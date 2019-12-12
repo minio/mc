@@ -46,9 +46,7 @@ var adminCmd = cli.Command{
 	},
 }
 
-const dateValueSeparator string = "-"
-const timeStampSeparator string = "-"
-const dateTimeFormatFilename string = "2006" + dateValueSeparator + "01" + dateValueSeparator + "02" + "T" + "15" + timeStampSeparator + "04" + timeStampSeparator + "05.999999-07" + timeStampSeparator + "00"
+const dateTimeFormatFilename = "2006-01-02T15-04-05.999999-07-00"
 
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {
