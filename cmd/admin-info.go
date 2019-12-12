@@ -166,7 +166,9 @@ func (u clusterStruct) String() (msg string) {
 			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize("Info", "OK "))
 
 		}
-		msg += "\n"
+		if u.Info.Buckets.Count != 0 {
+			msg += "\n"
+		}
 	}
 
 	// Summary on used space, total no of buckets and
