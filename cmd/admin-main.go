@@ -46,6 +46,8 @@ var adminCmd = cli.Command{
 	},
 }
 
+const dateTimeFormatFilename = "2006-01-02T15-04-05.999999-07-00"
+
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
