@@ -172,10 +172,11 @@ func (u clusterStruct) String() (msg string) {
 	// Summary on used space, total no of buckets and
 	// total no of objects at the Cluster level
 	usedTotal := humanize.IBytes(uint64(u.Info.Usage.Size))
-	msg += fmt.Sprintf("%s Used, %s, %s", usedTotal,
-		english.Plural(u.Info.Buckets.Count, "Bucket", ""),
-		english.Plural(u.Info.Objects.Count, "Object", ""))
-
+	if u.Info.Buckets.Count > 0 {
+		msg += fmt.Sprintf("%s Used, %s, %s", usedTotal,
+			english.Plural(u.Info.Buckets.Count, "Bucket", ""),
+			english.Plural(u.Info.Objects.Count, "Object", ""))
+	}
 	if backendType != "FS" {
 		// Summary on total no of online and total
 		// number of offline disks at the Cluster level
