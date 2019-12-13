@@ -563,8 +563,9 @@ FLAGS:
   --older-than value                 copy object(s) older than N days (default: 0)
   --newer-than value                 copy object(s) newer than N days (default: 0)
   --storage-class value, --sc value  set storage class for new object(s) on target
-  --preserve,-a                                 preserve file system attributes and bucket policy rules on target bucket(s)
+  --preserve,-a                      preserve file system attributes and bucket policy rules on target bucket(s)
   --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
+  --continue, -c                     create or resume copy session
   --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
   --help, -h                         show help

@@ -330,7 +330,6 @@ var appCmds = []cli.Command{
 	watchCmd,
 	policyCmd,
 	adminCmd,
-	sessionCmd,
 	configCmd,
 	updateCmd,
 	versionCmd,

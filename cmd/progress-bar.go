@@ -73,9 +73,7 @@ func newProgressBar(total int64) *progressBar {
 	}
 
 	// Start the progress bar.
-	if bar.Total > 0 {
-		bar.Start()
-	}
+	bar.Start()
 
 	// Copy for future
 	pgbar.ProgressBar = bar
@@ -109,9 +107,8 @@ func (p *progressBar) Read(buf []byte) (n int, err error) {
 	return p.ProgressBar.Read(buf)
 }
 
-func (p *progressBar) SetTotal(total int64) *progressBar {
+func (p *progressBar) SetTotal(total int64) {
 	p.ProgressBar.Total = total
-	return p
 }
 
 // cursorAnimate - returns a animated rune through read channel for every read.

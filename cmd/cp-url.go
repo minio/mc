@@ -213,7 +213,7 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string, isRecursive boo
 }
 
 // prepareCopyURLs - prepares target and source clientURLs for copying.
-func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
+func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair, olderThan, newerThan string) chan URLs {
 	copyURLsCh := make(chan URLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs, encKeyDB map[string][]prefixSSEPair) {
 		defer close(copyURLsCh)
@@ -238,5 +238,23 @@ func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool, en
 		}
 	}(sourceURLs, targetURL, copyURLsCh, encKeyDB)
 
-	return copyURLsCh
+	finalCopyURLsCh := make(chan URLs)
+	go func() {
+		defer close(finalCopyURLsCh)
+		for cpURLs := range copyURLsCh {
+			// Skip objects older than --older-than parameter if specified
+			if olderThan != "" && isOlder(cpURLs.SourceContent.Time, olderThan) {
+				continue
+			}
+
+			// Skip objects newer than --newer-than parameter if specified
+			if newerThan != "" && isNewer(cpURLs.SourceContent.Time, newerThan) {
+				continue
+			}
+
+			finalCopyURLsCh <- cpURLs
+		}
+	}()
+
+	return finalCopyURLsCh
 }

@@ -138,6 +138,9 @@ func (a *accounter) Get() int64 {
 	return atomic.LoadInt64(&a.current)
 }
 
+func (a *accounter) SetTotal(int64) {
+}
+
 // Add add to current value atomically.
 func (a *accounter) Add(n int64) int64 {
 	return atomic.AddInt64(&a.current, n)
