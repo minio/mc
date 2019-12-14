@@ -581,7 +581,6 @@ func (c *s3Client) Select(expression string, sse encrypt.ServerSide, selOpts Sel
 func (c *s3Client) watchOneBucket(bucket, prefix, suffix string, events []string, doneCh chan struct{}, eventChan chan EventInfo, errorChan chan *probe.Error) {
 	// Start listening on all bucket events.
 	eventsCh := c.api.ListenBucketNotification(bucket, prefix, suffix, events, doneCh)
-
 	for notificationInfo := range eventsCh {
 		if notificationInfo.Err != nil {
 			if nErr, ok := notificationInfo.Err.(minio.ErrorResponse); ok && nErr.Code == "APINotSupported" {
@@ -601,7 +600,6 @@ func (c *s3Client) watchOneBucket(bucket, prefix, suffix string, events []string
 				errorChan <- probe.NewError(e)
 				continue
 			}
-
 			u := *c.targetURL
 			u.Path = path.Join(string(u.Separator), bucketName, key)
 			if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
