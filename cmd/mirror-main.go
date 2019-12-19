@@ -545,7 +545,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
 				errorIf(err.Trace(),
-					"Unable to Watch on source, perhap source doesn't support Watching for events")
+					"Unable to Watch on source, perhaps source doesn't support Watching for events")
 				return
 			}
 			mj.statusCh <- URLs{Error: err}
