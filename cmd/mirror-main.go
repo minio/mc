@@ -544,7 +544,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 		case err := <-mj.watcher.Errors():
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				errorIf(err.Trace(), "Unable to Watch on source, ignoring.")
+				errorIf(err.Trace(),
+					"Unable to Watch on source, perhaps source doesn't support Watching for events")
 				return
 			}
 			mj.statusCh <- URLs{Error: err}
@@ -711,6 +712,10 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 	rules, err := srcClt.GetAccessRules()
 	if err != nil {
+		switch err.ToGoError().(type) {
+		case APINotImplemented:
+			return nil
+		}
 		return err
 	}
 	// Set found rules to target bucket if permitted

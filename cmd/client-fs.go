@@ -117,7 +117,10 @@ func (f *fsClient) GetURL() clientURL {
 
 // Select replies a stream of query results.
 func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
-	return nil, probe.NewError(APINotImplemented{})
+	return nil, probe.NewError(APINotImplemented{
+		API:     "Select",
+		APIType: "filesystem",
+	})
 }
 
 // Watches for all fs events on an input path.
@@ -1015,25 +1018,34 @@ func (f *fsClient) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 
 // Set object lock configuration of bucket.
 func (f *fsClient) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
-	return probe.NewError(APINotImplemented{API: "SetObjectLockConfig", APIType: "filesystem"})
+	return probe.NewError(APINotImplemented{
+		API:     "SetObjectLockConfig",
+		APIType: "filesystem",
+	})
 }
 
 // Get object lock configuration of bucket.
 func (f *fsClient) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
-	return nil, nil, nil, probe.NewError(APINotImplemented{API: "GetObjectLockConfig", APIType: "filesystem"})
+	return nil, nil, nil, probe.NewError(APINotImplemented{
+		API:     "GetObjectLockConfig",
+		APIType: "filesystem",
+	})
 }
 
 // GetAccessRules - unsupported API
 func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 	return map[string]string{}, probe.NewError(APINotImplemented{
-		API:     "ListBucketPolicies",
+		API:     "GetBucketPolicy",
 		APIType: "filesystem",
 	})
 }
 
 // Set object retention for a given object.
 func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
-	return probe.NewError(APINotImplemented{API: "PutObjectRetention", APIType: "filesystem"})
+	return probe.NewError(APINotImplemented{
+		API:     "PutObjectRetention",
+		APIType: "filesystem",
+	})
 }
 
 // GetAccess - get access policy permissions.
