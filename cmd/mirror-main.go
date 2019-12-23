@@ -303,17 +303,15 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		sURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = mj.storageClass
 	}
 
-	// Set multiMasterETagKey for the target.
-	if sURLs.SourceContent.UserMetadata[multiMasterETagKey] != "" {
-		sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.UserMetadata[multiMasterETagKey]
-	} else {
-		sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.ETag
-	}
+	if mj.multiMasterEnable {
+		// Set multiMasterETagKey for the target.
+		if sURLs.SourceContent.UserMetadata[multiMasterETagKey] == "" {
+			sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.ETag
+		}
 
-	if sURLs.SourceContent.UserMetadata[multiMasterSTagKey] != "" {
-		sURLs.TargetContent.Metadata[multiMasterSTagKey] = sURLs.SourceContent.UserMetadata[multiMasterSTagKey]
-	} else {
-		sURLs.TargetContent.Metadata[multiMasterSTagKey] = mj.multiMasterSTag
+		if sURLs.SourceContent.UserMetadata[multiMasterSTagKey] == "" {
+			sURLs.TargetContent.Metadata[multiMasterSTagKey] = mj.multiMasterSTag
+		}
 	}
 
 	if mj.isPreserve {
