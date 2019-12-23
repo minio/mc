@@ -332,7 +332,6 @@ var appCmds = []cli.Command{
 	adminCmd,
 	configCmd,
 	updateCmd,
-	versionCmd,
 }
 
 func registerApp(name string) *cli.App {

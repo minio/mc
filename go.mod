@@ -15,7 +15,7 @@ require (
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20191212015602-d266b3a06604
+	github.com/minio/minio v0.0.0-20191222063550-725172e13bb7
 	github.com/minio/minio-go/v6 v6.0.45-0.20191213193129-a5786a9c2a5b
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -27,10 +27,11 @@ require (
 	go.uber.org/zap v1.11.0 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
 	golang.org/x/text v0.3.2
-	google.golang.org/grpc v1.22.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/h2non/filetype.v1 v1.0.5
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.4
 )
 
 replace github.com/gorilla/rpc v1.2.0+incompatible => github.com/gorilla/rpc v1.2.0
+
+replace github.com/hashicorp/vault => github.com/hashicorp/vault v1.2.0-beta2

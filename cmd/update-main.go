@@ -89,7 +89,7 @@ var (
 )
 
 // mcVersionToReleaseTime - parses a standard official release
-// mc version string.
+// mc --version string.
 //
 // An official binary's version string is the release time formatted
 // with RFC3339 (in UTC) - e.g. `2017-09-29T19:16:56Z`
@@ -140,7 +140,7 @@ func getModTime(path string) (t time.Time, err *probe.Error) {
 }
 
 // GetCurrentReleaseTime - returns this process's release time.  If it
-// is official mc version, parsed version is returned else mc
+// is official mc --version, parsed version is returned else mc
 // binary's mod time is returned.
 func GetCurrentReleaseTime() (releaseTime time.Time, err *probe.Error) {
 	if releaseTime, err = mcVersionToReleaseTime(Version); err == nil {
