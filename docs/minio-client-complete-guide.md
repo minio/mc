@@ -25,7 +25,6 @@ admin    manage MinIO servers
 session  manage saved sessions for cp command
 config   manage mc configuration file
 update   check for a new software update
-version  print version info
 ```
 
 ## 1.  Download MinIO Client
@@ -247,18 +246,28 @@ Use this option to set a custom config path.
 ### Option [ --insecure]
 Skip SSL certificate verification.
 
+### Option [--version]
+Display the current version of `mc` installed
+
+ *Example: Print version of mc.*
+
+```
+mc --version
+mc version RELEASE.2016-04-01T00-22-11Z
+```
+
 ## 7. Commands
 
-|   |   | |
-|:---|:---|:---|
-|[**ls** - List buckets and objects](#ls)   |[**tree** - List buckets and objects in a tree format](#tree)  |[**mb** - Make a bucket](#mb)  | [**cat** - Concatenate an object](#cat)  |
-|[**cp** - Copy objects](#cp) |[**rb** - Remove a bucket](#rb)  | [**pipe** - Pipe to an object](#pipe) |
-| [**share** - Share access](#share)  | [**rm** - Remove objects](#rm)   | [**find** - Find files and objects](#find) |
-| [**diff** - Diff buckets](#diff) |[**mirror** - Mirror buckets](#mirror)|[**session** - Manage saved sessions](#session) |
-| [**config** - Manage config file](#config)  | [**policy** - Set public policy on bucket or prefix](#policy)  | [**event** - Manage events on your buckets](#event)  |
-| [**update** - Manage software updates](#update)  |  [**watch** - Watch for events](#watch) | [**stat** - Stat contents of objects and folders](#stat) |
-| [**head** - Display first 'n' lines of an object](#head) | [**version** - Show version](#version) | |
-| | [**sql** - Run sql queries on objects](#sql) | |
+|                                                          |                                                               |                                                          |                                         |
+|:---------------------------------------------------------|:--------------------------------------------------------------|:---------------------------------------------------------|-----------------------------------------|
+| [**ls** - List buckets and objects](#ls)                 | [**tree** - List buckets and objects in a tree format](#tree) | [**mb** - Make a bucket](#mb)                            | [**cat** - Concatenate an object](#cat) |
+| [**cp** - Copy objects](#cp)                             | [**rb** - Remove a bucket](#rb)                               | [**pipe** - Pipe to an object](#pipe)                    |                                         |
+| [**share** - Share access](#share)                       | [**rm** - Remove objects](#rm)                                | [**find** - Find files and objects](#find)               |                                         |
+| [**diff** - Diff buckets](#diff)                         | [**mirror** - Mirror buckets](#mirror)                        | [**session** - Manage saved sessions](#session)          |                                         |
+| [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)      |                                         |
+| [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat) |                                         |
+| [**head** - Display first 'n' lines of an object](#head) |                                                               |                                                          |                                         |
+|                                                          | [**sql** - Run sql queries on objects](#sql)                  |                                                          |                                         |
 
 
 ###  Command `ls` - List Objects
@@ -1140,28 +1149,6 @@ mc update
 You are already running the most recent version of ‘mc’.
 ```
 
-<a name="version"></a>
-### Command `version` - Display Version
-Display the current version of `mc` installed
-
-```
-USAGE:
-  mc version [FLAGS]
-
-FLAGS:
-  --quiet, -q  suppress chatty console output
-  --json       enable JSON formatted output
-  --help, -h   show help
-```
-
- *Example: Print version of mc.*
-
-```
-mc version
-Version: 2016-04-01T00:22:11Z
-Release-tag: RELEASE.2016-04-01T00-22-11Z
-Commit-id: 12adf3be326f5b6610cdd1438f72dfd861597fce
-```
 <a name="stat"></a>
 ### Command `stat` - Stat contents of objects and folders
 `stat` command displays information on objects (with optional prefix) contained in the specified bucket on an object storage. On a filesystem, it behaves like `stat` command.

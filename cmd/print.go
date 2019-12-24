@@ -16,7 +16,9 @@
 
 package cmd
 
-import "github.com/minio/mc/pkg/console"
+import (
+	"github.com/minio/mc/pkg/console"
+)
 
 // message interface for all structured messages implementing JSON(), String() methods.
 type message interface {
@@ -26,9 +28,11 @@ type message interface {
 
 // printMsg prints message string or JSON structure depending on the type of output console.
 func printMsg(msg message) {
+	var msgStr string
 	if !globalJSON {
-		console.Println(msg.String())
+		msgStr = msg.String()
 	} else {
-		console.Println(msg.JSON())
+		msgStr = msg.JSON()
 	}
+	console.Println(msgStr)
 }
