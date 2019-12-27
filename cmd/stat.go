@@ -182,3 +182,18 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 
 	return stats, probe.NewError(cErr)
 }
+
+// urlExists - Check if object exists
+func urlExists(targetURL string, isIncomplete bool) (*clientContent, *probe.Error) {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return nil, err
+	}
+
+	cnt, err := clnt.Stat(isIncomplete, true, false, nil)
+	if err == nil && cnt != nil {
+		return cnt, nil
+	}
+
+	return nil, err
+}
