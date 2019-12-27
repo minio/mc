@@ -182,3 +182,65 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 
 	return stats, probe.NewError(cErr)
 }
+
+// urlExists - Check if object exists
+func urlExists(targetURL string, isIncomplete bool) (*clientContent, *probe.Error) {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return nil, err
+	}
+
+	targetAlias, _, _ := mustExpandAlias(targetURL)
+	prefixPath := clnt.GetURL().Path
+	separator := string(clnt.GetURL().Separator)
+	if !strings.HasSuffix(prefixPath, separator) {
+		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
+	}
+	var cErr error
+	for content := range clnt.List(false, isIncomplete, false, DirNone) {
+		if content.Err != nil {
+			switch content.Err.ToGoError().(type) {
+			// handle this specifically for filesystem related errors.
+			case BrokenSymlink:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list broken link.")
+				continue
+			case TooManyLevelsSymlink:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list too many levels link.")
+				continue
+			case PathNotFound:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			case PathInsufficientPermission:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			}
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
+			continue
+		}
+
+		if content.StorageClass == s3StorageClassGlacier {
+			continue
+		}
+
+		url := targetAlias + getKey(content)
+		standardizedURL := getStandardizedURL(targetURL)
+
+		if url != standardizedURL {
+			continue
+		}
+
+		stat := content
+		// Convert any os specific delimiters to "/".
+		contentURL := filepath.ToSlash(stat.URL.Path)
+		prefixPath = filepath.ToSlash(prefixPath)
+		// Trim prefix path from the content path.
+		contentURL = strings.TrimPrefix(contentURL, prefixPath)
+		stat.URL.Path = contentURL
+		return stat, nil
+	}
+	if cErr != nil {
+		return nil, probe.NewError(cErr)
+	}
+	return nil, errTargetNotFound(targetURL)
+}

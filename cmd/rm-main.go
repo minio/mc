@@ -181,21 +181,11 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 }
 
 func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
-	isRecursive := false
-	contents, pErr := statURL(url, isIncomplete, isRecursive, encKeyDB)
+	content, pErr := urlExists(url, isIncomplete)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
-	if len(contents) == 0 {
-		if !isForce {
-			errorIf(errDummy().Trace(url), "Failed to remove `"+url+"`. Target object is not found")
-			return exitStatus(globalErrorExitStatus)
-		}
-		return nil
-	}
-
-	content := contents[0]
 
 	// Skip objects older than older--than parameter if specified
 	if olderThan != "" && isOlder(content.Time, olderThan) {
