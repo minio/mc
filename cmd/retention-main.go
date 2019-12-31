@@ -26,9 +26,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
+	"github.com/minio/minio/pkg/console"
 )
 
 var retentionCmd = cli.Command{

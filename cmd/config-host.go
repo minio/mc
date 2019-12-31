@@ -19,8 +19,8 @@ package cmd
 import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/console"
 )
 
 var configHostCmd = cli.Command{

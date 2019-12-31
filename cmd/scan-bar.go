@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/console"
 )
 
 // fixateScanBar truncates or stretches text to fit within the terminal size.

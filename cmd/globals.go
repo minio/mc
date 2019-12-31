@@ -21,7 +21,7 @@ import (
 	"crypto/x509"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/console"
 )
 
 const (
