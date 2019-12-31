@@ -11,11 +11,10 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.4 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
-	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20191222063550-725172e13bb7
+	github.com/minio/minio v0.0.0-20191231040613-0b7bd024fb30
 	github.com/minio/minio-go/v6 v6.0.45-0.20191213193129-a5786a9c2a5b
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -33,5 +32,3 @@ require (
 )
 
 replace github.com/gorilla/rpc v1.2.0+incompatible => github.com/gorilla/rpc v1.2.0
-
-replace github.com/hashicorp/vault => github.com/hashicorp/vault v1.2.0-beta2

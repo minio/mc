@@ -19,7 +19,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/console"
 )
 
 // Row specifies row description and theme

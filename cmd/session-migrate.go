@@ -20,8 +20,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/quick"
 )
 

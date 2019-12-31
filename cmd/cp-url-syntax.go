@@ -21,7 +21,7 @@ import (
 	"runtime"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/console"
 )
 
 func checkCopySyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
