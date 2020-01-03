@@ -695,13 +695,13 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
-	var status = NewProgressStatus(mj.parallel)
 	if globalQuiet {
-		status = NewQuietStatus(mj.parallel)
+		mj.status = NewQuietStatus(mj.parallel)
 	} else if globalJSON {
-		status = NewQuietStatus(mj.parallel)
+		mj.status = NewQuietStatus(mj.parallel)
+	} else {
+		mj.status = NewProgressStatus(mj.parallel)
 	}
-	mj.status = status
 
 	return &mj
 }

@@ -284,6 +284,14 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMe
 			err := differenceInternal(sourceClnt, targetClnt, sourceURL, targetURL,
 				isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
 			if err != nil {
+				// handle this specifically for filesystem related errors.
+				switch err.ToGoError().(type) {
+				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+					diffCh <- diffMessage{
+						Error: err,
+					}
+					return
+				}
 				errorIf(err, "Unable to list comparison retrying..")
 			} else {
 				// Success.
