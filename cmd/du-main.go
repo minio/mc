@@ -36,6 +36,10 @@ var (
 			Name:  "depth, d",
 			Usage: "print the total for a folder prefix only if it is N or fewer levels below the command line argument",
 		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "recursively print the total for a folder prefix",
+		},
 	}
 )
 
@@ -153,6 +157,10 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 
 // main for du command.
 func mainDu(ctx *cli.Context) error {
+	if !ctx.Args().Present() {
+		cli.ShowCommandHelpAndExit(ctx, "du", 1)
+	}
+
 	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 
@@ -163,7 +171,13 @@ func mainDu(ctx *cli.Context) error {
 	// du specific flags.
 	depth := ctx.Int("depth")
 	if depth == 0 {
-		depth = -1
+		if ctx.Bool("recursive") {
+			if !ctx.IsSet("depth") {
+				depth = -1
+			}
+		} else {
+			depth = 1
+		}
 	}
 
 	// Set color.
