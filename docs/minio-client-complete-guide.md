@@ -3,28 +3,30 @@
 MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
-ls       list buckets and objects
-tree     list buckets and objects in a tree format
-mb       make a bucket
-rb       remove a bucket
-cat      display object contents
-head     display first 'n' lines of an object
-pipe     stream STDIN to an object
-share    generate URL for temporary access to an object
-cp       copy objects
-mirror   synchronize objects to a remote site
-find     search for objects
-sql      run sql queries on objects
-stat     stat contents of objects
-diff     list differences in object name, size, and date between buckets
-rm       remove objects
-event    manage object notifications
-watch    watch for object events
-policy   manage anonymous access to objects
-admin    manage MinIO servers
-session  manage saved sessions for cp command
-config   manage mc configuration file
-update   check for a new software update
+ls        list buckets and objects
+tree      list buckets and objects in a tree format
+mb        make a bucket
+rb        remove a bucket
+cat       display object contents
+head      display first 'n' lines of an object
+pipe      stream STDIN to an object
+share     generate URL for temporary access to an object
+cp        copy objects
+mirror    synchronize objects to a remote site
+find      search for objects
+sql       run sql queries on objects
+stat      stat contents of objects
+lock      set and get object lock configuration
+retention set object retention for objects with a given prefix
+diff      list differences in object name, size, and date between buckets
+rm        remove objects
+event     manage object notifications
+watch     watch for object events
+policy    manage anonymous access to objects
+admin     manage MinIO servers
+session   manage saved sessions for cp command
+config    manage mc configuration file
+update    check for a new software update
 ```
 
 ## 1.  Download MinIO Client
@@ -266,7 +268,7 @@ mc version RELEASE.2016-04-01T00-22-11Z
 | [**diff** - Diff buckets](#diff)                         | [**mirror** - Mirror buckets](#mirror)                        | [**session** - Manage saved sessions](#session)          |                                         |
 | [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)      |                                         |
 | [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat) |                                         |
-| [**head** - Display first 'n' lines of an object](#head) |                                                               |                                                          |                                         |
+| [**head** - Display first 'n' lines of an object](#head) |  [**lock** - set and get object lock configuration](#lock)                                                             |  [**retention** - set object retention for objects with a given prefix](#retention)                                                        |                                         |
 |                                                          | [**sql** - Run sql queries on objects](#sql)                  |                                                          |                                         |
 
 
@@ -534,6 +536,73 @@ mc head -n 1 --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play
 Hello!!
 ```
 
+<a name="lock"></a>
+### Command `lock` - set and get object lock configuration
+`lock` sets and gets object lock configuration
+
+```
+USAGE:
+   mc lock [FLAGS] TARGET [governance | compliance] [VALIDITY]
+
+FLAGS:
+  --clear, -c                   clears previously stored object lock configuration
+  --json                        enable JSON formatted output
+  --help, -h                    show help
+```
+
+*Example: Set object lock configuration of 30 day compliance on bucket `mybucket`*
+
+```
+mc lock myminio/mybucket compliance 30d
+```
+
+*Example: Display the object lock configuration for bucket `mybucket`*
+
+```
+mc lock myminio/mybucket
+COMPLIANCE mode is enabled for 30d
+```
+*Example: Display the object lock configuration for bucket `mybucket`*
+
+```
+mc lock myminio/mybucket
+COMPLIANCE mode is enabled for 30d
+```
+*Example: Clear object lock configuration for bucket `mybucket`*
+
+```
+mc lock --clear myminio/mybucket
+No object lock configuration is enabled
+```
+
+<a name="retention"></a>
+### Command `retention` - set object retention for objects with a given prefix
+`retention` sets object retention for objects with a given prefix
+
+```
+USAGE:
+   mc retention [FLAGS] TARGET [governance | compliance] [VALIDITY]
+
+FLAGS:
+  --json                        enable JSON formatted output
+  --help, -h                    show help
+```
+
+*Example: Set governance for 30 days for objects with prefix `prefix` on bucket `mybucket`*
+
+```
+mc retention myminio/mybucket/prefix governance 30d
+Object retention successfully set for prefix `myminio/mybucket/prefix`.
+
+```
+*Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the compliance period is over*
+
+```
+mc cp ~/comp.csv myminio/mybucket/prefix/
+mc rm myminio/mybucket/prefix/comp.csv
+Removing `myminio/mybucket/prefix/comp.csv`.
+mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM protected and cannot be overwritten
+```
 <a name="pipe"></a>
 ### Command `pipe` - Pipe to Object
 `pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
