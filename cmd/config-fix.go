@@ -259,6 +259,10 @@ func fixConfigLocation() {
 		// If there is a config at legacyLoc+".exe", rename it.
 		legacyLoc := mcCustomConfigDir + ".exe"
 		unusedLoc := mcCustomConfigDir + ".unused"
+		s, err := os.Stat(legacyLoc)
+		if err != nil || !s.IsDir() {
+			return
+		}
 		_ = os.Rename(legacyLoc, unusedLoc)
 		return
 	}
@@ -269,8 +273,8 @@ func fixConfigLocation() {
 	wantExists := !os.IsNotExist(err)
 
 	legFileName := mcCustomConfigDir + ".exe"
-	_, err = os.Stat(legFileName)
-	legExists := !os.IsNotExist(err)
+	stat, err := os.Stat(legFileName)
+	legExists := !os.IsNotExist(err) && stat.IsDir()
 	switch {
 	case legExists && wantExists:
 		// Both exist and mc was called with legacy path (.exe)
