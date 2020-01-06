@@ -4,28 +4,30 @@
 MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff, find etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
-ls       list buckets and objects
-mb       make a bucket
-rb       remove a bucket
-cat      display object contents
-head     display first 'n' lines of an object
-pipe     stream STDIN to an object
-share    generate URL for temporary access to an object
-cp       copy objects
-mirror   synchronize objects to a remote site
-find     search for objects
-sql      run sql queries on objects
-stat     stat contents of objects
-diff     list differences in object name, size, and date between buckets
-rm       remove objects
-event    manage object notifications
-watch    watch for object events
-policy   manage anonymous access to objects
-admin    manage MinIO servers
-session  manage saved sessions for cp command
-config   manage mc configuration file
-update   check for a new software update
-version  print version info
+ls        list buckets and objects
+mb        make a bucket
+rb        remove a bucket
+cat       display object contents
+head      display first 'n' lines of an object
+pipe      stream STDIN to an object
+share     generate URL for temporary access to an object
+cp        copy objects
+mirror    synchronize objects to a remote site
+find      search for objects
+sql       run sql queries on objects
+stat      stat contents of objects
+lock      set and get object lock configuration
+retention set object retention for objects with a given prefix
+diff      list differences in object name, size, and date between buckets
+rm        remove objects
+event     manage object notifications
+watch     watch for object events
+policy    manage anonymous access to objects
+admin     manage MinIO servers
+session   manage saved sessions for cp command
+config    manage mc configuration file
+update    check for a new software update
+version   print version info
 ```
 
 ## Docker Container

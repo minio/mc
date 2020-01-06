@@ -80,7 +80,7 @@ type lockCmdMessage struct {
 // Colorized message for console printing.
 func (m lockCmdMessage) String() string {
 	if m.Mode == nil {
-		return fmt.Sprintf("No mode is enabled")
+		return fmt.Sprintf("No object lock configuration is enabled")
 	}
 
 	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", *m.Mode), console.Colorize("Validity", *m.Validity))
