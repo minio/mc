@@ -31,6 +31,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,6 +51,7 @@ type s3Client struct {
 	mutex        *sync.Mutex
 	targetURL    *clientURL
 	api          *minio.Client
+	snowball     bool
 	virtualStyle bool
 }
 
@@ -109,6 +111,16 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		// Save the target URL.
 		s3Clnt.targetURL = targetURL
 
+		var e error
+
+		// Enable snowball mode.
+		if v, ok := os.LookupEnv("MC_SNOWBALL_MODE"); ok {
+			s3Clnt.snowball, e = strconv.ParseBool(v)
+			if e != nil {
+				return nil, probe.NewError(e)
+			}
+		}
+
 		// Save if target supports virtual host style.
 		hostName := targetURL.Host
 		s3Clnt.virtualStyle = isVirtualHostStyle(hostName, config.Lookup)
@@ -137,8 +149,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 			}
-			// Not found. Instantiate a new MinIO
-			var e error
 
 			options := minio.Options{
 				Creds:        creds,
@@ -741,7 +751,17 @@ func (c *s3Client) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	opts := minio.GetObjectOptions{}
 	opts.ServerSideEncryption = sse
-	reader, e := c.api.GetObject(bucket, object, opts)
+	var e error
+	var reader io.ReadCloser
+	if c.snowball {
+		// AWS snowball doesn't implement all the GetObject related
+		// functionalities such as If-Match etc, fallback to basic
+		// GetObject()
+		cr := minio.Core{Client: c.api}
+		reader, _, _, e = cr.GetObject(bucket, object, opts)
+	} else {
+		reader, e = c.api.GetObject(bucket, object, opts)
+	}
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -1200,6 +1220,10 @@ func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}, metadata bool) <-chan minio.ObjectInfo {
 	if metadata {
 		return c.api.ListObjectsV2WithMetadata(bucket, object, isRecursive, doneCh)
+	}
+	if c.snowball {
+		// Snowball ListObjectsV2 implementation is broken use older API instead.
+		return c.api.ListObjects(bucket, object, isRecursive, doneCh)
 	}
 	return c.api.ListObjectsV2(bucket, object, isRecursive, doneCh)
 }
