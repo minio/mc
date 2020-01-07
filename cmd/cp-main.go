@@ -338,6 +338,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					close(cpURLsCh)
 					break
 				}
+
 				var cpURLs URLs
 				if e := json.Unmarshal([]byte(urlScanner.Text()), &cpURLs); e != nil {
 					errorIf(probe.NewError(e), "Unable to unmarshal %s", urlScanner.Text())
@@ -359,10 +360,27 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 
 		go func() {
 			totalBytes := int64(0)
-			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan) {
-				totalBytes += cpURLs.SourceContent.Size
-				pg.SetTotal(totalBytes)
-
+			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL, isRecursive,
+				encKeyDB, olderThan, newerThan) {
+				if cpURLs.Error != nil {
+					// Print in new line and adjust to top so that we
+					// don't print over the ongoing scan bar
+					if !globalQuiet && !globalJSON {
+						console.Eraseline()
+					}
+					if strings.Contains(cpURLs.Error.ToGoError().Error(),
+						" is a folder.") {
+						errorIf(cpURLs.Error.Trace(),
+							"Folder cannot be copied. Please use `...` suffix.")
+					} else {
+						errorIf(cpURLs.Error.Trace(),
+							"Unable to start copying.")
+					}
+					break
+				} else {
+					totalBytes += cpURLs.SourceContent.Size
+					pg.SetTotal(totalBytes)
+				}
 				cpURLsCh <- cpURLs
 			}
 			close(cpURLsCh)
