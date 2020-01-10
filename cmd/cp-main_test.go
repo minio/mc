@@ -29,11 +29,11 @@ func TestParseMetaData(t *testing.T) {
 		status bool
 	}{
 		// success scenario using ; as delimiter
-		{"key1=value1;key2=value2", map[string]string{"key1": "value1", "key2": "value2"}, nil, true},
+		{"key1=value1;key2=value2", map[string]string{"Key1": "value1", "Key2": "value2"}, nil, true},
 		// success scenario using ; as delimiter
-		{"key1=m1=m2,m3=m4;key2=value2", map[string]string{"key1": "m1=m2,m3=m4", "key2": "value2"}, nil, true},
+		{"key1=m1=m2,m3=m4;key2=value2", map[string]string{"Key1": "m1=m2,m3=m4", "Key2": "value2"}, nil, true},
 		// success scenario using = more than once
-		{"Cache-Control=max-age=90000,min-fresh=9000;key1=value1;key2=value2", map[string]string{"Cache-Control": "max-age=90000,min-fresh=9000", "key1": "value1", "key2": "value2"}, nil, true},
+		{"Cache-Control=max-age=90000,min-fresh=9000;key1=value1;key2=value2", map[string]string{"Cache-Control": "max-age=90000,min-fresh=9000", "Key1": "value1", "Key2": "value2"}, nil, true},
 		// using different delimiter, other than '=' between key value
 		{"key1:value1;key2:value2", nil, ErrInvalidMetadata, false},
 		// using no delimiter

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,11 +128,11 @@ EXAMPLES:
       base64 encoded string as key.
       {{.Prompt}} {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
 
-  11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
-      {{.Prompt}} {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
+  11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata, separated by ";"
+      {{.Prompt}} {{.HelpName}} --attr "key1=value1;key2=value2" Music/*.mp4 play/mybucket/
 
-  12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
-      {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+  12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with Cache-Control and custom metadata, separated by ";".
+      {{.Prompt}} {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000;key1=value1;key2=value2" --recursive play/mybucket/burningman2011/ s3/mybucket/
 
   13. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
       {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
@@ -141,6 +142,9 @@ EXAMPLES:
 
   15. Copy a text file to an object storage and preserve the file system attribute as metadata.
       {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
+
+  16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention date.
+      {{.Prompt}} {{.HelpName} --attr "x-amz-object-lock-mode=GOVERNANCE;x-amz-object-lock-retain-until-date=2020-01-11T01:57:02Z" locked.txt play/locked-bucket/
 `,
 }
 
@@ -529,11 +533,10 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	metaDataMap := make(map[string]string)
 	for _, metaData := range strings.Split(metadataString, ";") {
 		metaDataEntry := strings.SplitN(metaData, "=", 2)
-		if len(metaDataEntry) == 2 {
-			metaDataMap[metaDataEntry[0]] = metaDataEntry[1]
-		} else {
+		if len(metaDataEntry) != 2 {
 			return nil, probe.NewError(ErrInvalidMetadata)
 		}
+		metaDataMap[http.CanonicalHeaderKey(metaDataEntry[0])] = metaDataEntry[1]
 	}
 	return metaDataMap, nil
 }
