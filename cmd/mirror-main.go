@@ -160,8 +160,8 @@ EXAMPLES:
       non-printable character like tab, pass the base64 encoded string as key.
       {{.Prompt}} {{.HelpName}} --encrypt-key "s3/photos/=32byteslongsecretkeymustbegiven1,play/archive/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE=" s3/photos/ play/archive/
 
-  13. Update 'Cache-Control' header on existing objects.
-      {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000 myminio/video-files myminio/video-files
+  13. Update 'Cache-Control' header on all existing objects recursively.
+      {{.Prompt}} {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000" myminio/video-files myminio/video-files
 
   14. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
