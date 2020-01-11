@@ -85,6 +85,13 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
+
+	// Quit early if urlStr does not point to an S3 server
+	switch clnt.(type) {
+	case *fsClient:
+		fatal(errDummy().Trace(), "Retention for filesystem not supported.")
+	}
+
 	alias, _, _ := mustExpandAlias(urlStr)
 	retainUntilDate := func() (time.Time, error) {
 		if validity == nil {
