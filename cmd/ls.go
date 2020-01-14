@@ -42,6 +42,7 @@ type contentMessage struct {
 	Size     int64     `json:"size"`
 	Key      string    `json:"key"`
 	ETag     string    `json:"etag"`
+	URL      string    `json:"url,omitempty"`
 }
 
 // String colorized string message.
@@ -148,6 +149,9 @@ func doList(clnt Client, isRecursive, isIncomplete bool) error {
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		content.URL.Path = contentURL
 		parsedContent := parseContent(content)
+		// URL is empty by default
+		// Set it to either relative dir (host) or public url (remote)
+		parsedContent.URL = clnt.GetURL().String()
 		// Print colorized or jsonized content info.
 		printMsg(parsedContent)
 	}
