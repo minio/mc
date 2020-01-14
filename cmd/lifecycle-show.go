@@ -36,13 +36,37 @@ var ilmShowCmd = cli.Command{
 	Action: mainLifecycleShow,
 	Before: setGlobalsFromContext,
 	Flags:  append(ilmShowFlags, globalFlags...),
+	CustomHelpTemplate: `Name:
+	{{.HelpName}} - {{.Usage}}
+
+USAGE:
+ {{.HelpName}} [COMMAND FLAGS] TARGET
+
+FLAGS:
+ {{range .VisibleFlags}}{{.}}
+ {{end}}
+DESCRIPTION:
+ ILM show command is to show the user the current lifecycle configuration organized for easy comprehension.
+
+TARGET:
+ This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
+
+EXAMPLES:
+1. Show the lifecycle management rules for the test34bucket on s3. Show all fields.
+	{{.Prompt}} {{.HelpName}} s3/test34bucket
+
+2. Show the lifecycle management rules for the test34bucket on s3. Show fields related to expration. Rules with expiration details not set are not shown
+	{{.Prompt}} {{.HelpName}} --expiry s3/test34bucket
+
+3. Show the lifecycle management rules for the test34bucket on s3. Show transition details. Rules with transition details not set are not shown
+	{{.Prompt}} {{.HelpName}} --transition s3/test34bucket
+
+4. Show the lifecycle management rules for the test34bucket on s3. Minimum details. Mostly if enabled, transition set, expiry set.
+	{{.Prompt}} {{.HelpName}} --minimum s3/test34bucket
+`,
 }
 
 var ilmShowFlags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "minimum",
-		Usage: "Show Minimum fields",
-	},
 	cli.BoolFlag{
 		Name:  "expiry",
 		Usage: "Show Expiration Info",
@@ -51,17 +75,35 @@ var ilmShowFlags = []cli.Flag{
 		Name:  "transition",
 		Usage: "Show Transition Info",
 	},
+	cli.BoolFlag{
+		Name:  "minimum",
+		Usage: "Show Minimum fields",
+	},
 }
 
 // checkIlmShowSyntax - validate arguments passed by a user
 func checkIlmShowSyntax(ctx *cli.Context) {
 
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		// cli.ShowCommandHelp(ctx, ctx.Args().First())
-		cli.ShowCommandHelp(ctx, "")
+		cli.ShowCommandHelp(ctx, "show")
+		// cli.ShowCommandHelp(ctx, "")
 		os.Exit(globalErrorExitStatus)
 	}
 }
+
+const (
+	idLabel             string = "ID"
+	prefixLabel         string = "Prefix"
+	statusLabel         string = "Enabled"
+	statusDisabledLabel string = "Disabled"
+	expiryLabel         string = "Expiry"
+	expiryDatesLabel    string = "Date/Days"
+	singleTagLabel      string = "Tag"
+	tagLabel            string = "Tags"
+	transitionLabel     string = "Transition"
+	transitionDateLabel string = "Date/Days"
+	storageClassLabel   string = "Storage-Class"
+)
 
 // Get ilm info from alias & bucket
 /*func getIlmInfo(urlStr string) (string, *probe.Error) {
@@ -145,7 +187,7 @@ func printIlmInfoRow(info ilmResult, showOpts showDetails) {
 			showInfoField(statusLabel, statusVal)
 		}
 		if !showOpts.transition { // Skip expiry section in transition-only display
-			showExpDetails := (showOpts.allAvailable || showOpts.expiry) &&
+			showExpDetails := (showOpts.allAvailable || showOpts.expiry) && !showOpts.initial &&
 				(expiryDateSetChk || expriyDaySetChk)
 			if !showOpts.expiry {
 				expirySet = tickCell
@@ -172,7 +214,7 @@ func printIlmInfoRow(info ilmResult, showOpts showDetails) {
 			if !showOpts.transition {
 				showInfoField(transitionLabel, transitionSet)
 			}
-			showTransitionDetails := (showOpts.allAvailable || showOpts.transition) && transitionSet != crossTickCell
+			showTransitionDetails := (showOpts.allAvailable || showOpts.transition) && !showOpts.initial && transitionSet != crossTickCell
 			if showTransitionDetails {
 				transitionDate := blankCell
 				storageClass := blankCell
@@ -226,7 +268,7 @@ func getShowOpts(ctx *cli.Context) showDetails {
 		json:         ctx.Bool("json"),
 		initial:      ctx.Bool("minimum"),
 	}
-	if showOpts.expiry || showOpts.transition || showOpts.minimum {
+	if showOpts.expiry || showOpts.transition || showOpts.initial {
 		showOpts.allAvailable = false
 	} else if showOpts.allAvailable {
 		showOpts.expiry = false

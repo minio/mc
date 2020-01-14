@@ -18,14 +18,12 @@ package cmd
 
 import (
 	"encoding/xml"
-	"fmt"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/minio/pkg/console"
 )
@@ -36,7 +34,32 @@ var ilmGenerateCmd = cli.Command{
 	Action: mainLifecycleGenerate,
 	Before: setGlobalsFromContext,
 	Flags:  append(ilmGenerateFlags, globalFlags...),
-}
+	CustomHelpTemplate: `Name:
+	{{.HelpName}} - {{.Usage}}
+
+USAGE:
+ {{.HelpName}} [COMMAND FLAGS] TARGET
+
+FLAGS:
+ {{range .VisibleFlags}}{{.}}
+ {{end}}
+DESCRIPTION:
+ ILM generate generate Lifecycle Management rules in json format for a bucket or bucket/prefix. The generated rule is added to the existing (if any) set of rules.
+
+TARGET:
+ This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
+
+EXAMPLES:
+1. Get lifecycle management rules for the test34bucket on s3 and attach the newly generated rule
+	{{.Prompt}} {{.HelpName}} --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" --transition-date "2020-05-01" --storage-class "GLACIER" s3/test34bucket
+
+2. Get lifecycle management rules for the test34bucket on s3 and attach the newly generated rule
+	{{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" --expiry "200 days" --transition "300 days" --storage-class "GLACIER" s3/test34bucket
+
+3. Get lifecycle management rules for the test34bucket on s3 and attach the newly generated rule
+	{{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" --expiry "200 days" --tags "docformat:docx" --tags "plaintextformat:txt" --tags "PDFFormat:pdf" s3/test34bucket
+
+`}
 
 var ilmGenerateFlags = []cli.Flag{
 	cli.StringFlag{
@@ -83,7 +106,7 @@ func checkIlmTranExpDateErr(rule lifecycleRule) bool {
 	if transitionDaySet && expiryDaySet {
 		return rule.Transition.TransitionInDays >= rule.Expiration.ExpirationInDays
 	}
-	return true
+	return false
 }
 
 func checkIlmObject(rule lifecycleRule) bool {
@@ -98,7 +121,7 @@ func checkIlmObject(rule lifecycleRule) bool {
 // Validate user given arguments
 func checkIlmGenerateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
-		cli.ShowCommandHelp(ctx, "")
+		cli.ShowCommandHelp(ctx, "generate")
 		os.Exit(globalErrorExitStatus)
 	}
 	args := ctx.Args()
@@ -140,10 +163,9 @@ func extractExpiry(expirationArg string) lifecycleExpiration {
 	} else if dateparseerr != nil {
 		console.Println("Expiry date argument extraction resulted in an error. Generated JSON may have an error or Expiry information missing. Error: " + dateparseerr.Error())
 	} else {
-		dateerror := fmt.Sprintf("%s", "Expiry date argument extraction resulted in an error. Generated JSON may have an error or Expiry information missing.")
+		dateerror := "Expiry date argument extraction resulted in an error. Generated JSON may have an error or Expiry information missing."
 		console.Println(console.Colorize(fieldMainHeader, dateerror))
 		console.Errorln(dateparseerr.Error())
-
 	}
 	return expiry
 }
@@ -204,7 +226,7 @@ func getTransition(ctx *cli.Context) lifecycleTransition {
 	transitionCheck := (transitionDateArg != "" && storageClassArg != "") ||
 		(transitionDateArg == "" && storageClassArg == "")
 	if !transitionCheck {
-		console.Errorln("Error in Transition argument specification. Please check.")
+		console.Errorln("Error in Transition argument Storage class specification. Please check.")
 		os.Exit(globalErrorExitStatus)
 	} else if transitionDateArg != "" && storageClassArg != "" {
 		transition = extractTransition(transitionDateArg, storageClassArg)
@@ -266,7 +288,7 @@ func getILMInfoFromUserValues(ctx *cli.Context, lfcInfoP *ilmResult) lifecycleRu
 }
 
 func mainLifecycleGenerate(ctx *cli.Context) error {
-	console.SetColor(fieldThemeHeader, color.New(color.Bold, color.FgHiBlue))
+	setColorScheme()
 	checkIlmGenerateSyntax(ctx)
 	lfcInfo := ilmResult{}
 	args := ctx.Args()

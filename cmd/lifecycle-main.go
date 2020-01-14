@@ -26,7 +26,7 @@ import (
 // TODO: The usage and examples will change as the command implementation evolves after feedback.
 var ilmCmd = cli.Command{
 	Name:   "ilm",
-	Usage:  "Information bucket/object lifecycle management",
+	Usage:  "Bucket lifecycle management",
 	Action: mainLifecycle,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -35,6 +35,7 @@ var ilmCmd = cli.Command{
 		ilmRemoveCmd,
 		ilmSetCmd,
 		ilmGenerateCmd,
+		ilmCheckCmd,
 	},
 	CustomHelpTemplate: `Name:
 	   {{.HelpName}} - {{.Usage}}

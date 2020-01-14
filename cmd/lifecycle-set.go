@@ -19,7 +19,6 @@ package cmd
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"os"
 
 	"github.com/minio/cli"
@@ -34,13 +33,32 @@ var ilmSetCmd = cli.Command{
 	Action: mainLifecycleSet,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
+	CustomHelpTemplate: `Name:
+	{{.HelpName}} - {{.Usage}}
+
+USAGE:
+	{{.HelpName}} TARGET FILE
+
+DESCRIPTION:
+	Lifecycle configuration is set based on the rules in JSON file provided.
+
+TARGET:
+	This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
+FILE:
+	This argument needs to be the correct path to the .json file with Lifecycle configuration.
+
+EXAMPLES:
+1. Set lifecycle management rules for the test34bucket on alias s3 to the rules provided by s3_34bkt_lifecycle.json
+	{{.Prompt}} {{.HelpName}} s3/test34bucket /Users/miniouser/Documents/s3_34bkt_lifecycle.json
+
+`,
 }
 
 // checkIlmSetSyntax - validate arguments passed by a user
 func checkIlmSetSyntax(ctx *cli.Context) {
 	// fmt.Println(len(ctx.Args()))
 	if len(ctx.Args()) == 0 || len(ctx.Args()) != 2 {
-		cli.ShowCommandHelp(ctx, "")
+		cli.ShowCommandHelp(ctx, "set")
 		os.Exit(globalErrorExitStatus)
 	}
 }
@@ -50,10 +68,11 @@ func setIlmFromFile(urlstr string, file string) {
 	fatalIf(perr, "Unable to get client to set lifecycle from url: "+urlstr)
 	bkt := getBucketNameFromURL(urlstr)
 	if bkt == "" || len(bkt) == 0 {
-		bkterrstr := fmt.Sprintf("%s", "Error bucket name "+urlstr)
+		bkterrstr := "Error bucket name " + urlstr
 		console.Println(console.Colorize(fieldMainHeader, bkterrstr))
 		return
 	}
+
 	fileContents := readFileToString(file)
 	if fileContents == "" || !checkFileCompatibility(fileContents) {
 		console.Println("Found compatibility issues with file contents from: " + file + ". May not be able to set bucket lifecycle.")
@@ -67,6 +86,7 @@ func setIlmFromFile(urlstr string, file string) {
 	if err != nil {
 		errorIf(probe.NewError(err), "Unable to set lifecycle from contents of file: "+file)
 	}
+
 	ilmContents := string(cbfr)
 	// console.Println(ilmContents)
 	if err = api.SetBucketLifecycle(bkt, ilmContents); err != nil {
@@ -86,7 +106,7 @@ func mainLifecycleSet(ctx *cli.Context) error {
 
 	setIlmFromFile(objectURL, fileNamePath)
 	// console.Println("Success.")
-	successStr := fmt.Sprintf("%s", "Success. Lifecycle configuration set from file:"+fileNamePath)
+	successStr := "Success. Lifecycle configuration set from file:" + fileNamePath
 	console.Println(console.Colorize(fieldThemeResultSuccess, successStr))
 	return nil
 }

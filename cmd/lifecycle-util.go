@@ -19,48 +19,14 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/url"
 	"os"
-	"strings"
 
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/credentials"
 	"github.com/minio/minio/pkg/console"
-)
-
-const (
-	idWidth             int = 13
-	prefixWidth         int = 9
-	statusWidth         int = 9
-	expiryWidth         int = 9
-	expiryDatesWidth    int = 13
-	tagWidth            int = 20
-	transitionWidth     int = 13
-	transitionDateWidth int = 13
-	storageClassWidth   int = 16
-)
-
-const (
-	leftAlign   int = 1
-	centerAlign int = 2
-	rightAlign  int = 3
-)
-
-const (
-	idLabel             string = "ID"
-	prefixLabel         string = "Prefix"
-	statusLabel         string = "Enabled"
-	statusDisabledLabel string = "Disabled"
-	expiryLabel         string = "Expiry"
-	expiryDatesLabel    string = "Date/Days"
-	singleTagLabel      string = "Tag"
-	tagLabel            string = "Tags"
-	transitionLabel     string = "Transition"
-	transitionDateLabel string = "Date/Days"
-	storageClassLabel   string = "Storage-Class"
 )
 
 const (
@@ -98,57 +64,12 @@ const (
 	// tableSeperator string = ""
 )
 
-type tableCellInfo struct {
-	label       string
-	multLabels  []string
-	labelKey    string
-	fieldTheme  string
-	columnWidth int
-	align       int
-	colIdx      int
-}
-
 type showDetails struct {
 	allAvailable bool
 	expiry       bool
 	transition   bool
 	initial      bool
 	json         bool
-	minimum      bool
-}
-
-func getCentered(label string, maxLen int) string {
-	const toPadWith string = " "
-	lblLth := len(label)
-	length := (float64(maxLen - lblLth)) / float64(2)
-	rptLth := (int)(math.Floor(length / float64(len(toPadWith))))
-	if rptLth <= 0 {
-		rptLth = 1
-	}
-	output := strings.Repeat(toPadWith, rptLth) + label + strings.Repeat(toPadWith, rptLth)
-	return output
-}
-
-func getLeftAlgined(label string, maxLen int) string {
-	const toPadWith string = " "
-	lblLth := len(label)
-	length := maxLen - lblLth
-	if length <= 0 {
-		return label
-	}
-	output := label + strings.Repeat(toPadWith, length)
-	return output
-}
-
-func getRightAligned(label string, maxLen int) string {
-	const toPadWith string = " "
-	lblLth := len(label)
-	length := maxLen - lblLth
-	if length <= 0 {
-		return label
-	}
-	output := strings.Repeat(toPadWith, length) + label
-	return output
 }
 
 func getBucketNameFromURL(urlStr string) string {
@@ -162,6 +83,7 @@ func getHostCfgFromURL(urlStr string) *hostConfigV9 {
 	alias := splitStr(clientURL.String(), "/", 3)[0]
 	return mustGetHostConfig(alias)
 }
+
 func getParsedHostURL(urlStr string) (*url.URL, *probe.Error) {
 	hostCfg := getHostCfgFromURL(urlStr)
 	if hostCfg == nil {
@@ -203,7 +125,7 @@ func getMinioClient(urlStr string) (*minio.Client, *probe.Error) {
 func getIlmInfo(urlStr string) (string, *probe.Error) {
 	bucketName := getBucketNameFromURL(urlStr)
 	if bucketName == "" {
-		bkterrstr := fmt.Sprintf("%s", "Could not find bucket name.")
+		bkterrstr := "Could not find bucket name."
 		console.Colorize(fieldMainHeader, bkterrstr)
 		return "", errInvalidTarget(urlStr)
 	}
@@ -219,7 +141,8 @@ func getIlmInfo(urlStr string) (string, *probe.Error) {
 	lifecycleInfo, glcerr := api.GetBucketLifecycle(bucketName)
 
 	if glcerr != nil {
-		console.Println(console.Colorize(fieldMainHeader, "Could not get LifeCycle configuration for:"+urlStr+". Error: "+glcerr.Error()))
+		glcerrStr := "Could not get LifeCycle configuration for:" + urlStr + ". Error: " + glcerr.Error()
+		console.Println(console.Colorize(fieldMainHeader, glcerrStr))
 		return "", errInvalidURL(urlStr)
 	}
 
