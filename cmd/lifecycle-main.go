@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"encoding/xml"
+	"fmt"
 	"time"
 
 	"github.com/minio/cli"
@@ -26,7 +27,7 @@ import (
 // TODO: The usage and examples will change as the command implementation evolves after feedback.
 var ilmCmd = cli.Command{
 	Name:   "ilm",
-	Usage:  "Information bucket/object lifecycle management",
+	Usage:  "Bucket lifecycle management",
 	Action: mainLifecycle,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -35,25 +36,8 @@ var ilmCmd = cli.Command{
 		ilmRemoveCmd,
 		ilmSetCmd,
 		ilmGenerateCmd,
+		ilmCheckCmd,
 	},
-	CustomHelpTemplate: `Name:
-	   {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} [get | set] TARGET [OPTIONS]
-
-
-TARGET:
-	This argument needs to be in the format of 'alias/bucket/prefix'
-OPTIONS:
-	This argument is specific to the requirements of get/set commands. 
-EXAMPLES:
-   1. Get lifecycle management information for the test34bucket on s3.
-	  {{.Prompt}} {{.HelpName}} get s3/test34bucket
-
-   2. Set lifecycle management, expiry settings for test34bucket on s3.
-	  {{.Prompt}} {{.HelpName}} set s3/test34bucket <expiry-time>
-`,
 }
 
 type abortIncompleteMultipartUpload struct {
@@ -120,6 +104,7 @@ type ilmResult struct {
 }
 
 func mainLifecycle(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	fmt.Println("lc-main")
+	cli.ShowCommandHelp(ctx, "")
 	return nil
 }

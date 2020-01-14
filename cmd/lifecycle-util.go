@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"math"
 	"net/url"
@@ -105,14 +104,12 @@ type tableCellInfo struct {
 	fieldTheme  string
 	columnWidth int
 	align       int
-	colIdx      int
 }
 
 type showDetails struct {
 	allAvailable bool
 	expiry       bool
 	transition   bool
-	initial      bool
 	json         bool
 	minimum      bool
 }
@@ -162,6 +159,7 @@ func getHostCfgFromURL(urlStr string) *hostConfigV9 {
 	alias := splitStr(clientURL.String(), "/", 3)[0]
 	return mustGetHostConfig(alias)
 }
+
 func getParsedHostURL(urlStr string) (*url.URL, *probe.Error) {
 	hostCfg := getHostCfgFromURL(urlStr)
 	if hostCfg == nil {
@@ -199,11 +197,11 @@ func getMinioClient(urlStr string) (*minio.Client, *probe.Error) {
 	return api, nil
 }
 
-// Get ilm info from alias & bucket
+// Get lifecycle info from alias & bucket
 func getIlmInfo(urlStr string) (string, *probe.Error) {
 	bucketName := getBucketNameFromURL(urlStr)
 	if bucketName == "" {
-		bkterrstr := fmt.Sprintf("%s", "Could not find bucket name.")
+		bkterrstr := "Could not find bucket name."
 		console.Colorize(fieldMainHeader, bkterrstr)
 		return "", errInvalidTarget(urlStr)
 	}
@@ -219,7 +217,8 @@ func getIlmInfo(urlStr string) (string, *probe.Error) {
 	lifecycleInfo, glcerr := api.GetBucketLifecycle(bucketName)
 
 	if glcerr != nil {
-		console.Println(console.Colorize(fieldMainHeader, "Could not get LifeCycle configuration for:"+urlStr+". Error: "+glcerr.Error()))
+		glcerrStr := "Could not get LifeCycle configuration for:" + urlStr + ". Error: " + glcerr.Error()
+		console.Println(console.Colorize(fieldMainHeader, glcerrStr))
 		return "", errInvalidURL(urlStr)
 	}
 

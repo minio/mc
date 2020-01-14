@@ -17,32 +17,47 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/minio/cli"
 	"github.com/minio/minio/pkg/console"
 )
 
-var ilmRemoveFlags = []cli.Flag{
+/*var ilmRemoveFlags = []cli.Flag{
 	cli.StringFlag{
 		Name: "recursive",
 	},
-}
+}*/
 
 var ilmRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "Remove/Delte Information bucket lifecycle management information.",
 	Action: mainLifecycleRemove,
 	Before: setGlobalsFromContext,
-	Flags:  append(ilmRemoveFlags, globalFlags...),
+	Flags:  globalFlags,
+	CustomHelpTemplate: `Name:
+	{{.HelpName}} - {{.Usage}}
+
+USAGE:
+	{{.HelpName}} TARGET
+
+DESCRIPTION:
+	Remove the lifecycle configuration for the bucket/object.
+
+TARGET:
+	This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
+
+EXAMPLES:
+1. Delete the lifecycle management configuration provided for the test34bucket on alias s3 .
+	{{.Prompt}} {{.HelpName}} s3/test34bucket
+`,
 }
 
 // checkIlmSetSyntax - validate arguments passed by a user
 func checkIlmRemoveSyntax(ctx *cli.Context) {
 	// fmt.Println(len(ctx.Args()))
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelp(ctx, "")
+		cli.ShowCommandHelp(ctx, "remove")
 		os.Exit(globalErrorExitStatus)
 	}
 }
@@ -74,7 +89,7 @@ func mainLifecycleRemove(ctx *cli.Context) error {
 		console.Errorln("Unable to remove lifecycle information of object/bucket.")
 		return ilmRmErr
 	}
-	successStr := fmt.Sprintf("%s", "Removed Lifecycle Configuration: "+objectURL)
+	successStr := "Removed Lifecycle Configuration: " + objectURL
 	console.Println(console.Colorize(fieldThemeResultSuccess, successStr))
 	return nil
 }

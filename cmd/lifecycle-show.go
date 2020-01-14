@@ -36,6 +36,34 @@ var ilmShowCmd = cli.Command{
 	Action: mainLifecycleShow,
 	Before: setGlobalsFromContext,
 	Flags:  append(ilmShowFlags, globalFlags...),
+	CustomHelpTemplate: `Name:
+	{{.HelpName}} - {{.Usage}}
+
+USAGE:
+ {{.HelpName}} [COMMAND FLAGS] TARGET
+
+FLAGS:
+ {{range .VisibleFlags}}{{.}}
+ {{end}}
+DESCRIPTION:
+ ILM show command is to show the user the current lifecycle configuration organized for easy comprehension.
+
+TARGET:
+ This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
+
+EXAMPLES:
+1. Show the lifecycle management rules for the test34bucket on s3. Show all fields.
+	{{.Prompt}} {{.HelpName}} s3/test34bucket
+
+2. Show the lifecycle management rules for the test34bucket on s3. Show fields related to expration. Rules with expiration details not set are not shown
+	{{.Prompt}} {{.HelpName}} --expiry s3/test34bucket
+
+3. Show the lifecycle management rules for the test34bucket on s3. Show transition details. Rules with transition details not set are not shown
+	{{.Prompt}} {{.HelpName}} --transition s3/test34bucket
+
+4. Show the lifecycle management rules for the test34bucket on s3. Minimum details. Mostly if enabled, transition set, expiry set.
+	{{.Prompt}} {{.HelpName}} --minimum s3/test34bucket
+`,
 }
 
 var ilmShowFlags = []cli.Flag{
@@ -90,7 +118,7 @@ func setColorScheme() {
 // checkIlmShowSyntax - validate arguments passed by a user
 func checkIlmShowSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelp(ctx, "")
+		cli.ShowCommandHelp(ctx, "show")
 		os.Exit(globalErrorExitStatus)
 	}
 }
@@ -121,6 +149,7 @@ func getAlignedText(label string, align int, columnWidth int) string {
 	}
 	return cellLabel
 }
+
 func checkAddHeaderCell(headerFields *[]Field, headerArr *[]string, rowCheck map[string]int, cellInfo tableCellInfo) {
 	if _, ok := rowCheck[cellInfo.labelKey]; ok {
 		*headerFields = append(*headerFields, Field{ /*cellInfo.fieldTheme*/ "", cellInfo.columnWidth})
@@ -170,10 +199,8 @@ func checkAddTableCellRows(fieldArr *[]Field, rowArr *[]string, rowCheck map[str
 		(*rowArr)[colIdx] = getLeftAlgined(cellInfo.multLabels[0], cellInfo.columnWidth)
 	}
 	for index := 1; index < multLth; index++ {
-		fields, _ := newFields[index-1]
-		rows, _ := newRows[index-1]
-		fields = make([]Field, len(rowCheck))
-		rows = make([]string, len(rowCheck))
+		fields := make([]Field, len(rowCheck))
+		rows := make([]string, len(rowCheck))
 		for k, v := range rowCheck {
 			if k == cellInfo.labelKey {
 				// *newRows = append(*newRows, cellInfo.multLabels[index])
@@ -200,6 +227,7 @@ func checkAddTableCellRows(fieldArr *[]Field, rowArr *[]string, rowCheck map[str
 		newRows[index-1] = rows
 	}
 }
+
 func printIlmHeader(rowCheck map[string]int) *PrettyTable {
 	if len(rowCheck) <= 0 {
 		return nil
@@ -229,7 +257,6 @@ func printIlmHeader(rowCheck map[string]int) *PrettyTable {
 	tbl := newPrettyTable(tableSeperator, rowHeadFields...)
 	tb := &tbl
 	row := tb.buildRow(mainHeadArr...)
-	row = fmt.Sprintf("%s", row)
 	row = console.Colorize(fieldThemeHeader, row)
 	console.Println(row)
 	return tb
@@ -277,6 +304,7 @@ func getTransitionTick(rule lifecycleRule) string {
 	}
 	return tickCell
 }
+
 func getTransitionDate(rule lifecycleRule) string {
 	transitionDate := blankCell
 	transitionSet := (rule.Transition != nil)
@@ -301,29 +329,6 @@ func getStorageClassName(rule lifecycleRule) string {
 		storageClass = rule.Transition.StorageClass
 	}
 	return storageClass
-}
-
-func getTags(rule lifecycleRule) string {
-	var tagBfr bytes.Buffer
-	tagArr := rule.TagFilters
-	tagLth := len(rule.TagFilters)
-	var tagCellArr []string
-	if len(rule.TagFilters) == 0 && rule.RuleFilter != nil && rule.RuleFilter.And != nil {
-		tagLth = len(rule.RuleFilter.And.Tags)
-		tagArr = rule.RuleFilter.And.Tags
-	}
-	for tagIdx := 0; tagIdx < tagLth; tagIdx++ {
-		tagBfr.WriteString(tagArr[tagIdx].Key + ":" + tagArr[tagIdx].Value)
-		tagCellArr = append(tagCellArr, tagArr[tagIdx].Key+":"+tagArr[tagIdx].Value)
-		if tagIdx < len(tagArr)-1 {
-			tagBfr.WriteString(tagSeperator)
-		}
-	}
-	tagLbl := tagBfr.String()
-	if len(tagLbl) == 0 {
-		tagLbl = blankCell
-	}
-	return tagLbl
 }
 
 func getTagArr(rule lifecycleRule) []string {
@@ -381,7 +386,6 @@ func printIlmRows(tb *PrettyTable, rowCheck map[string]int, info ilmResult, show
 			newFields, newRows)
 		var row string // Table row
 		row = tb.buildRow(rowArr...)
-		row = fmt.Sprintf("%s", row)
 		console.Println(row)
 		lineRow := buildLineRow(rowArr)
 		if len(newRows) > 0 {
@@ -390,13 +394,11 @@ func printIlmRows(tb *PrettyTable, rowCheck map[string]int, info ilmResult, show
 				// console.Println(strconv.Itoa(index) + " " + strconv.FormatBool(ok) + " " + strconv.Itoa(len(newRows)))
 				if ok {
 					row = tb.buildRow(newRow...)
-					row = fmt.Sprintf("%s", row)
 					console.Println(row)
 				}
 			}
 		}
 		row = tb.buildRow(lineRow...)
-		row = fmt.Sprintf("%s", row)
 		console.Println(row)
 	}
 }
@@ -412,6 +414,7 @@ func buildLineRow(rowArr []string) []string {
 	}
 	return lineRowArr
 }
+
 func getPrefixVal(rule lifecycleRule) string {
 	prefixVal := ""
 	switch {
