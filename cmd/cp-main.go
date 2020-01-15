@@ -144,7 +144,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
 
   16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention date.
-      {{.Prompt}} {{.HelpName} --attr "x-amz-object-lock-mode=GOVERNANCE;x-amz-object-lock-retain-until-date=2020-01-11T01:57:02Z" locked.txt play/locked-bucket/
+      {{.Prompt}} {{.HelpName}} --attr "x-amz-object-lock-mode=GOVERNANCE;x-amz-object-lock-retain-until-date=2020-01-11T01:57:02Z" locked.txt play/locked-bucket/
 `,
 }
 
