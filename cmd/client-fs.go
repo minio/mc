@@ -233,6 +233,35 @@ func isStreamFile(objectPath string) bool {
 	return false
 }
 
+func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
+	mode, e := strconv.ParseUint(attr["mode"], 10, 32)
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Attempt to change the file mode.
+	if e := fd.Chmod(os.FileMode(mode)); e != nil {
+		return probe.NewError(e)
+	}
+
+	uid, e := strconv.Atoi(attr["uid"])
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	gid, e := strconv.Atoi(attr["gid"])
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Attempt to change the owner.
+	if e := fd.Chown(uid, gid); e != nil {
+		return probe.NewError(e)
+	}
+
+	return nil
+}
+
 /// Object operations.
 
 func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
@@ -268,6 +297,17 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
+	}
+
+	attr := make(map[string]string)
+	if len(metadata["mc-attrs"]) != 0 {
+		attr, e = parseAttribute(metadata["mc-attrs"][0])
+		if e != nil {
+			return 0, probe.NewError(e)
+		}
+		if err := preserveAttributes(partFile, attr); err != nil {
+			return 0, err.Trace(objectPath)
+		}
 	}
 
 	// Get stat to get the current size.
@@ -345,41 +385,7 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 			return totalWritten, err.Trace(objectPartPath, objectPath)
 		}
 
-		if len(metadata["mc-attrs"]) != 0 {
-			attr, e := parseAttribute(metadata["mc-attrs"][0])
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			mode, e := strconv.ParseUint(attr["mode"], 10, 32)
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			// Change the mode of file
-			if e := os.Chmod(objectPath, os.FileMode(mode)); e != nil {
-				if !os.IsPermission(e) {
-					return totalWritten, probe.NewError(e)
-				}
-			}
-
-			uid, e := strconv.Atoi(attr["uid"])
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			gid, e := strconv.Atoi(attr["gid"])
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			// Change the owner
-			if e := os.Chown(objectPath, uid, gid); e != nil {
-				if !os.IsPermission(e) {
-					return totalWritten, probe.NewError(e)
-				}
-			}
-
+		if len(attr) != 0 {
 			atime, e := strconv.ParseInt(attr["atime"], 10, 64)
 			if e != nil {
 				return totalWritten, probe.NewError(e)
@@ -390,13 +396,10 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 				return totalWritten, probe.NewError(e)
 			}
 
-			// Change the access, modify and change time
+			// Attempt to change the access, modify and change time
 			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(ctime, 0)); e != nil {
-				if !os.IsPermission(e) {
-					return totalWritten, probe.NewError(e)
-				}
+				return totalWritten, probe.NewError(e)
 			}
-
 		}
 	}
 	return totalWritten, nil
