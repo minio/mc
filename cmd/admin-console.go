@@ -103,7 +103,6 @@ func getLogTime(lt string) string {
 func (l logMessage) String() string {
 	var hostStr string
 	var b = &strings.Builder{}
-
 	if l.NodeName != "" {
 		hostStr = fmt.Sprintf("%s ", colorizedNodeName(l.NodeName))
 	}
@@ -116,22 +115,23 @@ func (l logMessage) String() string {
 		fmt.Fprintf(b, "%s %s", hostStr, log.ConsoleMsg)
 		return b.String()
 	}
-	traceLength := len(l.Trace.Source)
-
-	apiString := "API: " + l.API.Name + "("
-	if l.API.Args != nil && l.API.Args.Bucket != "" {
-		apiString = apiString + "bucket=" + l.API.Args.Bucket
+	if l.API != nil {
+		apiString := "API: " + l.API.Name + "("
+		if l.API.Args != nil && l.API.Args.Bucket != "" {
+			apiString = apiString + "bucket=" + l.API.Args.Bucket
+		}
+		if l.API.Args != nil && l.API.Args.Object != "" {
+			apiString = apiString + ", object=" + l.API.Args.Object
+		}
+		apiString += ")"
+		fmt.Fprintf(b, "\n%s %s", hostStr, console.Colorize("API", apiString))
 	}
-	if l.API.Args != nil && l.API.Args.Object != "" {
-		apiString = apiString + ", object=" + l.API.Args.Object
+	if l.Time != "" {
+		fmt.Fprintf(b, "\n%s Time: %s", hostStr, getLogTime(l.Time))
 	}
-	apiString += ")"
-
-	var msg = console.Colorize("LogMessage", l.Trace.Message)
-
-	fmt.Fprintf(b, "\n%s %s", hostStr, console.Colorize("Api", apiString))
-	fmt.Fprintf(b, "\n%s Time: %s", hostStr, getLogTime(l.Time))
-	fmt.Fprintf(b, "\n%s DeploymentID: %s", hostStr, l.DeploymentID)
+	if l.DeploymentID != "" {
+		fmt.Fprintf(b, "\n%s DeploymentID: %s", hostStr, l.DeploymentID)
+	}
 	if l.RequestID != "" {
 		fmt.Fprintf(b, "\n%s RequestID: %s", hostStr, l.RequestID)
 	}
@@ -141,17 +141,19 @@ func (l logMessage) String() string {
 	if l.UserAgent != "" {
 		fmt.Fprintf(b, "\n%s UserAgent: %s", hostStr, l.UserAgent)
 	}
-	fmt.Fprintf(b, "\n%s Error: %s", hostStr, msg)
-
+	if l.Trace.Message != "" {
+		fmt.Fprintf(b, "\n%s Error: %s", hostStr, console.Colorize("LogMessage", l.Trace.Message))
+	}
 	for key, value := range l.Trace.Variables {
 		if value != "" {
 			fmt.Fprintf(b, "\n%s %s=%s", hostStr, key, value)
 		}
 	}
+	traceLength := len(l.Trace.Source)
 	for i, element := range l.Trace.Source {
 		fmt.Fprintf(b, "\n%s %8v: %s", hostStr, traceLength-i, element)
-
 	}
+
 	logMsg := strings.TrimPrefix(b.String(), "\n")
 	return fmt.Sprintf("%s\n", logMsg)
 }
