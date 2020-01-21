@@ -953,6 +953,22 @@ func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate
 	})
 }
 
+// Get lifecycle configuration for a given bucket.
+func (f *fsClient) GetBucketLifecycle() (string, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetBucketLifecycle",
+		APIType: "filesystem",
+	})
+}
+
+// Set lifecycle configuration for a given bucket.
+func (f *fsClient) SetBucketLifecycle(lifecycleconfig string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetBucketLifecycle",
+		APIType: "filesystem",
+	})
+}
+
 // GetAccess - get access policy permissions.
 func (f *fsClient) GetAccess() (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
