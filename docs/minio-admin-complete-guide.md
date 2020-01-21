@@ -3,26 +3,26 @@
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```
-service  restart and stop all MinIO servers
-update   update all MinIO servers
-info     display MinIO server information
-user     manage users
-group    manage groups
-policy   manage policies defined in the MinIO server
-config   manage configuration file
-heal     heal disks, buckets and objects on MinIO server
-profile  generate profile data for debugging purposes
-top      provide top like statistics for MinIO
-trace    show http trace for minio server
-console  show console logs for MinIO server
-prometheus   manages prometheus config settings
+service     restart and stop all MinIO servers
+update      update all MinIO servers
+info        display MinIO server information
+user        manage users
+group       manage groups
+policy      manage policies defined in the MinIO server
+config      manage MinIO server configuration
+heal        heal disks, buckets and objects on MinIO server
+profile     generate profile data for debugging purposes
+top         provide top like statistics for MinIO
+trace       show http trace for MinIO server
+console     show console logs for MinIO server
+prometheus  manages prometheus config
 ```
 
 ## 1.  Download MinIO Client
 ### Docker Stable
 ```
 docker pull minio/mc
-docker run minio/mc admin info server play
+docker run minio/mc admin info play
 ```
 
 ### Docker Edge
@@ -114,23 +114,15 @@ mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqA
 Get MinIO server information for the configured alias `minio`
 
 ```
-mc admin info server minio
+mc admin info minio
+●  min.minio.io
+   Uptime: 11 hours
+   Version: 2020-01-17T22:08:02Z
+   Network: 1/1 OK
+   Drives: 4/4 OK
 
-●  192.168.1.51:9000
-   Uptime : online since 1 day ago
-  Version : 2018-05-28T04:31:38Z
-   Region :
- SQS ARNs : <none>
-    Stats : Incoming 82GiB, Outgoing 28GiB
-  Storage : Used 7.4GiB
-
-  CPU        min        avg      max
-  current    0.12%      0.14%    0.17%
-  historic   0.03%      1.27%    412.18%
-
-  MEM        usage
-  current    602 MiB
-  historic   448 MiB
+2.1 GiB Used, 158 Buckets, 12,092 Objects
+4 drives online, 0 drives offline
 ```
 
 ## 5. Everyday Use
@@ -149,43 +141,37 @@ Debug option enables debug output to console.
 *Example: Display verbose debug output for `info` command.*
 
 ```
-mc admin --debug info server minio
-mc: <DEBUG> GET /minio/admin/v1/info HTTP/1.1
-Host: 192.168.1.51:9000
-User-Agent: MinIO (linux; amd64) madmin-go/0.0.1 mc/2018-05-23T23:43:34Z
-Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20180530/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
-X-Amz-Content-Sha256: UNSIGNED-PAYLOAD
-X-Amz-Date: 20180530T001808Z
+mc: <DEBUG> GET /minio/admin/v2/info HTTP/1.1
+Host: play.minio.io
+User-Agent: MinIO (linux; amd64) madmin-go/0.0.1 mc/DEVELOPMENT.GOGET
+Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20200120//s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+X-Amz-Date: 20200120T185844Z
 Accept-Encoding: gzip
 
 mc: <DEBUG> HTTP/1.1 200 OK
-Transfer-Encoding: chunked
+Content-Length: 1105
 Accept-Ranges: bytes
+Connection: keep-alive
 Content-Security-Policy: block-all-mixed-content
 Content-Type: application/json
-Date: Wed, 30 May 2018 00:18:08 GMT
-Server: MinIO/DEVELOPMENT.2018-05-28T04-31-38Z (linux; amd64)
+Date: Mon, 20 Jan 2020 18:58:44 GMT
+Server: nginx/1.10.3 (Ubuntu)
 Vary: Origin
-X-Amz-Request-Id: 1533440573A63034
-X-Xss-Protection: "1; mode=block"
+X-Amz-Bucket-Region: us-east-1
+X-Amz-Request-Id: 15EBAD6087210B2A
+X-Xss-Protection: 1; mode=block
 
-mc: <DEBUG> Response Time:  140.70112ms
+mc: <DEBUG> Response Time:  381.860854ms
 
-●  192.168.1.51:9000
-   Uptime : online since 1 day ago
-  Version : 2018-05-28T04:31:38Z
-   Region :
- SQS ARNs : <none>
-    Stats : Incoming 82GiB, Outgoing 28GiB
-  Storage : Used 7.4GiB
+●  play.minio.io
+   Uptime: 11 hours
+   Version: 2020-01-17T22:08:02Z
+   Network: 1/1 OK
+   Drives: 4/4 OK
 
-  CPU        min        avg      max
-  current    0.12%      0.14%    0.17%
-  historic   0.03%      1.27%    412.18%
-
-  MEM        usage
-  current    602 MiB
-  historic   448 MiB
+2.1 GiB Used, 158 Buckets, 12,092 Objects
+4 drives online, 0 drives offline
 ```
 
 ### Option [--json]
@@ -194,59 +180,79 @@ JSON option enables parseable output in [JSON lines](http://jsonlines.org/) form
 *Example: MinIO server information.*
 
 ```
-mc admin --json info server minio
+mc admin --json info play
 {
-  "status": "success",
-  "service": "on",
-  "address": "192.168.1.51:9000",
-  "error": "",
-  "storage": {
-    "used": 7979370172,
-    "backend": {
-      "backendType": "FS"
+    "status": "success",
+    "info": {
+        "mode": "online",
+        "region": "us-east-1",
+        "deploymentID": "728e91fd-ed0c-4500-b13d-d143561518bf",
+        "buckets": {
+            "count": 158
+        },
+        "objects": {
+            "count": 12092
+        },
+        "usage": {
+            "size": 2249526349
+        },
+        "services": {
+            "vault": {
+                "status": "KMS configured using master key"
+            },
+            "ldap": {}
+        },
+        "backend": {
+            "backendType": "Erasure",
+            "onlineDisks": 4,
+            "rrSCData": 2,
+            "rrSCParity": 2,
+            "standardSCData": 2,
+            "standardSCParity": 2
+        },
+        "servers": [
+            {
+                "state": "ok",
+                "endpoint": "play.minio.io",
+                "uptime": 41216,
+                "version": "2020-01-17T22:08:02Z",
+                "commitID": "b0b25d558e25608e3a604888a0a43e58e8301dfb",
+                "network": {
+                    "play.minio.io": "online"
+                },
+                "disks": [
+                    {
+                        "path": "/home/play/data1",
+                        "state": "ok",
+                        "uuid": "c1f8dbf8-39c8-46cd-bab6-2c87d18db06a",
+                        "totalspace": 8378122240,
+                        "usedspace": 1410588672
+                    },
+                    {
+                        "path": "/home/play/data2",
+                        "state": "ok",
+                        "uuid": "9616d28f-5f4d-47f4-9c6d-4deb0da07cad",
+                        "totalspace": 8378122240,
+                        "usedspace": 1410588672
+                    },
+                    {
+                        "path": "/home/play/data3",
+                        "state": "ok",
+                        "uuid": "4c822d68-4d9a-4fa3-aabb-5bf5a58e5848",
+                        "totalspace": 8378122240,
+                        "usedspace": 1410588672
+                    },
+                    {
+                        "path": "/home/play/data4",
+                        "state": "ok",
+                        "uuid": "95b5a33c-193b-4a11-b13a-a99bc1483182",
+                        "totalspace": 8378122240,
+                        "usedspace": 1410588672
+                    }
+                ]
+            }
+        ]
     }
-  },
-  "network": {
-    "transferred": 90473434722,
-    "received": 30662519192
-  },
-  "server": {
-    "uptime": 157467244813288,
-    "version": "2018-05-28T04:31:38Z",
-    "commitID": "7d8c5ffb13334f4aec20a35bd2575bd7c740fb7a",
-    "region": "",
-    "sqsARN": []
-  }
-  "cpu": {
-  "addr": "play.minio.io:9000",
-  "load": [
-   {
-    "avg": 0.11,
-    "max": 0.13,
-    "min": 0.09
-   }
-  ],
-  "historicLoad": [
-   {
-    "avg": 1.270331023187104,
-    "max": 412.18000000000006,
-    "min": 0.03
-   }
-  ]
- },
- "mem": {
-  "addr": "play.minio.io:9000",
-  "usage": [
-   {
-    "mem": 631800056
-   }
-  ],
-  "historicUsage": [
-   {
-    "mem": 469437357
-   }
-  ]
- }
 }
 ```
 
@@ -264,7 +270,7 @@ Skip SSL certificate verification.
 
 ## 7. Commands
 
-|                                                                        |
+| Commands                                                               |
 |:-----------------------------------------------------------------------|
 | [**service** - restart and stop all MinIO servers](#service)           |
 | [**update** - updates all MinIO servers](#update)                      |
@@ -336,13 +342,14 @@ FLAGS:
 
 ```
 mc admin info play
-●  play.min.io
-   Uptime : online since 1 day ago
-  Version : 2018-05-28T04:31:38Z
-   Region :
- SQS ARNs : <none>
-    Stats : Incoming 82GiB, Outgoing 28GiB
-  Storage : Used 8.2GiB
+●  play.minio.io
+   Uptime: 11 hours
+   Version: 2020-01-17T22:08:02Z
+   Network: 1/1 OK
+   Drives: 4/4 OK
+
+2.1 GiB Used, 158 Buckets, 12,092 Objects
+4 drives online, 0 drives offline
 ```
 
 <a name="policy"></a>
