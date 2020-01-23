@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -431,68 +432,30 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 	})
 }
 
-// readFile reads and returns the data inside the file located
-// at the provided filepath.
-func readFile(fpath string) (io.ReadCloser, error) {
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, "/") {
-		fpath = fpath + "."
-	}
-	fpath, e := filepath.EvalSymlinks(fpath)
-	if e != nil {
-		return nil, e
-	}
-	fileData, e := os.Open(fpath)
-	if e != nil {
-		return nil, e
-	}
-	return fileData, nil
-}
-
 // Copy - copy data from source to destination
 func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
-	destination := f.PathURL.Path
-	rc, e := readFile(source)
+	rc, e := os.Open(source)
 	if e != nil {
-		err := f.toClientError(e, destination)
-		return err.Trace(destination)
+		err := f.toClientError(e, source)
+		return err.Trace(source)
 	}
 	defer rc.Close()
 
-	_, err := f.put(rc, size, map[string][]string{}, progress)
-	if err != nil {
+	destination := f.PathURL.Path
+	if _, err := f.put(rc, size, map[string][]string{}, progress); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil
 }
 
-// get - get wrapper returning object reader.
-func (f *fsClient) get() (io.ReadCloser, *probe.Error) {
-	tmppath := f.PathURL.Path
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(tmppath, string(f.PathURL.Separator)) {
-		tmppath = tmppath + "."
-	}
-
-	// Resolve symlinks.
-	_, e := filepath.EvalSymlinks(tmppath)
-	if e != nil {
-		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(f.PathURL.Path)
-	}
+// Get returns reader and any additional metadata.
+func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(f.PathURL.Path)
 	}
 	return fileData, nil
-}
-
-// Get returns reader and any additional metadata.
-func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
-	return f.get()
 }
 
 // Check if the given error corresponds to ENOTEMPTY for unix
@@ -659,7 +622,6 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 		}
 		return
 	}
-	pathURL := *f.PathURL
 	for _, fi := range files {
 		// Skip ignored files.
 		if isIgnoredFile(fi.Name()) {
@@ -670,36 +632,8 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			st, e := os.Stat(file)
 			if e != nil {
-				if os.IsPermission(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(PathInsufficientPermission{
-							Path: pathURL.Path,
-						}),
-					}
-					continue
-				}
-				if os.IsNotExist(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(BrokenSymlink{
-							Path: pathURL.Path,
-						}),
-					}
-					continue
-				}
-				if strings.Contains(e.Error(), "too many levels of symbolic links") {
-					contentCh <- &clientContent{
-						Err: probe.NewError(TooManyLevelsSymlink{
-							Path: pathURL.Path,
-						}),
-					}
-					continue
-				}
-				if e != nil {
-					contentCh <- &clientContent{
-						Err: probe.NewError(e),
-					}
-					continue
-				}
+				// Ignore any errors on symlink
+				continue
 			}
 			if strings.HasPrefix(file, prefix) {
 				contentCh <- &clientContent{
@@ -765,34 +699,8 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fp := filepath.Join(fpath, fi.Name())
 				fi, e = os.Stat(fp)
-				if os.IsPermission(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
-					}
-					continue
-				}
-				if os.IsNotExist(e) {
-					// Lstat makes no attempt to follow the broken link.
-					_, e = os.Lstat(fp)
-					contentCh <- &clientContent{
-						URL:  pathURL,
-						Size: -1,
-						Err:  probe.NewError(e),
-					}
-					continue
-				}
 				if e != nil {
-					if strings.Contains(e.Error(), "too many levels of symbolic links") {
-						contentCh <- &clientContent{
-							Err: probe.NewError(TooManyLevelsSymlink{
-								Path: pathURL.Path,
-							}),
-						}
-					} else {
-						contentCh <- &clientContent{
-							Err: probe.NewError(e),
-						}
-					}
+					// Ignore all errors on symlinks
 					continue
 				}
 			}
@@ -960,30 +868,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			fi, e = os.Stat(fp)
 			if e != nil {
-				if os.IsPermission(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(e),
-					}
-					return nil
-				}
-				if os.IsNotExist(e) {
-					// Lstat makes no attempt to follow the broken link.
-					_, e = os.Lstat(fp)
-					contentCh <- &clientContent{
-						URL:  *newClientURL(fp),
-						Size: -1,
-						Err:  probe.NewError(e),
-					}
-					return nil
-				}
-				if e != nil {
-					if strings.Contains(e.Error(), "too many levels of symbolic links") {
-						contentCh <- &clientContent{
-							Err: probe.NewError(TooManyLevelsSymlink{Path: fp}),
-						}
-					}
-				}
-				return e
+				// Ignore any errors for symlink
+				return nil
 			}
 		}
 		if fi.Mode().IsRegular() {
@@ -1173,6 +1059,9 @@ func (f *fsClient) toClientError(e error, fpath string) *probe.Error {
 	if os.IsNotExist(e) {
 		return probe.NewError(PathNotFound{Path: fpath})
 	}
+	if errors.Is(e, syscall.ELOOP) {
+		return probe.NewError(TooManyLevelsSymlink{Path: fpath})
+	}
 	return probe.NewError(e)
 }
 
@@ -1191,38 +1080,12 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 		fpath += partSuffix
 	}
 
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
-		fpath = fpath + "."
-	}
-	fpath, e = filepath.EvalSymlinks(fpath)
-	if e != nil {
-		if os.IsPermission(e) {
-			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
-		}
-		if strings.Contains(e.Error(), "too many levels of symbolic links") {
-			return nil, probe.NewError(TooManyLevelsSymlink{Path: f.PathURL.Path})
-		}
-		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(fpath)
-	}
-
 	st, e = os.Stat(fpath)
 	if e != nil {
-		if os.IsPermission(e) {
-			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
-		}
-		if os.IsNotExist(e) {
-			return nil, probe.NewError(PathNotFound{Path: f.PathURL.Path})
-		}
-		if strings.Contains(e.Error(), "too many levels of symbolic links") {
-			return nil, probe.NewError(TooManyLevelsSymlink{Path: f.PathURL.Path})
-		}
-		return nil, probe.NewError(e)
+		return nil, f.toClientError(e, fpath)
 	}
 	return st, nil
 }
 
-func (f *fsClient) AddUserAgent(app, version string) {
+func (f *fsClient) AddUserAgent(_, _ string) {
 }

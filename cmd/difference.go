@@ -286,7 +286,7 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMe
 			if err != nil {
 				// handle this specifically for filesystem related errors.
 				switch err.ToGoError().(type) {
-				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+				case PathNotFound, PathInsufficientPermission:
 					diffCh <- diffMessage{
 						Error: err,
 					}
