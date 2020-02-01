@@ -202,6 +202,18 @@ func mainAdminHeal(ctx *cli.Context) error {
 	splits := splitStr(aliasedURL, "/", 3)
 	bucket, prefix := splits[1], splits[2]
 
+	clnt, err := newClient(aliasedURL)
+	if err != nil {
+		fatalIf(err.Trace(clnt.GetURL().String()), "Unable to create client for URL ", aliasedURL)
+		return nil
+	}
+	for content := range clnt.List(false, false, false, DirNone) {
+		if content.Err != nil {
+			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to heal bucket `"+bucket+"`.")
+			return nil
+		}
+	}
+
 	// Return the background heal status when the user
 	// doesn't pass a bucket or --recursive flag.
 	if bucket == "" && !ctx.Bool("recursive") {
