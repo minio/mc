@@ -59,9 +59,12 @@ func NewQuietStatus(hook io.Reader) Status {
 
 // QuietStatus will only show the progress and summary
 type QuietStatus struct {
-	*accounter
-	hook   io.Reader
+	// Keep this as first element of struct because it guarantees 64bit
+	// alignment on 32 bit machines. atomic.* functions crash if operand is not
+	// aligned at 64bit. See https://github.com/golang/go/issues/599
 	counts int64
+	*accounter
+	hook io.Reader
 }
 
 // Read implements the io.Reader interface
@@ -151,9 +154,12 @@ func NewProgressStatus(hook io.Reader) Status {
 
 // ProgressStatus shows a progressbar
 type ProgressStatus struct {
-	*progressBar
-	hook   io.Reader
+	// Keep this as first element of struct because it guarantees 64bit
+	// alignment on 32 bit machines. atomic.* functions crash if operand is not
+	// aligned at 64bit. See https://github.com/golang/go/issues/599
 	counts int64
+	*progressBar
+	hook io.Reader
 }
 
 // Read implements the io.Reader interface

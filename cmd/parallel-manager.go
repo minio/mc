@@ -36,14 +36,17 @@ const (
 
 // ParallelManager - helps manage parallel workers to run tasks
 type ParallelManager struct {
+	// Calculate sent bytes.
+	// Keep this as first element of struct because it guarantees 64bit
+	// alignment on 32 bit machines. atomic.* functions crash if operand is not
+	// aligned at 64bit. See https://github.com/golang/go/issues/599
+	sentBytes int64
+
 	// Synchronize workers
 	wg *sync.WaitGroup
 
 	// Current threads number
 	workersNum uint32
-
-	// Calculate sent bytes.
-	sentBytes int64
 
 	// Channel to receive tasks to run
 	queueCh chan func() URLs
