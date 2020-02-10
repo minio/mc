@@ -17,14 +17,20 @@
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+const cred = "YellowItalics"
 
 var hostAddFlags = []cli.Flag{
 	cli.StringFlag{
@@ -71,24 +77,32 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com \
                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
      {{.EnableHistory}}
+
+  4. Add Amazon S3 storage service under "mys3" alias, prompting for keys.
+     {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
+     Enter Access Key: BKIKJAA5BMMU2RHO6IBB
+     Enter Secret Key: V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+
+  5. Add Amazon S3 storage service under "mys3" alias using piped keys.
+     {{.DisableHistory}}
+     {{.Prompt}} echo "BKIKJAA5BMMU2RHO6IBB\nV8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+                 {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
+     {{.EnableHistory}}
 `,
 }
 
 // checkConfigHostAddSyntax - verifies input arguments to 'config host add'.
-func checkConfigHostAddSyntax(ctx *cli.Context) {
+func checkConfigHostAddSyntax(ctx *cli.Context, accessKey, secretKey, api, bucketLookup string) {
 	args := ctx.Args()
 	argsNr := len(args)
-	if argsNr < 4 || argsNr > 5 {
+	if argsNr > 4 || argsNr < 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for host add command.")
 	}
 
 	alias := args.Get(0)
 	url := args.Get(1)
-	accessKey := args.Get(2)
-	secretKey := args.Get(3)
-	api := ctx.String("api")
-	bucketLookup := ctx.String("lookup")
+
 	if !isValidAlias(alias) {
 		fatalIf(errInvalidAlias(alias), "Invalid alias.")
 	}
@@ -213,18 +227,54 @@ func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *pro
 	return s3Config, nil
 }
 
+// fetchHostKeys - returns the user accessKey and secretKey
+func fetchHostKeys(args cli.Args) (string, string) {
+	accessKey := ""
+	secretKey := ""
+	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+	isTerminal := terminal.IsTerminal(int(os.Stdin.Fd()))
+	reader := bufio.NewReader(os.Stdin)
+
+	argsNr := len(args)
+
+	if argsNr == 2 {
+		if isTerminal {
+			fmt.Printf("%s", console.Colorize(cred, "Enter Access Key: "))
+		}
+		value, _, _ := reader.ReadLine()
+		accessKey = string(value)
+	} else {
+		accessKey = args.Get(2)
+	}
+
+	if argsNr >= 2 && argsNr <= 3 {
+		if isTerminal {
+			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
+			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+			fmt.Printf("\n")
+			secretKey = string(bytePassword)
+		} else {
+			value, _, _ := reader.ReadLine()
+			secretKey = string(value)
+		}
+	} else {
+		secretKey = args.Get(3)
+	}
+
+	return accessKey, secretKey
+}
+
 func mainConfigHostAdd(ctx *cli.Context) error {
-	checkConfigHostAddSyntax(ctx)
 
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 	var (
-		args      = ctx.Args()
-		url       = trimTrailingSeparator(args.Get(1))
-		accessKey = args.Get(2)
-		secretKey = args.Get(3)
-		api       = ctx.String("api")
-		lookup    = ctx.String("lookup")
+		args   = ctx.Args()
+		url    = trimTrailingSeparator(args.Get(1))
+		api    = ctx.String("api")
+		lookup = ctx.String("lookup")
 	)
+	accessKey, secretKey := fetchHostKeys(args)
+	checkConfigHostAddSyntax(ctx, accessKey, secretKey, api, lookup)
 
 	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
