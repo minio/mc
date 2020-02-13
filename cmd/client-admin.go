@@ -79,11 +79,11 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			var transport http.RoundTripper = &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
+					Timeout:   60 * time.Second,
+					KeepAlive: 60 * time.Second,
 				}).DialContext,
 				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
+				IdleConnTimeout:       300 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
 				TLSClientConfig:       tlsConfig,

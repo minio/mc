@@ -17,23 +17,25 @@
 package cmd
 
 import (
-	"encoding/json"
+	"flag"
+	"fmt"
 	"strings"
-	"errors"
-	
+	"syscall"
+
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminOBDFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "tests",
-		Usage: "diagnostics type, possible values are 'all', 'drive', 'net', 'sysinfo', 'hwinfo' and 'config'",
-		Value: "all",
+	OBDDataTypeFlag{
+		Name:   "data",
+		Usage:  "diagnostics type, possible values are " + options.String() + " (default $all)",
+		Value:  nil,
+		EnvVar: "MINIO_OBD_DATA",
 	},
 }
-
 
 var adminOBDCmd = cli.Command{
 	Name:   "obd",
@@ -59,7 +61,7 @@ EXAMPLES:
 type clusterOBDStruct struct {
 	Status string         `json:"status"`
 	Error  string         `json:"error,omitempty"`
-	Info   madmin.OBDInfo `json:"info,omitempty"`
+	Info   madmin.OBDInfo `json:"obdInfo,omitempty"`
 }
 
 func (u clusterOBDStruct) String() string {
@@ -88,29 +90,8 @@ func checkAdminOBDSyntax(ctx *cli.Context) {
 func mainAdminOBD(ctx *cli.Context) error {
 	checkAdminOBDSyntax(ctx)
 
-	drive, net, sysinfo, hwinfo, config := false, false, false, false, false
-	
-	types := ctx.String("tests")
-	obds := strings.Split(types, ",")
-	for _, obd := range obds {
-		switch obd {
-		case "all":
-			drive, net, sysinfo, hwinfo, config = true, true, true, true, true
-		case "drive":
-			drive = true
-		case "net":
-			net = true
-		case "sysinfo":
-			sysinfo = true
-		case "hwinfo":
-			hwinfo = true
-		case "config":
-			config = true
-		default:
-			fatalIf(probe.NewError(errors.New("unrecognized --tests option")), obd)
-		}
-	}
-	
+	types := GetOBDDataTypeSlice(ctx, "data")
+
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
@@ -119,9 +100,13 @@ func mainAdminOBD(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	if len(*types) == 0 {
+		types = &options
+	}
+
 	var clusterOBDInfo clusterOBDStruct
 	// Fetch info of all servers (cluster or single server)
-	adminOBDInfo, e := client.ServerOBDInfo(drive, net, sysinfo, hwinfo, config)
+	adminOBDInfo, e := client.ServerOBDInfo(*types)
 	if e != nil {
 		clusterOBDInfo.Status = "error"
 		clusterOBDInfo.Error = e.Error()
@@ -130,8 +115,115 @@ func mainAdminOBD(ctx *cli.Context) error {
 		clusterOBDInfo.Error = ""
 	}
 	clusterOBDInfo.Info = adminOBDInfo
-
+	
 	printMsg(clusterOBDStruct(clusterOBDInfo))
 
 	return nil
 }
+
+type OBDDataTypeSlice []madmin.OBDDataType
+
+func (d *OBDDataTypeSlice) Set(value string) error {
+	for _, v := range strings.Split(value, ",") {
+		if obdData, ok := madmin.OBDDataTypesMap[strings.Trim(v, " ")]; ok {
+			*d = append(*d, obdData)
+		} else {
+			return fmt.Errorf("valid options include %s", options.String())
+		}
+	}
+	return nil
+}
+
+func (d *OBDDataTypeSlice) String() string {
+	val := ""
+	for _, obdData := range *d {
+		formatStr := "%s"
+		if val != "" {
+			formatStr = fmt.Sprintf("%s,%%s", formatStr)
+		} else {
+			formatStr = fmt.Sprintf("%s%%s", formatStr)
+		}
+		val = fmt.Sprintf(formatStr, val, string(obdData))
+	}
+	return val
+}
+
+func (d *OBDDataTypeSlice) Value() []madmin.OBDDataType {
+	return *d
+}
+
+func (d *OBDDataTypeSlice) Get() interface{} {
+	return *d
+}
+
+type OBDDataTypeFlag struct {
+	Name   string
+	Usage  string
+	EnvVar string
+	Hidden bool
+	Value  *OBDDataTypeSlice
+}
+
+func (f OBDDataTypeFlag) String() string {
+	return fmt.Sprintf("--%s                        %s", f.Name, f.Usage)
+}
+
+func (f OBDDataTypeFlag) GetName() string {
+	return f.Name
+}
+
+func GetOBDDataTypeSlice(c *cli.Context, name string) *OBDDataTypeSlice {
+	generic := c.Generic(name)
+	if generic == nil {
+		return nil
+	}
+	if obdData, ok := generic.(*OBDDataTypeSlice); ok {
+		return obdData
+	}
+	return nil
+}
+
+func GetGlobalOBDDataTypeSlice(c *cli.Context, name string) *OBDDataTypeSlice {
+	generic := c.GlobalGeneric(name)
+	if generic == nil {
+		return nil
+	}
+	if obdData, ok := generic.(*OBDDataTypeSlice); ok {
+		return obdData
+	}
+	return nil
+}
+
+func (f OBDDataTypeFlag) Apply(set *flag.FlagSet) {
+	f.ApplyWithError(set)
+}
+
+func (f OBDDataTypeFlag) ApplyWithError(set *flag.FlagSet) error {
+	if f.EnvVar != "" {
+		for _, envVar := range strings.Split(f.EnvVar, ",") {
+			envVar = strings.TrimSpace(envVar)
+			if envVal, ok := syscall.Getenv(envVar); ok {
+				newVal := &OBDDataTypeSlice{}
+				for _, s := range strings.Split(envVal, ",") {
+					s = strings.TrimSpace(s)
+					if err := newVal.Set(s); err != nil {
+						return fmt.Errorf("could not parse %s as OBD datatype value for flag %s: %s", envVal, f.Name, err)
+					}
+				}
+				f.Value = newVal
+				break
+			}
+		}
+	}
+
+	for _, name := range strings.Split(f.Name, ",") {
+		name = strings.Trim(name, " ")
+		if f.Value == nil {
+			f.Value = &OBDDataTypeSlice{}
+		}
+		set.Var(f.Value, name, f.Usage)
+	}
+	return nil
+}
+
+var options = OBDDataTypeSlice(madmin.OBDDataTypesList)

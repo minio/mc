@@ -17,7 +17,7 @@
 package cmd
 
 import (
-	"encoding/json"
+	json "github.com/minio/mc/pkg/colorjson"
 	"fmt"
 	"os"
 
