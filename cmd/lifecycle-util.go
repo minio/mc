@@ -207,8 +207,11 @@ func getMinioClient(urlStr string) (*minio.Client, *probe.Error) {
 		return nil, err
 	}
 	api, apierr := minio.NewWithOptions(parsedHostURL.Host, &options) // Used as hostname or host:port
-	if apierr != nil {
+	if apierr != nil || api == nil {
 		return nil, probe.NewError(apierr)
+	}
+	if globalDebug && isatty.IsTerminal(os.Stdout.Fd()) {
+		api.TraceOn(os.Stderr)
 	}
 	return api, nil
 }
@@ -225,7 +228,6 @@ func getIlmConfig(urlStr string) (lfcInfo lifecycleConfiguration, err error) {
 	}
 
 	if err = xml.Unmarshal([]byte(lfcInfoXML), &lfcInfo); err != nil {
-		console.Errorln("Unable to extract lifecycle configuration from:" + urlStr)
 		return lfcInfo, err
 	}
 	return lfcInfo, nil
@@ -240,7 +242,7 @@ func getIlmInfo(urlStr string) (string, *probe.Error) {
 	}
 	api, err := getMinioClient(urlStr)
 	if err != nil || api == nil {
-		fatalIf(err, "Unable to call lifecycle methods on "+urlStr)
+		fatalIf(err, "Unable to call lifecycle configuration operations on "+urlStr)
 	}
 
 	lifecycleInfo, glcerr := api.GetBucketLifecycle(bucketName)
@@ -248,7 +250,7 @@ func getIlmInfo(urlStr string) (string, *probe.Error) {
 	if glcerr != nil {
 		pErr = probe.NewError(glcerr)
 		if _, glcerr = api.GetBucketLocation(bucketName); glcerr != nil {
-			fatalIf(probe.NewError(errors.New("bucket location/information access error")), "Unable to access bucket location or bucket lifecycle configuration.")
+			fatalIf(probe.NewError(glcerr), "Unable to access bucket location or bucket lifecycle configuration.")
 		} else {
 			pErr = nil
 		}

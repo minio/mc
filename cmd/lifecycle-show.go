@@ -45,20 +45,20 @@ DESCRIPTION:
   Ilm show command displays current lifecycle configuration.
 
 EXAMPLES:
-1. Show the lifecycle management rules (all fields) for the test34bucket on alias s3.
-	{{.Prompt}} {{.HelpName}} s3/test34bucket
+1. Show the lifecycle management rules (all fields) for the testbucket on alias s3.
+	{{.Prompt}} {{.HelpName}} s3/testbucket
 
-2. Show the lifecycle management rules (fields related to expration date/days) for the test34bucket on alias s3.
-	{{.Prompt}} {{.HelpName}} --expiry s3/test34bucket
+2. Show the lifecycle management rules (fields related to expration date/days) for the testbucket on alias s3.
+	{{.Prompt}} {{.HelpName}} --expiry s3/testbucket
 
-3. Show the lifecycle management rules (fields related to transition date/days, storage class) for the test34bucket on alias s3.
-	{{.Prompt}} {{.HelpName}} --transition s3/test34bucket
+3. Show the lifecycle management rules (fields related to transition date/days, storage class) for the testbucket on alias s3.
+	{{.Prompt}} {{.HelpName}} --transition s3/testbucket
 
-4. Show the lifecycle management rules (minimum details) for the test34bucket on alias s3.
-	{{.Prompt}} {{.HelpName}} --minimum s3/test34bucket
+4. Show the lifecycle management rules (minimum details) for the testbucket on alias s3.
+	{{.Prompt}} {{.HelpName}} --minimum s3/testbucket
 
-5. Show the lifecycle management rules in JSON format for the test34bucket on alias s3.
-	{{.Prompt}} {{.HelpName}} --json s3/test34bucket
+5. Show the lifecycle management rules in JSON format for the testbucket on alias s3.
+	{{.Prompt}} {{.HelpName}} --json s3/testbucket
 
 `,
 }
@@ -479,7 +479,8 @@ func showTags(rule lifecycleRule, showOpts showDetails) bool {
 	if showOpts.minimum {
 		return false
 	}
-	tagSet := len(rule.TagFilters) > 0 || (rule.RuleFilter != nil && rule.RuleFilter.And != nil && (len(rule.RuleFilter.And.Tags) > 0))
+	tagSet := showOpts.allAvailable ||
+		(len(rule.TagFilters) > 0 || (rule.RuleFilter != nil && rule.RuleFilter.And != nil && (len(rule.RuleFilter.And.Tags) > 0)))
 	return tagSet
 }
 

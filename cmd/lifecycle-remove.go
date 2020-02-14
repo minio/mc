@@ -48,10 +48,10 @@ DESCRIPTION:
 
 
 EXAMPLES:
-1. Remove the lifecycle management configuration rule denoted by ID with value "Documents" for the test34bucket on alias s3. ID is case sensitive.
-	{{.Prompt}} {{.HelpName}} --id "Documents" s3/test34bucket
-2. Remove ALL the lifecycle management configuration rules for the test34bucket on alias s3. Because the result is complete removal, the use of --force flag is enforced.
-	{{.Prompt}} {{.HelpName}} --all --force s3/test34bucket
+1. Remove the lifecycle management configuration rule denoted by ID with value "Documents" for the testbucket on alias s3. ID is case sensitive.
+	{{.Prompt}} {{.HelpName}} --id "Documents" s3/testbucket
+2. Remove ALL the lifecycle management configuration rules for the testbucket on alias s3. Because the result is complete removal, the use of --force flag is enforced.
+	{{.Prompt}} {{.HelpName}} --all --force s3/testbucket
 
 
 `,
@@ -105,7 +105,6 @@ func ilmAllRemove(urlStr string) error {
 		apierrstr := "unable to initialize the API to remove bucket lifecycle configuration"
 		console.Errorln(apierrstr)
 		return errors.New(apierrstr)
-
 	}
 	if ilmErr := api.SetBucketLifecycle(bkt, ""); ilmErr != nil {
 		failureStr := "Failure. Lifecycle configuration not removed for bucket " + bkt
@@ -126,7 +125,6 @@ func ilmIDRemove(ilmID string, urlStr string) (bool, error) {
 
 	api, pErr := getMinioClient(urlStr)
 	if pErr != nil {
-		console.Errorln("Error removing bucket lifecycle configuration. " + pErr.String())
 		return false, pErr.ToGoError()
 	}
 	if api == nil {
@@ -134,12 +132,10 @@ func ilmIDRemove(ilmID string, urlStr string) (bool, error) {
 		return false, errors.New(errstr)
 	}
 	if lfcInfoXML, pErr = getIlmInfo(urlStr); pErr != nil {
-		console.Errorln("Error generating lifecycle contents in XML: " + pErr.ToGoError().Error() + " Target:" + urlStr)
 		return false, pErr.ToGoError()
 	}
 	if lfcInfoXML != "" {
 		if err = xml.Unmarshal([]byte(lfcInfoXML), &lfcInfo); err != nil {
-			console.Errorln("Error getting lifecycle configuration in XML. Target:" + urlStr)
 			return false, err
 		}
 		idx := 0
@@ -189,7 +185,7 @@ func mainLifecycleRemove(ctx *cli.Context) error {
 	ilmID = ctx.String(strings.ToLower(idLabel))
 	if ilmID != "" {
 		if res, err = ilmIDRemove(ilmID, objectURL); err != nil {
-			failStr += "ID: " + ilmID + " Error: " + err.Error()
+			failStr += "ID: " + ilmID + "Target: " + objectURL + " Error: " + err.Error()
 			console.Println(console.Colorize(fieldThemeResultFailure, failStr))
 		}
 		if !res {

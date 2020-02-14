@@ -42,10 +42,10 @@ TARGET:
 	This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
 
 EXAMPLES:
-1. Redirect output of lifecycle configuration rules of the test34bucket on alias s3 to the file s3_34bkt_lifecycle.json
-	{{.Prompt}} {{.HelpName}} s3/test34bucket >> /Users/miniouser/Documents/s3_34bkt_lifecycle.json
-2. Show lifecycle configuration rules of the test34bucket on alias s3 on STDOUT
-	{{.Prompt}} {{.HelpName}} s3/test34bucket
+1. Redirect output of lifecycle configuration rules of the testbucket on alias s3 to the file lifecycle.json
+	{{.Prompt}} {{.HelpName}} s3/testbucket >> /Users/miniouser/Documents/lifecycle.json
+2. Show lifecycle configuration rules of the testbucket on alias s3 on STDOUT
+	{{.Prompt}} {{.HelpName}} s3/testbucket
 
 `,
 }

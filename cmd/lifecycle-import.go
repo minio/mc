@@ -47,10 +47,10 @@ TARGET:
 	This argument needs to be in the format of 'alias/bucket/prefix' or 'alias/bucket'
 
 EXAMPLES:
-1. Set lifecycle configuration for the test34bucket on alias s3 to the rules imported from s3_34bkt_lifecycle.json
-	{{.Prompt}} {{.HelpName}} s3/test34bucket < /Users/miniouser/Documents/s3_34bkt_lifecycle.json
-2. Set lifecycle configuration for the test34bucket on alias s3. User is expected to enter the JSON contents on STDIN
-	{{.Prompt}} {{.HelpName}} s3/test34bucket
+1. Set lifecycle configuration for the testbucket on alias s3 to the rules imported from lifecycle.json
+	{{.Prompt}} {{.HelpName}} s3/testbucket < /Users/miniouser/Documents/lifecycle.json
+2. Set lifecycle configuration for the testbucket on alias s3. User is expected to enter the JSON contents on STDIN
+	{{.Prompt}} {{.HelpName}} s3/testbucket
 
 `,
 }

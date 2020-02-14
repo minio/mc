@@ -52,14 +52,14 @@ TARGET:
 	This argument needs to be in the format of 'alias/bucket'
 
 EXAMPLES:
-1. Add rule for the test34bucket on s3. Both expiry & transition are given as dates.
-	{{.Prompt}} {{.HelpName}} --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" --transition-date "2020-05-01" --storage-class "GLACIER" s3/test34bucket
+1. Add rule for the testbucket on s3. Both expiry & transition are given as dates.
+	{{.Prompt}} {{.HelpName}} --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" --transition-date "2020-05-01" --storage-class "GLACIER" s3/testbucket
 
-2. Add rule for the test34bucket on s3. Both expiry and transition are given as number of days.
-	{{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" --expiry-days "200" --transition-days "300 days" --storage-class "GLACIER" s3/test34bucket
+2. Add rule for the testbucket on s3. Both expiry and transition are given as number of days.
+	{{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" --expiry-days "200" --transition-days "300 days" --storage-class "GLACIER" s3/testbucket
 
-3. Add rule for the test34bucket on s3. Only expiry is given as number of days.
-	{{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" --expiry-days "200" --tags "docformat:docx" --tags "plaintextformat:txt" --tags "PDFFormat:pdf" s3/test34bucket
+3. Add rule for the testbucket on s3. Only expiry is given as number of days.
+	{{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" --expiry-days "200" --tags "docformat:docx" --tags "plaintextformat:txt" --tags "PDFFormat:pdf" s3/testbucket
 
 `,
 }
@@ -164,7 +164,7 @@ func validateTranExpDate(rule lifecycleRule) error {
 func validateTranDays(rule lifecycleRule) error {
 	transitionSet := (rule.Transition != nil)
 	transitionDaySet := transitionSet && (rule.Transition.TransitionInDays > 0)
-	if transitionDaySet && rule.Transition.TransitionInDays <= 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
+	if transitionDaySet && rule.Transition.TransitionInDays < 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
 		return errors.New("Transition Date/Days are less than or equal to 30 and Storage class is STANDARD_IA")
 	}
 	return nil
@@ -212,7 +212,7 @@ func getTransition(ctx *cli.Context) (lifecycleTransition, error) {
 		console.Errorln("Error in Transition/Storage class argument specification.")
 		return transition, errors.New("transition/storage class argument error")
 	case err != nil:
-		console.Errorln("Error in transition date/day(s) argument. Error:" + err.Error())
+		console.Errorln("Error in transition date/day(s) argument.")
 		return lifecycleTransition{}, err
 	case transitionDayCheck || transitionDateCheck:
 		transition.StorageClass = storageClassArg
@@ -237,11 +237,7 @@ func getExpiry(ctx *cli.Context) (lifecycleExpiration, error) {
 		expiryArg = ctx.String(strings.ToLower(expiryDatesLabelFlag))
 		expiryDate, err = time.Parse(defaultILMDateFormat, expiryArg)
 		if err != nil || expiryDate.IsZero() {
-			errStr := "Error in Expiration argument:" + expiryArg + " date conversion."
-			if err != nil {
-				errStr += " " + err.Error()
-			}
-			console.Errorln(errStr)
+			console.Errorln("Error in Expiration argument " + expiryArg + " date conversion.")
 		} else {
 			expiry.ExpirationDate = &expiryDate
 		}
@@ -249,8 +245,7 @@ func getExpiry(ctx *cli.Context) (lifecycleExpiration, error) {
 		expiryArg = ctx.String(strings.ToLower(expiryDaysLabelFlag))
 		expiry.ExpirationInDays, err = strconv.Atoi(expiryArg)
 		if err != nil {
-			errStr := "Error in Expiration argument:" + expiryArg + " days conversion:" + err.Error()
-			console.Errorln(errStr)
+			console.Errorln("Error in Expiration argument " + expiryArg + " days conversion.")
 		}
 	}
 
@@ -273,8 +268,7 @@ func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *lifecycleConfiguration
 	ilmID := ctx.String(strings.ToLower(idLabel))
 	ilmPrefix := ctx.String(strings.ToLower(prefixLabel))
 	if ilmID == "" {
-		console.Errorln("Lifecycle configuration rule cannot added without ID")
-		return lifecycleRule{}, errors.New("lifecycle configuration rule cannot added without ID")
+		return lifecycleRule{}, errors.New("lifecycle configuration rule cannot be added without ID")
 	}
 	ilmStatus := statusLabelKey
 	if ilmDisabled := ctx.Bool(strings.ToLower(statusDisabledLabel)); ilmDisabled {
@@ -343,37 +337,35 @@ func setILM(urlStr string, ilm lifecycleConfiguration) error {
 	var cBfr []byte
 	var bkt string
 	var api *minio.Client
-	showILMErr := func(errStr string) {
+	setILMErr := func(errStr string) string {
+		var setErrStr string
 		if pErr != nil {
 			err = pErr.ToGoError()
 		}
 		if err != nil {
-			errStr += ". " + err.Error()
-			console.Errorln(errStr)
+			setErrStr = errStr + ". " + err.Error()
 		}
+		return setErrStr
 	}
 	var errStr string
 	if api, pErr = getMinioClient(urlStr); pErr != nil {
-		errStr = "Unable to get client to set lifecycle from url: " + urlStr
-		showILMErr(errStr)
+		errStr = setILMErr("Unable to get client to set lifecycle from url: " + urlStr)
 		return errors.New(errStr)
 	}
 
 	if bkt = getBucketNameFromURL(urlStr); bkt == "" || len(bkt) == 0 {
-		errStr = "Error bucket name " + urlStr
-		showILMErr(errStr)
+		errStr = setILMErr("Error bucket name " + urlStr)
 		return errors.New(errStr)
 	}
 
 	if cBfr, err = xml.Marshal(ilm); err != nil {
-		showILMErr("XML Conversion error.")
-		return err
+		errStr = setILMErr("XML Conversion error.")
+		return errors.New(errStr)
 	}
 	bktLCStr := string(cBfr)
 
 	if err = api.SetBucketLifecycle(bkt, bktLCStr); err != nil {
-		errStr = "Unable to set lifecycle for bucket: " + bkt + ". Target: " + urlStr
-		showILMErr(errStr)
+		errStr = setILMErr("Unable to set lifecycle for bucket: " + bkt + ". Target: " + urlStr)
 		return errors.New(errStr)
 	}
 
