@@ -141,19 +141,24 @@ func (l logMessage) String() string {
 	if l.UserAgent != "" {
 		fmt.Fprintf(b, "\n%s UserAgent: %s", hostStr, l.UserAgent)
 	}
-	if l.Trace.Message != "" {
-		fmt.Fprintf(b, "\n%s Error: %s", hostStr, console.Colorize("LogMessage", l.Trace.Message))
-	}
-	for key, value := range l.Trace.Variables {
-		if value != "" {
-			fmt.Fprintf(b, "\n%s %s=%s", hostStr, key, value)
+	if l.Trace != nil {
+		if l.Trace.Message != "" {
+			fmt.Fprintf(b, "\n%s Error: %s", hostStr, console.Colorize("LogMessage", l.Trace.Message))
+		}
+		if l.Trace.Variables != nil {
+			for key, value := range l.Trace.Variables {
+				if value != "" {
+					fmt.Fprintf(b, "\n%s %s=%s", hostStr, key, value)
+				}
+			}
+		}
+		if l.Trace.Source != nil {
+			traceLength := len(l.Trace.Source)
+			for i, element := range l.Trace.Source {
+				fmt.Fprintf(b, "\n%s %8v: %s", hostStr, traceLength-i, element)
+			}
 		}
 	}
-	traceLength := len(l.Trace.Source)
-	for i, element := range l.Trace.Source {
-		fmt.Fprintf(b, "\n%s %8v: %s", hostStr, traceLength-i, element)
-	}
-
 	logMsg := strings.TrimPrefix(b.String(), "\n")
 	return fmt.Sprintf("%s\n", logMsg)
 }
