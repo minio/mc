@@ -119,7 +119,7 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 #### Usage
 
 ```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] <API-SIGNATURE>
+mc config host add <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
 ```
 
 Keys must be supplied by argument or standard input.
