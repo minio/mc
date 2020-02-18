@@ -410,9 +410,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			}
 
 			sourceURL := newClientURL(eventPath)
-			// trim trailing slash from source url
-			sourceURLStr := strings.TrimSuffix(sourceURLFull, string(sourceURL.Separator))
-			aliasedPath := strings.Replace(eventPath, sourceURLStr, mj.sourceURL, -1)
 
 			// build target path, it is the relative of the eventPath with the sourceUrl
 			// joined to the targetURL.
@@ -427,45 +424,30 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
 			targetURL := newClientURL(expandedTargetPath)
-
-			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-			srcSSE := getSSE(sourcePath, mj.encKeyDB[sourceAlias])
 			tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
 
 			if (event.Type == EventCreate) ||
+				(event.Type == EventCreateCopy) ||
 				(event.Type == EventCreatePutRetention) {
 				mirrorURL := URLs{
 					SourceAlias: sourceAlias,
 					SourceContent: &clientContent{
 						URL:       *sourceURL,
 						Retention: event.Type == EventCreatePutRetention,
+						Size:      event.Size,
+						Metadata:  event.UserMetadata,
 					},
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
 				}
-				sourceClient, err := newClient(aliasedPath)
-				if err != nil {
-					// cannot create sourceclient
-					mj.statusCh <- mirrorURL.WithError(err)
-					continue
-				}
-				// we are checking if a destination file exists now, and if we only
-				// overwrite it when force is enabled.
-				sourceContent, err := sourceClient.Stat(false, true, false, srcSSE)
-				if err != nil {
-					// source doesn't exist anymore
-					mj.statusCh <- mirrorURL.WithError(err)
-					continue
-				}
-				if sourceContent.Metadata[multiMasterETagKey] != "" {
-					// If source has multiMasterETagKey, it means that the object was uplooaded by "mc mirror"
+				if mirrorURL.SourceContent.Metadata[multiMasterETagKey] != "" {
+					// If source has multiMasterETagKey, it means that the
+					// object was uplooaded by "mc mirror"
 					// hence ignore the event to avoid copying it.
 					continue
 				}
-				sourceContent.Retention = event.Type == EventCreatePutRetention
-				mirrorURL.SourceContent = sourceContent
-				if event.Size == 0 {
+				if mirrorURL.SourceContent.Size == 0 && mirrorURL.SourceContent.Retention {
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
@@ -475,7 +457,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					shouldQueue := false
 					if !mj.isOverwrite {
 						_, err = targetClient.Stat(false, false, false, tgtSSE)
-						if err == nil || event.Type != EventCreatePutRetention {
+						if err == nil {
 							continue
 						} // doesn't exist
 						shouldQueue = true
@@ -483,7 +465,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
 						// adjust total, because we want to show progress of
 						// the item still queued to be copied.
-						mj.status.Add(sourceContent.Size)
+						mj.status.Add(mirrorURL.SourceContent.Size)
 						mj.status.SetTotal(mj.status.Get()).Update()
 						mj.status.AddCounts(1)
 						mirrorURL.TotalSize = mj.status.Get()
@@ -502,7 +484,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					}
 					_, err = targetClient.Stat(false, false, false, tgtSSE)
 					if err == nil {
-						if event.Type == EventCreatePutRetention {
+						if mirrorURL.SourceContent.Retention {
 							shouldQueue = true
 						} else {
 							continue
@@ -511,7 +493,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					shouldQueue = true
 				}
 				if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
-					mirrorURL.SourceContent.Size = event.Size
 					// adjust total, because we want to show progress
 					// of the itemj stiil queued to be copied.
 					mj.status.Add(mirrorURL.SourceContent.Size)
