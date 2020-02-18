@@ -603,25 +603,38 @@ func (c *s3Client) watchOneBucket(bucket, prefix, suffix string, events []string
 			u := *c.targetURL
 			u.Path = path.Join(string(u.Separator), bucketName, key)
 			if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:PutRetention") {
+				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:Copy") {
 					eventChan <- EventInfo{
-						Time:      record.EventTime,
-						Size:      record.S3.Object.Size,
-						Path:      u.String(),
-						Type:      EventCreatePutRetention,
-						Host:      record.Source.Host,
-						Port:      record.Source.Port,
-						UserAgent: record.Source.UserAgent,
+						Time:         record.EventTime,
+						Size:         record.S3.Object.Size,
+						UserMetadata: record.S3.Object.UserMetadata,
+						Path:         u.String(),
+						Type:         EventCreateCopy,
+						Host:         record.Source.Host,
+						Port:         record.Source.Port,
+						UserAgent:    record.Source.UserAgent,
+					}
+				} else if strings.HasPrefix(record.EventName, "s3:ObjectCreated:PutRetention") {
+					eventChan <- EventInfo{
+						Time:         record.EventTime,
+						Size:         record.S3.Object.Size,
+						UserMetadata: record.S3.Object.UserMetadata,
+						Path:         u.String(),
+						Type:         EventCreatePutRetention,
+						Host:         record.Source.Host,
+						Port:         record.Source.Port,
+						UserAgent:    record.Source.UserAgent,
 					}
 				} else {
 					eventChan <- EventInfo{
-						Time:      record.EventTime,
-						Size:      record.S3.Object.Size,
-						Path:      u.String(),
-						Type:      EventCreate,
-						Host:      record.Source.Host,
-						Port:      record.Source.Port,
-						UserAgent: record.Source.UserAgent,
+						Time:         record.EventTime,
+						Size:         record.S3.Object.Size,
+						UserMetadata: record.S3.Object.UserMetadata,
+						Path:         u.String(),
+						Type:         EventCreate,
+						Host:         record.Source.Host,
+						Port:         record.Source.Port,
+						UserAgent:    record.Source.UserAgent,
 					}
 				}
 			} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
@@ -635,23 +648,25 @@ func (c *s3Client) watchOneBucket(bucket, prefix, suffix string, events []string
 				}
 			} else if record.EventName == minio.ObjectAccessedGet {
 				eventChan <- EventInfo{
-					Time:      record.EventTime,
-					Size:      record.S3.Object.Size,
-					Path:      u.String(),
-					Type:      EventAccessedRead,
-					Host:      record.Source.Host,
-					Port:      record.Source.Port,
-					UserAgent: record.Source.UserAgent,
+					Time:         record.EventTime,
+					Size:         record.S3.Object.Size,
+					UserMetadata: record.S3.Object.UserMetadata,
+					Path:         u.String(),
+					Type:         EventAccessedRead,
+					Host:         record.Source.Host,
+					Port:         record.Source.Port,
+					UserAgent:    record.Source.UserAgent,
 				}
 			} else if record.EventName == minio.ObjectAccessedHead {
 				eventChan <- EventInfo{
-					Time:      record.EventTime,
-					Size:      record.S3.Object.Size,
-					Path:      u.String(),
-					Type:      EventAccessedStat,
-					Host:      record.Source.Host,
-					Port:      record.Source.Port,
-					UserAgent: record.Source.UserAgent,
+					Time:         record.EventTime,
+					Size:         record.S3.Object.Size,
+					UserMetadata: record.S3.Object.UserMetadata,
+					Path:         u.String(),
+					Type:         EventAccessedStat,
+					Host:         record.Source.Host,
+					Port:         record.Source.Port,
+					UserAgent:    record.Source.UserAgent,
 				}
 			}
 		}
