@@ -29,6 +29,10 @@ type EventType string
 const (
 	// EventCreate notifies when a new object is created
 	EventCreate EventType = "ObjectCreated"
+
+	// EventCreateCopy notifies when there was a server side copy
+	EventCreateCopy EventType = "ObjectCreated:Copy"
+
 	// EventCreatePutRetention notifies when a retention configuration is added to an object
 	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
 	// EventRemove notifies when a new object is deleted
@@ -44,13 +48,14 @@ const (
 // EventInfo contains the information of the event that occurred and the source
 // IP:PORT of the client which triggerred the event.
 type EventInfo struct {
-	Time      string
-	Size      int64
-	Path      string
-	Type      EventType
-	Host      string
-	Port      string
-	UserAgent string
+	Time         string
+	Size         int64
+	UserMetadata map[string]string
+	Path         string
+	Type         EventType
+	Host         string
+	Port         string
+	UserAgent    string
 }
 
 type watchParams struct {
