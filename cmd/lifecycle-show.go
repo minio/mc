@@ -18,11 +18,13 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"strconv"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -66,16 +68,31 @@ EXAMPLES:
 var ilmShowFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "expiry",
-		Usage: "show expiration information",
+		Usage: "show expiration field(s)",
 	},
 	cli.BoolFlag{
 		Name:  "transition",
-		Usage: "show transition information",
+		Usage: "show transition field(s)",
 	},
 	cli.BoolFlag{
 		Name:  "minimum",
 		Usage: "show minimum fields",
 	},
+}
+
+func invalidFlagSet(ctx *cli.Context) bool {
+	var flags = [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json"), ctx.Bool("transition"), ctx.Bool("minimum")}
+	foundSet := false
+	idx := 0
+	for range flags {
+		if foundSet && flags[idx] {
+			return true
+		} else if flags[idx] {
+			foundSet = true
+		}
+		idx++
+	}
+	return false
 }
 
 // showopts gives an idea about what details user prefers to see.
@@ -116,6 +133,9 @@ func checkIlmShowSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		cli.ShowCommandHelp(ctx, "show")
 		os.Exit(globalErrorExitStatus)
+	}
+	if invalidFlagSet(ctx) {
+		fatalIf(probe.NewError(errors.New("Invalid input flag(s)")), "Only one show field flag allowed for show command. Refer mc "+ctx.Command.FullName()+" --help for details.")
 	}
 }
 
@@ -187,8 +207,11 @@ func getColumnWidthTable() map[string]int {
 
 // This cell will have multiple rows.
 // This function was first written for multiple tags as we couldn't have all tags in 1 row.
-func checkAddTableCellRows(fieldArr *[]Field, rowArr *[]string, rowCheck map[string]int, cellInfo tableCellInfo,
-	newFields map[int][]Field, newRows map[int][]string) {
+func checkAddTableCellRows(fieldArr *[]Field, rowArr *[]string, rowCheck map[string]int, showOpts showDetails,
+	cellInfo tableCellInfo, newFields map[int][]Field, newRows map[int][]string) {
+	if showOpts.minimum {
+		return
+	}
 	multLth := len(cellInfo.multLabels)
 	if cellInfo.label != "" || multLth <= 0 {
 		if colIdx, ok := rowCheck[cellInfo.labelKey]; ok {
@@ -391,7 +414,7 @@ func printIlmRows(tb *PrettyTable, rowCheck map[string]int, info lifecycleConfig
 		var newFields map[int][]Field
 		newRows = make(map[int][]string)
 		newFields = make(map[int][]Field)
-		checkAddTableCellRows(&rowFields, &rowArr, rowCheck,
+		checkAddTableCellRows(&rowFields, &rowArr, rowCheck, showOpts,
 			tableCellInfo{multLabels: getTagArr(rule), label: "", labelKey: tagLabel, fieldTheme: fieldThemeRow, columnWidth: tagWidth, align: leftAlign},
 			newFields, newRows)
 		printRowAndLine(tb, rowArr, newRows)

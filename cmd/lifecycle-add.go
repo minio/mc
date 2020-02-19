@@ -111,7 +111,7 @@ func checkIlmAddSyntax(ctx *cli.Context) {
 	}
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	//Empty or whatever
+	// Checking for Empty configuration, bucket access. etc.
 	_, err := getIlmInfo(objectURL)
 	if err != nil {
 		console.Errorln(console.Colorize(fieldMainHeader, "Possible error in the arguments or access. "+err.String()))

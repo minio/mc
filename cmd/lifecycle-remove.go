@@ -81,12 +81,12 @@ func checkIlmRemoveSyntax(ctx *cli.Context) {
 	ilmForce := ctx.Bool(forceLabel)
 	forceChk := (ilmAll && ilmForce) || (!ilmAll && !ilmForce)
 	if !forceChk {
-		fatalIf(errInvalidArgument(), "Mandatory to enter --all & --force flag together. Force flag enforced for all deletion (only).")
+		fatalIf(probe.NewError(errors.New("Flag missing or wrong")), "Mandatory to enter --all & --force flag together for mc "+ctx.Command.FullName()+".")
 	}
 
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	//Empty or whatever
+	// Checking for Empty configuration, bucket access. etc.
 	_, err := getIlmInfo(objectURL)
 	if err != nil {
 		console.Errorln(console.Colorize(fieldMainHeader, "Possible error in the arguments or access. "+err.String()))

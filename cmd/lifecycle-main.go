@@ -25,7 +25,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-// TODO: The usage and examples will change as the command implementation evolves after feedback.
 var ilmCmd = cli.Command{
 	Name:   "ilm",
 	Usage:  "configure bucket lifecycle",
@@ -104,7 +103,7 @@ type lifecycleConfiguration struct {
 	Rules   []lifecycleRule `xml:"Rule"`
 }
 
-// checkIlmExportSyntax - validate arguments passed by a user
+// checkIlmMainSyntax - validate arguments passed by a user
 func checkIlmMainSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		cli.ShowCommandHelp(ctx, "")

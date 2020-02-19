@@ -27,7 +27,6 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-// TODO: The usage and examples will change as the command implementation evolves after feedback.
 var ilmImportCmd = cli.Command{
 	Name:   "import",
 	Usage:  "import lifecycle configuration in JSON format",
@@ -55,7 +54,7 @@ EXAMPLES:
 `,
 }
 
-// checkIlmSetSyntax - validate arguments passed by a user
+// checkIlmImportSyntax - validate arguments passed by a user
 func checkIlmImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelp(ctx, "import")
