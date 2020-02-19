@@ -1287,7 +1287,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
-		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
+		if strings.HasSuffix(prefix, string(c.targetURL.Separator)) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Type = os.ModeDir
 			if isFetchMeta {
@@ -1301,7 +1301,8 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
-		} else if objectStat.Key == object {
+		} else if strings.Contains(objectStat.Key, object) {
+			// Object name could be either full-name or a prefix
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Time = objectStat.LastModified
 			objectMetadata.Size = objectStat.Size

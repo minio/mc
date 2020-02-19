@@ -256,7 +256,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
 
 	isRecursive := true
-	for content := range clnt.List(isRecursive, isIncomplete, false, DirLast) {
+	for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
 			switch content.Err.ToGoError().(type) {
