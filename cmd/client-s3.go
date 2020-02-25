@@ -1287,7 +1287,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
-		if strings.HasSuffix(prefix, string(c.targetURL.Separator)) {
+		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Type = os.ModeDir
 			if isFetchMeta {
