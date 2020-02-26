@@ -180,14 +180,6 @@ func mainRetention(ctx *cli.Context) error {
 	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("RetentionPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("RetentionMessageFailure", color.New(color.FgYellow))
-
-	// Parse encryption keys per command.
-	_, err := getEncKeys(ctx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
-	// lock specific flags.
-	clearLock := ctx.Bool("clear")
-
 	args := ctx.Args()
 
 	var urlStr string
@@ -198,10 +190,6 @@ func mainRetention(ctx *cli.Context) error {
 	switch l := len(args); l {
 	case 3:
 		urlStr = args[0]
-		if clearLock {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "clear flag must be passed with target alone")
-		}
-
 		m := minio.RetentionMode(strings.ToUpper(args[1]))
 		if !m.IsValid() {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
