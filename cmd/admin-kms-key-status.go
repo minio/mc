@@ -86,6 +86,6 @@ func (s kmsKeyStatusMsg) String() string {
 }
 
 func (s kmsKeyStatusMsg) JSON() string {
-	const fmtStr = `{"key-id":"%s","encryption-error":"%s","update-error":"%s","decryption-error":"%s"}`
-	return fmt.Sprintf(fmtStr, s.KeyID, s.EncryptionErr, s.UpdateErr, s.DecryptionErr)
+	const fmtStr = `{"key-id":"%s","encryption-error":"%s","decryption-error":"%s"}`
+	return fmt.Sprintf(fmtStr, s.KeyID, s.EncryptionErr, s.DecryptionErr)
 }
