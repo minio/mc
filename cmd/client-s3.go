@@ -2069,12 +2069,13 @@ func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 }
 
 // Set object retention for a given object.
-func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
+func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 
 	opts := minio.PutObjectRetentionOptions{
-		RetainUntilDate: retainUntilDate,
-		Mode:            mode,
+		RetainUntilDate:  retainUntilDate,
+		Mode:             mode,
+		GovernanceBypass: bypassGovernance,
 	}
 	err := c.api.PutObjectRetention(bucket, object, opts)
 	if err != nil {
