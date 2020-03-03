@@ -87,6 +87,7 @@ github.com/frankban/quicktest v1.7.2/go.mod h1:jaStnuzAqU1AJdCO0l53JDCJrVDKcS03D
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 h1:Mn26/9ZMNWSw9C9ERFA1PUxfmGpolnw2v0bKOREu5ew=
 github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32/go.mod h1:GIjDIg/heH5DOkXY3YJ/wNhfHsQHoXGjl8G8amsYQ1I=
+github.com/go-ini/ini v1.52.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-ldap/ldap v3.0.2+incompatible/go.mod h1:qfd9rJvER9Q0/D/Sqn1DfHRoBp40uXYvFoEVrNEPqRc=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
@@ -257,6 +258,8 @@ github.com/minio/minio v0.0.0-20200312144740-ed4bd20a7cfc h1:JvRNAEmHghf0mPluxNL
 github.com/minio/minio v0.0.0-20200312144740-ed4bd20a7cfc/go.mod h1:QbCnTGb/blyNjrkyxB9ecKxtuWWUdcHShqED1bItwa0=
 github.com/minio/minio v0.0.0-20200321002836-bf545dc3203b h1:8TWH16dqfdsSddYC29tBgRpTLxITy0LN/Dg5VFZezdY=
 github.com/minio/minio v0.0.0-20200321002836-bf545dc3203b/go.mod h1:cUjzu4ZZy1YdtUjCSBWsxoa+z2NqCRohj6EyFIQA3gE=
+github.com/minio/minio v0.0.0-20200321170220-27b8f18cce9b h1:tz+JNZ3kibon/xg5lrEMR7tirgEi57bekJkqLfaIlZI=
+github.com/minio/minio v0.0.0-20200321170220-27b8f18cce9b/go.mod h1:cUjzu4ZZy1YdtUjCSBWsxoa+z2NqCRohj6EyFIQA3gE=
 github.com/minio/minio-go/v6 v6.0.45/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=
 github.com/minio/minio-go/v6 v6.0.50-0.20200306231101-b882ba63d570 h1:GLTZoRC6rhCTucnkJAQ63LhMU2S4CM71MRc9gfX7ohE=
 github.com/minio/minio-go/v6 v6.0.50-0.20200306231101-b882ba63d570/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=

@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2018 MinIO, Inc.
+ * MinIO Client (C) 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,32 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/fatih/color"
+	"github.com/minio/cli"
+	"github.com/minio/minio/pkg/console"
+)
 
-var adminUserCmd = cli.Command{
-	Name:   "user",
-	Usage:  "manage users",
-	Action: mainAdminUser,
+var adminUserSACmd = cli.Command{
+	Name:   "sa",
+	Usage:  "manage service accounts",
+	Action: mainAdminUserSA,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminUserAddCmd,
-		adminUserDisableCmd,
-		adminUserEnableCmd,
-		adminUserRemoveCmd,
-		adminUserListCmd,
-		adminUserInfoCmd,
-		adminUserSACmd,
+		adminUserSAGenerateCmd,
+		adminUserSAShowCmd,
 	},
-	HideHelpCommand: true,
 }
 
-// mainAdminUser is the handle for "mc admin config" command.
-func mainAdminUser(ctx *cli.Context) error {
+func setSACommandColors() {
+	console.SetColor("SA", color.New(color.FgCyan, color.Bold))
+	console.SetColor("AccessKey", color.New(color.FgYellow))
+	console.SetColor("SecretKey", color.New(color.FgRed))
+	console.SetColor("SessionToken", color.New(color.FgBlue))
+}
+
+func mainAdminUserSA(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "get", "set" have their own main.
