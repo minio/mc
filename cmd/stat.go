@@ -164,7 +164,7 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
-			return nil, errTargetNotFound(targetURL)
+			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
 		_, stat, err := url2Stat(url, true, true, encKeyDB)
