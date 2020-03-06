@@ -92,7 +92,7 @@ EXAMPLES:
 }
 
 // checkConfigHostAddSyntax - verifies input arguments to 'config host add'.
-func checkConfigHostAddSyntax(ctx *cli.Context, accessKey, secretKey, api, bucketLookup string) {
+func checkConfigHostAddSyntax(ctx *cli.Context, accessKey string, secretKey string) {
 	args := ctx.Args()
 	argsNr := len(args)
 	if argsNr > 4 || argsNr < 2 {
@@ -102,6 +102,8 @@ func checkConfigHostAddSyntax(ctx *cli.Context, accessKey, secretKey, api, bucke
 
 	alias := args.Get(0)
 	url := args.Get(1)
+	api := ctx.String("api")
+	bucketLookup := ctx.String("lookup")
 
 	if !isValidAlias(alias) {
 		fatalIf(errInvalidAlias(alias), "Invalid alias.")
@@ -274,7 +276,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 		lookup = ctx.String("lookup")
 	)
 	accessKey, secretKey := fetchHostKeys(args)
-	checkConfigHostAddSyntax(ctx, accessKey, secretKey, api, lookup)
+	checkConfigHostAddSyntax(ctx, accessKey, secretKey)
 
 	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
