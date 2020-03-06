@@ -148,7 +148,7 @@ func fetchUserKeys(args cli.Args) (string, string) {
 		accessKey = args.Get(1)
 	}
 
-	if argCount >= 1 && argCount <= 2 {
+	if argCount == 1 || argCount == 2 {
 		if isTerminal {
 			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
 			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))

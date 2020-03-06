@@ -247,7 +247,7 @@ func fetchHostKeys(args cli.Args) (string, string) {
 		accessKey = args.Get(2)
 	}
 
-	if argsNr >= 2 && argsNr <= 3 {
+	if argsNr == 2 || argsNr == 3 {
 		if isTerminal {
 			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
 			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
