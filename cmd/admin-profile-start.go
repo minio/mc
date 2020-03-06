@@ -29,7 +29,7 @@ import (
 var adminProfileStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex', 'trace', 'threads', 'goroutines'",
+		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
 		Value: "cpu,mem,block",
 	},
 }
