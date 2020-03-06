@@ -29,7 +29,7 @@ import (
 var adminProfileStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex' and 'trace'",
+		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex', 'trace', 'threads', 'goroutines'",
 		Value: "cpu,mem,block",
 	},
 }
@@ -72,6 +72,8 @@ func checkAdminProfileStartSyntax(ctx *cli.Context) {
 		madmin.ProfilerBlock,
 		madmin.ProfilerMutex,
 		madmin.ProfilerTrace,
+		madmin.ProfilerThreads,
+		madmin.ProfilerGoroutines,
 	}
 	for _, profilerType := range supportedProfilerTypes {
 		s.Add(string(profilerType))
