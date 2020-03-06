@@ -3,7 +3,6 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.39.0 h1:UgQP9na6OTfp4dsAiz/eFpFA1C6tPdH5wiRdi19tuMw=
 cloud.google.com/go v0.39.0/go.mod h1:rVLT6fkc8chs9sfPtFc1SBH6em7n+ZoXaG+87tDISts=
 contrib.go.opencensus.io/exporter/ocagent v0.5.0/go.mod h1:ImxhfLRpxoYiSq891pBrLVhN+qmP8BTVvdH2YLs7Gl0=
-git.apache.org/thrift.git v0.12.0/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 git.apache.org/thrift.git v0.13.0 h1:/3bz5WZ+sqYArk7MBBBbDufMxKKOA56/6JO6psDpUDY=
 git.apache.org/thrift.git v0.13.0/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 github.com/Azure/azure-pipeline-go v0.2.1 h1:OLBdZJ3yvOn2MezlWvbrBMTEUQC72zAftRZOMdj5HYo=
@@ -189,7 +188,6 @@ github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03/go.mod h1:MK8+TM0
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jonboulle/clockwork v0.1.0 h1:VKV+ZcuP6l3yW9doeqz6ziZGgcynBVQO+obU0+0hcPo=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
-github.com/json-iterator/go v1.1.7/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/json-iterator/go v1.1.9 h1:9yzud/Ht36ygwatGx56VwCZtlI/2AD15T1X2sjSuGns=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
@@ -200,7 +198,6 @@ github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvW
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.8.2/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0guNDohfE1A=
 github.com/klauspost/compress v1.9.4/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0guNDohfE1A=
-github.com/klauspost/compress v1.9.7/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0guNDohfE1A=
 github.com/klauspost/compress v1.10.1 h1:a/QY0o9S6wCi0XhxaMX/QmusicNUqCqFugR6WKPOSoQ=
 github.com/klauspost/compress v1.10.1/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/cpuid v1.2.2 h1:1xAgYebNnsb9LKCdLOvFWtAxGU/33mjJtyOVbmUa0Us=
@@ -252,16 +249,11 @@ github.com/minio/highwayhash v1.0.0 h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2
 github.com/minio/highwayhash v1.0.0/go.mod h1:xQboMTeM9nY9v/LlAOxFctujiv5+Aq2hR5dxBpaMbdc=
 github.com/minio/lsync v1.0.1 h1:AVvILxA976xc27hstd1oR+X9PQG0sPSom1MNb1ImfUs=
 github.com/minio/lsync v1.0.1/go.mod h1:tCFzfo0dlvdGl70IT4IAK/5Wtgb0/BrTmo/jE8pArKA=
-github.com/minio/minio v0.0.0-20200118222113-b849fd7a756d h1:/i9HncNqZaHhRLwaReYT73wpU1XFiKYIfhwCQOrVcRg=
-github.com/minio/minio v0.0.0-20200118222113-b849fd7a756d/go.mod h1:f8MCueGjpibyBY0iVthLZPcrz310Dgwe/Knx+Dx/2+A=
 github.com/minio/minio v0.0.0-20200306033404-a1c7c9ea73d7 h1:aO9WwlJKc0SFWNCOXHULHnz0QPAgQITDnj/bOFVBLR0=
 github.com/minio/minio v0.0.0-20200306033404-a1c7c9ea73d7/go.mod h1:SxU0r96Z6zUj3lQAuPtyokbC0JEbqZ4x5RVcvl86TN0=
-github.com/minio/minio-go/v6 v6.0.44/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=
-github.com/minio/minio-go/v6 v6.0.45-0.20200117140906-66cf57d21ba4/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=
 github.com/minio/minio-go/v6 v6.0.45/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=
 github.com/minio/minio-go/v6 v6.0.49-0.20200218155844-112c09f43c78 h1:rGiqpjReCifELAwekJF3istDiHtW3jQYWaR/tbtRfAU=
 github.com/minio/minio-go/v6 v6.0.49-0.20200218155844-112c09f43c78/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=
-github.com/minio/parquet-go v0.0.0-20191231003236-20b3c07bcd2c/go.mod h1:sl82d+TnCE7qeaNJazHdNoG9Gpyl9SZYfleDAQWrsls=
 github.com/minio/parquet-go v0.0.0-20200125064549-a1e49702e174 h1:WYFHZIJ5LTWd4C3CW26jguaBLLDdX7l1/Xa3QSKGkIc=
 github.com/minio/parquet-go v0.0.0-20200125064549-a1e49702e174/go.mod h1:PXYM9yI2l0YPmxHUXe6mFTmkQcyaVasDshAPTbGpDoo=
 github.com/minio/sha256-simd v0.1.1 h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=
