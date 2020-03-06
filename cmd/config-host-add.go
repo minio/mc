@@ -85,7 +85,7 @@ EXAMPLES:
 
   5. Add Amazon S3 storage service under "mys3" alias using piped keys.
      {{.DisableHistory}}
-     {{.Prompt}} echo "BKIKJAA5BMMU2RHO6IBB\nV8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+     {{.Prompt}} echo -e "BKIKJAA5BMMU2RHO6IBB\nV8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
                  {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
      {{.EnableHistory}}
 `,

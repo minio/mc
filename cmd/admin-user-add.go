@@ -62,7 +62,7 @@ EXAMPLES:
      Enter Secret Key: foobar12345
   3. Add a new user 'foobar' to MinIO server using piped keys.
      {{.DisableHistory}}
-     {{.Prompt}} echo "foobar\nfoobar12345" | {{.HelpName}} myminio
+     {{.Prompt}} echo -e "foobar\nfoobar12345" | {{.HelpName}} myminio
      {{.EnableHistory}}
 `,
 }

@@ -125,7 +125,7 @@ Alias is simply a short name to your MinIO service. MinIO end-point, access and 
 2. Keys by pipe
 
    ```
-   echo "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+   echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
        mc config host add minio http://192.168.1.51:9000
    ```
 
