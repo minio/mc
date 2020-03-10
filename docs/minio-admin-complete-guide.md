@@ -289,17 +289,26 @@ Skip SSL certificate verification.
 
 <a name="update"></a>
 ### Command `update` - updates all MinIO servers
-`update` command provides a way to update all MinIO servers in a cluster.
-
-> NOTE:
-> - An alias pointing to a distributed setup this command will automatically update all MinIO servers in the cluster.
-> - `update` is an disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only when you are planning MinIO upgrades for your deployment.
+`update` command provides a way to update all MinIO servers in a cluster. You can also use a private mirror server with `update` command to update your MinIO cluster. This is useful in cases where MinIO is running in an environment that doesn't have Internet access.
 
 *Example: Update all MinIO servers.*
 ```
 mc admin update play
 Server `play` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
 ```
+
+#### Steps to update MinIO using a private mirror 
+For using `update` command with private mirror server, you need to mirror the directory structure on `https://dl.minio.io/server/minio/release/linux-amd64/` on your private mirror server and then provide:
+
+```
+mc admin update myminio https://myfavorite-mirror.com/minio-server/linux-amd64/minio.sha256sum
+Server `myminio` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
+```
+
+> NOTE:
+> - An alias pointing to a distributed setup this command will automatically update all MinIO servers in the cluster.
+> - `update` is a disruptive operation for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only when you are planning MinIO upgrades for your deployment.
+> - It is recommended to perform a restart after `update` successfully completes.
 
 <a name="service"></a>
 ### Command `service` - restart and stop all MinIO servers
