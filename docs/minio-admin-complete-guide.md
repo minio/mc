@@ -571,6 +571,12 @@ mc admin config set myminio < /tmp/my-serverconfig
 ### Command `heal` - Heal disks, buckets and objects on MinIO server
 `heal` command heals disks, missing buckets, objects on MinIO server. NOTE: This command is only applicable for MinIO erasure coded setup (standalone and distributed).
 
+The server already has a light background process to heal disks, buckets and objects when necessary. However, it does not detect some types of data corruption, especially the ones that rarely happen, such as silent data corruption. In that case, you need, once a while, to manually run the heal command providing this flag: `--scan deep`.
+
+To show the status of the background healing process, just type the following command: `mc admin heal your-alias`.
+
+To scan and heal everything, type: `mc admin heal -r your-alias`.
+
 ```
 NAME:
   mc admin heal - heal disks, buckets and objects on MinIO server
@@ -601,6 +607,12 @@ mc admin heal -r myminio/mybucket
 
 ```
 mc admin heal -r myminio/mybucket/myobjectprefix
+```
+
+*Example: Show the status of the self-healing process in a MinIO cluster.*
+
+```
+mc admin heal myminio/
 ```
 
 <a name="profile"></a>
