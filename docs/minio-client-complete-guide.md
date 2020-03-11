@@ -1118,46 +1118,6 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ### Command `admin` - Manage MinIO servers
 Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
 
-<a name="session"></a>
-### Command `session` - Manage Sessions
-``session`` command manages previously saved sessions for `cp` and `mirror` operations
-
-```
-USAGE:
-  mc session COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
-
-COMMANDS:
-  list    list all previously saved sessions
-  clear   clear a previously saved session
-  resume  resume a previously saved session
-
-FLAGS:
-  --help, -h                       show help
-
-```
-
-*Example: List all previously saved sessions.*
-
-```
-mc session list
-IXWKjpQM -> [2016-04-08 19:11:14 IST] cp assets.go play/mybucket
-ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
-```
-
-*Example: Resume a previously saved session.*
-
-```
-mc session resume IXWKjpQM
-...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
-```
-
-*Example: Drop a previously saved session.*
-
-```
-mc session clear ApwAxSwa
-Session ‘ApwAxSwa’ cleared successfully.
-```
-
 <a name="config"></a>
 ### Command `config` - Manage Config File
 `config host` command provides a convenient way to manage host entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.
