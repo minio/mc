@@ -17,12 +17,12 @@
 package cmd
 
 import (
-	json "github.com/minio/mc/pkg/colorjson"
 	"fmt"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )

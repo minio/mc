@@ -22,6 +22,13 @@ var (
 	adminFlags = []cli.Flag{}
 )
 
+const (
+	// dot represents a list item, for eg. server status - online (green) or offline (red)
+	dot = "●"
+	// check represents successful operation
+	check = "✔"
+)
+
 var adminCmd = cli.Command{
 	Name:            "admin",
 	Usage:           "manage MinIO servers",

@@ -17,10 +17,8 @@
 package cmd
 
 import (
-	json "github.com/minio/mc/pkg/colorjson"
-	"fmt"
-	
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -48,12 +46,12 @@ EXAMPLES:
 // configExportMessage container to hold locks information.
 type configExportMessage struct {
 	Status string `json:"status"`
-	Value  interface{} `json:"value"`
+	Value  []byte `json:"value"`
 }
 
 // String colorized service status message.
 func (u configExportMessage) String() string {
-	return u.Value.(string)
+	return string(u.Value)
 }
 
 // JSON jsonified service status Message message.
@@ -87,10 +85,10 @@ func mainAdminConfigExport(ctx *cli.Context) error {
 	// Call get config API
 	buf, e := client.GetConfig(globalContext)
 	fatalIf(probe.NewError(e), "Cannot get server config")
-	
+
 	// Print
 	printMsg(configExportMessage{
-		Value: fmt.Sprintf("%s", buf),
+		Value: buf,
 	})
 
 	return nil
