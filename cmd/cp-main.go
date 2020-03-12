@@ -479,6 +479,7 @@ loop:
 			if session != nil {
 				session.CloseAndDie()
 			}
+			break loop
 		case cpURLs, ok := <-statusCh:
 			// Status channel is closed, we should return.
 			if !ok {
