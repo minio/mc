@@ -1,4 +1,4 @@
-// +build openbsd
+// +build openbsd solaris
 
 /*
  * MinIO Cloud Storage, (C) 2019-2020 MinIO, Inc.

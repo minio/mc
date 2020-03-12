@@ -1213,6 +1213,11 @@ func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 
 // listObjectWrapper - select ObjectList version depending on the target hostname
 func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}, metadata bool) <-chan minio.ObjectInfo {
+	if isGoogle(c.targetURL.Host) {
+		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
+		// https://github.com/minio/mc/issues/3073
+		return c.api.ListObjects(bucket, object, isRecursive, doneCh)
+	}
 	if metadata {
 		return c.api.ListObjectsV2WithMetadata(bucket, object, isRecursive, doneCh)
 	}
