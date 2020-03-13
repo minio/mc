@@ -275,8 +275,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 				session.Delete()
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
-
-			fmt.Fprintln(dataFP, string(jsonData))
+			dataFP.Write(jsonData)
+			dataFP.Write([]byte{'\n'})
 			if !globalQuiet && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
 			}
