@@ -24,7 +24,7 @@ require (
 	github.com/rjeczalik/notify v0.9.2
 	github.com/ugorji/go v1.1.7 // indirect
 	go.uber.org/zap v1.11.0 // indirect
-	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6 // indirect
+	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/text v0.3.2

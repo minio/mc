@@ -119,8 +119,10 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 #### Usage
 
 ```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
+mc config host add <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
 ```
+
+Keys must be supplied by argument or standard input.
 
 Alias is simply a short name to your cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
@@ -145,6 +147,23 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 ```
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
+
+### Example - Specify keys using standard input
+
+1. Prompt
+
+   ```
+   mc config host add minio http://192.168.1.51 --api S3v4
+   Enter Access Key: BKIKJAA5BMMU2RHO6IBB
+   Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+   ```
+
+2. Pipe
+
+   ```
+   echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+       mc config host add minio http://192.168.1.51 --api S3v4
+   ```
 
 ### Specify host configuration through environment variable
 ```
