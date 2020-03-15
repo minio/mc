@@ -119,8 +119,10 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 #### Usage
 
 ```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
+mc config host add <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
 ```
+
+Keys must be supplied by argument or standard input.
 
 Alias is simply a short name to your cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
@@ -145,6 +147,23 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 ```
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
+
+### Example - Specify keys using standard input
+
+1. Prompt
+
+   ```
+   mc config host add minio http://192.168.1.51 --api S3v4
+   Enter Access Key: BKIKJAA5BMMU2RHO6IBB
+   Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+   ```
+
+2. Pipe
+
+   ```
+   echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+       mc config host add minio http://192.168.1.51 --api S3v4
+   ```
 
 ### Specify host configuration through environment variable
 ```
@@ -1117,46 +1136,6 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 <a name="admin"></a>
 ### Command `admin` - Manage MinIO servers
 Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
-
-<a name="session"></a>
-### Command `session` - Manage Sessions
-``session`` command manages previously saved sessions for `cp` and `mirror` operations
-
-```
-USAGE:
-  mc session COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
-
-COMMANDS:
-  list    list all previously saved sessions
-  clear   clear a previously saved session
-  resume  resume a previously saved session
-
-FLAGS:
-  --help, -h                       show help
-
-```
-
-*Example: List all previously saved sessions.*
-
-```
-mc session list
-IXWKjpQM -> [2016-04-08 19:11:14 IST] cp assets.go play/mybucket
-ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
-```
-
-*Example: Resume a previously saved session.*
-
-```
-mc session resume IXWKjpQM
-...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
-```
-
-*Example: Drop a previously saved session.*
-
-```
-mc session clear ApwAxSwa
-Session ‘ApwAxSwa’ cleared successfully.
-```
 
 <a name="config"></a>
 ### Command `config` - Manage Config File

@@ -61,50 +61,65 @@ type clusterStruct struct {
 	Info   madmin.InfoMessage `json:"info,omitempty"`
 }
 
-// String provides colorized info messages.
+// String provides colorized info messages depending on the type of a server
+//        FS server                          non-FS server
+// ==============================  ===================================
+// ● <ip>:<port>                   ● <ip>:<port>
+//   Uptime: xxx                     Uptime: xxx
+//   Version: xxx                    Version: xxx
+//   Network: X/Y OK                 Network: X/Y OK
+//
+// U Used, B Buckets, O Objects    Drives: N/N OK
+//
+//                                   U Used, B Buckets, O Objects
+//                                   N drives online, K drives offline
+//
 func (u clusterStruct) String() (msg string) {
+	// Check cluster level "Status" field for error
+	if u.Status == "error" {
+		fatal(probe.NewError(errors.New(u.Error)), "Cannot get service status")
+	}
 	// If nothing has been collected, error out
 	if u.Info.Servers == nil {
 		fatal(probe.NewError(errors.New("Cannot get service status")), "")
 	}
+
 	// Initialization
 	var totalOnlineDisksCluster int
 	var totalOfflineDisksCluster int
+
 	// Dot represents server status, online (green) or offline (red)
 	dot := "●"
 	// Color palette initialization
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
 	console.SetColor("InfoFail", color.New(color.FgRed, color.Bold))
+
 	// MinIO server type default
 	backendType := "Unknown"
+	// Set the type of MinIO server ("FS", "Erasure", "Unknown")
+	v := reflect.ValueOf(u.Info.Backend)
+	if v.Kind() == reflect.Map {
+		for _, key := range v.MapKeys() {
+			val := v.MapIndex(key)
+			switch t := val.Interface().(type) {
+			case string:
+				backendType = t
+			}
+		}
+	}
 
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
 		// Check if MinIO server is offline ("Mode" field),
 		// If offline, error out
-		if u.Info.Mode == "offline" {
+		if srv.State == "offline" {
 			// "PrintB" is color blue in console library package
 			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
-			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
-			return
+			msg += fmt.Sprintf("   Uptime: %s\n\n", console.Colorize("InfoFail", "offline"))
+			// Continue to the next server
+			continue
 		}
 
-		// Check cluster level "Status" field for error
-		if u.Status == "error" {
-			fatal(probe.NewError(errors.New(u.Error)), "Cannot get service status")
-		}
-
-		// Set the type of MinIO server ("FS", "Erasure", "Unknown")
-		v := reflect.ValueOf(u.Info.Backend)
-		if v.Kind() == reflect.Map {
-			for _, key := range v.MapKeys() {
-				val := v.MapIndex(key)
-				switch t := val.Interface().(type) {
-				case string:
-					backendType = t
-				}
-			}
-		}
 		// Print server title
 		msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", srv.Endpoint))
 
@@ -132,19 +147,6 @@ func (u clusterStruct) String() (msg string) {
 			msg += fmt.Sprintf("   Network: %s %s\n", displayNwInfo, console.Colorize("Info", "OK "))
 		}
 
-		// Choose and display information depending on the type of a server
-		//        FS server                          non-FS server
-		// ==============================  ===================================
-		// ● <ip>:<port>                   ● <ip>:<port>
-		//   Uptime: xxx                     Uptime: xxx
-		//   Version: xxx                    Version: xxx
-		//   Network: X/Y OK                 Network: X/Y OK
-		//
-		// U Used, B Buckets, O Objects    Drives: N/N OK
-		//
-		//                                   U Used, B Buckets, O Objects
-		//                                   N drives online, K drives offline
-		//
 		if backendType != "FS" {
 			// Info about drives on a server, only available for non-FS types
 			var OffDisks int

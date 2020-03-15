@@ -19,6 +19,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,7 +31,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -275,8 +275,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 				session.Delete()
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
-
-			fmt.Fprintln(dataFP, string(jsonData))
+			dataFP.Write(jsonData)
+			dataFP.Write([]byte{'\n'})
 			if !globalQuiet && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
 			}
@@ -479,6 +479,7 @@ loop:
 			if session != nil {
 				session.CloseAndDie()
 			}
+			break loop
 		case cpURLs, ok := <-statusCh:
 			// Status channel is closed, we should return.
 			if !ok {
