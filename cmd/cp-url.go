@@ -191,6 +191,11 @@ func makeCopyContentTypeC(sourceAlias string, sourceURL clientURL, sourceContent
 	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)
 	if pathSeparatorIndex > 1 {
 		sourcePrefix := filepath.ToSlash(sourceURL.Path[:pathSeparatorIndex])
+		// do not preserve unix cp behavior when copying from filesytem to
+		// objectstore.
+		if sourceAlias == "" && targetAlias != "" {
+			sourcePrefix = sourceURL.Path
+		}
 		newSourceSuffix = strings.TrimPrefix(newSourceSuffix, sourcePrefix)
 	}
 	newTargetURL := urlJoinPath(targetURL, newSourceSuffix)
