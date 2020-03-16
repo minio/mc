@@ -1089,3 +1089,10 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 
 func (f *fsClient) AddUserAgent(_, _ string) {
 }
+
+func (f *fsClient) DeleteObjectTag() *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetObjectLockConfig",
+		APIType: "filesystem",
+	})
+}

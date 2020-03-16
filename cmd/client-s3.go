@@ -2100,3 +2100,10 @@ func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *u
 
 	return mode, validity, unit, nil
 }
+
+func (c *s3Client) DeleteObjectTag(bucket, object string) *probe.Error {
+	if err := c.api.RemoveObjectTagging(bucket, object); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
