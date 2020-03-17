@@ -392,13 +392,13 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 				return totalWritten, probe.NewError(e)
 			}
 
-			ctime, e := strconv.ParseInt(attr["ctime"], 10, 64)
+			mtime, e := strconv.ParseInt(attr["mtime"], 10, 64)
 			if e != nil {
 				return totalWritten, probe.NewError(e)
 			}
 
-			// Attempt to change the access, modify and change time
-			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(ctime, 0)); e != nil {
+			// Attempt to change the access and modify time
+			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
 				return totalWritten, probe.NewError(e)
 			}
 		}
