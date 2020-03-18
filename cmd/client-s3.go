@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"hash/fnv"
 	"io"
@@ -42,6 +43,7 @@ import (
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 	"github.com/minio/minio-go/v6/pkg/policy"
 	"github.com/minio/minio-go/v6/pkg/s3utils"
+	"github.com/minio/minio/pkg/bucket/object/tagging"
 	"github.com/minio/minio/pkg/mimedb"
 )
 
@@ -2101,7 +2103,46 @@ func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *u
 	return mode, validity, unit, nil
 }
 
-func (c *s3Client) DeleteObjectTag(bucket, object string) *probe.Error {
+// Get Object Tags
+func (c *s3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
+	var err error
+	bucketName, objectName := c.url2BucketAndObject()
+	if bucketName == "" || objectName == "" {
+		err = errors.New("Bucket name or object name cannot be empty")
+		return tagging.Tagging{}, probe.NewError(err)
+	}
+	tagXML, err := c.api.GetObjectTagging(bucketName, objectName)
+	if err != nil {
+		return tagging.Tagging{}, probe.NewError(err)
+	}
+	var tagObj tagging.Tagging
+	if err = xml.Unmarshal([]byte(tagXML), &tagObj); err != nil {
+		return tagging.Tagging{}, probe.NewError(err)
+	}
+	return tagObj, nil
+}
+
+// Set Object tags
+func (c *s3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
+	var err error
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" || object == "" {
+		err = errors.New("Bucket name or object name cannot be empty")
+		return probe.NewError(err)
+	}
+	if err = c.api.PutObjectTagging(bucket, object, tagMap); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// Delete object tags
+func (c *s3Client) DeleteObjectTagging() *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" || object == "" {
+		err := errors.New("Bucket name or object name cannot be empty")
+		return probe.NewError(err)
+	}
 	if err := c.api.RemoveObjectTagging(bucket, object); err != nil {
 		return probe.NewError(err)
 	}

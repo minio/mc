@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -79,6 +80,7 @@ func (u clusterStruct) String() (msg string) {
 	if u.Status == "error" {
 		fatal(probe.NewError(errors.New(u.Error)), "Cannot get service status")
 	}
+
 	// If nothing has been collected, error out
 	if u.Info.Servers == nil {
 		fatal(probe.NewError(errors.New("Cannot get service status")), "")
@@ -168,27 +170,29 @@ func (u clusterStruct) String() (msg string) {
 			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize("Info", "OK "))
 
 		}
-		if u.Info.Buckets.Count != 0 {
-			msg += "\n"
-		}
+
+		msg += "\n"
 	}
 
 	// Summary on used space, total no of buckets and
 	// total no of objects at the Cluster level
 	usedTotal := humanize.IBytes(uint64(u.Info.Usage.Size))
 	if u.Info.Buckets.Count > 0 {
-		msg += fmt.Sprintf("%s Used, %s, %s", usedTotal,
+		msg += fmt.Sprintf("%s Used, %s, %s\n", usedTotal,
 			english.Plural(int(u.Info.Buckets.Count), "Bucket", ""),
 			english.Plural(int(u.Info.Objects.Count), "Object", ""))
 	}
 	if backendType != "FS" {
 		// Summary on total no of online and total
 		// number of offline disks at the Cluster level
-		msg += fmt.Sprintf("\n%s online, %s offline",
+		msg += fmt.Sprintf("%s online, %s offline\n",
 			english.Plural(totalOnlineDisksCluster, "drive", ""),
 			english.Plural(totalOfflineDisksCluster, "drive", ""))
 	}
 
+	// Remove the last new line if any
+	// since this is a String() function
+	msg = strings.TrimSuffix(msg, "\n")
 	return
 }
 
