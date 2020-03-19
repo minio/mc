@@ -20,7 +20,9 @@ import (
 	"os"
 
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/console"
 )
 
 var tagRemoveCmd = cli.Command{
@@ -42,10 +44,41 @@ DESCRIPTION:
    Remove object tags assigned to an object .
 
 EXAMPLES:
-  1. Remove the tags added to an existing object.
+  1. Remove the tags set to an existing object.
      {{.Prompt}} {{.HelpName}} s3/testbucket/testobject
 
 `,
+}
+
+// tagSetTagMessage structure will show message depending on the type of console.
+type tagRemoveMessage struct {
+	Status string `json:"status"`
+	Name   string `json:"name"`
+	Error  error  `json:"error,omitempty"`
+}
+
+// tagRemoveMessage console colorized output.
+func (t tagRemoveMessage) String() string {
+	return console.Colorize(tagPrintMsgTheme, "Tags removed for "+t.Name+".")
+}
+
+// JSON tagRemoveMessage.
+func (t tagRemoveMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(t, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
+func getTagRemoveMessage(tags string, urlStr string, err error) tagRemoveMessage {
+	var t tagRemoveMessage
+	t.Name = getTagObjectName(urlStr)
+	if err != nil {
+		t.Status = "error"
+		t.Error = err
+	} else {
+		t.Status = "success"
+	}
+	return t
 }
 
 func checkRemoveTagSyntax(ctx *cli.Context) {
@@ -55,29 +88,19 @@ func checkRemoveTagSyntax(ctx *cli.Context) {
 	}
 }
 
-func parseTagRemoveMessage(tags string, urlStr string, err error) tagsetListMessage {
-	var t tagsetListMessage
-	if err != nil {
-		t.Status = "Remove tags to target " + urlStr + ". Error " + err.Error()
-	} else {
-		t.Status = "Tags removed for " + urlStr + "."
-	}
-	return t
-}
-
 func mainRemoveTag(ctx *cli.Context) error {
 	checkRemoveTagSyntax(ctx)
 	setTagListColorScheme()
 	var pErr *probe.Error
+	var msg tagRemoveMessage
 	objectURL := ctx.Args().Get(0)
 	clnt, pErr := newClient(objectURL)
 	fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+".")
 	pErr = clnt.DeleteObjectTagging()
-	fatalIf(pErr, "Failed to remove tags")
+	fatalIf(pErr.Trace(objectURL), "Failed to remove tags")
 	tagObj, err := getObjTagging(objectURL)
-	var tMsg tagsetListMessage
-	tMsg = parseTagRemoveMessage(tagObj.String(), objectURL, err)
-	printMsg(tMsg)
+	msg = getTagRemoveMessage(tagObj.String(), objectURL, err)
+	printMsg(msg)
 
 	return nil
 }

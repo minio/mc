@@ -29,7 +29,7 @@ var tagCmd = cli.Command{
 	Subcommands: []cli.Command{
 		tagListCmd,
 		tagRemoveCmd,
-		tagAddCmd,
+		tagSetCmd,
 	},
 }
 

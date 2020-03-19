@@ -23,21 +23,22 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
 
-var tagAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add tags for an object",
-	Action: mainAddTag,
+var tagSetCmd = cli.Command{
+	Name:   "set",
+	Usage:  "set tags for an object",
+	Action: mainSetTag,
 	Before: setGlobalsFromContext,
-	Flags:  append(tagAddFlags, globalFlags...),
+	Flags:  globalFlags,
 	CustomHelpTemplate: `Name:
 	{{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [COMMAND FLAGS] TARGET
+  {{.HelpName}} [COMMAND FLAGS] TARGET [TAGS]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -47,29 +48,55 @@ DESCRIPTION:
 
 EXAMPLES:
   1. Assign the tags to an existing object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject --tags "key1=value1&key2=value2&key3=value3"
+     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 
 `,
 }
 
-var tagAddFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "tags",
-		Usage: "format '<key1>=<value1>&<key2>=<value2>'; <key1>=<value1> is a key value pair, different key value pairs are separated by '&'",
-	},
+// tagSetTagMessage structure will show message depending on the type of console.
+type tagSetMessage struct {
+	Status string `json:"status"`
+	Name   string `json:"name"`
+	Error  error  `json:"error,omitempty"`
 }
 
-func checkAddTagSyntax(ctx *cli.Context) {
-	tagValues := ctx.String("tags")
-	if len(ctx.Args()) != 1 || len(tagValues) == 0 {
-		cli.ShowCommandHelp(ctx, "add")
+// tagSetMessage console colorized output.
+func (t tagSetMessage) String() string {
+	return console.Colorize(tagPrintMsgTheme, "Tags set for "+t.Name+".")
+}
+
+// JSON tagSetMessage.
+func (t tagSetMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(t, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
+func getTagSetMessage(tags string, urlStr string, err error) tagSetMessage {
+	var t tagSetMessage
+	t.Name = getTagObjectName(urlStr)
+	if err != nil {
+		t.Status = "error"
+		t.Error = err
+	} else {
+		t.Status = "success"
+	}
+	return t
+}
+
+func checkSetTagSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 || (len(ctx.Args()) == 2 && len(ctx.Args().Get(1)) == 0) {
+		cli.ShowCommandHelp(ctx, "set")
 		os.Exit(globalErrorExitStatus)
 	}
 }
 
 func getTaggingMap(ctx *cli.Context) (map[string]string, error) {
+	if len(ctx.Args()) != 2 {
+		return nil, errors.New("Tags argument is empty")
+	}
 	tagKVMap := make(map[string]string)
-	tagValues := strings.Split(ctx.String("tags"), "&")
+	tagValues := strings.Split(ctx.Args().Get(1), "&")
 	for tagIdx, tag := range tagValues {
 		var key, val string
 		if !strings.Contains(tag, "=") {
@@ -88,36 +115,25 @@ func getTaggingMap(ctx *cli.Context) (map[string]string, error) {
 	return tagKVMap, nil
 }
 
-func parseTagAddMessage(tags string, urlStr string, err error) tagsetListMessage {
-	var t tagsetListMessage
-	if err != nil {
-		t.Status = "Failed to add tags to target " + urlStr + ". Error: " + err.Error()
-	} else {
-		t.Status = "Tags added for " + urlStr + "."
-	}
-
-	return t
-}
-
-func mainAddTag(ctx *cli.Context) error {
-	checkAddTagSyntax(ctx)
+func mainSetTag(ctx *cli.Context) error {
+	checkSetTagSyntax(ctx)
 	setTagListColorScheme()
 	objectURL := ctx.Args().Get(0)
 	var err error
 	var pErr *probe.Error
 	var objTagMap map[string]string
+	var msg tagSetMessage
+
 	if objTagMap, err = getTaggingMap(ctx); err != nil {
-		console.Errorln(err.Error() + ". Key value parsing failed from arguments provided. Please refer to mc " + ctx.Command.FullName() + " --help for details.")
-		return err
+		fatalIf(probe.NewError(err), ". Key value parsing failed from arguments provided. Please refer to mc "+ctx.Command.FullName()+" --help for details.")
 	}
 	clnt, pErr := newClient(objectURL)
 	fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+".")
 	pErr = clnt.SetObjectTagging(objTagMap)
-	fatalIf(pErr, "Failed to add tags")
+	fatalIf(pErr, "Failed to set tags")
 	tagObj, err := getObjTagging(objectURL)
-	var tMsg tagsetListMessage
-	tMsg = parseTagAddMessage(tagObj.String(), objectURL, err)
-	printMsg(tMsg)
+	msg = getTagSetMessage(tagObj.String(), objectURL, err)
+	printMsg(msg)
 
 	return nil
 }

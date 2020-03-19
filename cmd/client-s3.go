@@ -2107,9 +2107,11 @@ func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *u
 func (c *s3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
 	var err error
 	bucketName, objectName := c.url2BucketAndObject()
-	if bucketName == "" || objectName == "" {
-		err = errors.New("Bucket name or object name cannot be empty")
-		return tagging.Tagging{}, probe.NewError(err)
+	if bucketName == "" {
+		return tagging.Tagging{}, probe.NewError(BucketNameEmpty{})
+	}
+	if objectName == "" {
+		return tagging.Tagging{}, probe.NewError(ObjectNameEmpty{})
 	}
 	tagXML, err := c.api.GetObjectTagging(bucketName, objectName)
 	if err != nil {
@@ -2125,12 +2127,14 @@ func (c *s3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
 // Set Object tags
 func (c *s3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
 	var err error
-	bucket, object := c.url2BucketAndObject()
-	if bucket == "" || object == "" {
-		err = errors.New("Bucket name or object name cannot be empty")
-		return probe.NewError(err)
+	bucketName, objectName := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
 	}
-	if err = c.api.PutObjectTagging(bucket, object, tagMap); err != nil {
+	if objectName == "" {
+		return probe.NewError(ObjectNameEmpty{})
+	}
+	if err = c.api.PutObjectTagging(bucketName, objectName, tagMap); err != nil {
 		return probe.NewError(err)
 	}
 	return nil
@@ -2138,12 +2142,14 @@ func (c *s3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
 
 // Delete object tags
 func (c *s3Client) DeleteObjectTagging() *probe.Error {
-	bucket, object := c.url2BucketAndObject()
-	if bucket == "" || object == "" {
-		err := errors.New("Bucket name or object name cannot be empty")
-		return probe.NewError(err)
+	bucketName, objectName := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
 	}
-	if err := c.api.RemoveObjectTagging(bucket, object); err != nil {
+	if objectName == "" {
+		return probe.NewError(ObjectNameEmpty{})
+	}
+	if err := c.api.RemoveObjectTagging(bucketName, objectName); err != nil {
 		return probe.NewError(err)
 	}
 	return nil
