@@ -603,15 +603,17 @@ USAGE:
    mc retention [FLAGS] TARGET [governance | compliance] [VALIDITY]
 
 FLAGS:
+  --bypass                      bypass governance
+  --recursive, -r               apply retention recursively
   --json                        enable JSON formatted output
   --help, -h                    show help
 ```
 
-*Example: Set governance for 30 days for objects with prefix `prefix` on bucket `mybucket`*
+*Example: Set governance for 30 days for object `prefix` on bucket `mybucket`*
 
 ```
-mc retention myminio/mybucket/prefix governance 30d
-Object retention successfully set for prefix `myminio/mybucket/prefix`.
+mc retention myminio/mybucket/prefix governance 30d  -r
+Object retention successfully set for objects with prefix `myminio/mybucket/prefix`.
 
 ```
 *Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the compliance period is over*

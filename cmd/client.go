@@ -68,7 +68,7 @@ type Client interface {
 	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
 	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (n int64, err *probe.Error)
 	// Object Locking related API
-	PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error
+	PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

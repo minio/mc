@@ -234,7 +234,7 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 			retainUntilDate = t.UTC()
 		}
 	}
-	if err := targetClnt.PutObjectRetention(&lockMode, &retainUntilDate); err != nil {
+	if err := targetClnt.PutObjectRetention(&lockMode, &retainUntilDate, false); err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil
