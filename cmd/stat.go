@@ -30,15 +30,14 @@ import (
 
 // contentMessage container for content message structure.
 type statMessage struct {
-	Status            string            `json:"status"`
-	Key               string            `json:"name"`
-	Date              time.Time         `json:"lastModified"`
-	Size              int64             `json:"size"`
-	ETag              string            `json:"etag"`
-	Type              string            `json:"type"`
-	Expires           time.Time         `json:"expires"`
-	EncryptionHeaders map[string]string `json:"encryption,omitempty"`
-	Metadata          map[string]string `json:"metadata"`
+	Status   string            `json:"status"`
+	Key      string            `json:"name"`
+	Date     time.Time         `json:"lastModified"`
+	Size     int64             `json:"size"`
+	ETag     string            `json:"etag"`
+	Type     string            `json:"type"`
+	Expires  time.Time         `json:"expires"`
+	Metadata map[string]string `json:"metadata"`
 }
 
 // String colorized string message.
@@ -57,26 +56,37 @@ func printStat(stat statMessage) {
 	}
 	var maxKey = 0
 	for k := range stat.Metadata {
-		if len(k) > maxKey {
-			maxKey = len(k)
+		// Skip encryption headers, we print them later.
+		if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+			if len(k) > maxKey {
+				maxKey = len(k)
+			}
 		}
 	}
-	if len(stat.Metadata) > 0 {
+	if maxKey > 0 {
 		console.Println(fmt.Sprintf("%-10s:", "Metadata"))
 		for k, v := range stat.Metadata {
-			console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+			// Skip encryption headers, we print them later.
+			if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+				console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+			}
 		}
 	}
+
 	maxKey = 0
-	for k := range stat.EncryptionHeaders {
-		if len(k) > maxKey {
-			maxKey = len(k)
+	for k := range stat.Metadata {
+		if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+			if len(k) > maxKey {
+				maxKey = len(k)
+			}
 		}
 	}
-	if len(stat.EncryptionHeaders) > 0 {
+	if maxKey > 0 {
 		console.Println(fmt.Sprintf("%-10s:", "Encrypted"))
-		for k, v := range stat.EncryptionHeaders {
-			console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+		for k, v := range stat.Metadata {
+			if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+				console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+			}
 		}
 	}
 	console.Println()
@@ -108,7 +118,6 @@ func parseStat(c *clientContent) statMessage {
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
 	content.Expires = c.Expires
-	content.EncryptionHeaders = c.EncryptionHeaders
 	return content
 }
 

@@ -287,7 +287,7 @@ func filterMetadata(metadata map[string]string) map[string]string {
 		}
 	}
 	for k := range metadata {
-		if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
+		if strings.HasPrefix(http.CanonicalHeaderKey(k), http.CanonicalHeaderKey(serverEncryptionKeyPrefix)) {
 			delete(newMetadata, k)
 		}
 	}

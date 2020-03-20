@@ -88,18 +88,17 @@ type Client interface {
 
 // Content container for content metadata
 type clientContent struct {
-	URL               clientURL
-	Time              time.Time
-	Size              int64
-	Type              os.FileMode
-	StorageClass      string
-	Metadata          map[string]string
-	UserMetadata      map[string]string
-	ETag              string
-	Expires           time.Time
-	EncryptionHeaders map[string]string
-	Retention         bool
-	Err               *probe.Error
+	URL          clientURL
+	Time         time.Time
+	Size         int64
+	Type         os.FileMode
+	StorageClass string
+	Metadata     map[string]string
+	UserMetadata map[string]string
+	ETag         string
+	Expires      time.Time
+	Retention    bool
+	Err          *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

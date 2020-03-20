@@ -55,7 +55,6 @@ type s3Client struct {
 
 const (
 	amazonHostNameAccelerated = "s3-accelerate.amazonaws.com"
-
 	googleHostName            = "storage.googleapis.com"
 	serverEncryptionKeyPrefix = "x-amz-server-side-encryption"
 
@@ -77,13 +76,6 @@ const (
 	// AmzObjectLockRetainUntilDate sets object lock retain until date
 	AmzObjectLockRetainUntilDate = "X-Amz-Object-Lock-Retain-Until-Date"
 )
-
-// cseHeaders is list of client side encryption headers
-var cseHeaders = []string{
-	"X-Amz-Meta-X-Amz-Iv",
-	"X-Amz-Meta-X-Amz-Key",
-	"X-Amz-Meta-X-Amz-Matdesc",
-}
 
 var timeSentinel = time.Unix(0, 0).UTC()
 
@@ -825,6 +817,10 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 // Put - upload an object with custom metadata.
 func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return 0, probe.NewError(BucketNameEmpty{})
+	}
+
 	contentType, ok := metadata["Content-Type"]
 	if ok {
 		delete(metadata, "Content-Type")
@@ -872,10 +868,6 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
 			retainUntilDate = t.UTC()
 		}
-	}
-
-	if bucket == "" {
-		return 0, probe.NewError(BucketNameEmpty{})
 	}
 	opts := minio.PutObjectOptions{
 		UserMetadata:         metadata,
@@ -1269,7 +1261,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				objectMetadata.Size = objectMultipartInfo.Size
 				objectMetadata.Type = os.FileMode(0664)
 				objectMetadata.Metadata = map[string]string{}
-				objectMetadata.EncryptionHeaders = map[string]string{}
 				return objectMetadata, nil
 			}
 
@@ -1277,8 +1268,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				objectMetadata.URL = *c.targetURL
 				objectMetadata.Type = os.ModeDir
 				objectMetadata.Metadata = map[string]string{}
-				objectMetadata.EncryptionHeaders = map[string]string{}
-
 				return objectMetadata, nil
 			}
 		}
@@ -1302,7 +1291,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				}
 				objectMetadata.ETag = stat.ETag
 				objectMetadata.Metadata = stat.Metadata
-				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
 				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
@@ -1315,14 +1303,12 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 			objectMetadata.Type = os.FileMode(0664)
 			objectMetadata.Metadata = map[string]string{}
 			objectMetadata.Expires = objectStat.Expires
-			objectMetadata.EncryptionHeaders = map[string]string{}
 			if isFetchMeta {
 				stat, err := c.getObjectStat(bucket, object, opts)
 				if err != nil {
 					return nil, err
 				}
 				objectMetadata.Metadata = stat.Metadata
-				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
 				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
@@ -1362,25 +1348,8 @@ func (c *s3Client) getObjectStat(bucket, object string, opts minio.StatObjectOpt
 	objectMetadata.Expires = objectStat.Expires
 	objectMetadata.Type = os.FileMode(0664)
 	objectMetadata.Metadata = map[string]string{}
-	objectMetadata.EncryptionHeaders = map[string]string{}
-	objectMetadata.Metadata["Content-Type"] = objectStat.ContentType
-	for k, v := range objectStat.Metadata {
-		isCSEHeader := false
-		for _, header := range cseHeaders {
-			if (strings.Compare(strings.ToLower(header), strings.ToLower(k)) == 0) ||
-				strings.HasPrefix(strings.ToLower(serverEncryptionKeyPrefix), strings.ToLower(k)) {
-				if len(v) > 0 {
-					objectMetadata.EncryptionHeaders[k] = v[0]
-				}
-				isCSEHeader = true
-				break
-			}
-		}
-		if !isCSEHeader {
-			if len(v) > 0 {
-				objectMetadata.Metadata[k] = v[0]
-			}
-		}
+	for k := range objectStat.Metadata {
+		objectMetadata.Metadata[k] = objectStat.Metadata.Get(k)
 	}
 	objectMetadata.ETag = objectStat.ETag
 	return objectMetadata, nil
@@ -1765,9 +1734,13 @@ func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.ETag = entry.ETag
 	content.Time = entry.LastModified
 	content.Expires = entry.Expires
+	content.Metadata = map[string]string{}
 	content.UserMetadata = map[string]string{}
 	for k, v := range entry.UserMetadata {
 		content.UserMetadata[k] = v
+	}
+	for k := range entry.Metadata {
+		content.Metadata[k] = entry.Metadata.Get(k)
 	}
 	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) && entry.Size == 0 && entry.LastModified.IsZero() {
 		content.Type = os.ModeDir
