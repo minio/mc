@@ -31,12 +31,24 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
+var (
+	rFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "apply retention recursively",
+		},
+		cli.BoolFlag{
+			Name:  "bypass",
+			Usage: "bypass governance",
+		},
+	}
+)
 var retentionCmd = cli.Command{
 	Name:   "retention",
 	Usage:  "set object retention for objects with a given prefix",
 	Action: mainRetention,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(rFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -50,9 +62,13 @@ VALIDITY:
   This argument must be formatted like Nd or Ny where 'd' denotes days and 'y' denotes years e.g. 10d, 3y.
 
 EXAMPLES:
-   1. Set object retention for objects in a given prefix
-     $ {{.HelpName}} myminio/mybucket/prefix compliance 30d
-`,
+   1. Set object retention for a specific object
+     $ {{.HelpName}} myminio/mybucket/prefix/obj.csv compliance 30d
+
+   2. Set object retention for objects in a given prefix
+     $ {{.HelpName}} myminio/mybucket/prefix compliance 30d  --recursive
+
+	 `,
 }
 
 // Structured message depending on the type of console.
@@ -80,7 +96,7 @@ func (m retentionCmdMessage) JSON() string {
 }
 
 // setRetention - Set Retention for all objects within a given prefix.
-func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) error {
+func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, bypassGovernance, isRecursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
@@ -93,6 +109,7 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 	}
 
 	alias, _, _ := mustExpandAlias(urlStr)
+
 	retainUntilDate := func() (time.Time, error) {
 		if validity == nil {
 			return timeSentinel, fmt.Errorf("invalid validity '%v'", validity)
@@ -128,7 +145,7 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 
 	var cErr error
 	errorsFound := false
-	for content := range clnt.List(true, false, false, DirNone) {
+	for content := range clnt.List(isRecursive, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
@@ -144,7 +161,7 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
-		probeErr := newClnt.PutObjectRetention(mode, &retainUntil)
+		probeErr := newClnt.PutObjectRetention(mode, &retainUntil, bypassGovernance)
 		if probeErr != nil {
 			errorsFound = true
 			printMsg(retentionCmdMessage{
@@ -169,7 +186,7 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 		if errorsFound {
 			console.Print(console.Colorize("RetentionPartialFailure", fmt.Sprintf("Errors found while setting retention on objects with prefix `%s`.\n", urlStr)))
 		} else {
-			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for prefix `%s`.\n", urlStr)))
+			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for `%s`.\n", urlStr)))
 		}
 	}
 	return cErr
@@ -221,5 +238,5 @@ func mainRetention(ctx *cli.Context) error {
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "retention", 1)
 	}
-	return setRetention(urlStr, mode, validity, unit)
+	return setRetention(urlStr, mode, validity, unit, ctx.Bool("bypass"), ctx.Bool("recursive"))
 }

@@ -128,7 +128,9 @@ func mainSetTag(ctx *cli.Context) error {
 		fatalIf(probe.NewError(err), ". Key value parsing failed from arguments provided. Please refer to mc "+ctx.Command.FullName()+" --help for details.")
 	}
 	clnt, pErr := newClient(objectURL)
-	fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+".")
+	if pErr != nil {
+		fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+". "+pErr.ToGoError().Error())
+	}
 	pErr = clnt.SetObjectTagging(objTagMap)
 	fatalIf(pErr, "Failed to set tags")
 	tagObj, err := getObjTagging(objectURL)

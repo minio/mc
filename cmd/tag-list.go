@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -58,40 +59,6 @@ EXAMPLES:
 `,
 }
 
-type tagList struct {
-	Key   string `json:"Key"`
-	Value string `json:"Value"`
-}
-
-// tagsetListMessage container for displaying tag
-type tagsetListMessage struct {
-	Tags   []tagList `json:"tagset,omitempty"`
-	Status string    `json:"status"`
-	Name   string    `json:"name"`
-	Error  error     `json:"error,omitempty"`
-}
-
-func (t tagsetListMessage) JSON() string {
-	var tagJSONbytes []byte
-	var err error
-
-	tagJSONbytes, err = json.MarshalIndent(t, "", "  ")
-	tagJSONbytes = bytes.Replace(tagJSONbytes, []byte("\\u0026"), []byte("&"), -1)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+t.Name)
-
-	return string(tagJSONbytes)
-}
-
-func (t tagsetListMessage) String() string {
-	var msg string
-	if t.Error == nil && len(t.Tags) == 0 {
-		msg = console.Colorize(tagPrintMsgTheme, "Tag(s) set for "+t.Name+".")
-	} else if t.Error != nil {
-		msg = console.Colorize(tagPrintErrMsgTheme, "Failed to get tags for "+t.Name+". "+t.Error.Error())
-	}
-	return msg
-}
-
 const (
 	tagMainHeader       string = "Main-Heading"
 	tagRowTheme         string = "Row-Header"
@@ -99,14 +66,51 @@ const (
 	tagPrintErrMsgTheme string = "Tag-PrintMsgErr"
 )
 
+type tagList struct {
+	Key   string `json:"Key"`
+	Value string `json:"Value"`
+}
+
+// tagsetListMessage container for displaying tag
+type tagsetListMessage struct {
+	Tags   []tagList       `json:"tagset,omitempty"`
+	Status string          `json:"status"`
+	URL    string          `json:"url"`
+	Error  error           `json:"error,omitempty"`
+	TagObj tagging.Tagging `json:"-"`
+}
+
+func (t tagsetListMessage) JSON() string {
+	if t.Error == nil && len(t.Tags) == 0 {
+		errorIf(probe.NewError(errors.New("Tag(s) not set for "+t.URL)), "Failed to get tags.")
+	} else {
+		tagJSONbytes, err := json.MarshalIndent(t, "", "  ")
+		tagJSONbytes = bytes.Replace(tagJSONbytes, []byte("\\u0026"), []byte("&"), -1)
+		fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+getTagObjectName(t.URL))
+		return string(tagJSONbytes)
+	}
+	return ""
+}
+
+func (t tagsetListMessage) String() string {
+	if t.Error != nil {
+		return console.Colorize(tagPrintErrMsgTheme, "Failed to get tags for "+t.URL+". "+t.Error.Error())
+	}
+	if len(t.Tags) == 0 {
+		return console.Colorize(tagPrintMsgTheme, "Tag(s) not set for "+t.URL+". ")
+	}
+	return getFormattedTagList(getTagObjectName(t.URL), t.TagObj.TagSet.Tags)
+}
+
 // getnTagListMessage parses the tags(string) and initializes the structure tagsetListMessage.
 // tags(string) is in the format key1=value1&key1=value2
-func getTagListMessage(tags string, urlStr string, err error) tagsetListMessage {
+func getTagListMessage(tags tagging.Tagging, urlStr string, err error) tagsetListMessage {
 	var t tagsetListMessage
 	var tagStr string
 	var kvPairStr []string
-	tagStr = strings.Replace(tags, "\\u0026", "&", -1)
-	t.Name = getTagObjectName(urlStr)
+	tagStr = strings.Replace(tags.String(), "\\u0026", "&", -1)
+	t.URL = urlStr
+	t.TagObj = tags
 	t.Error = nil
 	if tagStr != "" {
 		kvPairStr = strings.SplitN(tagStr, "&", -1)
@@ -126,7 +130,7 @@ func getTagListMessage(tags string, urlStr string, err error) tagsetListMessage 
 func getObjTagging(urlStr string) (tagging.Tagging, error) {
 	clnt, pErr := newClient(urlStr)
 	if pErr != nil {
-		fatalIf(pErr.Trace(urlStr), "Unable to initialize target "+urlStr+". Error: "+pErr.ToGoError().Error())
+		fatalIf(pErr.Trace(urlStr), "Unable to initialize target "+urlStr+". "+pErr.ToGoError().Error())
 	}
 	tagObj, pErr := clnt.GetObjectTagging()
 	fatalIf(pErr, "Failed to get tags for "+urlStr)
@@ -159,7 +163,8 @@ func getTagObjectName(urlStr string) string {
 	return object
 }
 
-func listTagInfoFieldMultiple(urlStr string, kvpairs []tagging.Tag) {
+func getFormattedTagList(tagObjName string, kvpairs []tagging.Tag) string {
+	var tagListInfo string
 	padLen := len("Name")
 	for _, kv := range kvpairs {
 		if len(kv.Key) > padLen {
@@ -167,12 +172,13 @@ func listTagInfoFieldMultiple(urlStr string, kvpairs []tagging.Tag) {
 		}
 	}
 	padLen = listTagPaddingSpace(padLen)
-	objectName := fmt.Sprintf("%-*s:    %s", padLen, "Name", getTagObjectName(urlStr))
-	console.Println(console.Colorize(tagMainHeader, objectName))
+	objectName := fmt.Sprintf("%-*s:    %s\n", padLen, "Name", tagObjName)
+	tagListInfo += console.Colorize(tagMainHeader, objectName)
 	for idx := 0; idx < len(kvpairs); idx++ {
-		displayField := fmt.Sprintf("%-*s:    %s", padLen, kvpairs[idx].Key, kvpairs[idx].Value)
-		console.Println(console.Colorize(tagRowTheme, displayField))
+		displayField := fmt.Sprintf("%-*s:    %s\n", padLen, kvpairs[idx].Key, kvpairs[idx].Value)
+		tagListInfo += console.Colorize(tagRowTheme, displayField)
 	}
+	return tagListInfo
 }
 
 func listTagPaddingSpace(padLen int) int {
@@ -200,11 +206,7 @@ func mainListTag(ctx *cli.Context) error {
 		fatal(probe.NewError(err), "Unable to get tags for target "+objectURL+".")
 	}
 	var msg tagsetListMessage
-	msg = getTagListMessage(tagObj.String(), objectURL, err)
-
-	if !globalJSON {
-		listTagInfoFieldMultiple(objectURL, tagObj.TagSet.Tags)
-	}
+	msg = getTagListMessage(tagObj, objectURL, err)
 	printMsg(msg)
 	return nil
 }

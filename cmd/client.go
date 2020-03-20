@@ -69,7 +69,7 @@ type Client interface {
 	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
 	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (n int64, err *probe.Error)
 	// Object Locking related API
-	PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error
+	PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
@@ -94,18 +94,17 @@ type Client interface {
 
 // Content container for content metadata
 type clientContent struct {
-	URL               clientURL
-	Time              time.Time
-	Size              int64
-	Type              os.FileMode
-	StorageClass      string
-	Metadata          map[string]string
-	UserMetadata      map[string]string
-	ETag              string
-	Expires           time.Time
-	EncryptionHeaders map[string]string
-	Retention         bool
-	Err               *probe.Error
+	URL          clientURL
+	Time         time.Time
+	Size         int64
+	Type         os.FileMode
+	StorageClass string
+	Metadata     map[string]string
+	UserMetadata map[string]string
+	ETag         string
+	Expires      time.Time
+	Retention    bool
+	Err          *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
