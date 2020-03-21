@@ -96,7 +96,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 
 	if len(ctx.Args()) == 1 {
 		// Call get config API
-		hr, e := client.HelpConfigKV("", "", false)
+		hr, e := client.HelpConfigKV(globalContext, "", "", false)
 		fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
 
 		// Print
@@ -109,7 +109,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	}
 
 	// Call get config API
-	buf, e := client.GetConfigKV(strings.Join(args.Tail(), " "))
+	buf, e := client.GetConfigKV(globalContext, strings.Join(args.Tail(), " "))
 	fatalIf(probe.NewError(e), "Cannot get server '%s' config", args.Tail())
 
 	// Print

@@ -25,7 +25,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -175,8 +174,6 @@ EXAMPLES:
 const uaMirrorAppName = "mc-mirror"
 
 type mirrorJob struct {
-	// the channel to trap SIGKILL signals
-	trapCh <-chan bool
 	stopCh chan struct{}
 
 	// mutex for shutdown, this prevents the shutdown
@@ -529,7 +526,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			}
 			mj.statusCh <- URLs{Error: err}
 			return
-		case <-mj.trapCh:
+		case <-globalContext.Done():
 			return
 		case <-mj.stopCh:
 			return
@@ -593,7 +590,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 					return mj.doRemove(sURLs)
 				}
 			}
-		case <-mj.trapCh:
+		case <-globalContext.Done():
 			if stopParallel != nil {
 				stopParallel()
 			}
@@ -649,7 +646,6 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		isPreserve = true
 	}
 	mj := mirrorJob{
-		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		stopCh: make(chan struct{}),
 
 		sourceURL: srcURL,
@@ -772,7 +768,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		encKeyDB)
 
 	go func() {
-		<-mj.trapCh
+		<-globalContext.Done()
 		os.Exit(globalErrorExitStatus)
 	}()
 

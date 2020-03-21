@@ -107,7 +107,7 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 
 	if len(ctx.Args()) == 1 {
 		// Call get config API
-		hr, e := client.HelpConfigKV("", "", ctx.IsSet("env"))
+		hr, e := client.HelpConfigKV(globalContext, "", "", ctx.IsSet("env"))
 		fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
 
 		// Print
@@ -121,7 +121,7 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 
 	// Call reset config API
 	input := strings.Join(args.Tail(), " ")
-	fatalIf(probe.NewError(client.DelConfigKV(input)),
+	fatalIf(probe.NewError(client.DelConfigKV(globalContext, input)),
 		"Cannot reset '%s' on the server", input)
 
 	// Print set config result

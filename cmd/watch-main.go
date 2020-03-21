@@ -18,10 +18,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"sync"
-	"syscall"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -163,8 +161,6 @@ func mainWatch(ctx *cli.Context) error {
 	wo, err := s3Client.Watch(params)
 	fatalIf(err, "Cannot watch on the specified bucket.")
 
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
-
 	// Initialize.. waitgroup to track the go-routine.
 	wg := sync.WaitGroup{}
 
@@ -178,7 +174,7 @@ func mainWatch(ctx *cli.Context) error {
 		// Wait for all events.
 		for {
 			select {
-			case <-trapCh:
+			case <-globalContext.Done():
 				// Signal received we are done.
 				close(wo.doneChan)
 				return

@@ -143,13 +143,10 @@ func watchFind(ctx *findContext) {
 	watchObj, err := ctx.clnt.Watch(params)
 	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given params.")
 
-	// Enables users to kill using the control + c
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
-
 	// Loop until user CTRL-C the command line.
 	for {
 		select {
-		case <-trapCh:
+		case <-globalContext.Done():
 			console.Println()
 			close(watchObj.doneChan)
 			return

@@ -121,7 +121,7 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	fatalIf(probe.NewError(client.AddCannedPolicy(args.Get(1), string(policy))).Trace(args...), "Cannot add new policy")
+	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), string(policy))).Trace(args...), "Cannot add new policy")
 
 	printMsg(userPolicyMessage{
 		op:     "add",

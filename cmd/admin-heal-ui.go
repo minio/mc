@@ -20,9 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"strings"
-	"syscall"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -404,16 +402,15 @@ func (ui *uiData) healResumeMsg(aliasedURL string) string {
 }
 
 func (ui *uiData) DisplayAndFollowHealStatus(aliasedURL string) (res madmin.HealTaskStatus, err error) {
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
-	trapMsg := ui.healResumeMsg(aliasedURL)
+	quitMsg := ui.healResumeMsg(aliasedURL)
 
 	firstIter := true
 	for {
 		select {
-		case <-trapCh:
-			return res, errors.New(trapMsg)
+		case <-globalContext.Done():
+			return res, errors.New(quitMsg)
 		default:
-			_, res, err = ui.Client.Heal(ui.Bucket, ui.Prefix, *ui.HealOpts,
+			_, res, err = ui.Client.Heal(globalContext, ui.Bucket, ui.Prefix, *ui.HealOpts,
 				ui.ClientToken, ui.ForceStart, false)
 			if err != nil {
 				return res, err

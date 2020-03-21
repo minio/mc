@@ -87,7 +87,7 @@ func mainAdminServiceStop(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Stop the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceStop()), "Unable to stop the server.")
+	fatalIf(probe.NewError(client.ServiceStop(globalContext)), "Unable to stop the server.")
 
 	// Success..
 	printMsg(serviceStopMessage{Status: "success", ServerURL: aliasedURL})

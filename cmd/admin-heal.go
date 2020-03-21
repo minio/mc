@@ -231,7 +231,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Return the background heal status when the user
 	// doesn't pass a bucket or --recursive flag.
 	if bucket == "" && !ctx.Bool("recursive") {
-		bgHealStatus, berr := client.BackgroundHealStatus()
+		bgHealStatus, berr := client.BackgroundHealStatus(globalContext)
 		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
 		printMsg(backgroundHealStatusMessage{Status: "success", HealInfo: bgHealStatus})
 		return nil
@@ -247,13 +247,13 @@ func mainAdminHeal(ctx *cli.Context) error {
 	forceStart := ctx.Bool("force-start")
 	forceStop := ctx.Bool("force-stop")
 	if forceStop {
-		_, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, forceStop)
+		_, _, herr := client.Heal(globalContext, bucket, prefix, opts, "", forceStart, forceStop)
 		fatalIf(probe.NewError(herr), "Failed to stop heal sequence.")
 		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
 		return nil
 	}
 
-	healStart, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, false)
+	healStart, _, herr := client.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
 	fatalIf(probe.NewError(herr), "Failed to start heal sequence.")
 
 	ui := uiData{
