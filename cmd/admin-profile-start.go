@@ -114,7 +114,7 @@ func mainAdminProfileStart(ctx *cli.Context) error {
 	}
 
 	// Start profile
-	_, cmdErr := client.StartProfiling(madmin.ProfilerType(profilers))
+	_, cmdErr := client.StartProfiling(globalContext, madmin.ProfilerType(profilers))
 	fatalIf(probe.NewError(cmdErr), "Unable to start profile.")
 
 	console.Infoln("Profile data successfully started.")

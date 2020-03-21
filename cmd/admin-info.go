@@ -224,7 +224,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 
 	var clusterInfo clusterStruct
 	// Fetch info of all servers (cluster or single server)
-	admInfo, e := client.ServerInfo()
+	admInfo, e := client.ServerInfo(globalContext)
 	if e != nil {
 		clusterInfo.Status = "error"
 		clusterInfo.Error = e.Error()

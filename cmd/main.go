@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -109,6 +110,10 @@ func Main(args []string) {
 		// Trim ".exe" from Windows executable.
 		appName = appName[:strings.LastIndex(appName, ".")]
 	}
+
+	// Monitor OS exit signals and cancel the global context in such case
+	go trapSignals(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+
 	// Run the app - exit on error.
 	if err := registerApp(appName).Run(args); err != nil {
 		os.Exit(1)

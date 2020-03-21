@@ -103,7 +103,7 @@ func mainAdminPolicySet(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	e := client.SetPolicy(policyName, userOrGroup, isGroup)
+	e := client.SetPolicy(globalContext, policyName, userOrGroup, isGroup)
 
 	if e == nil {
 		printMsg(userPolicyMessage{

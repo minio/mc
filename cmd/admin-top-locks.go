@@ -114,7 +114,7 @@ func mainAdminTopLocks(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call top locks API
-	entries, e := client.TopLocks()
+	entries, e := client.TopLocks(globalContext)
 	fatalIf(probe.NewError(e), "Cannot get server locks list.")
 
 	console.SetColor("StaleLock", color.New(color.FgRed, color.Bold))

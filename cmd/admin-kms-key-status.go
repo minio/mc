@@ -60,7 +60,7 @@ func mainAdminKMSKeyStatus(ctx *cli.Context) error {
 	if len(ctx.Args()) == 2 {
 		keyID = ctx.Args().Get(1)
 	}
-	status, e := client.GetKeyStatus(keyID)
+	status, e := client.GetKeyStatus(globalContext, keyID)
 	fatalIf(probe.NewError(e), "Failed to get status information")
 
 	printMsg(kmsKeyStatusMsg(*status))
