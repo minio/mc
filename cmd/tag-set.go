@@ -44,10 +44,10 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-   Assign object tags (key,value) to target.
+   Assign tags to an object.
 
 EXAMPLES:
-  1. Assign the tags to an existing object.
+  1. Assign tags to an object.
      {{.Prompt}} {{.HelpName}} s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 
 `,
@@ -57,7 +57,6 @@ EXAMPLES:
 type tagSetMessage struct {
 	Status string `json:"status"`
 	Name   string `json:"name"`
-	Error  error  `json:"error,omitempty"`
 }
 
 // tagSetMessage console colorized output.
@@ -70,18 +69,6 @@ func (t tagSetMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(t, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
-}
-
-func getTagSetMessage(tags string, urlStr string, err error) tagSetMessage {
-	var t tagSetMessage
-	t.Name = getTagObjectName(urlStr)
-	if err != nil {
-		t.Status = "error"
-		t.Error = err
-	} else {
-		t.Status = "success"
-	}
-	return t
 }
 
 func checkSetTagSyntax(ctx *cli.Context) {
@@ -122,20 +109,26 @@ func mainSetTag(ctx *cli.Context) error {
 	var err error
 	var pErr *probe.Error
 	var objTagMap map[string]string
-	var msg tagSetMessage
 
 	if objTagMap, err = getTaggingMap(ctx); err != nil {
 		fatalIf(probe.NewError(err), ". Key value parsing failed from arguments provided. Please refer to mc "+ctx.Command.FullName()+" --help for details.")
 	}
+
 	clnt, pErr := newClient(objectURL)
 	if pErr != nil {
 		fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+". "+pErr.ToGoError().Error())
 	}
+
 	pErr = clnt.SetObjectTagging(objTagMap)
-	fatalIf(pErr, "Failed to set tags")
-	tagObj, err := getObjTagging(objectURL)
-	msg = getTagSetMessage(tagObj.String(), objectURL, err)
-	printMsg(msg)
+	if pErr != nil {
+		errorIf(pErr.Trace(objectURL), "Failed to set tags for "+objectURL)
+		return exitStatus(globalErrorExitStatus)
+	}
+
+	printMsg(tagSetMessage{
+		Status: "success",
+		Name:   objectURL,
+	})
 
 	return nil
 }
