@@ -404,6 +404,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			if runtime.GOOS == "darwin" {
 				// Strip the prefixes in the event path. Happens in darwin OS only
 				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
+			} else if runtime.GOOS == "windows" {
+				// Shared folder as source URL and if event path is an absolute path.
+				eventPath = winSharedEventPathCheck(mj.sourceURL, eventPath)
 			}
 
 			sourceURL := newClientURL(eventPath)
@@ -711,6 +714,29 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 	return nil
 }
 
+func winSharedEventPathCheck(srcURL, eventPath string) string {
+	// A rename or move or sometimes even write event sets eventPath as an absolute filepath.
+	// If the watch folder is a shared folder the write events show the entire event path,
+	// from which we need to deduce the correct path relative to the source URL
+	var eventRelPath, lastPathPrefix string
+	var lastPathPrefixPos int
+	sourceURLpathList := strings.Split(srcURL, slashSeperator)
+	lenSrcURLSlice := len(sourceURLpathList)
+	shdModifyEventPath := filepath.IsAbs(eventPath) && !filepath.IsAbs(srcURL) && lenSrcURLSlice > 1
+
+	if shdModifyEventPath {
+		lastPathPrefix = sourceURLpathList[lenSrcURLSlice-1]
+		lastPathPrefixPos = strings.Index(eventPath, lastPathPrefix)
+	}
+	canModifyEventPath := shdModifyEventPath && lastPathPrefix != "" && lastPathPrefixPos > 0
+	canModifyEventPath = canModifyEventPath && lastPathPrefixPos+len(lastPathPrefix) < len(eventPath)
+	if canModifyEventPath {
+		eventRelPath = filepath.ToSlash(eventPath[lastPathPrefixPos+len(lastPathPrefix):])
+		eventPath = srcURL + eventRelPath
+	}
+	return eventPath
+}
+
 // runMirror - mirrors all buckets to another S3 server
 func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
 	// This is kept for backward compatibility, `--force` means
@@ -897,7 +923,15 @@ func mainMirror(ctx *cli.Context) error {
 
 	srcURL := args[0]
 	tgtURL := args[1]
-
+	srcFI, e := os.Stat(srcURL)
+	if e == nil && srcFI.IsDir() && !filepath.IsAbs(srcURL) {
+		origSrcURL := srcURL
+		// Changing relative path to absolute path, if it is a local directory.
+		// Save original in case of error
+		if srcURL, e = filepath.Abs(srcURL); e != nil {
+			srcURL = origSrcURL
+		}
+	}
 	if ctx.String("multi-master") != "" {
 		for {
 			runMirror(srcURL, tgtURL, ctx, encKeyDB)

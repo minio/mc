@@ -71,53 +71,37 @@ type tagList struct {
 	Value string `json:"Value"`
 }
 
-// tagsetListMessage container for displaying tag
-type tagsetListMessage struct {
+// tagListMessage structure for displaying tag
+type tagListMessage struct {
 	Tags   []tagList       `json:"tagset,omitempty"`
 	Status string          `json:"status"`
 	URL    string          `json:"url"`
-	Error  error           `json:"error,omitempty"`
 	TagObj tagging.Tagging `json:"-"`
 }
 
-func (t tagsetListMessage) JSON() string {
-	if t.Error == nil && len(t.Tags) == 0 {
-		errorIf(probe.NewError(errors.New("Tag(s) not set for "+t.URL)), "Failed to get tags.")
-	} else {
-		tagJSONbytes, err := json.MarshalIndent(t, "", "  ")
-		tagJSONbytes = bytes.Replace(tagJSONbytes, []byte("\\u0026"), []byte("&"), -1)
-		fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+getTagObjectName(t.URL))
-		return string(tagJSONbytes)
-	}
-	return ""
+func (t tagListMessage) JSON() string {
+	tagJSONbytes, err := json.MarshalIndent(t, "", "  ")
+	tagJSONbytes = bytes.Replace(tagJSONbytes, []byte("\\u0026"), []byte("&"), -1)
+	fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+getTagObjectName(t.URL))
+	return string(tagJSONbytes)
 }
 
-func (t tagsetListMessage) String() string {
-	if t.Error != nil {
-		return console.Colorize(tagPrintErrMsgTheme, "Failed to get tags for "+t.URL+". "+t.Error.Error())
-	}
-	if len(t.Tags) == 0 {
-		return console.Colorize(tagPrintMsgTheme, "Tag(s) not set for "+t.URL+". ")
-	}
+func (t tagListMessage) String() string {
 	return getFormattedTagList(getTagObjectName(t.URL), t.TagObj.TagSet.Tags)
 }
 
-// getnTagListMessage parses the tags(string) and initializes the structure tagsetListMessage.
+// getTagListMessage parses the tags(string) and initializes the structure tagsetListMessage.
 // tags(string) is in the format key1=value1&key1=value2
-func getTagListMessage(tags tagging.Tagging, urlStr string, err error) tagsetListMessage {
-	var t tagsetListMessage
+func getTagListMessage(tags tagging.Tagging, urlStr string) tagListMessage {
+	var t tagListMessage
 	var tagStr string
 	var kvPairStr []string
 	tagStr = strings.Replace(tags.String(), "\\u0026", "&", -1)
 	t.URL = urlStr
 	t.TagObj = tags
-	t.Error = nil
 	if tagStr != "" {
 		kvPairStr = strings.SplitN(tagStr, "&", -1)
 		t.Status = "success"
-	} else {
-		t.Status = "error"
-		t.Error = err
 	}
 	for _, kvPair := range kvPairStr {
 		kvPairSplit := splitStr(kvPair, "=", 2)
@@ -127,7 +111,7 @@ func getTagListMessage(tags tagging.Tagging, urlStr string, err error) tagsetLis
 	return t
 }
 
-func getObjTagging(urlStr string) (tagging.Tagging, error) {
+func getObjTagging(urlStr string) tagging.Tagging {
 	clnt, pErr := newClient(urlStr)
 	if pErr != nil {
 		fatalIf(pErr.Trace(urlStr), "Unable to initialize target "+urlStr+". "+pErr.ToGoError().Error())
@@ -135,7 +119,7 @@ func getObjTagging(urlStr string) (tagging.Tagging, error) {
 	tagObj, pErr := clnt.GetObjectTagging()
 	fatalIf(pErr, "Failed to get tags for "+urlStr)
 
-	return tagObj, nil
+	return tagObj
 }
 
 // Color scheme for tag display
@@ -200,13 +184,13 @@ func mainListTag(ctx *cli.Context) error {
 	setTagListColorScheme()
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	var tagObj tagging.Tagging
-	var err error
-	if tagObj, err = getObjTagging(objectURL); err != nil {
-		fatal(probe.NewError(err), "Unable to get tags for target "+objectURL+".")
+	tagObj := getObjTagging(objectURL)
+	if len(tagObj.TagSet.Tags) == 0 {
+		errorIf(probe.NewError(errors.New("Tag(s) not set for "+objectURL)), "Failed to get tags.")
+		return exitStatus(globalErrorExitStatus)
 	}
-	var msg tagsetListMessage
-	msg = getTagListMessage(tagObj, objectURL, err)
+	var msg tagListMessage
+	msg = getTagListMessage(tagObj, objectURL)
 	printMsg(msg)
 	return nil
 }
