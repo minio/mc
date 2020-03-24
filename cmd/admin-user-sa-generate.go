@@ -50,7 +50,10 @@ FLAGS:
   {{end}}
 
 EXAMPLES:
-  1. Add a new service account under the name of 'foobar' to MinIO server.
+  1. Create a new service account from 'foobar' to MinIO server.
+     {{.Prompt}} {{.HelpName}} myminio foobar
+
+  2. Create a new service account with restrained policy specified by /tmp/policy.json.
      {{.Prompt}} {{.HelpName}} myminio foobar /tmp/policy.json
 `,
 }
