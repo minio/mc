@@ -41,9 +41,9 @@ PARENT-USER:
   The parent user.
 
 POLICY_FILE:
-  The path of the policy to apply for the new service account.
-  When unspecified, the policy of the parent user will be evaluated
-  instead for all type of service accounts requests.
+  Optional path of the policy to apply for the new service account.
+  When not specified, the policy of the parent user is inherited, please
+  check 'mc admin user info <parent_user>' for the relevant policy.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
