@@ -31,6 +31,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -433,6 +434,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						Retention: event.Type == EventCreatePutRetention,
 						Size:      event.Size,
 						Metadata:  event.UserMetadata,
+						ETag:      event.UserMetadata[xhttp.ETag],
 					},
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
