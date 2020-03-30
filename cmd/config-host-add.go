@@ -201,9 +201,9 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 	return s3Config.Signature, nil
 }
 
-// buildS3Config constructs an S3 Config and does
+// BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
+func BuildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
 	s3Config := newS3Config(url, &hostConfigV9{
 		AccessKey: accessKey,
@@ -278,7 +278,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	accessKey, secretKey := fetchHostKeys(args)
 	checkConfigHostAddSyntax(ctx, accessKey, secretKey)
 
-	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
+	s3Config, err := BuildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
 
 	addHost(ctx.Args().Get(0), hostConfigV9{
