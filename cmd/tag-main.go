@@ -1,5 +1,5 @@
 /*
- * MinIO Client, (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +17,27 @@
 package cmd
 
 import (
-	"os"
-	"os/signal"
+	"github.com/minio/cli"
 )
 
-// trapSignals traps the registered signals and cancel the global context.
-func trapSignals(sig ...os.Signal) {
-	// channel to receive signals.
-	sigCh := make(chan os.Signal, 1)
-	defer close(sigCh)
+var tagCmd = cli.Command{
+	Name:   "tag",
+	Usage:  "manage tags for an object",
+	Action: mainTag,
+	Before: setGlobalsFromContext,
+	Flags:  globalFlags,
+	Subcommands: []cli.Command{
+		tagListCmd,
+		tagRemoveCmd,
+		tagSetCmd,
+	},
+}
 
-	// `signal.Notify` registers the given channel to
-	// receive notifications of the specified signals.
-	signal.Notify(sigCh, sig...)
+func checkMainTagSyntax(ctx *cli.Context) {
+	cli.ShowCommandHelp(ctx, "")
+}
 
-	// Wait for the signal.
-	<-sigCh
-
-	// Once signal has been received stop signal Notify handler.
-	signal.Stop(sigCh)
-
-	// Cancel the global context
-	globalCancel()
+func mainTag(ctx *cli.Context) error {
+	checkMainTagSyntax(ctx)
+	return nil
 }

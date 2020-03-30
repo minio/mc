@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"hash/fnv"
 	"io"
@@ -42,6 +43,7 @@ import (
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 	"github.com/minio/minio-go/v6/pkg/policy"
 	"github.com/minio/minio-go/v6/pkg/s3utils"
+	"github.com/minio/minio/pkg/bucket/object/tagging"
 	"github.com/minio/minio/pkg/mimedb"
 )
 
@@ -55,7 +57,6 @@ type s3Client struct {
 
 const (
 	amazonHostNameAccelerated = "s3-accelerate.amazonaws.com"
-
 	googleHostName            = "storage.googleapis.com"
 	serverEncryptionKeyPrefix = "x-amz-server-side-encryption"
 
@@ -77,13 +78,6 @@ const (
 	// AmzObjectLockRetainUntilDate sets object lock retain until date
 	AmzObjectLockRetainUntilDate = "X-Amz-Object-Lock-Retain-Until-Date"
 )
-
-// cseHeaders is list of client side encryption headers
-var cseHeaders = []string{
-	"X-Amz-Meta-X-Amz-Iv",
-	"X-Amz-Meta-X-Amz-Key",
-	"X-Amz-Meta-X-Amz-Matdesc",
-}
 
 var timeSentinel = time.Unix(0, 0).UTC()
 
@@ -825,6 +819,10 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 // Put - upload an object with custom metadata.
 func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return 0, probe.NewError(BucketNameEmpty{})
+	}
+
 	contentType, ok := metadata["Content-Type"]
 	if ok {
 		delete(metadata, "Content-Type")
@@ -872,10 +870,6 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
 			retainUntilDate = t.UTC()
 		}
-	}
-
-	if bucket == "" {
-		return 0, probe.NewError(BucketNameEmpty{})
 	}
 	opts := minio.PutObjectOptions{
 		UserMetadata:         metadata,
@@ -1269,7 +1263,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				objectMetadata.Size = objectMultipartInfo.Size
 				objectMetadata.Type = os.FileMode(0664)
 				objectMetadata.Metadata = map[string]string{}
-				objectMetadata.EncryptionHeaders = map[string]string{}
 				return objectMetadata, nil
 			}
 
@@ -1277,8 +1270,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				objectMetadata.URL = *c.targetURL
 				objectMetadata.Type = os.ModeDir
 				objectMetadata.Metadata = map[string]string{}
-				objectMetadata.EncryptionHeaders = map[string]string{}
-
 				return objectMetadata, nil
 			}
 		}
@@ -1302,7 +1293,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 				}
 				objectMetadata.ETag = stat.ETag
 				objectMetadata.Metadata = stat.Metadata
-				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
 				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
@@ -1315,14 +1305,12 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 			objectMetadata.Type = os.FileMode(0664)
 			objectMetadata.Metadata = map[string]string{}
 			objectMetadata.Expires = objectStat.Expires
-			objectMetadata.EncryptionHeaders = map[string]string{}
 			if isFetchMeta {
 				stat, err := c.getObjectStat(bucket, object, opts)
 				if err != nil {
 					return nil, err
 				}
 				objectMetadata.Metadata = stat.Metadata
-				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
 				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
@@ -1362,25 +1350,8 @@ func (c *s3Client) getObjectStat(bucket, object string, opts minio.StatObjectOpt
 	objectMetadata.Expires = objectStat.Expires
 	objectMetadata.Type = os.FileMode(0664)
 	objectMetadata.Metadata = map[string]string{}
-	objectMetadata.EncryptionHeaders = map[string]string{}
-	objectMetadata.Metadata["Content-Type"] = objectStat.ContentType
-	for k, v := range objectStat.Metadata {
-		isCSEHeader := false
-		for _, header := range cseHeaders {
-			if (strings.Compare(strings.ToLower(header), strings.ToLower(k)) == 0) ||
-				strings.HasPrefix(strings.ToLower(serverEncryptionKeyPrefix), strings.ToLower(k)) {
-				if len(v) > 0 {
-					objectMetadata.EncryptionHeaders[k] = v[0]
-				}
-				isCSEHeader = true
-				break
-			}
-		}
-		if !isCSEHeader {
-			if len(v) > 0 {
-				objectMetadata.Metadata[k] = v[0]
-			}
-		}
+	for k := range objectStat.Metadata {
+		objectMetadata.Metadata[k] = objectStat.Metadata.Get(k)
 	}
 	objectMetadata.ETag = objectStat.ETag
 	return objectMetadata, nil
@@ -1765,9 +1736,13 @@ func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.ETag = entry.ETag
 	content.Time = entry.LastModified
 	content.Expires = entry.Expires
+	content.Metadata = map[string]string{}
 	content.UserMetadata = map[string]string{}
 	for k, v := range entry.UserMetadata {
 		content.UserMetadata[k] = v
+	}
+	for k := range entry.Metadata {
+		content.Metadata[k] = entry.Metadata.Get(k)
 	}
 	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) && entry.Size == 0 && entry.LastModified.IsZero() {
 		content.Type = os.ModeDir
@@ -2074,12 +2049,13 @@ func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 }
 
 // Set object retention for a given object.
-func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
+func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 
 	opts := minio.PutObjectRetentionOptions{
-		RetainUntilDate: retainUntilDate,
-		Mode:            mode,
+		RetainUntilDate:  retainUntilDate,
+		Mode:             mode,
+		GovernanceBypass: bypassGovernance,
 	}
 	err := c.api.PutObjectRetention(bucket, object, opts)
 	if err != nil {
@@ -2099,4 +2075,77 @@ func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *u
 	}
 
 	return mode, validity, unit, nil
+}
+
+// Get Object Tags
+func (c *s3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
+	var err error
+	bucketName, objectName := c.url2BucketAndObject()
+	if bucketName == "" {
+		return tagging.Tagging{}, probe.NewError(BucketNameEmpty{})
+	}
+	if objectName == "" {
+		return tagging.Tagging{}, probe.NewError(ObjectNameEmpty{})
+	}
+	tagXML, err := c.api.GetObjectTagging(bucketName, objectName)
+	if err != nil {
+		return tagging.Tagging{}, probe.NewError(err)
+	}
+	var tagObj tagging.Tagging
+	if err = xml.Unmarshal([]byte(tagXML), &tagObj); err != nil {
+		return tagging.Tagging{}, probe.NewError(err)
+	}
+	return tagObj, nil
+}
+
+// Set Object tags
+func (c *s3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
+	var err error
+	bucketName, objectName := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	if objectName == "" {
+		return probe.NewError(ObjectNameEmpty{})
+	}
+	if err = c.api.PutObjectTagging(bucketName, objectName, tagMap); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// Delete object tags
+func (c *s3Client) DeleteObjectTagging() *probe.Error {
+	bucketName, objectName := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	if objectName == "" {
+		return probe.NewError(ObjectNameEmpty{})
+	}
+	if err := c.api.RemoveObjectTagging(bucketName, objectName); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// Get lifecycle configuration for a given bucket.
+func (c *s3Client) GetBucketLifecycle() (string, *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+
+	lifecycleXML, err := c.api.GetBucketLifecycle(bucket)
+	if err != nil {
+		return "", probe.NewError(err)
+	}
+	return lifecycleXML, nil
+}
+
+// Set lifecycle configuration for a given bucket.
+func (c *s3Client) SetBucketLifecycle(lifecycleXML string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	err := c.api.SetBucketLifecycle(bucket, lifecycleXML)
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
 }

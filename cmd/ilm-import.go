@@ -20,17 +20,11 @@ import (
 	"os"
 
 	"github.com/minio/cli"
-	ilm "github.com/minio/mc/cmd/ilm"
+	"github.com/minio/mc/cmd/ilm"
+	json "github.com/minio/mc/pkg/colorjson"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
-
-// checkILMImportSyntax - validate arguments passed by user
-func checkILMImportSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelp(ctx, "import")
-		os.Exit(globalErrorExitStatus)
-	}
-}
 
 var ilmImportCmd = cli.Command{
 	Name:   "import",
@@ -56,6 +50,31 @@ EXAMPLES:
 `,
 }
 
+type ilmImportMessage struct {
+	Status string `json:"status"`
+	Target string `json:"target"`
+}
+
+// tagSetMessage console colorized output.
+func (i ilmImportMessage) String() string {
+	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration imported successfully to `"+i.Target+"`.")
+}
+
+// JSON tagSetMessage.
+func (i ilmImportMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(i, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
+// checkILMImportSyntax - validate arguments passed by user
+func checkILMImportSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelp(ctx, "import")
+		os.Exit(globalErrorExitStatus)
+	}
+}
+
 func mainILMImport(ctx *cli.Context) error {
 	checkILMImportSyntax(ctx)
 	setILMDisplayColorScheme()
@@ -64,14 +83,13 @@ func mainILMImport(ctx *cli.Context) error {
 	objectURL := args.Get(0)
 	var err error
 	var ilmXML string
-	if ilmXML, err = ilm.ReadILMConfigJSON(objectURL); err != nil {
-		console.Println(console.Colorize(fieldThemeResultFailure, err.Error()+" Reading lifecycle configuration failed."))
-		return err
-	}
-	if err = setBucketILMConfiguration(objectURL, ilmXML); err != nil {
-		console.Println(console.Colorize(fieldThemeResultFailure, err.Error()+" Setting Lifecycle configuration failed."))
-		return err
-	}
-
+	ilmXML, err = ilm.ReadILMConfigJSON(objectURL)
+	fatalIf(probe.NewError(err), "Failed to read lifecycle configuration.")
+	err = setBucketILMConfiguration(objectURL, ilmXML)
+	fatalIf(probe.NewError(err), "Failed to set lifecycle configuration.")
+	printMsg(ilmImportMessage{
+		Status: "success",
+		Target: objectURL,
+	})
 	return nil
 }

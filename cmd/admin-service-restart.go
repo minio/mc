@@ -113,7 +113,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Restart the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceRestart()), "Cannot restart the server.")
+	fatalIf(probe.NewError(client.ServiceRestart(globalContext)), "Cannot restart the server.")
 
 	// Success..
 	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
@@ -125,7 +125,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	time.Sleep(6 * time.Second)
 
 	// Fetch the service status of the specified MinIO server
-	_, e := client.ServerInfo()
+	_, e := client.ServerInfo(globalContext)
 
 	if e != nil {
 		printMsg(serviceRestartMessage{Status: "failure", Err: e, ServerURL: aliasedURL})

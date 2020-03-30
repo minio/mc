@@ -32,7 +32,7 @@ var ilmCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		ilmShowCmd,
+		ilmListCmd,
 		ilmAddCmd,
 		ilmRemoveCmd,
 		ilmExportCmd,
@@ -41,13 +41,13 @@ var ilmCmd = cli.Command{
 }
 
 const (
-	fieldMainHeader         string = "Main-Heading"
-	fieldThemeHeader        string = "Row-Header"
-	fieldThemeRow           string = "Row-Normal"
-	fieldThemeTick          string = "Row-Tick"
-	fieldThemeExpiry        string = "Row-Expiry"
-	fieldThemeResultSuccess string = "SucessOp"
-	fieldThemeResultFailure string = "FailureOp"
+	ilmMainHeader         string = "Main-Heading"
+	ilmThemeHeader        string = "Row-Header"
+	ilmThemeRow           string = "Row-Normal"
+	ilmThemeTick          string = "Row-Tick"
+	ilmThemeExpiry        string = "Row-Expiry"
+	ilmThemeResultSuccess string = "SucessOp"
+	ilmThemeResultFailure string = "FailureOp"
 )
 
 func mainILM(ctx *cli.Context) error {
@@ -61,48 +61,34 @@ func getILMXML(urlStr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ok := checkILMBucketAccess(urlStr)
-	if !ok {
-		fatalIf(probe.NewError(errors.New("access failed "+urlStr)), "Unable to access target or lifecycle configuration.")
+	if ok := checkILMBucketAccess(urlStr); !ok {
+		return "", errors.New("access failed " + urlStr)
 	}
 	return lifecycleInfo, nil
 }
 
 func checkILMBucketAccess(urlStr string) bool {
-	alias, _ := url2Alias(urlStr)
-	if alias == "" {
-		fatalIf(errInvalidAliasedURL(urlStr), "Unable to set tags to target "+urlStr)
-	}
 	clnt, pErr := newClient(urlStr)
-	if pErr != nil {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "Cannot parse the provided url "+urlStr)
-	}
+	fatalIf(pErr, "Cannot parse the provided url "+urlStr)
 	s3c, ok := clnt.(*s3Client)
 	if !ok {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "For "+urlStr+" unable to obtain client reference.")
+		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
 	}
-	ok, _ = s3c.api.BucketExists(getILMBucketNameFromURL(urlStr))
+	bucket, _ := s3c.url2BucketAndObject()
+	ok, _ = s3c.api.BucketExists(bucket)
 	return ok
 }
 
 // setBucketILMConfiguration sets the lifecycle configuration given by ilmConfig to the bucket given by the url (urlStr)
 func setBucketILMConfiguration(urlStr string, ilmConfig string) error {
-	var err error
-	alias, _ := url2Alias(urlStr)
-	if alias == "" {
-		fatalIf(errInvalidAliasedURL(urlStr), "Unable to set tags to target "+urlStr)
-	}
 	clnt, pErr := newClient(urlStr)
-	if pErr != nil {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "Cannot parse the provided url "+urlStr)
-	}
+	fatalIf(pErr, "Failed to set lifecycle configuration to "+urlStr)
 	s3c, ok := clnt.(*s3Client)
 	if !ok {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "For "+urlStr+" unable to obtain client reference.")
+		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
 	}
-	bucket, _ := s3c.url2BucketAndObject()
-	if err = s3c.api.SetBucketLifecycle(bucket, ilmConfig); err != nil {
-		return err
+	if pErr = s3c.SetBucketLifecycle(ilmConfig); pErr != nil {
+		return pErr.ToGoError()
 	}
 	return nil
 }
@@ -110,52 +96,25 @@ func setBucketILMConfiguration(urlStr string, ilmConfig string) error {
 // getBucketILMConfiguration gets the lifecycle configuration for the bucket given by the url (urlStr)
 func getBucketILMConfiguration(urlStr string) (string, error) {
 	var bktConfig string
-	var err error
-
-	alias, _ := url2Alias(urlStr)
-	if alias == "" {
-		fatalIf(errInvalidAliasedURL(urlStr), "Unable to set tags to target "+urlStr)
-	}
 	clnt, pErr := newClient(urlStr)
-	if pErr != nil {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "Cannot parse the provided url "+urlStr)
-	}
+	fatalIf(pErr, "Failed to get lifecycle configuration to "+urlStr)
 	s3c, ok := clnt.(*s3Client)
 	if !ok {
 		fatalIf(probe.NewError(errors.New("Unable to set tags")), "For "+urlStr+" unable to obtain client reference.")
 	}
-	bucket, _ := s3c.url2BucketAndObject()
-	if bktConfig, err = s3c.api.GetBucketLifecycle(bucket); err != nil {
-		return "", err
+	if bktConfig, pErr = s3c.GetBucketLifecycle(); pErr != nil {
+		return "", pErr.ToGoError()
 	}
 	return bktConfig, nil
 }
 
-// getBucketNameFromURL - return bucket name from the 'alias/bucket'
-func getILMBucketNameFromURL(urlStr string) string {
-	alias, _ := url2Alias(urlStr)
-	if alias == "" {
-		fatalIf(errInvalidAliasedURL(urlStr), "Unable to set tags to target "+urlStr)
-	}
-	clnt, pErr := newClient(urlStr)
-	if pErr != nil {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "Cannot parse the provided url "+urlStr)
-	}
-	s3c, ok := clnt.(*s3Client)
-	if !ok {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "For "+urlStr+" unable to obtain client reference.")
-	}
-	bucket, _ := s3c.url2BucketAndObject()
-	return bucket
-}
-
 // Color scheme for the table
 func setILMDisplayColorScheme() {
-	console.SetColor(fieldMainHeader, color.New(color.Bold, color.FgHiRed))
-	console.SetColor(fieldThemeRow, color.New(color.FgHiWhite))
-	console.SetColor(fieldThemeHeader, color.New(color.Bold, color.FgHiGreen))
-	console.SetColor(fieldThemeTick, color.New(color.FgGreen))
-	console.SetColor(fieldThemeExpiry, color.New(color.BlinkRapid, color.FgGreen))
-	console.SetColor(fieldThemeResultSuccess, color.New(color.FgGreen, color.Bold))
-	console.SetColor(fieldThemeResultFailure, color.New(color.FgHiYellow, color.Bold))
+	console.SetColor(ilmMainHeader, color.New(color.Bold, color.FgHiRed))
+	console.SetColor(ilmThemeRow, color.New(color.FgHiWhite))
+	console.SetColor(ilmThemeHeader, color.New(color.Bold, color.FgHiGreen))
+	console.SetColor(ilmThemeTick, color.New(color.FgGreen))
+	console.SetColor(ilmThemeExpiry, color.New(color.BlinkRapid, color.FgGreen))
+	console.SetColor(ilmThemeResultSuccess, color.New(color.FgGreen, color.Bold))
+	console.SetColor(ilmThemeResultFailure, color.New(color.FgHiYellow, color.Bold))
 }

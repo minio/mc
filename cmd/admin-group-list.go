@@ -65,7 +65,7 @@ func mainAdminGroupList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	gs, err1 := client.ListGroups()
+	gs, err1 := client.ListGroups(globalContext)
 	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group list")
 
 	printMsg(groupMessage{

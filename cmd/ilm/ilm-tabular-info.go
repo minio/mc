@@ -19,8 +19,6 @@ package ilm
 import (
 	"encoding/xml"
 	"strconv"
-
-	"github.com/minio/minio/pkg/console"
 )
 
 const (
@@ -86,9 +84,8 @@ const (
 )
 
 const (
-	tagSeperator    string = ","
-	keyValSeperator string = ":"
-	tableSeperator  string = "|"
+	tagSeperator    string = "&"
+	keyValSeperator string = "="
 )
 
 type tableCellInfo struct {
@@ -116,11 +113,9 @@ func GetILMDataForShow(ilmXML string, rowCheck *map[string]int, alignedHdrLabels
 	var err error
 	if ilmXML == "" {
 		// Empty configuration. No data to show
-		console.Infoln("Empty lifecycle configuration.")
 		return nil
 	}
 	if err = xml.Unmarshal([]byte(ilmXML), &ilmInfo); err != nil {
-		console.Errorln("Error assigning existing lifecycle configuration in XML: " + err.Error())
 		return err
 	}
 
@@ -135,7 +130,6 @@ func GetILMDataForShow(ilmXML string, rowCheck *map[string]int, alignedHdrLabels
 		transition:   showTransition,
 	}
 	getColumns(ilmInfo, *rowCheck, alignedHdrLabels, showOpts)
-	//alignedHdrLabels = getILMHeaderRow(rowCheck)
 	getILMShowDataWithoutTags(cellDataNoTags, *rowCheck, ilmInfo, showOpts)
 	getILMShowDataWithTags(cellDataWithTags, *tagRows, *rowCheck, ilmInfo, showOpts)
 	return err
@@ -172,6 +166,7 @@ func getILMColumnWidthTable() map[string]int {
 	return colWidth
 }
 
+// checkAddTableCellRows multiple rows created by filling up each cell of the table.
 func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts showDetails,
 	cellInfo tableCellInfo, ruleID string, newRows map[string][]string) {
 	var cellLabel string

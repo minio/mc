@@ -17,10 +17,12 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 
 	"github.com/minio/cli"
-	ilm "github.com/minio/mc/cmd/ilm"
+	"github.com/minio/mc/cmd/ilm"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -48,6 +50,39 @@ EXAMPLES:
 `,
 }
 
+type ilmExportMessage struct {
+	Status    string `json:"status"`
+	Target    string `json:"target"`
+	ILMConfig string `json:"ilmConfig"`
+}
+
+// tagSetMessage console colorized output.
+func (i ilmExportMessage) String() string {
+	var ilmRet string
+	var e error
+	if i.ILMConfig == "" {
+		return console.Colorize(ilmThemeResultFailure, "Lifecycle configuration is not set.")
+	}
+	if ilmRet, e = ilm.GetILMJSON(i.ILMConfig); e != nil {
+		return console.Colorize(ilmThemeResultFailure, e.Error()+". Export failed.")
+	}
+	return ilmRet
+}
+
+// JSON tagSetMessage.
+func (i ilmExportMessage) JSON() string {
+	var jsonRet string
+	var e error
+	if i.ILMConfig == "" {
+		//fatalIf. THen remove rest.
+		fatalIf(probe.NewError(errors.New("Lifecycle configuration is not set")), "Export failed.")
+	} else {
+		jsonRet, e = ilm.GetILMJSON(i.ILMConfig)
+		fatalIf(probe.NewError(e), "Error exporting lifecycle configuration")
+	}
+	return jsonRet
+}
+
 // checkILMExportSyntax - validate arguments passed by user
 func checkILMExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
@@ -61,13 +96,12 @@ func mainILMExport(ctx *cli.Context) error {
 	setILMDisplayColorScheme()
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	var err error
-	var ilmInfoXML string
-
-	if ilmInfoXML, err = getILMXML(objectURL); err != nil {
-		console.Errorln(err.Error() + ". Error getting lifecycle configuration.")
-		return err
-	}
-	ilm.PrintILMJSON(ilmInfoXML)
+	ilmInfoXML, err := getILMXML(objectURL)
+	fatalIf(probe.NewError(err), "Error exporting lifecycle configuration.")
+	printMsg(ilmExportMessage{
+		Status:    "error",
+		Target:    objectURL,
+		ILMConfig: ilmInfoXML,
+	})
 	return nil
 }

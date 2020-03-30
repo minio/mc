@@ -99,14 +99,35 @@ MinIO server displays URL, access and secret keys.
 #### Usage
 
 ```
-mc config host add <ALIAS> <YOUR-MINIO-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY>
+mc config host add <ALIAS> <YOUR-MINIO-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY]
 ```
+
+Keys must be supplied by argument or standard input.
 
 Alias is simply a short name to your MinIO service. MinIO end-point, access and secret keys are supplied by your MinIO service. Admin API uses "S3v4" signature and cannot be changed.
 
-```
-mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
-```
+### Examples
+
+1. Keys by argument
+
+   ```
+   mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+   ```
+
+2. Keys by prompt
+
+   ```
+   mc config host add minio http://192.168.1.51:9000
+   Enter Access Key: BKIKJAA5BMMU2RHO6IBB
+   Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+   ```
+
+2. Keys by pipe
+
+   ```
+   echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+       mc config host add minio http://192.168.1.51:9000
+   ```
 
 ## 4. Test Your Setup
 
@@ -439,6 +460,14 @@ COMMANDS:
 mc admin user add myminio/ newuser newuser123
 ```
 
+*Example: Add a new user 'newuser' on MinIO, using standard input.*
+
+```
+mc admin user add myminio/
+Enter Access Key: newuser
+Enter Secret Key: newuser123
+```
+
 *Example: Disable a user 'newuser' on MinIO.*
 
 ```
@@ -571,6 +600,12 @@ mc admin config set myminio < /tmp/my-serverconfig
 ### Command `heal` - Heal disks, buckets and objects on MinIO server
 `heal` command heals disks, missing buckets, objects on MinIO server. NOTE: This command is only applicable for MinIO erasure coded setup (standalone and distributed).
 
+The server already has a light background process to heal disks, buckets and objects when necessary. However, it does not detect some types of data corruption, especially the ones that rarely happen, such as silent data corruption. In that case, you need, once a while, to manually run the heal command providing this flag: `--scan deep`.
+
+To show the status of the background healing process, just type the following command: `mc admin heal your-alias`.
+
+To scan and heal everything, type: `mc admin heal -r your-alias`.
+
 ```
 NAME:
   mc admin heal - heal disks, buckets and objects on MinIO server
@@ -601,6 +636,12 @@ mc admin heal -r myminio/mybucket
 
 ```
 mc admin heal -r myminio/mybucket/myobjectprefix
+```
+
+*Example: Show the status of the self-healing process in a MinIO cluster.*
+
+```
+mc admin heal myminio/
 ```
 
 <a name="profile"></a>

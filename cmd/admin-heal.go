@@ -150,11 +150,24 @@ type backgroundHealStatusMessage struct {
 
 // String colorized to show background heal status message.
 func (s backgroundHealStatusMessage) String() string {
+	dot := console.Colorize("Dot", " ●  ")
+
 	healPrettyMsg := console.Colorize("HealBackgroundTitle", "Background healing status:\n")
-	healPrettyMsg += fmt.Sprintf("  Total items scanned: %s\n",
+	healPrettyMsg += dot + fmt.Sprintf("%s item(s) scanned in total\n",
 		console.Colorize("HealBackground", s.HealInfo.ScannedItemsCount))
-	healPrettyMsg += fmt.Sprintf("  Last background heal check: %s\n",
-		console.Colorize("HealBackground", timeDurationToHumanizedDuration(time.Since(s.HealInfo.LastHealActivity)).String()+" ago"))
+
+	lastHealingTime := dot + "Never executed"
+	if !s.HealInfo.LastHealActivity.IsZero() {
+		lastHealingTime = dot + "Completed " + timeDurationToHumanizedDuration(time.Since(s.HealInfo.LastHealActivity)).StringShort() + " ago"
+	}
+	healPrettyMsg += console.Colorize("HealBackground", lastHealingTime) + "\n"
+
+	now := time.Now()
+	if !s.HealInfo.NextHealRound.IsZero() && s.HealInfo.NextHealRound.After(now) {
+		nextHealingRound := timeDurationToHumanizedDuration(s.HealInfo.NextHealRound.Sub(now)).StringShort()
+		healPrettyMsg += dot + fmt.Sprintf("Next scheduled in %s\n", console.Colorize("HealBackground", nextHealingRound))
+	}
+
 	return healPrettyMsg
 }
 
@@ -185,6 +198,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	console.SetColor("Heal", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Dot", color.New(color.FgGreen, color.Bold))
 	console.SetColor("HealBackgroundTitle", color.New(color.FgGreen, color.Bold))
 	console.SetColor("HealBackground", color.New(color.Bold))
 	console.SetColor("HealUpdateUI", color.New(color.FgYellow, color.Bold))
@@ -217,7 +231,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Return the background heal status when the user
 	// doesn't pass a bucket or --recursive flag.
 	if bucket == "" && !ctx.Bool("recursive") {
-		bgHealStatus, berr := client.BackgroundHealStatus()
+		bgHealStatus, berr := client.BackgroundHealStatus(globalContext)
 		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
 		printMsg(backgroundHealStatusMessage{Status: "success", HealInfo: bgHealStatus})
 		return nil
@@ -233,13 +247,13 @@ func mainAdminHeal(ctx *cli.Context) error {
 	forceStart := ctx.Bool("force-start")
 	forceStop := ctx.Bool("force-stop")
 	if forceStop {
-		_, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, forceStop)
+		_, _, herr := client.Heal(globalContext, bucket, prefix, opts, "", forceStart, forceStop)
 		fatalIf(probe.NewError(herr), "Failed to stop heal sequence.")
 		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
 		return nil
 	}
 
-	healStart, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, false)
+	healStart, _, herr := client.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
 	fatalIf(probe.NewError(herr), "Failed to start heal sequence.")
 
 	ui := uiData{

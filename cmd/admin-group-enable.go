@@ -79,7 +79,7 @@ func mainAdminGroupEnableDisable(ctx *cli.Context) error {
 		err1 = errors.New("cannot happen")
 		fatalIf(probe.NewError(err1).Trace(args...), "Could not get group enable")
 	}
-	err1 = client.SetGroupStatus(group, status)
+	err1 = client.SetGroupStatus(globalContext, group, status)
 	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group enable")
 
 	printMsg(groupMessage{

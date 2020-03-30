@@ -14,8 +14,8 @@ require (
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20200306033404-a1c7c9ea73d7
-	github.com/minio/minio-go/v6 v6.0.50-0.20200306231101-b882ba63d570
+	github.com/minio/minio v0.0.0-20200321002836-bf545dc3203b
+	github.com/minio/minio-go/v6 v6.0.51-0.20200319192131-097caa7760c7
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
@@ -24,7 +24,7 @@ require (
 	github.com/rjeczalik/notify v0.9.2
 	github.com/ugorji/go v1.1.7 // indirect
 	go.uber.org/zap v1.11.0 // indirect
-	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6 // indirect
+	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/text v0.3.2

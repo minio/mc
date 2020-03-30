@@ -21,8 +21,6 @@ import (
 	stdlibjson "encoding/json"
 	"encoding/xml"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/minio/minio/pkg/console"
@@ -110,87 +108,8 @@ func (l LifecycleConfiguration) JSON() string {
 	var err error
 	ilmJSONbytes, err = stdlibjson.MarshalIndent(l, "", "    ")
 	if err != nil {
-		console.Errorln("Unable to get lifecycle configuration in JSON format.")
+		console.Errorln("Failed to get lifecycle configuration in JSON format.")
 		os.Exit(ilmErrorExitStatus)
 	}
 	return string(ilmJSONbytes)
-}
-
-type ilmRuleMessage struct {
-	ID                  string
-	Prefix              string
-	Status              string
-	ExpirationOnOrAfter string
-	TransitionOnOrAfter string
-	StorageClass        string
-	TagFilters          string
-}
-
-type ilmMessage struct {
-	NumRules int
-	Rules    []ilmRuleMessage
-}
-
-func (m ilmMessage) JSON() string {
-	var ilmMsgJSONbytes []byte
-	var err error
-	ilmMsgJSONbytes, err = stdlibjson.MarshalIndent(m, "", "    ")
-	if err != nil {
-		console.Errorln("Unable to get lifecycle configuration in JSON format.")
-		os.Exit(ilmErrorExitStatus)
-	}
-	return string(ilmMsgJSONbytes)
-}
-
-func (m ilmMessage) String() (ilmOut string) {
-	ilmOut += "Num of Rules: " + strconv.Itoa(m.NumRules) + "\n"
-	for _, ruleMsg := range m.Rules {
-		ilmOut += "Rule ID: " + ruleMsg.ID + "\n"
-		ilmOut += "    Prefix                       : " + ruleMsg.Prefix + "\n"
-		ilmOut += "    Status                       : " + ruleMsg.Status + "\n"
-		ilmOut += "    Expiry (On or After)         : " + ruleMsg.ExpirationOnOrAfter + "\n"
-		ilmOut += "    Transition (On or After)     : " + ruleMsg.TransitionOnOrAfter + "\n"
-		ilmOut += "    Storage Class                : " + ruleMsg.StorageClass + "\n"
-		ilmOut += "    Tags for Filter              : " + ruleMsg.TagFilters + "\n"
-		ilmOut += "\n"
-	}
-	return ilmOut
-}
-
-func parseILMRuleMessage(ilm LifecycleConfiguration) ilmMessage {
-	var ilmMsg ilmMessage
-	for _, rule := range ilm.Rules {
-		var ilmRuleMsg ilmRuleMessage
-		var tagArr []string
-		ilmRuleMsg.ID = rule.ID
-		ilmRuleMsg.Status = rule.Status
-		ilmRuleMsg.Prefix = getPrefixVal(rule)
-		tagArr = getTagArr(rule)
-		ilmRuleMsg.TagFilters = strings.Join(tagArr, ",")
-		ilmRuleMsg.ExpirationOnOrAfter = strings.TrimSpace(getExpiryDateVal(rule))
-		ilmRuleMsg.TransitionOnOrAfter = strings.TrimSpace(getTransitionDate(rule))
-		ilmRuleMsg.StorageClass = strings.TrimSpace(getStorageClassName(rule))
-		ilmMsg.Rules = append(ilmMsg.Rules, ilmRuleMsg)
-	}
-	ilmMsg.NumRules = len(ilm.Rules)
-	return ilmMsg
-}
-
-// DisplayILMJSON display in JSON format. Hence separate function.
-func DisplayILMJSON(ilmXML string) {
-	var err error
-	var ilmMsg ilmMessage
-	var ilmInfo LifecycleConfiguration
-	if ilmXML == "" {
-		return
-	}
-	if err = xml.Unmarshal([]byte(ilmXML), &ilmInfo); err != nil {
-		console.Errorln("Error assigning existing lifecycle configuration in XML: " + err.Error())
-		return
-	}
-
-	// Assign Message
-	ilmMsg = parseILMRuleMessage(ilmInfo)
-	// Show ILM
-	console.Println(ilmMsg.JSON())
 }

@@ -28,7 +28,6 @@ import (
 
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
-	"github.com/minio/minio/pkg/console"
 )
 
 const defaultILMDateFormat string = "2006-01-02"
@@ -121,24 +120,17 @@ func RemoveILMRule(lfcInfoXML string, ilmID string) (string, error) {
 	return "", errors.New("Rule not found")
 }
 
-// PrintILMJSON Print ILM in JSON
-func PrintILMJSON(ilmXML string) {
+// GetILMJSON Get ILM in JSON format
+func GetILMJSON(ilmXML string) (string, error) {
 	var err error
 	var ilmInfo LifecycleConfiguration
 	if ilmXML == "" {
-		console.Infoln("Empty lifecycle configuration.")
-		return
+		return ilmXML, errors.New("Empty lifecycle configuration")
 	}
 	if err = xml.Unmarshal([]byte(ilmXML), &ilmInfo); err != nil {
-		console.Errorln("Cannot print JSON output. " + err.Error())
+		return "", err
 	}
-
-	if err != nil {
-		console.Println("Unable to get JSON representation of lifecycle management structure.\n Error: " + err.Error())
-		os.Exit(ilmErrorExitStatus)
-	} else {
-		console.Println(ilmInfo.JSON() + "\n")
-	}
+	return ilmInfo.JSON() + "\n", nil
 }
 
 // ReadILMConfigJSON read from stdin and set to bucket
@@ -158,6 +150,11 @@ func ReadILMConfigJSON(urlStr string) (string, error) {
 			return "", err
 		}
 	}
+	if len(ilmInfo.Rules) == 0 {
+		err = errors.New("Empty configuration")
+		return "", err
+	}
+
 	if bytes, err = xml.Marshal(ilmInfo); err != nil {
 		return "", nil
 	}
@@ -187,8 +184,8 @@ func getBucketILMXML(ilm LifecycleConfiguration) (string, error) {
 // Adds/Replaces a lifecycleRule in the lifecycleConfiguration structure.
 // lifecycleConfiguration structure has the existing(if any) lifecycle configuration rules for the bucket.
 func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration) (LifecycleRule, error) {
-	var expiry LifecycleExpiration
-	var transition LifecycleTransition
+	var ilmExpiry LifecycleExpiration
+	var ilmTransition LifecycleTransition
 	var err error
 	var newRule LifecycleRule
 	var ilmTagKVList []LifecycleTag
@@ -206,18 +203,17 @@ func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration
 	if ilmDisabled := ctx.Bool(strings.ToLower(statusDisabledLabel)); ilmDisabled {
 		ilmStatus = statusDisabledLabel
 	}
-	tagValue := ctx.StringSlice(strings.ToLower(tagLabel))
-	if ilmTagKVList, err = extractILMTags(tagValue); err != nil {
-		console.Errorln("Error in Tags argument.")
+	ilmTag := ctx.String(strings.ToLower(tagLabel))
+	if ilmTagKVList, err = extractILMTags(ilmTag); err != nil {
 		return LifecycleRule{}, err
 
 	}
 
-	if expiry, err = getExpiry(ctx); err != nil {
+	if ilmExpiry, err = getExpiry(ctx); err != nil {
 		return LifecycleRule{}, err
 	}
 
-	if transition, err = getTransition(ctx); err != nil {
+	if ilmTransition, err = getTransition(ctx); err != nil {
 		return LifecycleRule{}, err
 	}
 	var andVal LifecycleAndOperator
@@ -230,13 +226,13 @@ func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration
 	}
 	var expP *LifecycleExpiration
 	var transP *LifecycleTransition
-	if (transition.TransitionDate != nil &&
-		!transition.TransitionDate.IsZero()) || transition.TransitionInDays > 0 {
-		transP = &transition
+	if (ilmTransition.TransitionDate != nil &&
+		!ilmTransition.TransitionDate.IsZero()) || ilmTransition.TransitionInDays > 0 {
+		transP = &ilmTransition
 	}
-	if (expiry.ExpirationDate != nil &&
-		!expiry.ExpirationDate.IsZero()) || expiry.ExpirationInDays > 0 {
-		expP = &expiry
+	if (ilmExpiry.ExpirationDate != nil &&
+		!ilmExpiry.ExpirationDate.IsZero()) || ilmExpiry.ExpirationInDays > 0 {
+		expP = &ilmExpiry
 	}
 
 	newRule = LifecycleRule{
@@ -291,15 +287,25 @@ func GetILMRuleToSet(ctx *cli.Context, lfcInfoXML string) (string, error) {
 }
 
 // Extracts the tags provided by user. The tagfilter array will be put in lifecycleRule structure.
-func extractILMTags(tagLabelVal []string) ([]LifecycleTag, error) {
+func extractILMTags(tagLabelVal string) ([]LifecycleTag, error) {
+	if tagLabelVal == "" {
+		return nil, nil
+	}
 	var ilmTagKVList []LifecycleTag
-	for tagIdx := 0; tagIdx < len(tagLabelVal); tagIdx++ {
-		key := splitStr(tagLabelVal[tagIdx], keyValSeperator, 2)[0]
-		val := splitStr(tagLabelVal[tagIdx], keyValSeperator, 2)[1]
-		if key != "" && val != "" {
+	tagValues := strings.Split(tagLabelVal, tagSeperator)
+	for tagIdx, tag := range tagValues {
+		var key, val string
+		if !strings.Contains(tag, keyValSeperator) {
+			key = tag
+			val = ""
+		} else {
+			key = splitStr(tag, keyValSeperator, 2)[0]
+			val = splitStr(tag, keyValSeperator, 2)[1]
+		}
+		if key != "" {
 			ilmTagKVList = append(ilmTagKVList, LifecycleTag{Key: key, Value: val})
 		} else {
-			return nil, errors.New("extracting tag argument lifecycle configuration rule failed")
+			return nil, errors.New("Failed extracting tag argument number " + strconv.Itoa(tagIdx+1) + " " + tag + " in lifecycle configuration rule")
 		}
 	}
 	return ilmTagKVList, nil
@@ -400,17 +406,20 @@ func getExpiry(ctx *cli.Context) (expiry LifecycleExpiration, err error) {
 	switch {
 	case ctx.String(strings.ToLower(expiryDatesLabelFlag)) != "":
 		expiryArg = ctx.String(strings.ToLower(expiryDatesLabelFlag))
-		expiryDate, err = time.Parse(defaultILMDateFormat, expiryArg)
-		if err != nil || expiryDate.IsZero() {
-			console.Errorln("Error in Expiration argument " + expiryArg + " date conversion.")
+		if expiryDate, err = time.Parse(defaultILMDateFormat, expiryArg); err != nil || expiryDate.IsZero() {
+			errStr := "Error in Expiration argument " + expiryArg + " date conversion."
+			if err != nil {
+				errStr += err.Error()
+			}
+			err = errors.New(errStr)
 		} else {
 			expiry.ExpirationDate = &expiryDate
 		}
 	case ctx.String(strings.ToLower(expiryDaysLabelFlag)) != "":
 		expiryArg = ctx.String(strings.ToLower(expiryDaysLabelFlag))
-		expiry.ExpirationInDays, err = strconv.Atoi(expiryArg)
-		if err != nil {
-			console.Errorln("Error in Expiration argument " + expiryArg + " days conversion.")
+		if expiry.ExpirationInDays, err = strconv.Atoi(expiryArg); err != nil {
+			errStr := "Error in Expiration argument " + expiryArg + ". " + err.Error()
+			err = errors.New(errStr)
 		}
 	}
 

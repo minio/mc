@@ -127,14 +127,14 @@ func mainAdminConfigHistory(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	if ctx.IsSet("clear") {
-		fatalIf(probe.NewError(client.ClearConfigHistoryKV("all")), "Cannot clear server configuration.")
+		fatalIf(probe.NewError(client.ClearConfigHistoryKV(globalContext, "all")), "Cannot clear server configuration.")
 
 		// Print
 		printMsg(configHistoryMessage{})
 		return nil
 	}
 
-	chEntries, e := client.ListConfigHistoryKV(ctx.Int("count"))
+	chEntries, e := client.ListConfigHistoryKV(globalContext, ctx.Int("count"))
 	fatalIf(probe.NewError(e), "Cannot list server history configuration.")
 
 	hentries := make([]historyEntry, len(chEntries))

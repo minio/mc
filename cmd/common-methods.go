@@ -234,7 +234,7 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 			retainUntilDate = t.UTC()
 		}
 	}
-	if err := targetClnt.PutObjectRetention(&lockMode, &retainUntilDate); err != nil {
+	if err := targetClnt.PutObjectRetention(&lockMode, &retainUntilDate, false); err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil
@@ -287,7 +287,7 @@ func filterMetadata(metadata map[string]string) map[string]string {
 		}
 	}
 	for k := range metadata {
-		if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
+		if strings.HasPrefix(http.CanonicalHeaderKey(k), http.CanonicalHeaderKey(serverEncryptionKeyPrefix)) {
 			delete(newMetadata, k)
 		}
 	}

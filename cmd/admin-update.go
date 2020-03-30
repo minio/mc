@@ -103,7 +103,7 @@ func mainAdminServerUpdate(ctx *cli.Context) error {
 
 	// Update the specified MinIO server, optionally also
 	// with the provided update URL.
-	us, e := client.ServerUpdate(updateURL)
+	us, e := client.ServerUpdate(globalContext, updateURL)
 	fatalIf(probe.NewError(e), "Unable to update the server.")
 
 	// Success..

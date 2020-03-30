@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -195,11 +196,12 @@ func mainAdminConsole(ctx *cli.Context) error {
 		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
 		return nil
 	}
-	doneCh := make(chan struct{})
-	defer close(doneCh)
+
+	ctxt, cancel := context.WithCancel(globalContext)
+	defer cancel()
 
 	// Start listening on all console log activity.
-	logCh := client.GetLogs(node, limit, logType, doneCh)
+	logCh := client.GetLogs(ctxt, node, limit, logType)
 	for logInfo := range logCh {
 		if logInfo.Err != nil {
 			fatalIf(probe.NewError(logInfo.Err), "Cannot listen to console logs")

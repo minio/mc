@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"context"
 	"crypto/x509"
 
 	"github.com/minio/cli"
@@ -50,7 +51,7 @@ var (
 	globalNoColor  = false // No Color flag set via command line
 	globalInsecure = false // Insecure flag set via command line
 
-	// WHEN YOU ADD NEXT GLOBAL FLAG, MAKE SURE TO ALSO UPDATE SESSION CODE AND CODE BELOW.
+	globalContext, globalCancel = context.WithCancel(context.Background())
 )
 
 var (

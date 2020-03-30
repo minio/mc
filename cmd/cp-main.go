@@ -19,6 +19,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,11 +27,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -224,7 +223,7 @@ func doCopyFake(cpURLs URLs, pg Progress) URLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
+func doPrepareCopyURLs(session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -275,15 +274,15 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 				session.Delete()
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
-
-			fmt.Fprintln(dataFP, string(jsonData))
+			dataFP.Write(jsonData)
+			dataFP.Write([]byte{'\n'})
 			if !globalQuiet && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
 			}
 
 			totalBytes += cpURLs.SourceContent.Size
 			totalObjects++
-		case <-trapCh:
+		case <-globalContext.Done():
 			cancelCopy()
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 			if !globalQuiet && !globalJSON {
@@ -301,9 +300,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 }
 
 func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair) error {
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
-
-	ctx, cancelCopy := context.WithCancel(context.Background())
+	ctx, cancelCopy := context.WithCancel(globalContext)
 	defer cancelCopy()
 
 	var isCopied func(string) bool
@@ -327,7 +324,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 		isCopied = isLastFactory(session.Header.LastCopied)
 
 		if !session.HasData() {
-			totalBytes, totalObjects = doPrepareCopyURLs(session, trapCh, cancelCopy)
+			totalBytes, totalObjects = doPrepareCopyURLs(session, cancelCopy)
 		} else {
 			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
 		}
@@ -469,7 +466,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 loop:
 	for {
 		select {
-		case <-trapCh:
+		case <-globalContext.Done():
 			close(quitCh)
 			cancelCopy()
 			// Receive interrupt notification.
@@ -479,6 +476,7 @@ loop:
 			if session != nil {
 				session.CloseAndDie()
 			}
+			break loop
 		case cpURLs, ok := <-statusCh:
 			// Status channel is closed, we should return.
 			if !ok {

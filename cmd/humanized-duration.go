@@ -33,13 +33,18 @@ type humanizedDuration struct {
 // StringShort() humanizes humanizedDuration to human readable short format.
 // This does not print at seconds.
 func (r humanizedDuration) StringShort() string {
-	if r.Days == 0 && r.Hours == 0 {
+	switch {
+	case r.Days == 0 && r.Hours == 0 && r.Minutes == 0:
+		return fmt.Sprintf("%d seconds", r.Seconds)
+	case r.Days == 0 && r.Hours == 0:
 		return fmt.Sprintf("%d minutes", r.Minutes)
-	}
-	if r.Days == 0 {
+	case r.Days == 0:
 		return fmt.Sprintf("%d hours %d minutes", r.Hours, r.Minutes)
+	case r.Days <= 2:
+		return fmt.Sprintf("%d days, %d hours", r.Days, r.Hours)
+	default:
+		return fmt.Sprintf("%d days", r.Days)
 	}
-	return fmt.Sprintf("%d days %d hours %d minutes", r.Days, r.Hours, r.Minutes)
 }
 
 // String() humanizes humanizedDuration to human readable,

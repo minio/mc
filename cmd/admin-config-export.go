@@ -84,7 +84,7 @@ func mainAdminConfigExport(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	buf, e := client.GetConfig()
+	buf, e := client.GetConfig(globalContext)
 	fatalIf(probe.NewError(e), "Cannot get server config")
 
 	// Print

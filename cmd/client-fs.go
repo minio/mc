@@ -40,6 +40,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
+	"github.com/minio/minio/pkg/bucket/object/tagging"
 )
 
 // filesystem client
@@ -392,13 +393,13 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 				return totalWritten, probe.NewError(e)
 			}
 
-			ctime, e := strconv.ParseInt(attr["ctime"], 10, 64)
+			mtime, e := strconv.ParseInt(attr["mtime"], 10, 64)
 			if e != nil {
 				return totalWritten, probe.NewError(e)
 			}
 
-			// Attempt to change the access, modify and change time
-			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(ctime, 0)); e != nil {
+			// Attempt to change the access and modify time
+			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
 				return totalWritten, probe.NewError(e)
 			}
 		}
@@ -946,7 +947,7 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
+func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
 		APIType: "filesystem",
@@ -1088,4 +1089,44 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 }
 
 func (f *fsClient) AddUserAgent(_, _ string) {
+}
+
+// Get Object Tags
+func (f *fsClient) GetObjectTagging() (tagging.Tagging, *probe.Error) {
+	return tagging.Tagging{}, probe.NewError(APINotImplemented{
+		API:     "GetObjectTagging",
+		APIType: "filesystem",
+	})
+}
+
+// Set Object tags
+func (f *fsClient) SetObjectTagging(tagMap map[string]string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetObjectTagging",
+		APIType: "filesystem",
+	})
+}
+
+// Delete object tags
+func (f *fsClient) DeleteObjectTagging() *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "DeleteObjectTagging",
+		APIType: "filesystem",
+	})
+}
+
+// Get lifecycle configuration for a given bucket.
+func (f *fsClient) GetBucketLifecycle() (string, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetBucketLifecycle",
+		APIType: "filesystem",
+	})
+}
+
+// Set lifecycle configuration for a given bucket.
+func (f *fsClient) SetBucketLifecycle(lifecycleconfig string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetBucketLifecycle",
+		APIType: "filesystem",
+	})
 }

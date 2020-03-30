@@ -103,8 +103,6 @@ func mainStat(ctx *cli.Context) error {
 	console.SetColor("Date", color.New(color.FgWhite))
 	console.SetColor("Size", color.New(color.FgWhite))
 	console.SetColor("ETag", color.New(color.FgWhite))
-
-	console.SetColor("EncryptionHeaders", color.New(color.FgWhite))
 	console.SetColor("Metadata", color.New(color.FgWhite))
 
 	// Parse encryption keys per command.

@@ -41,7 +41,7 @@ func completeAdminConfigKeys(aliasPath string, keyPrefix string) (prediction []s
 		return nil
 	}
 
-	h, e := clnt.HelpConfigKV("", "", false)
+	h, e := clnt.HelpConfigKV(globalContext, "", "", false)
 	if e != nil {
 		return nil
 	}

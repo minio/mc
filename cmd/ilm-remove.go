@@ -22,6 +22,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/cmd/ilm"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -71,8 +72,31 @@ EXAMPLES:
 `,
 }
 
+type ilmRmMessage struct {
+	Status string `json:"status"`
+	ID     string `json:"id"`
+	Target string `json:"target"`
+	All    bool   `json:"all"`
+}
+
+// tagSetMessage console colorized output.
+func (i ilmRmMessage) String() string {
+	msg := "Rule ID `" + i.ID + "` from target " + i.Target + " removed."
+	if i.All {
+		msg = "Rules for `" + i.Target + "` removed."
+	}
+	return console.Colorize(ilmThemeResultSuccess, msg)
+}
+
+// JSON tagSetMessage.
+func (i ilmRmMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(i, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
 func checkILMRemoveSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) >= 2 {
+	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelp(ctx, "remove")
 		os.Exit(globalErrorExitStatus)
 	}
@@ -80,7 +104,8 @@ func checkILMRemoveSyntax(ctx *cli.Context) {
 	ilmForce := ctx.Bool("force")
 	forceChk := (ilmAll && ilmForce) || (!ilmAll && !ilmForce)
 	if !forceChk {
-		fatalIf(probe.NewError(errors.New("Flag missing or wrong")), "Mandatory to enter --all & --force flag together for mc "+ctx.Command.FullName()+".")
+		fatalIf(probe.NewError(errors.New("Flag missing or wrong")),
+			"Mandatory to enter --all and --force flag together for mc "+ctx.Command.FullName()+".")
 	}
 	if ilmAll && ilmForce {
 		return
@@ -105,7 +130,7 @@ func ilmIDRemove(ilmID string, urlStr string) error {
 		return err
 	}
 	if lfcInfoXML == "" {
-		return errors.New("No lifecycle configuration set")
+		return errors.New("Lifecycle configuration for `" + urlStr + "` not set")
 	}
 	if lfcInfoXML, err = ilm.RemoveILMRule(lfcInfoXML, ilmID); err != nil {
 		return err
@@ -127,25 +152,28 @@ func mainILMRemove(ctx *cli.Context) error {
 	var ilmID string
 	ilmAll = ctx.Bool("all")
 	ilmForce = ctx.Bool("force")
-	failStr := "Lifecycle configuration rule(s) could not be removed."
 	if ilmAll && ilmForce {
-		if err = ilmAllRemove(objectURL); err != nil {
-			failStr = "Error: " + err.Error() + ". " + failStr
-			console.Println(console.Colorize(fieldThemeResultFailure, failStr))
-			return err
-		}
-		console.Println(console.Colorize(fieldThemeResultSuccess, "Lifecycle configuration force remove all completed with no failure."))
+		err = ilmAllRemove(objectURL)
+		fatalIf(probe.NewError(err), "Failed to remove all rules for `"+objectURL+"`.")
+		printMsg(ilmRmMessage{
+			Status: "success",
+			ID:     ilmID,
+			All:    true,
+			Target: objectURL,
+		})
 		return nil
 	}
-	ilmID = ctx.String("id")
-	if ilmID == "" {
-		return errors.New("ID not provided")
+	if ilmID = ctx.String("id"); ilmID == "" {
+		fatalIf(probe.NewError(errors.New("ID not provided")),
+			"Failed to remove lifecycle rule")
 	}
-	if err := ilmIDRemove(ilmID, objectURL); err != nil {
-		failStr = "Error: " + err.Error() + " ID `" + ilmID + "` Target " + objectURL + ". " + failStr
-		console.Println(console.Colorize(fieldThemeResultFailure, failStr))
-		return err
-	}
-	console.Println(console.Colorize(fieldThemeResultSuccess, "Rule ID `"+ilmID+"` from target "+objectURL+" removed."))
+	err = ilmIDRemove(ilmID, objectURL)
+	fatalIf(probe.NewError(err), "Failed to remove rule. ID `"+ilmID+"` Target "+objectURL+". ")
+	printMsg(ilmRmMessage{
+		Status: "success",
+		ID:     ilmID,
+		Target: objectURL,
+		All:    false,
+	})
 	return nil
 }

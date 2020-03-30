@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"hash/fnv"
 	"net/http"
@@ -117,11 +118,12 @@ func mainAdminTrace(ctx *cli.Context) error {
 		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
 		return nil
 	}
-	doneCh := make(chan struct{})
-	defer close(doneCh)
+
+	ctxt, cancel := context.WithCancel(globalContext)
+	defer cancel()
 
 	// Start listening on all trace activity.
-	traceCh := client.ServiceTrace(all, errfltr, doneCh)
+	traceCh := client.ServiceTrace(ctxt, all, errfltr)
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Cannot listen to http trace")

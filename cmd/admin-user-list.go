@@ -69,7 +69,7 @@ func mainAdminUserList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	users, e := client.ListUsers()
+	users, e := client.ListUsers(globalContext)
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot list user")
 
 	for k, v := range users {
