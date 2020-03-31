@@ -18,6 +18,7 @@ sql       run sql queries on objects
 stat      stat contents of objects
 lock      set and get object lock configuration
 retention set object retention for objects with a given prefix
+legalhold set object legal hold for objects with a given prefix
 diff      list differences in object name, size, and date between buckets
 rm        remove objects
 event     manage object notifications
@@ -288,7 +289,7 @@ mc version RELEASE.2016-04-01T00-22-11Z
 | [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)      |                                         |
 | [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat) |                                         |
 | [**head** - Display first 'n' lines of an object](#head) |  [**lock** - set and get object lock configuration](#lock)                                                             |  [**retention** - set object retention for objects with a given prefix](#retention)                                                        |                                         |
-|                                                          | [**sql** - Run sql queries on objects](#sql)                  |                                                          |                                         |
+|                                                          | [**sql** - Run sql queries on objects](#sql)                  |                   [**legalhold** - set object legal hold for objects with a given prefix](#legalhold)                                                    |                                         |
 
 
 ###  Command `ls` - List Objects
@@ -624,6 +625,38 @@ mc rm myminio/mybucket/prefix/comp.csv
 Removing `myminio/mybucket/prefix/comp.csv`.
 mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM protected and cannot be overwritten
 ```
+
+<a name="legalhold"></a>
+### Command `legalhold` - set object legal hold for objects
+`legalhold` sets object legal hold for objects
+
+```
+USAGE:
+   mc legalhold [FLAGS] TARGET [ON | OFF]
+
+FLAGS:
+  --recursive, -r               apply legal hold recursively
+  --json                        enable JSON formatted output
+  --help, -h                    show help
+```
+
+*Example: Enable legal hold for objects with prefix `prefix` on bucket `mybucket`*
+
+```
+mc legalhold myminio/mybucket/prefix ON -r
+Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
+
+```
+*Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the legal hold is lifted*
+
+```
+mc cp ~/test.csv myminio/mybucket/prefix/
+mc legalhold myminio/mybucket/prefix/test.csv ON
+mc rm myminio/mybucket/prefix/test.csv
+Removing `myminio/mybucket/prefix/test.csv`.
+mc: <ERROR> Failed to remove `myminio/mybucket/prefix/test.csv`. Object is WORM protected and cannot be overwritten
+```
+
 <a name="pipe"></a>
 ### Command `pipe` - Pipe to Object
 `pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.

@@ -141,10 +141,6 @@ func mainLock(ctx *cli.Context) error {
 	console.SetColor("Mode", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Validity", color.New(color.FgYellow))
 
-	// Parse encryption keys per command.
-	_, err := getEncKeys(ctx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
 	// lock specific flags.
 	clearLock := ctx.Bool("clear")
 
