@@ -28,6 +28,7 @@ admin     manage MinIO servers
 session   manage saved sessions for cp command
 config    manage mc configuration file
 update    check for a new software update
+mv        move objects
 ```
 
 ## 1.  Download MinIO Client
@@ -280,16 +281,16 @@ mc version RELEASE.2016-04-01T00-22-11Z
 
 ## 7. Commands
 
-|                                                          |                                                               |                                                          |                                         |
-|:---------------------------------------------------------|:--------------------------------------------------------------|:---------------------------------------------------------|-----------------------------------------|
-| [**ls** - List buckets and objects](#ls)                 | [**tree** - List buckets and objects in a tree format](#tree) | [**mb** - Make a bucket](#mb)                            | [**cat** - Concatenate an object](#cat) |
-| [**cp** - Copy objects](#cp)                             | [**rb** - Remove a bucket](#rb)                               | [**pipe** - Pipe to an object](#pipe)                    |                                         |
-| [**share** - Share access](#share)                       | [**rm** - Remove objects](#rm)                                | [**find** - Find files and objects](#find)               |                                         |
-| [**diff** - Diff buckets](#diff)                         | [**mirror** - Mirror buckets](#mirror)                        | [**session** - Manage saved sessions](#session)          |                                         |
-| [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)      |                                         |
-| [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat) |                                         |
-| [**head** - Display first 'n' lines of an object](#head) |  [**lock** - set and get object lock configuration](#lock)                                                             |  [**retention** - set object retention for objects with a given prefix](#retention)                                                        |                                         |
-|                                                          | [**sql** - Run sql queries on objects](#sql)                  |                   [**legalhold** - set object legal hold for objects with a given prefix](#legalhold)                                                    |                                         |
+|                                                          |                                                               |                                                                                     |                                         |
+|:---------------------------------------------------------|:--------------------------------------------------------------|:------------------------------------------------------------------------------------|-----------------------------------------|
+| [**ls** - List buckets and objects](#ls)                 | [**tree** - List buckets and objects in a tree format](#tree) | [**mb** - Make a bucket](#mb)                                                       | [**cat** - Concatenate an object](#cat) |
+| [**cp** - Copy objects](#cp)                             | [**rb** - Remove a bucket](#rb)                               | [**pipe** - Pipe to an object](#pipe)                                               |                                         |
+| [**share** - Share access](#share)                       | [**rm** - Remove objects](#rm)                                | [**find** - Find files and objects](#find)                                          |                                         |
+| [**diff** - Diff buckets](#diff)                         | [**mirror** - Mirror buckets](#mirror)                        | [**session** - Manage saved sessions](#session)                                     |                                         |
+| [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)                                 |                                         |
+| [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat)                            |                                         |
+| [**head** - Display first 'n' lines of an object](#head) | [**lock** - set and get object lock configuration](#lock)     | [**retention** - set object retention for objects with a given prefix](#retention)  |                                         |
+| [**mv** - Move objects](#mv)                             | [**sql** - Run sql queries on objects](#sql)                  | [**legalhold** - set object legal hold for objects with a given prefix](#legalhold) |                                         |
 
 
 ###  Command `ls` - List Objects
@@ -761,6 +762,95 @@ myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 ```
 mc cp -a myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+<a name="mv"></a>
+### Command `mv` - Move Objects
+`mv` command movies data from one or more sources to a target.  All move operations to object storage are verified with MD5SUM checksums. Interrupted or failed move operations can be resumed from the point of failure.
+
+```
+USAGE:
+   mc mv [FLAGS] SOURCE [SOURCE...] TARGET
+
+FLAGS:
+  --recursive, -r                    move recursively
+  --older-than value                 move object(s) older than N days (default: 0)
+  --newer-than value                 move object(s) newer than N days (default: 0)
+  --storage-class value, --sc value  set storage class for new object(s) on target
+  --preserve,-a                      preserve file system attributes and bucket policy rules on target bucket(s)
+  --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
+  --continue, -c                     create or resume move session
+  --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
+  --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                         show help
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT:      list of comma delimited prefixes
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+```
+
+*Example: Move a text file to an object storage.*
+
+```
+mc mv myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a text file to an object storage with specified metadata.*
+
+```
+mc mv --attr key1=value1;key2=value2 myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.*
+```
+mc mv --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+https://play.minio.io:9000/mybucket/myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a text file to an object storage and assign storage-class `REDUCED_REDUNDANCY` to the uploaded object.*
+
+```
+mc mv --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a server-side encrypted file to an object storage.*
+
+```
+mc mv --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1 , myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/myobject.txt myminio/documents/
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Perform key-rotation on a server-side encrypted object*
+
+```
+mc mv --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , myminio2/mybucket/=32byteslongsecretkeymustgenerat1' myminio1/mybucket/encryptedobject myminio2/mybucket/encryptedobject
+encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
+
+*Example: Move a javascript file to object storage and assign Cache-Control header to the uploaded object*
+
+```sh
+mc mv --attr Cache-Control=no-cache myscript.js play/mybucket
+myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a text file to an object storage and preserve the filesyatem attributes.*
+
+```
+mc mv -a myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
 ```
 
 <a name="rm"></a>

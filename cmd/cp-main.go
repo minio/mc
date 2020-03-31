@@ -212,7 +212,7 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a single file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -223,11 +223,11 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 	targetAlias := cpURLs.TargetAlias
 	targetURL := cpURLs.TargetContent.URL
 	length := cpURLs.SourceContent.Size
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 
 	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	} else {
-		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
 			Source:     sourcePath,
@@ -237,14 +237,26 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 			TotalSize:  cpURLs.TotalSize,
 		})
 	}
-	return uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB)
+
+	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB)
+	if isMvCmd && urls.Error == nil {
+		bgRemove(sourcePath)
+	}
+
+	return urls
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cpURLs URLs, pg Progress) URLs {
+func doCopyFake(cpURLs URLs, pg Progress, isMvCmd bool) URLs {
 	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
+
+	if isMvCmd {
+		sourcePath := filepath.ToSlash(filepath.Join(cpURLs.SourceAlias, cpURLs.SourceContent.URL.Path))
+		bgRemove(sourcePath)
+	}
+
 	return cpURLs
 }
 
@@ -325,7 +337,7 @@ func doPrepareCopyURLs(session *sessionV8, cancelCopy context.CancelFunc) (total
 	return
 }
 
-func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair) error {
+func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
 	ctx, cancelCopy := context.WithCancel(globalContext)
 	defer cancelCopy()
 
@@ -495,11 +507,11 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
-						return doCopyFake(cpURLs, pg)
+						return doCopyFake(cpURLs, pg, isMvCmd)
 					}
 				} else {
 					queueCh <- func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB)
+						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd)
 					}
 				}
 			}
@@ -598,7 +610,7 @@ func mainCopy(ctx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, encKeyDB)
+	checkCopySyntax(ctx, encKeyDB, false)
 
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
@@ -659,7 +671,7 @@ func mainCopy(ctx *cli.Context) error {
 		}
 	}
 
-	e := doCopySession(ctx, session, encKeyDB)
+	e := doCopySession(ctx, session, encKeyDB, false)
 	if session != nil {
 		session.Delete()
 	}
