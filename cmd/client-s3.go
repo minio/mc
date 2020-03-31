@@ -2065,6 +2065,19 @@ func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate
 	return nil
 }
 
+// Set object legal hold for a given object.
+func (c *s3Client) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	opts := minio.PutObjectLegalHoldOptions{
+		Status: lhold,
+	}
+	err := c.api.PutObjectLegalHold(bucket, object, opts)
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
 // Get object lock configuration of bucket.
 func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()

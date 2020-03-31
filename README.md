@@ -18,6 +18,7 @@ sql       run sql queries on objects
 stat      stat contents of objects
 lock      set and get object lock configuration
 retention set object retention for objects with a given prefix
+legalhold set object legal hold for objects
 diff      list differences in object name, size, and date between buckets
 rm        remove objects
 event     manage object notifications
