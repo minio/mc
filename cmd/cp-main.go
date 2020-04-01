@@ -69,6 +69,10 @@ var (
 			Name:  "preserve, a",
 			Usage: "preserve filesystem attributes (mode, ownership, timestamps)",
 		},
+		cli.BoolFlag{
+			Name:  "disable-multipart",
+			Usage: "disable multipart upload feature",
+		},
 	}
 )
 
@@ -144,6 +148,9 @@ EXAMPLES:
 
   16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention date.
       {{.Prompt}} {{.HelpName}} --attr "x-amz-object-lock-mode=GOVERNANCE;x-amz-object-lock-retain-until-date=2020-01-11T01:57:02Z" locked.txt play/locked-bucket/
+
+  17. Copy a text file to an object storage and disable multipart upload feature.
+      {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
 `,
 }
 
@@ -447,6 +454,9 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 						cpURLs.TargetContent.Metadata["mc-attrs"] = attrValue
 					}
 				}
+
+				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
+
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
@@ -595,6 +605,7 @@ func mainCopy(ctx *cli.Context) error {
 				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
+			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
 
 			var e error
 			if session.Header.RootPath, e = os.Getwd(); e != nil {
