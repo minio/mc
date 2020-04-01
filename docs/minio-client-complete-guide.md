@@ -24,6 +24,7 @@ rm        remove objects
 event     manage object notifications
 watch     watch for object events
 policy    manage anonymous access to objects
+tag       manage tags for an object
 admin     manage MinIO servers
 session   manage saved sessions for cp command
 config    manage mc configuration file
@@ -1166,6 +1167,49 @@ Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
 ```sh
 mc policy set none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
+```
+
+<a name="tag"></a>
+### Command `tag` - Manage tags for an object
+` tag` command provides a convenient way to set, remove, and list object tags. Tags are defined as key-value pairs.
+
+
+```
+USAGE:
+  mc tag list [COMMAND FLAGS] TARGET
+  mc tag remove [COMMAND FLAGS] TARGET
+  mc tag set [COMMAND FLAGS] TARGET [TAGS]
+
+FLAGS:
+  --help, -h                    show help
+  --json                        enable JSON formatted output
+  --debug                       enable debug output
+```
+
+*Example : List tags assigned to an object*
+
+List tags for `testobject` in `testbucket` in alias `s3`
+```
+mc tag list s3/testbucket/testobject
+Name                :    testobject
+editable            :    only-by-owner-and-authenticated
+confidentiality     :    open-to-authenticated-only
+```
+
+*Example : Set tags for an object*
+
+Set tags for `testobject` in `testbucket` in alias `s3`
+```
+mc tag set s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+Tags set for s3/testbucket/testobject.
+```
+
+*Example : Remove tags assigned to an object*
+
+Remove tags assigned to `testobject` in `testbucket` in alias `s3`
+```
+mc tag remove s3/testbucket/testobject
+Tags removed for s3/testbucket/testobject.
 ```
 
 <a name="admin"></a>
