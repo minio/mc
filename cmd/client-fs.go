@@ -954,6 +954,14 @@ func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate
 	})
 }
 
+// Set object legal hold for a given object.
+func (f *fsClient) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "PutObjectLegalHold",
+		APIType: "filesystem",
+	})
+}
+
 // GetAccess - get access policy permissions.
 func (f *fsClient) GetAccess() (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
