@@ -11,10 +11,12 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.4 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
-	github.com/mattn/go-isatty v0.0.7
+	github.com/klauspost/compress v1.10.3
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.8
 	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20200321002836-bf545dc3203b
+	github.com/minio/minio v0.0.0-20200327214830-6f992134a25f
 	github.com/minio/minio-go/v6 v6.0.51-0.20200319192131-097caa7760c7
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -26,7 +28,6 @@ require (
 	go.uber.org/zap v1.11.0 // indirect
 	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/text v0.3.2
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/h2non/filetype.v1 v1.0.5
