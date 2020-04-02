@@ -817,7 +817,7 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 }
 
 // Put - upload an object with custom metadata.
-func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
+func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
@@ -882,6 +882,7 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentLanguage:      contentLanguage,
 		StorageClass:         strings.ToUpper(storageClass),
 		ServerSideEncryption: sse,
+		DisableMultipart:     disableMultipart,
 	}
 	if retainUntilDate != timeSentinel {
 		opts.RetainUntilDate = &retainUntilDate

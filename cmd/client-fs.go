@@ -408,7 +408,7 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	if metadata["mc-attrs"] != "" {
 		meta := make(map[string][]string)
 		meta["mc-attrs"] = append(meta["mc-attrs"], metadata["mc-attrs"])

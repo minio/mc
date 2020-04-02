@@ -241,12 +241,12 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 }
 
 // putTargetStream writes to URL from Reader.
-func putTargetStream(ctx context.Context, alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
+func putTargetStream(ctx context.Context, alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
-	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse)
+	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, disableMultipart)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -254,7 +254,7 @@ func putTargetStream(ctx context.Context, alias string, urlStr string, reader io
 }
 
 // putTargetStreamWithURL writes to URL from reader. If length=-1, read until EOF.
-func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide) (int64, *probe.Error) {
+func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
@@ -263,7 +263,7 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 	metadata := map[string]string{
 		"Content-Type": contentType,
 	}
-	return putTargetStream(context.Background(), alias, urlStrFull, reader, size, metadata, nil, sse)
+	return putTargetStream(context.Background(), alias, urlStrFull, reader, size, metadata, nil, sse, disableMultipart)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
@@ -387,7 +387,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			metadata[k] = v
 		}
 		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, filterMetadata(metadata),
-			progress, tgtSSE)
+			progress, tgtSSE, urls.DisableMultipart)
 	}
 	if err != nil {
 		return urls.WithError(err.Trace(sourceURL.String()))
