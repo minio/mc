@@ -31,8 +31,8 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
-// newAdminFactory encloses New function with client cache.
-func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) {
+// NewAdminFactory encloses New function with client cache.
+func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) {
 	clientCache := make(map[uint32]*madmin.AdminClient)
 	mutex := &sync.Mutex{}
 
@@ -124,7 +124,7 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 		return nil, probe.NewError(fmt.Errorf("No valid configuration found for '%s' host alias", urlStrFull))
 	}
 
-	s3Config := newS3Config(urlStrFull, hostCfg)
+	s3Config := NewS3Config(urlStrFull, hostCfg)
 
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {
@@ -135,4 +135,4 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 
 // s3AdminNew returns an initialized minioAdmin structure. If debug is enabled,
 // it also enables an internal trace transport.
-var s3AdminNew = newAdminFactory()
+var s3AdminNew = NewAdminFactory()
