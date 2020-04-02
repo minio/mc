@@ -48,7 +48,7 @@ import (
 )
 
 // S3 client
-type s3Client struct {
+type S3Client struct {
 	mutex        *sync.Mutex
 	targetURL    *clientURL
 	api          *minio.Client
@@ -97,7 +97,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		}
 
 		// Instantiate s3
-		s3Clnt := &s3Client{}
+		s3Clnt := &S3Client{}
 		// Allocate a new mutex.
 		s3Clnt.mutex = new(sync.Mutex)
 		// Save the target URL.
@@ -221,17 +221,17 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 	}
 }
 
-// s3New returns an initialized s3Client structure. If debug is enabled,
+// S3New returns an initialized S3Client structure. If debug is enabled,
 // it also enables an internal trace transport.
-var s3New = newFactory()
+var S3New = newFactory()
 
 // GetURL get url.
-func (c *s3Client) GetURL() clientURL {
+func (c *S3Client) GetURL() clientURL {
 	return *c.targetURL
 }
 
 // Add bucket notification
-func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, suffix string, ignoreExisting bool) *probe.Error {
+func (c *S3Client) AddNotificationConfig(arn string, events []string, prefix, suffix string, ignoreExisting bool) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	// Validate total fields in ARN.
 	fields := strings.Split(arn, ":")
@@ -296,7 +296,7 @@ func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, su
 }
 
 // Remove bucket notification
-func (c *s3Client) RemoveNotificationConfig(arn string) *probe.Error {
+func (c *S3Client) RemoveNotificationConfig(arn string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	// Remove all notification configs if arn is empty
 	if arn == "" {
@@ -344,7 +344,7 @@ type notificationConfig struct {
 }
 
 // List notification configs
-func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *probe.Error) {
+func (c *S3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *probe.Error) {
 	var configs []notificationConfig
 	bucket, _ := c.url2BucketAndObject()
 	mb, e := c.api.GetBucketNotification(bucket)
@@ -553,7 +553,7 @@ func selectCompressionType(selOpts SelectObjectOpts, object string) minio.Select
 	return minio.SelectCompressionNONE
 }
 
-func (c *s3Client) Select(expression string, sse encrypt.ServerSide, selOpts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
+func (c *S3Client) Select(expression string, sse encrypt.ServerSide, selOpts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
 	opts := minio.SelectObjectOptions{
 		Expression:     expression,
 		ExpressionType: minio.QueryExpressionTypeSQL,
@@ -572,7 +572,7 @@ func (c *s3Client) Select(expression string, sse encrypt.ServerSide, selOpts Sel
 	return reader, nil
 }
 
-func (c *s3Client) watchOneBucket(bucket, prefix, suffix string, events []string, doneCh chan struct{}, eventChan chan EventInfo, errorChan chan *probe.Error) {
+func (c *S3Client) watchOneBucket(bucket, prefix, suffix string, events []string, doneCh chan struct{}, eventChan chan EventInfo, errorChan chan *probe.Error) {
 	// Start listening on all bucket events.
 	eventsCh := c.api.ListenBucketNotification(bucket, prefix, suffix, events, doneCh)
 	for notificationInfo := range eventsCh {
@@ -668,7 +668,7 @@ func (c *s3Client) watchOneBucket(bucket, prefix, suffix string, events []string
 }
 
 // Start watching on all bucket events for a given account ID.
-func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
+func (c *S3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Extract bucket and object.
 	bucket, object := c.url2BucketAndObject()
 
@@ -746,7 +746,7 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 }
 
 // Get - get object with metadata.
-func (c *s3Client) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
+func (c *S3Client) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	opts := minio.GetObjectOptions{}
 	opts.ServerSideEncryption = sse
@@ -774,7 +774,7 @@ func (c *s3Client) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
 // such that large file sizes will be copied in multipart manner on server
 // side.
-func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
+func (c *S3Client) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -817,7 +817,7 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 }
 
 // Put - upload an object with custom metadata.
-func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
+func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
@@ -933,7 +933,7 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 }
 
 // Remove incomplete uploads.
-func (c *s3Client) removeIncompleteObjects(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
+func (c *S3Client) removeIncompleteObjects(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
 	removeObjectErrorCh := make(chan minio.RemoveObjectError)
 
 	// Goroutine reads from objectsCh and sends error to removeObjectErrorCh if any.
@@ -950,12 +950,12 @@ func (c *s3Client) removeIncompleteObjects(bucket string, objectsCh <-chan strin
 	return removeObjectErrorCh
 }
 
-func (c *s3Client) AddUserAgent(app string, version string) {
+func (c *S3Client) AddUserAgent(app string, version string) {
 	c.api.SetAppInfo(app, version)
 }
 
 // Remove - remove object or bucket(s).
-func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	prevBucket := ""
@@ -1057,7 +1057,7 @@ func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 }
 
 // MakeBucket - make a new bucket.
-func (c *s3Client) MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error {
+func (c *S3Client) MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -1118,7 +1118,7 @@ func (c *s3Client) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 }
 
 // GetAccessRules - get configured policies from the server
-func (c *s3Client) GetAccessRules() (map[string]string, *probe.Error) {
+func (c *S3Client) GetAccessRules() (map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return map[string]string{}, probe.NewError(BucketNameEmpty{})
@@ -1144,7 +1144,7 @@ func (c *s3Client) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // GetAccess get access policy permissions.
-func (c *s3Client) GetAccess() (string, string, *probe.Error) {
+func (c *S3Client) GetAccess() (string, string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return "", "", probe.NewError(BucketNameEmpty{})
@@ -1168,7 +1168,7 @@ func (c *s3Client) GetAccess() (string, string, *probe.Error) {
 }
 
 // SetAccess set access policy permissions.
-func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
+func (c *S3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -1207,7 +1207,7 @@ func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 }
 
 // listObjectWrapper - select ObjectList version depending on the target hostname
-func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}, metadata bool) <-chan minio.ObjectInfo {
+func (c *S3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}, metadata bool) <-chan minio.ObjectInfo {
 	if isGoogle(c.targetURL.Host) {
 		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
 		// https://github.com/minio/mc/issues/3073
@@ -1220,7 +1220,7 @@ func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
-func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (*clientContent, *probe.Error) {
+func (c *S3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (*clientContent, *probe.Error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	bucket, object := c.url2BucketAndObject()
@@ -1321,7 +1321,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 }
 
 // getObjectStat returns the metadata of an object from a HEAD call.
-func (c *s3Client) getObjectStat(bucket, object string, opts minio.StatObjectOptions) (*clientContent, *probe.Error) {
+func (c *S3Client) getObjectStat(bucket, object string, opts minio.StatObjectOptions) (*clientContent, *probe.Error) {
 	objectMetadata := &clientContent{}
 	objectStat, e := c.api.StatObject(bucket, object, opts)
 	if e != nil {
@@ -1392,7 +1392,7 @@ func isVirtualHostStyle(host string, lookup minio.BucketLookupType) bool {
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path.
-func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
+func (c *S3Client) url2BucketAndObject() (bucketName, objectName string) {
 	path := c.targetURL.Path
 	// Convert any virtual host styled requests.
 	//
@@ -1418,7 +1418,7 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 }
 
 // splitPath split path into bucket and object.
-func (c *s3Client) splitPath(path string) (bucketName, objectName string) {
+func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 	path = strings.TrimPrefix(path, string(c.targetURL.Separator))
 
 	// Handle path if its virtual style.
@@ -1444,7 +1444,7 @@ func (c *s3Client) splitPath(path string) (bucketName, objectName string) {
 /// Bucket API operations.
 
 // List - list at delimited path, if not recursive.
-func (c *s3Client) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *clientContent {
+func (c *S3Client) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *clientContent {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -1474,7 +1474,7 @@ func (c *s3Client) List(isRecursive, isIncomplete, isMetadata bool, showDir DirO
 	return contentCh
 }
 
-func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
+func (c *S3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -1545,7 +1545,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 	}
 }
 
-func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientContent) {
+func (c *S3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -1600,7 +1600,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientConten
 }
 
 // Convert objectMultipartInfo to clientContent
-func (c *s3Client) objectMultipartInfo2ClientContent(bucket string, entry minio.ObjectMultipartInfo) clientContent {
+func (c *S3Client) objectMultipartInfo2ClientContent(bucket string, entry minio.ObjectMultipartInfo) clientContent {
 
 	content := clientContent{}
 	url := *c.targetURL
@@ -1620,7 +1620,7 @@ func (c *s3Client) objectMultipartInfo2ClientContent(bucket string, entry minio.
 }
 
 // Recursively lists incomplete uploads.
-func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt) {
+func (c *S3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt) {
 	defer close(contentCh)
 
 	// Closure function reads list of incomplete uploads and sends to contentCh. If a directory is found, it lists
@@ -1718,7 +1718,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *client
 }
 
 // Returns new path by joining path segments with URL path separator.
-func (c *s3Client) joinPath(bucket string, objects ...string) string {
+func (c *S3Client) joinPath(bucket string, objects ...string) string {
 	p := string(c.targetURL.Separator) + bucket
 	for _, o := range objects {
 		p += string(c.targetURL.Separator) + o
@@ -1727,7 +1727,7 @@ func (c *s3Client) joinPath(bucket string, objects ...string) string {
 }
 
 // Convert objectInfo to clientContent
-func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInfo) *clientContent {
+func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInfo) *clientContent {
 	content := &clientContent{}
 	url := *c.targetURL
 	// Join bucket and incoming object key.
@@ -1756,7 +1756,7 @@ func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 }
 
 // Returns bucket stat info of current bucket.
-func (c *s3Client) bucketStat(bucket string) (*clientContent, *probe.Error) {
+func (c *S3Client) bucketStat(bucket string) (*clientContent, *probe.Error) {
 	exists, e := c.api.BucketExists(bucket)
 	if e != nil {
 		return nil, probe.NewError(e)
@@ -1768,7 +1768,7 @@ func (c *s3Client) bucketStat(bucket string) (*clientContent, *probe.Error) {
 }
 
 // Recursively lists objects.
-func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt, metadata bool) {
+func (c *S3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt, metadata bool) {
 	defer close(contentCh)
 	// Closure function reads list objects and sends to contentCh. If a directory is found, it lists
 	// objects of the directory content recursively.
@@ -1865,7 +1865,7 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 	}
 }
 
-func (c *s3Client) listInRoutine(contentCh chan *clientContent, metadata bool) {
+func (c *S3Client) listInRoutine(contentCh chan *clientContent, metadata bool) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -1928,7 +1928,7 @@ const (
 	s3StorageClassGlacier = "GLACIER"
 )
 
-func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadata bool) {
+func (c *S3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadata bool) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -1996,7 +1996,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadat
 }
 
 // ShareDownload - get a usable presigned object url to share.
-func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
+func (c *S3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	// No additional request parameters are set for the time being.
 	reqParams := make(url.Values)
@@ -2008,7 +2008,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 }
 
 // ShareUpload - get data for presigned post http form upload.
-func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
+func (c *S3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
 	if e := p.SetExpires(UTCNow().Add(expires)); e != nil {
@@ -2038,7 +2038,7 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 }
 
 // Set object lock configurataion of bucket.
-func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+func (c *S3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 
 	err := c.api.SetBucketObjectLockConfig(bucket, mode, validity, unit)
@@ -2050,7 +2050,7 @@ func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 }
 
 // Set object retention for a given object.
-func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
+func (c *S3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 
 	opts := minio.PutObjectRetentionOptions{
@@ -2067,7 +2067,7 @@ func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate
 }
 
 // Set object legal hold for a given object.
-func (c *s3Client) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+func (c *S3Client) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	opts := minio.PutObjectLegalHoldOptions{
 		Status: lhold,
@@ -2080,7 +2080,7 @@ func (c *s3Client) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error
 }
 
 // Get object lock configuration of bucket.
-func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
+func (c *S3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
 	mode, validity, unit, err := c.api.GetBucketObjectLockConfig(bucket)
@@ -2092,7 +2092,7 @@ func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *u
 }
 
 // Get Object Tags
-func (c *s3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
+func (c *S3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
 	var err error
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
@@ -2113,7 +2113,7 @@ func (c *s3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
 }
 
 // Set Object tags
-func (c *s3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
+func (c *S3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
 	var err error
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
@@ -2129,7 +2129,7 @@ func (c *s3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
 }
 
 // Delete object tags
-func (c *s3Client) DeleteObjectTagging() *probe.Error {
+func (c *S3Client) DeleteObjectTagging() *probe.Error {
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
 		return probe.NewError(BucketNameEmpty{})
