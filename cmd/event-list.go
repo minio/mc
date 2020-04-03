@@ -115,7 +115,7 @@ func mainEventList(ctx *cli.Context) error {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 
-	s3Client, ok := client.(*s3Client)
+	s3Client, ok := client.(*S3Client)
 	if !ok {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
