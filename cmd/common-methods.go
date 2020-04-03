@@ -415,7 +415,7 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 		return fsClient, nil
 	}
 
-	s3Config := newS3Config(urlStr, hostCfg)
+	s3Config := NewS3Config(urlStr, hostCfg)
 
 	s3Client, err := S3New(s3Config)
 	if err != nil {

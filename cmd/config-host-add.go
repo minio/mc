@@ -205,7 +205,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 // signature auto-probe when needed.
 func BuildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
-	s3Config := newS3Config(url, &hostConfigV9{
+	s3Config := NewS3Config(url, &hostConfigV9{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
