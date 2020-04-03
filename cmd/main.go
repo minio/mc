@@ -329,6 +329,7 @@ var appCmds = []cli.Command{
 	duCmd,
 	lockCmd,
 	retentionCmd,
+	legalHoldCmd,
 	diffCmd,
 	rmCmd,
 	eventCmd,

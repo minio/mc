@@ -73,7 +73,7 @@ coverage: build
 # Builds mc locally.
 build: checks
 	@echo "Building mc binary to './mc'"
-	@GO111MODULE=on CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
+	@GO111MODULE=on CGO_ENABLED=0 go build -trimpath -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
 
 # Builds MinIO and installs it to $GOPATH/bin.
 install: build

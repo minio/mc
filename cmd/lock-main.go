@@ -100,7 +100,7 @@ func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 
-	s3Client, ok := client.(*s3Client)
+	s3Client, ok := client.(*S3Client)
 	if !ok {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
@@ -140,10 +140,6 @@ func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.
 func mainLock(ctx *cli.Context) error {
 	console.SetColor("Mode", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Validity", color.New(color.FgYellow))
-
-	// Parse encryption keys per command.
-	_, err := getEncKeys(ctx)
-	fatalIf(err, "Unable to parse encryption keys.")
 
 	// lock specific flags.
 	clearLock := ctx.Bool("clear")

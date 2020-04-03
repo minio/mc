@@ -22,14 +22,15 @@ import (
 
 // URLs contains source and target urls
 type URLs struct {
-	SourceAlias   string
-	SourceContent *clientContent
-	TargetAlias   string
-	TargetContent *clientContent
-	TotalCount    int64
-	TotalSize     int64
-	encKeyDB      map[string][]prefixSSEPair
-	Error         *probe.Error `json:"-"`
+	SourceAlias      string
+	SourceContent    *clientContent
+	TargetAlias      string
+	TargetContent    *clientContent
+	TotalCount       int64
+	TotalSize        int64
+	DisableMultipart bool
+	encKeyDB         map[string][]prefixSSEPair
+	Error            *probe.Error `json:"-"`
 }
 
 // WithError sets the error and returns object

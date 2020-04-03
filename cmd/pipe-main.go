@@ -79,7 +79,7 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
-	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey)
+	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey, false)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:

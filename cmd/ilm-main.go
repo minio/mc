@@ -70,7 +70,7 @@ func getILMXML(urlStr string) (string, error) {
 func checkILMBucketAccess(urlStr string) bool {
 	clnt, pErr := newClient(urlStr)
 	fatalIf(pErr, "Cannot parse the provided url "+urlStr)
-	s3c, ok := clnt.(*s3Client)
+	s3c, ok := clnt.(*S3Client)
 	if !ok {
 		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
 	}
@@ -83,7 +83,7 @@ func checkILMBucketAccess(urlStr string) bool {
 func setBucketILMConfiguration(urlStr string, ilmConfig string) error {
 	clnt, pErr := newClient(urlStr)
 	fatalIf(pErr, "Failed to set lifecycle configuration to "+urlStr)
-	s3c, ok := clnt.(*s3Client)
+	s3c, ok := clnt.(*S3Client)
 	if !ok {
 		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
 	}
@@ -98,7 +98,7 @@ func getBucketILMConfiguration(urlStr string) (string, error) {
 	var bktConfig string
 	clnt, pErr := newClient(urlStr)
 	fatalIf(pErr, "Failed to get lifecycle configuration to "+urlStr)
-	s3c, ok := clnt.(*s3Client)
+	s3c, ok := clnt.(*S3Client)
 	if !ok {
 		fatalIf(probe.NewError(errors.New("Unable to set tags")), "For "+urlStr+" unable to obtain client reference.")
 	}

@@ -52,11 +52,8 @@ func getCenterAligned(label string, maxLen int) string {
 	return output
 }
 
-// splitStr splits a string into n parts, empty strings are added
-// if we are not able to reach n elements
 func splitStr(path, sep string, n int) []string {
 	splits := strings.SplitN(path, sep, n)
-	// Add empty strings if we found elements less than nr
 	for i := n - len(splits); i > 0; i-- {
 		splits = append(splits, "")
 	}
