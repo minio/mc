@@ -60,7 +60,7 @@ type Client interface {
 	SetAccess(access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error
+	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error
 
 	// Runs select expression on object storage on specific files.
 	Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
