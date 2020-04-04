@@ -62,7 +62,7 @@ func (d differType) String() string {
 const multiMasterETagKey = "X-Amz-Meta-Mm-Etag"
 const multiMasterSTagKey = "X-Amz-Meta-Mm-Stag"
 
-func eTagMatch(src, tgt *clientContent) bool {
+func eTagMatch(src, tgt *ClientContent) bool {
 	if tgt.UserMetadata[multiMasterETagKey] != "" {
 		if tgt.UserMetadata[multiMasterETagKey] == src.UserMetadata[multiMasterETagKey] || tgt.UserMetadata[multiMasterETagKey] == src.ETag {
 			return true

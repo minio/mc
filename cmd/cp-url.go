@@ -103,8 +103,8 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[strin
 }
 
 // prepareCopyContentTypeA - makes CopyURLs content for copying.
-func makeCopyContentTypeA(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
-	targetContent := clientContent{URL: *newClientURL(targetURL)}
+func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+	targetContent := ClientContent{URL: *newClientURL(targetURL)}
 	return URLs{
 		SourceAlias:   sourceAlias,
 		SourceContent: sourceContent,
@@ -140,7 +140,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string, encKeyDB map[strin
 }
 
 // makeCopyContentTypeB - CopyURLs content for copying.
-func makeCopyContentTypeB(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func makeCopyContentTypeB(sourceAlias string, sourceContent *ClientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	targetURLParse := newClientURL(targetURL)
 	targetURLParse.Path = filepath.ToSlash(filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path)))
@@ -185,7 +185,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool, encKeyD
 }
 
 // makeCopyContentTypeC - CopyURLs content for copying.
-func makeCopyContentTypeC(sourceAlias string, sourceURL clientURL, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent *ClientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	newSourceURL := sourceContent.URL
 	pathSeparatorIndex := strings.LastIndex(sourceURL.Path, string(sourceURL.Separator))
 	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)

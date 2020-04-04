@@ -46,8 +46,8 @@ const defaultMultipartThreadsNum = 4
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error)
-	List(isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *clientContent
+	Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error)
+	List(isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *ClientContent
 
 	// Bucket operations
 	MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error
@@ -77,13 +77,13 @@ type Client interface {
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
-	Watch(params watchParams) (*watchObject, *probe.Error)
+	Watch(params watchParams) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) (errorCh <-chan *probe.Error)
+	Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
 
 	// GetURL returns back internal url
-	GetURL() clientURL
+	GetURL() ClientURL
 
 	AddUserAgent(app, version string)
 
@@ -93,9 +93,9 @@ type Client interface {
 	DeleteObjectTagging() *probe.Error
 }
 
-// Content container for content metadata
-type clientContent struct {
-	URL          clientURL
+// ClientContent - Content container for content metadata
+type ClientContent struct {
+	URL          ClientURL
 	Time         time.Time
 	Size         int64
 	Type         os.FileMode

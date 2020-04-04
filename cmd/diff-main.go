@@ -72,8 +72,8 @@ type diffMessage struct {
 	SecondURL     string       `json:"second"`
 	Diff          differType   `json:"diff"`
 	Error         *probe.Error `json:"error,omitempty"`
-	firstContent  *clientContent
-	secondContent *clientContent
+	firstContent  *ClientContent
+	secondContent *ClientContent
 }
 
 // String colorized diff message

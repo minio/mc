@@ -64,7 +64,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	// Verify previously create files and list them.
-	var contents []*clientContent
+	var contents []*ClientContent
 	for content := range fsClient.List(false, false, false, DirNone) {
 		if content.Err != nil {
 			err = content.Err

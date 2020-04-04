@@ -249,8 +249,8 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 		return sURLs.WithError(pErr)
 	}
 	clnt.AddUserAgent(uaMirrorAppName, Version)
-	contentCh := make(chan *clientContent, 1)
-	contentCh <- &clientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
+	contentCh := make(chan *ClientContent, 1)
+	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
 	isRemoveBucket := false
 	errorCh := clnt.Remove(false, isRemoveBucket, contentCh)
@@ -431,14 +431,14 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 				(event.Type == EventCreatePutRetention) {
 				mirrorURL := URLs{
 					SourceAlias: sourceAlias,
-					SourceContent: &clientContent{
+					SourceContent: &ClientContent{
 						URL:       *sourceURL,
 						Retention: event.Type == EventCreatePutRetention,
 						Size:      event.Size,
 						Metadata:  event.UserMetadata,
 					},
 					TargetAlias:   targetAlias,
-					TargetContent: &clientContent{URL: *targetURL},
+					TargetContent: &ClientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
 				}
 				if mirrorURL.SourceContent.Metadata[multiMasterETagKey] != "" {
@@ -510,7 +510,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					SourceAlias:   sourceAlias,
 					SourceContent: nil,
 					TargetAlias:   targetAlias,
-					TargetContent: &clientContent{URL: *targetURL},
+					TargetContent: &ClientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
 				}
 				mirrorURL.TotalCount = mj.status.GetCounts()
@@ -845,10 +845,10 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				// and queue them for copying.
 				if err := mj.watchURL(newSrcClt); err != nil {
 					if mj.multiMasterEnable {
-						errorIf(err, fmt.Sprintf("Failed to start monitoring."))
+						errorIf(err, "Failed to start monitoring.")
 						return true
 					}
-					mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
+					mj.status.fatalIf(err, "Failed to start monitoring.")
 				}
 			}
 		}
@@ -893,10 +893,10 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		// and queue them for copying.
 		if err := mj.watchURL(srcClt); err != nil {
 			if mj.multiMasterEnable {
-				errorIf(err, fmt.Sprintf("Failed to start monitoring."))
+				errorIf(err, "Failed to start monitoring.")
 				return true
 			}
-			mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
+			mj.status.fatalIf(err, "Failed to start monitoring.")
 		}
 	}
 
