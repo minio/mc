@@ -22,7 +22,6 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminConfigGetCmd = cli.Command{
@@ -57,13 +56,13 @@ EXAMPLES:
 
 // configGetMessage container to hold locks information.
 type configGetMessage struct {
-	Status string         `json:"status"`
-	Value  madmin.Targets `json:"value"`
+	Status string `json:"status"`
+	Value  []byte `json:"value"`
 }
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	return u.Value.String()
+	return string(u.Value)
 }
 
 // JSON jsonified service status Message message.
