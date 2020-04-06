@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -45,7 +45,7 @@ import (
 
 // filesystem client
 type fsClient struct {
-	PathURL *clientURL
+	PathURL *ClientURL
 }
 
 const (
@@ -113,7 +113,7 @@ func isIgnoredFile(filename string) bool {
 }
 
 // URL get url.
-func (f *fsClient) GetURL() clientURL {
+func (f *fsClient) GetURL() ClientURL {
 	return *f.PathURL
 }
 
@@ -126,7 +126,7 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
+func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	eventChan := make(chan EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
@@ -214,7 +214,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 		}
 	}()
 
-	return &watchObject{
+	return &WatchObject{
 		eventInfoChan: eventChan,
 		errorChan:     errorChan,
 		doneChan:      doneChan,
@@ -434,7 +434,7 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
+func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
 	rc, e := os.Open(source)
 	if e != nil {
 		err := f.toClientError(e, source)
@@ -503,8 +503,8 @@ func deleteFile(deletePath string) error {
 	return nil
 }
 
-// Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+// Remove - remove entry read from ClientContent channel.
+func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	// Goroutine reads from contentCh and removes the entry in content.
@@ -536,9 +536,9 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 }
 
 // List - list files and folders.
-func (f *fsClient) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *clientContent {
-	contentCh := make(chan *clientContent)
-	filteredCh := make(chan *clientContent)
+func (f *fsClient) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *ClientContent {
+	contentCh := make(chan *ClientContent)
+	filteredCh := make(chan *ClientContent)
 
 	if isRecursive {
 		if showDir == DirNone {
@@ -613,12 +613,12 @@ func readDir(dirname string) ([]os.FileInfo, error) {
 }
 
 // listPrefixes - list all files for any given prefix.
-func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) {
+func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *ClientContent) {
 	dirName := filepath.Dir(prefix)
 	files, e := readDir(dirName)
 	if e != nil {
 		err := f.toClientError(e, dirName)
-		contentCh <- &clientContent{
+		contentCh <- &ClientContent{
 			Err: err.Trace(dirName),
 		}
 		return
@@ -637,7 +637,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 				continue
 			}
 			if strings.HasPrefix(file, prefix) {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					URL:  *newClientURL(file),
 					Time: st.ModTime(),
 					Size: st.Size(),
@@ -648,7 +648,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 			}
 		}
 		if strings.HasPrefix(file, prefix) {
-			contentCh <- &clientContent{
+			contentCh <- &ClientContent{
 				URL:  *newClientURL(file),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
@@ -659,7 +659,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 	}
 }
 
-func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata bool) {
+func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent, isMetadata bool) {
 	// close the channel when the function returns.
 	defer close(contentCh)
 
@@ -676,7 +676,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 			return
 		}
 		// For all other errors we return genuine error back to the caller.
-		contentCh <- &clientContent{Err: err.Trace(fpath)}
+		contentCh <- &ClientContent{Err: err.Trace(fpath)}
 		return
 	}
 
@@ -692,7 +692,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 	case true:
 		files, e := readDir(fpath)
 		if err != nil {
-			contentCh <- &clientContent{Err: probe.NewError(e)}
+			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return
 		}
 		for _, file := range files {
@@ -714,7 +714,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 					continue
 				}
 
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					URL:  pathURL,
 					Time: fi.ModTime(),
 					Size: fi.Size(),
@@ -724,7 +724,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 			}
 		}
 	default:
-		contentCh <- &clientContent{
+		contentCh <- &ClientContent{
 			URL:  pathURL,
 			Time: fst.ModTime(),
 			Size: fst.Size(),
@@ -735,7 +735,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 }
 
 // List files recursively using non-recursive mode.
-func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
+func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
 	defer close(contentCh)
 
 	// Trim trailing / or \.
@@ -751,7 +751,7 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 		files, e := readDir(currentPath)
 		if e != nil {
 			if os.IsPermission(e) {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{
 						Path: currentPath,
 					}),
@@ -759,13 +759,13 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 				return false
 			}
 
-			contentCh <- &clientContent{Err: probe.NewError(e)}
+			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return true
 		}
 
 		for _, file := range files {
 			name := filepath.Join(currentPath, file.Name())
-			content := clientContent{
+			content := ClientContent{
 				URL:  *newClientURL(name),
 				Time: file.ModTime(),
 				Size: file.Size(),
@@ -795,17 +795,17 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 	// listDir() does not send currentPath to contentCh.  We send it here depending on dirOpt.
 
 	if dirOpt == DirFirst && !isIncomplete {
-		contentCh <- &clientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
+		contentCh <- &ClientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
 	}
 
 	listDir(currentPath)
 
 	if dirOpt == DirLast && !isIncomplete {
-		contentCh <- &clientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
+		contentCh <- &ClientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
 	}
 }
 
-func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetadata bool) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetadata bool) {
 	// close channels upon return.
 	defer close(contentCh)
 	var dirName string
@@ -853,13 +853,13 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 		if e != nil {
 			// If operation is not permitted, we throw quickly back.
 			if strings.Contains(e.Error(), "operation not permitted") {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					Err: probe.NewError(e),
 				}
 				return nil
 			}
 			if os.IsPermission(e) {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{Path: fp}),
 				}
 				return nil
@@ -874,7 +874,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 			}
 		}
 		if fi.Mode().IsRegular() {
-			contentCh <- &clientContent{
+			contentCh <- &ClientContent{
 				URL:  *newClientURL(fp),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
@@ -903,7 +903,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 	// walks invokes our custom function.
 	e := ioutils.FTW(dirName, visitFS)
 	if e != nil {
-		contentCh <- &clientContent{
+		contentCh <- &ClientContent{
 			Err: probe.NewError(e),
 		}
 	}
@@ -1020,13 +1020,13 @@ func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
 	}
 
-	content = &clientContent{}
+	content = &ClientContent{}
 	content.URL = *f.PathURL
 	content.Size = st.Size()
 	content.Time = st.ModTime()

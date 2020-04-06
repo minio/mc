@@ -79,7 +79,6 @@ type ilmRmMessage struct {
 	All    bool   `json:"all"`
 }
 
-// tagSetMessage console colorized output.
 func (i ilmRmMessage) String() string {
 	msg := "Rule ID `" + i.ID + "` from target " + i.Target + " removed."
 	if i.All {
@@ -88,7 +87,6 @@ func (i ilmRmMessage) String() string {
 	return console.Colorize(ilmThemeResultSuccess, msg)
 }
 
-// JSON tagSetMessage.
 func (i ilmRmMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")

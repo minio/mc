@@ -127,7 +127,18 @@ func GetILMJSON(ilmXML string) (string, error) {
 	if err = xml.Unmarshal([]byte(ilmXML), &ilmInfo); err != nil {
 		return "", err
 	}
-	return ilmInfo.JSON() + "\n", nil
+	return ilmInfo.JSON(), nil
+}
+
+// GetILMConfig Get ILM configuration populated with values
+func GetILMConfig(ilmXML string) (ilmInfo LifecycleConfiguration, err error) {
+	if ilmXML == "" {
+		return LifecycleConfiguration{}, errors.New("Empty lifecycle configuration")
+	}
+	if err = xml.Unmarshal([]byte(ilmXML), &ilmInfo); err != nil {
+		return LifecycleConfiguration{}, err
+	}
+	return ilmInfo, nil
 }
 
 // ReadILMConfigJSON read from stdin and set to bucket
@@ -269,11 +280,11 @@ func GetILMRuleToSet(ctx *cli.Context, lfcInfoXML string) (string, error) {
 	}
 
 	if rule, err = getILMRuleFromUserValues(ctx, &lfcInfo); err != nil {
-		errStr := err.Error() + ". Error getting input values for new rule. "
+		errStr := err.Error() + ". Error getting input values for new rule"
 		return "", errors.New(errStr)
 	}
 	if err = checkILMRule(rule); err != nil {
-		errStr := err.Error() + ". Invalid lifecycle configuration rule. "
+		errStr := err.Error() + ". Invalid lifecycle configuration rule"
 		return "", errors.New(errStr)
 	}
 	if bktILM, err = getBucketILMXML(lfcInfo); err != nil {
@@ -343,8 +354,47 @@ func validateTranDays(rule LifecycleRule) error {
 	return nil
 }
 
+// Amazon S3 requires atleast one action for a rule to be added.
+func validateRuleAction(rule LifecycleRule) error {
+	expirySet := (rule.Expiration != nil)
+	transitionSet := (rule.Transition != nil)
+	if !expirySet && !transitionSet {
+		errMsg := "At least one action (Expiry or Transition) needs to be specified in a rule."
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
+// Check if any date is before than cur date
+func validateTranExpCurdate(rule LifecycleRule) error {
+	var err error
+	expirySet := (rule.Expiration != nil)
+	transitionSet := (rule.Transition != nil)
+	transitionDateSet := transitionSet && (rule.Transition.TransitionDate != nil && !rule.Transition.TransitionDate.IsZero())
+	expiryDateSet := expirySet && rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()
+	currentTime := time.Now()
+	curTimeStr := currentTime.Format(defaultILMDateFormat)
+	currentTime, err = time.Parse(defaultILMDateFormat, curTimeStr)
+	if err != nil {
+		return err
+	}
+	if expirySet && expiryDateSet && rule.Expiration.ExpirationDate.Before(currentTime) {
+		err = errors.New("Expiry date falls before or on today's date")
+	} else if transitionSet && transitionDateSet && rule.Transition.TransitionDate.Before(currentTime) {
+		err = errors.New("Transition date falls before or on today's date")
+	}
+	return err
+}
+
 func checkILMRule(rule LifecycleRule) error {
 	var err error
+
+	if err = validateRuleAction(rule); err != nil {
+		return err
+	}
+	if err = validateTranExpCurdate(rule); err != nil {
+		return err
+	}
 	if err = validateTranExpDate(rule); err != nil {
 		return err
 	}

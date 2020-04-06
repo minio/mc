@@ -267,12 +267,12 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 }
 
 // copySourceToTargetURL copies to targetURL from source.
-func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
+func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
-	err = targetClnt.Copy(source, size, progress, srcSSE, tgtSSE, metadata)
+	err = targetClnt.Copy(source, size, progress, srcSSE, tgtSSE, metadata, disableMultipart)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
@@ -359,7 +359,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length,
-			progress, srcSSE, tgtSSE, filterMetadata(metadata))
+			progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart)
 	} else {
 		if len(metadata) == 0 {
 			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)

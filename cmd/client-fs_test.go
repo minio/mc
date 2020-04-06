@@ -64,7 +64,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	// Verify previously create files and list them.
-	var contents []*clientContent
+	var contents []*ClientContent
 	for content := range fsClient.List(false, false, false, DirNone) {
 		if content.Err != nil {
 			err = content.Err
@@ -360,6 +360,6 @@ func (s *TestSuite) TestCopy(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	err = fsClientTarget.Copy(sourcePath, int64(len(data)), nil, nil, nil, nil)
+	err = fsClientTarget.Copy(sourcePath, int64(len(data)), nil, nil, nil, nil, false)
 	c.Assert(err, IsNil)
 }

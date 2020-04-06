@@ -32,7 +32,7 @@ func checkCopySyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	// extract URLs.
 	URLs := ctx.Args()
 	if len(URLs) < 2 {
-		fatalIf(errDummy().Trace(ctx.Args()...), fmt.Sprintf("Unable to parse source and target arguments."))
+		fatalIf(errDummy().Trace(ctx.Args()...), "Unable to parse source and target arguments.")
 	}
 
 	srcURLs := URLs[:len(URLs)-1]

@@ -23,9 +23,9 @@ import (
 // URLs contains source and target urls
 type URLs struct {
 	SourceAlias      string
-	SourceContent    *clientContent
+	SourceContent    *ClientContent
 	TargetAlias      string
-	TargetContent    *clientContent
+	TargetContent    *ClientContent
 	TotalCount       int64
 	TotalSize        int64
 	DisableMultipart bool

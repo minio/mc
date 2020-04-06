@@ -17,11 +17,11 @@
 package cmd
 
 import (
-	"errors"
 	"os"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/cmd/ilm"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -51,12 +51,12 @@ EXAMPLES:
 }
 
 type ilmExportMessage struct {
-	Status    string `json:"status"`
-	Target    string `json:"target"`
-	ILMConfig string `json:"ilmConfig"`
+	Status    string                     `json:"status"`
+	Target    string                     `json:"target"`
+	ILMConfig string                     `json:"-"`
+	ILM       ilm.LifecycleConfiguration `json:"ilm"`
 }
 
-// tagSetMessage console colorized output.
 func (i ilmExportMessage) String() string {
 	var ilmRet string
 	var e error
@@ -69,18 +69,10 @@ func (i ilmExportMessage) String() string {
 	return ilmRet
 }
 
-// JSON tagSetMessage.
 func (i ilmExportMessage) JSON() string {
-	var jsonRet string
-	var e error
-	if i.ILMConfig == "" {
-		//fatalIf. THen remove rest.
-		fatalIf(probe.NewError(errors.New("Lifecycle configuration is not set")), "Export failed.")
-	} else {
-		jsonRet, e = ilm.GetILMJSON(i.ILMConfig)
-		fatalIf(probe.NewError(e), "Error exporting lifecycle configuration")
-	}
-	return jsonRet
+	msgBytes, e := json.MarshalIndent(i, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
 }
 
 // checkILMExportSyntax - validate arguments passed by user
@@ -94,14 +86,20 @@ func checkILMExportSyntax(ctx *cli.Context) {
 func mainILMExport(ctx *cli.Context) error {
 	checkILMExportSyntax(ctx)
 	setILMDisplayColorScheme()
+	var ilmConfiguration ilm.LifecycleConfiguration
 	args := ctx.Args()
 	objectURL := args.Get(0)
 	ilmInfoXML, err := getILMXML(objectURL)
 	fatalIf(probe.NewError(err), "Error exporting lifecycle configuration.")
+	if globalJSON {
+		ilmConfiguration, err = ilm.GetILMConfig(ilmInfoXML)
+		fatalIf(probe.NewError(err), "Error exporting lifecycle configuration.")
+	}
 	printMsg(ilmExportMessage{
-		Status:    "error",
+		Status:    "success",
 		Target:    objectURL,
 		ILMConfig: ilmInfoXML,
+		ILM:       ilmConfiguration,
 	})
 	return nil
 }

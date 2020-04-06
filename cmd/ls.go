@@ -67,7 +67,7 @@ func (c contentMessage) JSON() string {
 }
 
 // parseContent parse client Content container into printer struct.
-func parseContent(c *clientContent) contentMessage {
+func parseContent(c *ClientContent) contentMessage {
 	content := contentMessage{}
 	content.Time = c.Time.Local()
 
@@ -89,7 +89,7 @@ func parseContent(c *clientContent) contentMessage {
 }
 
 // get content key
-func getKey(c *clientContent) string {
+func getKey(c *ClientContent) string {
 	sep := "/"
 
 	// for windows make sure to print in 'windows' specific style.

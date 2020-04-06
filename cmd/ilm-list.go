@@ -83,12 +83,12 @@ EXAMPLES:
 }
 
 type ilmListMessage struct {
-	Status    string `json:"status"`
-	Target    string `json:"target"`
-	ILMConfig string `json:"config"`
+	Status    string                     `json:"status"`
+	Target    string                     `json:"target"`
+	ILMConfig string                     `json:"-"`
+	ILM       ilm.LifecycleConfiguration `json:"ilm"`
 }
 
-// tagSetMessage console colorized output.
 func (i ilmListMessage) String() string {
 	if i.ILMConfig == "" {
 		return console.Colorize(ilmThemeResultFailure, "Lifecycle configuration for `"+i.Target+"` not set.")
@@ -96,7 +96,6 @@ func (i ilmListMessage) String() string {
 	return i.ILMConfig
 }
 
-// JSON tagSetMessage.
 func (i ilmListMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -239,34 +238,48 @@ func mainILMList(ctx *cli.Context) error {
 	var fields []Field
 	// Fill up fields
 	var tblContents string
+	var ilmConfig ilm.LifecycleConfiguration
 	if len(cellDataNoTags) == 0 && len(cellDataWithTags) == 0 {
-		fatalIf(probe.NewError(errors.New("Lifecycle configuration not set")), "Failed to list lifecycle configuration for "+objectURL+".")
+		dataStr := ""
+		if showTransition {
+			dataStr = "Transition "
+		} else if showExpiry {
+			dataStr = "Expiry "
+		}
+		eMsg := dataStr + "Lifecycle configuration not set"
+		fatalIf(probe.NewError(errors.New(eMsg)), "Failed to list lifecycle configuration for "+objectURL+".")
 	}
 
-	for _, hdr := range alignedHdrLabels {
-		fields = append(fields, Field{ilmThemeHeader, len(hdr)})
-	}
-	tbl = newPrettyTable(tableSeperator, fields...)
-	tblContents = getILMHeader(&tbl, alignedHdrLabels...)
-	fields = nil
-	// The data table
-	var tblRowField *[]string
-	if len(cellDataNoTags) == 0 {
-		tblRowField = &cellDataWithTags[0]
+	if !globalJSON {
+		for _, hdr := range alignedHdrLabels {
+			fields = append(fields, Field{ilmThemeHeader, len(hdr)})
+		}
+		tbl = newPrettyTable(tableSeperator, fields...)
+		tblContents = getILMHeader(&tbl, alignedHdrLabels...)
+		fields = nil
+		// The data table
+		var tblRowField *[]string
+		if len(cellDataNoTags) == 0 {
+			tblRowField = &cellDataWithTags[0]
+		} else {
+			tblRowField = &cellDataNoTags[0]
+		}
+		for _, hdr := range *tblRowField {
+			fields = append(fields, Field{ilmThemeRow, len(hdr)})
+		}
+		tbl = newPrettyTable(tableSeperator, fields...)
+		tblContents += getILMRowsNoTags(&tbl, &cellDataNoTags)
+		tblContents += getILMRowsWithTags(&tbl, &cellDataWithTags, tagRows)
+
 	} else {
-		tblRowField = &cellDataNoTags[0]
+		ilmConfig, err = ilm.GetILMConfig(lfcInfo)
+		fatalIf(probe.NewError(err), "Failed to get lifecycle configuration for "+objectURL+".")
 	}
-	for _, hdr := range *tblRowField {
-		fields = append(fields, Field{ilmThemeRow, len(hdr)})
-	}
-	tbl = newPrettyTable(tableSeperator, fields...)
-	tblContents += getILMRowsNoTags(&tbl, &cellDataNoTags)
-	tblContents += getILMRowsWithTags(&tbl, &cellDataWithTags, tagRows)
-
 	printMsg(ilmListMessage{
 		Status:    "success",
 		Target:    objectURL,
 		ILMConfig: tblContents,
+		ILM:       ilmConfig,
 	})
 
 	return nil

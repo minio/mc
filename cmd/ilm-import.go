@@ -55,12 +55,10 @@ type ilmImportMessage struct {
 	Target string `json:"target"`
 }
 
-// tagSetMessage console colorized output.
 func (i ilmImportMessage) String() string {
 	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration imported successfully to `"+i.Target+"`.")
 }
 
-// JSON tagSetMessage.
 func (i ilmImportMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")

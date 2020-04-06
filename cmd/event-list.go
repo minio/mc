@@ -86,7 +86,7 @@ func (u eventListMessage) String() string {
 			msg += ","
 		}
 	}
-	msg += console.Colorize("Filter", fmt.Sprintf("   Filter: "))
+	msg += console.Colorize("Filter", "   Filter: ")
 	if u.Prefix != "" {
 		msg += console.Colorize("Filter", fmt.Sprintf("prefix=\"%s\"", u.Prefix))
 	}

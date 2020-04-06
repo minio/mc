@@ -160,7 +160,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 			// Either available only in source or size differs and force is set
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
-			targetContent := &clientContent{URL: *newClientURL(targetPath)}
+			targetContent := &ClientContent{URL: *newClientURL(targetPath)}
 			URLsCh <- URLs{
 				SourceAlias:   sourceAlias,
 				SourceContent: sourceContent,
@@ -172,7 +172,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
-			targetContent := &clientContent{URL: *newClientURL(targetPath)}
+			targetContent := &ClientContent{URL: *newClientURL(targetPath)}
 			URLsCh <- URLs{
 				SourceAlias:   sourceAlias,
 				SourceContent: sourceContent,

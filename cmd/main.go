@@ -125,7 +125,7 @@ func commandNotFound(ctx *cli.Context, command string) {
 	msg := fmt.Sprintf("`%s` is not a mc command. See `mc --help`.", command)
 	closestCommands := findClosestCommands(command)
 	if len(closestCommands) > 0 {
-		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
+		msg += "\n\nDid you mean one of these?\n"
 		if len(closestCommands) == 1 {
 			cmd := closestCommands[0]
 			msg += fmt.Sprintf("        `%s`", cmd)

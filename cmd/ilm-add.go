@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 
 	"github.com/minio/cli"
@@ -98,15 +99,14 @@ var ilmAddFlags = []cli.Flag{
 
 type ilmAddMessage struct {
 	Status string `json:"status"`
+	Target string `json:"target"`
 	ID     string `json:"id"`
 }
 
-// tagSetMessage console colorized output.
 func (i ilmAddMessage) String() string {
-	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration rule added with ID `"+i.ID+"`.")
+	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration rule added with ID `"+i.ID+"` to "+i.Target+".")
 }
 
-// JSON tagSetMessage.
 func (i ilmAddMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -121,8 +121,8 @@ func checkILMAddSyntax(ctx *cli.Context) {
 		os.Exit(globalErrorExitStatus)
 	}
 	if id == "" {
-		console.Errorln("ID for a rule cannot be empty.")
-		os.Exit(globalErrorExitStatus)
+		e := errors.New("ID for a rule cannot be empty")
+		fatalIf(probe.NewError(e), "Refer mc "+ctx.Command.FullName()+" --help for more details")
 	}
 }
 
@@ -143,6 +143,7 @@ func mainILMAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(err), "Failed to set lifecycle rule with id `"+id+"`")
 	printMsg(ilmAddMessage{
 		Status: "success",
+		Target: objectURL,
 		ID:     id,
 	})
 	return nil

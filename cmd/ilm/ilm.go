@@ -18,16 +18,11 @@
 package ilm
 
 import (
-	stdlibjson "encoding/json"
+	"encoding/json"
 	"encoding/xml"
-	"os"
 	"time"
 
 	"github.com/minio/minio/pkg/console"
-)
-
-const (
-	ilmErrorExitStatus = 1
 )
 
 // AbortIncompleteMultipartUpload structure
@@ -106,10 +101,9 @@ type LifecycleConfiguration struct {
 func (l LifecycleConfiguration) JSON() string {
 	var ilmJSONbytes []byte
 	var err error
-	ilmJSONbytes, err = stdlibjson.MarshalIndent(l, "", "    ")
+	ilmJSONbytes, err = json.MarshalIndent(l, "", "    ")
 	if err != nil {
-		console.Errorln("Failed to get lifecycle configuration in JSON format.")
-		os.Exit(ilmErrorExitStatus)
+		console.Fatal("Failed to get lifecycle configuration in JSON format.")
 	}
 	return string(ilmJSONbytes)
 }

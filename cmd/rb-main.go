@@ -121,7 +121,7 @@ func deleteBucket(url string) *probe.Error {
 	}
 	var isIncomplete bool
 	isRemoveBucket := true
-	contentCh := make(chan *clientContent)
+	contentCh := make(chan *ClientContent)
 	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
 
 	for content := range clnt.List(true, false, false, DirLast) {
@@ -166,7 +166,7 @@ func deleteBucket(url string) *probe.Error {
 	// Remove the given url since the user will always want to remove it.
 	alias, _ := url2Alias(targetURL)
 	if alias != "" {
-		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 	}
 
 	// Finish removing and print all the remaining errors

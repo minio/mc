@@ -223,8 +223,8 @@ func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan
 			targetURL = targetURL + string(clnt.GetURL().Separator)
 		}
 
-		contentCh := make(chan *clientContent, 1)
-		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+		contentCh := make(chan *ClientContent, 1)
+		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
 		isRemoveBucket := false
 		errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
@@ -250,7 +250,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"` recursively.")
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
-	contentCh := make(chan *clientContent)
+	contentCh := make(chan *ClientContent)
 	isRemoveBucket := false
 
 	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
