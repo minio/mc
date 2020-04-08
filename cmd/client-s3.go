@@ -77,6 +77,8 @@ const (
 	AmzObjectLockMode = "X-Amz-Object-Lock-Mode"
 	// AmzObjectLockRetainUntilDate sets object lock retain until date
 	AmzObjectLockRetainUntilDate = "X-Amz-Object-Lock-Retain-Until-Date"
+	// AmzObjectLockLegalHold sets object lock legal hold
+	AmzObjectLockLegalHold = "X-Amz-Object-Lock-Legal-Hold"
 )
 
 var timeSentinel = time.Unix(0, 0).UTC()
@@ -785,8 +787,32 @@ func (c *S3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 	// Source object
 	src := minio.NewSourceInfo(tokens[1], tokens[2], srcSSE)
 
+	destOpts := minio.DestInfoOptions{
+		Encryption: tgtSSE,
+	}
+
+	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
+		destOpts.Mode = minio.RetentionMode(strings.ToUpper(lockModeStr))
+		delete(metadata, AmzObjectLockMode)
+	}
+
+	if retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]; ok {
+		delete(metadata, AmzObjectLockRetainUntilDate)
+		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
+			destOpts.RetainUntilDate = t.UTC()
+		}
+	}
+
+	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
+		destOpts.LegalHold = minio.LegalHoldStatus(lh)
+		delete(metadata, AmzObjectLockLegalHold)
+	}
+
+	// Assign metadata after irrelevant parts are delete above
+	destOpts.UserMeta = metadata
+
 	// Destination object
-	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtSSE, metadata)
+	dst, e := minio.NewDestinationInfoWithOptions(dstBucket, dstObject, destOpts)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -865,7 +891,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	lockModeStr, ok := metadata[AmzObjectLockMode]
 	lockMode := minio.RetentionMode("")
 	if ok {
-		lockMode = minio.RetentionMode(lockModeStr)
+		lockMode = minio.RetentionMode(strings.ToUpper(lockModeStr))
 		delete(metadata, AmzObjectLockMode)
 	}
 
@@ -892,10 +918,18 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	}
 	if retainUntilDate != timeSentinel {
 		opts.RetainUntilDate = &retainUntilDate
+		opts.SendContentMd5 = true
 	}
 	if lockModeStr != "" {
 		opts.Mode = &lockMode
+		opts.SendContentMd5 = true
 	}
+	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
+		delete(metadata, AmzObjectLockLegalHold)
+		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
+		opts.SendContentMd5 = true
+	}
+
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -962,13 +996,16 @@ func (c *S3Client) AddUserAgent(app string, version string) {
 }
 
 // Remove - remove object or bucket(s).
-func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
+func (c *S3Client) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	prevBucket := ""
 	// Maintain objectsCh, statusCh for each bucket
 	var objectsCh chan string
 	var statusCh <-chan minio.RemoveObjectError
+	opts := minio.RemoveObjectsOptions{
+		GovernanceBypass: isBypass,
+	}
 
 	go func() {
 		defer close(errorCh)
@@ -995,7 +1032,7 @@ func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *C
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
 				} else {
-					statusCh = c.api.RemoveObjects(bucket, objectsCh)
+					statusCh = c.api.RemoveObjectsWithOptions(bucket, objectsCh, opts)
 				}
 			}
 
@@ -1017,7 +1054,7 @@ func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *C
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
 				} else {
-					statusCh = c.api.RemoveObjects(bucket, objectsCh)
+					statusCh = c.api.RemoveObjectsWithOptions(bucket, objectsCh, opts)
 				}
 				prevBucket = bucket
 			}

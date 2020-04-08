@@ -55,6 +55,14 @@ func checkCopySyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 		}
 	}
 
+	if ctx.String(rdFlag) != "" && ctx.String(rmFlag) == "" {
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Both object retention flags `--%s` and `--%s` are required.\n", rdFlag, rmFlag))
+	}
+
+	if ctx.String(rdFlag) == "" && ctx.String(rmFlag) != "" {
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Both object retention flags `--%s` and `--%s` are required.\n", rdFlag, rmFlag))
+	}
+
 	// Guess CopyURLsType based on source and target URLs.
 	copyURLsType, err := guessCopyURLType(srcURLs, tgtURL, isRecursive, encKeyDB)
 	if err != nil {

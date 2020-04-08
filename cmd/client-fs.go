@@ -503,8 +503,8 @@ func deleteFile(deletePath string) error {
 	return nil
 }
 
-// Remove - remove entry read from ClientContent channel.
-func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
+// Remove - remove entry read from clientContent channel.
+func (f *fsClient) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	// Goroutine reads from contentCh and removes the entry in content.

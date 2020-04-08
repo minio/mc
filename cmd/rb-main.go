@@ -122,7 +122,7 @@ func deleteBucket(url string) *probe.Error {
 	var isIncomplete bool
 	isRemoveBucket := true
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
+	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, false, contentCh)
 
 	for content := range clnt.List(true, false, false, DirLast) {
 		if content.Err != nil {

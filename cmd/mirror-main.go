@@ -253,7 +253,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
 	isRemoveBucket := false
-	errorCh := clnt.Remove(false, isRemoveBucket, contentCh)
+	errorCh := clnt.Remove(false, isRemoveBucket, false, contentCh)
 	for pErr := range errorCh {
 		if pErr != nil {
 			switch pErr.ToGoError().(type) {

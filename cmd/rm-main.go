@@ -65,6 +65,10 @@ var (
 			Name:  "newer-than",
 			Usage: "remove objects newer than L days, M hours and N minutes",
 		},
+		cli.BoolFlag{
+			Name:  bypass,
+			Usage: "bypass governance",
+		},
 	}
 )
 
@@ -117,6 +121,9 @@ EXAMPLES:
 
   10. Remove an encrypted object from Amazon S3 cloud storage.
       {{.Prompt}} {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
+
+  11. Bypass object retention in governance mode and delete the object.
+      {{.Prompt}} {{.HelpName}} --bypass s3/pop-songs/
 `,
 }
 
@@ -180,7 +187,7 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	}
 }
 
-func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
 	isRecursive := false
 	contents, pErr := statURL(url, isIncomplete, isRecursive, encKeyDB)
 	if pErr != nil {
@@ -227,7 +234,7 @@ func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan
 		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
 		isRemoveBucket := false
-		errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
+		errorCh := clnt.Remove(isIncomplete, isRemoveBucket, isBypass, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
@@ -243,7 +250,7 @@ func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan
 	return nil
 }
 
-func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -253,7 +260,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 	contentCh := make(chan *ClientContent)
 	isRemoveBucket := false
 
-	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
+	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, isBypass, contentCh)
 
 	isRecursive := true
 	for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
@@ -337,6 +344,7 @@ func mainRm(ctx *cli.Context) error {
 	isRecursive := ctx.Bool("recursive")
 	isFake := ctx.Bool("fake")
 	isStdin := ctx.Bool("stdin")
+	isBypass := ctx.Bool(bypass)
 	olderThan := ctx.String("older-than")
 	newerThan := ctx.String("newer-than")
 	isForce := ctx.Bool("force")
@@ -349,9 +357,9 @@ func mainRm(ctx *cli.Context) error {
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			e = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeRecursive(url, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
-			e = removeSingle(url, isIncomplete, isFake, isForce, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
@@ -367,9 +375,9 @@ func mainRm(ctx *cli.Context) error {
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			e = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeRecursive(url, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
-			e = removeSingle(url, isIncomplete, isFake, isForce, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
