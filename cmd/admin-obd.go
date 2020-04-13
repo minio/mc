@@ -43,6 +43,12 @@ var adminOBDFlags = []cli.Flag{
 		EnvVar: "MC_OBD_DATA",
 		Hidden: true,
 	},
+	cli.DurationFlag{
+		Name:   "deadline",
+		Usage:  "maximum duration that OBD tests should be allowed to run",
+		Value:  3600 * time.Second,
+		EnvVar: "MC_OBD_DEADLINE",
+	},
 }
 
 var adminOBDCmd = cli.Command{
@@ -253,7 +259,7 @@ func mainAdminOBD(ctx *cli.Context) error {
 	}
 
 	// Fetch info of all servers (cluster or single server)
-	obdChan := client.ServerOBDInfo(cont, options)
+	obdChan := client.ServerOBDInfo(cont, options, ctx.Duration("deadline"))
 	for adminOBDInfo := range obdChan {
 		if adminOBDInfo.Error != "" {
 			clusterOBDInfo.Status = "Error"
