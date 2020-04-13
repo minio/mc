@@ -133,7 +133,7 @@ func mainList(ctx *cli.Context) error {
 
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 			var st *ClientContent
-			st, err = clnt.Stat(isIncomplete, false, false, nil)
+			st, err = clnt.Stat(isIncomplete, false, nil)
 			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)

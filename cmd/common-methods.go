@@ -174,7 +174,7 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 	}
 	metadata = make(map[string]string)
 	if fetchStat {
-		st, err := sourceClnt.Stat(false, true, false, sse)
+		st, err := sourceClnt.Stat(false, false, sse)
 		if err != nil {
 			return nil, nil, err.Trace(alias, urlStr)
 		}
@@ -311,7 +311,7 @@ func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide,
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
-	st, err := sourceClnt.Stat(false, true, false, srcSSE)
+	st, err := sourceClnt.Stat(false, false, srcSSE)
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
@@ -478,7 +478,7 @@ func getFileAttrMeta(sURLs URLs, encKeyDB map[string][]prefixSSEPair) (string, *
 		return "", err.Trace(sourceURL.String())
 	}
 
-	sourceMeta, err := srcClt.Stat(false, true, true, srcSSE)
+	sourceMeta, err := srcClt.Stat(false, true, srcSSE)
 	if err != nil {
 		return "", err.Trace(sourceURL.String())
 	}

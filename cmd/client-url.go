@@ -179,7 +179,7 @@ func url2Stat(urlStr string, isFetchMeta, fileAttr bool, encKeyDB map[string][]p
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(false, isFetchMeta, fileAttr, sse)
+	content, err = client.Stat(false, fileAttr, sse)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}

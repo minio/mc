@@ -1020,7 +1020,7 @@ func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
@@ -1035,26 +1035,22 @@ func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 		"Content-Type": guessURLContentType(f.PathURL.Path),
 	}
 
-	// isFetchMeta is true only in the case of mc stat command which lists any extended attributes
-	// present for this object.
-	if isFetchMeta {
-		path := f.PathURL.String()
-		metaData, pErr := getAllXattrs(path)
-		if pErr != nil {
+	path := f.PathURL.String()
+	metaData, pErr := getAllXattrs(path)
+	if pErr != nil {
+		return content, nil
+	}
+	for k, v := range metaData {
+		content.Metadata[k] = v
+	}
+	// Populates meta data with file system attribute only in case of
+	// when preserve flag is passed.
+	if isPreserve {
+		fileAttr, err := disk.GetFileSystemAttrs(path)
+		if err != nil {
 			return content, nil
 		}
-		for k, v := range metaData {
-			content.Metadata[k] = v
-		}
-		// Populates meta data with file system attribute only in case of
-		// when preserve flag is passed.
-		if isPreserve {
-			fileAttr, err := disk.GetFileSystemAttrs(path)
-			if err != nil {
-				return content, nil
-			}
-			content.Metadata["mc-attrs"] = fileAttr
-		}
+		content.Metadata["mc-attrs"] = fileAttr
 	}
 
 	return content, nil
