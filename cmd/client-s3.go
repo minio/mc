@@ -1446,6 +1446,9 @@ func (c *S3Client) url2BucketAndObject() (bucketName, objectName string) {
 	if c.virtualStyle {
 		var bucket string
 		hostIndex := strings.Index(c.targetURL.Host, "s3")
+		if hostIndex != -1 && !matchS3InHost(c.targetURL.Host) {
+			hostIndex = -1
+		}
 		if hostIndex == -1 {
 			hostIndex = strings.Index(c.targetURL.Host, "s3-accelerate")
 		}
