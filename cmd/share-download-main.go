@@ -93,7 +93,7 @@ func checkShareDownloadSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEP
 	isRecursive := ctx.Bool("recursive")
 	if !isRecursive {
 		for _, url := range ctx.Args() {
-			_, _, err := url2Stat(url, false, false, encKeyDB)
+			_, _, err := url2Stat(url, false, encKeyDB)
 			if err != nil {
 				fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 			}

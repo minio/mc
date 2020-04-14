@@ -70,7 +70,7 @@ func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 
 	/****** Generic rules *******/
 	if !ctx.Bool("watch") {
-		_, srcContent, err := url2Stat(srcURL, false, false, encKeyDB)
+		_, srcContent, err := url2Stat(srcURL, false, encKeyDB)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {

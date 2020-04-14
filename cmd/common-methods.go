@@ -107,7 +107,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(aliasURL, false, false, keys)
+	_, targetContent, err := url2Stat(aliasURL, false, keys)
 	if err == nil {
 		return targetContent.Type.IsDir()
 	}
