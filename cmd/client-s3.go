@@ -469,38 +469,45 @@ func selectObjectOutputOpts(selOpts SelectObjectOpts, i minio.SelectObjectInputS
 
 	o := minio.SelectObjectOutputSerialization{}
 	if _, ok := selOpts.OutputSerOpts["json"]; ok {
-		recDelim, isOK = selOpts.OutputSerOpts["json"][recordDelimiterType]
-		if !isOK {
+		jo := minio.JSONOutputOptions{}
+		if recDelim, isOK = selOpts.OutputSerOpts["json"][recordDelimiterType]; !isOK {
 			recDelim = "\n"
 		}
-		o.JSON = &minio.JSONOutputOptions{RecordDelimiter: recDelim}
+		jo.SetRecordDelimiter(recDelim)
+		o.JSON = &jo
 	}
 	if _, ok := selOpts.OutputSerOpts["csv"]; ok {
-		o.CSV = &minio.CSVOutputOptions{RecordDelimiter: defaultRecordDelimiter, FieldDelimiter: defaultFieldDelimiter}
-		if recDelim, isOK = selOpts.OutputSerOpts["csv"][recordDelimiterType]; isOK {
-			o.CSV.RecordDelimiter = recDelim
+		ocsv := minio.CSVOutputOptions{}
+		if recDelim, isOK = selOpts.OutputSerOpts["csv"][recordDelimiterType]; !isOK {
+			recDelim = defaultRecordDelimiter
 		}
-
-		if fldDelim, isOK = selOpts.OutputSerOpts["csv"][fieldDelimiterType]; isOK {
-			o.CSV.FieldDelimiter = fldDelim
+		ocsv.SetRecordDelimiter(recDelim)
+		if fldDelim, isOK = selOpts.OutputSerOpts["csv"][fieldDelimiterType]; !isOK {
+			fldDelim = defaultFieldDelimiter
 		}
+		ocsv.SetFieldDelimiter(fldDelim)
 		if quoteChar, isOK = selOpts.OutputSerOpts["csv"][quoteCharacterType]; isOK {
-			o.CSV.QuoteCharacter = quoteChar
+			ocsv.SetQuoteCharacter(quoteChar)
 		}
-
 		if quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]; isOK {
-			o.CSV.QuoteEscapeCharacter = quoteEscChar
+			ocsv.SetQuoteEscapeCharacter(quoteEscChar)
 		}
 		if qf, isOK = selOpts.OutputSerOpts["csv"][quoteFieldType]; isOK {
-			o.CSV.QuoteFields = minio.CSVQuoteFields(qf)
+			ocsv.SetQuoteFields(minio.CSVQuoteFields(qf))
 		}
+		o.CSV = &ocsv
 	}
 	// default to CSV output if options left unspecified
 	if o.CSV == nil && o.JSON == nil {
 		if i.JSON != nil {
-			o.JSON = &minio.JSONOutputOptions{RecordDelimiter: "\n"}
+			j := minio.JSONOutputOptions{}
+			j.SetRecordDelimiter("\n")
+			o.JSON = &j
 		} else {
-			o.CSV = &minio.CSVOutputOptions{RecordDelimiter: defaultRecordDelimiter, FieldDelimiter: defaultFieldDelimiter}
+			ocsv := minio.CSVOutputOptions{}
+			ocsv.SetRecordDelimiter(defaultRecordDelimiter)
+			ocsv.SetFieldDelimiter(defaultFieldDelimiter)
+			o.CSV = &ocsv
 		}
 	}
 	return o
@@ -518,49 +525,56 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 
 	i := minio.SelectObjectInputSerialization{}
 	if _, ok := selOpts.InputSerOpts["parquet"]; ok {
-		i.Parquet = &minio.ParquetInputOptions{}
+		iparquet := minio.ParquetInputOptions{}
+		i.Parquet = &iparquet
 	}
 	if _, ok := selOpts.InputSerOpts["json"]; ok {
-		i.JSON = &minio.JSONInputOptions{}
+		j := minio.JSONInputOptions{}
 		if typ = selOpts.InputSerOpts["json"][typeJSONType]; typ != "" {
-			i.JSON.Type = minio.JSONType(typ)
+			j.SetType(minio.JSONType(typ))
 		}
+		i.JSON = &j
 	}
 	if _, ok := selOpts.InputSerOpts["csv"]; ok {
-		i.CSV = &minio.CSVInputOptions{RecordDelimiter: defaultRecordDelimiter}
+		icsv := minio.CSVInputOptions{}
+		icsv.SetRecordDelimiter(defaultRecordDelimiter)
 		if recDelim, isOK = selOpts.InputSerOpts["csv"][recordDelimiterType]; isOK {
-			i.CSV.RecordDelimiter = recDelim
+			icsv.SetRecordDelimiter(recDelim)
 		}
 		if fldDelim, isOK = selOpts.InputSerOpts["csv"][fieldDelimiterType]; isOK {
-			i.CSV.FieldDelimiter = fldDelim
+			icsv.SetFieldDelimiter(fldDelim)
 		}
 		if quoteChar, isOK = selOpts.InputSerOpts["csv"][quoteCharacterType]; isOK {
-			i.CSV.QuoteCharacter = quoteChar
+			icsv.SetQuoteCharacter(quoteChar)
 		}
-
 		if quoteEscChar, isOK = selOpts.InputSerOpts["csv"][quoteEscapeCharacterType]; isOK {
-			i.CSV.QuoteEscapeCharacter = quoteEscChar
+			icsv.SetQuoteEscapeCharacter(quoteEscChar)
 		}
-		fileHeader = selOpts.InputSerOpts["csv"][fileHeaderType]
-		i.CSV.FileHeaderInfo = minio.CSVFileHeaderInfo(fileHeader)
+		if fileHeader, isOK = selOpts.InputSerOpts["csv"][fileHeaderType]; isOK {
+			icsv.SetFileHeaderInfo(minio.CSVFileHeaderInfo(fileHeader))
+		}
 		if commentChar, isOK = selOpts.InputSerOpts["csv"][commentCharType]; isOK {
-			i.CSV.Comments = commentChar
+			icsv.SetComments(commentChar)
 		}
+		i.CSV = &icsv
 	}
 	if i.CSV == nil && i.JSON == nil && i.Parquet == nil {
 		ext := filepath.Ext(trimCompressionFileExts(object))
 		if strings.Contains(ext, "csv") {
-			i.CSV = &minio.CSVInputOptions{
-				RecordDelimiter: defaultRecordDelimiter,
-				FieldDelimiter:  defaultFieldDelimiter,
-				FileHeaderInfo:  minio.CSVFileHeaderInfoUse,
-			}
+			icsv := minio.CSVInputOptions{}
+			icsv.SetRecordDelimiter(defaultRecordDelimiter)
+			icsv.SetFieldDelimiter(defaultFieldDelimiter)
+			icsv.SetFileHeaderInfo(minio.CSVFileHeaderInfoUse)
+			i.CSV = &icsv
 		}
 		if strings.Contains(ext, "parquet") || strings.Contains(object, ".parquet") {
-			i.Parquet = &minio.ParquetInputOptions{}
+			iparquet := minio.ParquetInputOptions{}
+			i.Parquet = &iparquet
 		}
 		if strings.Contains(ext, "json") {
-			i.JSON = &minio.JSONInputOptions{Type: minio.JSONLinesType}
+			ijson := minio.JSONInputOptions{}
+			ijson.SetType(minio.JSONLinesType)
+			i.JSON = &ijson
 		}
 	}
 	if i.CompressionType == "" {
