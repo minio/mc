@@ -46,8 +46,8 @@ const defaultMultipartThreadsNum = 4
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error)
-	List(isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *clientContent
+	Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error)
+	List(isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *ClientContent
 
 	// Bucket operations
 	MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error
@@ -60,14 +60,14 @@ type Client interface {
 	SetAccess(access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error
+	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error
 
 	// Runs select expression on object storage on specific files.
 	Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
 
 	// I/O operations with metadata.
 	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
-	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (n int64, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (n int64, err *probe.Error)
 	// Object Locking related API
 	PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error
 	PutObjectLegalHold(hold *minio.LegalHoldStatus) *probe.Error
@@ -77,13 +77,12 @@ type Client interface {
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
-	Watch(params watchParams) (*watchObject, *probe.Error)
+	Watch(params watchParams) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) (errorCh <-chan *probe.Error)
-
+	Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
 	// GetURL returns back internal url
-	GetURL() clientURL
+	GetURL() ClientURL
 
 	AddUserAgent(app, version string)
 
@@ -93,19 +92,23 @@ type Client interface {
 	DeleteObjectTagging() *probe.Error
 }
 
-// Content container for content metadata
-type clientContent struct {
-	URL          clientURL
-	Time         time.Time
-	Size         int64
-	Type         os.FileMode
-	StorageClass string
-	Metadata     map[string]string
-	UserMetadata map[string]string
-	ETag         string
-	Expires      time.Time
-	Retention    bool
-	Err          *probe.Error
+// ClientContent - Content container for content metadata
+type ClientContent struct {
+	URL               ClientURL
+	Time              time.Time
+	Size              int64
+	Type              os.FileMode
+	StorageClass      string
+	Metadata          map[string]string
+	UserMetadata      map[string]string
+	ETag              string
+	Expires           time.Time
+	Retention         bool
+	RetentionMode     string
+	RetentionDuration string
+	BypassGovernance  bool
+	LegalHold         string
+	Err               *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

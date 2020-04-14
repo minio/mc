@@ -69,8 +69,28 @@ var (
 			Name:  "preserve, a",
 			Usage: "preserve filesystem attributes (mode, ownership, timestamps)",
 		},
+		cli.BoolFlag{
+			Name:  "disable-multipart",
+			Usage: "disable multipart upload feature",
+		},
+		cli.StringFlag{
+			Name:  rmFlag,
+			Usage: "retention mode to be applied on the object (governance, compliance)",
+		},
+		cli.StringFlag{
+			Name:  rdFlag,
+			Usage: "retention duration for the object in d days or y years",
+		},
+		cli.StringFlag{
+			Name:  lhFlag,
+			Usage: "apply legal hold to the copied object (on, off)",
+		},
 	}
 )
+
+var rmFlag = "retention-mode"
+var rdFlag = "retention-duration"
+var lhFlag = "legal-hold"
 
 // ErrInvalidMetadata reflects invalid metadata format
 var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=value1;key2=value2;... and so on")
@@ -142,8 +162,14 @@ EXAMPLES:
   15. Copy a text file to an object storage and preserve the file system attribute as metadata.
       {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
 
-  16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention date.
-      {{.Prompt}} {{.HelpName}} --attr "x-amz-object-lock-mode=GOVERNANCE;x-amz-object-lock-retain-until-date=2020-01-11T01:57:02Z" locked.txt play/locked-bucket/
+  16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention duration 1 day.
+      {{.Prompt}} {{.HelpName}} --retention-mode governance --retention-duration 1d locked.txt play/locked-bucket/
+
+  17. Copy a text file to an object storage with legal-hold enabled.
+      {{.Prompt}} {{.HelpName}} --legal-hold on locked.txt play/locked-bucket/
+
+  18. Copy a text file to an object storage and disable multipart upload feature.
+      {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
 `,
 }
 
@@ -185,7 +211,7 @@ type ProgressReader interface {
 	Progress
 }
 
-// doCopy - Copy a singe file from source to destination
+// doCopy - Copy a single file from source to destination
 func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
@@ -428,6 +454,22 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = storageClass
 				}
 
+				// update Object retention related fields
+				if session != nil {
+					cpURLs.TargetContent.RetentionMode = session.Header.CommandStringFlags[rmFlag]
+					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
+					cpURLs.TargetContent.LegalHold = session.Header.CommandStringFlags[lhFlag]
+				} else {
+					if rm := cli.String(rmFlag); rm != "" {
+						cpURLs.TargetContent.RetentionMode = rm
+					}
+					if rd := cli.String(rdFlag); rd != "" {
+						cpURLs.TargetContent.RetentionDuration = rd
+					}
+					if lh := cli.String(lhFlag); lh != "" {
+						cpURLs.TargetContent.LegalHold = lh
+					}
+				}
 				if cli.String("attr") != "" {
 					userMetaMap, _ := getMetaDataEntry(cli.String("attr"))
 					for metaDataKey, metaDataVal := range userMetaMap {
@@ -447,6 +489,9 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 						cpURLs.TargetContent.Metadata["mc-attrs"] = attrValue
 					}
 				}
+
+				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
+
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
@@ -555,13 +600,16 @@ func mainCopy(ctx *cli.Context) error {
 	// check 'copy' cli arguments.
 	checkCopySyntax(ctx, encKeyDB)
 
-	// Additional command speific theme customization.
+	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
 	recursive := ctx.Bool("recursive")
 	olderThan := ctx.String("older-than")
 	newerThan := ctx.String("newer-than")
 	storageClass := ctx.String("storage-class")
+	retentionMode := ctx.String(rmFlag)
+	retentionDuration := ctx.String(rdFlag)
+	legalHold := ctx.String(lhFlag)
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := ctx.String("encrypt-key"); key != "" {
 		sseKeys = key
@@ -587,6 +635,9 @@ func mainCopy(ctx *cli.Context) error {
 			session.Header.CommandStringFlags["older-than"] = olderThan
 			session.Header.CommandStringFlags["newer-than"] = newerThan
 			session.Header.CommandStringFlags["storage-class"] = storageClass
+			session.Header.CommandStringFlags[rmFlag] = retentionMode
+			session.Header.CommandStringFlags[rdFlag] = retentionDuration
+			session.Header.CommandStringFlags[lhFlag] = legalHold
 			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 			session.Header.CommandStringFlags["encrypt"] = sse
 			session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
@@ -595,6 +646,7 @@ func mainCopy(ctx *cli.Context) error {
 				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
+			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
 
 			var e error
 			if session.Header.RootPath, e = os.Getwd(); e != nil {

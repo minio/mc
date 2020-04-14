@@ -143,7 +143,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 	}
 
 	bucketNameShowed := false
-	var prev *clientContent
+	var prev *ClientContent
 	show := func(end bool) error {
 		currbranchString := branchString
 		if level == 1 && !bucketNameShowed {

@@ -30,62 +30,62 @@ func TestMatchFind(t *testing.T) {
 	// tests are run in the same order as this list.
 	var listFindContexts = []*findContext{
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			ignorePattern: "*.go",
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			namePattern: "console",
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			pathPattern: "*console*",
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			regexPattern: `^(\d+\.){3}\d+$`,
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			olderThan: "1d",
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			newerThan: "32000d",
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			largerSize: 1024 * 1024,
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			smallerSize: 1024,
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 			ignorePattern: "*.txt",
 		},
 		{
-			clnt: &s3Client{
-				targetURL: &clientURL{},
+			clnt: &S3Client{
+				targetURL: &ClientURL{},
 			},
 		},
 	}

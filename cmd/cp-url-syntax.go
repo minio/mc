@@ -32,7 +32,7 @@ func checkCopySyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	// extract URLs.
 	URLs := ctx.Args()
 	if len(URLs) < 2 {
-		fatalIf(errDummy().Trace(ctx.Args()...), fmt.Sprintf("Unable to parse source and target arguments."))
+		fatalIf(errDummy().Trace(ctx.Args()...), "Unable to parse source and target arguments.")
 	}
 
 	srcURLs := URLs[:len(URLs)-1]
@@ -53,6 +53,14 @@ func checkCopySyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 		if url.Path == string(url.Separator) {
 			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
 		}
+	}
+
+	if ctx.String(rdFlag) != "" && ctx.String(rmFlag) == "" {
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Both object retention flags `--%s` and `--%s` are required.\n", rdFlag, rmFlag))
+	}
+
+	if ctx.String(rdFlag) == "" && ctx.String(rmFlag) != "" {
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Both object retention flags `--%s` and `--%s` are required.\n", rdFlag, rmFlag))
 	}
 
 	// Guess CopyURLsType based on source and target URLs.

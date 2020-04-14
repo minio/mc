@@ -171,7 +171,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		Debug:     globalDebug,
 	}
 
-	s3Client, err := s3New(s3Config)
+	s3Client, err := S3New(s3Config)
 	if err != nil {
 		return "", err
 	}
@@ -183,7 +183,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		default:
 			// Attempt with signature v2, since v4 seem to have failed.
 			s3Config.Signature = "s3v2"
-			s3Client, err = s3New(s3Config)
+			s3Client, err = S3New(s3Config)
 			if err != nil {
 				return "", err
 			}
@@ -201,11 +201,11 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 	return s3Config.Signature, nil
 }
 
-// buildS3Config constructs an S3 Config and does
+// BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
+func BuildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
-	s3Config := newS3Config(url, &hostConfigV9{
+	s3Config := NewS3Config(url, &hostConfigV9{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
@@ -278,7 +278,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	accessKey, secretKey := fetchHostKeys(args)
 	checkConfigHostAddSyntax(ctx, accessKey, secretKey)
 
-	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
+	s3Config, err := BuildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
 
 	addHost(ctx.Args().Get(0), hostConfigV9{

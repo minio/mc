@@ -90,8 +90,6 @@ func (u clusterStruct) String() (msg string) {
 	var totalOnlineDisksCluster int
 	var totalOfflineDisksCluster int
 
-	// Dot represents server status, online (green) or offline (red)
-	dot := "●"
 	// Color palette initialization
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
 	console.SetColor("InfoFail", color.New(color.FgRed, color.Bold))

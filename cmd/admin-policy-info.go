@@ -70,19 +70,20 @@ func mainAdminPolicyInfo(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
+	fatalIf(err, "Unable to initialize admin connection")
 
 	policies, e := client.ListCannedPolicies(globalContext)
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot list policy")
 
-	if len(policies[policyName]) != 0 {
+	iamp, ok := policies[policyName]
+	if ok {
 		printMsg(userPolicyMessage{
 			op:         "info",
 			Policy:     policyName,
-			PolicyJSON: policies[policyName],
+			PolicyJSON: iamp,
 		})
 	} else {
-		fatalIf(probe.NewError(fmt.Errorf("%s is not found", policyName)), "Cannot list the policy")
+		fatalIf(probe.NewError(fmt.Errorf("%s is not found", policyName)), "Unable to display policy")
 	}
 	return nil
 }

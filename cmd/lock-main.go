@@ -80,7 +80,7 @@ type lockCmdMessage struct {
 // Colorized message for console printing.
 func (m lockCmdMessage) String() string {
 	if m.Mode == nil {
-		return fmt.Sprintf("No object lock configuration is enabled")
+		return "No object lock configuration is enabled"
 	}
 
 	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", *m.Mode), console.Colorize("Validity", *m.Validity))
@@ -100,7 +100,7 @@ func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 
-	s3Client, ok := client.(*s3Client)
+	s3Client, ok := client.(*S3Client)
 	if !ok {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
@@ -136,6 +136,35 @@ func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.
 	return nil
 }
 
+func parseRetentionValidity(validityStr string, m minio.RetentionMode) (*uint, *minio.ValidityUnit) {
+	if !m.IsValid() {
+		fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
+	}
+
+	unitStr := string(validityStr[len(validityStr)-1])
+	validityStr = validityStr[:len(validityStr)-1]
+	ui64, err := strconv.ParseUint(validityStr, 10, 64)
+	if err != nil {
+		fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity '%v'", validityStr)
+	}
+
+	u := uint(ui64)
+	validity := &u
+	var unit *minio.ValidityUnit
+	switch unitStr {
+	case "d", "D":
+		d := minio.Days
+		unit = &d
+	case "y", "Y":
+		y := minio.Years
+		unit = &y
+	default:
+		fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity format '%v'", unitStr)
+	}
+
+	return validity, unit
+}
+
 // main for lock command.
 func mainLock(ctx *cli.Context) error {
 	console.SetColor("Mode", color.New(color.FgCyan, color.Bold))
@@ -162,33 +191,9 @@ func mainLock(ctx *cli.Context) error {
 		}
 
 		m := minio.RetentionMode(strings.ToUpper(args[1]))
-		if !m.IsValid() {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
-		}
-
 		mode = &m
+		validity, unit = parseRetentionValidity(args[2], m)
 
-		validityStr := args[2]
-		unitStr := string(validityStr[len(validityStr)-1])
-
-		validityStr = validityStr[:len(validityStr)-1]
-		ui64, err := strconv.ParseUint(validityStr, 10, 64)
-		if err != nil {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity '%v'", args[2])
-		}
-		u := uint(ui64)
-		validity = &u
-
-		switch unitStr {
-		case "d", "D":
-			d := minio.Days
-			unit = &d
-		case "y", "Y":
-			y := minio.Years
-			unit = &y
-		default:
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity format '%v'", args[2])
-		}
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "lock", 1)
 	}

@@ -137,7 +137,7 @@ func fixConfigV6ForHosts() {
 		newCfgV6.Aliases[k] = v
 	}
 
-	url := &clientURL{}
+	url := &ClientURL{}
 	// Copy hosts.
 	for host, hostCfgV6 := range brokenMcCfgV6.Data().(*configV6).Hosts {
 		// Already fixed - Copy and move on.

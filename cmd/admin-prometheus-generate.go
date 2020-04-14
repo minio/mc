@@ -147,6 +147,7 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 	hostConfig := mustGetHostConfig(alias)
 	if hostConfig == nil {
 		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
+		return nil
 	}
 
 	u, err := url.Parse(hostConfig.URL)

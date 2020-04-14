@@ -102,7 +102,7 @@ func (c statMessage) JSON() string {
 }
 
 // parseStat parses client Content container into statMessage struct.
-func parseStat(c *clientContent) statMessage {
+func parseStat(c *ClientContent) statMessage {
 	content := statMessage{}
 	content.Date = c.Time.Local()
 	// guess file type.
@@ -127,8 +127,8 @@ func getStandardizedURL(targetURL string) string {
 }
 
 // statURL - simple or recursive listing
-func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*clientContent, *probe.Error) {
-	var stats []*clientContent
+func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
+	var stats []*ClientContent
 	var clnt Client
 	clnt, err := newClient(targetURL)
 	if err != nil {

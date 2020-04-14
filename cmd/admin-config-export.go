@@ -17,9 +17,8 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 )
 

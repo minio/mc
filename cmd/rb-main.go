@@ -17,13 +17,13 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -121,8 +121,8 @@ func deleteBucket(url string) *probe.Error {
 	}
 	var isIncomplete bool
 	isRemoveBucket := true
-	contentCh := make(chan *clientContent)
-	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
+	contentCh := make(chan *ClientContent)
+	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, false, contentCh)
 
 	for content := range clnt.List(true, false, false, DirLast) {
 		if content.Err != nil {
@@ -166,7 +166,7 @@ func deleteBucket(url string) *probe.Error {
 	// Remove the given url since the user will always want to remove it.
 	alias, _ := url2Alias(targetURL)
 	if alias != "" {
-		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 	}
 
 	// Finish removing and print all the remaining errors

@@ -168,14 +168,14 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	conf.AccessKey = "WLGDGYAQYIGI833EV05A"
 	conf.SecretKey = "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"
 	conf.Signature = "S3v4"
-	s3c, err := s3New(conf)
+	s3c, err := S3New(conf)
 	c.Assert(err, IsNil)
 
 	err = s3c.MakeBucket("us-east-1", true, false)
 	c.Assert(err, IsNil)
 
 	conf.HostURL = server.URL + string(s3c.GetURL().Separator)
-	s3c, err = s3New(conf)
+	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false, false, DirNone) {
@@ -184,7 +184,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	}
 
 	conf.HostURL = server.URL + "/bucket"
-	s3c, err = s3New(conf)
+	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false, false, DirNone) {
@@ -193,7 +193,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	}
 
 	conf.HostURL = server.URL + "/bucket/"
-	s3c, err = s3New(conf)
+	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false, false, DirNone) {
@@ -216,14 +216,14 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	conf.AccessKey = "WLGDGYAQYIGI833EV05A"
 	conf.SecretKey = "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"
 	conf.Signature = "S3v4"
-	s3c, err := s3New(conf)
+	s3c, err := S3New(conf)
 	c.Assert(err, IsNil)
 
 	var reader io.Reader
 	reader = bytes.NewReader(object.data)
 	n, err := s3c.Put(context.Background(), reader, int64(len(object.data)), map[string]string{
 		"Content-Type": "application/octet-stream",
-	}, nil, nil)
+	}, nil, nil, false)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 

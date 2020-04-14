@@ -126,9 +126,9 @@ func splitStr(path, sep string, n int) []string {
 	return splits
 }
 
-// newS3Config simply creates a new Config struct using the passed
+// NewS3Config simply creates a new Config struct using the passed
 // parameters.
-func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
+func NewS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)

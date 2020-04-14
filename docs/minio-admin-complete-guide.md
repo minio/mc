@@ -385,7 +385,7 @@ mc admin info play
 
 <a name="policy"></a>
 ### Command `policy` - Manage canned policies
-`policy` command to add, remove, list policies on MinIO server.
+`policy` command to add, remove, list policies, get info on a policy and to set a policy for a user on MinIO server.
 
 ```
 NAME:
@@ -402,36 +402,65 @@ COMMANDS:
   set      set IAM policy on a user or group
 ```
 
-*Example: Add a new policy 'newpolicy' on MinIO, with policy from /tmp/newpolicy.json.*
-
+*Example: List all canned policies on MinIO.*
 ```
-mc admin policy add myminio/ newpolicy /tmp/newpolicy.json
-```
-
-*Example: Remove policy 'newpolicy' on MinIO.*
-
-```
-mc admin policy remove myminio/ newpolicy
+mc admin policy list myminio/
+diagnostics
+readonly
+readwrite
+writeonly
 ```
 
-*Example: List all policies on MinIO.*
+
+*Example: Add a new policy 'listbucketsonly' on MinIO, with policy from /tmp/listbucketsonly.json.*
+*When this policy is applied on a user, that user can only list the top layer buckets, but nothing else, no prefixes, no objects.*
+
+*First create the json file, /tmp/listbucketsonly.json, with the following information.*
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets"
+      ],
+      "Resource": [
+        "arn:aws:s3:::*"
+      ]
+    }
+  ]
+}
+```
+
+*Add the policy as 'listbucketsonly' to the policy database*
+```
+mc admin policy add myminio/ listbucketsonly /tmp/listbucketsonly.json
+Added policy `listbucketsonly` successfully.
+```
+
+*Example: Remove policy 'listbucketsonly' on MinIO.*
 
 ```
-mc admin policy list --json myminio/
-{"status":"success","policy":"newpolicy"}
+mc admin policy remove myminio/ listbucketsonly
+Removed policy `listbucketsonly` successfully.
 ```
 
-*Example: Show info on a policy*
+*Example: Show info on a canned policy, 'writeonly'*
 
 ```
 mc admin policy info myminio/ writeonly
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::*"]}]}
 ```
 
-*Example: Set the policy on a user or group*
+*Example: Set the canned policy.'writeonly' on a user or group*
 
 ```
-mc admin policy set myminio writeonly user=someuser
-mc admin policy set myminio writeonly group=somegroup
+mc admin policy set myminio/ writeonly user=someuser
+Policy writeonly is set on user `someuser`
+
+mc admin policy set myminio/ writeonly group=somegroup
+Policy writeonly is set on group `somegroup`
 ```
 
 <a name="user"></a>
