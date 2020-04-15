@@ -1300,7 +1300,7 @@ func (c *S3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 	return c.api.ListObjectsV2(bucket, object, isRecursive, doneCh)
 }
 
-func (c *S3Client) statIsComplete(bucket, object string) (*ClientContent, *probe.Error) {
+func (c *S3Client) statInComplete(bucket, object string) (*ClientContent, *probe.Error) {
 	nonRecursive := false
 	objectMetadata := &ClientContent{}
 	// Prefix to pass to minio-go listing in order to fetch a given object/directory
@@ -1352,7 +1352,7 @@ func (c *S3Client) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 
 	// If the request is for incomplete upload stat, handle it here.
 	if isIncomplete {
-		return c.statIsComplete(bucket, object)
+		return c.statInComplete(bucket, object)
 	}
 
 	// The following code tries to calculate if a given prefix/object does really exist
@@ -1366,18 +1366,22 @@ func (c *S3Client) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 	opts := minio.StatObjectOptions{}
 	opts.ServerSideEncryption = sse
 
-	ctnt, err := c.getObjectStat(bucket, object, opts)
-	if err == nil {
-		return ctnt, err
-	}
-
-	// Ignore object missing error but return for other errors
-	if !errors.As(err.ToGoError(), &ObjectMissing{}) {
-		return nil, err
+	if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
+		// Issue HEAD request first but ignore no such key error
+		// so we can check if there is such prefix which exists
+		ctnt, err := c.getObjectStat(bucket, object, opts)
+		if err == nil {
+			return ctnt, err
+		}
+		// Ignore object missing error but return for other errors
+		if !errors.As(err.ToGoError(), &ObjectMissing{}) {
+			return nil, err
+		}
 	}
 
 	nonRecursive := false
 	objectMetadata := &ClientContent{}
+
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
