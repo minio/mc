@@ -148,7 +148,7 @@ func buildILMTableLineRow(rowArr ...string) []string {
 	lineRowArr := make([]string, len(rowArr))
 	for index := 0; index < len(rowArr); index++ {
 		var tagBfr bytes.Buffer
-		for slth := 0; slth < len(rowArr[index]); slth++ {
+		for rowArrChars := 0; rowArrChars < len(rowArr[index]); rowArrChars++ {
 			tagBfr.WriteByte('-')
 		}
 		lineRowArr[index] = tagBfr.String()
@@ -218,12 +218,11 @@ func mainILMList(ctx *cli.Context) error {
 	var cellDataNoTags [][]string
 	var cellDataWithTags [][]string
 	var tagRows map[string][]string
-	var lfcInfo string
 	var tbl PrettyTable
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	lfcInfo, err = getILMXML(objectURL)
-	fatalIf(probe.NewError(err), "Failed to list lifecycle configuration for "+objectURL+".")
+	lfcInfo, pErr := getBucketILMConfiguration(objectURL)
+	fatalIf(pErr.Trace(objectURL), "Failed to list lifecycle configuration for "+objectURL)
 	showExpiry := ctx.Bool("expiry")
 	showTransition := ctx.Bool("transition")
 	showMinimum := ctx.Bool("minimum")
@@ -246,8 +245,8 @@ func mainILMList(ctx *cli.Context) error {
 		} else if showExpiry {
 			dataStr = "Expiry "
 		}
-		eMsg := dataStr + "Lifecycle configuration not set"
-		fatalIf(probe.NewError(errors.New(eMsg)), "Failed to list lifecycle configuration for "+objectURL+".")
+		fatalIf(probe.NewError(errors.New(dataStr+"Lifecycle configuration not set")),
+			"Failed to list lifecycle configuration for "+objectURL+".")
 	}
 
 	if !globalJSON {

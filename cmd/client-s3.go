@@ -77,6 +77,8 @@ const (
 	AmzObjectLockMode = "X-Amz-Object-Lock-Mode"
 	// AmzObjectLockRetainUntilDate sets object lock retain until date
 	AmzObjectLockRetainUntilDate = "X-Amz-Object-Lock-Retain-Until-Date"
+	// AmzObjectLockLegalHold sets object lock legal hold
+	AmzObjectLockLegalHold = "X-Amz-Object-Lock-Legal-Hold"
 )
 
 var timeSentinel = time.Unix(0, 0).UTC()
@@ -294,7 +296,7 @@ func (c *S3Client) AddNotificationConfig(arn string, events []string, prefix, su
 }
 
 // RemoveNotificationConfig - Remove bucket notification
-func (c *S3Client) RemoveNotificationConfig(arn string) *probe.Error {
+func (c *S3Client) RemoveNotificationConfig(arn string, event string, prefix string, suffix string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	// Remove all notification configs if arn is empty
 	if arn == "" {
@@ -315,15 +317,52 @@ func (c *S3Client) RemoveNotificationConfig(arn string) *probe.Error {
 	}
 	accountArn := minio.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
 
-	switch fields[2] {
-	case "sns":
-		mb.RemoveTopicByArn(accountArn)
-	case "sqs":
-		mb.RemoveQueueByArn(accountArn)
-	case "lambda":
-		mb.RemoveLambdaByArn(accountArn)
-	default:
-		return errInvalidArgument().Trace(fields[2])
+	// if we are passed filters for either events, suffix or prefix, then only delete the single event that matches
+	// the arguments
+	if event != "" || suffix != "" || prefix != "" {
+		// Translate events to type events for comparison
+		events := strings.Split(event, ",")
+		var eventsTyped []minio.NotificationEventType
+		for _, e := range events {
+			switch e {
+			case "put":
+				eventsTyped = append(eventsTyped, minio.ObjectCreatedAll)
+			case "delete":
+				eventsTyped = append(eventsTyped, minio.ObjectRemovedAll)
+			case "get":
+				eventsTyped = append(eventsTyped, minio.ObjectAccessedAll)
+			default:
+				return errInvalidArgument().Trace(events...)
+			}
+		}
+		var err error
+		// based on the arn type, we'll look for the event in the corresponding sublist and delete it if there's a match
+		switch fields[2] {
+		case "sns":
+			err = mb.RemoveTopicByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+		case "sqs":
+			err = mb.RemoveQueueByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+		case "lambda":
+			err = mb.RemoveLambdaByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+		default:
+			return errInvalidArgument().Trace(fields[2])
+		}
+		if err != nil {
+			return probe.NewError(err)
+		}
+
+	} else {
+		// remove all events for matching arn
+		switch fields[2] {
+		case "sns":
+			mb.RemoveTopicByArn(accountArn)
+		case "sqs":
+			mb.RemoveQueueByArn(accountArn)
+		case "lambda":
+			mb.RemoveLambdaByArn(accountArn)
+		default:
+			return errInvalidArgument().Trace(fields[2])
+		}
 	}
 
 	// Set the new bucket configuration
@@ -785,8 +824,32 @@ func (c *S3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 	// Source object
 	src := minio.NewSourceInfo(tokens[1], tokens[2], srcSSE)
 
+	destOpts := minio.DestInfoOptions{
+		Encryption: tgtSSE,
+	}
+
+	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
+		destOpts.Mode = minio.RetentionMode(strings.ToUpper(lockModeStr))
+		delete(metadata, AmzObjectLockMode)
+	}
+
+	if retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]; ok {
+		delete(metadata, AmzObjectLockRetainUntilDate)
+		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
+			destOpts.RetainUntilDate = t.UTC()
+		}
+	}
+
+	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
+		destOpts.LegalHold = minio.LegalHoldStatus(lh)
+		delete(metadata, AmzObjectLockLegalHold)
+	}
+
+	// Assign metadata after irrelevant parts are delete above
+	destOpts.UserMeta = metadata
+
 	// Destination object
-	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtSSE, metadata)
+	dst, e := minio.NewDestinationInfoWithOptions(dstBucket, dstObject, destOpts)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -865,7 +928,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	lockModeStr, ok := metadata[AmzObjectLockMode]
 	lockMode := minio.RetentionMode("")
 	if ok {
-		lockMode = minio.RetentionMode(lockModeStr)
+		lockMode = minio.RetentionMode(strings.ToUpper(lockModeStr))
 		delete(metadata, AmzObjectLockMode)
 	}
 
@@ -892,10 +955,18 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	}
 	if retainUntilDate != timeSentinel {
 		opts.RetainUntilDate = &retainUntilDate
+		opts.SendContentMd5 = true
 	}
 	if lockModeStr != "" {
 		opts.Mode = &lockMode
+		opts.SendContentMd5 = true
 	}
+	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
+		delete(metadata, AmzObjectLockLegalHold)
+		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
+		opts.SendContentMd5 = true
+	}
+
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -962,13 +1033,16 @@ func (c *S3Client) AddUserAgent(app string, version string) {
 }
 
 // Remove - remove object or bucket(s).
-func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
+func (c *S3Client) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	prevBucket := ""
 	// Maintain objectsCh, statusCh for each bucket
 	var objectsCh chan string
 	var statusCh <-chan minio.RemoveObjectError
+	opts := minio.RemoveObjectsOptions{
+		GovernanceBypass: isBypass,
+	}
 
 	go func() {
 		defer close(errorCh)
@@ -995,7 +1069,7 @@ func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *C
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
 				} else {
-					statusCh = c.api.RemoveObjects(bucket, objectsCh)
+					statusCh = c.api.RemoveObjectsWithOptions(bucket, objectsCh, opts)
 				}
 			}
 
@@ -1017,7 +1091,7 @@ func (c *S3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *C
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
 				} else {
-					statusCh = c.api.RemoveObjects(bucket, objectsCh)
+					statusCh = c.api.RemoveObjectsWithOptions(bucket, objectsCh, opts)
 				}
 				prevBucket = bucket
 			}

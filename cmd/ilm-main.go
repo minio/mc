@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -46,7 +44,7 @@ const (
 	ilmThemeRow           string = "Row-Normal"
 	ilmThemeTick          string = "Row-Tick"
 	ilmThemeExpiry        string = "Row-Expiry"
-	ilmThemeResultSuccess string = "SucessOp"
+	ilmThemeResultSuccess string = "SuccessOp"
 	ilmThemeResultFailure string = "FailureOp"
 )
 
@@ -55,55 +53,31 @@ func mainILM(ctx *cli.Context) error {
 	return nil
 }
 
-// Get lifecycle info (XML) from alias & bucket
-func getILMXML(urlStr string) (string, error) {
-	lifecycleInfo, err := getBucketILMConfiguration(urlStr)
-	if err != nil {
-		return "", err
-	}
-	if ok := checkILMBucketAccess(urlStr); !ok {
-		return "", errors.New("access failed " + urlStr)
-	}
-	return lifecycleInfo, nil
-}
-
-func checkILMBucketAccess(urlStr string) bool {
-	clnt, pErr := newClient(urlStr)
-	fatalIf(pErr, "Cannot parse the provided url "+urlStr)
-	s3c, ok := clnt.(*S3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
-	}
-	bucket, _ := s3c.url2BucketAndObject()
-	ok, _ = s3c.api.BucketExists(bucket)
-	return ok
-}
-
 // setBucketILMConfiguration sets the lifecycle configuration given by ilmConfig to the bucket given by the url (urlStr)
-func setBucketILMConfiguration(urlStr string, ilmConfig string) error {
-	clnt, pErr := newClient(urlStr)
+func setBucketILMConfiguration(urlStr string, ilmConfig string) *probe.Error {
+	client, pErr := newClient(urlStr)
 	fatalIf(pErr, "Failed to set lifecycle configuration to "+urlStr)
-	s3c, ok := clnt.(*S3Client)
+	s3c, ok := client.(*S3Client)
 	if !ok {
 		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
 	}
 	if pErr = s3c.SetBucketLifecycle(ilmConfig); pErr != nil {
-		return pErr.ToGoError()
+		return pErr
 	}
 	return nil
 }
 
 // getBucketILMConfiguration gets the lifecycle configuration for the bucket given by the url (urlStr)
-func getBucketILMConfiguration(urlStr string) (string, error) {
+func getBucketILMConfiguration(urlStr string) (string, *probe.Error) {
 	var bktConfig string
-	clnt, pErr := newClient(urlStr)
+	client, pErr := newClient(urlStr)
 	fatalIf(pErr, "Failed to get lifecycle configuration to "+urlStr)
-	s3c, ok := clnt.(*S3Client)
+	s3c, ok := client.(*S3Client)
 	if !ok {
-		fatalIf(probe.NewError(errors.New("Unable to set tags")), "For "+urlStr+" unable to obtain client reference.")
+		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
 	}
 	if bktConfig, pErr = s3c.GetBucketLifecycle(); pErr != nil {
-		return "", pErr.ToGoError()
+		return "", pErr
 	}
 	return bktConfig, nil
 }

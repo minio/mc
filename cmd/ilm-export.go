@@ -87,10 +87,11 @@ func mainILMExport(ctx *cli.Context) error {
 	checkILMExportSyntax(ctx)
 	setILMDisplayColorScheme()
 	var ilmConfiguration ilm.LifecycleConfiguration
+	var err error
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	ilmInfoXML, err := getILMXML(objectURL)
-	fatalIf(probe.NewError(err), "Error exporting lifecycle configuration.")
+	ilmInfoXML, pErr := getBucketILMConfiguration(objectURL)
+	fatalIf(pErr.Trace(), "Error exporting lifecycle configuration for "+objectURL+".")
 	if globalJSON {
 		ilmConfiguration, err = ilm.GetILMConfig(ilmInfoXML)
 		fatalIf(probe.NewError(err), "Error exporting lifecycle configuration.")

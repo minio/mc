@@ -241,11 +241,14 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 }
 
 // putTargetStream writes to URL from Reader.
-func putTargetStream(ctx context.Context, alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
+func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
+	metadata[AmzObjectLockMode] = mode
+	metadata[AmzObjectLockRetainUntilDate] = until
+	metadata[AmzObjectLockLegalHold] = legalHold
 	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, disableMultipart)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
@@ -263,16 +266,22 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 	metadata := map[string]string{
 		"Content-Type": contentType,
 	}
-	return putTargetStream(context.Background(), alias, urlStrFull, reader, size, metadata, nil, sse, disableMultipart)
+	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, metadata, nil, sse, disableMultipart)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
-func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+func copySourceToTargetURL(alias, urlStr, source, mode, until, legalHold string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
+
+	metadata[AmzObjectLockMode] = mode
+	metadata[AmzObjectLockRetainUntilDate] = until
+	metadata[AmzObjectLockLegalHold] = legalHold
 	err = targetClnt.Copy(source, size, progress, srcSSE, tgtSSE, metadata, disableMultipart)
+
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
@@ -336,6 +345,21 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	var err *probe.Error
 	var metadata = map[string]string{}
 
+	var mode, until string
+	var pErr error
+	// add object retention fields in metadata
+	if urls.TargetContent.RetentionDuration != "" && urls.TargetContent.RetentionMode != "" {
+		m := minio.RetentionMode(strings.ToUpper(urls.TargetContent.RetentionMode))
+
+		dur, unit := parseRetentionValidity(urls.TargetContent.RetentionDuration, m)
+		mode = urls.TargetContent.RetentionMode
+
+		until, pErr = getRetainUntilDate(dur, unit)
+		if err != nil {
+			return urls.WithError(probe.NewError(pErr).Trace(sourceURL.String()))
+		}
+	}
+
 	// Optimize for server side copy if the host is same.
 	if sourceAlias == targetAlias {
 		for k, v := range urls.SourceContent.UserMetadata {
@@ -358,7 +382,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
-		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length,
+		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, mode, until, urls.TargetContent.LegalHold, length,
 			progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart)
 	} else {
 		if len(metadata) == 0 {
@@ -386,7 +410,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		for k, v := range urls.TargetContent.UserMetadata {
 			metadata[k] = v
 		}
-		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, filterMetadata(metadata),
+		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until, urls.TargetContent.LegalHold, reader, length, filterMetadata(metadata),
 			progress, tgtSSE, urls.DisableMultipart)
 	}
 	if err != nil {

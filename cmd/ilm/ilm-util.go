@@ -19,19 +19,15 @@ package ilm
 import (
 	"encoding/xml"
 	"errors"
-	"io"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 )
 
 const defaultILMDateFormat string = "2006-01-02"
 
+// Align text in label to center, pad with spaces on either sides.
 func getCenterAligned(label string, maxLen int) string {
 	const toPadWith string = " "
 	lblLth := len(label)
@@ -60,6 +56,7 @@ func splitStr(path, sep string, n int) []string {
 	return splits
 }
 
+// Align text in label to left, pad with spaces.
 func getLeftAlgined(label string, maxLen int) string {
 	const toPadWith string = " "
 	lblLth := len(label)
@@ -71,6 +68,7 @@ func getLeftAlgined(label string, maxLen int) string {
 	return output
 }
 
+// Align text in label to right, pad with spaces.
 func getRightAligned(label string, maxLen int) string {
 	const toPadWith string = " "
 	lblLth := len(label)
@@ -84,37 +82,41 @@ func getRightAligned(label string, maxLen int) string {
 
 // RemoveILMRule - Remove the ILM rule (with ilmID) from the configuration in XML that is provided.
 func RemoveILMRule(lfcInfoXML string, ilmID string) (string, error) {
-	var lfcInfo LifecycleConfiguration
 	var err error
-	if lfcInfoXML != "" {
-		if err = xml.Unmarshal([]byte(lfcInfoXML), &lfcInfo); err != nil {
-			return "", err
-		}
-		idx := 0
-		ruleFound := false
-		foundIdx := -1
-		for range lfcInfo.Rules {
-			rule := lfcInfo.Rules[idx]
-			if rule.ID == ilmID {
-				ruleFound = true
-				foundIdx = idx
-			}
-			idx++
-		}
-		if ruleFound && len(lfcInfo.Rules) > 1 {
-			lfcInfo.Rules = append(lfcInfo.Rules[:foundIdx], lfcInfo.Rules[foundIdx+1:]...)
-		} else if ruleFound && len(lfcInfo.Rules) <= 1 {
-			return "", nil // Only rule. Remove all.
-		}
-		if ruleFound {
-			var bytes []byte
-			if bytes, err = xml.Marshal(lfcInfo); err != nil {
-				return "", err
-			}
-			return string(bytes), nil
-		}
+	var lfcInfo LifecycleConfiguration
+	var foundIdx int
+	var marshalBytes []byte
+
+	if lfcInfoXML == "" {
+		return "", errors.New("Rule not found")
 	}
-	return "", errors.New("Rule not found")
+	if err = xml.Unmarshal([]byte(lfcInfoXML), &lfcInfo); err != nil {
+		return "", err
+	}
+	idx := 0
+	ruleFound := false
+	for range lfcInfo.Rules {
+		rule := lfcInfo.Rules[idx]
+		if rule.ID == ilmID {
+			ruleFound = true
+			foundIdx = idx
+			break
+		}
+		idx++
+	}
+	if !ruleFound {
+		return "", errors.New("Rule with id `" + ilmID + "` not found.")
+	}
+	if ruleFound && len(lfcInfo.Rules) > 1 {
+		lfcInfo.Rules = append(lfcInfo.Rules[:foundIdx], lfcInfo.Rules[foundIdx+1:]...)
+	} else if ruleFound && len(lfcInfo.Rules) == 1 {
+		return "", nil // Only rule. Remove all.
+	}
+	if marshalBytes, err = xml.Marshal(lfcInfo); err == nil && ruleFound {
+		return string(marshalBytes), nil
+	}
+	return "", err
+
 }
 
 // GetILMJSON Get ILM in JSON format
@@ -130,7 +132,7 @@ func GetILMJSON(ilmXML string) (string, error) {
 	return ilmInfo.JSON(), nil
 }
 
-// GetILMConfig Get ILM configuration populated with values
+// GetILMConfig Get ILM configuration (structure) populated with values
 func GetILMConfig(ilmXML string) (ilmInfo LifecycleConfiguration, err error) {
 	if ilmXML == "" {
 		return LifecycleConfiguration{}, errors.New("Empty lifecycle configuration")
@@ -141,57 +143,19 @@ func GetILMConfig(ilmXML string) (ilmInfo LifecycleConfiguration, err error) {
 	return ilmInfo, nil
 }
 
-// ReadILMConfigJSON read from stdin and set to bucket
-func ReadILMConfigJSON(urlStr string) (string, error) {
-	// User is expected to enter the lifecycleConfiguration instance contents in JSON format
-	var ilmInfo LifecycleConfiguration
-	var bytes []byte
-	var err error
-	// Consume json from STDIN
-	dec := json.NewDecoder(os.Stdin)
-	for {
-		err = dec.Decode(&ilmInfo)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", err
-		}
-	}
-	if len(ilmInfo.Rules) == 0 {
-		err = errors.New("Empty configuration")
-		return "", err
-	}
-
-	if bytes, err = xml.Marshal(ilmInfo); err != nil {
-		return "", nil
-	}
-	return string(bytes), nil
-}
-
 func getBucketILMXML(ilm LifecycleConfiguration) (string, error) {
 	var err error
 	var cBfr []byte
-	setILMErr := func(errStr string) string {
-		var setErrStr string
-		if err != nil {
-			setErrStr = errStr + ". " + err.Error()
-		}
-		return setErrStr
-	}
-	var errStr string
 	if cBfr, err = xml.Marshal(ilm); err != nil {
-		errStr = setILMErr("XML Conversion error.")
-		return "", errors.New(errStr)
+		return "", err
 	}
-	bktLCStr := string(cBfr)
-
-	return bktLCStr, nil
+	return string(cBfr), nil
 }
 
 // Adds/Replaces a lifecycleRule in the lifecycleConfiguration structure.
 // lifecycleConfiguration structure has the existing(if any) lifecycle configuration rules for the bucket.
-func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration) (LifecycleRule, error) {
+func getILMConfigWithNewRule(lfcInfoP *LifecycleConfiguration, ilmID, ilmPrefix, ilmStatus, ilmTag,
+	ilmExpiryDate, ilmExpiryDays, ilmTransitionDate, ilmTransitionDays, ilmStorageClass string) (LifecycleRule, error) {
 	var ilmExpiry LifecycleExpiration
 	var ilmTransition LifecycleTransition
 	var err error
@@ -202,26 +166,15 @@ func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration
 		return LifecycleRule{}, nil
 	}
 
-	ilmID := ctx.String(strings.ToLower(idLabel))
-	ilmPrefix := ctx.String(strings.ToLower(prefixLabel))
-	if ilmID == "" {
-		return LifecycleRule{}, errors.New("lifecycle configuration rule cannot be added without ID")
-	}
-	ilmStatus := statusLabelKey
-	if ilmDisabled := ctx.Bool(strings.ToLower(statusDisabledLabel)); ilmDisabled {
-		ilmStatus = statusDisabledLabel
-	}
-	ilmTag := ctx.String(strings.ToLower(tagLabel))
 	if ilmTagKVList, err = extractILMTags(ilmTag); err != nil {
 		return LifecycleRule{}, err
-
 	}
 
-	if ilmExpiry, err = getExpiry(ctx); err != nil {
+	if ilmExpiry, err = getExpiry(ilmExpiryDate, ilmExpiryDays); err != nil {
 		return LifecycleRule{}, err
 	}
 
-	if ilmTransition, err = getTransition(ctx); err != nil {
+	if ilmTransition, err = getTransition(ilmStorageClass, ilmTransitionDate, ilmTransitionDays); err != nil {
 		return LifecycleRule{}, err
 	}
 	var andVal LifecycleAndOperator
@@ -250,6 +203,10 @@ func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration
 		Expiration: expP,
 		Transition: transP,
 	}
+	if err = checkILMRule(newRule); err != nil {
+		return LifecycleRule{}, err
+	}
+
 	idx := 0
 	ruleFound := false
 	for range lfcInfoP.Rules {
@@ -266,30 +223,22 @@ func getILMRuleFromUserValues(ctx *cli.Context, lfcInfoP *LifecycleConfiguration
 	return newRule, nil
 }
 
-// GetILMRuleToSet Get the rule in XML and set it to the object URL.
-func GetILMRuleToSet(ctx *cli.Context, lfcInfoXML string) (string, error) {
+// GetILMConfigToSet Get the rule in XML and set it to the object URL.
+func GetILMConfigToSet(lfcInfoXML, ilmID, ilmPrefix, ilmStatus, ilmTag,
+	ilmExpiryDate, ilmExpiryDays, ilmTransitionDate, ilmTransitionDays, ilmStorageClass string) (string, error) {
 	var err error
 	var lfcInfo LifecycleConfiguration
-	var rule LifecycleRule
 	var bktILM string
-	if lfcInfoXML != "" {
-		if err = xml.Unmarshal([]byte(lfcInfoXML), &lfcInfo); err != nil {
-			errStr := "XML conversion of lifecycle configuration, " + err.Error()
-			return "", errors.New(errStr)
-		}
+	if err = xml.Unmarshal([]byte(lfcInfoXML), &lfcInfo); err != nil && lfcInfoXML != "" {
+		return "", err
 	}
 
-	if rule, err = getILMRuleFromUserValues(ctx, &lfcInfo); err != nil {
-		errStr := err.Error() + ". Error getting input values for new rule"
-		return "", errors.New(errStr)
-	}
-	if err = checkILMRule(rule); err != nil {
-		errStr := err.Error() + ". Invalid lifecycle configuration rule"
-		return "", errors.New(errStr)
+	if _, err = getILMConfigWithNewRule(&lfcInfo, ilmID, ilmPrefix, ilmStatus, ilmTag,
+		ilmExpiryDate, ilmExpiryDays, ilmTransitionDate, ilmTransitionDays, ilmStorageClass); err != nil {
+		return "", err
 	}
 	if bktILM, err = getBucketILMXML(lfcInfo); err != nil {
-		failureStr := "`" + rule.ID + "` Error: " + err.Error()
-		return "", errors.New(failureStr)
+		return "", err
 	}
 	return bktILM, nil
 }
@@ -344,7 +293,6 @@ func validateTranExpDate(rule LifecycleRule) error {
 	return nil
 }
 
-// Rule(s) enforced by Amazon S3 standards.
 func validateTranDays(rule LifecycleRule) error {
 	transitionSet := (rule.Transition != nil)
 	transitionDaySet := transitionSet && (rule.Transition.TransitionInDays > 0)
@@ -386,6 +334,7 @@ func validateTranExpCurdate(rule LifecycleRule) error {
 	return err
 }
 
+// Check S3 compatibility for the new rule and some other basic checks.
 func checkILMRule(rule LifecycleRule) error {
 	var err error
 
@@ -404,38 +353,35 @@ func checkILMRule(rule LifecycleRule) error {
 	return nil
 }
 
-// Returns valid lifecycleTransition to be but in lifecycleRule
-func getTransition(ctx *cli.Context) (LifecycleTransition, error) {
+// Returns valid lifecycleTransition to be included in lifecycleRule
+func getTransition(storageClass, transitionDateStr, transitionDayStr string) (LifecycleTransition, error) {
 	var transition LifecycleTransition
 	var err error
-	var transitionDateArg string
 	var transitionDate time.Time
 	var transitionDay int
-	storageClassArg := ctx.String(strings.ToLower(storageClassLabelKey))
-	transitionDayCheck := ctx.String(strings.ToLower(transitionDaysLabelKey)) != ""
-	transitionDateCheck := ctx.String(strings.ToLower(transitionDatesLabelKey)) != ""
-	transitionNoneCheck := (!transitionDayCheck && !transitionDateCheck && storageClassArg == "")
+	transitionDayCheck := transitionDayStr != ""
+	transitionDateCheck := transitionDateStr != ""
+	transitionNoneCheck := (!transitionDayCheck && !transitionDateCheck && storageClass == "")
 	switch {
 	case transitionNoneCheck:
 		return LifecycleTransition{}, nil
 	case transitionDateCheck:
-		transitionDateArg = ctx.String(strings.ToLower(transitionDatesLabelKey))
-		transitionDate, err = time.Parse(defaultILMDateFormat, transitionDateArg)
+		transitionDate, err = time.Parse(defaultILMDateFormat, transitionDateStr)
 	case transitionDayCheck:
-		transitionDateArg = ctx.String(strings.ToLower(transitionDaysLabelKey))
-		transitionDay, err = strconv.Atoi(transitionDateArg)
+		if transitionDay, err = strconv.Atoi(transitionDayStr); err != nil {
+			return LifecycleTransition{}, err
+		}
 	}
-	storageClassArg = strings.ToUpper(storageClassArg) // Just-in-case the user has entered lower case.
-
-	transitionArgCheck := (transitionDateArg != "" && storageClassArg != "")
-	// Different kinds of errors
+	storageClass = strings.ToUpper(storageClass) // Just-in-case the user has entered lower case characters.
+	transitionArgCheck := ((transitionDateStr != "" || transitionDayStr != "") && storageClass != "")
+	// Different kinds of compatibility checks.
 	switch {
 	case !transitionArgCheck:
-		return transition, errors.New("transition/storage class argument error")
+		return transition, errors.New("transition/storage class argument error, missing input")
 	case err != nil:
 		return LifecycleTransition{}, err
 	case transitionDayCheck || transitionDateCheck:
-		transition.StorageClass = storageClassArg
+		transition.StorageClass = storageClass
 		if transitionDayCheck {
 			transition.TransitionInDays = transitionDay
 		} else if transitionDateCheck {
@@ -446,15 +392,13 @@ func getTransition(ctx *cli.Context) (LifecycleTransition, error) {
 	return transition, err
 }
 
-// Returns lifecycleExpiration to be included in lifecycleRule struct
-func getExpiry(ctx *cli.Context) (expiry LifecycleExpiration, err error) {
+// Returns lifecycleExpiration to be included in lifecycleRule
+func getExpiry(expiryDateStr, expiryDayStr string) (expiry LifecycleExpiration, err error) {
 	var expiryDate time.Time
-	var expiryArg string
 	switch {
-	case ctx.String(strings.ToLower(expiryDatesLabelFlag)) != "":
-		expiryArg = ctx.String(strings.ToLower(expiryDatesLabelFlag))
-		if expiryDate, err = time.Parse(defaultILMDateFormat, expiryArg); err != nil || expiryDate.IsZero() {
-			errStr := "Error in Expiration argument " + expiryArg + " date conversion."
+	case expiryDateStr != "":
+		if expiryDate, err = time.Parse(defaultILMDateFormat, expiryDateStr); err != nil || expiryDate.IsZero() {
+			errStr := "Error in Expiration argument " + expiryDateStr + " date conversion."
 			if err != nil {
 				errStr += err.Error()
 			}
@@ -462,10 +406,9 @@ func getExpiry(ctx *cli.Context) (expiry LifecycleExpiration, err error) {
 		} else {
 			expiry.ExpirationDate = &expiryDate
 		}
-	case ctx.String(strings.ToLower(expiryDaysLabelFlag)) != "":
-		expiryArg = ctx.String(strings.ToLower(expiryDaysLabelFlag))
-		if expiry.ExpirationInDays, err = strconv.Atoi(expiryArg); err != nil {
-			errStr := "Error in Expiration argument " + expiryArg + ". " + err.Error()
+	case expiryDayStr != "":
+		if expiry.ExpirationInDays, err = strconv.Atoi(expiryDayStr); err != nil {
+			errStr := "Error in Expiration argument " + expiryDayStr + ". " + err.Error()
 			err = errors.New(errStr)
 		}
 	}

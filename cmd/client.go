@@ -80,8 +80,7 @@ type Client interface {
 	Watch(params watchParams) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
-
+	Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
@@ -98,17 +97,21 @@ type Client interface {
 
 // ClientContent - Content container for content metadata
 type ClientContent struct {
-	URL          ClientURL
-	Time         time.Time
-	Size         int64
-	Type         os.FileMode
-	StorageClass string
-	Metadata     map[string]string
-	UserMetadata map[string]string
-	ETag         string
-	Expires      time.Time
-	Retention    bool
-	Err          *probe.Error
+	URL               ClientURL
+	Time              time.Time
+	Size              int64
+	Type              os.FileMode
+	StorageClass      string
+	Metadata          map[string]string
+	UserMetadata      map[string]string
+	ETag              string
+	Expires           time.Time
+	Retention         bool
+	RetentionMode     string
+	RetentionDuration string
+	BypassGovernance  bool
+	LegalHold         string
+	Err               *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

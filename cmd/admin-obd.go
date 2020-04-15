@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -42,6 +43,12 @@ var adminOBDFlags = []cli.Flag{
 		Value:  nil,
 		EnvVar: "MC_OBD_DATA",
 		Hidden: true,
+	},
+	cli.DurationFlag{
+		Name:   "deadline",
+		Usage:  "maximum duration that OBD tests should be allowed to run",
+		Value:  3600 * time.Second,
+		EnvVar: "MC_OBD_DEADLINE",
 	},
 }
 
@@ -98,7 +105,7 @@ func checkAdminOBDSyntax(ctx *cli.Context) {
 
 //compress and tar obd output
 func tarGZ(c clusterOBDStruct, alias string) error {
-	filename := fmt.Sprintf("%s-obd_%s.json.gz", alias, time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("%s-obd_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
@@ -253,7 +260,7 @@ func mainAdminOBD(ctx *cli.Context) error {
 	}
 
 	// Fetch info of all servers (cluster or single server)
-	obdChan := client.ServerOBDInfo(cont, options)
+	obdChan := client.ServerOBDInfo(cont, options, ctx.Duration("deadline"))
 	for adminOBDInfo := range obdChan {
 		if adminOBDInfo.Error != "" {
 			clusterOBDInfo.Status = "Error"

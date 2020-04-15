@@ -48,6 +48,7 @@ const (
 	rightAlign  int = 3
 )
 
+// Labels used for display.
 const (
 	idLabel             string = "ID"
 	prefixLabel         string = "Prefix"
@@ -64,6 +65,7 @@ const (
 	allLabel            string = "all"
 )
 
+// Keys to be used in map structure which stores the columns to be displayed.
 const (
 	statusLabelKey          string = "Enabled"
 	storageClassLabelKey    string = "Storage-Class"
@@ -72,22 +74,20 @@ const (
 	transitionDaysLabelKey  string = "Transition-Days"
 )
 
-const (
-	expiryDatesLabelFlag string = "Expiry-Date"
-	expiryDaysLabelFlag  string = "Expiry-Days"
-)
-
+// Some cell values
 const (
 	tickCell      string = "\u2713 "
 	crossTickCell string = "\u2717 "
 	blankCell     string = " "
 )
 
+// Used in tags. Ex: --tags "key1=value1&key2=value2&key3=value3"
 const (
 	tagSeperator    string = "&"
 	keyValSeperator string = "="
 )
 
+// Represents information going into a single cell in the table.
 type tableCellInfo struct {
 	label       string
 	multLabels  []string
@@ -96,6 +96,7 @@ type tableCellInfo struct {
 	align       int
 }
 
+// Determines what columns need to be shown
 type showDetails struct {
 	allAvailable bool
 	expiry       bool
@@ -103,12 +104,11 @@ type showDetails struct {
 	minimum      bool
 }
 
-// GetILMDataForShow Based on showDetails mentioned by the user, show table with information.
-// Table is constructed row-by-row.
+// GetILMDataForShow Based on showDetails determined by user input, show the table with information.
+// Table is constructed row-by-row. Headers are first, then the rest of the rows.
 func GetILMDataForShow(ilmXML string, rowCheck *map[string]int, alignedHdrLabels *[]string,
 	cellDataNoTags *[][]string, cellDataWithTags *[][]string, tagRows *map[string][]string,
 	showAll, showMin, showExpiry, showTransition bool) error {
-	// [Column Label] -> [Column Number]
 	var ilmInfo LifecycleConfiguration
 	var err error
 	if ilmXML == "" {
@@ -121,7 +121,9 @@ func GetILMDataForShow(ilmXML string, rowCheck *map[string]int, alignedHdrLabels
 
 	// We need the different column headers and their respective column index
 	// where they appear in a map data-structure format.
+	// [Column Label] -> [Column Number]
 	*rowCheck = make(map[string]int)
+	// For rows with tags only tags are shown. Rest of the cells are empty (blanks in full cell length)
 	*tagRows = make(map[string][]string)
 	showOpts := showDetails{
 		allAvailable: showAll,
@@ -167,6 +169,8 @@ func getILMColumnWidthTable() map[string]int {
 }
 
 // checkAddTableCellRows multiple rows created by filling up each cell of the table.
+// Multiple rows are required for display of data with tags.
+// Each 'key:value' pair is shown in 1 row and the rest of it is cells populated with blanks.
 func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts showDetails,
 	cellInfo tableCellInfo, ruleID string, newRows map[string][]string) {
 	var cellLabel string
@@ -212,6 +216,7 @@ func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts s
 	}
 }
 
+// The right kind of tick is returned. Cross-tick if expiry is not set.
 func getExpiryTick(rule LifecycleRule) string {
 	expiryTick := crossTickCell
 	expiryDateSet := rule.Expiration != nil && rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()
@@ -222,6 +227,7 @@ func getExpiryTick(rule LifecycleRule) string {
 	return expiryTick
 }
 
+// The right kind of tick is returned. Cross-tick if status is 'Disabled' & tick if status is 'Enabled'.
 func getStatusTick(rule LifecycleRule) string {
 	statusTick := crossTickCell
 	if rule.Status == statusLabelKey {
@@ -230,6 +236,7 @@ func getStatusTick(rule LifecycleRule) string {
 	return statusTick
 }
 
+// Expiry date. 'YYYY-MM-DD'. Set for 00:00:00 GMT as per the standard.
 func getExpiryDateVal(rule LifecycleRule) string {
 	expiryDate := blankCell
 	expirySet := (rule.Expiration != nil)
@@ -244,6 +251,7 @@ func getExpiryDateVal(rule LifecycleRule) string {
 	return expiryDate
 }
 
+// Cross-tick if Transition is not set.
 func getTransitionTick(rule LifecycleRule) string {
 	transitionSet := rule.Transition != nil
 	transitionDateSet := transitionSet && ((rule.Transition.TransitionDate != nil &&
@@ -255,6 +263,7 @@ func getTransitionTick(rule LifecycleRule) string {
 	return tickCell
 }
 
+// Transition date. 'YYYY-MM-DD'. Set for 00:00:00 GMT as per the standard.
 func getTransitionDate(rule LifecycleRule) string {
 	transitionDate := blankCell
 	transitionSet := (rule.Transition != nil)
@@ -271,6 +280,7 @@ func getTransitionDate(rule LifecycleRule) string {
 	return transitionDate
 }
 
+// Storage class name for transition.
 func getStorageClassName(rule LifecycleRule) string {
 	storageClass := blankCell
 	transitionSet := (rule.Transition != nil)
@@ -296,7 +306,7 @@ func getTagArr(rule LifecycleRule) []string {
 	return tagCellArr
 }
 
-// Add single table cell - non-header.
+// Add single row table cell - non-header.
 func checkAddTableCell(rowArr *[]string, rowCheck map[string]int, cellInfo tableCellInfo) {
 	if rowArr == nil {
 		return

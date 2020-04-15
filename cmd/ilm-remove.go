@@ -114,27 +114,28 @@ func checkILMRemoveSyntax(ctx *cli.Context) {
 	}
 }
 
-func ilmAllRemove(urlStr string) error {
+func ilmAllRemove(urlStr string) *probe.Error {
 	if err := setBucketILMConfiguration(urlStr, ""); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ilmIDRemove(ilmID string, urlStr string) error {
+func ilmIDRemove(ilmID string, urlStr string) *probe.Error {
 	var lfcInfoXML string
 	var err error
-	if lfcInfoXML, err = getBucketILMConfiguration(urlStr); err != nil {
-		return err
+	var pErr *probe.Error
+	if lfcInfoXML, pErr = getBucketILMConfiguration(urlStr); err != nil {
+		return pErr
 	}
 	if lfcInfoXML == "" {
-		return errors.New("Lifecycle configuration for `" + urlStr + "` not set")
+		return probe.NewError(errors.New("Lifecycle configuration for `" + urlStr + "` not set"))
 	}
 	if lfcInfoXML, err = ilm.RemoveILMRule(lfcInfoXML, ilmID); err != nil {
-		return err
+		return probe.NewError(err)
 	}
-	if err = setBucketILMConfiguration(urlStr, lfcInfoXML); err != nil {
-		return err
+	if pErr = setBucketILMConfiguration(urlStr, lfcInfoXML); err != nil {
+		return pErr
 	}
 
 	return nil
@@ -145,14 +146,14 @@ func mainILMRemove(ctx *cli.Context) error {
 	setILMDisplayColorScheme()
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	var err error
+	var pErr *probe.Error
 	var ilmAll, ilmForce bool
 	var ilmID string
 	ilmAll = ctx.Bool("all")
 	ilmForce = ctx.Bool("force")
 	if ilmAll && ilmForce {
-		err = ilmAllRemove(objectURL)
-		fatalIf(probe.NewError(err), "Failed to remove all rules for `"+objectURL+"`.")
+		pErr = ilmAllRemove(objectURL)
+		fatalIf(pErr.Trace(objectURL), "Failed to remove all rules for `"+objectURL+"`.")
 		printMsg(ilmRmMessage{
 			Status: "success",
 			ID:     ilmID,
@@ -165,8 +166,8 @@ func mainILMRemove(ctx *cli.Context) error {
 		fatalIf(probe.NewError(errors.New("ID not provided")),
 			"Failed to remove lifecycle rule")
 	}
-	err = ilmIDRemove(ilmID, objectURL)
-	fatalIf(probe.NewError(err), "Failed to remove rule. ID `"+ilmID+"` Target "+objectURL+". ")
+	pErr = ilmIDRemove(ilmID, objectURL)
+	fatalIf(pErr, "Failed to remove rule. ID `"+ilmID+"` Target "+objectURL+". ")
 	printMsg(ilmRmMessage{
 		Status: "success",
 		ID:     ilmID,

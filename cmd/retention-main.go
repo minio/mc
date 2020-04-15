@@ -38,11 +38,14 @@ var (
 			Usage: "apply retention recursively",
 		},
 		cli.BoolFlag{
-			Name:  "bypass",
+			Name:  bypass,
 			Usage: "bypass governance",
 		},
 	}
 )
+
+var bypass = "bypass"
+
 var retentionCmd = cli.Command{
 	Name:   "retention",
 	Usage:  "set object retention for objects with a given prefix",
@@ -95,6 +98,21 @@ func (m retentionCmdMessage) JSON() string {
 	return string(msgBytes)
 }
 
+func getRetainUntilDate(validity *uint, unit *minio.ValidityUnit) (string, error) {
+	if validity == nil {
+		return "", fmt.Errorf("invalid validity '%v'", validity)
+	}
+	t := UTCNow()
+	if *unit == minio.Years {
+		t = t.AddDate(int(*validity), 0, 0)
+	} else {
+		t = t.AddDate(0, 0, int(*validity))
+	}
+	timeStr := t.Format(time.RFC3339)
+
+	return timeStr, nil
+}
+
 // setRetention - Set Retention for all objects within a given prefix.
 func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, bypassGovernance, isRecursive bool) error {
 	clnt, err := newClient(urlStr)
@@ -110,26 +128,6 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 
 	alias, _, _ := mustExpandAlias(urlStr)
 
-	retainUntilDate := func() (time.Time, error) {
-		if validity == nil {
-			return timeSentinel, fmt.Errorf("invalid validity '%v'", validity)
-		}
-		t := UTCNow()
-		if *unit == minio.Years {
-			t = t.AddDate(int(*validity), 0, 0)
-		} else {
-			t = t.AddDate(0, 0, int(*validity))
-		}
-		timeStr := t.Format(time.RFC3339)
-
-		t1, e := time.Parse(
-			time.RFC3339,
-			timeStr)
-		if e != nil {
-			return timeSentinel, e
-		}
-		return t1, nil
-	}
 	validityStr := func() *string {
 		if validity == nil {
 			return nil
@@ -151,11 +149,17 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
-		retainUntil, err := retainUntilDate()
+		timeStr, err := getRetainUntilDate(validity, unit)
 		if err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
 			continue
 		}
+		retainUntil, e := time.Parse(time.RFC3339, timeStr)
+		if e != nil {
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
+			continue
+		}
+
 		newClnt, perr := newClientFromAlias(alias, content.URL.String())
 		if perr != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")

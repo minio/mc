@@ -115,11 +115,11 @@ func (i ilmAddMessage) JSON() string {
 
 // Validate user given arguments
 func checkILMAddSyntax(ctx *cli.Context) {
-	id := ctx.String("id")
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelp(ctx, "add")
 		os.Exit(globalErrorExitStatus)
 	}
+	id := ctx.String("id")
 	if id == "" {
 		e := errors.New("ID for a rule cannot be empty")
 		fatalIf(probe.NewError(e), "Refer mc "+ctx.Command.FullName()+" --help for more details")
@@ -128,19 +128,34 @@ func checkILMAddSyntax(ctx *cli.Context) {
 
 // Calls SetBucketLifecycle with the XML representation of lifecycleConfiguration type.
 func mainILMAdd(ctx *cli.Context) error {
-	var lfcInfoXML string
 	var err error
 	checkILMAddSyntax(ctx)
 	setILMDisplayColorScheme()
 	args := ctx.Args()
 	objectURL := args.Get(0)
 	id := ctx.String("id")
-	lfcInfoXML, err = getILMXML(objectURL)
-	fatalIf(probe.NewError(err), "Failed to generate lifecycle configuration on "+objectURL)
-	lfcInfoXML, err = ilm.GetILMRuleToSet(ctx, lfcInfoXML)
-	fatalIf(probe.NewError(err), "Failed to get lifecycle rule from the user input")
-	err = setBucketILMConfiguration(objectURL, lfcInfoXML)
-	fatalIf(probe.NewError(err), "Failed to set lifecycle rule with id `"+id+"`")
+	// Configuration that is already set.
+	lfcInfoXML, pErr := getBucketILMConfiguration(objectURL)
+	fatalIf(pErr, "Failed to generate lifecycle configuration for "+objectURL)
+	ilmID := ctx.String("id")
+	ilmPrefix := ctx.String("prefix")
+	ilmStatus := "Enabled"
+	if ilmDisabled := ctx.Bool("disabled"); ilmDisabled {
+		ilmStatus = "Disabled"
+	}
+	ilmTag := ctx.String("tags")
+	ilmExpiryDate := ctx.String("expiry-date")
+	ilmExpiryDays := ctx.String("expiry-days")
+	ilmTransitionDate := ctx.String("transition-date")
+	ilmTransitionDays := ctx.String("transition-days")
+	ilmStorageClass := ctx.String("storage-class")
+	// Configuration that needs to be set is returned by ilm.GetILMConfigToSet.
+	// A new rule is added or the rule (if existing) is replaced
+	lfcInfoXML, err = ilm.GetILMConfigToSet(lfcInfoXML, ilmID, ilmPrefix, ilmStatus, ilmTag,
+		ilmExpiryDate, ilmExpiryDays, ilmTransitionDate, ilmTransitionDays, ilmStorageClass)
+	fatalIf(probe.NewError(err), "Failed to get lifecycle configuration from the user input")
+	pErr = setBucketILMConfiguration(objectURL, lfcInfoXML)
+	fatalIf(pErr, "Failed to set lifecycle rule with id `"+id+"`")
 	printMsg(ilmAddMessage{
 		Status: "success",
 		Target: objectURL,

@@ -17,6 +17,9 @@
 package cmd
 
 import (
+	"encoding/xml"
+	"errors"
+	"io"
 	"os"
 
 	"github.com/minio/cli"
@@ -65,6 +68,27 @@ func (i ilmImportMessage) JSON() string {
 	return string(msgBytes)
 }
 
+// ReadILMConfigJSON read from stdin and set ILM configuration to bucket
+func readILMConfigJSON() (string, *probe.Error) {
+	// User is expected to enter the lifecycleConfiguration instance contents in JSON format
+	var ilmInfo ilm.LifecycleConfiguration
+	var bytes []byte
+	var err error
+	// Consume json from STDIN
+	dec := json.NewDecoder(os.Stdin)
+	if err = dec.Decode(&ilmInfo); err != nil && err != io.EOF {
+		return "", probe.NewError(err)
+	}
+	if bytes, err = xml.Marshal(ilmInfo); err != nil {
+		return "", probe.NewError(err)
+	}
+	if len(ilmInfo.Rules) == 0 {
+		return "", probe.NewError(errors.New("Empty configuration"))
+	}
+
+	return string(bytes), nil
+}
+
 // checkILMImportSyntax - validate arguments passed by user
 func checkILMImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
@@ -79,12 +103,11 @@ func mainILMImport(ctx *cli.Context) error {
 
 	args := ctx.Args()
 	objectURL := args.Get(0)
-	var err error
 	var ilmXML string
-	ilmXML, err = ilm.ReadILMConfigJSON(objectURL)
-	fatalIf(probe.NewError(err), "Failed to read lifecycle configuration.")
-	err = setBucketILMConfiguration(objectURL, ilmXML)
-	fatalIf(probe.NewError(err), "Failed to set lifecycle configuration.")
+	ilmXML, pErr := readILMConfigJSON()
+	fatalIf(pErr, "Failed to read lifecycle configuration.")
+	pErr = setBucketILMConfiguration(objectURL, ilmXML)
+	fatalIf(pErr, "Failed to set lifecycle configuration.")
 	printMsg(ilmImportMessage{
 		Status: "success",
 		Target: objectURL,
