@@ -296,7 +296,7 @@ func (c *S3Client) AddNotificationConfig(arn string, events []string, prefix, su
 }
 
 // RemoveNotificationConfig - Remove bucket notification
-func (c *S3Client) RemoveNotificationConfig(arn string) *probe.Error {
+func (c *S3Client) RemoveNotificationConfig(arn string, event string, prefix string, suffix string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	// Remove all notification configs if arn is empty
 	if arn == "" {
@@ -317,15 +317,52 @@ func (c *S3Client) RemoveNotificationConfig(arn string) *probe.Error {
 	}
 	accountArn := minio.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
 
-	switch fields[2] {
-	case "sns":
-		mb.RemoveTopicByArn(accountArn)
-	case "sqs":
-		mb.RemoveQueueByArn(accountArn)
-	case "lambda":
-		mb.RemoveLambdaByArn(accountArn)
-	default:
-		return errInvalidArgument().Trace(fields[2])
+	// if we are passed filters for either events, suffix or prefix, then only delete the single event that matches
+	// the arguments
+	if event != "" || suffix != "" || prefix != "" {
+		// Translate events to type events for comparison
+		events := strings.Split(event, ",")
+		var eventsTyped []minio.NotificationEventType
+		for _, e := range events {
+			switch e {
+			case "put":
+				eventsTyped = append(eventsTyped, minio.ObjectCreatedAll)
+			case "delete":
+				eventsTyped = append(eventsTyped, minio.ObjectRemovedAll)
+			case "get":
+				eventsTyped = append(eventsTyped, minio.ObjectAccessedAll)
+			default:
+				return errInvalidArgument().Trace(events...)
+			}
+		}
+		var err error
+		// based on the arn type, we'll look for the event in the corresponding sublist and delete it if there's a match
+		switch fields[2] {
+		case "sns":
+			err = mb.RemoveTopicByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+		case "sqs":
+			err = mb.RemoveQueueByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+		case "lambda":
+			err = mb.RemoveLambdaByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+		default:
+			return errInvalidArgument().Trace(fields[2])
+		}
+		if err != nil {
+			return probe.NewError(err)
+		}
+
+	} else {
+		// remove all events for matching arn
+		switch fields[2] {
+		case "sns":
+			mb.RemoveTopicByArn(accountArn)
+		case "sqs":
+			mb.RemoveQueueByArn(accountArn)
+		case "lambda":
+			mb.RemoveLambdaByArn(accountArn)
+		default:
+			return errInvalidArgument().Trace(fields[2])
+		}
 	}
 
 	// Set the new bucket configuration

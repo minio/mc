@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2016 MinIO, Inc.
+ * MinIO Client (C) 2016-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package cmd
 import (
 	"errors"
 
+	"github.com/minio/minio-go/v6"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -31,6 +33,18 @@ var (
 		cli.BoolFlag{
 			Name:  "force",
 			Usage: "force removing all bucket notifications",
+		},
+		cli.StringFlag{
+			Name:  "event",
+			Usage: "filter specific type of event. Defaults to all event",
+		},
+		cli.StringFlag{
+			Name:  "prefix",
+			Usage: "filter event associated to the specified prefix",
+		},
+		cli.StringFlag{
+			Name:  "suffix",
+			Usage: "filter event associated to the specified suffix",
 		},
 	}
 )
@@ -111,8 +125,19 @@ func mainEventRemove(ctx *cli.Context) error {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
 
-	err = s3Client.RemoveNotificationConfig(arn)
-	fatalIf(err, "Cannot disable notification on the specified bucket.")
+	// flags for the attributes of the even
+	event := ctx.String("event")
+	prefix := ctx.String("prefix")
+	suffix := ctx.String("suffix")
+
+	err = s3Client.RemoveNotificationConfig(arn, event, prefix, suffix)
+	if err != nil {
+		if err.Cause == minio.ErrNoNotificationConfigMatch {
+			fatalIf(err, "Remove event failed.")
+		}
+		fatalIf(err, "Cannot disable notification on the specified bucket.")
+	}
+
 	printMsg(eventRemoveMessage{ARN: arn})
 
 	return nil
