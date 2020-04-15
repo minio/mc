@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -104,7 +105,7 @@ func checkAdminOBDSyntax(ctx *cli.Context) {
 
 //compress and tar obd output
 func tarGZ(c clusterOBDStruct, alias string) error {
-	filename := fmt.Sprintf("%s-obd_%s.json.gz", alias, time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("%s-obd_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
