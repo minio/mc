@@ -69,7 +69,7 @@ const (
 	fieldDelimiterType       = "fielddelimiter"
 	quoteCharacterType       = "quotechar"
 	quoteEscapeCharacterType = "quoteescchar"
-	quoteFieldType           = "quotefield"
+	quoteFieldsType          = "quotefields"
 	fileHeaderType           = "fileheader"
 	commentCharType          = "commentchar"
 	typeJSONType             = "type"
@@ -492,7 +492,7 @@ func selectObjectOutputOpts(selOpts SelectObjectOpts, i minio.SelectObjectInputS
 		if quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]; isOK {
 			ocsv.SetQuoteEscapeCharacter(quoteEscChar)
 		}
-		if qf, isOK = selOpts.OutputSerOpts["csv"][quoteFieldType]; isOK {
+		if qf, isOK = selOpts.OutputSerOpts["csv"][quoteFieldsType]; isOK {
 			ocsv.SetQuoteFields(minio.CSVQuoteFields(qf))
 		}
 		o.CSV = &ocsv
