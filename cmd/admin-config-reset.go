@@ -64,7 +64,7 @@ type configResetMessage struct {
 // String colorized service status message.
 func (u configResetMessage) String() (msg string) {
 	msg += console.Colorize("ResetConfigSuccess",
-		"Reseteting key has been successful.\n")
+		"Key is successfully reset.\n")
 	suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
 	msg += console.Colorize("ResetConfigSuccess",
 		fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
