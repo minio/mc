@@ -1300,7 +1300,7 @@ func (c *S3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 	return c.api.ListObjectsV2(bucket, object, isRecursive, doneCh)
 }
 
-func (c *S3Client) statInComplete(bucket, object string) (*ClientContent, *probe.Error) {
+func (c *S3Client) statIncompleteUpload(bucket, object string) (*ClientContent, *probe.Error) {
 	nonRecursive := false
 	objectMetadata := &ClientContent{}
 	// Prefix to pass to minio-go listing in order to fetch a given object/directory
@@ -1352,7 +1352,7 @@ func (c *S3Client) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 
 	// If the request is for incomplete upload stat, handle it here.
 	if isIncomplete {
-		return c.statInComplete(bucket, object)
+		return c.statIncompleteUpload(bucket, object)
 	}
 
 	// The following code tries to calculate if a given prefix/object does really exist
