@@ -149,14 +149,13 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			tr := &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
+					Timeout:   10 * time.Second,
+					KeepAlive: 15 * time.Second,
 				}).DialContext,
-				MaxIdleConns:          1024,
-				MaxIdleConnsPerHost:   1024,
+				MaxIdleConnsPerHost:   256,
 				IdleConnTimeout:       90 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
+				ExpectContinueTimeout: 10 * time.Second,
 				// Set this value so that the underlying transport round-tripper
 				// doesn't try to auto decode the body of objects with
 				// content-encoding set to `gzip`.
