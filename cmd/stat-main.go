@@ -89,7 +89,7 @@ func checkStatSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	isIncomplete := false
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, false, encKeyDB)
+		_, _, err := url2Stat(url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}

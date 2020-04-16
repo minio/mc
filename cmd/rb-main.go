@@ -215,7 +215,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
-		_, err = clnt.Stat(false, false, false, nil)
+		_, err = clnt.Stat(false, false, nil)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:

@@ -123,7 +123,7 @@ func checkDiffSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	// Diff only works between two directories, verify them below.
 
 	// Verify if firstURL is accessible.
-	_, firstContent, err := url2Stat(firstURL, false, false, encKeyDB)
+	_, firstContent, err := url2Stat(firstURL, false, encKeyDB)
 	if err != nil {
 		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
@@ -134,7 +134,7 @@ func checkDiffSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	}
 
 	// Verify if secondURL is accessible.
-	_, secondContent, err := url2Stat(secondURL, false, false, encKeyDB)
+	_, secondContent, err := url2Stat(secondURL, false, encKeyDB)
 	if err != nil {
 		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
 	}
