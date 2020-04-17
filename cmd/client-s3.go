@@ -931,8 +931,8 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		delete(metadata, AmzObjectLockMode)
 	}
 
-	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
 	retainUntilDate := timeSentinel
+	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
 	if ok {
 		delete(metadata, AmzObjectLockRetainUntilDate)
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
@@ -952,14 +952,17 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ServerSideEncryption: sse,
 		DisableMultipart:     disableMultipart,
 	}
-	if retainUntilDate != timeSentinel {
+
+	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
 		opts.RetainUntilDate = &retainUntilDate
 		opts.SendContentMd5 = true
 	}
+
 	if lockModeStr != "" {
 		opts.Mode = &lockMode
 		opts.SendContentMd5 = true
 	}
+
 	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
 		delete(metadata, AmzObjectLockLegalHold)
 		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
