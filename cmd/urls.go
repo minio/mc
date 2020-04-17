@@ -28,6 +28,7 @@ type URLs struct {
 	TargetContent    *ClientContent
 	TotalCount       int64
 	TotalSize        int64
+	MD5              bool
 	DisableMultipart bool
 	encKeyDB         map[string][]prefixSSEPair
 	Error            *probe.Error `json:"-"`
