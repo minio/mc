@@ -1,3 +1,12 @@
+---
+name: Bug report
+about: Bug report template
+title: ''
+labels: community, triage
+assignees: ''
+
+---
+
 ## Expected behavior
 
 ## Actual behavior
@@ -8,5 +17,3 @@
 - (paste output of `mc --version`)
 
 ## System information
-
-
