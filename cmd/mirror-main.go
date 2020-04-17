@@ -311,16 +311,6 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		}
 	}
 
-	if mj.isPreserve {
-		attrValue, pErr := getFileAttrMeta(sURLs, mj.encKeyDB)
-		if pErr != nil {
-			return sURLs.WithError(pErr)
-		}
-		if attrValue != "" {
-			sURLs.TargetContent.Metadata["mc-attrs"] = attrValue
-		}
-	}
-
 	// Initialize additional target user metadata.
 	sURLs.TargetContent.UserMetadata = mj.userMetadata
 
@@ -333,7 +323,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB)
+	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB, mj.isPreserve)
 }
 
 // Update progress status
