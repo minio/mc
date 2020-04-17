@@ -162,6 +162,30 @@ func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) 
 	return reader, err
 }
 
+func probeContentType(reader io.Reader) (ctype string, err *probe.Error) {
+	ctype = "application/octet-stream"
+	// Read a chunk to decide between utf-8 text and binary
+	if s, ok := reader.(io.Seeker); ok {
+		var buf [512]byte
+		n, _ := io.ReadFull(reader, buf[:])
+		if n <= 0 {
+			return ctype, nil
+		}
+		kind, e := filetype.Match(buf[:n])
+		if e != nil {
+			return ctype, probe.NewError(e)
+		}
+		// rewind to output whole file
+		if _, e = s.Seek(0, io.SeekStart); e != nil {
+			return ctype, probe.NewError(e)
+		}
+		if kind.MIME.Value != "" {
+			ctype = kind.MIME.Value
+		}
+	}
+	return ctype, nil
+}
+
 // getSourceStream gets a reader from URL.
 func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.ServerSide) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
@@ -172,40 +196,49 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
+
 	metadata = make(map[string]string)
 	if fetchStat {
-		st, err := sourceClnt.Stat(false, false, sse)
-		if err != nil {
-			return nil, nil, err.Trace(alias, urlStr)
+		var st *ClientContent
+		mo, mok := reader.(*minio.Object)
+		if mok {
+			oinfo, e := mo.Stat()
+			if e != nil {
+				return nil, nil, err.Trace(alias, urlStr)
+			}
+			st = &ClientContent{}
+			st.Time = oinfo.LastModified
+			st.Size = oinfo.Size
+			st.ETag = oinfo.ETag
+			st.Expires = oinfo.Expires
+			st.Type = os.FileMode(0664)
+			st.Metadata = map[string]string{}
+			for k := range oinfo.Metadata {
+				st.Metadata[k] = oinfo.Metadata.Get(k)
+			}
+			st.ETag = oinfo.ETag
+		} else {
+			st, err = sourceClnt.Stat(false, false, sse)
+			if err != nil {
+				return nil, nil, err.Trace(alias, urlStr)
+			}
 		}
+
 		for k, v := range st.Metadata {
 			if httpguts.ValidHeaderFieldName(k) &&
 				httpguts.ValidHeaderFieldValue(v) {
 				metadata[k] = v
 			}
 		}
-		// If our reader is a seeker try to detect content-type further.
-		if s, ok := reader.(io.ReadSeeker); ok {
-			// All unrecognized files have `application/octet-stream`
-			// So we continue our detection process.
-			if ctype := metadata["Content-Type"]; ctype == "application/octet-stream" {
-				// Read a chunk to decide between utf-8 text and binary
-				var buf [512]byte
-				n, _ := io.ReadFull(reader, buf[:])
-				if n > 0 {
-					kind, e := filetype.Match(buf[:n])
-					if e != nil {
-						return nil, nil, probe.NewError(e)
-					}
-					// rewind to output whole file
-					if _, e := s.Seek(0, io.SeekStart); e != nil {
-						return nil, nil, probe.NewError(e)
-					}
-					ctype = kind.MIME.Value
-					if ctype == "" {
-						ctype = "application/octet-stream"
-					}
-					metadata["Content-Type"] = ctype
+
+		// All unrecognized files have `application/octet-stream`
+		// So we continue our detection process.
+		if ctype := metadata["Content-Type"]; ctype == "application/octet-stream" {
+			// Continue probing content-type if its filesystem stream.
+			if !mok {
+				metadata["Content-Type"], err = probeContentType(reader)
+				if err != nil {
+					return nil, nil, err.Trace(alias, urlStr)
 				}
 			}
 		}
