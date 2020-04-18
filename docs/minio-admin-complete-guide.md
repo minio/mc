@@ -852,3 +852,40 @@ Key: test-key-1
  	 • Encryption ✔
  	 • Decryption ✔
 ```
+
+<a name="quota"></a>
+### Command `quota` - Set/Get bucket quota
+`quota` command to set or get bucket quota on MinIO server.
+
+```
+NAME:
+  mc admin bucket quota - manage bucket quota
+
+USAGE:
+  mc admin bucket quota TARGET [--fifo | --hard] [QUOTA]
+
+QUOTA
+  quota accepts human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
+
+```
+*Example: List bucket quota on bucket 'mybucket' on MinIO.*
+
+```
+mc admin bucket quota myminio/mybucket
+```
+
+*Example: Set a hard bucket quota of 64Mb for bucket 'mybucket' on MinIO.*
+
+```
+mc admin bucket quota myminio/mybucket --hard 64MB
+```
+
+*Example: Reset bucket quota configured for bucket 'mybucket' on MinIO.*
+
+```
+mc admin bucket quota myminio/mybucket --clear
+```
