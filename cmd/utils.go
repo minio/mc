@@ -39,7 +39,7 @@ import (
 
 func isErrIgnored(err *probe.Error) (ignored bool) {
 	// For all non critical errors we can continue for the remaining files.
-	switch err.ToGoError().(type) {
+	switch e := err.ToGoError().(type) {
 	// Handle these specifically for filesystem related errors.
 	case BrokenSymlink, TooManyLevelsSymlink, PathNotFound:
 		ignored = true
@@ -48,6 +48,8 @@ func isErrIgnored(err *probe.Error) (ignored bool) {
 		ignored = true
 	case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid:
 		ignored = true
+	case minio.ErrorResponse:
+		ignored = strings.Contains(e.Error(), "The specified key does not exist")
 	default:
 		ignored = false
 	}
