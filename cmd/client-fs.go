@@ -512,22 +512,29 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh
 		defer close(errorCh)
 
 		for content := range contentCh {
+			if content.Err != nil {
+				errorCh <- content.Err
+				continue
+			}
 			name := content.URL.Path
 			// Add partSuffix for incomplete uploads.
 			if isIncomplete {
 				name += partSuffix
 			}
-			if e := deleteFile(name); e != nil {
-				if os.IsPermission(e) {
-					// Ignore permission error.
-					errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
-				} else if os.IsNotExist(e) && isRemoveBucket {
-					// ignore PathNotFound for dir removal.
-					return
-				} else {
-					errorCh <- probe.NewError(e)
-					return
-				}
+			e := deleteFile(name)
+			if e == nil {
+				continue
+			}
+			if os.IsNotExist(e) && isRemoveBucket {
+				// ignore PathNotFound for dir removal.
+				return
+			}
+			if os.IsPermission(e) {
+				// Ignore permission error.
+				errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+			} else {
+				errorCh <- probe.NewError(e)
+				return
 			}
 		}
 	}()
