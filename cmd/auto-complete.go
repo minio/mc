@@ -228,6 +228,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/event/list":   aliasCompleter,
 	"/event/remove": aliasCompleter,
 
+	"/tag/list":   s3Completer,
+	"/tag/remove": s3Completer,
+	"/tag/set":    s3Completer,
+
 	"/share/download": s3Completer,
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,

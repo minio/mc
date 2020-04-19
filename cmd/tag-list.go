@@ -17,24 +17,21 @@
 package cmd
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/bucket/object/tagging"
 	"github.com/minio/minio/pkg/console"
 )
 
 var tagListCmd = cli.Command{
 	Name:   "list",
-	Usage:  "list tags for an object",
+	Usage:  "list tags of a bucket or an object",
 	Action: mainListTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -55,142 +52,74 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} s3/testbucket/testobject
   2. List the tags assigned to an object in JSON format.
      {{.Prompt}} {{.HelpName}} --json s3/testbucket/testobject
-
+  3. List the tags assigned to a bucket.
+     {{.Prompt}} {{.HelpName}} s3/testbucket
+  4. List the tags assigned to a bucket in JSON format.
+     {{.Prompt}} {{.HelpName}} --json s3/testbucket
 `,
-}
-
-const (
-	tagMainHeader       string = "Main-Heading"
-	tagRowTheme         string = "Row-Header"
-	tagPrintMsgTheme    string = "Tag-PrintMsg"
-	tagPrintErrMsgTheme string = "Tag-PrintMsgErr"
-)
-
-type tagList struct {
-	Key   string `json:"Key"`
-	Value string `json:"Value"`
 }
 
 // tagListMessage structure for displaying tag
 type tagListMessage struct {
-	Tags   []tagList       `json:"tagset,omitempty"`
-	Status string          `json:"status"`
-	URL    string          `json:"url"`
-	TagObj tagging.Tagging `json:"-"`
+	Tags   map[string]string `json:"tagset,omitempty"`
+	Status string            `json:"status"`
+	URL    string            `json:"url"`
 }
 
 func (t tagListMessage) JSON() string {
 	tagJSONbytes, err := json.MarshalIndent(t, "", "  ")
-	tagJSONbytes = bytes.Replace(tagJSONbytes, []byte("\\u0026"), []byte("&"), -1)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+getTagObjectName(t.URL))
+	fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+t.URL)
 	return string(tagJSONbytes)
 }
 
 func (t tagListMessage) String() string {
-	return getFormattedTagList(getTagObjectName(t.URL), t.TagObj.TagSet.Tags)
-}
-
-// getTagListMessage parses the tags(string) and initializes the structure tagsetListMessage.
-// tags(string) is in the format key1=value1&key1=value2
-func getTagListMessage(tags tagging.Tagging, urlStr string) tagListMessage {
-	var t tagListMessage
-	var tagStr string
-	var kvPairStr []string
-	tagStr = strings.Replace(tags.String(), "\\u0026", "&", -1)
-	t.URL = urlStr
-	t.TagObj = tags
-	if tagStr != "" {
-		kvPairStr = strings.SplitN(tagStr, "&", -1)
-		t.Status = "success"
-	}
-	for _, kvPair := range kvPairStr {
-		kvPairSplit := splitStr(kvPair, "=", 2)
-		t.Tags = append(t.Tags, tagList{Key: kvPairSplit[0], Value: kvPairSplit[1]})
-	}
-
-	return t
-}
-
-func getObjTagging(urlStr string) tagging.Tagging {
-	clnt, pErr := newClient(urlStr)
-	if pErr != nil {
-		fatalIf(pErr.Trace(urlStr), "Unable to initialize target "+urlStr+". "+pErr.ToGoError().Error())
-	}
-	tagObj, pErr := clnt.GetObjectTagging()
-	fatalIf(pErr, "Failed to get tags for "+urlStr)
-
-	return tagObj
-}
-
-// Color scheme for tag display
-func setTagListColorScheme() {
-	console.SetColor(tagRowTheme, color.New(color.FgWhite))
-	console.SetColor(tagMainHeader, color.New(color.Bold, color.FgCyan))
-	console.SetColor(tagPrintMsgTheme, color.New(color.FgGreen))
-	console.SetColor(tagPrintErrMsgTheme, color.New(color.FgRed))
-}
-
-func checkListTagSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelp(ctx, "list")
-		os.Exit(globalErrorExitStatus)
-	}
-}
-
-func getTagObjectName(urlStr string) string {
-	if !strings.Contains(urlStr, "/") {
-		urlStr = filepath.ToSlash(urlStr)
-	}
-	splits := splitStr(urlStr, "/", 3)
-	object := splits[2]
-
-	return object
-}
-
-func getFormattedTagList(tagObjName string, kvpairs []tagging.Tag) string {
-	var tagListInfo string
-	padLen := len("Name")
-	for _, kv := range kvpairs {
-		if len(kv.Key) > padLen {
-			padLen = len(kv.Key)
+	keys := []string{}
+	maxKeyLen := 4 // len("Name")
+	for key := range t.Tags {
+		keys = append(keys, key)
+		if len(key) > maxKeyLen {
+			maxKeyLen = len(key)
 		}
 	}
-	padLen = listTagPaddingSpace(padLen)
-	objectName := fmt.Sprintf("%-*s:    %s\n", padLen, "Name", tagObjName)
-	tagListInfo += console.Colorize(tagMainHeader, objectName)
-	for idx := 0; idx < len(kvpairs); idx++ {
-		displayField := fmt.Sprintf("%-*s:    %s\n", padLen, kvpairs[idx].Key, kvpairs[idx].Value)
-		tagListInfo += console.Colorize(tagRowTheme, displayField)
-	}
-	return tagListInfo
-}
+	sort.Strings(keys)
 
-func listTagPaddingSpace(padLen int) int {
-	switch padLen % 4 {
-	case 0:
-		padLen += 4
-	case 1:
-		padLen += 3
-	case 2:
-		padLen += 2
-	case 3:
-		padLen += 5
+	maxKeyLen += 2 // add len(" :")
+	strs := []string{
+		fmt.Sprintf("%v%*v %v", console.Colorize("Name", "Name"), maxKeyLen-4, ":", console.Colorize("Name", t.URL)),
 	}
-	return padLen
+	for _, key := range keys {
+		strs = append(
+			strs,
+			fmt.Sprintf("%v%*v %v", console.Colorize("Key", key), maxKeyLen-len(key), ":", console.Colorize("Value", t.Tags[key])),
+		)
+	}
+
+	return strings.Join(strs, "\n")
 }
 
 func mainListTag(ctx *cli.Context) error {
-	checkListTagSyntax(ctx)
-	setTagListColorScheme()
-	args := ctx.Args()
-	objectURL := args.Get(0)
-	tagObj := getObjTagging(objectURL)
-	if len(tagObj.TagSet.Tags) == 0 {
-		errorIf(probe.NewError(errors.New("Tag(s) not set for "+objectURL)), "Failed to get tags.")
-		return exitStatus(globalErrorExitStatus)
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
 	}
-	var msg tagListMessage
-	msg = getTagListMessage(tagObj, objectURL)
-	printMsg(msg)
+
+	targetURL := ctx.Args().Get(0)
+	clnt, pErr := newClient(targetURL)
+	fatalIf(pErr, "Unable to initialize target "+targetURL)
+	tags, pErr := clnt.GetTags()
+	fatalIf(pErr, "Failed to get tags for "+targetURL)
+	tagMap := tags.ToMap()
+	if len(tagMap) == 0 {
+		fatalIf(probe.NewError(errors.New("The TagSet does not exist")), "Failed to get tags for "+targetURL)
+	}
+
+	console.SetColor("Name", color.New(color.Bold, color.FgCyan))
+	console.SetColor("Key", color.New(color.FgGreen))
+	console.SetColor("Value", color.New(color.FgYellow))
+
+	printMsg(tagListMessage{
+		Tags:   tagMap,
+		Status: "success",
+		URL:    targetURL,
+	})
 	return nil
 }
