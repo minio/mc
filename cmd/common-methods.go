@@ -424,10 +424,10 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	}
 
 	for k, v := range urls.SourceContent.UserMetadata {
-		metadata[k] = v
+		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 	for k, v := range urls.SourceContent.Metadata {
-		metadata[k] = v
+		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
 	// Optimize for server side copy if the host is same.
