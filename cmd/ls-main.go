@@ -91,7 +91,7 @@ func checkListSyntax(ctx *cli.Context) {
 	isIncomplete := ctx.Bool("incomplete")
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, false, nil)
+		_, _, err := url2Stat(url, false, nil)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
@@ -133,7 +133,7 @@ func mainList(ctx *cli.Context) error {
 
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 			var st *ClientContent
-			st, err = clnt.Stat(isIncomplete, false, false, nil)
+			st, err = clnt.Stat(isIncomplete, false, nil)
 			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)

@@ -212,7 +212,7 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a single file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool, preserve bool) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -238,7 +238,7 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB)
+	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
 	if isMvCmd && urls.Error == nil {
 		bgRemove(sourcePath)
 	}
@@ -489,19 +489,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					}
 				}
 
-				// If one needs to store the file system information by passing -a flag
-				if preserve := cli.Bool("preserve"); preserve {
-					attrValue, pErr := getFileAttrMeta(cpURLs, encKeyDB)
-					if pErr != nil {
-						errorIf(pErr, "Unable to fetch file meta info for %s", cpURLs.SourceAlias)
-						continue
-					}
-
-					if attrValue != "" {
-						cpURLs.TargetContent.Metadata["mc-attrs"] = attrValue
-					}
-				}
-
+				preserve := cli.Bool("preserve")
 				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
 				// Verify if previously copied, notify progress bar.
@@ -511,7 +499,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					}
 				} else {
 					queueCh <- func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd)
+						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
 					}
 				}
 			}

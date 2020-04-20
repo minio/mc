@@ -311,16 +311,6 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		}
 	}
 
-	if mj.isPreserve {
-		attrValue, pErr := getFileAttrMeta(sURLs, mj.encKeyDB)
-		if pErr != nil {
-			return sURLs.WithError(pErr)
-		}
-		if attrValue != "" {
-			sURLs.TargetContent.Metadata["mc-attrs"] = attrValue
-		}
-	}
-
 	// Initialize additional target user metadata.
 	sURLs.TargetContent.UserMetadata = mj.userMetadata
 
@@ -333,7 +323,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB)
+	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB, mj.isPreserve)
 }
 
 // Update progress status
@@ -379,11 +369,12 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc) {
+func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc, stopParallel func()) {
 	for {
 		select {
 		case event, ok := <-mj.watcher.Events():
 			if !ok {
+				stopParallel()
 				return
 			}
 
@@ -456,7 +447,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					}
 					shouldQueue := false
 					if !mj.isOverwrite {
-						_, err = targetClient.Stat(false, false, false, tgtSSE)
+						_, err = targetClient.Stat(false, false, tgtSSE)
 						if err == nil {
 							continue
 						} // doesn't exist
@@ -470,7 +461,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.status.AddCounts(1)
 						mirrorURL.TotalSize = mj.status.Get()
 						mirrorURL.TotalCount = mj.status.GetCounts()
-						mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
+						mj.queueCh <- func() URLs {
+							return mj.doMirror(ctx, cancelMirror, mirrorURL)
+						}
 					}
 					continue
 				}
@@ -479,10 +472,12 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
-						mj.statusCh <- mirrorURL.WithError(err)
+						mj.queueCh <- func() URLs {
+							return mirrorURL.WithError(err)
+						}
 						return
 					}
-					_, err = targetClient.Stat(false, false, false, tgtSSE)
+					_, err = targetClient.Stat(false, false, tgtSSE)
 					if err == nil {
 						if mirrorURL.SourceContent.Retention {
 							shouldQueue = true
@@ -500,7 +495,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					mj.status.AddCounts(1)
 					mirrorURL.TotalSize = mj.status.Get()
 					mirrorURL.TotalCount = mj.status.GetCounts()
-					mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
+					mj.queueCh <- func() URLs {
+						return mj.doMirror(ctx, cancelMirror, mirrorURL)
+					}
 				}
 			} else if event.Type == EventRemove {
 				if strings.Contains(event.UserAgent, uaMirrorAppName) {
@@ -516,7 +513,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 				mirrorURL.TotalCount = mj.status.GetCounts()
 				mirrorURL.TotalSize = mj.status.Get()
 				if mirrorURL.TargetContent != nil && (mj.isRemove || mj.multiMasterEnable) {
-					mj.statusCh <- mj.doRemove(mirrorURL)
+					mj.queueCh <- func() URLs {
+						return mj.doRemove(mirrorURL)
+					}
 				}
 			}
 
@@ -527,11 +526,11 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					"Unable to Watch on source, perhaps source doesn't support Watching for events")
 				return
 			}
-			mj.statusCh <- URLs{Error: err}
-			return
+			mj.queueCh <- func() URLs {
+				return URLs{Error: err}
+			}
 		case <-globalContext.Done():
-			return
-		case <-mj.stopCh:
+			stopParallel()
 			return
 		}
 	}
@@ -554,9 +553,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok {
-				if stopParallel != nil {
-					stopParallel()
-				}
+				stopParallel()
 				return
 			}
 			if sURLs.Error != nil {
@@ -594,16 +591,10 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 		case <-globalContext.Done():
-			if stopParallel != nil {
-				stopParallel()
-			}
-			cancelMirror()
+			stopParallel()
 			return
 		case <-mj.stopCh:
-			if stopParallel != nil {
-				stopParallel()
-			}
-			cancelMirror()
+			stopParallel()
 			return
 		}
 	}
@@ -619,7 +610,12 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mj.watchMirror(ctx, cancelMirror)
+			stopParallel := func() {
+				close(mj.queueCh)
+				mj.parallel.wait()
+				cancelMirror()
+			}
+			mj.watchMirror(ctx, cancelMirror, stopParallel)
 		}()
 	}
 
@@ -628,8 +624,11 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	go func() {
 		defer wg.Done()
 		stopParallel := func() {
-			close(mj.queueCh)
-			mj.parallel.wait()
+			if !mj.isWatch {
+				close(mj.queueCh)
+				mj.parallel.wait()
+				cancelMirror()
+			}
 		}
 		// startMirror locks and blocks itself.
 		mj.startMirror(ctx, cancelMirror, stopParallel)

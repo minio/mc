@@ -255,10 +255,12 @@ github.com/minio/highwayhash v1.0.0 h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2
 github.com/minio/highwayhash v1.0.0/go.mod h1:xQboMTeM9nY9v/LlAOxFctujiv5+Aq2hR5dxBpaMbdc=
 github.com/minio/lsync v1.0.1 h1:AVvILxA976xc27hstd1oR+X9PQG0sPSom1MNb1ImfUs=
 github.com/minio/lsync v1.0.1/go.mod h1:tCFzfo0dlvdGl70IT4IAK/5Wtgb0/BrTmo/jE8pArKA=
-github.com/minio/minio v0.0.0-20200414235329-5c11a46412f3 h1:Gm6jno7M0sqIhqe3bu2dfGH+yiIulNofjmtdltvLtvc=
-github.com/minio/minio v0.0.0-20200414235329-5c11a46412f3/go.mod h1:v8oQPMMaTkjDwp5cOz1WCElA4Ik+X+0y4On+VMk0fis=
+github.com/minio/minio v0.0.0-20200415191640-bde0f444dbab h1:9hlqghJl3e3HorXa6ADWsz6ECq790t4iQs07VD9JctM=
+github.com/minio/minio v0.0.0-20200415191640-bde0f444dbab/go.mod h1:v8oQPMMaTkjDwp5cOz1WCElA4Ik+X+0y4On+VMk0fis=
 github.com/minio/minio-go/v6 v6.0.53 h1:8jzpwiOzZ5Iz7/goFWqNZRICbyWYShbb5rARjrnSCNI=
 github.com/minio/minio-go/v6 v6.0.53/go.mod h1:DIvC/IApeHX8q1BAMVCXSXwpmrmM+I+iBvhvztQorfI=
+github.com/minio/minio-go/v6 v6.0.54-0.20200417072347-d624b8a802c5 h1:oYoTfDzXSBQiSyUXECIJrFjTlIV0mFH1kGNPEf6jb6Q=
+github.com/minio/minio-go/v6 v6.0.54-0.20200417072347-d624b8a802c5/go.mod h1:DIvC/IApeHX8q1BAMVCXSXwpmrmM+I+iBvhvztQorfI=
 github.com/minio/parquet-go v0.0.0-20200414234858-838cfa8aae61/go.mod h1:4trzEJ7N1nBTd5Tt7OCZT5SEin+WiAXpdJ/WgPkESA8=
 github.com/minio/sha256-simd v0.1.1 h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=
 github.com/minio/sha256-simd v0.1.1/go.mod h1:B5e1o+1/KgNmWrSQK08Y6Z1Vb5pwIktudl0J58iy0KM=

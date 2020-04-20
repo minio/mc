@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -114,6 +115,9 @@ func checkRbSyntax(ctx *cli.Context) {
 
 // deletes a bucket and all its contents
 func deleteBucket(url string) *probe.Error {
+	ctx, cancelCopy := context.WithCancel(globalContext)
+	defer cancelCopy()
+
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -124,61 +128,47 @@ func deleteBucket(url string) *probe.Error {
 	contentCh := make(chan *ClientContent)
 	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, false, contentCh)
 
-	for content := range clnt.List(true, false, false, DirLast) {
-		if content.Err != nil {
-			switch content.Err.ToGoError().(type) {
-			case PathInsufficientPermission:
-				errorIf(content.Err.Trace(url), "Failed to remove `"+url+"`.")
-				// Ignore Permission error.
+	go func() {
+		defer close(contentCh)
+		for content := range clnt.List(true, false, false, DirLast) {
+			if content.Err != nil {
+				contentCh <- content
 				continue
 			}
-			close(contentCh)
-			return content.Err
-		}
-		urlString := content.URL.Path
 
-		sent := false
-		for !sent {
+			urlString := content.URL.Path
+
 			select {
 			case contentCh <- content:
-				sent = true
-			case pErr := <-errorCh:
-				switch pErr.ToGoError().(type) {
-				case PathInsufficientPermission:
-					errorIf(pErr.Trace(urlString), "Failed to remove `"+urlString+"`.")
-					// Ignore Permission error.
-					continue
-				}
-				close(contentCh)
-				return pErr
+			case <-ctx.Done():
+				return
+			}
+
+			// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
+			// The rmMessage needs to be printed only for actual buckets being deleted and not objects.
+			tgt := strings.TrimPrefix(urlString, string(filepath.Separator))
+			if !strings.Contains(tgt, string(filepath.Separator)) && tgt != targetAlias {
+				printMsg(removeBucketMessage{
+					Bucket: targetAlias + urlString, Status: "success",
+				})
 			}
 		}
-		// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
-		// The rmMessage needs to be printed only for actual buckets being deleted and not objects.
-		tgt := strings.TrimPrefix(urlString, string(filepath.Separator))
-		if !strings.Contains(tgt, string(filepath.Separator)) && tgt != targetAlias {
-			printMsg(removeBucketMessage{
-				Bucket: targetAlias + urlString, Status: "success",
-			})
+
+		// Remove the given url since the user will always want to remove it.
+		alias, _ := url2Alias(targetURL)
+		if alias != "" {
+			contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 		}
-	}
+	}()
 
-	// Remove the given url since the user will always want to remove it.
-	alias, _ := url2Alias(targetURL)
-	if alias != "" {
-		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
-	}
-
-	// Finish removing and print all the remaining errors
-	close(contentCh)
-	for pErr := range errorCh {
-		switch pErr.ToGoError().(type) {
+	for perr := range errorCh {
+		switch perr.ToGoError().(type) {
 		case PathInsufficientPermission:
-			errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
+			errorIf(perr.Trace(url), "Failed to remove `"+url+"`.")
 			// Ignore Permission error.
 			continue
 		}
-		return pErr
+		return perr
 	}
 	return nil
 }
@@ -215,7 +205,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
-		_, err = clnt.Stat(false, false, false, nil)
+		_, err = clnt.Stat(false, false, nil)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
@@ -226,6 +216,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 
 			}
 		}
+
 		isEmpty := true
 		for range clnt.List(true, false, false, DirNone) {
 			isEmpty = false

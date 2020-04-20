@@ -119,7 +119,7 @@ func checkTreeSyntax(ctx *cli.Context) {
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(url, false, false, nil); err != nil && !isURLPrefixExists(url, false) {
+		if _, _, err := url2Stat(url, false, nil); err != nil && !isURLPrefixExists(url, false) {
 			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 		}
 	}

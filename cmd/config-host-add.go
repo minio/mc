@@ -26,6 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6"
 	"github.com/minio/minio/pkg/console"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -166,39 +167,44 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		Insecure:  globalInsecure,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
-		Signature: "s3v4",
 		HostURL:   urlJoinPath(url, probeBucketName),
 		Debug:     globalDebug,
 	}
 
-	s3Client, err := S3New(s3Config)
-	if err != nil {
-		return "", err
-	}
-
-	if _, err = s3Client.Stat(false, false, false, nil); err != nil {
-		switch err.ToGoError().(type) {
-		case BucketDoesNotExist:
-			// Bucket doesn't exist, means signature probing worked V4.
-		default:
-			// Attempt with signature v2, since v4 seem to have failed.
-			s3Config.Signature = "s3v2"
-			s3Client, err = S3New(s3Config)
-			if err != nil {
-				return "", err
-			}
-			if _, err = s3Client.Stat(false, false, false, nil); err != nil {
-				switch err.ToGoError().(type) {
-				case BucketDoesNotExist:
-					// Bucket doesn't exist, means signature probing worked with V2.
-				default:
-					return "", err
-				}
-			}
+	probeSignatureType := func(stype string) (string, *probe.Error) {
+		s3Config.Signature = stype
+		s3Client, err := S3New(s3Config)
+		if err != nil {
+			return "", err
 		}
+
+		if _, err := s3Client.Stat(false, false, nil); err != nil {
+			e := err.ToGoError()
+			if _, ok := e.(BucketDoesNotExist); ok {
+				// Bucket doesn't exist, means signature probing worked successfully.
+				return stype, nil
+			}
+			// AccessDenied means Stat() is not allowed but credentials are valid.
+			// AccessDenied is only returned when policy doesn't allow HeadBucket
+			// operations.
+			if minio.ToErrorResponse(err.ToGoError()).Code == "AccessDenied" {
+				return stype, nil
+			}
+
+			// For any other errors we fail.
+			return "", err.Trace(s3Config.Signature)
+		}
+		return stype, nil
 	}
 
-	return s3Config.Signature, nil
+	stype, err := probeSignatureType("s3v4")
+	if err != nil {
+		if stype, err = probeSignatureType("s3v2"); err != nil {
+			return "", err.Trace("s3v4", "s3v2")
+		}
+		return stype, nil
+	}
+	return stype, nil
 }
 
 // BuildS3Config constructs an S3 Config and does

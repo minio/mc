@@ -107,7 +107,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(aliasURL, false, false, keys)
+	_, targetContent, err := url2Stat(aliasURL, false, keys)
 	if err == nil {
 		return targetContent.Type.IsDir()
 	}
@@ -148,7 +148,7 @@ func getSourceStreamMetadataFromURL(urlStr string, encKeyDB map[string][]prefixS
 		return nil, nil, err.Trace(urlStr)
 	}
 	sseKey := getSSE(urlStr, encKeyDB[alias])
-	return getSourceStream(alias, urlStrFull, true, sseKey)
+	return getSourceStream(alias, urlStrFull, true, sseKey, false)
 }
 
 // getSourceStreamFromURL gets a reader from URL.
@@ -158,12 +158,59 @@ func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) 
 		return nil, err.Trace(urlStr)
 	}
 	sse := getSSE(urlStr, encKeyDB[alias])
-	reader, _, err = getSourceStream(alias, urlStrFull, false, sse)
+	reader, _, err = getSourceStream(alias, urlStrFull, false, sse, false)
 	return reader, err
 }
 
+func probeContentType(reader io.Reader) (ctype string, err *probe.Error) {
+	ctype = "application/octet-stream"
+	// Read a chunk to decide between utf-8 text and binary
+	if s, ok := reader.(io.Seeker); ok {
+		var buf [512]byte
+		n, _ := io.ReadFull(reader, buf[:])
+		if n <= 0 {
+			return ctype, nil
+		}
+		kind, e := filetype.Match(buf[:n])
+		if e != nil {
+			return ctype, probe.NewError(e)
+		}
+		// rewind to output whole file
+		if _, e = s.Seek(0, io.SeekStart); e != nil {
+			return ctype, probe.NewError(e)
+		}
+		if kind.MIME.Value != "" {
+			ctype = kind.MIME.Value
+		}
+	}
+	return ctype, nil
+}
+
+// Verify if reader is a generic ReaderAt
+func isReadAt(reader io.Reader) (ok bool) {
+	var v *os.File
+	v, ok = reader.(*os.File)
+	if ok {
+		// Stdin, Stdout and Stderr all have *os.File type
+		// which happen to also be io.ReaderAt compatible
+		// we need to add special conditions for them to
+		// be ignored by this function.
+		for _, f := range []string{
+			"/dev/stdin",
+			"/dev/stdout",
+			"/dev/stderr",
+		} {
+			if f == v.Name() {
+				ok = false
+				break
+			}
+		}
+	}
+	return
+}
+
 // getSourceStream gets a reader from URL.
-func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.ServerSide) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
+func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.ServerSide, preserve bool) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
@@ -172,40 +219,49 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
+
 	metadata = make(map[string]string)
 	if fetchStat {
-		st, err := sourceClnt.Stat(false, true, false, sse)
-		if err != nil {
-			return nil, nil, err.Trace(alias, urlStr)
+		var st *ClientContent
+		mo, mok := reader.(*minio.Object)
+		if mok {
+			oinfo, e := mo.Stat()
+			if e != nil {
+				return nil, nil, err.Trace(alias, urlStr)
+			}
+			st = &ClientContent{}
+			st.Time = oinfo.LastModified
+			st.Size = oinfo.Size
+			st.ETag = oinfo.ETag
+			st.Expires = oinfo.Expires
+			st.Type = os.FileMode(0664)
+			st.Metadata = map[string]string{}
+			for k := range oinfo.Metadata {
+				st.Metadata[k] = oinfo.Metadata.Get(k)
+			}
+			st.ETag = oinfo.ETag
+		} else {
+			st, err = sourceClnt.Stat(false, preserve, sse)
+			if err != nil {
+				return nil, nil, err.Trace(alias, urlStr)
+			}
 		}
+
 		for k, v := range st.Metadata {
 			if httpguts.ValidHeaderFieldName(k) &&
 				httpguts.ValidHeaderFieldValue(v) {
 				metadata[k] = v
 			}
 		}
-		// If our reader is a seeker try to detect content-type further.
-		if s, ok := reader.(io.ReadSeeker); ok {
-			// All unrecognized files have `application/octet-stream`
-			// So we continue our detection process.
-			if ctype := metadata["Content-Type"]; ctype == "application/octet-stream" {
-				// Read a chunk to decide between utf-8 text and binary
-				var buf [512]byte
-				n, _ := io.ReadFull(reader, buf[:])
-				if n > 0 {
-					kind, e := filetype.Match(buf[:n])
-					if e != nil {
-						return nil, nil, probe.NewError(e)
-					}
-					// rewind to output whole file
-					if _, e := s.Seek(0, io.SeekStart); e != nil {
-						return nil, nil, probe.NewError(e)
-					}
-					ctype = kind.MIME.Value
-					if ctype == "" {
-						ctype = "application/octet-stream"
-					}
-					metadata["Content-Type"] = ctype
+
+		// All unrecognized files have `application/octet-stream`
+		// So we continue our detection process.
+		if ctype := metadata["Content-Type"]; ctype == "application/octet-stream" {
+			// Continue probing content-type if its filesystem stream.
+			if !mok {
+				metadata["Content-Type"], err = probeContentType(reader)
+				if err != nil {
+					return nil, nil, err.Trace(alias, urlStr)
 				}
 			}
 		}
@@ -246,9 +302,16 @@ func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold 
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
-	metadata[AmzObjectLockMode] = mode
-	metadata[AmzObjectLockRetainUntilDate] = until
-	metadata[AmzObjectLockLegalHold] = legalHold
+
+	if mode != "" {
+		metadata[AmzObjectLockMode] = mode
+	}
+	if until != "" {
+		metadata[AmzObjectLockRetainUntilDate] = until
+	}
+	if legalHold != "" {
+		metadata[AmzObjectLockLegalHold] = legalHold
+	}
 	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, disableMultipart)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
@@ -305,13 +368,13 @@ func filterMetadata(metadata map[string]string) map[string]string {
 
 // getAllMetadata - returns a map of user defined function
 // by combining the usermetadata of object and values passed by attr keyword
-func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs) (map[string]string, *probe.Error) {
+func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs, preserve bool) (map[string]string, *probe.Error) {
 	metadata := make(map[string]string)
 	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURLStr)
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
-	st, err := sourceClnt.Stat(false, true, false, srcSSE)
+	st, err := sourceClnt.Stat(false, preserve, srcSSE)
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
@@ -330,7 +393,7 @@ func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide,
 // uploadSourceToTargetURL - uploads to targetURL from source.
 // optionally optimizes copy for object sizes <= 5GiB by using
 // server side copy operation.
-func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair) URLs {
+func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair, preserve bool) URLs {
 	sourceAlias := urls.SourceAlias
 	sourceURL := urls.SourceContent.URL
 	targetAlias := urls.TargetAlias
@@ -360,18 +423,19 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		}
 	}
 
+	for k, v := range urls.SourceContent.UserMetadata {
+		metadata[http.CanonicalHeaderKey(k)] = v
+	}
+	for k, v := range urls.SourceContent.Metadata {
+		metadata[http.CanonicalHeaderKey(k)] = v
+	}
+
 	// Optimize for server side copy if the host is same.
 	if sourceAlias == targetAlias {
-		for k, v := range urls.SourceContent.UserMetadata {
-			metadata[k] = v
-		}
-		for k, v := range urls.SourceContent.Metadata {
-			metadata[k] = v
-		}
 		// If no metadata populated already by the caller
 		// just do a Stat() to obtain the metadata.
 		if len(metadata) == 0 {
-			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
+			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
 			if err != nil {
 				return urls.WithError(err.Trace(sourceURL.String()))
 			}
@@ -385,23 +449,27 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, mode, until, urls.TargetContent.LegalHold, length,
 			progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart)
 	} else {
-		if len(metadata) == 0 {
-			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
-			if err != nil {
-				return urls.WithError(err.Trace(sourceURL.String()))
-			}
-		}
 		if urls.SourceContent.Retention {
+			// If no metadata populated already by the caller
+			// just do a Stat() to obtain the metadata.
+			if len(metadata) == 0 {
+				metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
+				if err != nil {
+					return urls.WithError(err.Trace(sourceURL.String()))
+				}
+			}
+
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 		var reader io.ReadCloser
 		// Proceed with regular stream copy.
-		reader, metadata, err = getSourceStream(sourceAlias, sourceURL.String(), true, srcSSE)
+		reader, metadata, err = getSourceStream(sourceAlias, sourceURL.String(), true, srcSSE, preserve)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 		defer reader.Close()
+
 		// Get metadata from target content as well
 		for k, v := range urls.TargetContent.Metadata {
 			metadata[k] = v
@@ -410,8 +478,16 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		for k, v := range urls.TargetContent.UserMetadata {
 			metadata[k] = v
 		}
-		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until, urls.TargetContent.LegalHold, reader, length, filterMetadata(metadata),
-			progress, tgtSSE, urls.DisableMultipart)
+
+		if isReadAt(reader) {
+			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
+				urls.TargetContent.LegalHold, reader, length, filterMetadata(metadata),
+				progress, tgtSSE, urls.DisableMultipart)
+		} else {
+			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
+				urls.TargetContent.LegalHold, io.LimitReader(reader, length),
+				length, filterMetadata(metadata), progress, tgtSSE, urls.DisableMultipart)
+		}
 	}
 	if err != nil {
 		return urls.WithError(err.Trace(sourceURL.String()))
@@ -463,32 +539,4 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
 	return newClientFromAlias(alias, urlStrFull)
-}
-
-// Return the file attribute value present in metadata
-func getFileAttrMeta(sURLs URLs, encKeyDB map[string][]prefixSSEPair) (string, *probe.Error) {
-	sourceAlias := sURLs.SourceAlias
-	sourceURL := sURLs.SourceContent.URL
-	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sURLs.SourceContent.URL.Path))
-	srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
-
-	statSourceURL := sURLs.SourceAlias + getKey(sURLs.SourceContent)
-	srcClt, err := newClient(statSourceURL)
-	if err != nil {
-		return "", err.Trace(sourceURL.String())
-	}
-
-	sourceMeta, err := srcClt.Stat(false, true, true, srcSSE)
-	if err != nil {
-		return "", err.Trace(sourceURL.String())
-	}
-	attrValue := ""
-	if sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"] != "" {
-		attrValue = sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"]
-	} else if sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"] != "" {
-		attrValue = sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"]
-	} else if sourceMeta.Metadata["mc-attrs"] != "" {
-		attrValue = sourceMeta.Metadata["mc-attrs"]
-	}
-	return attrValue, nil
 }

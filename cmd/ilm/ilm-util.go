@@ -57,7 +57,7 @@ func splitStr(path, sep string, n int) []string {
 }
 
 // Align text in label to left, pad with spaces.
-func getLeftAlgined(label string, maxLen int) string {
+func getLeftAligned(label string, maxLen int) string {
 	const toPadWith string = " "
 	lblLth := len(label)
 	length := maxLen - lblLth
@@ -81,8 +81,7 @@ func getRightAligned(label string, maxLen int) string {
 }
 
 // RemoveILMRule - Remove the ILM rule (with ilmID) from the configuration in XML that is provided.
-func RemoveILMRule(lfcInfoXML string, ilmID string) (string, error) {
-	var err error
+func RemoveILMRule(lfcInfoXML string, ilmID string) (ilmXML string, err error) {
 	var lfcInfo LifecycleConfiguration
 	var foundIdx int
 	var marshalBytes []byte
@@ -105,17 +104,21 @@ func RemoveILMRule(lfcInfoXML string, ilmID string) (string, error) {
 		idx++
 	}
 	if !ruleFound {
-		return "", errors.New("Rule with id `" + ilmID + "` not found.")
-	}
-	if ruleFound && len(lfcInfo.Rules) > 1 {
+		ilmXML = ""
+		err = errors.New("Rule with id `" + ilmID + "` not found.")
+	} else if ruleFound && len(lfcInfo.Rules) > 1 {
 		lfcInfo.Rules = append(lfcInfo.Rules[:foundIdx], lfcInfo.Rules[foundIdx+1:]...)
+		if marshalBytes, err = xml.Marshal(lfcInfo); err == nil && ruleFound {
+			ilmXML = string(marshalBytes)
+			err = nil
+		} else if err != nil {
+			ilmXML = ""
+		}
 	} else if ruleFound && len(lfcInfo.Rules) == 1 {
-		return "", nil // Only rule. Remove all.
+		ilmXML = ""
+		err = nil
 	}
-	if marshalBytes, err = xml.Marshal(lfcInfo); err == nil && ruleFound {
-		return string(marshalBytes), nil
-	}
-	return "", err
+	return ilmXML, err
 
 }
 
@@ -302,7 +305,7 @@ func validateTranDays(rule LifecycleRule) error {
 	return nil
 }
 
-// Amazon S3 requires atleast one action for a rule to be added.
+// Amazon S3 requires a minimum of one action for a rule to be added.
 func validateRuleAction(rule LifecycleRule) error {
 	expirySet := (rule.Expiration != nil)
 	transitionSet := (rule.Transition != nil)

@@ -142,7 +142,7 @@ func getAlignedText(label string, align int, columnWidth int) string {
 	cellLabel := blankCell
 	switch align {
 	case leftAlign:
-		cellLabel = getLeftAlgined(label, columnWidth)
+		cellLabel = getLeftAligned(label, columnWidth)
 	case centerAlign:
 		cellLabel = getCenterAligned(label, columnWidth)
 	case rightAlign:
@@ -191,7 +191,7 @@ func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts s
 		if len(cellInfo.multLabels[0]) > (cellInfo.columnWidth - 3) { // 2 dots & 1 space for left-alignment
 			cellLabel = cellLabel[:(cellInfo.columnWidth-5)] + ".."
 		}
-		(*rowArr)[colIdx] = getLeftAlgined(cellLabel, cellInfo.columnWidth)
+		(*rowArr)[colIdx] = getLeftAligned(cellLabel, cellInfo.columnWidth)
 	}
 
 	for index := 1; index < multLth; index++ {
@@ -202,7 +202,7 @@ func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts s
 				if len(cellInfo.multLabels[index]) > (cellInfo.columnWidth - 3) {
 					cellLabel = cellLabel[:(cellInfo.columnWidth-5)] + ".."
 				}
-				row[v] = getLeftAlgined(cellLabel, cellInfo.columnWidth)
+				row[v] = getLeftAligned(cellLabel, cellInfo.columnWidth)
 			} else {
 				var width int
 				var ok bool
@@ -284,8 +284,8 @@ func getTransitionDate(rule LifecycleRule) string {
 func getStorageClassName(rule LifecycleRule) string {
 	storageClass := blankCell
 	transitionSet := (rule.Transition != nil)
-	strgClsAval := transitionSet && (rule.Transition.StorageClass != "")
-	if strgClsAval {
+	storageClassAvail := transitionSet && (rule.Transition.StorageClass != "")
+	if storageClassAvail {
 		storageClass = rule.Transition.StorageClass
 	}
 	return storageClass
