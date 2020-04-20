@@ -27,9 +27,9 @@ import (
 	"github.com/minio/minio/pkg/mimedb"
 )
 
-// url client url structure
-type clientURL struct {
-	Type            clientURLType
+// ClientURL url client url structure
+type ClientURL struct {
+	Type            ClientURLType
 	Scheme          string
 	Host            string
 	Path            string
@@ -37,8 +37,8 @@ type clientURL struct {
 	Separator       rune
 }
 
-// clientURLType - enum of different url types
-type clientURLType int
+// ClientURLType - enum of different url types
+type ClientURLType int
 
 // enum types
 const (
@@ -91,7 +91,7 @@ func getHost(authority string) (host string) {
 }
 
 // newClientURL returns an abstracted URL for filesystems and object storage.
-func newClientURL(urlStr string) *clientURL {
+func newClientURL(urlStr string) *ClientURL {
 	scheme, rest := getScheme(urlStr)
 	if strings.HasPrefix(rest, "//") {
 		// if rest has '//' prefix, skip them
@@ -102,7 +102,7 @@ func newClientURL(urlStr string) *clientURL {
 		}
 		host := getHost(authority)
 		if host != "" && (scheme == "http" || scheme == "https") {
-			return &clientURL{
+			return &ClientURL{
 				Scheme:          scheme,
 				Type:            objectStorage,
 				Host:            host,
@@ -112,7 +112,7 @@ func newClientURL(urlStr string) *clientURL {
 			}
 		}
 	}
-	return &clientURL{
+	return &ClientURL{
 		Type:      fileSystem,
 		Path:      rest,
 		Separator: filepath.Separator,
@@ -120,7 +120,7 @@ func newClientURL(urlStr string) *clientURL {
 }
 
 // joinURLs join two input urls and returns a url
-func joinURLs(url1, url2 *clientURL) *clientURL {
+func joinURLs(url1, url2 *ClientURL) *ClientURL {
 	var url1Path, url2Path string
 	url1Path = filepath.ToSlash(url1.Path)
 	url2Path = filepath.ToSlash(url2.Path)
@@ -133,7 +133,7 @@ func joinURLs(url1, url2 *clientURL) *clientURL {
 }
 
 // String convert URL into its canonical form.
-func (u clientURL) String() string {
+func (u ClientURL) String() string {
 	var buf bytes.Buffer
 	// if fileSystem no translation needed, return as is.
 	if u.Type == fileSystem {
@@ -171,7 +171,7 @@ func urlJoinPath(url1, url2 string) string {
 }
 
 // url2Stat returns stat info for URL.
-func url2Stat(urlStr string, isFetchMeta, fileAttr bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *clientContent, err *probe.Error) {
+func url2Stat(urlStr string, fileAttr bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -179,7 +179,7 @@ func url2Stat(urlStr string, isFetchMeta, fileAttr bool, encKeyDB map[string][]p
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(false, isFetchMeta, fileAttr, sse)
+	content, err = client.Stat(false, fileAttr, sse)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}

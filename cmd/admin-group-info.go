@@ -66,7 +66,7 @@ func mainAdminGroupInfo(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	group := args.Get(1)
-	gd, err1 := client.GetGroupDescription(group)
+	gd, err1 := client.GetGroupDescription(globalContext, group)
 	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group info")
 
 	printMsg(groupMessage{

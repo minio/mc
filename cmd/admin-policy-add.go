@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 
@@ -25,6 +26,7 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
+	iampolicy "github.com/minio/minio/pkg/iam/policy"
 )
 
 var adminPolicyAddCmd = cli.Command{
@@ -64,17 +66,19 @@ func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 // userPolicyMessage container for content message structure
 type userPolicyMessage struct {
 	op          string
-	Status      string `json:"status"`
-	Policy      string `json:"policy,omitempty"`
-	PolicyJSON  []byte `json:"policyJSON,omitempty"`
-	UserOrGroup string `json:"userOrGroup,omitempty"`
-	IsGroup     bool   `json:"isGroup"`
+	Status      string            `json:"status"`
+	Policy      string            `json:"policy,omitempty"`
+	PolicyJSON  *iampolicy.Policy `json:"policyJSON,omitempty"`
+	UserOrGroup string            `json:"userOrGroup,omitempty"`
+	IsGroup     bool              `json:"isGroup"`
 }
 
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
-		return string(u.PolicyJSON)
+		buf, e := json.MarshalIndent(u.PolicyJSON, "", " ")
+		fatalIf(probe.NewError(e), "Unable to parse policy")
+		return string(buf)
 	case "list":
 		policyFieldMaxLen := 20
 		// Create a new pretty table with cols configuration
@@ -121,7 +125,10 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	fatalIf(probe.NewError(client.AddCannedPolicy(args.Get(1), string(policy))).Trace(args...), "Cannot add new policy")
+	iamp, e := iampolicy.ParseConfig(bytes.NewReader(policy))
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse the input policy")
+
+	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), iamp)).Trace(args...), "Unable to add new policy")
 
 	printMsg(userPolicyMessage{
 		op:     "add",

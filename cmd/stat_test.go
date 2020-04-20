@@ -18,41 +18,50 @@ package cmd
 
 import (
 	"os"
+	"reflect"
 	"strings"
+	"testing"
 	"time"
-
-	. "gopkg.in/check.v1"
 )
 
-func (s *TestSuite) TestParseStat(c *C) {
+func TestParseStat(t *testing.T) {
 	localTime := time.Unix(12001, 0).UTC()
 	testCases := []struct {
-		content     clientContent
+		content     ClientContent
 		targetAlias string
 	}{
-		{clientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, EncryptionHeaders: map[string]string{}, Expires: time.Now()},
-			"play"},
-		{clientContent{URL: *newClientURL("https://play.min.io/testbucket"), Size: 500, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, EncryptionHeaders: map[string]string{}, Expires: time.Unix(0, 0).UTC()},
-			"play"},
-		{clientContent{URL: *newClientURL("https://s3.amazonaws.com/yrdy"), Size: 0, Time: localTime, Type: 0644, ETag: "abcdefasaas", Metadata: map[string]string{}, EncryptionHeaders: map[string]string{}},
-			"s3"},
-		{clientContent{URL: *newClientURL("https://play.min.io/yrdy"), Size: 10000, Time: localTime, Type: 0644, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, EncryptionHeaders: map[string]string{"X-Amz-Iv": "test", "X-Amz-Matdesc": "abcd"}},
-			"play"},
+		{ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Now()}, "play"},
+		{ClientContent{URL: *newClientURL("https://play.min.io/testbucket"), Size: 500, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Unix(0, 0).UTC()}, "play"},
+		{ClientContent{URL: *newClientURL("https://s3.amazonaws.com/yrdy"), Size: 0, Time: localTime, Type: 0644, ETag: "abcdefasaas", Metadata: map[string]string{}}, "s3"},
+		{ClientContent{URL: *newClientURL("https://play.min.io/yrdy"), Size: 10000, Time: localTime, Type: 0644, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}}, "play"},
 	}
 	for _, testCase := range testCases {
-		statMsg := parseStat(&testCase.content)
-		c.Assert(testCase.content.Metadata, DeepEquals, statMsg.Metadata)
-		c.Assert(testCase.content.EncryptionHeaders, DeepEquals, statMsg.EncryptionHeaders)
-		c.Assert(testCase.content.Size, Equals, statMsg.Size)
-		c.Assert(testCase.content.Expires, Equals, statMsg.Expires)
-		c.Log(statMsg.Type)
-		if testCase.content.Type.IsRegular() {
-			c.Assert(statMsg.Type, Equals, "file")
-		} else {
-			c.Assert(statMsg.Type, Equals, "folder")
-		}
-		etag := strings.TrimPrefix(testCase.content.ETag, "\"")
-		etag = strings.TrimSuffix(etag, "\"")
-		c.Assert(etag, Equals, statMsg.ETag)
+		testCase := testCase
+		t.Run("", func(t *testing.T) {
+			statMsg := parseStat(&testCase.content)
+			if !reflect.DeepEqual(testCase.content.Metadata, statMsg.Metadata) {
+				t.Errorf("Expecting %s, got %s", testCase.content.Metadata, statMsg.Metadata)
+			}
+			if testCase.content.Size != statMsg.Size {
+				t.Errorf("Expecting %d, got %d", testCase.content.Size, statMsg.Size)
+			}
+			if testCase.content.Expires != statMsg.Expires {
+				t.Errorf("Expecting %s, got %s", testCase.content.Expires, statMsg.Expires)
+			}
+			if testCase.content.Type.IsRegular() {
+				if statMsg.Type != "file" {
+					t.Errorf("Expecting file, got %s", statMsg.Type)
+				}
+			} else {
+				if statMsg.Type != "folder" {
+					t.Errorf("Expecting folder, got %s", statMsg.Type)
+				}
+			}
+			etag := strings.TrimPrefix(testCase.content.ETag, "\"")
+			etag = strings.TrimSuffix(etag, "\"")
+			if etag != statMsg.ETag {
+				t.Errorf("Expecting %s, got %s", etag, statMsg.ETag)
+			}
+		})
 	}
 }

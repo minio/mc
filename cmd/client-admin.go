@@ -31,8 +31,8 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
-// newAdminFactory encloses New function with client cache.
-func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) {
+// NewAdminFactory encloses New function with client cache.
+func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) {
 	clientCache := make(map[uint32]*madmin.AdminClient)
 	mutex := &sync.Mutex{}
 
@@ -71,7 +71,13 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			}
 
 			// Keep TLS config.
-			tlsConfig := &tls.Config{RootCAs: globalRootCAs}
+			tlsConfig := &tls.Config{
+				RootCAs: globalRootCAs,
+				// Can't use SSLv3 because of POODLE and BEAST
+				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+				// Can't use TLSv1.1 because of RC4 cipher usage
+				MinVersion: tls.VersionTLS12,
+			}
 			if config.Insecure {
 				tlsConfig.InsecureSkipVerify = true
 			}
@@ -79,14 +85,21 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			var transport http.RoundTripper = &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
+					Timeout:   10 * time.Second,
+					KeepAlive: 15 * time.Second,
 				}).DialContext,
-				MaxIdleConns:          100,
+				MaxIdleConnsPerHost:   256,
 				IdleConnTimeout:       90 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
+				ExpectContinueTimeout: 10 * time.Second,
 				TLSClientConfig:       tlsConfig,
+				// Set this value so that the underlying transport round-tripper
+				// doesn't try to auto decode the body of objects with
+				// content-encoding set to `gzip`.
+				//
+				// Refer:
+				//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
+				DisableCompression: true,
 			}
 
 			if config.Debug {
@@ -124,7 +137,7 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 		return nil, probe.NewError(fmt.Errorf("No valid configuration found for '%s' host alias", urlStrFull))
 	}
 
-	s3Config := newS3Config(urlStrFull, hostCfg)
+	s3Config := NewS3Config(urlStrFull, hostCfg)
 
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {
@@ -135,4 +148,4 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 
 // s3AdminNew returns an initialized minioAdmin structure. If debug is enabled,
 // it also enables an internal trace transport.
-var s3AdminNew = newAdminFactory()
+var s3AdminNew = NewAdminFactory()

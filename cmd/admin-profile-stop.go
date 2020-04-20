@@ -103,7 +103,7 @@ func mainAdminProfileStop(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
 	// Ask for profile data, which will come compressed with zip format
-	zippedData, adminErr := client.DownloadProfilingData()
+	zippedData, adminErr := client.DownloadProfilingData(globalContext)
 	fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
 
 	// Copy zip content to target download file

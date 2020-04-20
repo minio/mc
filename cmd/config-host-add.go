@@ -17,14 +17,21 @@
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6"
 	"github.com/minio/minio/pkg/console"
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+const cred = "YellowItalics"
 
 var hostAddFlags = []cli.Flag{
 	cli.StringFlag{
@@ -71,24 +78,34 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com \
                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
      {{.EnableHistory}}
+
+  4. Add Amazon S3 storage service under "mys3" alias, prompting for keys.
+     {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
+     Enter Access Key: BKIKJAA5BMMU2RHO6IBB
+     Enter Secret Key: V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+
+  5. Add Amazon S3 storage service under "mys3" alias using piped keys.
+     {{.DisableHistory}}
+     {{.Prompt}} echo -e "BKIKJAA5BMMU2RHO6IBB\nV8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+                 {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
+     {{.EnableHistory}}
 `,
 }
 
 // checkConfigHostAddSyntax - verifies input arguments to 'config host add'.
-func checkConfigHostAddSyntax(ctx *cli.Context) {
+func checkConfigHostAddSyntax(ctx *cli.Context, accessKey string, secretKey string) {
 	args := ctx.Args()
 	argsNr := len(args)
-	if argsNr < 4 || argsNr > 5 {
+	if argsNr > 4 || argsNr < 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for host add command.")
 	}
 
 	alias := args.Get(0)
 	url := args.Get(1)
-	accessKey := args.Get(2)
-	secretKey := args.Get(3)
 	api := ctx.String("api")
 	bucketLookup := ctx.String("lookup")
+
 	if !isValidAlias(alias) {
 		fatalIf(errInvalidAlias(alias), "Invalid alias.")
 	}
@@ -150,45 +167,51 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		Insecure:  globalInsecure,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
-		Signature: "s3v4",
 		HostURL:   urlJoinPath(url, probeBucketName),
+		Debug:     globalDebug,
 	}
 
-	s3Client, err := s3New(s3Config)
-	if err != nil {
-		return "", err
-	}
-
-	if _, err = s3Client.Stat(false, false, false, nil); err != nil {
-		switch err.ToGoError().(type) {
-		case BucketDoesNotExist:
-			// Bucket doesn't exist, means signature probing worked V4.
-		default:
-			// Attempt with signature v2, since v4 seem to have failed.
-			s3Config.Signature = "s3v2"
-			s3Client, err = s3New(s3Config)
-			if err != nil {
-				return "", err
-			}
-			if _, err = s3Client.Stat(false, false, false, nil); err != nil {
-				switch err.ToGoError().(type) {
-				case BucketDoesNotExist:
-					// Bucket doesn't exist, means signature probing worked with V2.
-				default:
-					return "", err
-				}
-			}
+	probeSignatureType := func(stype string) (string, *probe.Error) {
+		s3Config.Signature = stype
+		s3Client, err := S3New(s3Config)
+		if err != nil {
+			return "", err
 		}
+
+		if _, err := s3Client.Stat(false, false, nil); err != nil {
+			e := err.ToGoError()
+			if _, ok := e.(BucketDoesNotExist); ok {
+				// Bucket doesn't exist, means signature probing worked successfully.
+				return stype, nil
+			}
+			// AccessDenied means Stat() is not allowed but credentials are valid.
+			// AccessDenied is only returned when policy doesn't allow HeadBucket
+			// operations.
+			if minio.ToErrorResponse(err.ToGoError()).Code == "AccessDenied" {
+				return stype, nil
+			}
+
+			// For any other errors we fail.
+			return "", err.Trace(s3Config.Signature)
+		}
+		return stype, nil
 	}
 
-	return s3Config.Signature, nil
+	stype, err := probeSignatureType("s3v4")
+	if err != nil {
+		if stype, err = probeSignatureType("s3v2"); err != nil {
+			return "", err.Trace("s3v4", "s3v2")
+		}
+		return stype, nil
+	}
+	return stype, nil
 }
 
-// buildS3Config constructs an S3 Config and does
+// BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
+func BuildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
-	s3Config := newS3Config(url, &hostConfigV9{
+	s3Config := NewS3Config(url, &hostConfigV9{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
@@ -212,20 +235,56 @@ func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *pro
 	return s3Config, nil
 }
 
+// fetchHostKeys - returns the user accessKey and secretKey
+func fetchHostKeys(args cli.Args) (string, string) {
+	accessKey := ""
+	secretKey := ""
+	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+	isTerminal := terminal.IsTerminal(int(os.Stdin.Fd()))
+	reader := bufio.NewReader(os.Stdin)
+
+	argsNr := len(args)
+
+	if argsNr == 2 {
+		if isTerminal {
+			fmt.Printf("%s", console.Colorize(cred, "Enter Access Key: "))
+		}
+		value, _, _ := reader.ReadLine()
+		accessKey = string(value)
+	} else {
+		accessKey = args.Get(2)
+	}
+
+	if argsNr == 2 || argsNr == 3 {
+		if isTerminal {
+			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
+			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+			fmt.Printf("\n")
+			secretKey = string(bytePassword)
+		} else {
+			value, _, _ := reader.ReadLine()
+			secretKey = string(value)
+		}
+	} else {
+		secretKey = args.Get(3)
+	}
+
+	return accessKey, secretKey
+}
+
 func mainConfigHostAdd(ctx *cli.Context) error {
-	checkConfigHostAddSyntax(ctx)
 
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 	var (
-		args      = ctx.Args()
-		url       = trimTrailingSeparator(args.Get(1))
-		accessKey = args.Get(2)
-		secretKey = args.Get(3)
-		api       = ctx.String("api")
-		lookup    = ctx.String("lookup")
+		args   = ctx.Args()
+		url    = trimTrailingSeparator(args.Get(1))
+		api    = ctx.String("api")
+		lookup = ctx.String("lookup")
 	)
+	accessKey, secretKey := fetchHostKeys(args)
+	checkConfigHostAddSyntax(ctx, accessKey, secretKey)
 
-	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
+	s3Config, err := BuildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
 
 	addHost(ctx.Args().Get(0), hostConfigV9{

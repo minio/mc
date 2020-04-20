@@ -91,11 +91,13 @@ func checkListSyntax(ctx *cli.Context) {
 	isIncomplete := ctx.Bool("incomplete")
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, false, nil)
+		_, _, err := url2Stat(url, false, nil)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
-			if _, ok := err.ToGoError().(BucketNameEmpty); ok {
+			_, buckNameEmpty := err.ToGoError().(BucketNameEmpty)
+			_, noPath := err.ToGoError().(PathNotFound)
+			if buckNameEmpty || noPath {
 				continue
 			}
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
@@ -130,9 +132,9 @@ func mainList(ctx *cli.Context) error {
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
-			var st *clientContent
-			st, err = clnt.Stat(isIncomplete, false, false, nil)
-			if err == nil && st.Type.IsDir() {
+			var st *ClientContent
+			st, err = clnt.Stat(isIncomplete, false, nil)
+			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)
 				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")

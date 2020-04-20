@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -26,17 +25,33 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio/pkg/console"
 )
+
+var (
+	rFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "apply retention recursively",
+		},
+		cli.BoolFlag{
+			Name:  bypass,
+			Usage: "bypass governance",
+		},
+	}
+)
+
+var bypass = "bypass"
 
 var retentionCmd = cli.Command{
 	Name:   "retention",
 	Usage:  "set object retention for objects with a given prefix",
 	Action: mainRetention,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(rFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -50,9 +65,13 @@ VALIDITY:
   This argument must be formatted like Nd or Ny where 'd' denotes days and 'y' denotes years e.g. 10d, 3y.
 
 EXAMPLES:
-   1. Set object retention for objects in a given prefix
-     $ {{.HelpName}} myminio/mybucket/prefix compliance 30d
-`,
+   1. Set object retention for a specific object
+     $ {{.HelpName}} myminio/mybucket/prefix/obj.csv compliance 30d
+
+   2. Set object retention for objects in a given prefix
+     $ {{.HelpName}} myminio/mybucket/prefix compliance 30d  --recursive
+
+	 `,
 }
 
 // Structured message depending on the type of console.
@@ -79,33 +98,36 @@ func (m retentionCmdMessage) JSON() string {
 	return string(msgBytes)
 }
 
+func getRetainUntilDate(validity *uint, unit *minio.ValidityUnit) (string, error) {
+	if validity == nil {
+		return "", fmt.Errorf("invalid validity '%v'", validity)
+	}
+	t := UTCNow()
+	if *unit == minio.Years {
+		t = t.AddDate(int(*validity), 0, 0)
+	} else {
+		t = t.AddDate(0, 0, int(*validity))
+	}
+	timeStr := t.Format(time.RFC3339)
+
+	return timeStr, nil
+}
+
 // setRetention - Set Retention for all objects within a given prefix.
-func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) error {
+func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, bypassGovernance, isRecursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
-	alias, _, _ := mustExpandAlias(urlStr)
-	retainUntilDate := func() (time.Time, error) {
-		if validity == nil {
-			return timeSentinel, fmt.Errorf("invalid validity '%v'", validity)
-		}
-		t := UTCNow()
-		if *unit == minio.Years {
-			t = t.AddDate(int(*validity), 0, 0)
-		} else {
-			t = t.AddDate(0, 0, int(*validity))
-		}
-		timeStr := t.Format(time.RFC3339)
 
-		t1, e := time.Parse(
-			time.RFC3339,
-			timeStr)
-		if e != nil {
-			return timeSentinel, e
-		}
-		return t1, nil
+	// Quit early if urlStr does not point to an S3 server
+	switch clnt.(type) {
+	case *fsClient:
+		fatal(errDummy().Trace(), "Retention for filesystem not supported.")
 	}
+
+	alias, _, _ := mustExpandAlias(urlStr)
+
 	validityStr := func() *string {
 		if validity == nil {
 			return nil
@@ -121,23 +143,29 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 
 	var cErr error
 	errorsFound := false
-	for content := range clnt.List(true, false, false, DirNone) {
+	for content := range clnt.List(isRecursive, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
-		retainUntil, err := retainUntilDate()
+		timeStr, err := getRetainUntilDate(validity, unit)
 		if err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
 			continue
 		}
+		retainUntil, e := time.Parse(time.RFC3339, timeStr)
+		if e != nil {
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
+			continue
+		}
+
 		newClnt, perr := newClientFromAlias(alias, content.URL.String())
 		if perr != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
-		probeErr := newClnt.PutObjectRetention(mode, &retainUntil)
+		probeErr := newClnt.PutObjectRetention(mode, &retainUntil, bypassGovernance)
 		if probeErr != nil {
 			errorsFound = true
 			printMsg(retentionCmdMessage{
@@ -162,7 +190,7 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 		if errorsFound {
 			console.Print(console.Colorize("RetentionPartialFailure", fmt.Sprintf("Errors found while setting retention on objects with prefix `%s`.\n", urlStr)))
 		} else {
-			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for prefix `%s`.\n", urlStr)))
+			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for `%s`.\n", urlStr)))
 		}
 	}
 	return cErr
@@ -173,14 +201,6 @@ func mainRetention(ctx *cli.Context) error {
 	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("RetentionPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("RetentionMessageFailure", color.New(color.FgYellow))
-
-	// Parse encryption keys per command.
-	_, err := getEncKeys(ctx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
-	// lock specific flags.
-	clearLock := ctx.Bool("clear")
-
 	args := ctx.Args()
 
 	var urlStr string
@@ -191,10 +211,6 @@ func mainRetention(ctx *cli.Context) error {
 	switch l := len(args); l {
 	case 3:
 		urlStr = args[0]
-		if clearLock {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "clear flag must be passed with target alone")
-		}
-
 		m := minio.RetentionMode(strings.ToUpper(args[1]))
 		if !m.IsValid() {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
@@ -226,5 +242,5 @@ func mainRetention(ctx *cli.Context) error {
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "retention", 1)
 	}
-	return setRetention(urlStr, mode, validity, unit)
+	return setRetention(urlStr, mode, validity, unit, ctx.Bool("bypass"), ctx.Bool("recursive"))
 }

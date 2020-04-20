@@ -16,7 +16,6 @@ rm       删除文件和对象。
 events   管理对象通知。
 watch    监视文件和对象的事件。
 policy   管理访问策略。
-session  为cp命令管理保存的会话。
 config   管理mc配置文件。
 update   检查软件更新。
 version  输出版本信息。
@@ -111,7 +110,7 @@ mc.exe --help
 #### 使用
 
 ```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
+mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> [--api API-SIGNATURE]
 ```
 
 别名就是给你的云存储服务起了一个短点的外号。S3 endpoint,access key和secret key是你的云存储服务提供的。API签名是可选参数，默认情况下，它被设置为"S3v4"。
@@ -121,21 +120,21 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 
 
 ```
-mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
+mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v4
 ```
 
 ### 示例-Amazon S3云存储
 参考[AWS Credentials指南](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)获取你的AccessKeyID和SecretAccessKey。
 
 ```
-mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
+mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v4
 ```
 
 ### 示例-Google云存储
 参考[Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)获取你的AccessKeyID和SecretAccessKey。
 
 ```
-mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v2
 ```
 
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
@@ -232,14 +231,14 @@ mc --json ls play
 
 ## 7. 命令
 
-|   |   | |
-|:---|:---|:---|
-|[**ls** - 列出存储桶和对象](#ls)   |[**mb** - 创建存储桶](#mb)  | [**cat** - 合并对象](#cat)  |
-|[**cp** - 拷贝对象](#cp) | [**rm** - 删除对象](#rm)  | [**pipe** - Pipe到一个对象](#pipe) |
-| [**share** - 共享](#share)  |[**mirror** - 存储桶镜像](#mirror)  | [**find** - 查找文件和对象](#find) |
-| [**diff** - 比较存储桶差异](#diff) |[**policy** - 给存储桶或前缀设置访问策略](#policy)  |[**session** - 管理保存的会话](#session) |
-| [**config** - 管理配置文件](#config)  | [**watch** - 事件监听](#watch)  | [**events** - 管理存储桶事件](#events)  |
-| [**update** - 管理软件更新](#update)  | [**version** - 显示版本信息](#version)  |   |
+|                                      |                                                    |                                        |
+|:-------------------------------------|:---------------------------------------------------|:---------------------------------------|
+| [**ls** - 列出存储桶和对象](#ls)     | [**mb** - 创建存储桶](#mb)                         | [**cat** - 合并对象](#cat)             |
+| [**cp** - 拷贝对象](#cp)             | [**rm** - 删除对象](#rm)                           | [**pipe** - Pipe到一个对象](#pipe)     |
+| [**share** - 共享](#share)           | [**mirror** - 存储桶镜像](#mirror)                 | [**find** - 查找文件和对象](#find)     |
+| [**diff** - 比较存储桶差异](#diff)   | [**policy** - 给存储桶或前缀设置访问策略](#policy) |                                        |
+| [**config** - 管理配置文件](#config) | [**watch** - 事件监听](#watch)                     | [**events** - 管理存储桶事件](#events) |
+| [**update** - 管理软件更新](#update) | [**version** - 显示版本信息](#version)             |                                        |
 
 
 ###  `ls`命令 - 列出对象
@@ -662,46 +661,6 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 ```
 mc policy set none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
-```
-
-<a name="session"></a>
-### `session`命令 - 管理session
-``session``命令管理之前保存的`cp`和`mirror`操作的会话。
-
-```
-用法：
-  mc session COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
-
-COMMANDS:
-  list    列出所有之前保存的会话。
-  clear   清除某个之前保存的会话。
-  resume  恢复某个之前保存的会话。
-
-FLAGS:
-  --help, -h                       显示帮助。
-
-```
-
-*示例： 列出所有之前保存的会话*
-
-```
-mc session list
-IXWKjpQM -> [2016-04-08 19:11:14 IST] cp assets.go play/mybucket
-ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
-```
-
-*示例： 恢复一个之前保存的会话*
-
-```
-mc session resume IXWKjpQM
-...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
-```
-
-*示例： 清除一个之前保存的会话。*
-
-```
-mc session clear ApwAxSwa
-Session ‘ApwAxSwa’ cleared successfully.
 ```
 
 <a name="config"></a>

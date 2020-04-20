@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -109,6 +110,10 @@ func Main(args []string) {
 		// Trim ".exe" from Windows executable.
 		appName = appName[:strings.LastIndex(appName, ".")]
 	}
+
+	// Monitor OS exit signals and cancel the global context in such case
+	go trapSignals(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+
 	// Run the app - exit on error.
 	if err := registerApp(appName).Run(args); err != nil {
 		os.Exit(1)
@@ -120,7 +125,7 @@ func commandNotFound(ctx *cli.Context, command string) {
 	msg := fmt.Sprintf("`%s` is not a mc command. See `mc --help`.", command)
 	closestCommands := findClosestCommands(command)
 	if len(closestCommands) > 0 {
-		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
+		msg += "\n\nDid you mean one of these?\n"
 		if len(closestCommands) == 1 {
 			cmd := closestCommands[0]
 			msg += fmt.Sprintf("        `%s`", cmd)
@@ -324,14 +329,17 @@ var appCmds = []cli.Command{
 	duCmd,
 	lockCmd,
 	retentionCmd,
+	legalHoldCmd,
 	diffCmd,
 	rmCmd,
 	eventCmd,
 	watchCmd,
 	policyCmd,
+	tagCmd,
 	adminCmd,
 	configCmd,
 	updateCmd,
+	mvCmd,
 }
 
 func registerApp(name string) *cli.App {

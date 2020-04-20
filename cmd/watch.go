@@ -29,6 +29,10 @@ type EventType string
 const (
 	// EventCreate notifies when a new object is created
 	EventCreate EventType = "ObjectCreated"
+
+	// EventCreateCopy notifies when there was a server side copy
+	EventCreateCopy EventType = "ObjectCreated:Copy"
+
 	// EventCreatePutRetention notifies when a retention configuration is added to an object
 	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
 	// EventRemove notifies when a new object is deleted
@@ -44,13 +48,14 @@ const (
 // EventInfo contains the information of the event that occurred and the source
 // IP:PORT of the client which triggerred the event.
 type EventInfo struct {
-	Time      string
-	Size      int64
-	Path      string
-	Type      EventType
-	Host      string
-	Port      string
-	UserAgent string
+	Time         string
+	Size         int64
+	UserMetadata map[string]string
+	Path         string
+	Type         EventType
+	Host         string
+	Port         string
+	UserAgent    string
 }
 
 type watchParams struct {
@@ -60,7 +65,8 @@ type watchParams struct {
 	recursive bool
 }
 
-type watchObject struct {
+// WatchObject captures watch channels to read and listen on.
+type WatchObject struct {
 	// eventInfo will be put on this chan
 	eventInfoChan chan EventInfo
 	// errors will be put on this chan
@@ -70,17 +76,17 @@ type watchObject struct {
 }
 
 // Events returns the chan receiving events
-func (w *watchObject) Events() chan EventInfo {
+func (w *WatchObject) Events() chan EventInfo {
 	return w.eventInfoChan
 }
 
 // Errors returns the chan receiving errors
-func (w *watchObject) Errors() chan *probe.Error {
+func (w *WatchObject) Errors() chan *probe.Error {
 	return w.errorChan
 }
 
 // Close the watcher, will stop all goroutines
-func (w *watchObject) Close() {
+func (w *WatchObject) Close() {
 	// Cleanup
 	close(w.eventInfoChan)
 	close(w.errorChan)
@@ -97,7 +103,7 @@ type Watcher struct {
 	eventInfoChan chan EventInfo
 
 	// array of watchers joined
-	o []*watchObject
+	o []*WatchObject
 
 	// all watchers joining will enter this waitgroup
 	wg sync.WaitGroup
@@ -109,7 +115,7 @@ func NewWatcher(sessionStartTime time.Time) *Watcher {
 		sessionStartTime: sessionStartTime,
 		errorChan:        make(chan *probe.Error),
 		eventInfoChan:    make(chan EventInfo),
-		o:                []*watchObject{},
+		o:                []*WatchObject{},
 	}
 }
 

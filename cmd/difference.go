@@ -62,7 +62,7 @@ func (d differType) String() string {
 const multiMasterETagKey = "X-Amz-Meta-Mm-Etag"
 const multiMasterSTagKey = "X-Amz-Meta-Mm-Stag"
 
-func eTagMatch(src, tgt *clientContent) bool {
+func eTagMatch(src, tgt *ClientContent) bool {
 	if tgt.UserMetadata[multiMasterETagKey] != "" {
 		if tgt.UserMetadata[multiMasterETagKey] == src.UserMetadata[multiMasterETagKey] || tgt.UserMetadata[multiMasterETagKey] == src.ETag {
 			return true
@@ -284,6 +284,14 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMe
 			err := differenceInternal(sourceClnt, targetClnt, sourceURL, targetURL,
 				isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
 			if err != nil {
+				// handle this specifically for filesystem related errors.
+				switch err.ToGoError().(type) {
+				case PathNotFound, PathInsufficientPermission:
+					diffCh <- diffMessage{
+						Error: err,
+					}
+					return
+				}
 				errorIf(err, "Unable to list comparison retrying..")
 			} else {
 				// Success.

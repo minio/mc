@@ -21,6 +21,7 @@ import (
 	"errors"
 	"io"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,7 +39,7 @@ import (
 
 func isErrIgnored(err *probe.Error) (ignored bool) {
 	// For all non critical errors we can continue for the remaining files.
-	switch err.ToGoError().(type) {
+	switch e := err.ToGoError().(type) {
 	// Handle these specifically for filesystem related errors.
 	case BrokenSymlink, TooManyLevelsSymlink, PathNotFound:
 		ignored = true
@@ -47,6 +48,8 @@ func isErrIgnored(err *probe.Error) (ignored bool) {
 		ignored = true
 	case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid:
 		ignored = true
+	case minio.ErrorResponse:
+		ignored = strings.Contains(e.Error(), "The specified key does not exist")
 	default:
 		ignored = false
 	}
@@ -126,9 +129,9 @@ func splitStr(path, sep string, n int) []string {
 	return splits
 }
 
-// newS3Config simply creates a new Config struct using the passed
+// NewS3Config simply creates a new Config struct using the passed
 // parameters.
-func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
+func NewS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
@@ -348,4 +351,21 @@ func parseAttribute(attrs string) (map[string]string, error) {
 	}
 
 	return attribute, nil
+}
+
+// Returns true if "s3" is entirely in sub-domain and false otherwise.
+// true for s3.amazonaws.com, false for ams3.digitaloceanspaces.com, 192.168.1.12
+func matchS3InHost(urlHost string) bool {
+	if strings.Contains(urlHost, ":") {
+		if host, _, err := net.SplitHostPort(urlHost); err == nil {
+			urlHost = host
+		}
+	}
+	fqdnParts := strings.Split(urlHost, ".")
+	for _, fqdn := range fqdnParts {
+		if fqdn == "s3" {
+			return true
+		}
+	}
+	return false
 }

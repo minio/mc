@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -39,11 +40,12 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
+	"github.com/minio/minio/pkg/bucket/object/tagging"
 )
 
 // filesystem client
 type fsClient struct {
-	PathURL *clientURL
+	PathURL *ClientURL
 }
 
 const (
@@ -111,7 +113,7 @@ func isIgnoredFile(filename string) bool {
 }
 
 // URL get url.
-func (f *fsClient) GetURL() clientURL {
+func (f *fsClient) GetURL() ClientURL {
 	return *f.PathURL
 }
 
@@ -124,7 +126,7 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
+func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	eventChan := make(chan EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
@@ -212,7 +214,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 		}
 	}()
 
-	return &watchObject{
+	return &WatchObject{
 		eventInfoChan: eventChan,
 		errorChan:     errorChan,
 		doneChan:      doneChan,
@@ -231,6 +233,35 @@ func isStreamFile(objectPath string) bool {
 		return true
 	}
 	return false
+}
+
+func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
+	mode, e := strconv.ParseUint(attr["mode"], 10, 32)
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Attempt to change the file mode.
+	if e := fd.Chmod(os.FileMode(mode)); e != nil {
+		return probe.NewError(e)
+	}
+
+	uid, e := strconv.Atoi(attr["uid"])
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	gid, e := strconv.Atoi(attr["gid"])
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Attempt to change the owner.
+	if e := fd.Chown(uid, gid); e != nil {
+		return probe.NewError(e)
+	}
+
+	return nil
 }
 
 /// Object operations.
@@ -268,6 +299,17 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
+	}
+
+	attr := make(map[string]string)
+	if len(metadata["mc-attrs"]) != 0 {
+		attr, e = parseAttribute(metadata["mc-attrs"][0])
+		if e != nil {
+			return 0, probe.NewError(e)
+		}
+		if err := preserveAttributes(partFile, attr); err != nil {
+			return 0, err.Trace(objectPath)
+		}
 	}
 
 	// Get stat to get the current size.
@@ -345,65 +387,28 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 			return totalWritten, err.Trace(objectPartPath, objectPath)
 		}
 
-		if len(metadata["mc-attrs"]) != 0 {
-			attr, e := parseAttribute(metadata["mc-attrs"][0])
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			mode, e := strconv.ParseUint(attr["mode"], 10, 32)
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			// Change the mode of file
-			if e := os.Chmod(objectPath, os.FileMode(mode)); e != nil {
-				if !os.IsPermission(e) {
-					return totalWritten, probe.NewError(e)
-				}
-			}
-
-			uid, e := strconv.Atoi(attr["uid"])
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			gid, e := strconv.Atoi(attr["gid"])
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			// Change the owner
-			if e := os.Chown(objectPath, uid, gid); e != nil {
-				if !os.IsPermission(e) {
-					return totalWritten, probe.NewError(e)
-				}
-			}
-
+		if len(attr) != 0 {
 			atime, e := strconv.ParseInt(attr["atime"], 10, 64)
 			if e != nil {
 				return totalWritten, probe.NewError(e)
 			}
 
-			ctime, e := strconv.ParseInt(attr["ctime"], 10, 64)
+			mtime, e := strconv.ParseInt(attr["mtime"], 10, 64)
 			if e != nil {
 				return totalWritten, probe.NewError(e)
 			}
 
-			// Change the access, modify and change time
-			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(ctime, 0)); e != nil {
-				if !os.IsPermission(e) {
-					return totalWritten, probe.NewError(e)
-				}
+			// Attempt to change the access and modify time
+			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
+				return totalWritten, probe.NewError(e)
 			}
-
 		}
 	}
 	return totalWritten, nil
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
 	if metadata["mc-attrs"] != "" {
 		meta := make(map[string][]string)
 		meta["mc-attrs"] = append(meta["mc-attrs"], metadata["mc-attrs"])
@@ -428,68 +433,30 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 	})
 }
 
-// readFile reads and returns the data inside the file located
-// at the provided filepath.
-func readFile(fpath string) (io.ReadCloser, error) {
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, "/") {
-		fpath = fpath + "."
-	}
-	fpath, e := filepath.EvalSymlinks(fpath)
-	if e != nil {
-		return nil, e
-	}
-	fileData, e := os.Open(fpath)
-	if e != nil {
-		return nil, e
-	}
-	return fileData, nil
-}
-
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
-	destination := f.PathURL.Path
-	rc, e := readFile(source)
+func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+	rc, e := os.Open(source)
 	if e != nil {
-		err := f.toClientError(e, destination)
-		return err.Trace(destination)
+		err := f.toClientError(e, source)
+		return err.Trace(source)
 	}
 	defer rc.Close()
 
-	_, err := f.put(rc, size, map[string][]string{}, progress)
-	if err != nil {
+	destination := f.PathURL.Path
+	if _, err := f.put(rc, size, map[string][]string{}, progress); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil
 }
 
-// get - get wrapper returning object reader.
-func (f *fsClient) get() (io.ReadCloser, *probe.Error) {
-	tmppath := f.PathURL.Path
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(tmppath, string(f.PathURL.Separator)) {
-		tmppath = tmppath + "."
-	}
-
-	// Resolve symlinks.
-	_, e := filepath.EvalSymlinks(tmppath)
-	if e != nil {
-		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(f.PathURL.Path)
-	}
+// Get returns reader and any additional metadata.
+func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(f.PathURL.Path)
 	}
 	return fileData, nil
-}
-
-// Get returns reader and any additional metadata.
-func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
-	return f.get()
 }
 
 // Check if the given error corresponds to ENOTEMPTY for unix
@@ -537,7 +504,7 @@ func deleteFile(deletePath string) error {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+func (f *fsClient) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	// Goroutine reads from contentCh and removes the entry in content.
@@ -545,22 +512,29 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 		defer close(errorCh)
 
 		for content := range contentCh {
+			if content.Err != nil {
+				errorCh <- content.Err
+				continue
+			}
 			name := content.URL.Path
 			// Add partSuffix for incomplete uploads.
 			if isIncomplete {
 				name += partSuffix
 			}
-			if e := deleteFile(name); e != nil {
-				if os.IsPermission(e) {
-					// Ignore permission error.
-					errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
-				} else if os.IsNotExist(e) && isRemoveBucket {
-					// ignore PathNotFound for dir removal.
-					return
-				} else {
-					errorCh <- probe.NewError(e)
-					return
-				}
+			e := deleteFile(name)
+			if e == nil {
+				continue
+			}
+			if os.IsNotExist(e) && isRemoveBucket {
+				// ignore PathNotFound for dir removal.
+				return
+			}
+			if os.IsPermission(e) {
+				// Ignore permission error.
+				errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+			} else {
+				errorCh <- probe.NewError(e)
+				return
 			}
 		}
 	}()
@@ -569,9 +543,9 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 }
 
 // List - list files and folders.
-func (f *fsClient) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *clientContent {
-	contentCh := make(chan *clientContent)
-	filteredCh := make(chan *clientContent)
+func (f *fsClient) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *ClientContent {
+	contentCh := make(chan *ClientContent)
+	filteredCh := make(chan *ClientContent)
 
 	if isRecursive {
 		if showDir == DirNone {
@@ -646,17 +620,16 @@ func readDir(dirname string) ([]os.FileInfo, error) {
 }
 
 // listPrefixes - list all files for any given prefix.
-func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) {
+func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *ClientContent) {
 	dirName := filepath.Dir(prefix)
 	files, e := readDir(dirName)
 	if e != nil {
 		err := f.toClientError(e, dirName)
-		contentCh <- &clientContent{
+		contentCh <- &ClientContent{
 			Err: err.Trace(dirName),
 		}
 		return
 	}
-	pathURL := *f.PathURL
 	for _, fi := range files {
 		// Skip ignored files.
 		if isIgnoredFile(fi.Name()) {
@@ -667,31 +640,11 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			st, e := os.Stat(file)
 			if e != nil {
-				if os.IsPermission(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(PathInsufficientPermission{
-							Path: pathURL.Path,
-						}),
-					}
-					continue
-				}
-				if os.IsNotExist(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(BrokenSymlink{
-							Path: pathURL.Path,
-						}),
-					}
-					continue
-				}
-				if e != nil {
-					contentCh <- &clientContent{
-						Err: probe.NewError(e),
-					}
-					continue
-				}
+				// Ignore any errors on symlink
+				continue
 			}
 			if strings.HasPrefix(file, prefix) {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					URL:  *newClientURL(file),
 					Time: st.ModTime(),
 					Size: st.Size(),
@@ -702,7 +655,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 			}
 		}
 		if strings.HasPrefix(file, prefix) {
-			contentCh <- &clientContent{
+			contentCh <- &ClientContent{
 				URL:  *newClientURL(file),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
@@ -713,7 +666,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 	}
 }
 
-func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata bool) {
+func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent, isMetadata bool) {
 	// close the channel when the function returns.
 	defer close(contentCh)
 
@@ -730,7 +683,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 			return
 		}
 		// For all other errors we return genuine error back to the caller.
-		contentCh <- &clientContent{Err: err.Trace(fpath)}
+		contentCh <- &ClientContent{Err: err.Trace(fpath)}
 		return
 	}
 
@@ -746,7 +699,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 	case true:
 		files, e := readDir(fpath)
 		if err != nil {
-			contentCh <- &clientContent{Err: probe.NewError(e)}
+			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return
 		}
 		for _, file := range files {
@@ -754,26 +707,8 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fp := filepath.Join(fpath, fi.Name())
 				fi, e = os.Stat(fp)
-				if os.IsPermission(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
-					}
-					continue
-				}
-				if os.IsNotExist(e) {
-					// Lstat makes no attempt to follow the broken link.
-					_, e = os.Lstat(fp)
-					contentCh <- &clientContent{
-						URL:  pathURL,
-						Size: -1,
-						Err:  probe.NewError(e),
-					}
-					continue
-				}
 				if e != nil {
-					contentCh <- &clientContent{
-						Err: probe.NewError(e),
-					}
+					// Ignore all errors on symlinks
 					continue
 				}
 			}
@@ -786,7 +721,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 					continue
 				}
 
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					URL:  pathURL,
 					Time: fi.ModTime(),
 					Size: fi.Size(),
@@ -796,7 +731,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 			}
 		}
 	default:
-		contentCh <- &clientContent{
+		contentCh <- &ClientContent{
 			URL:  pathURL,
 			Time: fst.ModTime(),
 			Size: fst.Size(),
@@ -807,7 +742,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 }
 
 // List files recursively using non-recursive mode.
-func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
+func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
 	defer close(contentCh)
 
 	// Trim trailing / or \.
@@ -823,7 +758,7 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 		files, e := readDir(currentPath)
 		if e != nil {
 			if os.IsPermission(e) {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{
 						Path: currentPath,
 					}),
@@ -831,13 +766,13 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 				return false
 			}
 
-			contentCh <- &clientContent{Err: probe.NewError(e)}
+			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return true
 		}
 
 		for _, file := range files {
 			name := filepath.Join(currentPath, file.Name())
-			content := clientContent{
+			content := ClientContent{
 				URL:  *newClientURL(name),
 				Time: file.ModTime(),
 				Size: file.Size(),
@@ -867,17 +802,17 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 	// listDir() does not send currentPath to contentCh.  We send it here depending on dirOpt.
 
 	if dirOpt == DirFirst && !isIncomplete {
-		contentCh <- &clientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
+		contentCh <- &ClientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
 	}
 
 	listDir(currentPath)
 
 	if dirOpt == DirLast && !isIncomplete {
-		contentCh <- &clientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
+		contentCh <- &ClientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
 	}
 }
 
-func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetadata bool) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetadata bool) {
 	// close channels upon return.
 	defer close(contentCh)
 	var dirName string
@@ -925,13 +860,13 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 		if e != nil {
 			// If operation is not permitted, we throw quickly back.
 			if strings.Contains(e.Error(), "operation not permitted") {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					Err: probe.NewError(e),
 				}
 				return nil
 			}
 			if os.IsPermission(e) {
-				contentCh <- &clientContent{
+				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{Path: fp}),
 				}
 				return nil
@@ -941,34 +876,12 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			fi, e = os.Stat(fp)
 			if e != nil {
-				if os.IsPermission(e) {
-					contentCh <- &clientContent{
-						Err: probe.NewError(e),
-					}
-					return nil
-				}
-				if os.IsNotExist(e) {
-					// Lstat makes no attempt to follow the broken link.
-					_, e = os.Lstat(fp)
-					contentCh <- &clientContent{
-						URL:  *newClientURL(fp),
-						Size: -1,
-						Err:  probe.NewError(e),
-					}
-					return nil
-				}
-				// Ignore symlink loops.
-				if strings.Contains(e.Error(), "too many levels of symbolic links") {
-					contentCh <- &clientContent{
-						Err: probe.NewError(TooManyLevelsSymlink{Path: fp}),
-					}
-					return nil
-				}
-				return e
+				// Ignore any errors for symlink
+				return nil
 			}
 		}
 		if fi.Mode().IsRegular() {
-			contentCh <- &clientContent{
+			contentCh <- &ClientContent{
 				URL:  *newClientURL(fp),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
@@ -997,7 +910,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 	// walks invokes our custom function.
 	e := ioutils.FTW(dirName, visitFS)
 	if e != nil {
-		contentCh <- &clientContent{
+		contentCh <- &ClientContent{
 			Err: probe.NewError(e),
 		}
 	}
@@ -1041,9 +954,17 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
+func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
+		APIType: "filesystem",
+	})
+}
+
+// Set object legal hold for a given object.
+func (f *fsClient) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "PutObjectLegalHold",
 		APIType: "filesystem",
 	})
 }
@@ -1106,13 +1027,13 @@ func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
 	}
 
-	content = &clientContent{}
+	content = &ClientContent{}
 	content.URL = *f.PathURL
 	content.Size = st.Size()
 	content.Time = st.ModTime()
@@ -1121,26 +1042,22 @@ func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 		"Content-Type": guessURLContentType(f.PathURL.Path),
 	}
 
-	// isFetchMeta is true only in the case of mc stat command which lists any extended attributes
-	// present for this object.
-	if isFetchMeta {
-		path := f.PathURL.String()
-		metaData, pErr := getAllXattrs(path)
-		if pErr != nil {
+	path := f.PathURL.String()
+	metaData, pErr := getAllXattrs(path)
+	if pErr != nil {
+		return content, nil
+	}
+	for k, v := range metaData {
+		content.Metadata[k] = v
+	}
+	// Populates meta data with file system attribute only in case of
+	// when preserve flag is passed.
+	if isPreserve {
+		fileAttr, err := disk.GetFileSystemAttrs(path)
+		if err != nil {
 			return content, nil
 		}
-		for k, v := range metaData {
-			content.Metadata[k] = v
-		}
-		// Populates meta data with file system attribute only in case of
-		// when preserve flag is passed.
-		if isPreserve {
-			fileAttr, err := disk.GetFileSystemAttrs(path)
-			if err != nil {
-				return content, nil
-			}
-			content.Metadata["mc-attrs"] = fileAttr
-		}
+		content.Metadata["mc-attrs"] = fileAttr
 	}
 
 	return content, nil
@@ -1153,6 +1070,9 @@ func (f *fsClient) toClientError(e error, fpath string) *probe.Error {
 	}
 	if os.IsNotExist(e) {
 		return probe.NewError(PathNotFound{Path: fpath})
+	}
+	if errors.Is(e, syscall.ELOOP) {
+		return probe.NewError(TooManyLevelsSymlink{Path: fpath})
 	}
 	return probe.NewError(e)
 }
@@ -1172,32 +1092,36 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 		fpath += partSuffix
 	}
 
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
-		fpath = fpath + "."
-	}
-	fpath, e = filepath.EvalSymlinks(fpath)
-	if e != nil {
-		if os.IsPermission(e) {
-			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
-		}
-		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(fpath)
-	}
-
 	st, e = os.Stat(fpath)
 	if e != nil {
-		if os.IsPermission(e) {
-			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
-		}
-		if os.IsNotExist(e) {
-			return nil, probe.NewError(PathNotFound{Path: f.PathURL.Path})
-		}
-		return nil, probe.NewError(e)
+		return nil, f.toClientError(e, fpath)
 	}
 	return st, nil
 }
 
-func (f *fsClient) AddUserAgent(app, version string) {
+func (f *fsClient) AddUserAgent(_, _ string) {
+}
+
+// Get Object Tags
+func (f *fsClient) GetObjectTagging() (tagging.Tagging, *probe.Error) {
+	return tagging.Tagging{}, probe.NewError(APINotImplemented{
+		API:     "GetObjectTagging",
+		APIType: "filesystem",
+	})
+}
+
+// Set Object tags
+func (f *fsClient) SetObjectTagging(tagMap map[string]string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetObjectTagging",
+		APIType: "filesystem",
+	})
+}
+
+// Delete object tags
+func (f *fsClient) DeleteObjectTagging() *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "DeleteObjectTagging",
+		APIType: "filesystem",
+	})
 }

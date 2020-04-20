@@ -30,15 +30,14 @@ import (
 
 // contentMessage container for content message structure.
 type statMessage struct {
-	Status            string            `json:"status"`
-	Key               string            `json:"name"`
-	Date              time.Time         `json:"lastModified"`
-	Size              int64             `json:"size"`
-	ETag              string            `json:"etag"`
-	Type              string            `json:"type"`
-	Expires           time.Time         `json:"expires"`
-	EncryptionHeaders map[string]string `json:"encryption,omitempty"`
-	Metadata          map[string]string `json:"metadata"`
+	Status   string            `json:"status"`
+	Key      string            `json:"name"`
+	Date     time.Time         `json:"lastModified"`
+	Size     int64             `json:"size"`
+	ETag     string            `json:"etag"`
+	Type     string            `json:"type"`
+	Expires  time.Time         `json:"expires"`
+	Metadata map[string]string `json:"metadata"`
 }
 
 // String colorized string message.
@@ -57,26 +56,37 @@ func printStat(stat statMessage) {
 	}
 	var maxKey = 0
 	for k := range stat.Metadata {
-		if len(k) > maxKey {
-			maxKey = len(k)
+		// Skip encryption headers, we print them later.
+		if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+			if len(k) > maxKey {
+				maxKey = len(k)
+			}
 		}
 	}
-	if len(stat.Metadata) > 0 {
+	if maxKey > 0 {
 		console.Println(fmt.Sprintf("%-10s:", "Metadata"))
 		for k, v := range stat.Metadata {
-			console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+			// Skip encryption headers, we print them later.
+			if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+				console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+			}
 		}
 	}
+
 	maxKey = 0
-	for k := range stat.EncryptionHeaders {
-		if len(k) > maxKey {
-			maxKey = len(k)
+	for k := range stat.Metadata {
+		if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+			if len(k) > maxKey {
+				maxKey = len(k)
+			}
 		}
 	}
-	if len(stat.EncryptionHeaders) > 0 {
+	if maxKey > 0 {
 		console.Println(fmt.Sprintf("%-10s:", "Encrypted"))
-		for k, v := range stat.EncryptionHeaders {
-			console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+		for k, v := range stat.Metadata {
+			if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+				console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+			}
 		}
 	}
 	console.Println()
@@ -92,7 +102,7 @@ func (c statMessage) JSON() string {
 }
 
 // parseStat parses client Content container into statMessage struct.
-func parseStat(c *clientContent) statMessage {
+func parseStat(c *ClientContent) statMessage {
 	content := statMessage{}
 	content.Date = c.Time.Local()
 	// guess file type.
@@ -108,7 +118,6 @@ func parseStat(c *clientContent) statMessage {
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
 	content.Expires = c.Expires
-	content.EncryptionHeaders = c.EncryptionHeaders
 	return content
 }
 
@@ -118,8 +127,8 @@ func getStandardizedURL(targetURL string) string {
 }
 
 // statURL - simple or recursive listing
-func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*clientContent, *probe.Error) {
-	var stats []*clientContent
+func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
+	var stats []*ClientContent
 	var clnt Client
 	clnt, err := newClient(targetURL)
 	if err != nil {
@@ -164,10 +173,10 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
-			return nil, errTargetNotFound(targetURL)
+			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
-		_, stat, err := url2Stat(url, true, true, encKeyDB)
+		_, stat, err := url2Stat(url, true, encKeyDB)
 		if err != nil {
 			stat = content
 		}

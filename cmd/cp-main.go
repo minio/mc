@@ -23,10 +23,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -69,8 +69,28 @@ var (
 			Name:  "preserve, a",
 			Usage: "preserve filesystem attributes (mode, ownership, timestamps)",
 		},
+		cli.BoolFlag{
+			Name:  "disable-multipart",
+			Usage: "disable multipart upload feature",
+		},
+		cli.StringFlag{
+			Name:  rmFlag,
+			Usage: "retention mode to be applied on the object (governance, compliance)",
+		},
+		cli.StringFlag{
+			Name:  rdFlag,
+			Usage: "retention duration for the object in d days or y years",
+		},
+		cli.StringFlag{
+			Name:  lhFlag,
+			Usage: "apply legal hold to the copied object (on, off)",
+		},
 	}
 )
+
+var rmFlag = "retention-mode"
+var rdFlag = "retention-duration"
+var lhFlag = "legal-hold"
 
 // ErrInvalidMetadata reflects invalid metadata format
 var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=value1;key2=value2;... and so on")
@@ -127,11 +147,11 @@ EXAMPLES:
       base64 encoded string as key.
       {{.Prompt}} {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
 
-  11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
-      {{.Prompt}} {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
+  11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata, separated by ";"
+      {{.Prompt}} {{.HelpName}} --attr "key1=value1;key2=value2" Music/*.mp4 play/mybucket/
 
-  12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
-      {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+  12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with Cache-Control and custom metadata, separated by ";".
+      {{.Prompt}} {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000;key1=value1;key2=value2" --recursive play/mybucket/burningman2011/ s3/mybucket/
 
   13. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
       {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
@@ -141,6 +161,15 @@ EXAMPLES:
 
   15. Copy a text file to an object storage and preserve the file system attribute as metadata.
       {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
+
+  16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention duration 1 day.
+      {{.Prompt}} {{.HelpName}} --retention-mode governance --retention-duration 1d locked.txt play/locked-bucket/
+
+  17. Copy a text file to an object storage with legal-hold enabled.
+      {{.Prompt}} {{.HelpName}} --legal-hold on locked.txt play/locked-bucket/
+
+  18. Copy a text file to an object storage and disable multipart upload feature.
+      {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
 `,
 }
 
@@ -182,8 +211,8 @@ type ProgressReader interface {
 	Progress
 }
 
-// doCopy - Copy a singe file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair) URLs {
+// doCopy - Copy a single file from source to destination
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool, preserve bool) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -194,11 +223,11 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 	targetAlias := cpURLs.TargetAlias
 	targetURL := cpURLs.TargetContent.URL
 	length := cpURLs.SourceContent.Size
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 
 	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	} else {
-		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
 			Source:     sourcePath,
@@ -208,19 +237,31 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 			TotalSize:  cpURLs.TotalSize,
 		})
 	}
-	return uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB)
+
+	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
+	if isMvCmd && urls.Error == nil {
+		bgRemove(sourcePath)
+	}
+
+	return urls
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cpURLs URLs, pg Progress) URLs {
+func doCopyFake(cpURLs URLs, pg Progress, isMvCmd bool) URLs {
 	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
+
+	if isMvCmd {
+		sourcePath := filepath.ToSlash(filepath.Join(cpURLs.SourceAlias, cpURLs.SourceContent.URL.Path))
+		bgRemove(sourcePath)
+	}
+
 	return cpURLs
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
+func doPrepareCopyURLs(session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -271,15 +312,15 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 				session.Delete()
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
-
-			fmt.Fprintln(dataFP, string(jsonData))
+			dataFP.Write(jsonData)
+			dataFP.Write([]byte{'\n'})
 			if !globalQuiet && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
 			}
 
 			totalBytes += cpURLs.SourceContent.Size
 			totalObjects++
-		case <-trapCh:
+		case <-globalContext.Done():
 			cancelCopy()
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 			if !globalQuiet && !globalJSON {
@@ -296,10 +337,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	return
 }
 
-func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair) error {
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
-
-	ctx, cancelCopy := context.WithCancel(context.Background())
+func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
+	ctx, cancelCopy := context.WithCancel(globalContext)
 	defer cancelCopy()
 
 	var isCopied func(string) bool
@@ -323,7 +362,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 		isCopied = isLastFactory(session.Header.LastCopied)
 
 		if !session.HasData() {
-			totalBytes, totalObjects = doPrepareCopyURLs(session, trapCh, cancelCopy)
+			totalBytes, totalObjects = doPrepareCopyURLs(session, cancelCopy)
 		} else {
 			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
 		}
@@ -338,6 +377,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					close(cpURLsCh)
 					break
 				}
+
 				var cpURLs URLs
 				if e := json.Unmarshal([]byte(urlScanner.Text()), &cpURLs); e != nil {
 					errorIf(probe.NewError(e), "Unable to unmarshal %s", urlScanner.Text())
@@ -359,10 +399,27 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 
 		go func() {
 			totalBytes := int64(0)
-			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan) {
-				totalBytes += cpURLs.SourceContent.Size
-				pg.SetTotal(totalBytes)
-
+			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL, isRecursive,
+				encKeyDB, olderThan, newerThan) {
+				if cpURLs.Error != nil {
+					// Print in new line and adjust to top so that we
+					// don't print over the ongoing scan bar
+					if !globalQuiet && !globalJSON {
+						console.Eraseline()
+					}
+					if strings.Contains(cpURLs.Error.ToGoError().Error(),
+						" is a folder.") {
+						errorIf(cpURLs.Error.Trace(),
+							"Folder cannot be copied. Please use `...` suffix.")
+					} else {
+						errorIf(cpURLs.Error.Trace(),
+							"Unable to start copying.")
+					}
+					break
+				} else {
+					totalBytes += cpURLs.SourceContent.Size
+					pg.SetTotal(totalBytes)
+				}
 				cpURLsCh <- cpURLs
 			}
 			close(cpURLsCh)
@@ -409,6 +466,22 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = storageClass
 				}
 
+				// update Object retention related fields
+				if session != nil {
+					cpURLs.TargetContent.RetentionMode = session.Header.CommandStringFlags[rmFlag]
+					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
+					cpURLs.TargetContent.LegalHold = session.Header.CommandStringFlags[lhFlag]
+				} else {
+					if rm := cli.String(rmFlag); rm != "" {
+						cpURLs.TargetContent.RetentionMode = rm
+					}
+					if rd := cli.String(rdFlag); rd != "" {
+						cpURLs.TargetContent.RetentionDuration = rd
+					}
+					if lh := cli.String(lhFlag); lh != "" {
+						cpURLs.TargetContent.LegalHold = lh
+					}
+				}
 				if cli.String("attr") != "" {
 					userMetaMap, _ := getMetaDataEntry(cli.String("attr"))
 					for metaDataKey, metaDataVal := range userMetaMap {
@@ -416,26 +489,17 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					}
 				}
 
-				// If one needs to store the file system information by passing -a flag
-				if preserve := cli.Bool("preserve"); preserve {
-					attrValue, pErr := getFileAttrMeta(cpURLs, encKeyDB)
-					if pErr != nil {
-						errorIf(pErr, "Unable to fetch file meta info for %s", cpURLs.SourceAlias)
-						continue
-					}
+				preserve := cli.Bool("preserve")
+				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
-					if attrValue != "" {
-						cpURLs.TargetContent.Metadata["mc-attrs"] = attrValue
-					}
-				}
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
-						return doCopyFake(cpURLs, pg)
+						return doCopyFake(cpURLs, pg, isMvCmd)
 					}
 				} else {
 					queueCh <- func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB)
+						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
 					}
 				}
 			}
@@ -447,7 +511,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 loop:
 	for {
 		select {
-		case <-trapCh:
+		case <-globalContext.Done():
 			close(quitCh)
 			cancelCopy()
 			// Receive interrupt notification.
@@ -457,6 +521,7 @@ loop:
 			if session != nil {
 				session.CloseAndDie()
 			}
+			break loop
 		case cpURLs, ok := <-statusCh:
 			// Status channel is closed, we should return.
 			if !ok {
@@ -511,11 +576,10 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	metaDataMap := make(map[string]string)
 	for _, metaData := range strings.Split(metadataString, ";") {
 		metaDataEntry := strings.SplitN(metaData, "=", 2)
-		if len(metaDataEntry) == 2 {
-			metaDataMap[metaDataEntry[0]] = metaDataEntry[1]
-		} else {
+		if len(metaDataEntry) != 2 {
 			return nil, probe.NewError(ErrInvalidMetadata)
 		}
+		metaDataMap[http.CanonicalHeaderKey(metaDataEntry[0])] = metaDataEntry[1]
 	}
 	return metaDataMap, nil
 }
@@ -534,15 +598,18 @@ func mainCopy(ctx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, encKeyDB)
+	checkCopySyntax(ctx, encKeyDB, false)
 
-	// Additional command speific theme customization.
+	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
 	recursive := ctx.Bool("recursive")
 	olderThan := ctx.String("older-than")
 	newerThan := ctx.String("newer-than")
 	storageClass := ctx.String("storage-class")
+	retentionMode := ctx.String(rmFlag)
+	retentionDuration := ctx.String(rdFlag)
+	legalHold := ctx.String(lhFlag)
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := ctx.String("encrypt-key"); key != "" {
 		sseKeys = key
@@ -568,6 +635,9 @@ func mainCopy(ctx *cli.Context) error {
 			session.Header.CommandStringFlags["older-than"] = olderThan
 			session.Header.CommandStringFlags["newer-than"] = newerThan
 			session.Header.CommandStringFlags["storage-class"] = storageClass
+			session.Header.CommandStringFlags[rmFlag] = retentionMode
+			session.Header.CommandStringFlags[rdFlag] = retentionDuration
+			session.Header.CommandStringFlags[lhFlag] = legalHold
 			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 			session.Header.CommandStringFlags["encrypt"] = sse
 			session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
@@ -576,6 +646,7 @@ func mainCopy(ctx *cli.Context) error {
 				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
+			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
 
 			var e error
 			if session.Header.RootPath, e = os.Getwd(); e != nil {
@@ -588,7 +659,7 @@ func mainCopy(ctx *cli.Context) error {
 		}
 	}
 
-	e := doCopySession(ctx, session, encKeyDB)
+	e := doCopySession(ctx, session, encKeyDB, false)
 	if session != nil {
 		session.Delete()
 	}

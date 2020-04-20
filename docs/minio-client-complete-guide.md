@@ -3,28 +3,33 @@
 MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
-ls       list buckets and objects
-tree     list buckets and objects in a tree format
-mb       make a bucket
-rb       remove a bucket
-cat      display object contents
-head     display first 'n' lines of an object
-pipe     stream STDIN to an object
-share    generate URL for temporary access to an object
-cp       copy objects
-mirror   synchronize objects to a remote site
-find     search for objects
-sql      run sql queries on objects
-stat     stat contents of objects
-diff     list differences in object name, size, and date between buckets
-rm       remove objects
-event    manage object notifications
-watch    watch for object events
-policy   manage anonymous access to objects
-admin    manage MinIO servers
-session  manage saved sessions for cp command
-config   manage mc configuration file
-update   check for a new software update
+ls        list buckets and objects
+tree      list buckets and objects in a tree format
+mb        make a bucket
+rb        remove a bucket
+cat       display object contents
+head      display first 'n' lines of an object
+pipe      stream STDIN to an object
+share     generate URL for temporary access to an object
+cp        copy objects
+mirror    synchronize objects to a remote site
+find      search for objects
+sql       run sql queries on objects
+stat      stat contents of objects
+lock      set and get object lock configuration
+retention set object retention for objects with a given prefix
+legalhold set object legal hold for objects with a given prefix
+diff      list differences in object name, size, and date between buckets
+rm        remove objects
+event     manage object notifications
+watch     watch for object events
+policy    manage anonymous access to objects
+tag       manage tags for an object
+admin     manage MinIO servers
+session   manage saved sessions for cp command
+config    manage mc configuration file
+update    check for a new software update
+mv        move objects
 ```
 
 ## 1.  Download MinIO Client
@@ -117,8 +122,10 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 #### Usage
 
 ```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
+mc config host add <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
 ```
+
+Keys must be supplied by argument or standard input.
 
 Alias is simply a short name to your cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
@@ -143,6 +150,23 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 ```
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
+
+### Example - Specify keys using standard input
+
+1. Prompt
+
+   ```
+   mc config host add minio http://192.168.1.51 --api S3v4
+   Enter Access Key: BKIKJAA5BMMU2RHO6IBB
+   Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+   ```
+
+2. Pipe
+
+   ```
+   echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
+       mc config host add minio http://192.168.1.51 --api S3v4
+   ```
 
 ### Specify host configuration through environment variable
 ```
@@ -258,16 +282,16 @@ mc version RELEASE.2016-04-01T00-22-11Z
 
 ## 7. Commands
 
-|                                                          |                                                               |                                                          |                                         |
-|:---------------------------------------------------------|:--------------------------------------------------------------|:---------------------------------------------------------|-----------------------------------------|
-| [**ls** - List buckets and objects](#ls)                 | [**tree** - List buckets and objects in a tree format](#tree) | [**mb** - Make a bucket](#mb)                            | [**cat** - Concatenate an object](#cat) |
-| [**cp** - Copy objects](#cp)                             | [**rb** - Remove a bucket](#rb)                               | [**pipe** - Pipe to an object](#pipe)                    |                                         |
-| [**share** - Share access](#share)                       | [**rm** - Remove objects](#rm)                                | [**find** - Find files and objects](#find)               |                                         |
-| [**diff** - Diff buckets](#diff)                         | [**mirror** - Mirror buckets](#mirror)                        | [**session** - Manage saved sessions](#session)          |                                         |
-| [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)      |                                         |
-| [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat) |                                         |
-| [**head** - Display first 'n' lines of an object](#head) |                                                               |                                                          |                                         |
-|                                                          | [**sql** - Run sql queries on objects](#sql)                  |                                                          |                                         |
+|                                                          |                                                               |                                                                                     |                                         |
+|:---------------------------------------------------------|:--------------------------------------------------------------|:------------------------------------------------------------------------------------|-----------------------------------------|
+| [**ls** - List buckets and objects](#ls)                 | [**tree** - List buckets and objects in a tree format](#tree) | [**mb** - Make a bucket](#mb)                                                       | [**cat** - Concatenate an object](#cat) |
+| [**cp** - Copy objects](#cp)                             | [**rb** - Remove a bucket](#rb)                               | [**pipe** - Pipe to an object](#pipe)                                               |                                         |
+| [**share** - Share access](#share)                       | [**rm** - Remove objects](#rm)                                | [**find** - Find files and objects](#find)                                          |                                         |
+| [**diff** - Diff buckets](#diff)                         | [**mirror** - Mirror buckets](#mirror)                        | [**session** - Manage saved sessions](#session)                                     |                                         |
+| [**config** - Manage config file](#config)               | [**policy** - Set public policy on bucket or prefix](#policy) | [**event** - Manage events on your buckets](#event)                                 |                                         |
+| [**update** - Manage software updates](#update)          | [**watch** - Watch for events](#watch)                        | [**stat** - Stat contents of objects and folders](#stat)                            |                                         |
+| [**head** - Display first 'n' lines of an object](#head) | [**lock** - set and get object lock configuration](#lock)     | [**retention** - set object retention for objects with a given prefix](#retention)  |                                         |
+| [**mv** - Move objects](#mv)                             | [**sql** - Run sql queries on objects](#sql)                  | [**legalhold** - set object legal hold for objects with a given prefix](#legalhold) |                                         |
 
 
 ###  Command `ls` - List Objects
@@ -534,6 +558,107 @@ mc head -n 1 --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play
 Hello!!
 ```
 
+<a name="lock"></a>
+### Command `lock` - set and get object lock configuration
+`lock` sets and gets object lock configuration
+
+```
+USAGE:
+   mc lock [FLAGS] TARGET [governance | compliance] [VALIDITY]
+
+FLAGS:
+  --clear, -c                   clears previously stored object lock configuration
+  --json                        enable JSON formatted output
+  --help, -h                    show help
+```
+
+*Example: Set object lock configuration of 30 day compliance on bucket `mybucket`*
+
+```
+mc lock myminio/mybucket compliance 30d
+```
+
+*Example: Display the object lock configuration for bucket `mybucket`*
+
+```
+mc lock myminio/mybucket
+COMPLIANCE mode is enabled for 30d
+```
+*Example: Display the object lock configuration for bucket `mybucket`*
+
+```
+mc lock myminio/mybucket
+COMPLIANCE mode is enabled for 30d
+```
+*Example: Clear object lock configuration for bucket `mybucket`*
+
+```
+mc lock --clear myminio/mybucket
+No object lock configuration is enabled
+```
+
+<a name="retention"></a>
+### Command `retention` - set object retention for objects with a given prefix
+`retention` sets object retention for objects with a given prefix
+
+```
+USAGE:
+   mc retention [FLAGS] TARGET [governance | compliance] [VALIDITY]
+
+FLAGS:
+  --bypass                      bypass governance
+  --recursive, -r               apply retention recursively
+  --json                        enable JSON formatted output
+  --help, -h                    show help
+```
+
+*Example: Set governance for 30 days for object `prefix` on bucket `mybucket`*
+
+```
+mc retention myminio/mybucket/prefix governance 30d  -r
+Object retention successfully set for objects with prefix `myminio/mybucket/prefix`.
+
+```
+*Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the compliance period is over*
+
+```
+mc cp ~/comp.csv myminio/mybucket/prefix/
+mc rm myminio/mybucket/prefix/comp.csv
+Removing `myminio/mybucket/prefix/comp.csv`.
+mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM protected and cannot be overwritten
+```
+
+<a name="legalhold"></a>
+### Command `legalhold` - set object legal hold for objects
+`legalhold` sets object legal hold for objects
+
+```
+USAGE:
+   mc legalhold [FLAGS] TARGET [ON | OFF]
+
+FLAGS:
+  --recursive, -r               apply legal hold recursively
+  --json                        enable JSON formatted output
+  --help, -h                    show help
+```
+
+*Example: Enable legal hold for objects with prefix `prefix` on bucket `mybucket`*
+
+```
+mc legalhold myminio/mybucket/prefix ON -r
+Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
+
+```
+*Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the legal hold is lifted*
+
+```
+mc cp ~/test.csv myminio/mybucket/prefix/
+mc legalhold myminio/mybucket/prefix/test.csv ON
+mc rm myminio/mybucket/prefix/test.csv
+Removing `myminio/mybucket/prefix/test.csv`.
+mc: <ERROR> Failed to remove `myminio/mybucket/prefix/test.csv`. Object is WORM protected and cannot be overwritten
+```
+
 <a name="pipe"></a>
 ### Command `pipe` - Pipe to Object
 `pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
@@ -638,6 +763,95 @@ myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 ```
 mc cp -a myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+<a name="mv"></a>
+### Command `mv` - Move Objects
+`mv` command movies data from one or more sources to a target.  All move operations to object storage are verified with MD5SUM checksums. Interrupted or failed move operations can be resumed from the point of failure.
+
+```
+USAGE:
+   mc mv [FLAGS] SOURCE [SOURCE...] TARGET
+
+FLAGS:
+  --recursive, -r                    move recursively
+  --older-than value                 move object(s) older than N days (default: 0)
+  --newer-than value                 move object(s) newer than N days (default: 0)
+  --storage-class value, --sc value  set storage class for new object(s) on target
+  --preserve,-a                      preserve file system attributes and bucket policy rules on target bucket(s)
+  --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
+  --continue, -c                     create or resume move session
+  --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
+  --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                         show help
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT:      list of comma delimited prefixes
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+```
+
+*Example: Move a text file to an object storage.*
+
+```
+mc mv myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a text file to an object storage with specified metadata.*
+
+```
+mc mv --attr key1=value1;key2=value2 myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.*
+```
+mc mv --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+https://play.minio.io:9000/mybucket/myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a text file to an object storage and assign storage-class `REDUCED_REDUNDANCY` to the uploaded object.*
+
+```
+mc mv --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a server-side encrypted file to an object storage.*
+
+```
+mc mv --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1 , myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/myobject.txt myminio/documents/
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Perform key-rotation on a server-side encrypted object*
+
+```
+mc mv --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , myminio2/mybucket/=32byteslongsecretkeymustgenerat1' myminio1/mybucket/encryptedobject myminio2/mybucket/encryptedobject
+encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
+
+*Example: Move a javascript file to object storage and assign Cache-Control header to the uploaded object*
+
+```sh
+mc mv --attr Cache-Control=no-cache myscript.js play/mybucket
+myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
+```
+
+*Example: Move a text file to an object storage and preserve the filesyatem attributes.*
+
+```
+mc mv -a myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+Waiting move operations to complete
 ```
 
 <a name="rm"></a>
@@ -1045,49 +1259,52 @@ mc policy set none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ```
 
-<a name="admin"></a>
-### Command `admin` - Manage MinIO servers
-Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
+<a name="tag"></a>
+### Command `tag` - Manage tags for an object
+` tag` command provides a convenient way to set, remove, and list object tags. Tags are defined as key-value pairs.
 
-<a name="session"></a>
-### Command `session` - Manage Sessions
-``session`` command manages previously saved sessions for `cp` and `mirror` operations
 
 ```
 USAGE:
-  mc session COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
-
-COMMANDS:
-  list    list all previously saved sessions
-  clear   clear a previously saved session
-  resume  resume a previously saved session
+  mc tag list [COMMAND FLAGS] TARGET
+  mc tag remove [COMMAND FLAGS] TARGET
+  mc tag set [COMMAND FLAGS] TARGET [TAGS]
 
 FLAGS:
-  --help, -h                       show help
-
+  --help, -h                    show help
+  --json                        enable JSON formatted output
+  --debug                       enable debug output
 ```
 
-*Example: List all previously saved sessions.*
+*Example : List tags assigned to an object*
 
+List tags for `testobject` in `testbucket` in alias `s3`
 ```
-mc session list
-IXWKjpQM -> [2016-04-08 19:11:14 IST] cp assets.go play/mybucket
-ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
-```
-
-*Example: Resume a previously saved session.*
-
-```
-mc session resume IXWKjpQM
-...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
+mc tag list s3/testbucket/testobject
+Name                :    testobject
+editable            :    only-by-owner-and-authenticated
+confidentiality     :    open-to-authenticated-only
 ```
 
-*Example: Drop a previously saved session.*
+*Example : Set tags for an object*
 
+Set tags for `testobject` in `testbucket` in alias `s3`
 ```
-mc session clear ApwAxSwa
-Session ‘ApwAxSwa’ cleared successfully.
+mc tag set s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+Tags set for s3/testbucket/testobject.
 ```
+
+*Example : Remove tags assigned to an object*
+
+Remove tags assigned to `testobject` in `testbucket` in alias `s3`
+```
+mc tag remove s3/testbucket/testobject
+Tags removed for s3/testbucket/testobject.
+```
+
+<a name="admin"></a>
+### Command `admin` - Manage MinIO servers
+Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
 
 <a name="config"></a>
 ### Command `config` - Manage Config File

@@ -36,13 +36,17 @@ var (
 			Name:  "depth, d",
 			Usage: "print the total for a folder prefix only if it is N or fewer levels below the command line argument",
 		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "recursively print the total for a folder prefix",
+		},
 	}
 )
 
 // Summarize disk usage.
 var duCmd = cli.Command{
 	Name:   "du",
-	Usage:  "summarize disk usage folder prefixes recursively",
+	Usage:  "summarize disk usage recursively",
 	Action: mainDu,
 	Before: setGlobalsFromContext,
 	Flags:  append(append(duFlags, ioFlags...), globalFlags...),
@@ -107,10 +111,17 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 	size := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {
+			switch content.Err.ToGoError().(type) {
+			// handle this specifically for filesystem related errors.
+			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, ObjectOnGlacier:
+				continue
+			case PathInsufficientPermission:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			}
 			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
 			return 0, exitStatus(globalErrorExitStatus)
 		}
-
 		if content.URL.String() == targetURL {
 			continue
 		}
@@ -153,6 +164,10 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 
 // main for du command.
 func mainDu(ctx *cli.Context) error {
+	if !ctx.Args().Present() {
+		cli.ShowCommandHelpAndExit(ctx, "du", 1)
+	}
+
 	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 
@@ -163,7 +178,13 @@ func mainDu(ctx *cli.Context) error {
 	// du specific flags.
 	depth := ctx.Int("depth")
 	if depth == 0 {
-		depth = -1
+		if ctx.Bool("recursive") {
+			if !ctx.IsSet("depth") {
+				depth = -1
+			}
+		} else {
+			depth = 1
+		}
 	}
 
 	// Set color.

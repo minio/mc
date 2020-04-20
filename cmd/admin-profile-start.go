@@ -21,6 +21,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6/pkg/set"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
 )
@@ -28,8 +29,8 @@ import (
 var adminProfileStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex' and 'trace'",
-		Value: "mem",
+		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
+		Value: "cpu,mem,block",
 	},
 }
 
@@ -50,9 +51,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Start CPU profile
+    1. Start CPU profiling only
        {{.Prompt}} {{.HelpName}} --type cpu myminio/
 
+    2. Start CPU, Memory and Block profiling concurrently
+       {{.Prompt}} {{.HelpName}} --type cpu,mem,block myminio/
 `,
 }
 
@@ -62,25 +65,33 @@ func checkAdminProfileStartSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "start", 1) // last argument is exit code
 	}
 
-	profilerTypes := []madmin.ProfilerType{
+	s := set.NewStringSet()
+	supportedProfilerTypes := []madmin.ProfilerType{
 		madmin.ProfilerCPU,
 		madmin.ProfilerMEM,
 		madmin.ProfilerBlock,
 		madmin.ProfilerMutex,
 		madmin.ProfilerTrace,
+		madmin.ProfilerThreads,
+		madmin.ProfilerGoroutines,
 	}
-
+	for _, profilerType := range supportedProfilerTypes {
+		s.Add(string(profilerType))
+	}
 	// Check if the provided profiler type is known and supported
 	supportedProfiler := false
-	profilerType := strings.ToLower(ctx.String("type"))
-	for _, profiler := range profilerTypes {
-		if profilerType == string(profiler) {
-			supportedProfiler = true
-			break
+	profilers := strings.Split(strings.ToLower(ctx.String("type")), ",")
+	for _, profiler := range profilers {
+		if profiler != "" {
+			if s.Contains(profiler) {
+				supportedProfiler = true
+				break
+			}
 		}
 	}
 	if !supportedProfiler {
-		fatalIf(errDummy(), "Profiler type unrecognized. Possible values are: %v.", profilerTypes)
+		fatalIf(errDummy().Trace(ctx.String("type")),
+			"Profiler type unrecognized. Possible values are: %v.", supportedProfilerTypes)
 	}
 }
 
@@ -93,7 +104,7 @@ func mainAdminProfileStart(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	profilerType := ctx.String("type")
+	profilers := ctx.String("type")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -103,7 +114,7 @@ func mainAdminProfileStart(ctx *cli.Context) error {
 	}
 
 	// Start profile
-	_, cmdErr := client.StartProfiling(madmin.ProfilerType(profilerType))
+	_, cmdErr := client.StartProfiling(globalContext, madmin.ProfilerType(profilers))
 	fatalIf(probe.NewError(cmdErr), "Unable to start profile.")
 
 	console.Infoln("Profile data successfully started.")

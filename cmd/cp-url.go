@@ -53,7 +53,7 @@ const (
 func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair) (copyURLsType, *probe.Error) {
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
 		sourceURL := sourceURLs[0]
-		_, sourceContent, err := url2Stat(sourceURL, false, false, keys)
+		_, sourceContent, err := url2Stat(sourceURL, false, keys)
 		if err != nil {
 			return copyURLsTypeInvalid, err
 		}
@@ -88,7 +88,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[strin
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(sourceURL, false, false, encKeyDB)
+	_, sourceContent, err := url2Stat(sourceURL, false, encKeyDB)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -103,8 +103,8 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[strin
 }
 
 // prepareCopyContentTypeA - makes CopyURLs content for copying.
-func makeCopyContentTypeA(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
-	targetContent := clientContent{URL: *newClientURL(targetURL)}
+func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+	targetContent := ClientContent{URL: *newClientURL(targetURL)}
 	return URLs{
 		SourceAlias:   sourceAlias,
 		SourceContent: sourceContent,
@@ -121,7 +121,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string, encKeyDB map[strin
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(sourceURL, false, false, encKeyDB)
+	_, sourceContent, err := url2Stat(sourceURL, false, encKeyDB)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -140,7 +140,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string, encKeyDB map[strin
 }
 
 // makeCopyContentTypeB - CopyURLs content for copying.
-func makeCopyContentTypeB(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func makeCopyContentTypeB(sourceAlias string, sourceContent *ClientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	targetURLParse := newClientURL(targetURL)
 	targetURLParse.Path = filepath.ToSlash(filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path)))
@@ -185,12 +185,17 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool, encKeyD
 }
 
 // makeCopyContentTypeC - CopyURLs content for copying.
-func makeCopyContentTypeC(sourceAlias string, sourceURL clientURL, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent *ClientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	newSourceURL := sourceContent.URL
 	pathSeparatorIndex := strings.LastIndex(sourceURL.Path, string(sourceURL.Separator))
 	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)
 	if pathSeparatorIndex > 1 {
 		sourcePrefix := filepath.ToSlash(sourceURL.Path[:pathSeparatorIndex])
+		// do not preserve unix cp behavior when copying from filesytem to
+		// objectstore.
+		if sourceAlias == "" && targetAlias != "" {
+			sourcePrefix = sourceURL.Path
+		}
 		newSourceSuffix = strings.TrimPrefix(newSourceSuffix, sourcePrefix)
 	}
 	newTargetURL := urlJoinPath(targetURL, newSourceSuffix)

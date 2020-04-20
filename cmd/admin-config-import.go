@@ -17,12 +17,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -96,7 +96,7 @@ func mainAdminConfigImport(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call set config API
-	fatalIf(probe.NewError(client.SetConfig(os.Stdin)), "Cannot set server config")
+	fatalIf(probe.NewError(client.SetConfig(globalContext, os.Stdin)), "Cannot set server config")
 
 	// Print
 	printMsg(configImportMessage{
