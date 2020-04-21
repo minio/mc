@@ -67,9 +67,9 @@ var (
 			Name:  "preserve, a",
 			Usage: "preserve file(s)/object(s) attributes and bucket policy rules on target bucket(s)",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "multi-master",
-			Usage: `multi-master multi-site setup, "value" is the site tag for the multi-master deployment`,
+			Usage: "enable multi-master multi-site setup",
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
@@ -166,8 +166,8 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
   15. Cross mirror between sites in a multi-master deployment.
-      Site-A: {{.Prompt}} {{.HelpName}} --watch --multi-master splunk-smartstore1 siteA siteB
-      Site-B: {{.Prompt}} {{.HelpName}} --watch --multi-master splunk-smartstore1 siteB siteA
+      Site-A: {{.Prompt}} {{.HelpName}} --watch --multi-master siteA siteB
+      Site-B: {{.Prompt}} {{.HelpName}} --watch --multi-master siteB siteA
 `,
 }
 
@@ -209,7 +209,6 @@ type mirrorJob struct {
 	encKeyDB       map[string][]prefixSSEPair
 
 	multiMasterEnable bool
-	multiMasterSTag   string
 }
 
 // mirrorMessage container for file mirror messages
@@ -301,13 +300,12 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 	}
 
 	if mj.multiMasterEnable {
-		// Set multiMasterETagKey for the target.
-		if sURLs.SourceContent.UserMetadata[multiMasterETagKey] == "" {
-			sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.ETag
-		}
-
-		if sURLs.SourceContent.UserMetadata[multiMasterSTagKey] == "" {
-			sURLs.TargetContent.Metadata[multiMasterSTagKey] = mj.multiMasterSTag
+		// If the source object already has source modtime attribute set, then
+		// use it in target. Otherwise use the S3 modtime instead.
+		if sURLs.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
+			sURLs.TargetContent.Metadata[multiMasterSourceModTimeKey] = sURLs.SourceContent.Metadata[multiMasterSourceModTimeKey]
+		} else {
+			sURLs.TargetContent.Metadata[multiMasterSourceModTimeKey] = sURLs.SourceContent.Time.Format(time.RFC3339Nano)
 		}
 	}
 
@@ -420,22 +418,25 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			if (event.Type == EventCreate) ||
 				(event.Type == EventCreateCopy) ||
 				(event.Type == EventCreatePutRetention) {
+				sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
 				mirrorURL := URLs{
 					SourceAlias: sourceAlias,
 					SourceContent: &ClientContent{
 						URL:       *sourceURL,
 						Retention: event.Type == EventCreatePutRetention,
 						Size:      event.Size,
+						Time:      sourceModTime,
 						Metadata:  event.UserMetadata,
 					},
 					TargetAlias:   targetAlias,
 					TargetContent: &ClientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
 				}
-				if mirrorURL.SourceContent.Metadata[multiMasterETagKey] != "" {
-					// If source has multiMasterETagKey, it means that the
-					// object was uplooaded by "mc mirror"
-					// hence ignore the event to avoid copying it.
+				if mj.multiMasterEnable &&
+					mirrorURL.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
+					// If source has multi-master attributes, it means that the
+					// object was uploaded by "mc mirror", hence ignore the event
+					// to avoid copying it.
 					continue
 				}
 				if mirrorURL.SourceContent.Size == 0 && mirrorURL.SourceContent.Retention {
@@ -643,10 +644,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return mj.monitorMirrorStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan string, storageClass string, multiMasterSTag string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
-	if multiMasterEnable {
-		isPreserve = true
-	}
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve bool, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
 	mj := mirrorJob{
 		stopCh: make(chan struct{}),
 
@@ -657,7 +655,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		isRemove:          isRemove,
 		isOverwrite:       isOverwrite,
 		isWatch:           isWatch,
-		isPreserve:        isPreserve,
+		isPreserve:        isPreserve || multiMasterEnable,
 		excludeOptions:    excludeOptions,
 		olderThan:         olderThan,
 		newerThan:         newerThan,
@@ -667,7 +665,6 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		statusCh:          make(chan URLs),
 		watcher:           NewWatcher(UTCNow()),
 		multiMasterEnable: multiMasterEnable,
-		multiMasterSTag:   multiMasterSTag,
 	}
 
 	mj.parallel, mj.queueCh = newParallelManager(mj.statusCh)
@@ -773,9 +770,6 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		fatalIf(err, "Unable to initialize `"+dstURL+"`.")
 	}
 
-	multiMasterSTag := ctx.String("multi-master")
-	multiMasterEnable := multiMasterSTag != ""
-
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
 		ctx.Bool("fake"),
@@ -783,12 +777,11 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		isOverwrite,
 		ctx.Bool("watch"),
 		ctx.Bool("a"),
-		multiMasterEnable,
+		ctx.Bool("multi-master"),
 		ctx.StringSlice("exclude"),
 		ctx.String("older-than"),
 		ctx.String("newer-than"),
 		ctx.String("storage-class"),
-		multiMasterSTag,
 		userMetaMap,
 		encKeyDB)
 
@@ -931,7 +924,8 @@ func mainMirror(ctx *cli.Context) error {
 			srcURL = origSrcURL
 		}
 	}
-	if ctx.String("multi-master") != "" {
+
+	if ctx.Bool("multi-master") {
 		for {
 			runMirror(srcURL, tgtURL, ctx, encKeyDB)
 			time.Sleep(time.Second * 2)
