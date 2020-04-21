@@ -68,8 +68,16 @@ var (
 			Usage: "preserve file(s)/object(s) attributes and bucket policy rules on target bucket(s)",
 		},
 		cli.BoolFlag{
+			Name:  "md5",
+			Usage: "force all upload(s) to calculate md5sum checksum",
+		},
+		cli.StringFlag{
 			Name:  "multi-master",
 			Usage: "enable multi-master multi-site setup",
+		},
+		cli.BoolFlag{
+			Name:  "disable-multipart",
+			Usage: "disable multipart upload feature",
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
@@ -201,6 +209,7 @@ type mirrorJob struct {
 
 	isFake, isRemove, isOverwrite bool
 	isWatch, isPreserve           bool
+	md5, disableMultipart         bool
 	olderThan, newerThan          string
 	storageClass                  string
 	userMetadata                  map[string]string
@@ -321,6 +330,8 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
+	sURLs.MD5 = mj.md5
+	sURLs.DisableMultipart = mj.disableMultipart
 	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB, mj.isPreserve)
 }
 
@@ -428,9 +439,11 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						Time:      sourceModTime,
 						Metadata:  event.UserMetadata,
 					},
-					TargetAlias:   targetAlias,
-					TargetContent: &ClientContent{URL: *targetURL},
-					encKeyDB:      mj.encKeyDB,
+					TargetAlias:      targetAlias,
+					TargetContent:    &ClientContent{URL: *targetURL},
+					MD5:              mj.md5,
+					DisableMultipart: mj.disableMultipart,
+					encKeyDB:         mj.encKeyDB,
 				}
 				if mj.multiMasterEnable &&
 					mirrorURL.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
@@ -505,11 +518,13 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					continue
 				}
 				mirrorURL := URLs{
-					SourceAlias:   sourceAlias,
-					SourceContent: nil,
-					TargetAlias:   targetAlias,
-					TargetContent: &ClientContent{URL: *targetURL},
-					encKeyDB:      mj.encKeyDB,
+					SourceAlias:      sourceAlias,
+					SourceContent:    nil,
+					TargetAlias:      targetAlias,
+					TargetContent:    &ClientContent{URL: *targetURL},
+					MD5:              mj.md5,
+					DisableMultipart: mj.disableMultipart,
+					encKeyDB:         mj.encKeyDB,
 				}
 				mirrorURL.TotalCount = mj.status.GetCounts()
 				mirrorURL.TotalSize = mj.status.Get()
@@ -644,7 +659,10 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return mj.monitorMirrorStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve bool, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan string, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair, md5, disableMultipart bool) *mirrorJob {
+	if multiMasterEnable {
+		isPreserve = true
+	}
 	mj := mirrorJob{
 		stopCh: make(chan struct{}),
 
@@ -656,6 +674,8 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		isOverwrite:       isOverwrite,
 		isWatch:           isWatch,
 		isPreserve:        isPreserve || multiMasterEnable,
+		md5:               md5,
+		disableMultipart:  disableMultipart,
 		excludeOptions:    excludeOptions,
 		olderThan:         olderThan,
 		newerThan:         newerThan,
@@ -783,7 +803,10 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		ctx.String("newer-than"),
 		ctx.String("storage-class"),
 		userMetaMap,
-		encKeyDB)
+		encKeyDB,
+		ctx.Bool("md5"),
+		ctx.Bool("disable-multipart"),
+	)
 
 	go func() {
 		<-globalContext.Done()

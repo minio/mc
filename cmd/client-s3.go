@@ -885,7 +885,7 @@ func (c *S3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 }
 
 // Put - upload an object with custom metadata.
-func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (int64, *probe.Error) {
+func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
@@ -950,23 +950,21 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentLanguage:      contentLanguage,
 		StorageClass:         strings.ToUpper(storageClass),
 		ServerSideEncryption: sse,
+		SendContentMd5:       md5,
 		DisableMultipart:     disableMultipart,
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
 		opts.RetainUntilDate = &retainUntilDate
-		opts.SendContentMd5 = true
 	}
 
 	if lockModeStr != "" {
 		opts.Mode = &lockMode
-		opts.SendContentMd5 = true
 	}
 
 	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
 		delete(metadata, AmzObjectLockLegalHold)
 		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
-		opts.SendContentMd5 = true
 	}
 
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
