@@ -73,6 +73,10 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
+		cli.BoolFlag{
+			Name:  "md5",
+			Usage: "force all upload(s) to calculate md5sum checksum",
+		},
 		cli.StringFlag{
 			Name:  rmFlag,
 			Usage: "retention mode to be applied on the object (governance, compliance)",
@@ -490,6 +494,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				}
 
 				preserve := cli.Bool("preserve")
+				cpURLs.MD5 = cli.Bool("md5")
 				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
 				// Verify if previously copied, notify progress bar.
@@ -646,6 +651,7 @@ func mainCopy(ctx *cli.Context) error {
 				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
+			session.Header.CommandBoolFlags["md5"] = ctx.Bool("md5")
 			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
 
 			var e error
