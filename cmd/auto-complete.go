@@ -235,18 +235,15 @@ var completeCmds = map[string]complete.Predictor{
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
 
-	"/admin/info/server": aliasCompleter,
-	"/admin/info/cpu":    aliasCompleter,
-	"/admin/info/mem":    aliasCompleter,
+	"/admin/info": aliasCompleter,
 
-	"/admin/config/get":             adminConfigCompleter,
-	"/admin/config/set":             adminConfigCompleter,
-	"/admin/config/del":             adminConfigCompleter,
-	"/admin/config/import":          aliasCompleter,
-	"/admin/config/export":          aliasCompleter,
-	"/admin/config/history/restore": aliasCompleter,
-	"/admin/config/history/list":    aliasCompleter,
-	"/admin/config/history/clear":   aliasCompleter,
+	"/admin/config/get":     adminConfigCompleter,
+	"/admin/config/set":     adminConfigCompleter,
+	"/admin/config/reset":   adminConfigCompleter,
+	"/admin/config/import":  aliasCompleter,
+	"/admin/config/export":  aliasCompleter,
+	"/admin/config/history": aliasCompleter,
+	"/admin/config/restore": aliasCompleter,
 
 	"/admin/trace":     aliasCompleter,
 	"/admin/console":   aliasCompleter,
@@ -280,10 +277,6 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/list":    aliasCompleter,
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
-
-	"/session/clear":  nil,
-	"/session/list":   nil,
-	"/session/resume": nil,
 
 	"/config/host/add":    nil,
 	"/config/host/list":   aliasCompleter,
