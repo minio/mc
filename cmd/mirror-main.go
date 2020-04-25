@@ -277,13 +277,13 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
-func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFunc, sURLs URLs) URLs {
+func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
 
-	//s For a fake mirror make sure we update respective progress bars
+	// For a fake mirror make sure we update respective progress bars
 	// and accounting readers under relevant conditions.
 	if mj.isFake {
 		if sURLs.SourceContent != nil {
@@ -476,7 +476,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mirrorURL.TotalSize = mj.status.Get()
 						mirrorURL.TotalCount = mj.status.GetCounts()
 						mj.queueCh <- func() URLs {
-							return mj.doMirror(ctx, cancelMirror, mirrorURL)
+							return mj.doMirror(ctx, mirrorURL)
 						}
 					}
 					continue
@@ -510,7 +510,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					mirrorURL.TotalSize = mj.status.Get()
 					mirrorURL.TotalCount = mj.status.GetCounts()
 					mj.queueCh <- func() URLs {
-						return mj.doMirror(ctx, cancelMirror, mirrorURL)
+						return mj.doMirror(ctx, mirrorURL)
 					}
 				}
 			} else if event.Type == EventRemove {
@@ -599,7 +599,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 
 			if sURLs.SourceContent != nil {
 				mj.queueCh <- func() URLs {
-					return mj.doMirror(ctx, cancelMirror, sURLs)
+					return mj.doMirror(ctx, sURLs)
 				}
 			} else if sURLs.TargetContent != nil && mj.isRemove {
 				mj.queueCh <- func() URLs {
