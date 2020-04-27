@@ -32,13 +32,13 @@ import (
 type differType int
 
 const (
-	differInNone     differType = iota // does not differ
-	differInETag                       // differs in ETag
-	differInSize                       // differs in size
-	differInMetadata                   // differs in metadata
-	differInType                       // differs in type, exfile/directory
-	differInFirst                      // only in source (FIRST)
-	differInSecond                     // only in target (SECOND)
+	differInNone          differType = iota // does not differ
+	differInSize                            // differs in size
+	differInMMSourceMTime                   // differs in multi-master source modtime
+	differInMetadata                        // differs in metadata
+	differInType                            // differs in type, exfile/directory
+	differInFirst                           // only in source (FIRST)
+	differInSecond                          // only in target (SECOND)
 )
 
 func (d differType) String() string {
@@ -49,6 +49,8 @@ func (d differType) String() string {
 		return "size"
 	case differInMetadata:
 		return "metadata"
+	case differInMMSourceMTime:
+		return "mm-source-mtime"
 	case differInType:
 		return "type"
 	case differInFirst:
@@ -59,26 +61,48 @@ func (d differType) String() string {
 	return "unknown"
 }
 
-const multiMasterETagKey = "X-Amz-Meta-Mm-Etag"
-const multiMasterSTagKey = "X-Amz-Meta-Mm-Stag"
+const multiMasterSourceModTimeKey = "X-Amz-Meta-Mm-Source-Mtime"
 
-func eTagMatch(src, tgt *ClientContent) bool {
-	if tgt.UserMetadata[multiMasterETagKey] != "" {
-		if tgt.UserMetadata[multiMasterETagKey] == src.UserMetadata[multiMasterETagKey] || tgt.UserMetadata[multiMasterETagKey] == src.ETag {
-			return true
-		}
+func oldestNonNullTime(t1, t2 time.Time) time.Time {
+	if t1.IsZero() {
+		return t2
 	}
-	if src.UserMetadata[multiMasterETagKey] != "" {
-		if src.UserMetadata[multiMasterETagKey] == tgt.UserMetadata[multiMasterETagKey] || src.UserMetadata[multiMasterETagKey] == tgt.ETag {
-			return true
-		}
+	if t2.IsZero() {
+		return t1
 	}
-	return src.ETag == tgt.ETag
+	if t1.Before(t2) {
+		return t1
+	}
+
+	return t2
+}
+
+// multiMasterModTimeUpdated tries to calculate if the object copy in the target
+// is older than the one in the source by comparing the modtime of the data.
+func multiMasterModTimeUpdated(src, dst *ClientContent) bool {
+	if src == nil || dst == nil {
+		return false
+	}
+
+	if src.Time.IsZero() || dst.Time.IsZero() {
+		// This should only happen in a messy environment
+		// but we are returning false anyway so the caller
+		// function won't take any action.
+		return false
+	}
+
+	srcOriginLastModified, _ := time.Parse(time.RFC3339Nano, src.UserMetadata[multiMasterSourceModTimeKey])
+	dstOriginLastModified, _ := time.Parse(time.RFC3339Nano, dst.UserMetadata[multiMasterSourceModTimeKey])
+
+	srcActualModTime := oldestNonNullTime(src.Time, srcOriginLastModified)
+	dstActualModTime := oldestNonNullTime(dst.Time, dstOriginLastModified)
+
+	return srcActualModTime.After(dstActualModTime)
 }
 
 func metadataEqual(m1, m2 map[string]string) bool {
 	for k, v := range m1 {
-		if k == multiMasterETagKey || k == multiMasterSTagKey {
+		if k == multiMasterSourceModTimeKey {
 			continue
 		}
 		if m2[k] != v {
@@ -86,7 +110,7 @@ func metadataEqual(m1, m2 map[string]string) bool {
 		}
 	}
 	for k, v := range m2 {
-		if k == multiMasterETagKey || k == multiMasterSTagKey {
+		if k == multiMasterSourceModTimeKey {
 			continue
 		}
 		if m1[k] != v {
@@ -205,26 +229,20 @@ func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL stri
 				}
 				continue
 			}
-			if eTagMatch(srcCtnt, tgtCtnt) {
-				// If ETag matches, only thing that can differ is metadata.
-				if isMetadata &&
-					!metadataEqual(srcCtnt.UserMetadata, tgtCtnt.UserMetadata) &&
-					!metadataEqual(srcCtnt.Metadata, tgtCtnt.Metadata) {
-					// Regular files user requesting additional metadata to same file.
-					diffCh <- diffMessage{
-						FirstURL:      srcCtnt.URL.String(),
-						SecondURL:     tgtCtnt.URL.String(),
-						Diff:          differInMetadata,
-						firstContent:  srcCtnt,
-						secondContent: tgtCtnt,
-					}
-				}
-			} else if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
+			if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
 				// Regular files differing in size.
 				diffCh <- diffMessage{
 					FirstURL:      srcCtnt.URL.String(),
 					SecondURL:     tgtCtnt.URL.String(),
 					Diff:          differInSize,
+					firstContent:  srcCtnt,
+					secondContent: tgtCtnt,
+				}
+			} else if multiMasterModTimeUpdated(srcCtnt, tgtCtnt) {
+				diffCh <- diffMessage{
+					FirstURL:      srcCtnt.URL.String(),
+					SecondURL:     tgtCtnt.URL.String(),
+					Diff:          differInMMSourceMTime,
 					firstContent:  srcCtnt,
 					secondContent: tgtCtnt,
 				}

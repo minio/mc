@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -191,10 +192,17 @@ func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent
 	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)
 	if pathSeparatorIndex > 1 {
 		sourcePrefix := filepath.ToSlash(sourceURL.Path[:pathSeparatorIndex])
-		// do not preserve unix cp behavior when copying from filesytem to
+		// do not preserve unix cp behavior when copying a filesytem dir to
 		// objectstore.
 		if sourceAlias == "" && targetAlias != "" {
-			sourcePrefix = sourceURL.Path
+			// Check if sourceURL.Path is a directory or not
+			fileInfo, err := os.Stat(sourceURL.Path)
+			if err != nil {
+				return URLs{Error: probe.NewError(err)}
+			}
+			if fileInfo.IsDir() {
+				sourcePrefix = sourceURL.Path
+			}
 		}
 		newSourceSuffix = strings.TrimPrefix(newSourceSuffix, sourcePrefix)
 	}

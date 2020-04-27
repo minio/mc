@@ -92,7 +92,7 @@ var ilmAddFlags = []cli.Flag{
 		Usage: "storage class for transition (STANDARD_IA, ONEZONE_IA, GLACIER. Etc)",
 	},
 	cli.BoolFlag{
-		Name:  "disabled",
+		Name:  "disable",
 		Usage: "disable the rule",
 	},
 }
@@ -140,7 +140,7 @@ func mainILMAdd(ctx *cli.Context) error {
 	ilmID := ctx.String("id")
 	ilmPrefix := ctx.String("prefix")
 	ilmStatus := "Enabled"
-	if ilmDisabled := ctx.Bool("disabled"); ilmDisabled {
+	if ilmDisable := ctx.Bool("disable"); ilmDisable {
 		ilmStatus = "Disabled"
 	}
 	ilmTag := ctx.String("tags")
