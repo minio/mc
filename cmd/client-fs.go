@@ -127,9 +127,9 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 
 // Watches for all fs events on an input path.
 func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
-	eventChan := make(chan EventInfo)
+	eventChan := make(chan []EventInfo)
 	errorChan := make(chan *probe.Error)
-	doneChan := make(chan bool)
+	doneChan := make(chan struct{})
 	// Make the channel buffered to ensure no event is dropped. Notify will drop
 	// an event if the receiver is not able to keep up the sending pace.
 	in, out := PipeChan(1000)
@@ -192,24 +192,24 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 					// we want files
 					continue
 				}
-				eventChan <- EventInfo{
+				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Size: i.Size(),
 					Path: event.Path(),
 					Type: EventCreate,
-				}
+				}}
 			} else if IsDeleteEvent(event.Event()) {
-				eventChan <- EventInfo{
+				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Path: event.Path(),
 					Type: EventRemove,
-				}
+				}}
 			} else if IsGetEvent(event.Event()) {
-				eventChan <- EventInfo{
+				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Path: event.Path(),
 					Type: EventAccessed,
-				}
+				}}
 			}
 		}
 	}()
