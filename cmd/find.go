@@ -150,23 +150,24 @@ func watchFind(ctx *findContext) {
 			console.Println()
 			close(watchObj.doneChan)
 			return
-		case event, ok := <-watchObj.Events():
+		case events, ok := <-watchObj.Events():
 			if !ok {
 				return
 			}
 
-			time, e := time.Parse(time.RFC3339, event.Time)
-			if e != nil {
-				errorIf(probe.NewError(e).Trace(event.Time), "Unable to parse event time.")
-				continue
+			for _, event := range events {
+				time, e := time.Parse(time.RFC3339, event.Time)
+				if e != nil {
+					errorIf(probe.NewError(e).Trace(event.Time), "Unable to parse event time.")
+					continue
+				}
+
+				find(ctx, contentMessage{
+					Key:  getAliasedPath(ctx, event.Path),
+					Time: time,
+					Size: event.Size,
+				})
 			}
-
-			find(ctx, contentMessage{
-				Key:  getAliasedPath(ctx, event.Path),
-				Time: time,
-				Size: event.Size,
-			})
-
 		case err, ok := <-watchObj.Errors():
 			if !ok {
 				return
