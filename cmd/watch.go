@@ -33,13 +33,20 @@ const (
 	// EventCreateCopy notifies when there was a server side copy
 	EventCreateCopy EventType = "ObjectCreated:Copy"
 
-	// EventCreatePutRetention notifies when a retention configuration is added to an object
-	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
 	// EventRemove notifies when a new object is deleted
 	EventRemove = "ObjectRemoved"
+
+	// Following are MinIO server specific events
+
+	// EventCreatePutRetention notifies when a retention configuration is added to an object
+	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
+
+	// EventCreatePutLegalHold notifies when a legal hold configuration is added to an object
+	EventCreatePutLegalHold EventType = "ObjectCreated:PutLegalHold"
+
 	// EventAccessed notifies when an object is accessed.
 	EventAccessed = "ObjectAccessed"
-	// EventAccessedRead notifies when an object is accessed (specifically read).
+	// EventAccessedRead notifies when an object is accessed (specifically read/get).
 	EventAccessedRead = "ObjectAccessed:Read"
 	// EventAccessedStat notifies when an object is accessed (specifically stat).
 	EventAccessedStat = "ObjectAccessed:Stat"

@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2019 MinIO, Inc.
+ * MinIO Client (C) 2019-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -49,7 +48,7 @@ var lockCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET [governance | compliance] [VALIDITY]
+  {{.HelpName}} [FLAGS] TARGET [governance | compliance] VALIDITY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -71,19 +70,19 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type lockCmdMessage struct {
-	Enabled  string               `json:"enabled"`
-	Mode     *minio.RetentionMode `json:"mode"`
-	Validity *string              `json:"validity"`
-	Status   string               `json:"status"`
+	Enabled  string              `json:"enabled"`
+	Mode     minio.RetentionMode `json:"mode"`
+	Validity string              `json:"validity"`
+	Status   string              `json:"status"`
 }
 
 // Colorized message for console printing.
 func (m lockCmdMessage) String() string {
-	if m.Mode == nil {
-		return "No object lock configuration is enabled"
+	if m.Mode == "" {
+		return "Object lock configuration cleared successfully"
 	}
 
-	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", *m.Mode), console.Colorize("Validity", *m.Validity))
+	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", m.Mode), console.Colorize("Validity", m.Validity))
 }
 
 // JSON'ified message for scripting.
@@ -94,75 +93,53 @@ func (m lockCmdMessage) JSON() string {
 }
 
 // lock - set/get object lock configuration.
-func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, clearLock bool) error {
+func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, clearLock bool) error {
 	client, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 
-	s3Client, ok := client.(*S3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
-	}
-
-	validityStr := func() *string {
-		if validity == nil {
-			return nil
-		}
-
-		unitStr := "d"
-		if *unit == minio.Years {
-			unitStr = "y"
-		}
-		s := fmt.Sprint(*validity, unitStr)
-		return &s
-	}
-
-	if clearLock || mode != nil {
-		err = s3Client.SetObjectLockConfig(mode, validity, unit)
+	if clearLock || mode != "" {
+		err = client.SetObjectLockConfig(mode, validity, unit)
 		fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
 	} else {
-		mode, validity, unit, err = s3Client.GetObjectLockConfig()
+		mode, validity, unit, err = client.GetObjectLockConfig()
 		fatalIf(err, "Cannot get object lock configuration on the specified bucket.")
 	}
 
 	printMsg(lockCmdMessage{
 		Enabled:  "Enabled",
 		Mode:     mode,
-		Validity: validityStr(),
+		Validity: fmt.Sprintf("%d%s", validity, unit),
 		Status:   "success",
 	})
 
 	return nil
 }
 
-func parseRetentionValidity(validityStr string, m minio.RetentionMode) (*uint, *minio.ValidityUnit) {
+func parseRetentionValidity(validityStr string, m minio.RetentionMode) (uint64, minio.ValidityUnit, *probe.Error) {
 	if !m.IsValid() {
-		fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
+		return 0, "", errInvalidArgument().Trace(fmt.Sprintf("invalid retention mode '%v'", m))
 	}
 
 	unitStr := string(validityStr[len(validityStr)-1])
 	validityStr = validityStr[:len(validityStr)-1]
-	ui64, err := strconv.ParseUint(validityStr, 10, 64)
-	if err != nil {
-		fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity '%v'", validityStr)
+	validity, e := strconv.ParseUint(validityStr, 10, 64)
+	if e != nil {
+		return 0, "", probe.NewError(e).Trace(validityStr)
 	}
 
-	u := uint(ui64)
-	validity := &u
-	var unit *minio.ValidityUnit
+	var unit minio.ValidityUnit
 	switch unitStr {
 	case "d", "D":
-		d := minio.Days
-		unit = &d
+		unit = minio.Days
 	case "y", "Y":
-		y := minio.Years
-		unit = &y
+		unit = minio.Years
 	default:
-		fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity format '%v'", unitStr)
+		return 0, "", errInvalidArgument().Trace(unitStr)
 	}
 
-	return validity, unit
+	return validity, unit, nil
 }
 
 // main for lock command.
@@ -176,24 +153,25 @@ func mainLock(ctx *cli.Context) error {
 	args := ctx.Args()
 
 	var urlStr string
-	var mode *minio.RetentionMode
-	var validity *uint
-	var unit *minio.ValidityUnit
+	var mode minio.RetentionMode
+	var validity uint64
+	var unit minio.ValidityUnit
+	var err *probe.Error
 
 	switch l := len(args); l {
 	case 1:
 		urlStr = args[0]
-
 	case 3:
 		urlStr = args[0]
 		if clearLock {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "clear flag must be passed with target alone")
+			fatalIf(errInvalidArgument().Trace(urlStr), "clear flag must be passed with target alone")
 		}
 
-		m := minio.RetentionMode(strings.ToUpper(args[1]))
-		mode = &m
-		validity, unit = parseRetentionValidity(args[2], m)
-
+		mode = minio.RetentionMode(strings.ToUpper(args[1]))
+		validity, unit, err = parseRetentionValidity(args[2], mode)
+		if err != nil {
+			fatalIf(err.Trace(args...), "unable to parse input arguments")
+		}
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "lock", 1)
 	}

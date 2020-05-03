@@ -930,7 +930,7 @@ func (f *fsClient) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 }
 
 // Set object lock configuration of bucket.
-func (f *fsClient) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+func (f *fsClient) SetObjectLockConfig(mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectLockConfig",
 		APIType: "filesystem",
@@ -938,8 +938,8 @@ func (f *fsClient) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 }
 
 // Get object lock configuration of bucket.
-func (f *fsClient) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
-	return nil, nil, nil, probe.NewError(APINotImplemented{
+func (f *fsClient) GetObjectLockConfig() (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+	return "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "filesystem",
 	})
@@ -954,7 +954,7 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
+func (f *fsClient) PutObjectRetention(mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
 		APIType: "filesystem",
@@ -962,7 +962,7 @@ func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate
 }
 
 // Set object legal hold for a given object.
-func (f *fsClient) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+func (f *fsClient) PutObjectLegalHold(lhold minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
 		APIType: "filesystem",

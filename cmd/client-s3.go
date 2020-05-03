@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"net"
@@ -649,6 +650,17 @@ func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []Even
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
 					Type:         EventCreatePutRetention,
+					Host:         record.Source.Host,
+					Port:         record.Source.Port,
+					UserAgent:    record.Source.UserAgent,
+				}
+			} else if strings.HasPrefix(record.EventName, "s3:ObjectCreated:PutLegalHold") {
+				eventsInfo[i] = EventInfo{
+					Time:         record.EventTime,
+					Size:         record.S3.Object.Size,
+					UserMetadata: record.S3.Object.UserMetadata,
+					Path:         u.String(),
+					Type:         EventCreatePutLegalHold,
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
@@ -2120,57 +2132,80 @@ func (c *S3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 }
 
 // SetObjectLockConfig - Set object lock configurataion of bucket.
-func (c *S3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+func (c *S3Client) SetObjectLockConfig(mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 
-	err := c.api.SetBucketObjectLockConfig(bucket, mode, validity, unit)
-	if err != nil {
-		return probe.NewError(err)
+	// FIXME: This is too ugly, fix minio-go
+	vuint := (uint)(validity)
+	if mode != "" && vuint > 0 && unit != "" {
+		e := c.api.SetBucketObjectLockConfig(bucket, &mode, &vuint, &unit)
+		if e != nil {
+			return probe.NewError(e).Trace(c.GetURL().String())
+		}
+		return nil
 	}
-
-	return nil
+	if mode == "" && vuint == 0 && unit == "" {
+		e := c.api.SetBucketObjectLockConfig(bucket, nil, nil, nil)
+		if e != nil {
+			return probe.NewError(e).Trace(c.GetURL().String())
+		}
+		return nil
+	}
+	return errInvalidArgument().Trace(c.GetURL().String())
 }
 
 // PutObjectRetention - Set object retention for a given object.
-func (c *S3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
+func (c *S3Client) PutObjectRetention(mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 
-	opts := minio.PutObjectRetentionOptions{
-		RetainUntilDate:  retainUntilDate,
-		Mode:             mode,
-		GovernanceBypass: bypassGovernance,
-	}
-	err := c.api.PutObjectRetention(bucket, object, opts)
-	if err != nil {
-		return probe.NewError(err)
+	if mode != "" && !retainUntilDate.IsZero() {
+		opts := minio.PutObjectRetentionOptions{
+			RetainUntilDate:  &retainUntilDate,
+			Mode:             &mode,
+			GovernanceBypass: bypassGovernance,
+		}
+		e := c.api.PutObjectRetention(bucket, object, opts)
+		if e != nil {
+			return probe.NewError(e).Trace(c.GetURL().String())
+		}
+		return nil
 	}
 
-	return nil
+	return errInvalidArgument().Trace(c.GetURL().String())
 }
 
 // PutObjectLegalHold - Set object legal hold for a given object.
-func (c *S3Client) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+func (c *S3Client) PutObjectLegalHold(lhold minio.LegalHoldStatus) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
-	opts := minio.PutObjectLegalHoldOptions{
-		Status: lhold,
+	if lhold.IsValid() {
+		opts := minio.PutObjectLegalHoldOptions{
+			Status: &lhold,
+		}
+		e := c.api.PutObjectLegalHold(bucket, object, opts)
+		if e != nil {
+			return probe.NewError(e).Trace(c.GetURL().String())
+		}
+		return nil
 	}
-	err := c.api.PutObjectLegalHold(bucket, object, opts)
-	if err != nil {
-		return probe.NewError(err)
-	}
-	return nil
+	return errInvalidArgument().Trace(c.GetURL().String())
 }
 
 // GetObjectLockConfig - Get object lock configuration of bucket.
-func (c *S3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
+func (c *S3Client) GetObjectLockConfig() (minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
-	mode, validity, unit, err := c.api.GetBucketObjectLockConfig(bucket)
-	if err != nil {
-		return nil, nil, nil, probe.NewError(err)
+	mode, validity, unit, e := c.api.GetBucketObjectLockConfig(bucket)
+	if e != nil {
+		return "", 0, "", probe.NewError(e).Trace(c.GetURL().String())
 	}
 
-	return mode, validity, unit, nil
+	if mode != nil && validity != nil && unit != nil {
+		// FIXME: this is too ugly, fix minio-go
+		vuint64 := uint64(*validity)
+		return *mode, vuint64, *unit, nil
+	}
+
+	return "", 0, "", probe.NewError(fmt.Errorf("No object lock configuration set on %s", bucket)).Trace(c.GetURL().String())
 }
 
 // GetObjectTagging - Get Object Tags
