@@ -132,6 +132,18 @@ func joinURLs(url1, url2 *ClientURL) *ClientURL {
 	return url1
 }
 
+// Clone the url into a new object.
+func (u ClientURL) Clone() ClientURL {
+	return ClientURL{
+		Type:            u.Type,
+		Scheme:          u.Scheme,
+		Host:            u.Host,
+		Path:            u.Path,
+		SchemeSeparator: u.SchemeSeparator,
+		Separator:       u.Separator,
+	}
+}
+
 // String convert URL into its canonical form.
 func (u ClientURL) String() string {
 	var buf bytes.Buffer

@@ -31,6 +31,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6/pkg/encrypt"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -277,6 +278,36 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
+func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSSE encrypt.ServerSide, sURLs URLs) URLs {
+	shouldQueue := false
+	if !mj.isOverwrite && !mj.multiMasterEnable {
+		targetClient, err := newClient(targetPath)
+		if err != nil {
+			// cannot create targetclient
+			return sURLs.WithError(err)
+		}
+		_, err = targetClient.Stat(false, false, tgtSSE)
+		if err == nil {
+			if !sURLs.SourceContent.Retention {
+				return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
+			}
+		} // doesn't exist
+		shouldQueue = true
+	}
+	if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
+		// adjust total, because we want to show progress of
+		// the item still queued to be copied.
+		mj.status.Add(sURLs.SourceContent.Size)
+		mj.status.SetTotal(mj.status.Get()).Update()
+		mj.status.AddCounts(1)
+		sURLs.TotalSize = mj.status.Get()
+		sURLs.TotalCount = mj.status.GetCounts()
+		return mj.doMirror(ctx, sURLs)
+	}
+	return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
+}
+
+// doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
 	if sURLs.Error != nil { // Erroneous sURLs passed.
@@ -377,173 +408,125 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 	return
 }
 
+func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) {
+	for _, event := range events {
+		// It will change the expanded alias back to the alias
+		// again, by replacing the sourceUrlFull with the sourceAlias.
+		// This url will be used to mirror.
+		sourceAlias, sourceURLFull, _ := mustExpandAlias(mj.sourceURL)
+
+		// If the passed source URL points to fs, fetch the absolute src path
+		// to correctly calculate targetPath
+		if sourceAlias == "" {
+			tmpSrcURL, err := filepath.Abs(sourceURLFull)
+			if err == nil {
+				sourceURLFull = tmpSrcURL
+			}
+		}
+		eventPath := event.Path
+		if runtime.GOOS == "darwin" {
+			// Strip the prefixes in the event path. Happens in darwin OS only
+			eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
+		} else if runtime.GOOS == "windows" {
+			// Shared folder as source URL and if event path is an absolute path.
+			eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
+		}
+
+		sourceURL := newClientURL(eventPath)
+
+		// build target path, it is the relative of the eventPath with the sourceUrl
+		// joined to the targetURL.
+		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
+		//Skip the object, if it matches the Exclude options provided
+		if matchExcludeOptions(mj.excludeOptions, sourceSuffix) {
+			continue
+		}
+
+		targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
+
+		// newClient needs the unexpanded  path, newCLientURL needs the expanded path
+		targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
+		targetURL := newClientURL(expandedTargetPath)
+		tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
+
+		if (event.Type == EventCreate) ||
+			(event.Type == EventCreateCopy) ||
+			(event.Type == EventCreatePutRetention) {
+			sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
+			mirrorURL := URLs{
+				SourceAlias: sourceAlias,
+				SourceContent: &ClientContent{
+					URL:       *sourceURL,
+					Retention: event.Type == EventCreatePutRetention,
+					Size:      event.Size,
+					Time:      sourceModTime,
+					Metadata:  event.UserMetadata,
+				},
+				TargetAlias:      targetAlias,
+				TargetContent:    &ClientContent{URL: *targetURL},
+				MD5:              mj.md5,
+				DisableMultipart: mj.disableMultipart,
+				encKeyDB:         mj.encKeyDB,
+			}
+			if mj.multiMasterEnable &&
+				mirrorURL.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
+				// If source has multi-master attributes, it means that the
+				// object was uploaded by "mc mirror", hence ignore the event
+				// to avoid copying it.
+				continue
+			}
+			mj.queueCh <- func() URLs {
+				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
+			}
+		} else if event.Type == EventRemove {
+			if strings.Contains(event.UserAgent, uaMirrorAppName) {
+				continue
+			}
+			mirrorURL := URLs{
+				SourceAlias:      sourceAlias,
+				SourceContent:    nil,
+				TargetAlias:      targetAlias,
+				TargetContent:    &ClientContent{URL: *targetURL},
+				MD5:              mj.md5,
+				DisableMultipart: mj.disableMultipart,
+				encKeyDB:         mj.encKeyDB,
+			}
+			mirrorURL.TotalCount = mj.status.GetCounts()
+			mirrorURL.TotalSize = mj.status.Get()
+			if mirrorURL.TargetContent != nil && (mj.isRemove || mj.multiMasterEnable) {
+				mj.queueCh <- func() URLs {
+					return mj.doRemove(mirrorURL)
+				}
+			}
+		}
+	}
+}
+
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc, stopParallel func()) {
+func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 	for {
 		select {
-		case event, ok := <-mj.watcher.Events():
+		case events, ok := <-mj.watcher.Events():
 			if !ok {
 				stopParallel()
 				return
 			}
-
-			// It will change the expanded alias back to the alias
-			// again, by replacing the sourceUrlFull with the sourceAlias.
-			// This url will be used to mirror.
-			sourceAlias, sourceURLFull, _ := mustExpandAlias(mj.sourceURL)
-
-			// If the passed source URL points to fs, fetch the absolute src path
-			// to correctly calculate targetPath
-			if sourceAlias == "" {
-				tmpSrcURL, err := filepath.Abs(sourceURLFull)
-				if err == nil {
-					sourceURLFull = tmpSrcURL
-				}
+			mj.watchMirrorEvents(ctx, events)
+		case err, ok := <-mj.watcher.Errors():
+			if !ok {
+				stopParallel()
+				return
 			}
-			eventPath := event.Path
-			if runtime.GOOS == "darwin" {
-				// Strip the prefixes in the event path. Happens in darwin OS only
-				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
-			} else if runtime.GOOS == "windows" {
-				// Shared folder as source URL and if event path is an absolute path.
-				eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
-			}
-
-			sourceURL := newClientURL(eventPath)
-
-			// build target path, it is the relative of the eventPath with the sourceUrl
-			// joined to the targetURL.
-			sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
-			//Skip the object, if it matches the Exclude options provided
-			if matchExcludeOptions(mj.excludeOptions, sourceSuffix) {
-				continue
-			}
-
-			targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
-
-			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
-			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
-			targetURL := newClientURL(expandedTargetPath)
-			tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
-
-			if (event.Type == EventCreate) ||
-				(event.Type == EventCreateCopy) ||
-				(event.Type == EventCreatePutRetention) {
-				sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
-				mirrorURL := URLs{
-					SourceAlias: sourceAlias,
-					SourceContent: &ClientContent{
-						URL:       *sourceURL,
-						Retention: event.Type == EventCreatePutRetention,
-						Size:      event.Size,
-						Time:      sourceModTime,
-						Metadata:  event.UserMetadata,
-					},
-					TargetAlias:      targetAlias,
-					TargetContent:    &ClientContent{URL: *targetURL},
-					MD5:              mj.md5,
-					DisableMultipart: mj.disableMultipart,
-					encKeyDB:         mj.encKeyDB,
-				}
-				if mj.multiMasterEnable &&
-					mirrorURL.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
-					// If source has multi-master attributes, it means that the
-					// object was uploaded by "mc mirror", hence ignore the event
-					// to avoid copying it.
-					continue
-				}
-				if mirrorURL.SourceContent.Size == 0 && mirrorURL.SourceContent.Retention {
-					targetClient, err := newClient(targetPath)
-					if err != nil {
-						// cannot create targetclient
-						mj.statusCh <- mirrorURL.WithError(err)
-						return
-					}
-					shouldQueue := false
-					if !mj.isOverwrite {
-						_, err = targetClient.Stat(false, false, tgtSSE)
-						if err == nil {
-							continue
-						} // doesn't exist
-						shouldQueue = true
-					}
-					if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
-						// adjust total, because we want to show progress of
-						// the item still queued to be copied.
-						mj.status.Add(mirrorURL.SourceContent.Size)
-						mj.status.SetTotal(mj.status.Get()).Update()
-						mj.status.AddCounts(1)
-						mirrorURL.TotalSize = mj.status.Get()
-						mirrorURL.TotalCount = mj.status.GetCounts()
-						mj.queueCh <- func() URLs {
-							return mj.doMirror(ctx, mirrorURL)
-						}
-					}
-					continue
-				}
-				shouldQueue := false
-				if !mj.isOverwrite && !mj.multiMasterEnable {
-					targetClient, err := newClient(targetPath)
-					if err != nil {
-						// cannot create targetclient
-						mj.queueCh <- func() URLs {
-							return mirrorURL.WithError(err)
-						}
-						return
-					}
-					_, err = targetClient.Stat(false, false, tgtSSE)
-					if err == nil {
-						if mirrorURL.SourceContent.Retention {
-							shouldQueue = true
-						} else {
-							continue
-						}
-					} // doesn't exist
-					shouldQueue = true
-				}
-				if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
-					// adjust total, because we want to show progress
-					// of the itemj stiil queued to be copied.
-					mj.status.Add(mirrorURL.SourceContent.Size)
-					mj.status.SetTotal(mj.status.Get()).Update()
-					mj.status.AddCounts(1)
-					mirrorURL.TotalSize = mj.status.Get()
-					mirrorURL.TotalCount = mj.status.GetCounts()
-					mj.queueCh <- func() URLs {
-						return mj.doMirror(ctx, mirrorURL)
-					}
-				}
-			} else if event.Type == EventRemove {
-				if strings.Contains(event.UserAgent, uaMirrorAppName) {
-					continue
-				}
-				mirrorURL := URLs{
-					SourceAlias:      sourceAlias,
-					SourceContent:    nil,
-					TargetAlias:      targetAlias,
-					TargetContent:    &ClientContent{URL: *targetURL},
-					MD5:              mj.md5,
-					DisableMultipart: mj.disableMultipart,
-					encKeyDB:         mj.encKeyDB,
-				}
-				mirrorURL.TotalCount = mj.status.GetCounts()
-				mirrorURL.TotalSize = mj.status.Get()
-				if mirrorURL.TargetContent != nil && (mj.isRemove || mj.multiMasterEnable) {
-					mj.queueCh <- func() URLs {
-						return mj.doRemove(mirrorURL)
-					}
-				}
-			}
-
-		case err := <-mj.watcher.Errors():
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
 				errorIf(err.Trace(),
 					"Unable to Watch on source, perhaps source doesn't support Watching for events")
 				return
 			}
-			mj.queueCh <- func() URLs {
-				return URLs{Error: err}
+			if err != nil {
+				mj.queueCh <- func() URLs {
+					return URLs{Error: err}
+				}
 			}
 		case <-globalContext.Done():
 			stopParallel()
@@ -631,7 +614,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 				mj.parallel.wait()
 				cancelMirror()
 			}
-			mj.watchMirror(ctx, cancelMirror, stopParallel)
+			mj.watchMirror(ctx, stopParallel)
 		}()
 	}
 

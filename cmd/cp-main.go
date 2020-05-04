@@ -513,7 +513,8 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 	}()
 
 	var retErr error
-	var errSeen bool
+	errSeen := false
+	cpAllFilesErr := true
 
 loop:
 	for {
@@ -539,11 +540,11 @@ loop:
 					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
 					session.Save()
 				}
+				cpAllFilesErr = false
 			} else {
 
 				// Set exit status for any copy error
 				retErr = exitStatus(globalErrorExitStatus)
-				errSeen = true
 
 				// Print in new line and adjust to top so that we
 				// don't print over the ongoing progress bar.
@@ -553,15 +554,18 @@ loop:
 				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
 					fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
 				if isErrIgnored(cpURLs.Error) {
+					cpAllFilesErr = false
 					continue loop
 				}
 
+				errSeen = true
 				if progressReader, pgok := pg.(*progressBar); pgok {
 					if progressReader.ProgressBar.Get() > 0 {
 						writeContSize := (int)(cpURLs.SourceContent.Size)
 						totalPGSize := (int)(progressReader.ProgressBar.Total)
-						if totalPGSize > writeContSize {
-							progressReader.ProgressBar.Set((totalPGSize - writeContSize))
+						written := (int)(progressReader.ProgressBar.Get())
+						if totalPGSize > writeContSize && written > writeContSize {
+							progressReader.ProgressBar.Set((written - writeContSize))
 							progressReader.ProgressBar.Update()
 						}
 					}
@@ -578,8 +582,9 @@ loop:
 	}
 
 	if progressReader, ok := pg.(*progressBar); ok {
-		oneObjErr := errSeen && totalObjects == 1
-		if progressReader.ProgressBar.Get() > 0 && !oneObjErr {
+		if (errSeen && totalObjects == 1) || (cpAllFilesErr && totalObjects > 1) {
+			console.Eraseline()
+		} else if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {
