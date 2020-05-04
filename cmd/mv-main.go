@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -295,7 +296,7 @@ func mainMove(ctx *cli.Context) error {
 
 		if s3Client, ok := client.(*S3Client); ok {
 			if _, _, _, err = s3Client.GetObjectLockConfig(); err == nil {
-				fatalIf(err, fmt.Sprintf("object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
+				fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 			}
 		}
 	}
