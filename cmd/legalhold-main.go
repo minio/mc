@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -39,26 +38,26 @@ var (
 )
 var legalHoldCmd = cli.Command{
 	Name:   "legalhold",
-	Usage:  "set object legal hold for objects",
+	Usage:  "set legal hold for object(s)",
 	Action: mainLegalHold,
 	Before: setGlobalsFromContext,
 	Flags:  append(lhFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
  
- USAGE:
-   {{.HelpName}} [FLAGS] TARGET [ON | OFF]
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET [ON | OFF]
  
- FLAGS:
-   {{range .VisibleFlags}}{{.}}
-   {{end}}
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
  
- EXAMPLES:
-	1. Enable object legal hold for objects in a given prefix
-	  $ {{.HelpName}} myminio/mybucket/prefix ON --recursive
+EXAMPLES:
+   1. Enable legal hold on a specific object
+      $ {{.HelpName}} myminio/mybucket/prefix/obj.csv ON
 
-	2. Enable legal hold on a specific object
-	  $ {{.HelpName}} myminio/mybucket/prefix/obj.csv ON
+   2. Enable object legal hold recursively for all objects at a prefix
+      $ {{.HelpName}} myminio/mybucket/prefix ON --recursive
  `,
 }
 
@@ -86,18 +85,18 @@ func (l legalHoldCmdMessage) JSON() string {
 }
 
 // setRetention - Set Retention for all objects within a given prefix.
-func setLegalHold(urlStr string, lhold *minio.LegalHoldStatus, isRecursive bool) error {
+func setLegalHold(urlStr string, lhold minio.LegalHoldStatus, isRecursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 	if !isRecursive {
-		probeErr := clnt.PutObjectLegalHold(lhold)
-		if probeErr != nil {
-			errorIf(probeErr.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
+		err = clnt.PutObjectLegalHold(lhold)
+		if err != nil {
+			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
 		} else {
 			printMsg(legalHoldCmdMessage{
-				LegalHold: *lhold,
+				LegalHold: lhold,
 				Status:    "success",
 				URLPath:   urlStr,
 			})
@@ -127,7 +126,7 @@ func setLegalHold(urlStr string, lhold *minio.LegalHoldStatus, isRecursive bool)
 		} else {
 			if globalJSON {
 				printMsg(legalHoldCmdMessage{
-					LegalHold: *lhold,
+					LegalHold: lhold,
 					Status:    "success",
 					URLPath:   content.URL.Path,
 				})
@@ -152,15 +151,14 @@ func mainLegalHold(ctx *cli.Context) error {
 	args := ctx.Args()
 
 	var urlStr string
-	var lhold *minio.LegalHoldStatus
+	var lhold minio.LegalHoldStatus
 	switch l := len(args); l {
 	case 2:
 		urlStr = args[0]
-		h := minio.LegalHoldStatus(strings.ToUpper(args[1]))
-		if !h.IsValid() {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid legal hold status '%v'", h)
+		lhold = minio.LegalHoldStatus(strings.ToUpper(args[1]))
+		if !lhold.IsValid() {
+			fatalIf(errInvalidArgument().Trace(urlStr), "invalid legal hold status '%v'", lhold)
 		}
-		lhold = &h
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "legalhold", 1)
 	}

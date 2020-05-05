@@ -288,7 +288,7 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 		}
 		_, err = targetClient.Stat(false, false, tgtSSE)
 		if err == nil {
-			if !sURLs.SourceContent.Retention {
+			if !sURLs.SourceContent.RetentionEnabled && !sURLs.SourceContent.LegalHoldEnabled {
 				return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
 			}
 		} // doesn't exist
@@ -456,11 +456,12 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mirrorURL := URLs{
 				SourceAlias: sourceAlias,
 				SourceContent: &ClientContent{
-					URL:       *sourceURL,
-					Retention: event.Type == EventCreatePutRetention,
-					Size:      event.Size,
-					Time:      sourceModTime,
-					Metadata:  event.UserMetadata,
+					URL:              *sourceURL,
+					RetentionEnabled: event.Type == EventCreatePutRetention,
+					LegalHoldEnabled: event.Type == EventCreatePutLegalHold,
+					Size:             event.Size,
+					Time:             sourceModTime,
+					Metadata:         event.UserMetadata,
 				},
 				TargetAlias:      targetAlias,
 				TargetContent:    &ClientContent{URL: *targetURL},
@@ -830,7 +831,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 					continue
 				}
 				// object lock configuration set on bucket
-				if mode != nil {
+				if mode != "" {
 					errorIf(newDstClt.SetObjectLockConfig(mode, validity, unit),
 						"Unable to set object lock config in `"+newTgtURL+"`.")
 				}
@@ -871,7 +872,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		}
 
 		// object lock configuration set on bucket
-		if mode != nil {
+		if mode != "" {
 			err = dstClt.SetObjectLockConfig(mode, validity, unit)
 			errorIf(err, "Unable to set object lock config in `"+dstURL+"`.")
 			if err != nil && mj.multiMasterEnable {
