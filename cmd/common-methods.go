@@ -227,7 +227,7 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 		if mok {
 			oinfo, e := mo.Stat()
 			if e != nil {
-				return nil, nil, err.Trace(alias, urlStr)
+				return nil, nil, probe.NewError(e).Trace(alias, urlStr)
 			}
 			st = &ClientContent{}
 			st.Time = oinfo.LastModified
