@@ -40,7 +40,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
-	"github.com/minio/minio/pkg/bucket/object/tagging"
+	"github.com/minio/minio-go/v6/pkg/tags"
 )
 
 // filesystem client
@@ -1103,15 +1103,15 @@ func (f *fsClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (f *fsClient) GetObjectTagging() (tagging.Tagging, *probe.Error) {
-	return tagging.Tagging{}, probe.NewError(APINotImplemented{
+func (f *fsClient) GetObjectTagging() (*tags.Tags, *probe.Error) {
+	return &tags.Tags{}, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "filesystem",
 	})
 }
 
 // Set Object tags
-func (f *fsClient) SetObjectTagging(tagMap map[string]string) *probe.Error {
+func (f *fsClient) SetObjectTagging(t *tags.Tags) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectTagging",
 		APIType: "filesystem",

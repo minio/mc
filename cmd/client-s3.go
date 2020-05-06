@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -44,7 +43,7 @@ import (
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 	"github.com/minio/minio-go/v6/pkg/policy"
 	"github.com/minio/minio-go/v6/pkg/s3utils"
-	"github.com/minio/minio/pkg/bucket/object/tagging"
+	"github.com/minio/minio-go/v6/pkg/tags"
 	"github.com/minio/minio/pkg/mimedb"
 )
 
@@ -335,20 +334,20 @@ func (c *S3Client) RemoveNotificationConfig(arn string, event string, prefix str
 				return errInvalidArgument().Trace(events...)
 			}
 		}
-		var err error
+		var e error
 		// based on the arn type, we'll look for the event in the corresponding sublist and delete it if there's a match
 		switch fields[2] {
 		case "sns":
-			err = mb.RemoveTopicByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+			e = mb.RemoveTopicByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
 		case "sqs":
-			err = mb.RemoveQueueByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+			e = mb.RemoveQueueByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
 		case "lambda":
-			err = mb.RemoveLambdaByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
+			e = mb.RemoveLambdaByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
 		default:
 			return errInvalidArgument().Trace(fields[2])
 		}
-		if err != nil {
-			return probe.NewError(err)
+		if e != nil {
+			return probe.NewError(e)
 		}
 
 	} else {
@@ -2220,29 +2219,27 @@ func (c *S3Client) GetObjectLockConfig() (minio.RetentionMode, uint64, minio.Val
 }
 
 // GetObjectTagging - Get Object Tags
-func (c *S3Client) GetObjectTagging() (tagging.Tagging, *probe.Error) {
-	var err error
+func (c *S3Client) GetObjectTagging() (*tags.Tags, *probe.Error) {
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
-		return tagging.Tagging{}, probe.NewError(BucketNameEmpty{})
+		return &tags.Tags{}, probe.NewError(BucketNameEmpty{})
 	}
 	if objectName == "" {
-		return tagging.Tagging{}, probe.NewError(ObjectNameEmpty{})
+		return &tags.Tags{}, probe.NewError(ObjectNameEmpty{})
 	}
-	tagXML, err := c.api.GetObjectTagging(bucketName, objectName)
-	if err != nil {
-		return tagging.Tagging{}, probe.NewError(err)
+	tagXML, e := c.api.GetObjectTaggingWithContext(globalContext, bucketName, objectName)
+	if e != nil {
+		return &tags.Tags{}, probe.NewError(e)
 	}
-	var tagObj tagging.Tagging
-	if err = xml.Unmarshal([]byte(tagXML), &tagObj); err != nil {
-		return tagging.Tagging{}, probe.NewError(err)
+	t, e := tags.ParseObjectXML(strings.NewReader(tagXML))
+	if e != nil {
+		return &tags.Tags{}, probe.NewError(e)
 	}
-	return tagObj, nil
+	return t, nil
 }
 
 // SetObjectTagging - Set Object tags
-func (c *S3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
-	var err error
+func (c *S3Client) SetObjectTagging(t *tags.Tags) *probe.Error {
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -2250,8 +2247,8 @@ func (c *S3Client) SetObjectTagging(tagMap map[string]string) *probe.Error {
 	if objectName == "" {
 		return probe.NewError(ObjectNameEmpty{})
 	}
-	if err = c.api.PutObjectTagging(bucketName, objectName, tagMap); err != nil {
-		return probe.NewError(err)
+	if e := c.api.PutObjectTaggingWithContext(globalContext, bucketName, objectName, t.ToMap()); e != nil {
+		return probe.NewError(e)
 	}
 	return nil
 }
@@ -2265,8 +2262,8 @@ func (c *S3Client) DeleteObjectTagging() *probe.Error {
 	if objectName == "" {
 		return probe.NewError(ObjectNameEmpty{})
 	}
-	if err := c.api.RemoveObjectTagging(bucketName, objectName); err != nil {
-		return probe.NewError(err)
+	if e := c.api.RemoveObjectTaggingWithContext(globalContext, bucketName, objectName); e != nil {
+		return probe.NewError(e)
 	}
 	return nil
 }

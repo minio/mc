@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,7 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/bucket/object/tagging"
+	"github.com/minio/minio-go/v6/pkg/tags"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -39,23 +38,21 @@ var tagListCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [COMMAND FLAGS] TARGET
+  {{.HelpName}} [FLAGS] TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-DESCRIPTION:
-   List tags assigned to an object.
 
 EXAMPLES:
   1. List the tags assigned to an object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject
-  2. List the tags assigned to an object in JSON format.
-     {{.Prompt}} {{.HelpName}} --json s3/testbucket/testobject
+     {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
 
+  2. List the tags assigned to an object in JSON format.
+     {{.Prompt}} {{.HelpName}} --json myminio/testbucket/testobject
 `,
 }
 
@@ -73,10 +70,10 @@ type tagList struct {
 
 // tagListMessage structure for displaying tag
 type tagListMessage struct {
-	Tags   []tagList       `json:"tagset,omitempty"`
-	Status string          `json:"status"`
-	URL    string          `json:"url"`
-	TagObj tagging.Tagging `json:"-"`
+	Tags   []tagList  `json:"tagset,omitempty"`
+	Status string     `json:"status"`
+	URL    string     `json:"url"`
+	TagObj *tags.Tags `json:"-"`
 }
 
 func (t tagListMessage) JSON() string {
@@ -87,39 +84,33 @@ func (t tagListMessage) JSON() string {
 }
 
 func (t tagListMessage) String() string {
-	return getFormattedTagList(getTagObjectName(t.URL), t.TagObj.TagSet.Tags)
+	return getFormattedTagList(getTagObjectName(t.URL), t.TagObj.ToMap())
 }
 
 // getTagListMessage parses the tags(string) and initializes the structure tagsetListMessage.
 // tags(string) is in the format key1=value1&key1=value2
-func getTagListMessage(tags tagging.Tagging, urlStr string) tagListMessage {
-	var t tagListMessage
-	var tagStr string
-	var kvPairStr []string
-	tagStr = strings.Replace(tags.String(), "\\u0026", "&", -1)
-	t.URL = urlStr
-	t.TagObj = tags
-	if tagStr != "" {
-		kvPairStr = strings.SplitN(tagStr, "&", -1)
-		t.Status = "success"
+func getTagListMessage(t *tags.Tags, urlStr string) tagListMessage {
+	var tm = tagListMessage{URL: urlStr}
+	if t == nil {
+		tm.Status = "failure"
+		return tm
 	}
-	for _, kvPair := range kvPairStr {
-		kvPairSplit := splitStr(kvPair, "=", 2)
-		t.Tags = append(t.Tags, tagList{Key: kvPairSplit[0], Value: kvPairSplit[1]})
+	tm.TagObj = t
+	tm.Status = "success"
+	for k, v := range t.ToMap() {
+		tm.Tags = append(tm.Tags, tagList{Key: k, Value: v})
 	}
-
-	return t
+	return tm
 }
 
-func getObjTagging(urlStr string) tagging.Tagging {
-	clnt, pErr := newClient(urlStr)
-	if pErr != nil {
-		fatalIf(pErr.Trace(urlStr), "Unable to initialize target "+urlStr+". "+pErr.ToGoError().Error())
-	}
-	tagObj, pErr := clnt.GetObjectTagging()
-	fatalIf(pErr, "Failed to get tags for "+urlStr)
+func mustGetObjectTagging(urlStr string) *tags.Tags {
+	clnt, err := newClient(urlStr)
+	fatalIf(err.Trace(urlStr), "Unable to initialize target")
 
-	return tagObj
+	t, err := clnt.GetObjectTagging()
+	fatalIf(err.Trace(urlStr), "Unable to fetch tags for "+urlStr)
+
+	return t
 }
 
 // Color scheme for tag display
@@ -147,19 +138,19 @@ func getTagObjectName(urlStr string) string {
 	return object
 }
 
-func getFormattedTagList(tagObjName string, kvpairs []tagging.Tag) string {
+func getFormattedTagList(tagObjName string, kvMap map[string]string) string {
 	var tagListInfo string
 	padLen := len("Name")
-	for _, kv := range kvpairs {
-		if len(kv.Key) > padLen {
-			padLen = len(kv.Key)
+	for k := range kvMap {
+		if len(k) > padLen {
+			padLen = len(k)
 		}
 	}
 	padLen = listTagPaddingSpace(padLen)
 	objectName := fmt.Sprintf("%-*s:    %s\n", padLen, "Name", tagObjName)
 	tagListInfo += console.Colorize(tagMainHeader, objectName)
-	for idx := 0; idx < len(kvpairs); idx++ {
-		displayField := fmt.Sprintf("%-*s:    %s\n", padLen, kvpairs[idx].Key, kvpairs[idx].Value)
+	for k, v := range kvMap {
+		displayField := fmt.Sprintf("%-*s:    %s\n", padLen, k, v)
 		tagListInfo += console.Colorize(tagRowTheme, displayField)
 	}
 	return tagListInfo
@@ -182,15 +173,12 @@ func listTagPaddingSpace(padLen int) int {
 func mainListTag(ctx *cli.Context) error {
 	checkListTagSyntax(ctx)
 	setTagListColorScheme()
-	args := ctx.Args()
-	objectURL := args.Get(0)
-	tagObj := getObjTagging(objectURL)
-	if len(tagObj.TagSet.Tags) == 0 {
-		errorIf(probe.NewError(errors.New("Tag(s) not set for "+objectURL)), "Failed to get tags.")
+
+	urlStr := ctx.Args().Get(0)
+	tagObj := mustGetObjectTagging(urlStr)
+	if tagObj == nil {
 		return exitStatus(globalErrorExitStatus)
 	}
-	var msg tagListMessage
-	msg = getTagListMessage(tagObj, objectURL)
-	printMsg(msg)
+	printMsg(getTagListMessage(tagObj, urlStr))
 	return nil
 }

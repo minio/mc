@@ -31,8 +31,8 @@ var tagRemoveCmd = cli.Command{
 	Action: mainRemoveTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} [COMMAND FLAGS] TARGET
@@ -40,13 +40,10 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-DESCRIPTION:
-   Remove tags assigned to an object .
 
 EXAMPLES:
   1. Remove the tags assigned to an object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject
-
+     {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
 `,
 }
 
@@ -77,15 +74,13 @@ func checkRemoveTagSyntax(ctx *cli.Context) {
 func mainRemoveTag(ctx *cli.Context) error {
 	checkRemoveTagSyntax(ctx)
 	setTagListColorScheme()
-	var pErr *probe.Error
+
 	objectURL := ctx.Args().Get(0)
-	clnt, pErr := newClient(objectURL)
-	fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+".")
-	pErr = clnt.DeleteObjectTagging()
-	if pErr != nil {
-		errorIf(pErr.Trace(objectURL), "Failed to remove tags for "+objectURL)
-		return exitStatus(globalErrorExitStatus)
-	}
+
+	clnt, err := newClient(objectURL)
+	fatalIf(err.Trace(objectURL), "Unable to initialize target")
+
+	fatalIf(clnt.DeleteObjectTagging().Trace(objectURL), "Unable to remove tags")
 
 	printMsg(tagRemoveMessage{
 		Status: "success",

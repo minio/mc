@@ -21,11 +21,12 @@ import (
 )
 
 var tagCmd = cli.Command{
-	Name:   "tag",
-	Usage:  "manage tags for an object",
-	Action: mainTag,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:            "tag",
+	Usage:           "manage tags for an object",
+	Action:          mainTag,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
 		tagListCmd,
 		tagRemoveCmd,

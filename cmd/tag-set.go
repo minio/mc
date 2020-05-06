@@ -17,14 +17,12 @@
 package cmd
 
 import (
-	"errors"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6/pkg/tags"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -34,22 +32,22 @@ var tagSetCmd = cli.Command{
 	Action: mainSetTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [COMMAND FLAGS] TARGET [TAGS]
+  {{.HelpName}} [FLAGS] TARGET VALUE
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-DESCRIPTION:
-   Assign tags to an object.
+
+VALUE:
+  Value is of the form "k1=v1&k2=v2"
 
 EXAMPLES:
-  1. Assign tags to an object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
-
+  1. Set tags to an object.
+     {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 `,
 }
 
@@ -78,52 +76,32 @@ func checkSetTagSyntax(ctx *cli.Context) {
 	}
 }
 
-func getTaggingMap(ctx *cli.Context) (map[string]string, error) {
+func getTaggingMap(ctx *cli.Context) (*tags.Tags, *probe.Error) {
 	if len(ctx.Args()) != 2 {
-		return nil, errors.New("Tags argument is empty")
+		return nil, errInvalidArgument().Trace(ctx.Args()...)
 	}
-	tagKVMap := make(map[string]string)
-	tagValues := strings.Split(ctx.Args().Get(1), "&")
-	for tagIdx, tag := range tagValues {
-		var key, val string
-		if !strings.Contains(tag, "=") {
-			key = tag
-			val = ""
-		} else {
-			key = splitStr(tag, "=", 2)[0]
-			val = splitStr(tag, "=", 2)[1]
-		}
-		if key != "" {
-			tagKVMap[key] = val
-		} else {
-			return nil, errors.New("error extracting tag argument(#" + strconv.Itoa(tagIdx+1) + ") " + tag)
-		}
+	t, e := tags.ParseObjectTags(ctx.Args().Get(1))
+	if e != nil {
+		return nil, probe.NewError(e)
 	}
-	return tagKVMap, nil
+	return t, nil
 }
 
 func mainSetTag(ctx *cli.Context) error {
 	checkSetTagSyntax(ctx)
 	setTagListColorScheme()
+
 	objectURL := ctx.Args().Get(0)
-	var err error
-	var pErr *probe.Error
-	var objTagMap map[string]string
 
-	if objTagMap, err = getTaggingMap(ctx); err != nil {
-		fatalIf(probe.NewError(err), ". Key value parsing failed from arguments provided. Please refer to mc "+ctx.Command.FullName()+" --help for details.")
-	}
+	t, err := getTaggingMap(ctx)
 
-	clnt, pErr := newClient(objectURL)
-	if pErr != nil {
-		fatalIf(pErr.Trace(objectURL), "Unable to initialize target "+objectURL+". "+pErr.ToGoError().Error())
-	}
+	fatalIf(err.Trace(ctx.Args()...), "Unable to parse input tags, Please refer to mc "+ctx.Command.FullName()+" --help.")
 
-	pErr = clnt.SetObjectTagging(objTagMap)
-	if pErr != nil {
-		errorIf(pErr.Trace(objectURL), "Failed to set tags for "+objectURL)
-		return exitStatus(globalErrorExitStatus)
-	}
+	clnt, err := newClient(objectURL)
+
+	fatalIf(err.Trace(objectURL), "Unable to initialize target "+objectURL)
+
+	fatalIf(clnt.SetObjectTagging(t).Trace(objectURL), "Unable to set tags")
 
 	printMsg(tagSetMessage{
 		Status: "success",
