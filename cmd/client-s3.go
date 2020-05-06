@@ -629,8 +629,19 @@ func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []Even
 	var eventsInfo = make([]EventInfo, len(ninfo.Records))
 	for i, record := range ninfo.Records {
 		bucketName := record.S3.Bucket.Name
+		var key string
+		// Unescape only if needed, look for URL encoded content.
+		if strings.Contains(record.S3.Object.Key, "%2F") {
+			var e error
+			key, e = url.QueryUnescape(record.S3.Object.Key)
+			if e != nil {
+				key = record.S3.Object.Key
+			}
+		} else {
+			key = record.S3.Object.Key
+		}
 		u := c.targetURL.Clone()
-		u.Path = path.Join(string(u.Separator), bucketName, record.S3.Object.Key)
+		u.Path = path.Join(string(u.Separator), bucketName, key)
 		if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
 			if strings.HasPrefix(record.EventName, "s3:ObjectCreated:Copy") {
 				eventsInfo[i] = EventInfo{
