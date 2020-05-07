@@ -37,11 +37,12 @@ var (
 
 // hostConfig configuration of a host.
 type hostConfigV9 struct {
-	URL       string `json:"url"`
-	AccessKey string `json:"accessKey"`
-	SecretKey string `json:"secretKey"`
-	API       string `json:"api"`
-	Lookup    string `json:"lookup"`
+	URL          string `json:"url"`
+	AccessKey    string `json:"accessKey"`
+	SecretKey    string `json:"secretKey"`
+	SessionToken string `json:"sessionToken,omitempty"`
+	API          string `json:"api"`
+	Lookup       string `json:"lookup"`
 }
 
 // configV8 config version.
