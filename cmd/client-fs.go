@@ -51,6 +51,7 @@ type fsClient struct {
 const (
 	partSuffix     = ".part.minio"
 	slashSeperator = "/"
+	metaDataKey    = "X-Amz-Meta-Mc-Attrs"
 )
 
 var ( // GOOS specific ignore list.
@@ -302,8 +303,8 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	}
 
 	attr := make(map[string]string)
-	if len(metadata["mc-attrs"]) != 0 {
-		attr, e = parseAttribute(metadata["mc-attrs"][0])
+	if len(metadata[metaDataKey]) != 0 {
+		attr, e = parseAttribute(metadata[metaDataKey][0])
 		if e != nil {
 			return 0, probe.NewError(e)
 		}
@@ -409,9 +410,9 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 
 // Put - create a new file with metadata.
 func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
-	if metadata["mc-attrs"] != "" {
+	if metadata[metaDataKey] != "" {
 		meta := make(map[string][]string)
-		meta["mc-attrs"] = append(meta["mc-attrs"], metadata["mc-attrs"])
+		meta[metaDataKey] = append(meta[metaDataKey], metadata[metaDataKey])
 		return f.put(reader, size, meta, progress)
 	}
 	return f.put(reader, size, nil, progress)
@@ -1057,7 +1058,7 @@ func (f *fsClient) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 		if err != nil {
 			return content, nil
 		}
-		content.Metadata["mc-attrs"] = fileAttr
+		content.Metadata[metaDataKey] = fileAttr
 	}
 
 	return content, nil
