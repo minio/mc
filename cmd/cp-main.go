@@ -423,6 +423,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				} else {
 					totalBytes += cpURLs.SourceContent.Size
 					pg.SetTotal(totalBytes)
+					totalObjects++
 				}
 				cpURLsCh <- cpURLs
 			}
@@ -520,6 +521,8 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 	}()
 
 	var retErr error
+	errSeen := false
+	cpAllFilesErr := true
 
 loop:
 	for {
@@ -545,6 +548,7 @@ loop:
 					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
 					session.Save()
 				}
+				cpAllFilesErr = false
 			} else {
 
 				// Set exit status for any copy error
@@ -558,7 +562,21 @@ loop:
 				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
 					fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
 				if isErrIgnored(cpURLs.Error) {
+					cpAllFilesErr = false
 					continue loop
+				}
+
+				errSeen = true
+				if progressReader, pgok := pg.(*progressBar); pgok {
+					if progressReader.ProgressBar.Get() > 0 {
+						writeContSize := (int)(cpURLs.SourceContent.Size)
+						totalPGSize := (int)(progressReader.ProgressBar.Total)
+						written := (int)(progressReader.ProgressBar.Get())
+						if totalPGSize > writeContSize && written > writeContSize {
+							progressReader.ProgressBar.Set((written - writeContSize))
+							progressReader.ProgressBar.Update()
+						}
+					}
 				}
 
 				if session != nil {
@@ -572,7 +590,9 @@ loop:
 	}
 
 	if progressReader, ok := pg.(*progressBar); ok {
-		if progressReader.ProgressBar.Get() > 0 {
+		if (errSeen && totalObjects == 1) || (cpAllFilesErr && totalObjects > 1) {
+			console.Eraseline()
+		} else if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {
