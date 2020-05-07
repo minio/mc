@@ -320,15 +320,16 @@ func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold 
 }
 
 // putTargetStreamWithURL writes to URL from reader. If length=-1, read until EOF.
-func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
+func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide, md5, disableMultipart bool, metadata map[string]string) (int64, *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
 	contentType := guessURLContentType(urlStr)
-	metadata := map[string]string{
-		"Content-Type": contentType,
+	if metadata == nil {
+		metadata = map[string]string{}
 	}
+	metadata["Content-Type"] = contentType
 	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, metadata, nil, sse, md5, disableMultipart)
 }
 
