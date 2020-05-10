@@ -79,7 +79,7 @@ var sqlCmd = cli.Command{
 	Usage:  "run sql queries on objects",
 	Action: mainSQL,
 	Before: setGlobalsFromContext,
-	Flags:  append(sqlFlags, globalFlags...),
+	Flags:  append(append(sqlFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -446,7 +446,10 @@ func mainSQL(ctx *cli.Context) error {
 	URLs := ctx.Args()
 	writeHdr := true
 	for _, url := range URLs {
-		if !isAliasURLDir(url, encKeyDB) {
+		if _, targetContent, err := url2Stat(url, false, encKeyDB); err != nil {
+			errorIf(err.Trace(url), "Unable to run sql for "+url+".")
+			continue
+		} else if !targetContent.Type.IsDir() {
 			if writeHdr {
 				query, csvHdrs, selOpts = getAndValidateArgs(ctx, encKeyDB, url)
 			}

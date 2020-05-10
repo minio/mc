@@ -30,6 +30,10 @@ var (
 			Name:  "encrypt",
 			Usage: "encrypt objects (using server-side encryption with server managed keys)",
 		},
+		cli.StringFlag{
+			Name:  "storage-class, sc",
+			Usage: "set storage class for new object(s) on target",
+		},
 	}
 )
 
@@ -65,10 +69,13 @@ EXAMPLES:
 
   4. Stream MySQL database dump to Amazon S3 directly.
      {{.Prompt}} mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/sql-backups/backups/accountsdb-oct-9-2015.sql
+
+  5. Write contents of stdin to an object on Amazon S3 cloud storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
+     {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY s3/personalbuck/meeting-notes.txt
 `,
 }
 
-func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass string) *probe.Error {
 	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin, -1).Trace()
@@ -79,7 +86,11 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
-	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey, false)
+	var metadata map[string]string
+	if storageClass != "" {
+		metadata = map[string]string{"X-Amz-Storage-Class": storageClass}
+	}
+	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey, false, false, metadata)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
@@ -108,12 +119,12 @@ func mainPipe(ctx *cli.Context) error {
 	checkPipeSyntax(ctx)
 
 	if len(ctx.Args()) == 0 {
-		err = pipe("", nil)
+		err = pipe("", nil, ctx.String("storage-class"))
 		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
 	} else {
 		// extract URLs.
 		URLs := ctx.Args()
-		err = pipe(URLs[0], encKeyDB)
+		err = pipe(URLs[0], encKeyDB, ctx.String("storage-class"))
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
 

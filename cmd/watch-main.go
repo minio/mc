@@ -178,25 +178,29 @@ func mainWatch(ctx *cli.Context) error {
 				// Signal received we are done.
 				close(wo.doneChan)
 				return
-			case event, ok := <-wo.Events():
+			case events, ok := <-wo.Events():
 				if !ok {
 					return
 				}
-				msg := watchMessage{}
-				msg.Event.Path = event.Path
-				msg.Event.Size = event.Size
-				msg.Event.Time = event.Time
-				msg.Event.Type = event.Type
-				msg.Source.Host = event.Host
-				msg.Source.Port = event.Port
-				msg.Source.UserAgent = event.UserAgent
-				printMsg(msg)
+				for _, event := range events {
+					msg := watchMessage{}
+					msg.Event.Path = event.Path
+					msg.Event.Size = event.Size
+					msg.Event.Time = event.Time
+					msg.Event.Type = event.Type
+					msg.Source.Host = event.Host
+					msg.Source.Port = event.Port
+					msg.Source.UserAgent = event.UserAgent
+					printMsg(msg)
+				}
 			case err, ok := <-wo.Errors():
 				if !ok {
 					return
 				}
-				errorIf(err, "Unable to watch for events.")
-				return
+				if err != nil {
+					errorIf(err, "Unable to watch for events.")
+					return
+				}
 			}
 		}
 	}()

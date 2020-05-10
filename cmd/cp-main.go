@@ -73,6 +73,10 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
+		cli.BoolFlag{
+			Name:  "md5",
+			Usage: "force all upload(s) to calculate md5sum checksum",
+		},
 		cli.StringFlag{
 			Name:  rmFlag,
 			Usage: "retention mode to be applied on the object (governance, compliance)",
@@ -212,7 +216,7 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a single file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool, preserve bool) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -238,7 +242,7 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB)
+	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
 	if isMvCmd && urls.Error == nil {
 		bgRemove(sourcePath)
 	}
@@ -419,6 +423,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				} else {
 					totalBytes += cpURLs.SourceContent.Size
 					pg.SetTotal(totalBytes)
+					totalObjects++
 				}
 				cpURLsCh <- cpURLs
 			}
@@ -469,17 +474,25 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				// update Object retention related fields
 				if session != nil {
 					cpURLs.TargetContent.RetentionMode = session.Header.CommandStringFlags[rmFlag]
+					if cpURLs.TargetContent.RetentionMode != "" {
+						cpURLs.TargetContent.RetentionEnabled = true
+					}
 					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
 					cpURLs.TargetContent.LegalHold = session.Header.CommandStringFlags[lhFlag]
+					if cpURLs.TargetContent.LegalHold != "" {
+						cpURLs.TargetContent.LegalHoldEnabled = true
+					}
 				} else {
 					if rm := cli.String(rmFlag); rm != "" {
 						cpURLs.TargetContent.RetentionMode = rm
+						cpURLs.TargetContent.RetentionEnabled = true
 					}
 					if rd := cli.String(rdFlag); rd != "" {
 						cpURLs.TargetContent.RetentionDuration = rd
 					}
 					if lh := cli.String(lhFlag); lh != "" {
 						cpURLs.TargetContent.LegalHold = lh
+						cpURLs.TargetContent.LegalHoldEnabled = true
 					}
 				}
 				if cli.String("attr") != "" {
@@ -489,19 +502,8 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					}
 				}
 
-				// If one needs to store the file system information by passing -a flag
-				if preserve := cli.Bool("preserve"); preserve {
-					attrValue, pErr := getFileAttrMeta(cpURLs, encKeyDB)
-					if pErr != nil {
-						errorIf(pErr, "Unable to fetch file meta info for %s", cpURLs.SourceAlias)
-						continue
-					}
-
-					if attrValue != "" {
-						cpURLs.TargetContent.Metadata["mc-attrs"] = attrValue
-					}
-				}
-
+				preserve := cli.Bool("preserve")
+				cpURLs.MD5 = cli.Bool("md5")
 				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
 				// Verify if previously copied, notify progress bar.
@@ -511,7 +513,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 					}
 				} else {
 					queueCh <- func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd)
+						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
 					}
 				}
 			}
@@ -519,6 +521,8 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 	}()
 
 	var retErr error
+	errSeen := false
+	cpAllFilesErr := true
 
 loop:
 	for {
@@ -544,6 +548,7 @@ loop:
 					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
 					session.Save()
 				}
+				cpAllFilesErr = false
 			} else {
 
 				// Set exit status for any copy error
@@ -557,7 +562,21 @@ loop:
 				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
 					fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
 				if isErrIgnored(cpURLs.Error) {
+					cpAllFilesErr = false
 					continue loop
+				}
+
+				errSeen = true
+				if progressReader, pgok := pg.(*progressBar); pgok {
+					if progressReader.ProgressBar.Get() > 0 {
+						writeContSize := (int)(cpURLs.SourceContent.Size)
+						totalPGSize := (int)(progressReader.ProgressBar.Total)
+						written := (int)(progressReader.ProgressBar.Get())
+						if totalPGSize > writeContSize && written > writeContSize {
+							progressReader.ProgressBar.Set((written - writeContSize))
+							progressReader.ProgressBar.Update()
+						}
+					}
 				}
 
 				if session != nil {
@@ -571,7 +590,9 @@ loop:
 	}
 
 	if progressReader, ok := pg.(*progressBar); ok {
-		if progressReader.ProgressBar.Get() > 0 {
+		if (errSeen && totalObjects == 1) || (cpAllFilesErr && totalObjects > 1) {
+			console.Eraseline()
+		} else if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {
@@ -658,6 +679,7 @@ func mainCopy(ctx *cli.Context) error {
 				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
+			session.Header.CommandBoolFlags["md5"] = ctx.Bool("md5")
 			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
 
 			var e error

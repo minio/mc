@@ -39,7 +39,7 @@ import (
 
 func isErrIgnored(err *probe.Error) (ignored bool) {
 	// For all non critical errors we can continue for the remaining files.
-	switch err.ToGoError().(type) {
+	switch e := err.ToGoError().(type) {
 	// Handle these specifically for filesystem related errors.
 	case BrokenSymlink, TooManyLevelsSymlink, PathNotFound:
 		ignored = true
@@ -48,6 +48,8 @@ func isErrIgnored(err *probe.Error) (ignored bool) {
 		ignored = true
 	case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid:
 		ignored = true
+	case minio.ErrorResponse:
+		ignored = strings.Contains(e.Error(), "The specified key does not exist")
 	default:
 		ignored = false
 	}
@@ -144,6 +146,7 @@ func NewS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	if hostCfg != nil {
 		s3Config.AccessKey = hostCfg.AccessKey
 		s3Config.SecretKey = hostCfg.SecretKey
+		s3Config.SessionToken = hostCfg.SessionToken
 		s3Config.Signature = hostCfg.API
 	}
 	s3Config.Lookup = getLookupType(hostCfg.Lookup)

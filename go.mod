@@ -16,8 +16,8 @@ require (
 	github.com/mattn/go-isatty v0.0.8
 	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20200415191640-bde0f444dbab
-	github.com/minio/minio-go/v6 v6.0.53
+	github.com/minio/minio v0.0.0-20200421050159-282c9f790a03
+	github.com/minio/minio-go/v6 v6.0.56-0.20200502013257-a81c8c13cc3f
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0

@@ -31,6 +31,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6/pkg/encrypt"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -67,9 +68,17 @@ var (
 			Name:  "preserve, a",
 			Usage: "preserve file(s)/object(s) attributes and bucket policy rules on target bucket(s)",
 		},
+		cli.BoolFlag{
+			Name:  "md5",
+			Usage: "force all upload(s) to calculate md5sum checksum",
+		},
 		cli.StringFlag{
 			Name:  "multi-master",
-			Usage: `multi-master multi-site setup, "value" is the site tag for the multi-master deployment`,
+			Usage: "enable multi-master multi-site setup",
+		},
+		cli.BoolFlag{
+			Name:  "disable-multipart",
+			Usage: "disable multipart upload feature",
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
@@ -166,8 +175,8 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
   15. Cross mirror between sites in a multi-master deployment.
-      Site-A: {{.Prompt}} {{.HelpName}} --watch --multi-master splunk-smartstore1 siteA siteB
-      Site-B: {{.Prompt}} {{.HelpName}} --watch --multi-master splunk-smartstore1 siteB siteA
+      Site-A: {{.Prompt}} {{.HelpName}} --watch --multi-master siteA siteB
+      Site-B: {{.Prompt}} {{.HelpName}} --watch --multi-master siteB siteA
 `,
 }
 
@@ -201,6 +210,7 @@ type mirrorJob struct {
 
 	isFake, isRemove, isOverwrite bool
 	isWatch, isPreserve           bool
+	md5, disableMultipart         bool
 	olderThan, newerThan          string
 	storageClass                  string
 	userMetadata                  map[string]string
@@ -209,7 +219,6 @@ type mirrorJob struct {
 	encKeyDB       map[string][]prefixSSEPair
 
 	multiMasterEnable bool
-	multiMasterSTag   string
 }
 
 // mirrorMessage container for file mirror messages
@@ -269,13 +278,43 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
-func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFunc, sURLs URLs) URLs {
+func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSSE encrypt.ServerSide, sURLs URLs) URLs {
+	shouldQueue := false
+	if !mj.isOverwrite && !mj.multiMasterEnable {
+		targetClient, err := newClient(targetPath)
+		if err != nil {
+			// cannot create targetclient
+			return sURLs.WithError(err)
+		}
+		_, err = targetClient.Stat(false, false, tgtSSE)
+		if err == nil {
+			if !sURLs.SourceContent.RetentionEnabled && !sURLs.SourceContent.LegalHoldEnabled {
+				return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
+			}
+		} // doesn't exist
+		shouldQueue = true
+	}
+	if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
+		// adjust total, because we want to show progress of
+		// the item still queued to be copied.
+		mj.status.Add(sURLs.SourceContent.Size)
+		mj.status.SetTotal(mj.status.Get()).Update()
+		mj.status.AddCounts(1)
+		sURLs.TotalSize = mj.status.Get()
+		sURLs.TotalCount = mj.status.GetCounts()
+		return mj.doMirror(ctx, sURLs)
+	}
+	return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
+}
+
+// doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
+func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
 
-	//s For a fake mirror make sure we update respective progress bars
+	// For a fake mirror make sure we update respective progress bars
 	// and accounting readers under relevant conditions.
 	if mj.isFake {
 		if sURLs.SourceContent != nil {
@@ -301,23 +340,12 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 	}
 
 	if mj.multiMasterEnable {
-		// Set multiMasterETagKey for the target.
-		if sURLs.SourceContent.UserMetadata[multiMasterETagKey] == "" {
-			sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.ETag
-		}
-
-		if sURLs.SourceContent.UserMetadata[multiMasterSTagKey] == "" {
-			sURLs.TargetContent.Metadata[multiMasterSTagKey] = mj.multiMasterSTag
-		}
-	}
-
-	if mj.isPreserve {
-		attrValue, pErr := getFileAttrMeta(sURLs, mj.encKeyDB)
-		if pErr != nil {
-			return sURLs.WithError(pErr)
-		}
-		if attrValue != "" {
-			sURLs.TargetContent.Metadata["mc-attrs"] = attrValue
+		// If the source object already has source modtime attribute set, then
+		// use it in target. Otherwise use the S3 modtime instead.
+		if sURLs.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
+			sURLs.TargetContent.Metadata[multiMasterSourceModTimeKey] = sURLs.SourceContent.Metadata[multiMasterSourceModTimeKey]
+		} else {
+			sURLs.TargetContent.Metadata[multiMasterSourceModTimeKey] = sURLs.SourceContent.Time.Format(time.RFC3339Nano)
 		}
 	}
 
@@ -333,7 +361,9 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB)
+	sURLs.MD5 = mj.md5
+	sURLs.DisableMultipart = mj.disableMultipart
+	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB, mj.isPreserve)
 }
 
 // Update progress status
@@ -378,160 +408,129 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 	return
 }
 
-// this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc) {
-	for {
-		select {
-		case event, ok := <-mj.watcher.Events():
-			if !ok {
-				return
+func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) {
+	for _, event := range events {
+		// It will change the expanded alias back to the alias
+		// again, by replacing the sourceUrlFull with the sourceAlias.
+		// This url will be used to mirror.
+		sourceAlias, sourceURLFull, _ := mustExpandAlias(mj.sourceURL)
+
+		// If the passed source URL points to fs, fetch the absolute src path
+		// to correctly calculate targetPath
+		if sourceAlias == "" {
+			tmpSrcURL, err := filepath.Abs(sourceURLFull)
+			if err == nil {
+				sourceURLFull = tmpSrcURL
 			}
+		}
+		eventPath := event.Path
+		if runtime.GOOS == "darwin" {
+			// Strip the prefixes in the event path. Happens in darwin OS only
+			eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
+		} else if runtime.GOOS == "windows" {
+			// Shared folder as source URL and if event path is an absolute path.
+			eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
+		}
 
-			// It will change the expanded alias back to the alias
-			// again, by replacing the sourceUrlFull with the sourceAlias.
-			// This url will be used to mirror.
-			sourceAlias, sourceURLFull, _ := mustExpandAlias(mj.sourceURL)
+		sourceURL := newClientURL(eventPath)
 
-			// If the passed source URL points to fs, fetch the absolute src path
-			// to correctly calculate targetPath
-			if sourceAlias == "" {
-				tmpSrcURL, err := filepath.Abs(sourceURLFull)
-				if err == nil {
-					sourceURLFull = tmpSrcURL
-				}
+		// build target path, it is the relative of the eventPath with the sourceUrl
+		// joined to the targetURL.
+		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
+		//Skip the object, if it matches the Exclude options provided
+		if matchExcludeOptions(mj.excludeOptions, sourceSuffix) {
+			continue
+		}
+
+		targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
+
+		// newClient needs the unexpanded  path, newCLientURL needs the expanded path
+		targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
+		targetURL := newClientURL(expandedTargetPath)
+		tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
+
+		if (event.Type == EventCreate) ||
+			(event.Type == EventCreateCopy) ||
+			(event.Type == EventCreatePutRetention) {
+			sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
+			mirrorURL := URLs{
+				SourceAlias: sourceAlias,
+				SourceContent: &ClientContent{
+					URL:              *sourceURL,
+					RetentionEnabled: event.Type == EventCreatePutRetention,
+					LegalHoldEnabled: event.Type == EventCreatePutLegalHold,
+					Size:             event.Size,
+					Time:             sourceModTime,
+					Metadata:         event.UserMetadata,
+				},
+				TargetAlias:      targetAlias,
+				TargetContent:    &ClientContent{URL: *targetURL},
+				MD5:              mj.md5,
+				DisableMultipart: mj.disableMultipart,
+				encKeyDB:         mj.encKeyDB,
 			}
-			eventPath := event.Path
-			if runtime.GOOS == "darwin" {
-				// Strip the prefixes in the event path. Happens in darwin OS only
-				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
-			} else if runtime.GOOS == "windows" {
-				// Shared folder as source URL and if event path is an absolute path.
-				eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
-			}
-
-			sourceURL := newClientURL(eventPath)
-
-			// build target path, it is the relative of the eventPath with the sourceUrl
-			// joined to the targetURL.
-			sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
-			//Skip the object, if it matches the Exclude options provided
-			if matchExcludeOptions(mj.excludeOptions, sourceSuffix) {
+			if mj.multiMasterEnable &&
+				mirrorURL.SourceContent.Metadata[multiMasterSourceModTimeKey] != "" {
+				// If source has multi-master attributes, it means that the
+				// object was uploaded by "mc mirror", hence ignore the event
+				// to avoid copying it.
 				continue
 			}
-
-			targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
-
-			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
-			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
-			targetURL := newClientURL(expandedTargetPath)
-			tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
-
-			if (event.Type == EventCreate) ||
-				(event.Type == EventCreateCopy) ||
-				(event.Type == EventCreatePutRetention) {
-				mirrorURL := URLs{
-					SourceAlias: sourceAlias,
-					SourceContent: &ClientContent{
-						URL:       *sourceURL,
-						Retention: event.Type == EventCreatePutRetention,
-						Size:      event.Size,
-						Metadata:  event.UserMetadata,
-					},
-					TargetAlias:   targetAlias,
-					TargetContent: &ClientContent{URL: *targetURL},
-					encKeyDB:      mj.encKeyDB,
-				}
-				if mirrorURL.SourceContent.Metadata[multiMasterETagKey] != "" {
-					// If source has multiMasterETagKey, it means that the
-					// object was uplooaded by "mc mirror"
-					// hence ignore the event to avoid copying it.
-					continue
-				}
-				if mirrorURL.SourceContent.Size == 0 && mirrorURL.SourceContent.Retention {
-					targetClient, err := newClient(targetPath)
-					if err != nil {
-						// cannot create targetclient
-						mj.statusCh <- mirrorURL.WithError(err)
-						return
-					}
-					shouldQueue := false
-					if !mj.isOverwrite {
-						_, err = targetClient.Stat(false, false, tgtSSE)
-						if err == nil {
-							continue
-						} // doesn't exist
-						shouldQueue = true
-					}
-					if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
-						// adjust total, because we want to show progress of
-						// the item still queued to be copied.
-						mj.status.Add(mirrorURL.SourceContent.Size)
-						mj.status.SetTotal(mj.status.Get()).Update()
-						mj.status.AddCounts(1)
-						mirrorURL.TotalSize = mj.status.Get()
-						mirrorURL.TotalCount = mj.status.GetCounts()
-						mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
-					}
-					continue
-				}
-				shouldQueue := false
-				if !mj.isOverwrite && !mj.multiMasterEnable {
-					targetClient, err := newClient(targetPath)
-					if err != nil {
-						// cannot create targetclient
-						mj.statusCh <- mirrorURL.WithError(err)
-						return
-					}
-					_, err = targetClient.Stat(false, false, tgtSSE)
-					if err == nil {
-						if mirrorURL.SourceContent.Retention {
-							shouldQueue = true
-						} else {
-							continue
-						}
-					} // doesn't exist
-					shouldQueue = true
-				}
-				if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
-					// adjust total, because we want to show progress
-					// of the itemj stiil queued to be copied.
-					mj.status.Add(mirrorURL.SourceContent.Size)
-					mj.status.SetTotal(mj.status.Get()).Update()
-					mj.status.AddCounts(1)
-					mirrorURL.TotalSize = mj.status.Get()
-					mirrorURL.TotalCount = mj.status.GetCounts()
-					mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
-				}
-			} else if event.Type == EventRemove {
-				if strings.Contains(event.UserAgent, uaMirrorAppName) {
-					continue
-				}
-				mirrorURL := URLs{
-					SourceAlias:   sourceAlias,
-					SourceContent: nil,
-					TargetAlias:   targetAlias,
-					TargetContent: &ClientContent{URL: *targetURL},
-					encKeyDB:      mj.encKeyDB,
-				}
-				mirrorURL.TotalCount = mj.status.GetCounts()
-				mirrorURL.TotalSize = mj.status.Get()
-				if mirrorURL.TargetContent != nil && (mj.isRemove || mj.multiMasterEnable) {
-					mj.statusCh <- mj.doRemove(mirrorURL)
+			mj.queueCh <- func() URLs {
+				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
+			}
+		} else if event.Type == EventRemove {
+			if strings.Contains(event.UserAgent, uaMirrorAppName) {
+				continue
+			}
+			mirrorURL := URLs{
+				SourceAlias:      sourceAlias,
+				SourceContent:    nil,
+				TargetAlias:      targetAlias,
+				TargetContent:    &ClientContent{URL: *targetURL},
+				MD5:              mj.md5,
+				DisableMultipart: mj.disableMultipart,
+				encKeyDB:         mj.encKeyDB,
+			}
+			mirrorURL.TotalCount = mj.status.GetCounts()
+			mirrorURL.TotalSize = mj.status.Get()
+			if mirrorURL.TargetContent != nil && (mj.isRemove || mj.multiMasterEnable) {
+				mj.queueCh <- func() URLs {
+					return mj.doRemove(mirrorURL)
 				}
 			}
+		}
+	}
+}
 
-		case err := <-mj.watcher.Errors():
+// this goroutine will watch for notifications, and add modified objects to the queue
+func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
+	for {
+		select {
+		case events, ok := <-mj.watcher.Events():
+			if !ok {
+				stopParallel()
+				return
+			}
+			mj.watchMirrorEvents(ctx, events)
+		case err, ok := <-mj.watcher.Errors():
+			if !ok {
+				stopParallel()
+				return
+			}
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
 				errorIf(err.Trace(),
 					"Unable to Watch on source, perhaps source doesn't support Watching for events")
 				return
 			}
-			mj.statusCh <- URLs{Error: err}
-			return
+			if err != nil {
+				mj.queueCh <- func() URLs {
+					return URLs{Error: err}
+				}
+			}
 		case <-globalContext.Done():
-			return
-		case <-mj.stopCh:
+			stopParallel()
 			return
 		}
 	}
@@ -554,9 +553,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok {
-				if stopParallel != nil {
-					stopParallel()
-				}
+				stopParallel()
 				return
 			}
 			if sURLs.Error != nil {
@@ -586,7 +583,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 
 			if sURLs.SourceContent != nil {
 				mj.queueCh <- func() URLs {
-					return mj.doMirror(ctx, cancelMirror, sURLs)
+					return mj.doMirror(ctx, sURLs)
 				}
 			} else if sURLs.TargetContent != nil && mj.isRemove {
 				mj.queueCh <- func() URLs {
@@ -594,16 +591,10 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 		case <-globalContext.Done():
-			if stopParallel != nil {
-				stopParallel()
-			}
-			cancelMirror()
+			stopParallel()
 			return
 		case <-mj.stopCh:
-			if stopParallel != nil {
-				stopParallel()
-			}
-			cancelMirror()
+			stopParallel()
 			return
 		}
 	}
@@ -619,7 +610,12 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mj.watchMirror(ctx, cancelMirror)
+			stopParallel := func() {
+				close(mj.queueCh)
+				mj.parallel.wait()
+				cancelMirror()
+			}
+			mj.watchMirror(ctx, stopParallel)
 		}()
 	}
 
@@ -628,8 +624,11 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	go func() {
 		defer wg.Done()
 		stopParallel := func() {
-			close(mj.queueCh)
-			mj.parallel.wait()
+			if !mj.isWatch {
+				close(mj.queueCh)
+				mj.parallel.wait()
+				cancelMirror()
+			}
 		}
 		// startMirror locks and blocks itself.
 		mj.startMirror(ctx, cancelMirror, stopParallel)
@@ -644,7 +643,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return mj.monitorMirrorStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan string, storageClass string, multiMasterSTag string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan string, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair, md5, disableMultipart bool) *mirrorJob {
 	if multiMasterEnable {
 		isPreserve = true
 	}
@@ -658,7 +657,9 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		isRemove:          isRemove,
 		isOverwrite:       isOverwrite,
 		isWatch:           isWatch,
-		isPreserve:        isPreserve,
+		isPreserve:        isPreserve || multiMasterEnable,
+		md5:               md5,
+		disableMultipart:  disableMultipart,
 		excludeOptions:    excludeOptions,
 		olderThan:         olderThan,
 		newerThan:         newerThan,
@@ -668,7 +669,6 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		statusCh:          make(chan URLs),
 		watcher:           NewWatcher(UTCNow()),
 		multiMasterEnable: multiMasterEnable,
-		multiMasterSTag:   multiMasterSTag,
 	}
 
 	mj.parallel, mj.queueCh = newParallelManager(mj.statusCh)
@@ -774,9 +774,6 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		fatalIf(err, "Unable to initialize `"+dstURL+"`.")
 	}
 
-	multiMasterSTag := ctx.String("multi-master")
-	multiMasterEnable := multiMasterSTag != ""
-
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
 		ctx.Bool("fake"),
@@ -784,14 +781,16 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		isOverwrite,
 		ctx.Bool("watch"),
 		ctx.Bool("a"),
-		multiMasterEnable,
+		ctx.Bool("multi-master"),
 		ctx.StringSlice("exclude"),
 		ctx.String("older-than"),
 		ctx.String("newer-than"),
 		ctx.String("storage-class"),
-		multiMasterSTag,
 		userMetaMap,
-		encKeyDB)
+		encKeyDB,
+		ctx.Bool("md5"),
+		ctx.Bool("disable-multipart"),
+	)
 
 	go func() {
 		<-globalContext.Done()
@@ -832,7 +831,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 					continue
 				}
 				// object lock configuration set on bucket
-				if mode != nil {
+				if mode != "" {
 					errorIf(newDstClt.SetObjectLockConfig(mode, validity, unit),
 						"Unable to set object lock config in `"+newTgtURL+"`.")
 				}
@@ -873,7 +872,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		}
 
 		// object lock configuration set on bucket
-		if mode != nil {
+		if mode != "" {
 			err = dstClt.SetObjectLockConfig(mode, validity, unit)
 			errorIf(err, "Unable to set object lock config in `"+dstURL+"`.")
 			if err != nil && mj.multiMasterEnable {
@@ -932,7 +931,8 @@ func mainMirror(ctx *cli.Context) error {
 			srcURL = origSrcURL
 		}
 	}
-	if ctx.String("multi-master") != "" {
+
+	if ctx.Bool("multi-master") {
 		for {
 			runMirror(srcURL, tgtURL, ctx, encKeyDB)
 			time.Sleep(time.Second * 2)

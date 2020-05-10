@@ -33,13 +33,20 @@ const (
 	// EventCreateCopy notifies when there was a server side copy
 	EventCreateCopy EventType = "ObjectCreated:Copy"
 
-	// EventCreatePutRetention notifies when a retention configuration is added to an object
-	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
 	// EventRemove notifies when a new object is deleted
 	EventRemove = "ObjectRemoved"
+
+	// Following are MinIO server specific events
+
+	// EventCreatePutRetention notifies when a retention configuration is added to an object
+	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
+
+	// EventCreatePutLegalHold notifies when a legal hold configuration is added to an object
+	EventCreatePutLegalHold EventType = "ObjectCreated:PutLegalHold"
+
 	// EventAccessed notifies when an object is accessed.
 	EventAccessed = "ObjectAccessed"
-	// EventAccessedRead notifies when an object is accessed (specifically read).
+	// EventAccessedRead notifies when an object is accessed (specifically read/get).
 	EventAccessedRead = "ObjectAccessed:Read"
 	// EventAccessedStat notifies when an object is accessed (specifically stat).
 	EventAccessedStat = "ObjectAccessed:Stat"
@@ -68,15 +75,15 @@ type watchParams struct {
 // WatchObject captures watch channels to read and listen on.
 type WatchObject struct {
 	// eventInfo will be put on this chan
-	eventInfoChan chan EventInfo
+	eventInfoChan chan []EventInfo
 	// errors will be put on this chan
 	errorChan chan *probe.Error
 	// will stop the watcher goroutines
-	doneChan chan bool
+	doneChan chan struct{}
 }
 
 // Events returns the chan receiving events
-func (w *WatchObject) Events() chan EventInfo {
+func (w *WatchObject) Events() chan []EventInfo {
 	return w.eventInfoChan
 }
 
@@ -100,7 +107,7 @@ type Watcher struct {
 	// all error will be added to this chan
 	errorChan chan *probe.Error
 	// all events will be added to this chan
-	eventInfoChan chan EventInfo
+	eventInfoChan chan []EventInfo
 
 	// array of watchers joined
 	o []*WatchObject
@@ -114,7 +121,7 @@ func NewWatcher(sessionStartTime time.Time) *Watcher {
 	return &Watcher{
 		sessionStartTime: sessionStartTime,
 		errorChan:        make(chan *probe.Error),
-		eventInfoChan:    make(chan EventInfo),
+		eventInfoChan:    make(chan []EventInfo),
 		o:                []*WatchObject{},
 	}
 }
@@ -125,7 +132,7 @@ func (w *Watcher) Errors() chan *probe.Error {
 }
 
 // Events returns a channel which will receive events
-func (w *Watcher) Events() chan EventInfo {
+func (w *Watcher) Events() chan []EventInfo {
 	return w.eventInfoChan
 }
 
@@ -174,11 +181,11 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 
 		for {
 			select {
-			case event, ok := <-wo.Events():
+			case events, ok := <-wo.Events():
 				if !ok {
 					return
 				}
-				w.eventInfoChan <- event
+				w.eventInfoChan <- events
 			case err, ok := <-wo.Errors():
 				if !ok {
 					return

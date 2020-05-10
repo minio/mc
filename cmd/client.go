@@ -51,8 +51,9 @@ type Client interface {
 
 	// Bucket operations
 	MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error
-	SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error
-	GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error)
+	// Object lock config
+	SetObjectLockConfig(mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
+	GetObjectLockConfig() (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
 	GetAccess() (access string, policyJSON string, error *probe.Error)
@@ -67,10 +68,11 @@ type Client interface {
 
 	// I/O operations with metadata.
 	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
-	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, disableMultipart bool) (n int64, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (n int64, err *probe.Error)
+
 	// Object Locking related API
-	PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error
-	PutObjectLegalHold(hold *minio.LegalHoldStatus) *probe.Error
+	PutObjectRetention(mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
+	PutObjectLegalHold(hold minio.LegalHoldStatus) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
@@ -103,26 +105,29 @@ type ClientContent struct {
 	UserMetadata      map[string]string
 	ETag              string
 	Expires           time.Time
-	Retention         bool
+	RetentionEnabled  bool
 	RetentionMode     string
 	RetentionDuration string
 	BypassGovernance  bool
+	LegalHoldEnabled  bool
 	LegalHold         string
-	Err               *probe.Error
+
+	Err *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
-	AccessKey   string
-	SecretKey   string
-	Signature   string
-	HostURL     string
-	AppName     string
-	AppVersion  string
-	AppComments []string
-	Debug       bool
-	Insecure    bool
-	Lookup      minio.BucketLookupType
+	AccessKey    string
+	SecretKey    string
+	SessionToken string
+	Signature    string
+	HostURL      string
+	AppName      string
+	AppVersion   string
+	AppComments  []string
+	Debug        bool
+	Insecure     bool
+	Lookup       minio.BucketLookupType
 }
 
 // SelectObjectOpts - opts entered for select API
