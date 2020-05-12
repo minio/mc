@@ -41,7 +41,7 @@ var ilmListFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "minimum",
-		Usage: "show minimum fields",
+		Usage: "show minimum fields - id, prefix, status, transition set, expiry set",
 	},
 }
 
@@ -102,20 +102,19 @@ func (i ilmListMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func invalidILMListFlagSet(ctx *cli.Context) bool {
+// validateILMListFlagSet - Only one of these flags needs to be set for display: --json, --expiry, --transition, --minimum
+func validateILMListFlagSet(ctx *cli.Context) bool {
 	var flags = [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json"),
 		ctx.Bool("minimum")}
-	foundSet := false
-	idx := 0
-	for range flags {
-		if foundSet && flags[idx] {
-			return true
-		} else if flags[idx] {
-			foundSet = true
+	found := false
+	for _, flag := range flags {
+		if found && flag {
+			return false
+		} else if flag {
+			found = true
 		}
-		idx++
 	}
-	return false
+	return true
 }
 
 // checkILMListSyntax - validate arguments passed by a user
@@ -124,7 +123,7 @@ func checkILMListSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelp(ctx, "list")
 		os.Exit(globalErrorExitStatus)
 	}
-	if invalidILMListFlagSet(ctx) {
+	if !validateILMListFlagSet(ctx) {
 		fatalIf(probe.NewError(errors.New("Invalid input flag(s)")), "Only one show field flag allowed for list command. Refer mc "+ctx.Command.FullName()+" --help.")
 	}
 }

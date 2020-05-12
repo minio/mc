@@ -79,11 +79,11 @@ func readILMConfigJSON() (string, *probe.Error) {
 	if err = dec.Decode(&ilmInfo); err != nil && err != io.EOF {
 		return "", probe.NewError(err)
 	}
-	if bytes, err = xml.Marshal(ilmInfo); err != nil {
-		return "", probe.NewError(err)
-	}
 	if len(ilmInfo.Rules) == 0 {
 		return "", probe.NewError(errors.New("Empty configuration"))
+	}
+	if bytes, err = xml.Marshal(ilmInfo); err != nil {
+		return "", probe.NewError(err)
 	}
 
 	return string(bytes), nil

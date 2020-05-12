@@ -423,6 +423,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				} else {
 					totalBytes += cpURLs.SourceContent.Size
 					pg.SetTotal(totalBytes)
+					totalObjects++
 				}
 				cpURLsCh <- cpURLs
 			}
@@ -473,17 +474,25 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				// update Object retention related fields
 				if session != nil {
 					cpURLs.TargetContent.RetentionMode = session.Header.CommandStringFlags[rmFlag]
+					if cpURLs.TargetContent.RetentionMode != "" {
+						cpURLs.TargetContent.RetentionEnabled = true
+					}
 					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
 					cpURLs.TargetContent.LegalHold = session.Header.CommandStringFlags[lhFlag]
+					if cpURLs.TargetContent.LegalHold != "" {
+						cpURLs.TargetContent.LegalHoldEnabled = true
+					}
 				} else {
 					if rm := cli.String(rmFlag); rm != "" {
 						cpURLs.TargetContent.RetentionMode = rm
+						cpURLs.TargetContent.RetentionEnabled = true
 					}
 					if rd := cli.String(rdFlag); rd != "" {
 						cpURLs.TargetContent.RetentionDuration = rd
 					}
 					if lh := cli.String(lhFlag); lh != "" {
 						cpURLs.TargetContent.LegalHold = lh
+						cpURLs.TargetContent.LegalHoldEnabled = true
 					}
 				}
 				if cli.String("attr") != "" {
@@ -512,6 +521,8 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 	}()
 
 	var retErr error
+	errSeen := false
+	cpAllFilesErr := true
 
 loop:
 	for {
@@ -537,6 +548,7 @@ loop:
 					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
 					session.Save()
 				}
+				cpAllFilesErr = false
 			} else {
 
 				// Set exit status for any copy error
@@ -550,7 +562,21 @@ loop:
 				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
 					fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
 				if isErrIgnored(cpURLs.Error) {
+					cpAllFilesErr = false
 					continue loop
+				}
+
+				errSeen = true
+				if progressReader, pgok := pg.(*progressBar); pgok {
+					if progressReader.ProgressBar.Get() > 0 {
+						writeContSize := (int)(cpURLs.SourceContent.Size)
+						totalPGSize := (int)(progressReader.ProgressBar.Total)
+						written := (int)(progressReader.ProgressBar.Get())
+						if totalPGSize > writeContSize && written > writeContSize {
+							progressReader.ProgressBar.Set((written - writeContSize))
+							progressReader.ProgressBar.Update()
+						}
+					}
 				}
 
 				if session != nil {
@@ -564,7 +590,9 @@ loop:
 	}
 
 	if progressReader, ok := pg.(*progressBar); ok {
-		if progressReader.ProgressBar.Get() > 0 {
+		if (errSeen && totalObjects == 1) || (cpAllFilesErr && totalObjects > 1) {
+			console.Eraseline()
+		} else if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {

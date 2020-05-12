@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -137,10 +138,7 @@ EXAMPLES:
   15. Move a text file to an object storage and preserve the file system attribute as metadata.
       {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
 
-  16. Move a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention date.
-      {{.Prompt}} {{.HelpName}} --attr "x-amz-object-lock-mode=GOVERNANCE;x-amz-object-lock-retain-until-date=2020-01-11T01:57:02Z" locked.txt play/locked-bucket/
-
-  17. Move a text file to an object storage and disable multipart upload feature.
+  16. Move a text file to an object storage and disable multipart upload feature.
       {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
 `,
 }
@@ -295,7 +293,7 @@ func mainMove(ctx *cli.Context) error {
 
 		if s3Client, ok := client.(*S3Client); ok {
 			if _, _, _, err = s3Client.GetObjectLockConfig(); err == nil {
-				fatalIf(err, fmt.Sprintf("object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
+				fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 			}
 		}
 	}

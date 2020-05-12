@@ -325,6 +325,7 @@ var appCmds = []cli.Command{
 	findCmd,
 	sqlCmd,
 	statCmd,
+	mvCmd,
 	treeCmd,
 	duCmd,
 	lockCmd,
@@ -340,7 +341,6 @@ var appCmds = []cli.Command{
 	adminCmd,
 	configCmd,
 	updateCmd,
-	mvCmd,
 }
 
 func registerApp(name string) *cli.App {

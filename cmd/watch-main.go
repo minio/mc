@@ -150,15 +150,15 @@ func mainWatch(ctx *cli.Context) error {
 		fatalIf(pErr.Trace(), "Cannot parse the provided url.")
 	}
 
-	params := watchParams{
-		recursive: recursive,
-		events:    events,
-		prefix:    prefix,
-		suffix:    suffix,
+	options := WatchOptions{
+		Recursive: recursive,
+		Events:    events,
+		Prefix:    prefix,
+		Suffix:    suffix,
 	}
 
 	// Start watching on events
-	wo, err := s3Client.Watch(params)
+	wo, err := s3Client.Watch(options)
 	fatalIf(err, "Cannot watch on the specified bucket.")
 
 	// Initialize.. waitgroup to track the go-routine.
@@ -176,27 +176,31 @@ func mainWatch(ctx *cli.Context) error {
 			select {
 			case <-globalContext.Done():
 				// Signal received we are done.
-				close(wo.doneChan)
+				close(wo.DoneChan)
 				return
-			case event, ok := <-wo.Events():
+			case events, ok := <-wo.Events():
 				if !ok {
 					return
 				}
-				msg := watchMessage{}
-				msg.Event.Path = event.Path
-				msg.Event.Size = event.Size
-				msg.Event.Time = event.Time
-				msg.Event.Type = event.Type
-				msg.Source.Host = event.Host
-				msg.Source.Port = event.Port
-				msg.Source.UserAgent = event.UserAgent
-				printMsg(msg)
+				for _, event := range events {
+					msg := watchMessage{}
+					msg.Event.Path = event.Path
+					msg.Event.Size = event.Size
+					msg.Event.Time = event.Time
+					msg.Event.Type = event.Type
+					msg.Source.Host = event.Host
+					msg.Source.Port = event.Port
+					msg.Source.UserAgent = event.UserAgent
+					printMsg(msg)
+				}
 			case err, ok := <-wo.Errors():
 				if !ok {
 					return
 				}
-				errorIf(err, "Unable to watch for events.")
-				return
+				if err != nil {
+					errorIf(err, "Unable to watch for events.")
+					return
+				}
 			}
 		}
 	}()

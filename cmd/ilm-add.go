@@ -61,7 +61,7 @@ EXAMPLES:
 var ilmAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "id",
-		Usage: "id for the rule, should be an unique value",
+		Usage: "id for the rule, should be a unique value",
 	},
 	cli.StringFlag{
 		Name:  "prefix",

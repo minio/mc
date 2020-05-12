@@ -51,6 +51,7 @@ type fsClient struct {
 const (
 	partSuffix     = ".part.minio"
 	slashSeperator = "/"
+	metaDataKey    = "X-Amz-Meta-Mc-Attrs"
 )
 
 var ( // GOOS specific ignore list.
@@ -126,16 +127,16 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
-	eventChan := make(chan EventInfo)
+func (f *fsClient) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
+	eventChan := make(chan []EventInfo)
 	errorChan := make(chan *probe.Error)
-	doneChan := make(chan bool)
+	doneChan := make(chan struct{})
 	// Make the channel buffered to ensure no event is dropped. Notify will drop
 	// an event if the receiver is not able to keep up the sending pace.
 	in, out := PipeChan(1000)
 
 	var fsEvents []notify.Event
-	for _, event := range params.events {
+	for _, event := range options.Events {
 		switch event {
 		case "put":
 			fsEvents = append(fsEvents, EventTypePut...)
@@ -151,7 +152,7 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	// Set up a watchpoint listening for events within a directory tree rooted
 	// at current working directory. Dispatch remove events to c.
 	recursivePath := f.PathURL.Path
-	if params.recursive {
+	if options.Recursive {
 		recursivePath = f.PathURL.Path + "..."
 	}
 	if e := notify.Watch(recursivePath, in, fsEvents...); e != nil {
@@ -192,32 +193,32 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 					// we want files
 					continue
 				}
-				eventChan <- EventInfo{
+				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Size: i.Size(),
 					Path: event.Path(),
 					Type: EventCreate,
-				}
+				}}
 			} else if IsDeleteEvent(event.Event()) {
-				eventChan <- EventInfo{
+				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Path: event.Path(),
 					Type: EventRemove,
-				}
+				}}
 			} else if IsGetEvent(event.Event()) {
-				eventChan <- EventInfo{
+				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Path: event.Path(),
 					Type: EventAccessed,
-				}
+				}}
 			}
 		}
 	}()
 
 	return &WatchObject{
-		eventInfoChan: eventChan,
-		errorChan:     errorChan,
-		doneChan:      doneChan,
+		EventInfoChan: eventChan,
+		ErrorChan:     errorChan,
+		DoneChan:      doneChan,
 	}, nil
 }
 
@@ -302,8 +303,8 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	}
 
 	attr := make(map[string]string)
-	if len(metadata["mc-attrs"]) != 0 {
-		attr, e = parseAttribute(metadata["mc-attrs"][0])
+	if len(metadata[metaDataKey]) != 0 {
+		attr, e = parseAttribute(metadata[metaDataKey][0])
 		if e != nil {
 			return 0, probe.NewError(e)
 		}
@@ -409,9 +410,9 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 
 // Put - create a new file with metadata.
 func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
-	if metadata["mc-attrs"] != "" {
+	if metadata[metaDataKey] != "" {
 		meta := make(map[string][]string)
-		meta["mc-attrs"] = append(meta["mc-attrs"], metadata["mc-attrs"])
+		meta[metaDataKey] = append(meta[metaDataKey], metadata[metaDataKey])
 		return f.put(reader, size, meta, progress)
 	}
 	return f.put(reader, size, nil, progress)
@@ -930,7 +931,7 @@ func (f *fsClient) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 }
 
 // Set object lock configuration of bucket.
-func (f *fsClient) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+func (f *fsClient) SetObjectLockConfig(mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectLockConfig",
 		APIType: "filesystem",
@@ -938,8 +939,8 @@ func (f *fsClient) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 }
 
 // Get object lock configuration of bucket.
-func (f *fsClient) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
-	return nil, nil, nil, probe.NewError(APINotImplemented{
+func (f *fsClient) GetObjectLockConfig() (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+	return "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "filesystem",
 	})
@@ -954,7 +955,7 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time, bypassGovernance bool) *probe.Error {
+func (f *fsClient) PutObjectRetention(mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
 		APIType: "filesystem",
@@ -962,7 +963,7 @@ func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate
 }
 
 // Set object legal hold for a given object.
-func (f *fsClient) PutObjectLegalHold(lhold *minio.LegalHoldStatus) *probe.Error {
+func (f *fsClient) PutObjectLegalHold(lhold minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
 		APIType: "filesystem",
@@ -1057,7 +1058,7 @@ func (f *fsClient) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 		if err != nil {
 			return content, nil
 		}
-		content.Metadata["mc-attrs"] = fileAttr
+		content.Metadata[metaDataKey] = fileAttr
 	}
 
 	return content, nil

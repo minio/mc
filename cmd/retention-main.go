@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -48,7 +47,7 @@ var bypass = "bypass"
 
 var retentionCmd = cli.Command{
 	Name:   "retention",
-	Usage:  "set object retention for objects with a given prefix",
+	Usage:  "set retention for object(s)",
 	Action: mainRetention,
 	Before: setGlobalsFromContext,
 	Flags:  append(rFlags, globalFlags...),
@@ -56,7 +55,7 @@ var retentionCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET [governance | compliance] [VALIDITY]
+  {{.HelpName}} [FLAGS] TARGET [governance | compliance] VALIDITY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -65,19 +64,18 @@ VALIDITY:
   This argument must be formatted like Nd or Ny where 'd' denotes days and 'y' denotes years e.g. 10d, 3y.
 
 EXAMPLES:
-   1. Set object retention for a specific object
+  1. Set object retention for a specific object
      $ {{.HelpName}} myminio/mybucket/prefix/obj.csv compliance 30d
 
-   2. Set object retention for objects in a given prefix
+  2. Set object retention for recursively for all objects at a given prefix
      $ {{.HelpName}} myminio/mybucket/prefix compliance 30d  --recursive
-
-	 `,
+`,
 }
 
 // Structured message depending on the type of console.
 type retentionCmdMessage struct {
 	Mode     minio.RetentionMode `json:"mode"`
-	Validity *string             `json:"validity"`
+	Validity string              `json:"validity"`
 	URLPath  string              `json:"urlpath"`
 	Status   string              `json:"status"`
 	Err      error               `json:"error"`
@@ -86,27 +84,30 @@ type retentionCmdMessage struct {
 // Colorized message for console printing.
 func (m retentionCmdMessage) String() string {
 	if m.Err != nil {
-		return console.Colorize("RetentionMessageFailure", "Cannot set object retention on `"+m.URLPath+"`."+m.Err.Error())
+		return console.Colorize("RetentionMessageFailure", fmt.Sprintf("Cannot set object retention on `%s`: %s", m.URLPath, m.Err))
 	}
-	return ""
+	return console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for `%s`", m.URLPath))
 }
 
 // JSON'ified message for scripting.
 func (m retentionCmdMessage) JSON() string {
+	if m.Err != nil {
+		m.Status = "failure"
+	}
 	msgBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
 
-func getRetainUntilDate(validity *uint, unit *minio.ValidityUnit) (string, error) {
-	if validity == nil {
-		return "", fmt.Errorf("invalid validity '%v'", validity)
+func getRetainUntilDate(validity uint64, unit minio.ValidityUnit) (string, *probe.Error) {
+	if validity == 0 {
+		return "", probe.NewError(fmt.Errorf("invalid validity '%v'", validity))
 	}
 	t := UTCNow()
-	if *unit == minio.Years {
-		t = t.AddDate(int(*validity), 0, 0)
+	if unit == minio.Years {
+		t = t.AddDate(int(validity), 0, 0)
 	} else {
-		t = t.AddDate(0, 0, int(*validity))
+		t = t.AddDate(0, 0, int(validity))
 	}
 	timeStr := t.Format(time.RFC3339)
 
@@ -114,7 +115,7 @@ func getRetainUntilDate(validity *uint, unit *minio.ValidityUnit) (string, error
 }
 
 // setRetention - Set Retention for all objects within a given prefix.
-func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, bypassGovernance, isRecursive bool) error {
+func setRetention(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance, isRecursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
@@ -128,21 +129,7 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 
 	alias, _, _ := mustExpandAlias(urlStr)
 
-	validityStr := func() *string {
-		if validity == nil {
-			return nil
-		}
-
-		unitStr := "d"
-		if *unit == minio.Years {
-			unitStr = "y"
-		}
-		s := fmt.Sprint(*validity, unitStr)
-		return &s
-	}
-
 	var cErr error
-	errorsFound := false
 	for content := range clnt.List(isRecursive, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
@@ -151,46 +138,36 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 		}
 		timeStr, err := getRetainUntilDate(validity, unit)
 		if err != nil {
-			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
+			errorIf(err.Trace(clnt.GetURL().String()), "Invalid retention date")
 			continue
 		}
 		retainUntil, e := time.Parse(time.RFC3339, timeStr)
 		if e != nil {
-			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
+			errorIf(probe.NewError(e).Trace(clnt.GetURL().String()), "Invalid retention date")
 			continue
 		}
 
-		newClnt, perr := newClientFromAlias(alias, content.URL.String())
-		if perr != nil {
-			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
+		newClnt, err := newClientFromAlias(alias, content.URL.String())
+		if err != nil {
+			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
-		probeErr := newClnt.PutObjectRetention(mode, &retainUntil, bypassGovernance)
-		if probeErr != nil {
-			errorsFound = true
+		err = newClnt.PutObjectRetention(mode, retainUntil, bypassGovernance)
+		if err != nil {
 			printMsg(retentionCmdMessage{
-				Mode:     *mode,
-				Validity: validityStr(),
+				Mode:     mode,
+				Validity: fmt.Sprintf("%d%s", validity, unit),
 				Status:   "failure",
-				URLPath:  content.URL.Path,
-				Err:      probeErr.ToGoError(),
+				URLPath:  urlJoinPath(alias, content.URL.Path),
+				Err:      err.ToGoError(),
 			})
 		} else {
-			if globalJSON {
-				printMsg(retentionCmdMessage{
-					Mode:     *mode,
-					Validity: validityStr(),
-					Status:   "success",
-					URLPath:  content.URL.Path,
-				})
-			}
-		}
-	}
-	if cErr == nil && !globalJSON {
-		if errorsFound {
-			console.Print(console.Colorize("RetentionPartialFailure", fmt.Sprintf("Errors found while setting retention on objects with prefix `%s`.\n", urlStr)))
-		} else {
-			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for `%s`.\n", urlStr)))
+			printMsg(retentionCmdMessage{
+				Mode:     mode,
+				Validity: fmt.Sprintf("%d%s", validity, unit),
+				Status:   "success",
+				URLPath:  urlJoinPath(alias, content.URL.Path),
+			})
 		}
 	}
 	return cErr
@@ -204,40 +181,35 @@ func mainRetention(ctx *cli.Context) error {
 	args := ctx.Args()
 
 	var urlStr string
-	var mode *minio.RetentionMode
-	var validity *uint
-	var unit *minio.ValidityUnit
+	var mode minio.RetentionMode
+	var validity uint64
+	var unit minio.ValidityUnit
 
 	switch l := len(args); l {
 	case 3:
 		urlStr = args[0]
-		m := minio.RetentionMode(strings.ToUpper(args[1]))
-		if !m.IsValid() {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
+		mode = minio.RetentionMode(strings.ToUpper(args[1]))
+		if !mode.IsValid() {
+			fatalIf(errInvalidArgument().Trace(args...), "invalid retention mode '%v'", mode)
 		}
-
-		mode = &m
 
 		validityStr := args[2]
-		unitStr := string(validityStr[len(validityStr)-1])
-
+		unitStr := validityStr[len(validityStr)-1]
 		validityStr = validityStr[:len(validityStr)-1]
-		ui64, err := strconv.ParseUint(validityStr, 10, 64)
-		if err != nil {
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity '%v'", args[2])
+
+		var e error
+		validity, e = strconv.ParseUint(validityStr, 10, 64)
+		if e != nil {
+			fatalIf(probe.NewError(e).Trace(urlStr), "invalid validity '%v'", validityStr)
 		}
-		u := uint(ui64)
-		validity = &u
 
 		switch unitStr {
-		case "d", "D":
-			d := minio.Days
-			unit = &d
-		case "y", "Y":
-			y := minio.Years
-			unit = &y
+		case 'd', 'D':
+			unit = minio.Days
+		case 'y', 'Y':
+			unit = minio.Years
 		default:
-			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity format '%v'", args[2])
+			fatalIf(errInvalidArgument().Trace(urlStr), "invalid validity format '%v'", unitStr)
 		}
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "retention", 1)

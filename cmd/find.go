@@ -136,37 +136,38 @@ func watchFind(ctx *findContext) {
 	if !ctx.watch {
 		return
 	}
-	params := watchParams{
-		recursive: true,
-		events:    []string{"put"},
+	options := WatchOptions{
+		Recursive: true,
+		Events:    []string{"put"},
 	}
-	watchObj, err := ctx.clnt.Watch(params)
-	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given params.")
+	watchObj, err := ctx.clnt.Watch(options)
+	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given options.")
 
 	// Loop until user CTRL-C the command line.
 	for {
 		select {
 		case <-globalContext.Done():
 			console.Println()
-			close(watchObj.doneChan)
+			close(watchObj.DoneChan)
 			return
-		case event, ok := <-watchObj.Events():
+		case events, ok := <-watchObj.Events():
 			if !ok {
 				return
 			}
 
-			time, e := time.Parse(time.RFC3339, event.Time)
-			if e != nil {
-				errorIf(probe.NewError(e).Trace(event.Time), "Unable to parse event time.")
-				continue
+			for _, event := range events {
+				time, e := time.Parse(time.RFC3339, event.Time)
+				if e != nil {
+					errorIf(probe.NewError(e).Trace(event.Time), "Unable to parse event time.")
+					continue
+				}
+
+				find(ctx, contentMessage{
+					Key:  getAliasedPath(ctx, event.Path),
+					Time: time,
+					Size: event.Size,
+				})
 			}
-
-			find(ctx, contentMessage{
-				Key:  getAliasedPath(ctx, event.Path),
-				Time: time,
-				Size: event.Size,
-			})
-
 		case err, ok := <-watchObj.Errors():
 			if !ok {
 				return
