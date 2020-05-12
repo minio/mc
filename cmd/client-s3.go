@@ -727,13 +727,13 @@ func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []Even
 }
 
 // Watch - Start watching on all bucket events for a given account ID.
-func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
+func (c *S3Client) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
 	// Extract bucket and object.
 	bucket, object := c.url2BucketAndObject()
 
 	// Flag set to set the notification.
 	var events []string
-	for _, event := range params.events {
+	for _, event := range options.Events {
 		switch event {
 		case "put":
 			events = append(events, string(minio.ObjectCreatedAll))
@@ -745,11 +745,11 @@ func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
 			return nil, errInvalidArgument().Trace(event)
 		}
 	}
-	if object != "" && params.prefix != "" {
-		return nil, errInvalidArgument().Trace(params.prefix, object)
+	if object != "" && options.Prefix != "" {
+		return nil, errInvalidArgument().Trace(options.Prefix, object)
 	}
-	if object != "" && params.prefix == "" {
-		params.prefix = object
+	if object != "" && options.Prefix == "" {
+		options.Prefix = object
 	}
 
 	// The list of buckets to watch
@@ -767,9 +767,9 @@ func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	}
 
 	wo := &WatchObject{
-		eventInfoChan: make(chan []EventInfo),
-		errorChan:     make(chan *probe.Error),
-		doneChan:      make(chan struct{}),
+		EventInfoChan: make(chan []EventInfo),
+		ErrorChan:     make(chan *probe.Error),
+		DoneChan:      make(chan struct{}),
 	}
 
 	var wg sync.WaitGroup
@@ -779,7 +779,7 @@ func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
 		go func() {
 			defer wg.Done()
 			// Start listening on all bucket events.
-			eventsCh := c.api.ListenBucketNotification(bucket, params.prefix, params.suffix, events, wo.doneChan)
+			eventsCh := c.api.ListenBucketNotification(bucket, options.Prefix, options.Suffix, events, wo.DoneChan)
 			for notificationInfo := range eventsCh {
 				if notificationInfo.Err != nil {
 					var perr *probe.Error

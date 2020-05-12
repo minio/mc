@@ -79,7 +79,7 @@ type Client interface {
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
-	Watch(params watchParams) (*WatchObject, *probe.Error)
+	Watch(options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
 	Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)

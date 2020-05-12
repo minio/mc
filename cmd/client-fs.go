@@ -127,7 +127,7 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
+func (f *fsClient) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
 	eventChan := make(chan []EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan struct{})
@@ -136,7 +136,7 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	in, out := PipeChan(1000)
 
 	var fsEvents []notify.Event
-	for _, event := range params.events {
+	for _, event := range options.Events {
 		switch event {
 		case "put":
 			fsEvents = append(fsEvents, EventTypePut...)
@@ -152,7 +152,7 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	// Set up a watchpoint listening for events within a directory tree rooted
 	// at current working directory. Dispatch remove events to c.
 	recursivePath := f.PathURL.Path
-	if params.recursive {
+	if options.Recursive {
 		recursivePath = f.PathURL.Path + "..."
 	}
 	if e := notify.Watch(recursivePath, in, fsEvents...); e != nil {
@@ -216,9 +216,9 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	}()
 
 	return &WatchObject{
-		eventInfoChan: eventChan,
-		errorChan:     errorChan,
-		doneChan:      doneChan,
+		EventInfoChan: eventChan,
+		ErrorChan:     errorChan,
+		DoneChan:      doneChan,
 	}, nil
 }
 
