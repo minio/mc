@@ -2270,3 +2270,24 @@ func (c *S3Client) DeleteObjectTagging() *probe.Error {
 	}
 	return nil
 }
+
+// GetBucketLifecycle - Get lifecycle configuration for a given bucket.
+func (c *S3Client) GetBucketLifecycle() (string, *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+
+	lifecycleXML, err := c.api.GetBucketLifecycle(bucket)
+	if err != nil {
+		return "", probe.NewError(err)
+	}
+	return lifecycleXML, nil
+}
+
+// SetBucketLifecycle - Set lifecycle configuration for a given bucket.
+func (c *S3Client) SetBucketLifecycle(lifecycleXML string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	err := c.api.SetBucketLifecycle(bucket, lifecycleXML)
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}

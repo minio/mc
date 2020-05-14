@@ -92,6 +92,9 @@ type Client interface {
 	GetObjectTagging() (tagging.Tagging, *probe.Error)
 	SetObjectTagging(tagMap map[string]string) *probe.Error
 	DeleteObjectTagging() *probe.Error
+	// Bucket Lifecycle operations
+	GetBucketLifecycle() (string, *probe.Error)
+	SetBucketLifecycle(lifecycleXML string) *probe.Error
 }
 
 // ClientContent - Content container for content metadata

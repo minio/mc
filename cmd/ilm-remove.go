@@ -1,0 +1,178 @@
+/*
+ * MinIO Client (C) 2020 MinIO, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package cmd
+
+import (
+	"errors"
+	"os"
+
+	"github.com/minio/cli"
+	"github.com/minio/mc/cmd/ilm"
+	json "github.com/minio/mc/pkg/colorjson"
+	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/console"
+)
+
+var ilmRemoveFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "id",
+		Usage: "id of the lifecycle rule",
+	},
+	cli.BoolFlag{
+		Name:  "force",
+		Usage: "force flag is to be used when deleting all lifecycle configuration rules for the bucket",
+	},
+	cli.BoolFlag{
+		Name:  "all",
+		Usage: "delete all lifecycle configuration rules of the bucket, force flag enforced",
+	},
+}
+
+var ilmRemoveCmd = cli.Command{
+	Name:   "remove",
+	Usage:  "remove (if any) existing lifecycle configuration rule with the id",
+	Action: mainILMRemove,
+	Before: setGlobalsFromContext,
+	Flags:  append(ilmRemoveFlags, globalFlags...),
+	CustomHelpTemplate: `Name:
+	{{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [COMMAND FLAGS] TARGET
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+
+DESCRIPTION:
+  Remove the lifecycle configuration rule for the bucket with the ID or all configurations only if specified (--all --force).
+
+
+EXAMPLES:
+  1. Remove the lifecycle management configuration rule given by ID "Documents" for testbucket on alias s3. ID is case sensitive.
+     {{.Prompt}} {{.HelpName}} --id "Documents" s3/testbucket
+  2. Remove ALL the lifecycle management configuration rules for testbucket on alias s3. Because the result is complete removal, the use of --force flag is enforced.
+     {{.Prompt}} {{.HelpName}} --all --force s3/testbucket
+
+
+`,
+}
+
+type ilmRmMessage struct {
+	Status string `json:"status"`
+	ID     string `json:"id"`
+	Target string `json:"target"`
+	All    bool   `json:"all"`
+}
+
+func (i ilmRmMessage) String() string {
+	msg := "Rule ID `" + i.ID + "` from target " + i.Target + " removed."
+	if i.All {
+		msg = "Rules for `" + i.Target + "` removed."
+	}
+	return console.Colorize(ilmThemeResultSuccess, msg)
+}
+
+func (i ilmRmMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(i, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
+func checkILMRemoveSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelp(ctx, "remove")
+		os.Exit(globalErrorExitStatus)
+	}
+	ilmAll := ctx.Bool("all")
+	ilmForce := ctx.Bool("force")
+	forceChk := (ilmAll && ilmForce) || (!ilmAll && !ilmForce)
+	if !forceChk {
+		fatalIf(probe.NewError(errors.New("Flag missing or wrong")),
+			"Mandatory to enter --all and --force flag together for mc "+ctx.Command.FullName()+".")
+	}
+	if ilmAll && ilmForce {
+		return
+	}
+	ilmID := ctx.String("id")
+	if ilmID == "" {
+		fatalIf(probe.NewError(errors.New("ID of lifecycle rule missing")), "Please provide id.")
+	}
+}
+
+func ilmAllRemove(urlStr string) *probe.Error {
+	if err := setBucketILMConfiguration(urlStr, ""); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ilmIDRemove(ilmID string, urlStr string) *probe.Error {
+	var lfcInfoXML string
+	var err error
+	var pErr *probe.Error
+	if lfcInfoXML, pErr = getBucketILMConfiguration(urlStr); err != nil {
+		return pErr
+	}
+	if lfcInfoXML == "" {
+		return probe.NewError(errors.New("Lifecycle configuration for `" + urlStr + "` not set"))
+	}
+	if lfcInfoXML, err = ilm.RemoveILMRule(lfcInfoXML, ilmID); err != nil {
+		return probe.NewError(err)
+	}
+	if pErr = setBucketILMConfiguration(urlStr, lfcInfoXML); err != nil {
+		return pErr
+	}
+
+	return nil
+}
+
+func mainILMRemove(ctx *cli.Context) error {
+	checkILMRemoveSyntax(ctx)
+	setILMDisplayColorScheme()
+	args := ctx.Args()
+	objectURL := args.Get(0)
+	var pErr *probe.Error
+	var ilmAll, ilmForce bool
+	var ilmID string
+	ilmAll = ctx.Bool("all")
+	ilmForce = ctx.Bool("force")
+	if ilmAll && ilmForce {
+		pErr = ilmAllRemove(objectURL)
+		fatalIf(pErr.Trace(objectURL), "Failed to remove all rules for `"+objectURL+"`.")
+		printMsg(ilmRmMessage{
+			Status: "success",
+			ID:     ilmID,
+			All:    true,
+			Target: objectURL,
+		})
+		return nil
+	}
+	if ilmID = ctx.String("id"); ilmID == "" {
+		fatalIf(probe.NewError(errors.New("ID not provided")),
+			"Failed to remove lifecycle rule")
+	}
+	pErr = ilmIDRemove(ilmID, objectURL)
+	fatalIf(pErr, "Failed to remove rule. ID `"+ilmID+"` Target "+objectURL+". ")
+	printMsg(ilmRmMessage{
+		Status: "success",
+		ID:     ilmID,
+		Target: objectURL,
+		All:    false,
+	})
+	return nil
+}

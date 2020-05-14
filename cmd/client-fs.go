@@ -1126,3 +1126,19 @@ func (f *fsClient) DeleteObjectTagging() *probe.Error {
 		APIType: "filesystem",
 	})
 }
+
+// Get lifecycle configuration for a given bucket.
+func (f *fsClient) GetBucketLifecycle() (string, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetBucketLifecycle",
+		APIType: "filesystem",
+	})
+}
+
+// Set lifecycle configuration for a given bucket.
+func (f *fsClient) SetBucketLifecycle(lifecycleconfig string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetBucketLifecycle",
+		APIType: "filesystem",
+	})
+}
