@@ -25,7 +25,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
-	"github.com/minio/minio/pkg/bucket/object/tagging"
+	"github.com/minio/minio-go/v6/pkg/tags"
 )
 
 // DirOpt - list directory option.
@@ -89,9 +89,10 @@ type Client interface {
 	AddUserAgent(app, version string)
 
 	// Object Tag operations
-	GetObjectTagging() (tagging.Tagging, *probe.Error)
-	SetObjectTagging(tagMap map[string]string) *probe.Error
-	DeleteObjectTagging() *probe.Error
+	GetTags() (*tags.Tags, *probe.Error)
+	SetTags(tags string) *probe.Error
+	DeleteTags() *probe.Error
+
 	// Bucket Lifecycle operations
 	GetBucketLifecycle() (string, *probe.Error)
 	SetBucketLifecycle(lifecycleXML string) *probe.Error

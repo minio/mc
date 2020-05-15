@@ -22,7 +22,7 @@ import (
 
 var tagCmd = cli.Command{
 	Name:   "tag",
-	Usage:  "manage tags for an object",
+	Usage:  "manage tags of a bucket or an object",
 	Action: mainTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
