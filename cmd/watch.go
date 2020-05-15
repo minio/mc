@@ -65,39 +65,40 @@ type EventInfo struct {
 	UserAgent    string
 }
 
-type watchParams struct {
-	prefix    string
-	suffix    string
-	events    []string
-	recursive bool
+// WatchOptions contains watch configuration options
+type WatchOptions struct {
+	Prefix    string
+	Suffix    string
+	Events    []string
+	Recursive bool
 }
 
 // WatchObject captures watch channels to read and listen on.
 type WatchObject struct {
 	// eventInfo will be put on this chan
-	eventInfoChan chan []EventInfo
+	EventInfoChan chan []EventInfo
 	// errors will be put on this chan
-	errorChan chan *probe.Error
+	ErrorChan chan *probe.Error
 	// will stop the watcher goroutines
-	doneChan chan struct{}
+	DoneChan chan struct{}
 }
 
 // Events returns the chan receiving events
 func (w *WatchObject) Events() chan []EventInfo {
-	return w.eventInfoChan
+	return w.EventInfoChan
 }
 
 // Errors returns the chan receiving errors
 func (w *WatchObject) Errors() chan *probe.Error {
-	return w.errorChan
+	return w.ErrorChan
 }
 
 // Close the watcher, will stop all goroutines
 func (w *WatchObject) Close() {
 	// Cleanup
-	close(w.eventInfoChan)
-	close(w.errorChan)
-	close(w.doneChan)
+	close(w.EventInfoChan)
+	close(w.ErrorChan)
+	close(w.DoneChan)
 }
 
 // Watcher can be used to have one or multiple clients watch for notifications
@@ -105,9 +106,9 @@ type Watcher struct {
 	sessionStartTime time.Time
 
 	// all error will be added to this chan
-	errorChan chan *probe.Error
+	ErrorChan chan *probe.Error
 	// all events will be added to this chan
-	eventInfoChan chan []EventInfo
+	EventInfoChan chan []EventInfo
 
 	// array of watchers joined
 	o []*WatchObject
@@ -120,20 +121,20 @@ type Watcher struct {
 func NewWatcher(sessionStartTime time.Time) *Watcher {
 	return &Watcher{
 		sessionStartTime: sessionStartTime,
-		errorChan:        make(chan *probe.Error),
-		eventInfoChan:    make(chan []EventInfo),
+		ErrorChan:        make(chan *probe.Error),
+		EventInfoChan:    make(chan []EventInfo),
 		o:                []*WatchObject{},
 	}
 }
 
 // Errors returns a channel which will receive errors
 func (w *Watcher) Errors() chan *probe.Error {
-	return w.errorChan
+	return w.ErrorChan
 }
 
 // Events returns a channel which will receive events
 func (w *Watcher) Events() chan []EventInfo {
-	return w.eventInfoChan
+	return w.EventInfoChan
 }
 
 // Stop watcher
@@ -145,8 +146,8 @@ func (w *Watcher) Stop() {
 
 	w.wg.Wait()
 
-	close(w.errorChan)
-	close(w.eventInfoChan)
+	close(w.ErrorChan)
+	close(w.EventInfoChan)
 }
 
 // Watching returns if the watcher is watching for notifications
@@ -161,9 +162,9 @@ func (w *Watcher) Wait() {
 
 // Join the watcher with client
 func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
-	wo, err := client.Watch(watchParams{
-		recursive: recursive,
-		events:    []string{"put", "delete"},
+	wo, err := client.Watch(WatchOptions{
+		Recursive: recursive,
+		Events:    []string{"put", "delete"},
 	})
 	if err != nil {
 		return err
@@ -185,13 +186,13 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 				if !ok {
 					return
 				}
-				w.eventInfoChan <- events
+				w.EventInfoChan <- events
 			case err, ok := <-wo.Errors():
 				if !ok {
 					return
 				}
 
-				w.errorChan <- err
+				w.ErrorChan <- err
 			}
 		}
 	}()

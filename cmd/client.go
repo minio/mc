@@ -79,7 +79,7 @@ type Client interface {
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
-	Watch(params watchParams) (*WatchObject, *probe.Error)
+	Watch(options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
 	Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
@@ -92,6 +92,10 @@ type Client interface {
 	GetTags() (*tags.Tags, *probe.Error)
 	SetTags(tags string) *probe.Error
 	DeleteTags() *probe.Error
+
+	// Bucket Lifecycle operations
+	GetBucketLifecycle() (string, *probe.Error)
+	SetBucketLifecycle(lifecycleXML string) *probe.Error
 }
 
 // ClientContent - Content container for content metadata
@@ -117,16 +121,17 @@ type ClientContent struct {
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
-	AccessKey   string
-	SecretKey   string
-	Signature   string
-	HostURL     string
-	AppName     string
-	AppVersion  string
-	AppComments []string
-	Debug       bool
-	Insecure    bool
-	Lookup      minio.BucketLookupType
+	AccessKey    string
+	SecretKey    string
+	SessionToken string
+	Signature    string
+	HostURL      string
+	AppName      string
+	AppVersion   string
+	AppComments  []string
+	Debug        bool
+	Insecure     bool
+	Lookup       minio.BucketLookupType
 }
 
 // SelectObjectOpts - opts entered for select API

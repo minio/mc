@@ -116,7 +116,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		}
 		// Generate a hash out of s3Conf.
 		confHash := fnv.New32a()
-		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey))
+		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
 		confSum := confHash.Sum32()
 
 		// Lookup previous cache by hash.
@@ -126,7 +126,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 			// if Signature version '4' use NewV4 directly.
-			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, "")
+			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
 			// if Signature version '2' use NewV2 directly.
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
@@ -726,13 +726,13 @@ func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []Even
 }
 
 // Watch - Start watching on all bucket events for a given account ID.
-func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
+func (c *S3Client) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
 	// Extract bucket and object.
 	bucket, object := c.url2BucketAndObject()
 
 	// Flag set to set the notification.
 	var events []string
-	for _, event := range params.events {
+	for _, event := range options.Events {
 		switch event {
 		case "put":
 			events = append(events, string(minio.ObjectCreatedAll))
@@ -744,11 +744,11 @@ func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
 			return nil, errInvalidArgument().Trace(event)
 		}
 	}
-	if object != "" && params.prefix != "" {
-		return nil, errInvalidArgument().Trace(params.prefix, object)
+	if object != "" && options.Prefix != "" {
+		return nil, errInvalidArgument().Trace(options.Prefix, object)
 	}
-	if object != "" && params.prefix == "" {
-		params.prefix = object
+	if object != "" && options.Prefix == "" {
+		options.Prefix = object
 	}
 
 	// The list of buckets to watch
@@ -766,9 +766,9 @@ func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	}
 
 	wo := &WatchObject{
-		eventInfoChan: make(chan []EventInfo),
-		errorChan:     make(chan *probe.Error),
-		doneChan:      make(chan struct{}),
+		EventInfoChan: make(chan []EventInfo),
+		ErrorChan:     make(chan *probe.Error),
+		DoneChan:      make(chan struct{}),
 	}
 
 	var wg sync.WaitGroup
@@ -778,7 +778,7 @@ func (c *S3Client) Watch(params watchParams) (*WatchObject, *probe.Error) {
 		go func() {
 			defer wg.Done()
 			// Start listening on all bucket events.
-			eventsCh := c.api.ListenBucketNotification(bucket, params.prefix, params.suffix, events, wo.doneChan)
+			eventsCh := c.api.ListenBucketNotification(bucket, options.Prefix, options.Suffix, events, wo.DoneChan)
 			for notificationInfo := range eventsCh {
 				if notificationInfo.Err != nil {
 					var perr *probe.Error
@@ -2290,5 +2290,26 @@ func (c *S3Client) DeleteTags() *probe.Error {
 		return probe.NewError(err)
 	}
 
+	return nil
+}
+
+// GetBucketLifecycle - Get lifecycle configuration for a given bucket.
+func (c *S3Client) GetBucketLifecycle() (string, *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+
+	lifecycleXML, err := c.api.GetBucketLifecycle(bucket)
+	if err != nil {
+		return "", probe.NewError(err)
+	}
+	return lifecycleXML, nil
+}
+
+// SetBucketLifecycle - Set lifecycle configuration for a given bucket.
+func (c *S3Client) SetBucketLifecycle(lifecycleXML string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	err := c.api.SetBucketLifecycle(bucket, lifecycleXML)
+	if err != nil {
+		return probe.NewError(err)
+	}
 	return nil
 }

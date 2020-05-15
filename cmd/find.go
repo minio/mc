@@ -136,19 +136,19 @@ func watchFind(ctx *findContext) {
 	if !ctx.watch {
 		return
 	}
-	params := watchParams{
-		recursive: true,
-		events:    []string{"put"},
+	options := WatchOptions{
+		Recursive: true,
+		Events:    []string{"put"},
 	}
-	watchObj, err := ctx.clnt.Watch(params)
-	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given params.")
+	watchObj, err := ctx.clnt.Watch(options)
+	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given options.")
 
 	// Loop until user CTRL-C the command line.
 	for {
 		select {
 		case <-globalContext.Done():
 			console.Println()
-			close(watchObj.doneChan)
+			close(watchObj.DoneChan)
 			return
 		case events, ok := <-watchObj.Events():
 			if !ok {

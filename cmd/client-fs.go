@@ -51,6 +51,7 @@ type fsClient struct {
 const (
 	partSuffix     = ".part.minio"
 	slashSeperator = "/"
+	metaDataKey    = "X-Amz-Meta-Mc-Attrs"
 )
 
 var ( // GOOS specific ignore list.
@@ -126,7 +127,7 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
+func (f *fsClient) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
 	eventChan := make(chan []EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan struct{})
@@ -135,7 +136,7 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	in, out := PipeChan(1000)
 
 	var fsEvents []notify.Event
-	for _, event := range params.events {
+	for _, event := range options.Events {
 		switch event {
 		case "put":
 			fsEvents = append(fsEvents, EventTypePut...)
@@ -151,7 +152,7 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	// Set up a watchpoint listening for events within a directory tree rooted
 	// at current working directory. Dispatch remove events to c.
 	recursivePath := f.PathURL.Path
-	if params.recursive {
+	if options.Recursive {
 		recursivePath = f.PathURL.Path + "..."
 	}
 	if e := notify.Watch(recursivePath, in, fsEvents...); e != nil {
@@ -215,9 +216,9 @@ func (f *fsClient) Watch(params watchParams) (*WatchObject, *probe.Error) {
 	}()
 
 	return &WatchObject{
-		eventInfoChan: eventChan,
-		errorChan:     errorChan,
-		doneChan:      doneChan,
+		EventInfoChan: eventChan,
+		ErrorChan:     errorChan,
+		DoneChan:      doneChan,
 	}, nil
 }
 
@@ -302,8 +303,8 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	}
 
 	attr := make(map[string]string)
-	if len(metadata["mc-attrs"]) != 0 {
-		attr, e = parseAttribute(metadata["mc-attrs"][0])
+	if len(metadata[metaDataKey]) != 0 {
+		attr, e = parseAttribute(metadata[metaDataKey][0])
 		if e != nil {
 			return 0, probe.NewError(e)
 		}
@@ -409,9 +410,9 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 
 // Put - create a new file with metadata.
 func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
-	if metadata["mc-attrs"] != "" {
+	if metadata[metaDataKey] != "" {
 		meta := make(map[string][]string)
-		meta["mc-attrs"] = append(meta["mc-attrs"], metadata["mc-attrs"])
+		meta[metaDataKey] = append(meta[metaDataKey], metadata[metaDataKey])
 		return f.put(reader, size, meta, progress)
 	}
 	return f.put(reader, size, nil, progress)
@@ -1057,7 +1058,7 @@ func (f *fsClient) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 		if err != nil {
 			return content, nil
 		}
-		content.Metadata["mc-attrs"] = fileAttr
+		content.Metadata[metaDataKey] = fileAttr
 	}
 
 	return content, nil
@@ -1122,6 +1123,22 @@ func (f *fsClient) SetTags(tags string) *probe.Error {
 func (f *fsClient) DeleteTags() *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteObjectTagging",
+		APIType: "filesystem",
+	})
+}
+
+// Get lifecycle configuration for a given bucket.
+func (f *fsClient) GetBucketLifecycle() (string, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetBucketLifecycle",
+		APIType: "filesystem",
+	})
+}
+
+// Set lifecycle configuration for a given bucket.
+func (f *fsClient) SetBucketLifecycle(lifecycleconfig string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetBucketLifecycle",
 		APIType: "filesystem",
 	})
 }

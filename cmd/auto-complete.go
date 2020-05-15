@@ -29,7 +29,31 @@ import (
 // fsComplete knows how to complete file/dir names by the given path
 type fsComplete struct{}
 
-func (fs fsComplete) Predict(a complete.Args) (prediction []string) {
+// predictPathWithTilde completes an FS path which starts with a `~/`
+func (fs fsComplete) predictPathWithTilde(a complete.Args) []string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil || homeDir == "" {
+		return nil
+	}
+	// Clean the home directory path
+	homeDir = strings.TrimRight(homeDir, "/")
+
+	// Replace the first occurrence of ~ with the real path and complete
+	a.Last = strings.Replace(a.Last, "~", homeDir, 1)
+	predictions := complete.PredictFiles("*").Predict(a)
+
+	// Restore ~ to avoid disturbing the completion user experience
+	for i := range predictions {
+		predictions[i] = strings.Replace(predictions[i], homeDir, "~", 1)
+	}
+
+	return predictions
+}
+
+func (fs fsComplete) Predict(a complete.Args) []string {
+	if strings.HasPrefix(a.Last, "~/") {
+		return fs.predictPathWithTilde(a)
+	}
 	return complete.PredictFiles("*").Predict(a)
 }
 
