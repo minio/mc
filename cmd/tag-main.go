@@ -21,11 +21,12 @@ import (
 )
 
 var tagCmd = cli.Command{
-	Name:   "tag",
-	Usage:  "manage tags of a bucket or an object",
-	Action: mainTag,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:            "tag",
+	Usage:           "manage tags for bucket(s) and object(s)",
+	Action:          mainTag,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
 		tagListCmd,
 		tagRemoveCmd,
@@ -33,11 +34,7 @@ var tagCmd = cli.Command{
 	},
 }
 
-func checkMainTagSyntax(ctx *cli.Context) {
-	cli.ShowCommandHelp(ctx, "")
-}
-
 func mainTag(ctx *cli.Context) error {
-	checkMainTagSyntax(ctx)
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 }
