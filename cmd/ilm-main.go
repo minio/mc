@@ -19,16 +19,16 @@ package cmd
 import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
 
 var ilmCmd = cli.Command{
-	Name:   "ilm",
-	Usage:  "configure bucket lifecycle",
-	Action: mainILM,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:            "ilm",
+	Usage:           "configure bucket lifecycle",
+	Action:          mainILM,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
 		ilmListCmd,
 		ilmAddCmd,
@@ -49,37 +49,8 @@ const (
 )
 
 func mainILM(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, "")
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-}
-
-// setBucketILMConfiguration sets the lifecycle configuration given by ilmConfig to the bucket given by the url (urlStr)
-func setBucketILMConfiguration(urlStr string, ilmConfig string) *probe.Error {
-	client, pErr := newClient(urlStr)
-	fatalIf(pErr, "Failed to set lifecycle configuration to "+urlStr)
-	s3c, ok := client.(*S3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
-	}
-	if pErr = s3c.SetBucketLifecycle(ilmConfig); pErr != nil {
-		return pErr
-	}
-	return nil
-}
-
-// getBucketILMConfiguration gets the lifecycle configuration for the bucket given by the url (urlStr)
-func getBucketILMConfiguration(urlStr string) (string, *probe.Error) {
-	var bktConfig string
-	client, pErr := newClient(urlStr)
-	fatalIf(pErr, "Failed to get lifecycle configuration to "+urlStr)
-	s3c, ok := client.(*S3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(urlStr), "For "+urlStr+" unable to obtain client reference.")
-	}
-	if bktConfig, pErr = s3c.GetBucketLifecycle(); pErr != nil {
-		return "", pErr
-	}
-	return bktConfig, nil
 }
 
 // Color scheme for the table

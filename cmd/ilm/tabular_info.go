@@ -17,7 +17,6 @@
 package ilm
 
 import (
-	"encoding/xml"
 	"strconv"
 )
 
@@ -104,20 +103,11 @@ type showDetails struct {
 	minimum      bool
 }
 
-// GetILMDataForShow Based on showDetails determined by user input, show the table with information.
-// Table is constructed row-by-row. Headers are first, then the rest of the rows.
-func GetILMDataForShow(ilmXML string, rowCheck *map[string]int, alignedHdrLabels *[]string,
+// PopulateILMDataForDisplay based on showDetails determined by user input, populate the ILM display
+// table with information. Table is constructed row-by-row. Headers are first, then the rest of the rows.
+func PopulateILMDataForDisplay(ilmCfg LifecycleConfiguration, rowCheck *map[string]int, alignedHdrLabels *[]string,
 	cellDataNoTags *[][]string, cellDataWithTags *[][]string, tagRows *map[string][]string,
-	showAll, showMin, showExpiry, showTransition bool) error {
-	var ilmInfo LifecycleConfiguration
-	var err error
-	if ilmXML == "" {
-		// Empty configuration. No data to show
-		return nil
-	}
-	if err = xml.Unmarshal([]byte(ilmXML), &ilmInfo); err != nil {
-		return err
-	}
+	showAll, showMin, showExpiry, showTransition bool) {
 
 	// We need the different column headers and their respective column index
 	// where they appear in a map data-structure format.
@@ -131,10 +121,9 @@ func GetILMDataForShow(ilmXML string, rowCheck *map[string]int, alignedHdrLabels
 		expiry:       showExpiry,
 		transition:   showTransition,
 	}
-	getColumns(ilmInfo, *rowCheck, alignedHdrLabels, showOpts)
-	getILMShowDataWithoutTags(cellDataNoTags, *rowCheck, ilmInfo, showOpts)
-	getILMShowDataWithTags(cellDataWithTags, *tagRows, *rowCheck, ilmInfo, showOpts)
-	return err
+	getColumns(ilmCfg, *rowCheck, alignedHdrLabels, showOpts)
+	getILMShowDataWithoutTags(cellDataNoTags, *rowCheck, ilmCfg, showOpts)
+	getILMShowDataWithTags(cellDataWithTags, *tagRows, *rowCheck, ilmCfg, showOpts)
 }
 
 // Text inside the table cell

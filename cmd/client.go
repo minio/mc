@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
@@ -88,14 +89,14 @@ type Client interface {
 
 	AddUserAgent(app, version string)
 
-	// Object Tag operations
+	// Tagging operations
 	GetTags() (*tags.Tags, *probe.Error)
 	SetTags(tags string) *probe.Error
 	DeleteTags() *probe.Error
 
-	// Bucket Lifecycle operations
-	GetBucketLifecycle() (string, *probe.Error)
-	SetBucketLifecycle(lifecycleXML string) *probe.Error
+	// Lifecycle operations
+	GetLifecycle() (ilm.LifecycleConfiguration, *probe.Error)
+	SetLifecycle(lfcCfg ilm.LifecycleConfiguration) *probe.Error
 }
 
 // ClientContent - Content container for content metadata

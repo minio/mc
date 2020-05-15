@@ -19,7 +19,6 @@ package cmd
 import (
 	"bytes"
 	"errors"
-	"os"
 	"strconv"
 	"strings"
 
@@ -33,67 +32,113 @@ import (
 var ilmListFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "expiry",
-		Usage: "show only expiration fields",
+		Usage: "display only expiration fields",
 	},
 	cli.BoolFlag{
 		Name:  "transition",
-		Usage: "show only transition fields",
+		Usage: "display only transition fields",
 	},
 	cli.BoolFlag{
 		Name:  "minimum",
-		Usage: "show minimum fields - id, prefix, status, transition set, expiry set",
+		Usage: "display minimum fields such as (id, prefix, status, transition set, expiry set)",
 	},
 }
 
 var ilmListCmd = cli.Command{
 	Name:   "list",
-	Usage:  "list bucket lifecycle configuration",
+	Usage:  "pretty print bucket lifecycle configuration",
 	Action: mainILMList,
 	Before: setGlobalsFromContext,
 	Flags:  append(ilmListFlags, globalFlags...),
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [COMMAND FLAGS] TARGET
+  {{.HelpName}} [FLAGS] TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-  ILM list command displays current lifecycle configuration.
+  Pretty prints lifecycle configuration set on a bucket.
 
 EXAMPLES:
-  1. List the lifecycle management rules (all fields) for testbucket on alias s3.
-     {{.Prompt}} {{.HelpName}} s3/testbucket
+  1. List the lifecycle management rules (all fields) for testbucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} myminio/testbucket
 
-  2. List the lifecycle management rules (expration date/days fields) for testbucket on alias s3.
-     {{.Prompt}} {{.HelpName}} --expiry s3/testbucket
+  2. List the lifecycle management rules (expration date/days fields) for testbucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --expiry myminio/testbucket
 
-  3. List the lifecycle management rules (transition date/days, storage class fields) for testbucket on alias s3.
-     {{.Prompt}} {{.HelpName}} --transition s3/testbucket
+  3. List the lifecycle management rules (transition date/days, storage class fields) for testbucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --transition myminio/testbucket
 
-  4. List the lifecycle management rules (minimum details) for testbucket on alias s3.
-     {{.Prompt}} {{.HelpName}} --minimum s3/testbucket
+  4. List the lifecycle management rules (minimum details) for testbucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --minimum myminio/testbucket
 
-  5. List the lifecycle management rules in JSON format for testbucket on alias s3.
-     {{.Prompt}} {{.HelpName}} --json s3/testbucket
-
+  5. List the lifecycle management rules in JSON format for testbucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --json myminio/testbucket
 `,
 }
 
 type ilmListMessage struct {
 	Status    string                     `json:"status"`
 	Target    string                     `json:"target"`
-	ILMConfig string                     `json:"-"`
-	ILM       ilm.LifecycleConfiguration `json:"ilm"`
+	Context   *cli.Context               `json:"-"`
+	ILMConfig ilm.LifecycleConfiguration `json:"ilmConfig"`
 }
 
 func (i ilmListMessage) String() string {
-	if i.ILMConfig == "" {
-		return console.Colorize(ilmThemeResultFailure, "Lifecycle configuration for `"+i.Target+"` not set.")
+	showExpiry := i.Context.Bool("expiry")
+	showTransition := i.Context.Bool("transition")
+	showMinimum := i.Context.Bool("minimum")
+	// If none of the flags are explicitly mentioned, all fields are shown.
+	showAll := !showExpiry && !showTransition && !showMinimum
+
+	var hdrLabelIndexMap map[string]int
+	var alignedHdrLabels []string
+	var cellDataNoTags [][]string
+	var cellDataWithTags [][]string
+	var tagRows map[string][]string
+	var tbl PrettyTable
+
+	ilm.PopulateILMDataForDisplay(i.ILMConfig, &hdrLabelIndexMap, &alignedHdrLabels,
+		&cellDataNoTags, &cellDataWithTags, &tagRows,
+		showAll, showMinimum, showExpiry, showTransition)
+
+	// Entire table content.
+	var tblContents string
+
+	// Fill up fields
+	var fields []Field
+
+	// The header table
+	for _, hdr := range alignedHdrLabels {
+		fields = append(fields, Field{ilmThemeHeader, len(hdr)})
 	}
-	return i.ILMConfig
+
+	tbl = newPrettyTable(tableSeperator, fields...)
+	tblContents = getILMHeader(&tbl, alignedHdrLabels...)
+
+	// Reuse the fields
+	fields = nil
+
+	// The data table
+	var tblRowField *[]string
+	if len(cellDataNoTags) == 0 {
+		tblRowField = &cellDataWithTags[0]
+	} else {
+		tblRowField = &cellDataNoTags[0]
+	}
+
+	for _, hdr := range *tblRowField {
+		fields = append(fields, Field{ilmThemeRow, len(hdr)})
+	}
+
+	tbl = newPrettyTable(tableSeperator, fields...)
+	tblContents += getILMRowsNoTags(&tbl, &cellDataNoTags)
+	tblContents += getILMRowsWithTags(&tbl, &cellDataWithTags, tagRows)
+
+	return tblContents
 }
 
 func (i ilmListMessage) JSON() string {
@@ -120,11 +165,11 @@ func validateILMListFlagSet(ctx *cli.Context) bool {
 // checkILMListSyntax - validate arguments passed by a user
 func checkILMListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelp(ctx, "list")
-		os.Exit(globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
 	}
+
 	if !validateILMListFlagSet(ctx) {
-		fatalIf(probe.NewError(errors.New("Invalid input flag(s)")), "Only one show field flag allowed for list command. Refer mc "+ctx.Command.FullName()+" --help.")
+		fatalIf(errInvalidArgument(), "only one display field flag is allowed per list command. Refer mc "+ctx.Command.FullName()+" --help.")
 	}
 }
 
@@ -211,73 +256,26 @@ func getILMRowsWithTags(tbl *PrettyTable, cellDataWithTags *[][]string, newRows 
 func mainILMList(ctx *cli.Context) error {
 	checkILMListSyntax(ctx)
 	setILMDisplayColorScheme()
-	var err error
-	var hdrLabelIndexMap map[string]int
-	var alignedHdrLabels []string
-	var cellDataNoTags [][]string
-	var cellDataWithTags [][]string
-	var tagRows map[string][]string
-	var tbl PrettyTable
+
 	args := ctx.Args()
-	objectURL := args.Get(0)
-	lfcInfo, pErr := getBucketILMConfiguration(objectURL)
-	fatalIf(pErr.Trace(objectURL), "Failed to list lifecycle configuration for "+objectURL)
-	showExpiry := ctx.Bool("expiry")
-	showTransition := ctx.Bool("transition")
-	showMinimum := ctx.Bool("minimum")
-	// If none of the flags are explicitly mentioned, all fields are shown.
-	showAll := !showExpiry && !showTransition && !showMinimum
+	urlStr := args.Get(0)
 
-	err = ilm.GetILMDataForShow(lfcInfo, &hdrLabelIndexMap, &alignedHdrLabels,
-		&cellDataNoTags, &cellDataWithTags, &tagRows,
-		showAll, showMinimum, showExpiry, showTransition)
-	fatalIf(probe.NewError(err), "Error getting tabular data for ILM configuration.")
-	// The header table
-	var fields []Field
-	// Fill up fields
-	var tblContents string
-	var ilmConfig ilm.LifecycleConfiguration
-	if len(cellDataNoTags) == 0 && len(cellDataWithTags) == 0 {
-		dataStr := ""
-		if showTransition {
-			dataStr = "Transition "
-		} else if showExpiry {
-			dataStr = "Expiry "
-		}
-		fatalIf(probe.NewError(errors.New(dataStr+"Lifecycle configuration not set")),
-			"Failed to list lifecycle configuration for "+objectURL+".")
+	client, err := newClient(urlStr)
+	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
+
+	ilmCfg, err := client.GetLifecycle()
+	fatalIf(err.Trace(args...), "Unable to get lifecycle")
+
+	if len(ilmCfg.Rules) == 0 {
+		fatalIf(probe.NewError(errors.New("lifecyle configuration not set")).Trace(urlStr),
+			"Unable to list lifecyle configuration")
 	}
 
-	if !globalJSON {
-		for _, hdr := range alignedHdrLabels {
-			fields = append(fields, Field{ilmThemeHeader, len(hdr)})
-		}
-		tbl = newPrettyTable(tableSeperator, fields...)
-		tblContents = getILMHeader(&tbl, alignedHdrLabels...)
-		fields = nil
-		// The data table
-		var tblRowField *[]string
-		if len(cellDataNoTags) == 0 {
-			tblRowField = &cellDataWithTags[0]
-		} else {
-			tblRowField = &cellDataNoTags[0]
-		}
-		for _, hdr := range *tblRowField {
-			fields = append(fields, Field{ilmThemeRow, len(hdr)})
-		}
-		tbl = newPrettyTable(tableSeperator, fields...)
-		tblContents += getILMRowsNoTags(&tbl, &cellDataNoTags)
-		tblContents += getILMRowsWithTags(&tbl, &cellDataWithTags, tagRows)
-
-	} else {
-		ilmConfig, err = ilm.GetILMConfig(lfcInfo)
-		fatalIf(probe.NewError(err), "Failed to get lifecycle configuration for "+objectURL+".")
-	}
 	printMsg(ilmListMessage{
 		Status:    "success",
-		Target:    objectURL,
-		ILMConfig: tblContents,
-		ILM:       ilmConfig,
+		Target:    urlStr,
+		Context:   ctx,
+		ILMConfig: ilmCfg,
 	})
 
 	return nil

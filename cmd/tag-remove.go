@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -32,8 +30,8 @@ var tagRemoveCmd = cli.Command{
 	Action: mainRemoveTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} [COMMAND FLAGS] TARGET
@@ -42,13 +40,14 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-   Remove tags assigned to an object .
+  Remove tags assigned to a bucket or an object.
 
 EXAMPLES:
   1. Remove the tags assigned to an object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject
+     {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
+
   2. Remove the tags assigned to a bucket.
-     {{.Prompt}} {{.HelpName}} s3/testbucket
+     {{.Prompt}} {{.HelpName}} play/testbucket
 `,
 }
 
@@ -71,13 +70,13 @@ func (t tagRemoveMessage) JSON() string {
 }
 func checkRemoveTagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelp(ctx, "remove")
-		os.Exit(globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "remove", globalErrorExitStatus)
 	}
 }
 
 func mainRemoveTag(ctx *cli.Context) error {
 	checkRemoveTagSyntax(ctx)
+
 	console.SetColor("Remove", color.New(color.FgGreen))
 
 	targetURL := ctx.Args().Get(0)

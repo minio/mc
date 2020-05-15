@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -36,6 +37,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
@@ -2293,23 +2295,45 @@ func (c *S3Client) DeleteTags() *probe.Error {
 	return nil
 }
 
-// GetBucketLifecycle - Get lifecycle configuration for a given bucket.
-func (c *S3Client) GetBucketLifecycle() (string, *probe.Error) {
+// GetLifecycle - Get current lifecycle configuration.
+func (c *S3Client) GetLifecycle() (ilm.LifecycleConfiguration, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
-
-	lifecycleXML, err := c.api.GetBucketLifecycle(bucket)
-	if err != nil {
-		return "", probe.NewError(err)
+	if bucket == "" {
+		return ilm.LifecycleConfiguration{}, probe.NewError(BucketNameEmpty{})
 	}
-	return lifecycleXML, nil
+
+	lifecycleXML, e := c.api.GetBucketLifecycle(bucket)
+	if e != nil {
+		return ilm.LifecycleConfiguration{}, probe.NewError(e)
+	}
+
+	lfcCfg := ilm.LifecycleConfiguration{}
+	if e = xml.Unmarshal([]byte(lifecycleXML), &lfcCfg); e != nil && e != io.EOF {
+		return lfcCfg, probe.NewError(e)
+	}
+
+	return lfcCfg, nil
 }
 
-// SetBucketLifecycle - Set lifecycle configuration for a given bucket.
-func (c *S3Client) SetBucketLifecycle(lifecycleXML string) *probe.Error {
+// SetLifecycle - Set lifecycle configuration on a bucket
+func (c *S3Client) SetLifecycle(ilmCfg ilm.LifecycleConfiguration) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
-	err := c.api.SetBucketLifecycle(bucket, lifecycleXML)
-	if err != nil {
-		return probe.NewError(err)
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
 	}
+
+	var lifecycleXML []byte
+	if len(ilmCfg.Rules) != 0 {
+		var e error
+		lifecycleXML, e = xml.Marshal(ilmCfg)
+		if e != nil {
+			return probe.NewError(e)
+		}
+	}
+
+	if e := c.api.SetBucketLifecycle(bucket, string(lifecycleXML)); e != nil {
+		return probe.NewError(e)
+	}
+
 	return nil
 }

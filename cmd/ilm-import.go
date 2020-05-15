@@ -17,9 +17,6 @@
 package cmd
 
 import (
-	"encoding/xml"
-	"errors"
-	"io"
 	"os"
 
 	"github.com/minio/cli"
@@ -35,21 +32,21 @@ var ilmImportCmd = cli.Command{
 	Action: mainILMImport,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Lifecycle configuration is imported. Input is required in JSON format.
+  Import entire lifecyle configuration from STDIN, input file is expected to be in JSON format.
 
 EXAMPLES:
-  1. Set lifecycle configuration for the testbucket on alias s3 to the rules imported from lifecycle.json
-     {{.Prompt}} {{.HelpName}} s3/testbucket < /Users/miniouser/Documents/lifecycle.json
-  2. Set lifecycle configuration for the testbucket on alias s3. User is expected to enter the JSON contents on STDIN
-     {{.Prompt}} {{.HelpName}} s3/testbucket
+  1. Set lifecycle configuration for the testbucket on alias 'myminio' to the rules imported from lifecycle.json
+     {{.Prompt}} {{.HelpName}} myminio/testbucket < lifecycle.json
 
+  2. Set lifecycle configuration for the testbucket on alias 'myminio'. User is expected to enter the JSON contents on STDIN
+     {{.Prompt}} {{.HelpName}} myminio/testbucket
 `,
 }
 
@@ -68,32 +65,22 @@ func (i ilmImportMessage) JSON() string {
 	return string(msgBytes)
 }
 
-// ReadILMConfigJSON read from stdin and set ILM configuration to bucket
-func readILMConfigJSON() (string, *probe.Error) {
+// readILMConfig read from stdin, returns XML.
+func readILMConfig() (ilm.LifecycleConfiguration, *probe.Error) {
 	// User is expected to enter the lifecycleConfiguration instance contents in JSON format
-	var ilmInfo ilm.LifecycleConfiguration
-	var bytes []byte
-	var err error
+	var ilmCfg ilm.LifecycleConfiguration
 	// Consume json from STDIN
 	dec := json.NewDecoder(os.Stdin)
-	if err = dec.Decode(&ilmInfo); err != nil && err != io.EOF {
-		return "", probe.NewError(err)
+	if e := dec.Decode(&ilmCfg); e != nil {
+		return ilmCfg, probe.NewError(e)
 	}
-	if len(ilmInfo.Rules) == 0 {
-		return "", probe.NewError(errors.New("Empty configuration"))
-	}
-	if bytes, err = xml.Marshal(ilmInfo); err != nil {
-		return "", probe.NewError(err)
-	}
-
-	return string(bytes), nil
+	return ilmCfg, nil
 }
 
 // checkILMImportSyntax - validate arguments passed by user
 func checkILMImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelp(ctx, "import")
-		os.Exit(globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "import", globalErrorExitStatus)
 	}
 }
 
@@ -102,15 +89,19 @@ func mainILMImport(ctx *cli.Context) error {
 	setILMDisplayColorScheme()
 
 	args := ctx.Args()
-	objectURL := args.Get(0)
-	var ilmXML string
-	ilmXML, pErr := readILMConfigJSON()
-	fatalIf(pErr, "Failed to read lifecycle configuration.")
-	pErr = setBucketILMConfiguration(objectURL, ilmXML)
-	fatalIf(pErr, "Failed to set lifecycle configuration.")
+	urlStr := args.Get(0)
+
+	client, err := newClient(urlStr)
+	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
+
+	ilmCfg, err := readILMConfig()
+	fatalIf(err.Trace(args...), "Unable to read ILM configuration")
+
+	fatalIf(client.SetLifecycle(ilmCfg).Trace(urlStr), "Unable to set new lifecycle rules")
+
 	printMsg(ilmImportMessage{
 		Status: "success",
-		Target: objectURL,
+		Target: urlStr,
 	})
 	return nil
 }

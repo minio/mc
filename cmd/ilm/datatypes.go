@@ -18,11 +18,8 @@
 package ilm
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"time"
-
-	"github.com/minio/minio/pkg/console"
 )
 
 // AbortIncompleteMultipartUpload structure
@@ -53,6 +50,11 @@ type LifecycleTransition struct {
 	TransitionInDays int        `xml:"Days,omitempty" json:"Days,omitempty"`
 }
 
+// IsSet is transition set
+func (t LifecycleTransition) IsSet() bool {
+	return t.TransitionDate != nil && !t.TransitionDate.IsZero() || t.TransitionInDays > 0
+}
+
 // LifecycleAndOperator And Rule for LifecycleTag, to be used in LifecycleRuleFilter
 type LifecycleAndOperator struct {
 	XMLName xml.Name       `xml:"And,omitempty" json:"-"`
@@ -75,6 +77,11 @@ type LifecycleExpiration struct {
 	ExpirationInDays int        `xml:"Days,omitempty" json:"Days,omitempty"`
 }
 
+// IsSet - is LifecycleExpiration set?
+func (e LifecycleExpiration) IsSet() bool {
+	return e.ExpirationDate != nil && !e.ExpirationDate.IsZero() || e.ExpirationInDays > 0
+}
+
 // LifecycleRule represents a single rule in lifecycle configuration
 type LifecycleRule struct {
 	XMLName                        xml.Name                        `xml:"Rule,omitempty" json:"-"`
@@ -95,15 +102,4 @@ type LifecycleRule struct {
 type LifecycleConfiguration struct {
 	XMLName xml.Name        `xml:"LifecycleConfiguration,omitempty" json:"-"`
 	Rules   []LifecycleRule `xml:"Rule"`
-}
-
-// JSON jsonified lifecycle configuration.
-func (l LifecycleConfiguration) JSON() string {
-	var ilmJSONbytes []byte
-	var err error
-	ilmJSONbytes, err = json.MarshalIndent(l, "", "    ")
-	if err != nil {
-		console.Fatal("Failed to get lifecycle configuration in JSON format.")
-	}
-	return string(ilmJSONbytes)
 }

@@ -24,9 +24,10 @@ legalhold  set legal hold for object(s)
 diff       list differences in object name, size, and date between two buckets
 rm         remove objects
 event      configure object notifications
+ilm        configure bucket lifecycle
 watch      listen for object notification events
 policy     manage anonymous access to buckets and objects
-tag        manage tags for an object
+tag        manage tags for bucket(s) and object(s)
 admin      manage MinIO servers
 config     configure MinIO client
 update     update mc to latest release
@@ -1275,14 +1276,16 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 
 <a name="tag"></a>
 ### Command `tag`
-` tag` command provides a convenient way to set, remove, and list object tags. Tags are defined as key-value pairs.
-
+` tag` command provides a convenient way to set, remove, and list bucket/object tags. Tags are defined as key-value pairs.
 
 ```
 USAGE:
-  mc tag list [COMMAND FLAGS] TARGET
-  mc tag remove [COMMAND FLAGS] TARGET
-  mc tag set [COMMAND FLAGS] TARGET [TAGS]
+  mc tag COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  list     list tags of a bucket or an object
+  remove   remove tags assigned to a bucket or an object
+  set      set tags for a bucket or an object
 
 FLAGS:
   --help, -h                    show help

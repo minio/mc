@@ -35,8 +35,8 @@ var tagListCmd = cli.Command{
 	Action: mainListTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} [COMMAND FLAGS] TARGET
@@ -45,15 +45,18 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-   List tags assigned to an object.
+   List tags assigned to a bucket or an object
 
 EXAMPLES:
   1. List the tags assigned to an object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject
+     {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
+
   2. List the tags assigned to an object in JSON format.
-     {{.Prompt}} {{.HelpName}} --json s3/testbucket/testobject
+     {{.Prompt}} {{.HelpName}} --json myminio/testbucket/testobject
+
   3. List the tags assigned to a bucket.
-     {{.Prompt}} {{.HelpName}} s3/testbucket
+     {{.Prompt}} {{.HelpName}} myminio/testbucket
+
   4. List the tags assigned to a bucket in JSON format.
      {{.Prompt}} {{.HelpName}} --json s3/testbucket
 `,
@@ -99,17 +102,19 @@ func (t tagListMessage) String() string {
 
 func mainListTag(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
 	}
 
 	targetURL := ctx.Args().Get(0)
-	clnt, pErr := newClient(targetURL)
-	fatalIf(pErr, "Unable to initialize target "+targetURL)
-	tags, pErr := clnt.GetTags()
-	fatalIf(pErr, "Failed to get tags for "+targetURL)
+	clnt, err := newClient(targetURL)
+	fatalIf(err, "Unable to initialize target "+targetURL)
+
+	tags, err := clnt.GetTags()
+	fatalIf(err, "Unable to fetch tags for "+targetURL)
+
 	tagMap := tags.ToMap()
 	if len(tagMap) == 0 {
-		fatalIf(probe.NewError(errors.New("The TagSet does not exist")), "Failed to get tags for "+targetURL)
+		fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)
 	}
 
 	console.SetColor("Name", color.New(color.Bold, color.FgCyan))

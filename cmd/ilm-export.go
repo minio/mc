@@ -17,13 +17,10 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
 )
 
 var ilmExportCmd = cli.Command{
@@ -32,75 +29,69 @@ var ilmExportCmd = cli.Command{
 	Action: mainILMExport,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Lifecycle configuration of the target bucket exported in JSON format.
+  Exports lifecycle configuration in JSON format to STDOUT.
 
 EXAMPLES:
-  1. Redirect output of lifecycle configuration rules of the testbucket on alias s3 to the file lifecycle.json
-     {{.Prompt}} {{.HelpName}} s3/testbucket >> /Users/miniouser/Documents/lifecycle.json
-  2. Show lifecycle configuration rules of the testbucket on alias s3 on STDOUT
-     {{.Prompt}} {{.HelpName}} s3/testbucket
+  1. Export lifecycle configuration for 'testbucket' to 'lifecycle.json' file.
+     {{.Prompt}} {{.HelpName}} myminio/testbucket > lifecycle.json
 
+  2. Print lifecycle configuration for 'testbucket' to STDOUT.
+     {{.Prompt}} {{.HelpName}} play/testbucket
 `,
 }
 
 type ilmExportMessage struct {
 	Status    string                     `json:"status"`
 	Target    string                     `json:"target"`
-	ILMConfig string                     `json:"-"`
-	ILM       ilm.LifecycleConfiguration `json:"ilm"`
+	ILMConfig ilm.LifecycleConfiguration `json:"ilmConfig"`
 }
 
 func (i ilmExportMessage) String() string {
-	var ilmRet string
-	var e error
-	if i.ILMConfig == "" {
-		return console.Colorize(ilmThemeResultFailure, "Lifecycle configuration is not set.")
-	}
-	if ilmRet, e = ilm.GetILMJSON(i.ILMConfig); e != nil {
-		return console.Colorize(ilmThemeResultFailure, e.Error()+". Export failed.")
-	}
-	return ilmRet
+	msgBytes, e := json.MarshalIndent(i.ILMConfig, "", " ")
+	fatalIf(probe.NewError(e), "Unable to export ILM configuration")
+
+	return string(msgBytes)
 }
 
 func (i ilmExportMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	fatalIf(probe.NewError(e), "Unable to marshal ILM message")
+
 	return string(msgBytes)
 }
 
 // checkILMExportSyntax - validate arguments passed by user
 func checkILMExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelp(ctx, "export")
-		os.Exit(globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "export", globalErrorExitStatus)
 	}
 }
 
 func mainILMExport(ctx *cli.Context) error {
 	checkILMExportSyntax(ctx)
 	setILMDisplayColorScheme()
-	var ilmConfiguration ilm.LifecycleConfiguration
-	var err error
+
 	args := ctx.Args()
-	objectURL := args.Get(0)
-	ilmInfoXML, pErr := getBucketILMConfiguration(objectURL)
-	fatalIf(pErr.Trace(), "Error exporting lifecycle configuration for "+objectURL+".")
-	if globalJSON {
-		ilmConfiguration, err = ilm.GetILMConfig(ilmInfoXML)
-		fatalIf(probe.NewError(err), "Error exporting lifecycle configuration.")
-	}
+	urlStr := args.Get(0)
+
+	client, err := newClient(urlStr)
+	fatalIf(err.Trace(args...), "Unable to initialize client for "+urlStr+".")
+
+	ilmCfg, err := client.GetLifecycle()
+	fatalIf(err.Trace(args...), "Unable to get lifecycle configuration")
+
 	printMsg(ilmExportMessage{
 		Status:    "success",
-		Target:    objectURL,
-		ILMConfig: ilmInfoXML,
-		ILM:       ilmConfiguration,
+		Target:    urlStr,
+		ILMConfig: ilmCfg,
 	})
+
 	return nil
 }

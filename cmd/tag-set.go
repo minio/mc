@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -28,27 +26,28 @@ import (
 
 var tagSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "set tags for a bucket or an object",
+	Usage:  "set tags for a bucket(s) and object(s)",
 	Action: mainSetTag,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
-	CustomHelpTemplate: `Name:
-	{{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [COMMAND FLAGS] TARGET [TAGS]
+  {{.HelpName}} [COMMAND FLAGS] TARGET TAGS
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-   Assign tags to an object.
+   Assign tags to a bucket or an object.
 
 EXAMPLES:
   1. Assign tags to an object.
-     {{.Prompt}} {{.HelpName}} s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+     {{.Prompt}} {{.HelpName}} play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+
   2. Assign tags to a bucket.
-     {{.Prompt}} {{.HelpName}} s3/testbucket "key1=value1&key2=value2&key3=value3"
+     {{.Prompt}} {{.HelpName}} myminio/testbucket "key1=value1&key2=value2&key3=value3"
 `,
 }
 
@@ -72,8 +71,7 @@ func (t tagSetMessage) JSON() string {
 
 func checkSetTagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
-		cli.ShowCommandHelp(ctx, "set")
-		os.Exit(globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
 	}
 }
 
@@ -83,10 +81,11 @@ func mainSetTag(ctx *cli.Context) error {
 
 	targetURL := ctx.Args().Get(0)
 	tags := ctx.Args().Get(1)
-	clnt, pErr := newClient(targetURL)
-	fatalIf(pErr, "Unable to initialize target "+targetURL)
-	pErr = clnt.SetTags(tags)
-	fatalIf(pErr, "Failed to set tags for "+targetURL)
+
+	clnt, err := newClient(targetURL)
+	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize target "+targetURL)
+
+	fatalIf(clnt.SetTags(tags).Trace(tags), "Failed to set tags for "+targetURL)
 
 	printMsg(tagSetMessage{
 		Status: "success",
