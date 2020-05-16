@@ -42,7 +42,7 @@ type LifecycleTag struct {
 	Value   string   `xml:"Value,omitempty" json:"Value,omitempty"`
 }
 
-// LifecycleTransition structure - transition details of lifeycle configuration
+// LifecycleTransition structure - transition details of lifecycle configuration
 type LifecycleTransition struct {
 	XMLName          xml.Name   `xml:"Transition" json:"-"`
 	TransitionDate   *time.Time `xml:"Date,omitempty" json:"Date,omitempty"`
@@ -70,7 +70,7 @@ type LifecycleRuleFilter struct {
 	Tag     *LifecycleTag         `xml:"Tag,omitempty" json:"-"`
 }
 
-// LifecycleExpiration structure - expiration details of lifeycle configuration
+// LifecycleExpiration structure - expiration details of lifecycle configuration
 type LifecycleExpiration struct {
 	XMLName          xml.Name   `xml:"Expiration,omitempty" json:"-"`
 	ExpirationDate   *time.Time `xml:"Date,omitempty" json:"Date,omitempty"`

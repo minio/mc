@@ -75,7 +75,7 @@ func validateTranDays(rule LifecycleRule) error {
 	transitionSet := (rule.Transition != nil)
 	transitionDaySet := transitionSet && (rule.Transition.TransitionInDays > 0)
 	if transitionDaySet && rule.Transition.TransitionInDays < 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
-		return errors.New("Transition Date/Days are less than or equal to 30 and Storage class is STANDARD_IA")
+		return errors.New("Transition Date/Days are less than or equal to 30 when Storage class is STANDARD_IA")
 	}
 	return nil
 }
@@ -148,6 +148,7 @@ func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (
 		} else {
 			return LifecycleTransition{}, probe.NewError(errors.New("if storage class is set a valid transitionDate or transitionDay must be set"))
 		}
+		transition.StorageClass = storageClass
 	}
 
 	return transition, nil

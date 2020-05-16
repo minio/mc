@@ -74,6 +74,9 @@ func getRightAligned(label string, maxLen int) string {
 
 // RemoveILMRule - Remove the ILM rule (with ilmID) from the configuration in XML that is provided.
 func RemoveILMRule(lfcCfg LifecycleConfiguration, ilmID string) (LifecycleConfiguration, *probe.Error) {
+	if len(lfcCfg.Rules) == 0 {
+		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
+	}
 	n := 0
 	for _, rule := range lfcCfg.Rules {
 		if rule.ID != ilmID {
@@ -81,12 +84,12 @@ func RemoveILMRule(lfcCfg LifecycleConfiguration, ilmID string) (LifecycleConfig
 			n++
 		}
 	}
-	lfcCfg.Rules = lfcCfg.Rules[:n]
 	if n == len(lfcCfg.Rules) && len(lfcCfg.Rules) > 0 {
 		// if there was no filtering then rules will be of same length, means we didn't find
 		// our ilm id return an error here.
 		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle rule for id '%s' not found", ilmID))
 	}
+	lfcCfg.Rules = lfcCfg.Rules[:n]
 	return lfcCfg, nil
 }
 
@@ -181,7 +184,7 @@ func getLifecycleOptions(ctx *cli.Context) lifecycleOptions {
 	}
 }
 
-// ApplyNewILMConfig apply new lifecyle rules to existing lifecycle configuration, this
+// ApplyNewILMConfig apply new lifecycle rules to existing lifecycle configuration, this
 // function returns modified/overwritten rules if any.
 func ApplyNewILMConfig(ctx *cli.Context, lfcCfg LifecycleConfiguration) (LifecycleConfiguration, *probe.Error) {
 	opts := getLifecycleOptions(ctx)
