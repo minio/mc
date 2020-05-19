@@ -162,7 +162,7 @@ func mainWatch(ctx *cli.Context) error {
 	fatalIf(err, "Cannot watch on the specified bucket.")
 
 	// Initialize.. waitgroup to track the go-routine.
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 
 	// Increment wait group to wait subsequent routine.
 	wg.Add(1)

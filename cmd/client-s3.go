@@ -801,8 +801,10 @@ func (c *S3Client) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
 	}
 
 	go func() {
-		wg.Wait()
-		wo.Close()
+		wg.Wait() // this occurs when all watchers have returned
+		// we can safely close data and error channels
+		close(wo.EventInfoChan)
+		close(wo.ErrorChan)
 	}()
 
 	return wo, nil

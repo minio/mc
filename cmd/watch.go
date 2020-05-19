@@ -93,14 +93,6 @@ func (w *WatchObject) Errors() chan *probe.Error {
 	return w.ErrorChan
 }
 
-// Close the watcher, will stop all goroutines
-func (w *WatchObject) Close() {
-	// Cleanup
-	close(w.EventInfoChan)
-	close(w.ErrorChan)
-	close(w.DoneChan)
-}
-
 // Watcher can be used to have one or multiple clients watch for notifications
 type Watcher struct {
 	sessionStartTime time.Time
@@ -135,19 +127,6 @@ func (w *Watcher) Errors() chan *probe.Error {
 // Events returns a channel which will receive events
 func (w *Watcher) Events() chan []EventInfo {
 	return w.EventInfoChan
-}
-
-// Stop watcher
-func (w *Watcher) Stop() {
-	// close all running goroutines
-	for _, wo := range w.o {
-		wo.Close()
-	}
-
-	w.wg.Wait()
-
-	close(w.ErrorChan)
-	close(w.EventInfoChan)
 }
 
 // Watching returns if the watcher is watching for notifications
