@@ -289,15 +289,24 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	}
 
 	objectPath := f.PathURL.Path
-	avoidResumeUpload := isStreamFile(objectPath)
+
+	_, seeker := reader.(io.Seeker)
+	avoidResumeUpload := isStreamFile(objectPath) || isStdIO(reader) || !seeker || size < 0
+
 	// Write to a temporary file "object.part.minio" before commit.
 	objectPartPath := objectPath + partSuffix
+
 	if avoidResumeUpload {
-		objectPartPath = objectPath
+		// We cannot resume this operation, then we
+		// should remove any partial download if any.
+		e := os.Remove(objectPartPath)
+		if e != nil && !os.IsNotExist(e) {
+			err := f.toClientError(e, f.PathURL.Path)
+			return 0, err.Trace(f.PathURL.Path)
+		}
 	}
 
-	// If exists, open in append mode. If not create it the part file.
-	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0666)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
@@ -325,21 +334,17 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	// Current file offset.
 	var currentOffset = partSt.Size()
 
-	if !isStdIO(reader) && size > 0 {
-		reader = hookreader.NewHook(reader, progress)
-		if seeker, ok := reader.(io.Seeker); ok {
-			if _, e = seeker.Seek(currentOffset, 0); e != nil {
-				return 0, probe.NewError(e)
-			}
-			// Discard bytes until currentOffset.
-			if _, e = io.CopyN(ioutil.Discard, progress, currentOffset); e != nil {
-				return 0, probe.NewError(e)
-			}
+	reader = hookreader.NewHook(reader, progress)
+
+	if !avoidResumeUpload && currentOffset > 0 {
+		// At this stage reader is always a seeker
+		// since it is a hook reader.
+		seeker, _ := reader.(io.Seeker)
+		if _, e = seeker.Seek(currentOffset, 0); e != nil {
+			return 0, probe.NewError(e)
 		}
-	} else {
-		reader = hookreader.NewHook(reader, progress)
 		// Discard bytes until currentOffset.
-		if _, e = io.CopyN(ioutil.Discard, reader, currentOffset); e != nil {
+		if _, e = io.CopyN(ioutil.Discard, progress, currentOffset); e != nil {
 			return 0, probe.NewError(e)
 		}
 	}
@@ -382,30 +387,30 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 			})
 		}
 	}
-	if !avoidResumeUpload {
-		// Safely completed put. Now commit by renaming to actual filename.
-		if e = os.Rename(objectPartPath, objectPath); e != nil {
-			err := f.toClientError(e, objectPath)
-			return totalWritten, err.Trace(objectPartPath, objectPath)
+
+	// Safely completed put. Now commit by renaming to actual filename.
+	if e = os.Rename(objectPartPath, objectPath); e != nil {
+		err := f.toClientError(e, objectPath)
+		return totalWritten, err.Trace(objectPartPath, objectPath)
+	}
+
+	if len(attr) != 0 {
+		atime, e := strconv.ParseInt(attr["atime"], 10, 64)
+		if e != nil {
+			return totalWritten, probe.NewError(e)
 		}
 
-		if len(attr) != 0 {
-			atime, e := strconv.ParseInt(attr["atime"], 10, 64)
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
+		mtime, e := strconv.ParseInt(attr["mtime"], 10, 64)
+		if e != nil {
+			return totalWritten, probe.NewError(e)
+		}
 
-			mtime, e := strconv.ParseInt(attr["mtime"], 10, 64)
-			if e != nil {
-				return totalWritten, probe.NewError(e)
-			}
-
-			// Attempt to change the access and modify time
-			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
-				return totalWritten, probe.NewError(e)
-			}
+		// Attempt to change the access and modify time
+		if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
+			return totalWritten, probe.NewError(e)
 		}
 	}
+
 	return totalWritten, nil
 }
 
