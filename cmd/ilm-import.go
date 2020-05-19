@@ -39,7 +39,7 @@ USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Import entire lifecyle configuration from STDIN, input file is expected to be in JSON format.
+  Import entire lifecycle configuration from STDIN, input file is expected to be in JSON format.
 
 EXAMPLES:
   1. Set lifecycle configuration for the testbucket on alias 'myminio' to the rules imported from lifecycle.json

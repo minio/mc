@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"errors"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -86,6 +88,10 @@ func mainILMExport(ctx *cli.Context) error {
 
 	ilmCfg, err := client.GetLifecycle()
 	fatalIf(err.Trace(args...), "Unable to get lifecycle configuration")
+	if len(ilmCfg.Rules) == 0 {
+		fatalIf(probe.NewError(errors.New("lifecycle configuration not set")).Trace(urlStr),
+			"Unable to export lifecycle configuration")
+	}
 
 	printMsg(ilmExportMessage{
 		Status:    "success",

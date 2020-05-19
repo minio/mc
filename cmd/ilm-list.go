@@ -267,8 +267,8 @@ func mainILMList(ctx *cli.Context) error {
 	fatalIf(err.Trace(args...), "Unable to get lifecycle")
 
 	if len(ilmCfg.Rules) == 0 {
-		fatalIf(probe.NewError(errors.New("lifecyle configuration not set")).Trace(urlStr),
-			"Unable to list lifecyle configuration")
+		fatalIf(probe.NewError(errors.New("lifecycle configuration not set")).Trace(urlStr),
+			"Unable to list lifecycle configuration")
 	}
 
 	printMsg(ilmListMessage{
