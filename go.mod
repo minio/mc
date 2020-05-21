@@ -10,6 +10,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.4 // indirect
+	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/klauspost/compress v1.10.3
 	github.com/mattn/go-colorable v0.1.4 // indirect
@@ -22,7 +23,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
-	github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953
+	github.com/posener/complete v1.2.3
 	github.com/rjeczalik/notify v0.9.2
 	github.com/ugorji/go v1.1.7 // indirect
 	go.uber.org/zap v1.11.0 // indirect
@@ -34,3 +35,5 @@ require (
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 )
+
+replace github.com/posener/complete => /home/anis/work/gospace/src/github.com/posener/complete

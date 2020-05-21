@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2019 MinIO, Inc.
+ * MinIO Client (C) 2019-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,6 +26,58 @@ import (
 	"github.com/minio/cli"
 	"github.com/posener/complete"
 )
+
+const escapeCharacters = "\\ !\"$&'()*;<=>?@[\\]^`{|}"
+
+func escape(s string) string {
+	buf := bytes.NewBuffer([]byte{})
+	for {
+		i := strings.IndexAny(s, escapeCharacters)
+		if i < 0 {
+			buf.WriteString(s)
+			break
+		} else {
+			buf.WriteString(s[:i])
+			buf.WriteByte('\\')
+			buf.WriteByte(s[i])
+			s = s[i+1:]
+		}
+	}
+	return buf.String()
+}
+
+func unescape(s string) string {
+	buf := bytes.NewBuffer([]byte{})
+	for {
+		i := strings.Index(s, "\\")
+		if i < 0 {
+			buf.WriteString(s)
+			break
+		} else if i+1 == len(s) {
+			buf.WriteByte('\\')
+			break
+		} else {
+			buf.WriteString(s[:i])
+			buf.WriteByte(s[i+1])
+			s = s[i+2:]
+		}
+	}
+	return buf.String()
+}
+
+// escaper predicts the completion using the underlying
+// Predictor function and escapes all found predictions.
+type escaper struct {
+	complete.Predictor
+}
+
+func (e escaper) Predict(args complete.Args) []string {
+	predictions := e.Predictor.Predict(args)
+	for i := range predictions {
+		predictions[i] = escape(unescape(predictions[i]))
+	}
+	return predictions
+}
 
 // fsComplete knows how to complete file/dir names by the given path
 type fsComplete struct{}
@@ -344,7 +397,7 @@ func cmdToCompleteCmd(cmd cli.Command, parentPath string) complete.Command {
 	}
 
 	complCmd.Flags = flagsToCompleteFlags(cmd.Flags)
-	complCmd.Args = completeCmds[parentPath+"/"+cmd.Name]
+	complCmd.Args = escaper{completeCmds[parentPath+"/"+cmd.Name]}
 	return complCmd
 }
 
