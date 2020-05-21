@@ -862,7 +862,7 @@ NAME:
   mc admin bucket quota - manage bucket quota
 
 USAGE:
-  mc admin bucket quota TARGET [--fifo | --hard] [QUOTA]
+  mc admin bucket quota TARGET [--fifo QUOTA | --hard QUOTA | --clear]
 
 QUOTA
   quota accepts human-readable case-insensitive number

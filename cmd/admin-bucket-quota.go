@@ -31,15 +31,15 @@ import (
 var adminQuotaFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "fifo",
-		Usage: "Set fifo quota, allowing automatic deletion of older content",
+		Usage: "set fifo quota, allowing automatic deletion of older content",
 	},
 	cli.StringFlag{
 		Name:  "hard",
-		Usage: "Set a hard quota, disallowing writes after quota is reached",
+		Usage: "set a hard quota, disallowing writes after quota is reached",
 	},
 	cli.BoolFlag{
 		Name:  "clear",
-		Usage: "Clears bucket quota configured for bucket",
+		Usage: "clears bucket quota configured for bucket",
 	},
 }
 
@@ -53,20 +53,20 @@ type quotaMessage struct {
 }
 
 func (q quotaMessage) String() string {
-	if q.op == "set" {
+	switch q.op {
+	case "set":
 		return console.Colorize("QuotaMessage",
 			fmt.Sprintf("Successfully set bucket quota of %s with %s type on `%s`", humanize.IBytes(q.Quota), q.QuotaType, q.Bucket))
-	}
-	if q.op == "unset" {
+	case "unset":
 		return console.Colorize("QuotaMessage",
 			fmt.Sprintf("Successfully cleared bucket quota configured on `%s`", q.Bucket))
+	default:
+		return console.Colorize("QuotaInfo",
+			fmt.Sprintf("Bucket `%s` has %s quota of %s", q.Bucket, q.QuotaType, humanize.IBytes(q.Quota)))
 	}
-	return console.Colorize("QuotaInfo",
-		fmt.Sprintf("Bucket `%s` has %s quota of %s", q.Bucket, q.QuotaType, humanize.IBytes(q.Quota)))
 }
 
 func (q quotaMessage) JSON() string {
-	q.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(q, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -107,7 +107,6 @@ EXAMPLES:
 
    4. Clear bucket quota configured for bucket "mybucket" on MinIO.
 	  {{.Prompt}} {{.HelpName}} myminio/mybucket --clear
-
 `,
 }
 
@@ -152,35 +151,37 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 		if ctx.IsSet("hard") {
 			qType = madmin.HardQuota
 		}
-		quota, err := humanize.ParseBytes(quotaStr)
-		fatalIf(probe.NewError(err).Trace(quotaStr), "Unable to parse quota")
-		if err = client.SetBucketQuota(globalContext, targetURL, quota, qType); err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Cannot set bucket quota")
-
+		quota, e := humanize.ParseBytes(quotaStr)
+		fatalIf(probe.NewError(e).Trace(quotaStr), "Unable to parse quota")
+		if e = client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{Quota: quota, Type: qType}); e != nil {
+			fatalIf(probe.NewError(e).Trace(args...), "Unable to set bucket quota")
 		}
 		printMsg(quotaMessage{
 			op:        "set",
 			Bucket:    targetURL,
 			Quota:     quota,
 			QuotaType: string(qType),
+			Status:    "success",
 		})
 	} else if ctx.Bool("clear") && len(args) == 1 {
-		if err := client.RemoveBucketQuota(globalContext, targetURL); err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Cannot clear bucket quota config")
+		if err := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); err != nil {
+			fatalIf(probe.NewError(err).Trace(args...), "Unable to clear bucket quota config")
 		}
 		printMsg(quotaMessage{
 			op:     "unset",
 			Bucket: targetURL,
+			Status: "success",
 		})
 
 	} else {
 		qCfg, e := client.GetBucketQuota(globalContext, targetURL)
-		fatalIf(probe.NewError(e).Trace(args...), "Cannot get bucket quota")
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to get bucket quota")
 		printMsg(quotaMessage{
 			op:        "get",
 			Bucket:    targetURL,
 			Quota:     qCfg.Quota,
 			QuotaType: string(qCfg.Type),
+			Status:    "success",
 		})
 	}
 
