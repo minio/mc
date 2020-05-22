@@ -90,6 +90,8 @@ func (d diffMessage) String() string {
 		msg = console.Colorize("DiffSize", "! "+d.SecondURL)
 	case differInMetadata:
 		msg = console.Colorize("DiffMetadata", "! "+d.SecondURL)
+	case differInMMSourceMTime:
+		msg = console.Colorize("DiffMMSourceMTime", "! "+d.SecondURL)
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
@@ -201,7 +203,8 @@ func mainDiff(ctx *cli.Context) error {
 	console.SetColor("DiffOnlyInSecond", color.New(color.FgGreen))
 	console.SetColor("DiffType", color.New(color.FgMagenta))
 	console.SetColor("DiffSize", color.New(color.FgYellow, color.Bold))
-	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))
+	console.SetColor("DiffMetadata", color.New(color.FgYellow, color.Bold))
+	console.SetColor("DiffMMSourceMTime", color.New(color.FgYellow, color.Bold))
 
 	URLs := ctx.Args()
 	firstURL := URLs.Get(0)

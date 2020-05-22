@@ -34,11 +34,11 @@ type differType int
 const (
 	differInNone          differType = iota // does not differ
 	differInSize                            // differs in size
-	differInMMSourceMTime                   // differs in multi-master source modtime
 	differInMetadata                        // differs in metadata
 	differInType                            // differs in type, exfile/directory
 	differInFirst                           // only in source (FIRST)
 	differInSecond                          // only in target (SECOND)
+	differInMMSourceMTime                   // differs in multi-master source modtime
 )
 
 func (d differType) String() string {
@@ -88,6 +88,13 @@ func multiMasterModTimeUpdated(src, dst *ClientContent) bool {
 		// This should only happen in a messy environment
 		// but we are returning false anyway so the caller
 		// function won't take any action.
+		return false
+	}
+
+	_, ok1 := src.UserMetadata[multiMasterSourceModTimeKey]
+	_, ok2 := dst.UserMetadata[multiMasterSourceModTimeKey]
+	if !ok1 && !ok2 {
+		// No multimaster context found, consider src & dst as similar
 		return false
 	}
 
