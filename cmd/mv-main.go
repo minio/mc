@@ -285,6 +285,15 @@ func mainMove(ctx *cli.Context) error {
 	// check 'copy' cli arguments.
 	checkCopySyntax(ctx, encKeyDB, true)
 
+	if ctx.NArg() == 2 {
+		args := ctx.Args()
+		srcURL := args.Get(0)
+		dstURL := args.Get(1)
+		if srcURL == dstURL {
+			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Source and destination urls cannot be the same: %v.", srcURL))
+		}
+	}
+
 	for _, urlStr := range ctx.Args() {
 		client, err := newClient(urlStr)
 		if err != nil {
