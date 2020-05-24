@@ -467,6 +467,16 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
+
+		// Get metadata from target content as well
+		for k, v := range urls.TargetContent.Metadata {
+			metadata[k] = v
+		}
+		// Get userMetadata from target content as well
+		for k, v := range urls.TargetContent.UserMetadata {
+			metadata[k] = v
+		}
+
 		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, mode, until,
 			legalHold, length, progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart)
 	} else {
