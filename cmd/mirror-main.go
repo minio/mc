@@ -851,7 +851,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				}
 			}
 		}
-	} else {
+	} else if _, err := dstClt.Stat(false, false, nil); err != nil {
 		withLock := false
 		mode, validity, unit, err := srcClt.GetObjectLockConfig()
 		if err == nil {
