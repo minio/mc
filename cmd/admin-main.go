@@ -52,6 +52,7 @@ var adminCmd = cli.Command{
 		adminPrometheusCmd,
 		adminKMSCmd,
 		adminOBDCmd,
+		adminBucketCmd,
 	},
 }
 
