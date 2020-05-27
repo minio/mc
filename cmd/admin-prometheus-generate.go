@@ -138,7 +138,7 @@ func checkAdminPrometheusSyntax(ctx *cli.Context) {
 func generatePrometheusConfig(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
-	alias := args.Get(0)
+	alias := cleanAlias(args.Get(0))
 
 	if !isValidAlias(alias) {
 		fatalIf(errInvalidAlias(alias), "Invalid alias.")

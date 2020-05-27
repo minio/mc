@@ -101,7 +101,7 @@ func checkConfigHostAddSyntax(ctx *cli.Context, accessKey string, secretKey stri
 			"Incorrect number of arguments for host add command.")
 	}
 
-	alias := args.Get(0)
+	alias := cleanAlias(args.Get(0))
 	url := args.Get(1)
 	api := ctx.String("api")
 	bucketLookup := ctx.String("lookup")
@@ -277,6 +277,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 	var (
 		args   = ctx.Args()
+		alias  = cleanAlias(args.Get(0))
 		url    = trimTrailingSeparator(args.Get(1))
 		api    = ctx.String("api")
 		lookup = ctx.String("lookup")
@@ -287,7 +288,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	s3Config, err := BuildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
 
-	addHost(ctx.Args().Get(0), hostConfigV9{
+	addHost(alias, hostConfigV9{
 		URL:       s3Config.HostURL,
 		AccessKey: s3Config.AccessKey,
 		SecretKey: s3Config.SecretKey,

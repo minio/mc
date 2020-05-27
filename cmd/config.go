@@ -159,6 +159,14 @@ func isMcConfigExists() bool {
 	return true
 }
 
+// cleanAlias removes any forbidden trailing slashes or backslashes
+// before any validation to avoid annoying mc complaints.
+func cleanAlias(s string) string {
+	s = strings.TrimSuffix(s, "/")
+	s = strings.TrimSuffix(s, "\\")
+	return s
+}
+
 // isValidAlias - Check if alias valid.
 func isValidAlias(alias string) bool {
 	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-_]+$").MatchString(alias)
