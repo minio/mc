@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -410,7 +411,7 @@ func TestStringReplace(t *testing.T) {
 		},
 	}
 	for i, testCase := range testCases {
-		gotStr := stringsReplace(testCase.str, testCase.content)
+		gotStr := stringsReplace(context.Background(), testCase.str, testCase.content)
 		if gotStr != testCase.expectedStr {
 			t.Errorf("Test %d: Expected %s, got %s", i+1, testCase.expectedStr, gotStr)
 		}

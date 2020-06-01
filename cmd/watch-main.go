@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -157,8 +158,11 @@ func mainWatch(ctx *cli.Context) error {
 		Suffix:    suffix,
 	}
 
+	ctxt, cancelWatch := context.WithCancel(globalContext)
+	defer cancelWatch()
+
 	// Start watching on events
-	wo, err := s3Client.Watch(options)
+	wo, err := s3Client.Watch(ctxt, options)
 	fatalIf(err, "Cannot watch on the specified bucket.")
 
 	// Initialize.. waitgroup to track the go-routine.

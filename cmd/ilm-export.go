@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 
 	"github.com/minio/cli"
@@ -76,17 +77,20 @@ func checkILMExportSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainILMExport(ctx *cli.Context) error {
-	checkILMExportSyntax(ctx)
+func mainILMExport(cliCtx *cli.Context) error {
+	ctx, cancelILMExport := context.WithCancel(globalContext)
+	defer cancelILMExport()
+
+	checkILMExportSyntax(cliCtx)
 	setILMDisplayColorScheme()
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(args...), "Unable to initialize client for "+urlStr+".")
 
-	ilmCfg, err := client.GetLifecycle()
+	ilmCfg, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(args...), "Unable to get lifecycle configuration")
 	if len(ilmCfg.Rules) == 0 {
 		fatalIf(probe.NewError(errors.New("lifecycle configuration not set")).Trace(urlStr),

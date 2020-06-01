@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -215,7 +216,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 		return nil
 	}
 
-	for content := range clnt.List(false, false, false, DirNone) {
+	for content := range clnt.List(globalContext, false, false, false, DirNone) {
 
 		if !includeFiles && !content.Type.IsDir() {
 			continue
@@ -245,22 +246,25 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 }
 
 // mainTree - is a handler for mc tree command
-func mainTree(ctx *cli.Context) error {
+func mainTree(cli *cli.Context) error {
 
 	// check 'tree' cli arguments.
-	checkTreeSyntax(ctx)
+	checkTreeSyntax(cli)
 
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 
-	args := ctx.Args()
+	args := cli.Args()
 	// mimic operating system tool behavior.
-	if !ctx.Args().Present() {
+	if !cli.Args().Present() {
 		args = []string{"."}
 	}
 
-	includeFiles := ctx.Bool("files")
-	depth := ctx.Int("depth")
+	includeFiles := cli.Bool("files")
+	depth := cli.Int("depth")
+
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
 
 	var cErr error
 	for _, targetURL := range args {
@@ -275,7 +279,7 @@ func mainTree(ctx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(clnt, true, false); e != nil {
+			if e := doList(ctx, clnt, true, false); e != nil {
 				cErr = e
 			}
 		}

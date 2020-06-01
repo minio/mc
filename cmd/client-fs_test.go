@@ -65,7 +65,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	// Verify previously create files and list them.
 	var contents []*ClientContent
-	for content := range fsClient.List(false, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, false, false, false, DirNone) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -93,7 +93,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List non recursive to list only top level files.
-	for content := range fsClient.List(false, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, false, false, false, DirNone) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -109,7 +109,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(true, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, true, false, false, DirNone) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -153,7 +153,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(true, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, true, false, false, DirNone) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -194,7 +194,7 @@ func (s *TestSuite) TestPutBucket(c *C) {
 	bucketPath := filepath.Join(root, "bucket")
 	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
-	err = fsClient.MakeBucket("us-east-1", true, false)
+	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
 	c.Assert(err, IsNil)
 }
 
@@ -208,9 +208,9 @@ func (s *TestSuite) TestStatBucket(c *C) {
 
 	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
-	err = fsClient.MakeBucket("us-east-1", true, false)
+	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
 	c.Assert(err, IsNil)
-	_, err = fsClient.Stat(false, false, nil)
+	_, err = fsClient.Stat(context.Background(), false, false, nil)
 	c.Assert(err, IsNil)
 }
 
@@ -223,15 +223,15 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 	bucketPath := filepath.Join(root, "bucket")
 	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
-	err = fsClient.MakeBucket("us-east-1", true, false)
+	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
 	c.Assert(err, IsNil)
 
 	// On windows setting permissions is not supported.
 	if runtime.GOOS != "windows" {
-		err = fsClient.SetAccess("readonly", false)
+		err = fsClient.SetAccess(context.Background(), "readonly", false)
 		c.Assert(err, IsNil)
 
-		_, _, err = fsClient.GetAccess()
+		_, _, err = fsClient.GetAccess(context.Background())
 		c.Assert(err, IsNil)
 	}
 }
@@ -275,7 +275,7 @@ func (s *TestSuite) TestGet(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	reader, err = fsClient.Get(nil)
+	reader, err = fsClient.Get(context.Background(), nil)
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
 	_, e = io.Copy(&results, reader)
@@ -303,7 +303,7 @@ func (s *TestSuite) TestGetRange(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	reader, err = fsClient.Get(nil)
+	reader, err = fsClient.Get(context.Background(), nil)
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
 	buf := make([]byte, 5)
@@ -334,7 +334,7 @@ func (s *TestSuite) TestStatObject(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	content, err := fsClient.Stat(false, false, nil)
+	content, err := fsClient.Stat(context.Background(), false, false, nil)
 	c.Assert(err, IsNil)
 	c.Assert(content.Size, Equals, int64(dataLen))
 }
@@ -359,6 +359,6 @@ func (s *TestSuite) TestCopy(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	err = fsClientTarget.Copy(sourcePath, int64(len(data)), nil, nil, nil, nil, false)
+	err = fsClientTarget.Copy(context.Background(), sourcePath, int64(len(data)), nil, nil, nil, nil, false)
 	c.Assert(err, IsNil)
 }

@@ -35,8 +35,10 @@ func trapSignals(sig ...os.Signal) {
 	<-sigCh
 
 	// Once signal has been received stop signal Notify handler.
+
 	signal.Stop(sigCh)
 
 	// Cancel the global context
 	globalCancel()
+
 }

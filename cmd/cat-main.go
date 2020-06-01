@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -156,7 +157,7 @@ func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error 
 		if err == nil && client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
-		if reader, err = getSourceStreamFromURL(sourceURL, encKeyDB); err != nil {
+		if reader, err = getSourceStreamFromURL(context.Background(), sourceURL, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
 		defer reader.Close()

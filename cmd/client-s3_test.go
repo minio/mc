@@ -171,14 +171,14 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err := S3New(conf)
 	c.Assert(err, IsNil)
 
-	err = s3c.MakeBucket("us-east-1", true, false)
+	err = s3c.MakeBucket(context.Background(), "us-east-1", true, false)
 	c.Assert(err, IsNil)
 
 	conf.HostURL = server.URL + string(s3c.GetURL().Separator)
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(false, false, false, DirNone) {
+	for content := range s3c.List(globalContext, false, false, false, DirNone) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
@@ -187,7 +187,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(false, false, false, DirNone) {
+	for content := range s3c.List(globalContext, false, false, false, DirNone) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
@@ -196,7 +196,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(false, false, false, DirNone) {
+	for content := range s3c.List(globalContext, false, false, false, DirNone) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsRegular(), Equals, true)
 	}
@@ -227,7 +227,7 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 
-	reader, err = s3c.Get(nil)
+	reader, err = s3c.Get(context.Background(), nil)
 	c.Assert(err, IsNil)
 	var buffer bytes.Buffer
 	{

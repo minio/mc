@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -253,17 +254,20 @@ func getILMRowsWithTags(tbl *PrettyTable, cellDataWithTags *[][]string, newRows 
 	return rows
 }
 
-func mainILMList(ctx *cli.Context) error {
-	checkILMListSyntax(ctx)
+func mainILMList(cliCtx *cli.Context) error {
+	ctx, cancelILMList := context.WithCancel(globalContext)
+	defer cancelILMList()
+
+	checkILMListSyntax(cliCtx)
 	setILMDisplayColorScheme()
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
 
-	ilmCfg, err := client.GetLifecycle()
+	ilmCfg, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(args...), "Unable to get lifecycle")
 
 	if len(ilmCfg.Rules) == 0 {
@@ -274,7 +278,7 @@ func mainILMList(ctx *cli.Context) error {
 	printMsg(ilmListMessage{
 		Status:    "success",
 		Target:    urlStr,
-		Context:   ctx,
+		Context:   cliCtx,
 		ILMConfig: ilmCfg,
 	})
 

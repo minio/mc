@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -75,17 +77,20 @@ func checkSetTagSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainSetTag(ctx *cli.Context) error {
-	checkSetTagSyntax(ctx)
+func mainSetTag(cliCtx *cli.Context) error {
+	ctx, cancelSetTag := context.WithCancel(globalContext)
+	defer cancelSetTag()
+
+	checkSetTagSyntax(cliCtx)
 	console.SetColor("List", color.New(color.FgGreen))
 
-	targetURL := ctx.Args().Get(0)
-	tags := ctx.Args().Get(1)
+	targetURL := cliCtx.Args().Get(0)
+	tags := cliCtx.Args().Get(1)
 
 	clnt, err := newClient(targetURL)
-	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize target "+targetURL)
+	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
-	fatalIf(clnt.SetTags(tags).Trace(tags), "Failed to set tags for "+targetURL)
+	fatalIf(clnt.SetTags(ctx, tags).Trace(tags), "Failed to set tags for "+targetURL)
 
 	printMsg(tagSetMessage{
 		Status: "success",

@@ -114,10 +114,7 @@ func checkRbSyntax(ctx *cli.Context) {
 }
 
 // deletes a bucket and all its contents
-func deleteBucket(url string) *probe.Error {
-	ctx, cancelCopy := context.WithCancel(globalContext)
-	defer cancelCopy()
-
+func deleteBucket(ctx context.Context, url string) *probe.Error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -126,11 +123,11 @@ func deleteBucket(url string) *probe.Error {
 	var isIncomplete bool
 	isRemoveBucket := true
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, false, contentCh)
+	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, false, contentCh)
 
 	go func() {
 		defer close(contentCh)
-		for content := range clnt.List(true, false, false, DirLast) {
+		for content := range clnt.List(ctx, true, false, false, DirLast) {
 			if content.Err != nil {
 				contentCh <- content
 				continue
@@ -188,16 +185,19 @@ func isNamespaceRemoval(url string) bool {
 }
 
 // mainRemoveBucket is entry point for rb command.
-func mainRemoveBucket(ctx *cli.Context) error {
+func mainRemoveBucket(cliCtx *cli.Context) error {
+	ctx, cancelRemoveBucket := context.WithCancel(globalContext)
+	defer cancelRemoveBucket()
+
 	// check 'rb' cli arguments.
-	checkRbSyntax(ctx)
-	isForce := ctx.Bool("force")
+	checkRbSyntax(cliCtx)
+	isForce := cliCtx.Bool("force")
 
 	// Additional command specific theme customization.
 	console.SetColor("RemoveBucket", color.New(color.FgGreen, color.Bold))
 
 	var cErr error
-	for _, targetURL := range ctx.Args() {
+	for _, targetURL := range cliCtx.Args() {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
@@ -205,7 +205,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
-		_, err = clnt.Stat(false, false, nil)
+		_, err = clnt.Stat(ctx, false, false, nil)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
@@ -218,7 +218,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 		}
 
 		isEmpty := true
-		for range clnt.List(true, false, false, DirNone) {
+		for range clnt.List(ctx, true, false, false, DirNone) {
 			isEmpty = false
 			break
 		}
@@ -227,7 +227,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 
-		e := deleteBucket(targetURL)
+		e := deleteBucket(ctx, targetURL)
 		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
 
 		if !isNamespaceRemoval(targetURL) {

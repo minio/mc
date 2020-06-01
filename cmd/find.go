@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -131,7 +132,7 @@ func execFind(command string) {
 // watchFind - enables listening on the input path, listens for all file/object
 // created actions. Asynchronously executes the input command line, also allows
 // formatting for the command line in accordance with subsititution arguments.
-func watchFind(ctx *findContext) {
+func watchFind(ctxCtx context.Context, ctx *findContext) {
 	// Watch is not enabled, return quickly.
 	if !ctx.watch {
 		return
@@ -140,7 +141,7 @@ func watchFind(ctx *findContext) {
 		Recursive: true,
 		Events:    []string{"put"},
 	}
-	watchObj, err := ctx.clnt.Watch(options)
+	watchObj, err := ctx.clnt.Watch(ctxCtx, options)
 	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given options.")
 
 	// Loop until user CTRL-C the command line.
@@ -162,7 +163,7 @@ func watchFind(ctx *findContext) {
 					continue
 				}
 
-				find(ctx, contentMessage{
+				find(ctxCtx, ctx, contentMessage{
 					Key:  getAliasedPath(ctx, event.Path),
 					Time: time,
 					Size: event.Size,
@@ -220,7 +221,7 @@ func getAliasedPath(ctx *findContext, path string) string {
 	return trimSuffixAtMaxDepth(ctx.targetURL, aliasedPath, separator, ctx.maxDepth)
 }
 
-func find(ctx *findContext, fileContent contentMessage) {
+func find(ctxCtx context.Context, ctx *findContext, fileContent contentMessage) {
 	// Match the incoming content, didn't match return.
 	if !matchFind(ctx, fileContent) {
 		return
@@ -228,27 +229,27 @@ func find(ctx *findContext, fileContent contentMessage) {
 
 	// proceed to either exec, format the output string.
 	if ctx.execCmd != "" {
-		execFind(stringsReplace(ctx.execCmd, fileContent))
+		execFind(stringsReplace(ctxCtx, ctx.execCmd, fileContent))
 		return
 	}
 	if ctx.printFmt != "" {
-		fileContent.Key = stringsReplace(ctx.printFmt, fileContent)
+		fileContent.Key = stringsReplace(ctxCtx, ctx.printFmt, fileContent)
 	}
 	printMsg(findMessage{fileContent})
 }
 
 // doFind - find is main function body which interprets and executes
 // all the input parameters.
-func doFind(ctx *findContext) error {
+func doFind(ctxCtx context.Context, ctx *findContext) error {
 	// If watch is enabled we will wait on the prefix perpetually
 	// for all I/O events until canceled by user, if watch is not enabled
 	// following defer is a no-op.
-	defer watchFind(ctx)
+	defer watchFind(ctxCtx, ctx)
 
 	var prevKeyName string
 
 	// iterate over all content which is within the given directory
-	for content := range ctx.clnt.List(true, false, false, DirNone) {
+	for content := range ctx.clnt.List(globalContext, true, false, false, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -288,11 +289,11 @@ func doFind(ctx *findContext) error {
 
 		// proceed to either exec, format the output string.
 		if ctx.execCmd != "" {
-			execFind(stringsReplace(ctx.execCmd, fileContent))
+			execFind(stringsReplace(ctxCtx, ctx.execCmd, fileContent))
 			continue
 		}
 		if ctx.printFmt != "" {
-			fileContent.Key = stringsReplace(ctx.printFmt, fileContent)
+			fileContent.Key = stringsReplace(ctxCtx, ctx.printFmt, fileContent)
 		}
 
 		printMsg(findMessage{fileContent})
@@ -305,7 +306,7 @@ func doFind(ctx *findContext) error {
 
 // stringsReplace - formats the string to remove {} and replace each
 // with the appropriate argument
-func stringsReplace(args string, fileContent contentMessage) string {
+func stringsReplace(ctx context.Context, args string, fileContent contentMessage) string {
 	// replace all instances of {}
 	str := args
 	if strings.Contains(str, "{}") {
@@ -359,12 +360,12 @@ func stringsReplace(args string, fileContent contentMessage) string {
 
 	// replace all instances of {url}
 	if strings.Contains(str, "{url}") {
-		str = strings.Replace(str, "{url}", getShareURL(fileContent.Key), -1)
+		str = strings.Replace(str, "{url}", getShareURL(ctx, fileContent.Key), -1)
 	}
 
 	// replace all instances of {"url"}
 	if strings.Contains(str, `{"url"}`) {
-		str = strings.Replace(str, `{"url"}`, strconv.Quote(getShareURL(fileContent.Key)), -1)
+		str = strings.Replace(str, `{"url"}`, strconv.Quote(getShareURL(ctx, fileContent.Key)), -1)
 	}
 
 	return str
@@ -414,14 +415,14 @@ var defaultSevenDays = time.Duration(604800) * time.Second
 
 // getShareURL is used in conjunction with the {url} substitution
 // argument to generate and return presigned URLs, returns error if any.
-func getShareURL(path string) string {
+func getShareURL(ctx context.Context, path string) string {
 	targetAlias, targetURLFull, _, err := expandAlias(path)
 	fatalIf(err.Trace(path), "Unable to expand alias.")
 
 	clnt, err := newClientFromAlias(targetAlias, targetURLFull)
 	fatalIf(err.Trace(targetAlias, targetURLFull), "Unable to initialize client instance from alias.")
 
-	content, err := clnt.Stat(false, false, nil)
+	content, err := clnt.Stat(ctx, false, false, nil)
 	fatalIf(err.Trace(targetURLFull, targetAlias), "Unable to lookup file/object.")
 
 	// Skip if its a directory.
@@ -434,7 +435,7 @@ func getShareURL(path string) string {
 	fatalIf(err.Trace(targetAlias, objectURL), "Unable to initialize new client from alias.")
 
 	// Set default expiry for each url (point of no longer valid), to be 7 days
-	shareURL, err := newClnt.ShareDownload(defaultSevenDays)
+	shareURL, err := newClnt.ShareDownload(ctx, defaultSevenDays)
 	fatalIf(err.Trace(targetAlias, objectURL), "Unable to generate share url.")
 
 	return shareURL

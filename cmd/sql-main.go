@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -308,7 +309,7 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if r, metadata, err = getSourceStreamMetadataFromURL(sourceURL, encKeyDB); err != nil {
+		if r, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, encKeyDB); err != nil {
 			return nil, err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]
@@ -381,6 +382,9 @@ func isCSVOrJSON(inOpts map[string]map[string]string) bool {
 }
 
 func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair, selOpts SelectObjectOpts, csvHdrs []string, writeHdr bool) *probe.Error {
+	ctx, cancelSelect := context.WithCancel(globalContext)
+	defer cancelSelect()
+
 	alias, _, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -392,7 +396,7 @@ func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair
 	}
 
 	sseKey := getSSE(targetURL, encKeyDB[alias])
-	outputer, err := targetClnt.Select(expression, sseKey, selOpts)
+	outputer, err := targetClnt.Select(ctx, expression, sseKey, selOpts)
 	if err != nil {
 		return err.Trace(targetURL, expression)
 	}
@@ -464,7 +468,7 @@ func mainSQL(ctx *cli.Context) error {
 			continue
 		}
 
-		for content := range clnt.List(ctx.Bool("recursive"), false, false, DirNone) {
+		for content := range clnt.List(globalContext, ctx.Bool("recursive"), false, false, DirNone) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue

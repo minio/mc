@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -197,8 +198,11 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 }
 
 func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+	ctx, cancelRemoveSingle := context.WithCancel(globalContext)
+	defer cancelRemoveSingle()
+
 	isRecursive := false
-	contents, pErr := statURL(url, isIncomplete, isRecursive, encKeyDB)
+	contents, pErr := statURL(ctx, url, isIncomplete, isRecursive, encKeyDB)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
@@ -243,7 +247,7 @@ func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olde
 		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
 		isRemoveBucket := false
-		errorCh := clnt.Remove(isIncomplete, isRemoveBucket, isBypass, contentCh)
+		errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
@@ -260,6 +264,9 @@ func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olde
 }
 
 func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+	ctx, cancelRemoveRecursive := context.WithCancel(globalContext)
+	defer cancelRemoveRecursive()
+
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -269,10 +276,10 @@ func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan,
 	contentCh := make(chan *ClientContent)
 	isRemoveBucket := false
 
-	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, isBypass, contentCh)
+	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
 
 	isRecursive := true
-	for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
+	for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
 			switch content.Err.ToGoError().(type) {

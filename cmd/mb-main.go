@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -103,28 +105,28 @@ func (s makeBucketMessage) JSON() string {
 }
 
 // Validate command line arguments.
-func checkMakeBucketSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
+func checkMakeBucketSyntax(cliCtx *cli.Context) {
+	if !cliCtx.Args().Present() {
+		cli.ShowCommandHelpAndExit(cliCtx, "mb", 1) // last argument is exit code
 	}
 }
 
 // mainMakeBucket is entry point for mb command.
-func mainMakeBucket(ctx *cli.Context) error {
+func mainMakeBucket(cli *cli.Context) error {
 
 	// check 'mb' cli arguments.
-	checkMakeBucketSyntax(ctx)
+	checkMakeBucketSyntax(cli)
 
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
 
 	// Save region.
-	region := ctx.String("region")
-	ignoreExisting := ctx.Bool("p")
-	withLock := ctx.Bool("l")
+	region := cli.String("region")
+	ignoreExisting := cli.Bool("p")
+	withLock := cli.Bool("l")
 
 	var cErr error
-	for _, targetURL := range ctx.Args() {
+	for _, targetURL := range cli.Args() {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
@@ -133,8 +135,11 @@ func mainMakeBucket(ctx *cli.Context) error {
 			continue
 		}
 
+		ctx, cancelMakeBucket := context.WithCancel(globalContext)
+		defer cancelMakeBucket()
+
 		// Make bucket.
-		err = clnt.MakeBucket(region, ignoreExisting, withLock)
+		err = clnt.MakeBucket(ctx, region, ignoreExisting, withLock)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:

@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -129,30 +131,33 @@ func checkILMAddSyntax(ctx *cli.Context) {
 }
 
 // Calls SetBucketLifecycle with the XML representation of lifecycleConfiguration type.
-func mainILMAdd(ctx *cli.Context) error {
-	checkILMAddSyntax(ctx)
+func mainILMAdd(cliCtx *cli.Context) error {
+	ctx, cancelILMAdd := context.WithCancel(globalContext)
+	defer cancelILMAdd()
+
+	checkILMAddSyntax(cliCtx)
 	setILMDisplayColorScheme()
-	args := ctx.Args()
+	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
 
 	// Configuration that is already set.
-	lfcCfg, err := client.GetLifecycle()
+	lfcCfg, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(args...), "Unable to fetch lifecycle rules for "+urlStr)
 
 	// Configuration that needs to be set is returned by ilm.GetILMConfigToSet.
 	// A new rule is added or the rule (if existing) is replaced
-	lfcCfg, err = ilm.ApplyNewILMConfig(ctx, lfcCfg)
+	lfcCfg, err = ilm.ApplyNewILMConfig(cliCtx, lfcCfg)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecyle rules for the input")
 
-	fatalIf(client.SetLifecycle(lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")
 
 	printMsg(ilmAddMessage{
 		Status: "success",
 		Target: urlStr,
-		ID:     ctx.String("id"),
+		ID:     cliCtx.String("id"),
 	})
 
 	return nil

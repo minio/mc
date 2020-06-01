@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -112,33 +114,36 @@ func checkILMRemoveSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainILMRemove(ctx *cli.Context) error {
-	checkILMRemoveSyntax(ctx)
+func mainILMRemove(cliCtx *cli.Context) error {
+	ctx, cancelILMImport := context.WithCancel(globalContext)
+	defer cancelILMImport()
+
+	checkILMRemoveSyntax(cliCtx)
 	setILMDisplayColorScheme()
-	args := ctx.Args()
+	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(args...), "Unable to initialize client for "+urlStr+".")
 
-	ilmCfg, err := client.GetLifecycle()
+	ilmCfg, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(urlStr), "Unable to fetch lifecycle rules")
 
-	ilmAll := ctx.Bool("all")
-	ilmForce := ctx.Bool("force")
+	ilmAll := cliCtx.Bool("all")
+	ilmForce := cliCtx.Bool("force")
 
 	if ilmAll && ilmForce {
 		ilmCfg.Rules = nil // Remove all rules
 	} else {
-		ilmCfg, err = ilm.RemoveILMRule(ilmCfg, ctx.String("id"))
-		fatalIf(err.Trace(urlStr, ctx.String("id")), "Unable to remove rule by id")
+		ilmCfg, err = ilm.RemoveILMRule(ilmCfg, cliCtx.String("id"))
+		fatalIf(err.Trace(urlStr, cliCtx.String("id")), "Unable to remove rule by id")
 	}
 
-	fatalIf(client.SetLifecycle(ilmCfg).Trace(urlStr), "Unable to set lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, ilmCfg).Trace(urlStr), "Unable to set lifecycle rules")
 
 	printMsg(ilmRmMessage{
 		Status: "success",
-		ID:     ctx.String("id"),
+		ID:     cliCtx.String("id"),
 		All:    ilmAll,
 		Target: urlStr,
 	})

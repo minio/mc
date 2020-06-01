@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -207,7 +208,7 @@ type findContext struct {
 }
 
 // mainFind - handler for mc find commands
-func mainFind(ctx *cli.Context) error {
+func mainFind(ctxCtx context.Context, ctx *cli.Context) error {
 	// Additional command specific theme customization.
 	console.SetColor("Find", color.New(color.FgGreen, color.Bold))
 	console.SetColor("FindExecErr", color.New(color.FgRed, color.Italic, color.Bold))
@@ -260,7 +261,7 @@ func mainFind(ctx *cli.Context) error {
 		targetFullURL = hostCfg.URL
 	}
 
-	return doFind(&findContext{
+	return doFind(ctxCtx, &findContext{
 		Context:       ctx,
 		maxDepth:      ctx.Uint("maxdepth"),
 		execCmd:       ctx.String("exec"),

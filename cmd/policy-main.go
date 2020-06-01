@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/url"
 	"os"
@@ -253,20 +254,20 @@ func accessPermToString(perm accessPerms) string {
 }
 
 // doSetAccess do set access.
-func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
+func doSetAccess(ctx context.Context, targetURL string, targetPERMS accessPerms) *probe.Error {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
 	policy := accessPermToString(targetPERMS)
-	if err = clnt.SetAccess(policy, false); err != nil {
+	if err = clnt.SetAccess(ctx, policy, false); err != nil {
 		return err.Trace(targetURL, string(targetPERMS))
 	}
 	return nil
 }
 
 // doSetAccessJSON do set access JSON.
-func doSetAccessJSON(targetURL string, targetPERMS accessPerms) *probe.Error {
+func doSetAccessJSON(ctx context.Context, targetURL string, targetPERMS accessPerms) *probe.Error {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -289,7 +290,7 @@ func doSetAccessJSON(targetURL string, targetPERMS accessPerms) *probe.Error {
 	}
 
 	configBytes := configBuf[:n]
-	if err = clnt.SetAccess(string(configBytes), true); err != nil {
+	if err = clnt.SetAccess(ctx, string(configBytes), true); err != nil {
 		return err.Trace(targetURL, string(targetPERMS))
 	}
 	return nil
@@ -314,12 +315,12 @@ func stringToAccessPerm(perm string) accessPerms {
 }
 
 // doGetAccess do get access.
-func doGetAccess(targetURL string) (perms accessPerms, policyStr string, err *probe.Error) {
+func doGetAccess(ctx context.Context, targetURL string) (perms accessPerms, policyStr string, err *probe.Error) {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return "", "", err.Trace(targetURL)
 	}
-	perm, policyJSON, err := clnt.GetAccess()
+	perm, policyJSON, err := clnt.GetAccess(ctx)
 	if err != nil {
 		return "", "", err.Trace(targetURL)
 	}
@@ -327,18 +328,21 @@ func doGetAccess(targetURL string) (perms accessPerms, policyStr string, err *pr
 }
 
 // doGetAccessRules do get access rules.
-func doGetAccessRules(targetURL string) (r map[string]string, err *probe.Error) {
+func doGetAccessRules(ctx context.Context, targetURL string) (r map[string]string, err *probe.Error) {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return map[string]string{}, err.Trace(targetURL)
 	}
-	return clnt.GetAccessRules()
+	return clnt.GetAccessRules(ctx)
 }
 
 // Run policy list command
 func runPolicyListCmd(args cli.Args) {
+	ctx, cancelPolicyList := context.WithCancel(globalContext)
+	defer cancelPolicyList()
+
 	targetURL := args.First()
-	policies, err := doGetAccessRules(targetURL)
+	policies, err := doGetAccessRules(ctx, targetURL)
 	if err != nil {
 		switch err.ToGoError().(type) {
 		case APINotImplemented:
@@ -354,11 +358,14 @@ func runPolicyListCmd(args cli.Args) {
 
 // Run policy links command
 func runPolicyLinksCmd(args cli.Args, recursive bool) {
+	ctx, cancelPolicyLinks := context.WithCancel(globalContext)
+	defer cancelPolicyLinks()
+
 	// Get alias/bucket/prefix argument
 	targetURL := args.First()
 
 	// Fetch all policies associated to the passed url
-	policies, err := doGetAccessRules(targetURL)
+	policies, err := doGetAccessRules(ctx, targetURL)
 	if err != nil {
 		switch err.ToGoError().(type) {
 		case APINotImplemented:
@@ -394,7 +401,7 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 		clnt, err := newClient(newURL)
 		fatalIf(err.Trace(newURL), "Unable to initialize target `"+targetURL+"`.")
 		// Search for public objects
-		for content := range clnt.List(isRecursive, isIncomplete, false, DirFirst) {
+		for content := range clnt.List(globalContext, isRecursive, isIncomplete, false, DirFirst) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
@@ -422,15 +429,18 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 
 // Run policy cmd to fetch set permission
 func runPolicyCmd(args cli.Args) {
+	ctx, cancelPolicy := context.WithCancel(globalContext)
+	defer cancelPolicy()
+
 	var operation, policyStr string
 	var probeErr *probe.Error
 	perms := accessPerms(args.Get(1))
 	targetURL := args.Get(2)
 	if perms.isValidAccessPERM() {
-		probeErr = doSetAccess(targetURL, perms)
+		probeErr = doSetAccess(ctx, targetURL, perms)
 		operation = "set"
 	} else if perms.isValidAccessFile() {
-		probeErr = doSetAccessJSON(targetURL, perms)
+		probeErr = doSetAccessJSON(ctx, targetURL, perms)
 		operation = "set-json"
 	} else {
 		targetURL = args.Get(1)
@@ -438,7 +448,7 @@ func runPolicyCmd(args cli.Args) {
 		if args.First() == "get-json" {
 			operation = "get-json"
 		}
-		perms, policyStr, probeErr = doGetAccess(targetURL)
+		perms, policyStr, probeErr = doGetAccess(ctx, targetURL)
 
 	}
 	// Upon error exit.
