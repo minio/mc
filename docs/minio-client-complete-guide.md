@@ -1226,7 +1226,7 @@ USAGE:
   mc policy [FLAGS] set-json FILE TARGET
   mc policy [FLAGS] get TARGET
   mc policy [FLAGS] get-json TARGET
-  mc policy list [FLAGS] TARGET
+  mc policy [FLAGS] list TARGET
 
 PERMISSION:
   Allowed policies are: [none, download, upload, public].

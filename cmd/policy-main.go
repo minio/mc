@@ -51,11 +51,11 @@ var policyCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} set [FLAGS] PERMISSION TARGET
-  {{.HelpName}} set-json [FLAGS] FILE TARGET
-  {{.HelpName}} get [FLAGS] TARGET
-  {{.HelpName}} get-json [FLAGS] TARGET
-  {{.HelpName}} list [FLAGS] TARGET
+  {{.HelpName}} [FLAGS] set PERMISSION TARGET
+  {{.HelpName}} [FLAGS] set-json FILE TARGET
+  {{.HelpName}} [FLAGS] get TARGET
+  {{.HelpName}} [FLAGS] get-json TARGET
+  {{.HelpName}} [FLAGS] list TARGET
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
