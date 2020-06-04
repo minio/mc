@@ -177,7 +177,7 @@ func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bo
 			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
-		_, stat, err := url2Stat(url, true, encKeyDB)
+		_, stat, err := url2Stat(ctx, url, true, encKeyDB)
 		if err != nil {
 			stat = content
 		}

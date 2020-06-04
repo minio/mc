@@ -149,20 +149,20 @@ func (r rmMessage) JSON() string {
 }
 
 // Validate command line arguments.
-func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	// Set command flags from context.
-	isForce := ctx.Bool("force")
-	isRecursive := ctx.Bool("recursive")
-	isStdin := ctx.Bool("stdin")
-	isDangerous := ctx.Bool("dangerous")
+	isForce := cliCtx.Bool("force")
+	isRecursive := cliCtx.Bool("recursive")
+	isStdin := cliCtx.Bool("stdin")
+	isDangerous := cliCtx.Bool("dangerous")
 	isNamespaceRemoval := false
 
-	for _, url := range ctx.Args() {
+	for _, url := range cliCtx.Args() {
 		// clean path for aliases like s3/.
 		// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 		url = filepath.ToSlash(filepath.Clean(url))
 		// namespace removal applies only for non FS. So filter out if passed url represents a directory
-		dir := isAliasURLDir(url, encKeyDB)
+		dir := isAliasURLDir(ctx, url, encKeyDB)
 		if !dir {
 			_, path := url2Alias(url)
 			isNamespaceRemoval = (path == "")
@@ -177,9 +177,9 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 				"Removal requires --recursive flag. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 		}
 	}
-	if !ctx.Args().Present() && !isStdin {
+	if !cliCtx.Args().Present() && !isStdin {
 		exitCode := 1
-		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
+		cli.ShowCommandHelpAndExit(cliCtx, "rm", exitCode)
 	}
 
 	// For all recursive operations make sure to check for 'force' flag.
@@ -347,23 +347,26 @@ func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan,
 }
 
 // main for rm command.
-func mainRm(ctx *cli.Context) error {
+func mainRm(cliCtx *cli.Context) error {
+	ctx, cancelRm := context.WithCancel(globalContext)
+	defer cancelRm()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'rm' cli arguments.
-	checkRmSyntax(ctx, encKeyDB)
+	checkRmSyntax(ctx, cliCtx, encKeyDB)
 
 	// rm specific flags.
-	isIncomplete := ctx.Bool("incomplete")
-	isRecursive := ctx.Bool("recursive")
-	isFake := ctx.Bool("fake")
-	isStdin := ctx.Bool("stdin")
-	isBypass := ctx.Bool(bypass)
-	olderThan := ctx.String("older-than")
-	newerThan := ctx.String("newer-than")
-	isForce := ctx.Bool("force")
+	isIncomplete := cliCtx.Bool("incomplete")
+	isRecursive := cliCtx.Bool("recursive")
+	isFake := cliCtx.Bool("fake")
+	isStdin := cliCtx.Bool("stdin")
+	isBypass := cliCtx.Bool(bypass)
+	olderThan := cliCtx.String("older-than")
+	newerThan := cliCtx.String("newer-than")
+	isForce := cliCtx.Bool("force")
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
@@ -371,7 +374,7 @@ func mainRm(ctx *cli.Context) error {
 	var rerr error
 	var e error
 	// Support multiple targets.
-	for _, url := range ctx.Args() {
+	for _, url := range cliCtx.Args() {
 		if isRecursive {
 			e = removeRecursive(url, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {

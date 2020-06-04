@@ -106,11 +106,11 @@ EXAMPLES:
 }
 
 // checkTreeSyntax - validate all the passed arguments
-func checkTreeSyntax(ctx *cli.Context) {
-	args := ctx.Args()
+func checkTreeSyntax(ctx context.Context, cliCtx *cli.Context) {
+	args := cliCtx.Args()
 
-	if ctx.IsSet("depth") {
-		if ctx.Int("depth") < -1 || ctx.Int("depth") == 0 {
+	if cliCtx.IsSet("depth") {
+		if cliCtx.Int("depth") < -1 || cliCtx.Int("depth") == 0 {
 			fatalIf(errInvalidArgument().Trace(args...), "please set a proper depth, for example: '--depth 1' to limit the tree output, default (-1) output displays everything")
 		}
 	}
@@ -120,7 +120,7 @@ func checkTreeSyntax(ctx *cli.Context) {
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(url, false, nil); err != nil && !isURLPrefixExists(url, false) {
+		if _, _, err := url2Stat(ctx, url, false, nil); err != nil && !isURLPrefixExists(url, false) {
 			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 		}
 	}
@@ -246,25 +246,24 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 }
 
 // mainTree - is a handler for mc tree command
-func mainTree(cli *cli.Context) error {
+func mainTree(cliCtx *cli.Context) error {
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
 
-	// check 'tree' cli arguments.
-	checkTreeSyntax(cli)
+	// check 'tree' cliCtx arguments.
+	checkTreeSyntax(ctx, cliCtx)
 
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 
-	args := cli.Args()
+	args := cliCtx.Args()
 	// mimic operating system tool behavior.
-	if !cli.Args().Present() {
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
 
-	includeFiles := cli.Bool("files")
-	depth := cli.Int("depth")
-
-	ctx, cancelList := context.WithCancel(globalContext)
-	defer cancelList()
+	includeFiles := cliCtx.Bool("files")
+	depth := cliCtx.Int("depth")
 
 	var cErr error
 	for _, targetURL := range args {

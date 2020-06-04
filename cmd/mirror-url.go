@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"strings"
@@ -31,19 +32,19 @@ import (
 //   mirror(d1..., d2) -> []mirror(d1/f, d2/d1/f)
 
 // checkMirrorSyntax(URLs []string)
-func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
-	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "mirror", 1) // last argument is exit code.
+func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+	if len(cliCtx.Args()) != 2 {
+		cli.ShowCommandHelpAndExit(cliCtx, "mirror", 1) // last argument is exit code.
 	}
 
 	// extract URLs.
-	URLs := ctx.Args()
+	URLs := cliCtx.Args()
 	srcURL := URLs[0]
 	tgtURL := URLs[1]
 
-	if ctx.Bool("force") && ctx.Bool("remove") {
+	if cliCtx.Bool("force") && cliCtx.Bool("remove") {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead with `--remove` for the same functionality.")
-	} else if ctx.Bool("force") {
+	} else if cliCtx.Bool("force") {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead for the same functionality.")
 	}
 
@@ -62,15 +63,15 @@ func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 
 	// Mirror with preserve option on windows
 	// only works for object storage to object storage
-	if runtime.GOOS == "windows" && ctx.Bool("a") {
+	if runtime.GOOS == "windows" && cliCtx.Bool("a") {
 		if srcClient.Type == fileSystem || destClient.Type == fileSystem {
 			errorIf(errInvalidArgument(), "Preserve functionality on windows support object storage to object storage transfer only.")
 		}
 	}
 
 	/****** Generic rules *******/
-	if !ctx.Bool("watch") {
-		_, srcContent, err := url2Stat(srcURL, false, encKeyDB)
+	if !cliCtx.Bool("watch") {
+		_, srcContent, err := url2Stat(ctx, srcURL, false, encKeyDB)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {

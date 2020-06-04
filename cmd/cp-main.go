@@ -631,7 +631,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(cliCtx, encKeyDB, false)
+	checkCopySyntax(ctx, cliCtx, encKeyDB, false)
 
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))

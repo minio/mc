@@ -74,23 +74,23 @@ EXAMPLES:
 }
 
 // checkStatSyntax - validate all the passed arguments
-func checkStatSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
-	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "stat", 1) // last argument is exit code
+func checkStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+	if !cliCtx.Args().Present() {
+		cli.ShowCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
 	}
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
 		}
 	}
 	// extract URLs.
-	URLs := ctx.Args()
+	URLs := cliCtx.Args()
 	isIncomplete := false
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, encKeyDB)
+		_, _, err := url2Stat(ctx, url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
@@ -114,7 +114,7 @@ func mainStat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'stat' cli arguments.
-	checkStatSyntax(cliCtx, encKeyDB)
+	checkStatSyntax(ctx, cliCtx, encKeyDB)
 
 	// Set command flags from context.
 	isRecursive := cliCtx.Bool("recursive")

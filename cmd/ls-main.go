@@ -77,9 +77,9 @@ EXAMPLES:
 }
 
 // checkListSyntax - validate all the passed arguments
-func checkListSyntax(ctx *cli.Context) {
-	args := ctx.Args()
-	if !ctx.Args().Present() {
+func checkListSyntax(ctx context.Context, cliCtx *cli.Context) {
+	args := cliCtx.Args()
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
 	for _, arg := range args {
@@ -88,11 +88,11 @@ func checkListSyntax(ctx *cli.Context) {
 		}
 	}
 	// extract URLs.
-	URLs := ctx.Args()
-	isIncomplete := ctx.Bool("incomplete")
+	URLs := cliCtx.Args()
+	isIncomplete := cliCtx.Bool("incomplete")
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, nil)
+		_, _, err := url2Stat(ctx, url, false, nil)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
@@ -107,28 +107,28 @@ func checkListSyntax(ctx *cli.Context) {
 }
 
 // mainList - is a handler for mc ls command
-func mainList(cli *cli.Context) error {
+func mainList(cliCtx *cli.Context) error {
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
+
 	// Additional command specific theme customization.
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
 
-	// check 'ls' cli arguments.
-	checkListSyntax(cli)
+	// check 'ls' cliCtx arguments.
+	checkListSyntax(ctx, cliCtx)
 
 	// Set command flags from context.
-	isRecursive := cli.Bool("recursive")
-	isIncomplete := cli.Bool("incomplete")
+	isRecursive := cliCtx.Bool("recursive")
+	isIncomplete := cliCtx.Bool("incomplete")
 
-	args := cli.Args()
+	args := cliCtx.Args()
 	// mimic operating system tool behavior.
-	if !cli.Args().Present() {
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
-
-	ctx, cancelList := context.WithCancel(globalContext)
-	defer cancelList()
 
 	var cErr error
 	for _, targetURL := range args {

@@ -784,13 +784,13 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 		cli.Bool("fake"),
 		cli.Bool("remove"),
 		isOverwrite,
-		ctx.Bool("watch"),
-		ctx.Bool("a"),
-		ctx.Bool("multi-master") || ctx.Bool("active-active"),
-		ctx.StringSlice("exclude"),
-		ctx.String("older-than"),
-		ctx.String("newer-than"),
-		ctx.String("storage-class"),
+		cli.Bool("watch"),
+		cli.Bool("a"),
+		cli.Bool("multi-master") || cli.Bool("active-active"),
+		cli.StringSlice("exclude"),
+		cli.String("older-than"),
+		cli.String("newer-than"),
+		cli.String("storage-class"),
 		userMetaMap,
 		encKeyDB,
 		cli.Bool("md5"),
@@ -869,7 +869,7 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 		// Create bucket if it doesn't exist at destination.
 		// ignore if already exists.
 		if mj.activeActive {
-			err = dstClt.MakeBucket(ctx, ctx.String("region"), true, withLock)
+			err = dstClt.MakeBucket(ctx, cli.String("region"), true, withLock)
 			errorIf(err, "Unable to create bucket at `"+dstURL+"`.")
 			if err != nil {
 				return true
@@ -912,18 +912,21 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 }
 
 // Main entry point for mirror command.
-func mainMirror(ctx *cli.Context) error {
+func mainMirror(cliCtx *cli.Context) error {
+	ctx, cancelMirror := context.WithCancel(globalContext)
+	defer cancelMirror()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'mirror' cli arguments.
-	checkMirrorSyntax(ctx, encKeyDB)
+	checkMirrorSyntax(ctx, cliCtx, encKeyDB)
 
 	// Additional command specific theme customization.
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 
 	srcURL := args[0]
 	tgtURL := args[1]
@@ -937,14 +940,14 @@ func mainMirror(ctx *cli.Context) error {
 		}
 	}
 
-	if ctx.Bool("multi-master") || ctx.Bool("active-active") {
+	if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
 		for {
-			runMirror(srcURL, tgtURL, ctx, encKeyDB)
+			runMirror(srcURL, tgtURL, cliCtx, encKeyDB)
 			time.Sleep(time.Second * 2)
 		}
 	}
 
-	if errorDetected := runMirror(srcURL, tgtURL, ctx, encKeyDB); errorDetected {
+	if errorDetected := runMirror(srcURL, tgtURL, cliCtx, encKeyDB); errorDetected {
 		return exitStatus(globalErrorExitStatus)
 	}
 

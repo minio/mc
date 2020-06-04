@@ -93,17 +93,17 @@ func (s removeBucketMessage) JSON() string {
 }
 
 // Validate command line arguments.
-func checkRbSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
+func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
+	if !cliCtx.Args().Present() {
 		exitCode := 1
-		cli.ShowCommandHelpAndExit(ctx, "rb", exitCode)
+		cli.ShowCommandHelpAndExit(cliCtx, "rb", exitCode)
 	}
 	// Set command flags from context.
-	isForce := ctx.Bool("force")
-	isDangerous := ctx.Bool("dangerous")
+	isForce := cliCtx.Bool("force")
+	isDangerous := cliCtx.Bool("dangerous")
 
-	for _, url := range ctx.Args() {
-		if isNamespaceRemoval(url) {
+	for _, url := range cliCtx.Args() {
+		if isNamespaceRemoval(ctx, url) {
 			if isForce && isDangerous {
 				continue
 			}
@@ -172,12 +172,12 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 
 // isNamespaceRemoval returns true if alias
 // is not qualified by bucket
-func isNamespaceRemoval(url string) bool {
+func isNamespaceRemoval(ctx context.Context, url string) bool {
 	// clean path for aliases like s3/.
 	//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 	url = filepath.ToSlash(filepath.Clean(url))
 	// namespace removal applies only for non FS. So filter out if passed url represents a directory
-	if !isAliasURLDir(url, nil) {
+	if !isAliasURLDir(ctx, url, nil) {
 		_, path := url2Alias(url)
 		return (path == "")
 	}
@@ -190,7 +190,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 	defer cancelRemoveBucket()
 
 	// check 'rb' cli arguments.
-	checkRbSyntax(cliCtx)
+	checkRbSyntax(ctx, cliCtx)
 	isForce := cliCtx.Bool("force")
 
 	// Additional command specific theme customization.
@@ -230,7 +230,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		e := deleteBucket(ctx, targetURL)
 		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
 
-		if !isNamespaceRemoval(targetURL) {
+		if !isNamespaceRemoval(ctx, targetURL) {
 			printMsg(removeBucketMessage{
 				Bucket: targetURL, Status: "success",
 			})
