@@ -185,8 +185,7 @@ func mainAdminConsole(ctx *cli.Context) error {
 			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "please set a proper limit, for example: '--limit 5' to display last 5 logs, omit this flag to display all available logs")
 		}
 	}
-	var logType string
-	logType = strings.ToLower(ctx.String("type"))
+	logType := strings.ToLower(ctx.String("type"))
 	if logType != "minio" && logType != "application" && logType != "all" {
 		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Invalid value for --type flag. Valid options are [minio, application, all]")
 	}

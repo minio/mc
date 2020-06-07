@@ -18,18 +18,12 @@ checks:
 
 getdeps:
 	@mkdir -p ${GOPATH}/bin
-	@which golint 1>/dev/null || (echo "Installing golint" && GO111MODULE=off go get -u golang.org/x/lint/golint)
-ifeq ($(GOARCH),s390x)
-	@which staticcheck 1>/dev/null || (echo "Installing staticcheck" && GO111MODULE=off go get honnef.co/go/tools/cmd/staticcheck)
-else
-	@which staticcheck 1>/dev/null || (echo "Installing staticcheck" && wget --quiet https://github.com/dominikh/go-tools/releases/download/2019.2.3/staticcheck_${GOOS}_${GOARCH}.tar.gz && tar xf staticcheck_${GOOS}_${GOARCH}.tar.gz && mv staticcheck/staticcheck ${GOPATH}/bin/staticcheck && chmod +x ${GOPATH}/bin/staticcheck && rm -f staticcheck_${GOOS}_${GOARCH}.tar.gz && rm -rf staticcheck)
-endif
-	@which misspell 1>/dev/null || (echo "Installing misspell" && GO111MODULE=off go get -u github.com/client9/misspell/cmd/misspell)
+	@which golangci-lint 1>/dev/null || (echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.27.0)
 
 crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)
 
-verifiers: getdeps vet fmt lint staticcheck spelling
+verifiers: getdeps vet fmt lint
 
 docker: build
 	@docker build -t $(TAG) . -f Dockerfile.dev
@@ -44,19 +38,9 @@ fmt:
 	@GO111MODULE=on gofmt -d pkg/
 
 lint:
-	@echo "Running $@"
-	@GO111MODULE=on ${GOPATH}/bin/golint -set_exit_status github.com/minio/mc/cmd/...
-	@GO111MODULE=on ${GOPATH}/bin/golint -set_exit_status github.com/minio/mc/pkg/...
-
-staticcheck:
-	@echo "Running $@"
-	@GO111MODULE=on ${GOPATH}/bin/staticcheck github.com/minio/mc/cmd/...
-	@GO111MODULE=on ${GOPATH}/bin/staticcheck github.com/minio/mc/pkg/...
-
-spelling:
-	@GO111MODULE=on ${GOPATH}/bin/misspell -locale US -error `find cmd/`
-	@GO111MODULE=on ${GOPATH}/bin/misspell -locale US -error `find pkg/`
-	@GO111MODULE=on ${GOPATH}/bin/misspell -locale US -error `find docs/`
+	@echo "Running $@ check"
+	@GO111MODULE=on ${GOPATH}/bin/golangci-lint cache clean
+	@GO111MODULE=on ${GOPATH}/bin/golangci-lint run --timeout=5m --config ./.golangci.yml
 
 # Builds mc, runs the verifiers then runs the tests.
 check: test
@@ -66,9 +50,16 @@ test: verifiers build
 	@echo "Running functional tests"
 	@(env bash $(PWD)/functional-tests.sh)
 
-coverage: build
-	@echo "Running all coverage for MinIO"
-	@(env bash $(PWD)/buildscripts/go-coverage.sh)
+test-race: verifiers build
+	@echo "Running unit tests under -race"
+	@GO111MODULE=on go test -race -v --timeout 20m ./... 1>/dev/null
+
+# Verify mc binary
+verify:
+	@echo "Verifying build with race"
+	@GO111MODULE=on CGO_ENABLED=1 go build -race -tags kqueue -trimpath --ldflags "$(LDFLAGS)" -o $(PWD)/mc 1>/dev/null
+	@echo "Running functional tests"
+	@(env bash $(PWD)/functional-tests.sh)
 
 # Builds mc locally.
 build: checks

@@ -1,5 +1,5 @@
 /*
- * MinIO Cloud Storage, (C) 2015 MinIO, Inc.
+ * MinIO Cloud Storage, (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ func (e *Error) trace(fields ...string) *Error {
 	function := runtime.FuncForPC(pc).Name()
 	_, function = filepath.Split(function)
 	file = strings.TrimPrefix(file, rootPath+string(os.PathSeparator)) // trims project's root path.
-	tp := TracePoint{}
+	var tp TracePoint
 	if len(fields) > 0 {
 		tp = TracePoint{Line: line, Filename: file, Function: function, Env: map[string][]string{"Tags": fields}}
 	} else {

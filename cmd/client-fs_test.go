@@ -352,8 +352,7 @@ func (s *TestSuite) TestCopy(c *C) {
 	c.Assert(err, IsNil)
 
 	data := "hello world"
-	var reader io.Reader
-	reader = bytes.NewReader([]byte(data))
+	reader := bytes.NewReader([]byte(data))
 	n, err := fsClientSource.Put(context.Background(), reader, int64(len(data)), map[string]string{
 		"Content-Type": "application/octet-stream",
 	}, nil, nil, false, false)
