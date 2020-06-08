@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -58,7 +57,7 @@ const (
 var ( // GOOS specific ignore list.
 	ignoreFiles = map[string][]string{
 		"darwin":  {"*.DS_Store"},
-		"default": {""},
+		"default": {"lost+found"},
 	}
 )
 
@@ -223,20 +222,6 @@ func (f *fsClient) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
 	}, nil
 }
 
-func isStreamFile(objectPath string) bool {
-	switch objectPath {
-	case os.DevNull:
-		fallthrough
-	case os.Stdin.Name():
-		fallthrough
-	case os.Stdout.Name():
-		fallthrough
-	case os.Stderr.Name():
-		return true
-	}
-	return false
-}
-
 func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 	mode, e := strconv.ParseUint(attr["mode"], 10, 32)
 	if e != nil {
@@ -290,23 +275,14 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 
 	objectPath := f.PathURL.Path
 
-	_, seeker := reader.(io.Seeker)
-	avoidResumeUpload := isStreamFile(objectPath) || isStdIO(reader) || !seeker || size < 0
-
 	// Write to a temporary file "object.part.minio" before commit.
 	objectPartPath := objectPath + partSuffix
 
-	if avoidResumeUpload {
-		// We cannot resume this operation, then we
-		// should remove any partial download if any.
-		e := os.Remove(objectPartPath)
-		if e != nil && !os.IsNotExist(e) {
-			err := f.toClientError(e, f.PathURL.Path)
-			return 0, err.Trace(f.PathURL.Path)
-		}
-	}
+	// We cannot resume this operation, then we
+	// should remove any partial download if any.
+	defer os.Remove(objectPartPath)
 
-	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0666)
+	tmpFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0666)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
@@ -316,57 +292,34 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	if len(metadata[metaDataKey]) != 0 {
 		attr, e = parseAttribute(metadata[metaDataKey][0])
 		if e != nil {
+			tmpFile.Close()
 			return 0, probe.NewError(e)
 		}
-		if err := preserveAttributes(partFile, attr); err != nil {
+		if err := preserveAttributes(tmpFile, attr); err != nil {
+			tmpFile.Close()
 			return 0, err.Trace(objectPath)
 		}
 	}
 
-	// Get stat to get the current size.
-	partSt, e := os.Stat(objectPartPath)
+	totalWritten, e := io.Copy(tmpFile, hookreader.NewHook(reader, progress))
 	if e != nil {
-		err := f.toClientError(e, objectPartPath)
-		return 0, err.Trace(objectPartPath)
-	}
-
-	var totalWritten int64
-	// Current file offset.
-	var currentOffset = partSt.Size()
-
-	reader = hookreader.NewHook(reader, progress)
-
-	if !avoidResumeUpload && currentOffset > 0 {
-		// At this stage reader is always a seeker
-		// since it is a hook reader.
-		seeker, _ := reader.(io.Seeker)
-		if _, e = seeker.Seek(currentOffset, 0); e != nil {
-			return 0, probe.NewError(e)
-		}
-		// Discard bytes until currentOffset.
-		if _, e = io.CopyN(ioutil.Discard, progress, currentOffset); e != nil {
-			return 0, probe.NewError(e)
-		}
-	}
-
-	n, e := io.Copy(partFile, reader)
-	if e != nil {
+		tmpFile.Close()
 		return 0, probe.NewError(e)
 	}
-
-	// Save currently copied total into totalWritten.
-	totalWritten = n + currentOffset
 
 	// Close the input reader as well, if possible.
 	closer, ok := reader.(io.Closer)
 	if ok {
 		if e = closer.Close(); e != nil {
+			tmpFile.Close()
 			return totalWritten, probe.NewError(e)
 		}
 	}
 
-	// Close the file before rename.
-	if e = partFile.Close(); e != nil {
+	// Close the file before renaming, we need to do this
+	// specifically for windows users - windows explicitly
+	// disallows renames on Open() fd's by default.
+	if e = tmpFile.Close(); e != nil {
 		return totalWritten, probe.NewError(e)
 	}
 

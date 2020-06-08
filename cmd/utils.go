@@ -19,7 +19,6 @@ package cmd
 import (
 	"crypto/tls"
 	"errors"
-	"io"
 	"math/rand"
 	"net"
 	"os"
@@ -111,11 +110,6 @@ func dumpTLSCertificates(t *tls.ConnectionState) {
 		}
 		console.Debugln(" >> Expires: " + cert.NotAfter.String())
 	}
-}
-
-// isStdIO checks if the input parameter is one of the standard input/output streams
-func isStdIO(reader io.Reader) bool {
-	return reader == os.Stdin || reader == os.Stdout || reader == os.Stderr
 }
 
 // splitStr splits a string into n parts, empty strings are added
