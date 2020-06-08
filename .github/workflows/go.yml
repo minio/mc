@@ -30,14 +30,18 @@ jobs:
         if: matrix.os == 'windows-latest'
         env:
           GO111MODULE: on
-        run: go test -v -race ./...
+        run: |
+          go build --ldflags="-s -w" -o %GOPATH%\bin\mc.exe
+          go test -v -race --timeout 30m ./...
       - name: Build on ${{ matrix.os }}
         if: matrix.os == 'ubuntu-latest'
         env:
           GO111MODULE: on
         run: |
+          make
           diff -au <(gofmt -d *.go) <(printf "")
-          diff -au <(gofmt -d cmd) <(printf "")
-          diff -au <(gofmt -d pkg) <(printf "")
-          go test -v -race ./...
-          make test
+          diff -au <(gofmt -s -d cmd) <(printf "")
+          diff -au <(gofmt -s -d pkg) <(printf "")
+          make test-race
+          make verify
+          make crosscompile

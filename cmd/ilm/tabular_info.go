@@ -52,16 +52,12 @@ const (
 	idLabel             string = "ID"
 	prefixLabel         string = "Prefix"
 	statusLabel         string = "Enabled "
-	statusDisabledLabel string = "Disabled"
 	expiryLabel         string = "Expiry"
 	expiryDatesLabel    string = "Date/Days "
-	singleTagLabel      string = "Tag"
 	tagLabel            string = "Tags"
 	transitionLabel     string = "Transition"
 	transitionDateLabel string = "Date/Days "
 	storageClassLabel   string = "Storage-Class "
-	forceLabel          string = "force"
-	allLabel            string = "all"
 )
 
 // Keys to be used in map structure which stores the columns to be displayed.
@@ -70,7 +66,6 @@ const (
 	storageClassLabelKey    string = "Storage-Class"
 	expiryDatesLabelKey     string = "Expiry-Dates"
 	transitionDatesLabelKey string = "Transition-Date"
-	transitionDaysLabelKey  string = "Transition-Days"
 )
 
 // Some cell values
