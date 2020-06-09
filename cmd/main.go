@@ -355,7 +355,7 @@ func registerApp(name string) *cli.App {
 
 	app := cli.NewApp()
 	app.Name = name
-	app.Action = func(ctx *cli.Context) {
+	app.Action = func(ctx *cli.Context) error {
 		if strings.HasPrefix(ReleaseTag, "RELEASE.") {
 			// Check for new updates from dl.min.io.
 			checkUpdate(ctx)
@@ -364,10 +364,11 @@ func registerApp(name string) *cli.App {
 		if ctx.Bool("autocompletion") || ctx.GlobalBool("autocompletion") {
 			// Install shell completions
 			installAutoCompletion()
-			return
+			return nil
 		}
 
 		cli.ShowAppHelp(ctx)
+		return exitStatus(globalErrorExitStatus)
 	}
 
 	app.Before = registerBefore
