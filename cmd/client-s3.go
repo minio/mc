@@ -870,7 +870,9 @@ func (c *S3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 		destOpts.LegalHold = minio.LegalHoldStatus(lh)
 		delete(metadata, AmzObjectLockLegalHold)
 	}
-
+	if _, ok := metadata["X-Amz-Tagging-Count"]; ok {
+		delete(metadata, "X-Amz-Tagging-Count")
+	}
 	// Assign metadata after irrelevant parts are delete above
 	destOpts.UserMeta = metadata
 
@@ -957,7 +959,9 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		lockMode = minio.RetentionMode(strings.ToUpper(lockModeStr))
 		delete(metadata, AmzObjectLockMode)
 	}
-
+	if _, ok := metadata["X-Amz-Tagging-Count"]; ok {
+		delete(metadata, "X-Amz-Tagging-Count")
+	}
 	retainUntilDate := timeSentinel
 	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
 	if ok {
