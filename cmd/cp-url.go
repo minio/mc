@@ -201,7 +201,7 @@ func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent
 				return URLs{Error: probe.NewError(err)}
 			}
 			if fileInfo.IsDir() {
-				sourcePrefix = sourceURL.Path
+				sourcePrefix = filepath.ToSlash(sourceURL.Path)
 			}
 		}
 		newSourceSuffix = strings.TrimPrefix(newSourceSuffix, sourcePrefix)
