@@ -1428,7 +1428,6 @@ func (c *S3Client) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (
 
 // getObjectStat returns the metadata of an object from a HEAD call.
 func (c *S3Client) getObjectStat(bucket, object string, opts minio.StatObjectOptions) (*ClientContent, *probe.Error) {
-	objectMetadata := &ClientContent{}
 	objectStat, e := c.api.StatObject(bucket, object, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -1450,17 +1449,7 @@ func (c *S3Client) getObjectStat(bucket, object string, opts minio.StatObjectOpt
 		}
 		return nil, probe.NewError(e)
 	}
-	objectMetadata.URL = c.targetURL.Clone()
-	objectMetadata.Time = objectStat.LastModified
-	objectMetadata.Size = objectStat.Size
-	objectMetadata.ETag = objectStat.ETag
-	objectMetadata.Expires = objectStat.Expires
-	objectMetadata.Type = os.FileMode(0664)
-	objectMetadata.Metadata = map[string]string{}
-	for k := range objectStat.Metadata {
-		objectMetadata.Metadata[k] = objectStat.Metadata.Get(k)
-	}
-	objectMetadata.ETag = objectStat.ETag
+	objectMetadata := c.objectInfo2ClientContent(bucket, objectStat)
 	return objectMetadata, nil
 }
 
@@ -1836,6 +1825,18 @@ func (c *S3Client) joinPath(bucket string, objects ...string) string {
 }
 
 // Convert objectInfo to ClientContent
+func (c *S3Client) bucketInfo2ClientContent(bucket minio.BucketInfo) *ClientContent {
+	content := &ClientContent{}
+	url := c.targetURL.Clone()
+	url.Path = c.joinPath(bucket.Name)
+	content.URL = url
+	content.Size = 0
+	content.Time = bucket.CreationDate
+	content.Type = os.ModeDir
+	return content
+}
+
+// Convert objectInfo to ClientContent
 func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInfo) *ClientContent {
 	content := &ClientContent{}
 	url := c.targetURL.Clone()
@@ -1953,13 +1954,7 @@ func (c *S3Client) listRecursiveInRoutineDirOpt(contentCh chan *ClientContent, d
 
 	for _, bucket := range buckets {
 		if allBuckets {
-			url := c.targetURL.Clone()
-			url.Path = c.joinPath(bucket.Name)
-			cContent = &ClientContent{
-				URL:  url,
-				Time: bucket.CreationDate,
-				Type: os.ModeDir,
-			}
+			cContent = c.bucketInfo2ClientContent(bucket)
 		}
 		if cContent != nil && dirOpt == DirFirst {
 			contentCh <- cContent
@@ -1987,14 +1982,7 @@ func (c *S3Client) listInRoutine(contentCh chan *ClientContent, metadata bool) {
 			return
 		}
 		for _, bucket := range buckets {
-			url := c.targetURL.Clone()
-			url.Path = c.joinPath(bucket.Name)
-			content := &ClientContent{}
-			content.URL = url
-			content.Size = 0
-			content.Time = bucket.CreationDate
-			content.Type = os.ModeDir
-			contentCh <- content
+			contentCh <- c.bucketInfo2ClientContent(bucket)
 		}
 	case b != "" && !strings.HasSuffix(c.targetURL.Path, string(c.targetURL.Separator)) && o == "":
 		content, err := c.bucketStat(b)
@@ -2058,21 +2046,7 @@ func (c *S3Client) listRecursiveInRoutine(contentCh chan *ClientContent, metadat
 					}
 					return
 				}
-				content := &ClientContent{}
-				objectURL := c.targetURL.Clone()
-				objectURL.Path = c.joinPath(bucket.Name, object.Key)
-				content.URL = objectURL
-				content.StorageClass = object.StorageClass
-				content.Size = object.Size
-				content.ETag = object.ETag
-				content.Time = object.LastModified
-				content.Type = os.FileMode(0664)
-				content.Expires = object.Expires
-				content.UserMetadata = map[string]string{}
-				for k, v := range object.UserMetadata {
-					content.UserMetadata[k] = v
-				}
-				contentCh <- content
+				contentCh <- c.objectInfo2ClientContent(bucket.Name, object)
 			}
 		}
 	default:
@@ -2084,21 +2058,7 @@ func (c *S3Client) listRecursiveInRoutine(contentCh chan *ClientContent, metadat
 				}
 				return
 			}
-			content := &ClientContent{}
-			url := c.targetURL.Clone()
-			// Join bucket and incoming object key.
-			url.Path = c.joinPath(b, object.Key)
-			content.URL = url
-			content.Size = object.Size
-			content.ETag = object.ETag
-			content.Time = object.LastModified
-			content.Type = os.FileMode(0664)
-			content.Expires = object.Expires
-			content.UserMetadata = map[string]string{}
-			for k, v := range object.UserMetadata {
-				content.UserMetadata[k] = v
-			}
-			contentCh <- content
+			contentCh <- c.objectInfo2ClientContent(b, object)
 		}
 	}
 }
