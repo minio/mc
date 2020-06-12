@@ -1434,7 +1434,6 @@ func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 
 // getObjectStat returns the metadata of an object from a HEAD call.
 func (c *S3Client) getObjectStat(ctx context.Context, bucket, object string, opts minio.StatObjectOptions) (*ClientContent, *probe.Error) {
-	objectMetadata := &ClientContent{}
 	objectStat, e := c.api.StatObjectWithContext(ctx, bucket, object, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -1456,7 +1455,7 @@ func (c *S3Client) getObjectStat(ctx context.Context, bucket, object string, opt
 		}
 		return nil, probe.NewError(e)
 	}
-	objectMetadata = c.objectInfo2ClientContent(bucket, objectStat)
+	objectMetadata := c.objectInfo2ClientContent(bucket, objectStat)
 	return objectMetadata, nil
 }
 
