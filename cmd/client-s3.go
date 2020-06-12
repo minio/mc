@@ -87,9 +87,6 @@ var timeSentinel = time.Unix(0, 0).UTC()
 
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
-	ctx, cancelNewFactory := context.WithCancel(globalContext)
-	defer cancelNewFactory()
-
 	clientCache := make(map[uint32]*minio.Client)
 	var mutex sync.Mutex
 
@@ -212,7 +209,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 
 			// Set app info.
-			api.SetAppInfo(ctx, config.AppName, config.AppVersion)
+			api.SetAppInfo(config.AppName, config.AppVersion)
 
 			// Cache the new MinIO Client with hash of config as key.
 			clientCache[confSum] = api
@@ -244,7 +241,7 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 	}
 
 	// Get any enabled notification.
-	mb, e := c.api.GetBucketNotification(ctx, bucket)
+	mb, e := c.api.GetBucketNotificationWithContext(ctx, bucket)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -304,13 +301,13 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 	bucket, _ := c.url2BucketAndObject()
 	// Remove all notification configs if arn is empty
 	if arn == "" {
-		if err := c.api.RemoveAllBucketNotification(ctx, bucket); err != nil {
+		if err := c.api.RemoveAllBucketNotificationWithContext(ctx, bucket); err != nil {
 			return probe.NewError(err)
 		}
 		return nil
 	}
 
-	mb, e := c.api.GetBucketNotification(ctx, bucket)
+	mb, e := c.api.GetBucketNotificationWithContext(ctx, bucket)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -389,7 +386,7 @@ type NotificationConfig struct {
 func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]NotificationConfig, *probe.Error) {
 	var configs []NotificationConfig
 	bucket, _ := c.url2BucketAndObject()
-	mb, e := c.api.GetBucketNotification(ctx, bucket)
+	mb, e := c.api.GetBucketNotificationWithContext(ctx, bucket)
 	if e != nil {
 		return nil, probe.NewError(e)
 	}
@@ -759,7 +756,7 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 	// The list of buckets to watch
 	var buckets []string
 	if bucket == "" {
-		bkts, err := c.api.ListBuckets(ctx)
+		bkts, err := c.api.ListBucketsWithContext(ctx)
 		if err != nil {
 			return nil, probe.NewError(err)
 		}
@@ -783,7 +780,7 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 		go func() {
 			defer wg.Done()
 			// Start listening on all bucket events.
-			eventsCh := c.api.ListenBucketNotification(ctx, bucket, options.Prefix, options.Suffix, events, wo.DoneChan)
+			eventsCh := c.api.ListenBucketNotificationWithContext(ctx, bucket, options.Prefix, options.Suffix, events, wo.DoneChan)
 			for notificationInfo := range eventsCh {
 				if notificationInfo.Err != nil {
 					var perr *probe.Error
@@ -818,7 +815,7 @@ func (c *S3Client) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadClos
 	bucket, object := c.url2BucketAndObject()
 	opts := minio.GetObjectOptions{}
 	opts.ServerSideEncryption = sse
-	reader, e := c.api.GetObject(ctx, bucket, object, opts)
+	reader, e := c.api.GetObjectWithContext(ctx, bucket, object, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -884,9 +881,9 @@ func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress
 	}
 
 	if disableMultipart {
-		e = c.api.CopyObjectWithProgress(ctx, dst, src, progress)
+		e = c.api.CopyObjectWithProgressWithContext(ctx, dst, src, progress)
 	} else {
-		e = c.api.ComposeObjectWithProgress(ctx, dst, []minio.SourceInfo{src}, progress)
+		e = c.api.ComposeObjectWithProgressWithContext(ctx, dst, []minio.SourceInfo{src}, progress)
 	}
 
 	if e != nil {
@@ -1046,7 +1043,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 }
 
 // Remove incomplete uploads.
-func (c *S3Client) removeIncompleteObjects(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
+func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
 	removeObjectErrorCh := make(chan minio.RemoveObjectError)
 
 	// Goroutine reads from objectsCh and sends error to removeObjectErrorCh if any.
@@ -1054,7 +1051,7 @@ func (c *S3Client) removeIncompleteObjects(bucket string, objectsCh <-chan strin
 		defer close(removeObjectErrorCh)
 
 		for object := range objectsCh {
-			if err := c.api.RemoveIncompleteUpload(bucket, object); err != nil {
+			if err := c.api.RemoveIncompleteUploadWithContext(ctx, bucket, object); err != nil {
 				removeObjectErrorCh <- minio.RemoveObjectError{ObjectName: object, Err: err}
 			}
 		}
@@ -1064,8 +1061,8 @@ func (c *S3Client) removeIncompleteObjects(bucket string, objectsCh <-chan strin
 }
 
 // AddUserAgent - add custom user agent.
-func (c *S3Client) AddUserAgent(ctx context.Context, app string, version string) {
-	c.api.SetAppInfo(ctx, app, version)
+func (c *S3Client) AddUserAgent(app string, version string) {
+	c.api.SetAppInfo(app, version)
 }
 
 // Remove - remove object or bucket(s).
@@ -1103,9 +1100,9 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				objectsCh = make(chan string)
 				prevBucket = bucket
 				if isIncomplete {
-					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
+					statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
 				} else {
-					statusCh = c.api.RemoveObjectsWithOptions(bucket, objectsCh, opts)
+					statusCh = c.api.RemoveObjectsWithOptionsContext(ctx, bucket, objectsCh, opts)
 				}
 			}
 
@@ -1118,16 +1115,16 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				}
 				// Remove bucket if it qualifies.
 				if isRemoveBucket && !isIncomplete {
-					if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
+					if err := c.api.RemoveBucketWithContext(ctx, prevBucket); err != nil {
 						errorCh <- probe.NewError(err)
 					}
 				}
 				// Re-init objectsCh for next bucket
 				objectsCh = make(chan string)
 				if isIncomplete {
-					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
+					statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
 				} else {
-					statusCh = c.api.RemoveObjectsWithOptions(bucket, objectsCh, opts)
+					statusCh = c.api.RemoveObjectsWithOptionsContext(ctx, bucket, objectsCh, opts)
 				}
 				prevBucket = bucket
 			}
@@ -1165,7 +1162,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		}
 		// Remove last bucket if it qualifies.
 		if isRemoveBucket && prevBucket != "" && !isIncomplete {
-			if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
+			if err := c.api.RemoveBucketWithContext(ctx, prevBucket); err != nil {
 				errorCh <- probe.NewError(err)
 			}
 		}
@@ -1188,7 +1185,7 @@ func (c *S3Client) MakeBucket(ctx context.Context, region string, ignoreExisting
 		}
 		var retried bool
 		for {
-			_, e := c.api.PutObject(ctx, bucket, object,
+			_, e := c.api.PutObjectWithContext(ctx, bucket, object,
 				bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{})
 			if e == nil {
 				return nil
@@ -1199,9 +1196,9 @@ func (c *S3Client) MakeBucket(ctx context.Context, region string, ignoreExisting
 			switch minio.ToErrorResponse(e).Code {
 			case "NoSuchBucket":
 				if withLock {
-					e = c.api.MakeBucketWithObjectLock(ctx, bucket, region)
+					e = c.api.MakeBucketWithObjectLockWithContext(ctx, bucket, region)
 				} else {
-					e = c.api.MakeBucket(ctx, bucket, region)
+					e = c.api.MakeBucketWithContext(ctx, bucket, region)
 				}
 				if e != nil {
 					return probe.NewError(e)
@@ -1215,9 +1212,9 @@ func (c *S3Client) MakeBucket(ctx context.Context, region string, ignoreExisting
 
 	var e error
 	if withLock {
-		e = c.api.MakeBucketWithObjectLock(ctx, bucket, region)
+		e = c.api.MakeBucketWithObjectLockWithContext(ctx, bucket, region)
 	} else {
-		e = c.api.MakeBucket(ctx, bucket, region)
+		e = c.api.MakeBucketWithContext(ctx, bucket, region)
 	}
 	if e != nil {
 		// Ignore bucket already existing error when ignoreExisting flag is enabled
@@ -1241,7 +1238,7 @@ func (c *S3Client) GetAccessRules(ctx context.Context) (map[string]string, *prob
 		return map[string]string{}, probe.NewError(BucketNameEmpty{})
 	}
 	policies := map[string]string{}
-	policyStr, e := c.api.GetBucketPolicy(ctx, bucket)
+	policyStr, e := c.api.GetBucketPolicyWithContext(ctx, bucket)
 	if e != nil {
 		return nil, probe.NewError(e)
 	}
@@ -1266,7 +1263,7 @@ func (c *S3Client) GetAccess(ctx context.Context) (string, string, *probe.Error)
 	if bucket == "" {
 		return "", "", probe.NewError(BucketNameEmpty{})
 	}
-	policyStr, e := c.api.GetBucketPolicy(ctx, bucket)
+	policyStr, e := c.api.GetBucketPolicyWithContext(ctx, bucket)
 	if e != nil {
 		return "", "", probe.NewError(e)
 	}
@@ -1291,12 +1288,12 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 		return probe.NewError(BucketNameEmpty{})
 	}
 	if isJSON {
-		if e := c.api.SetBucketPolicy(ctx, bucket, bucketPolicy); e != nil {
+		if e := c.api.SetBucketPolicyWithContext(ctx, bucket, bucketPolicy); e != nil {
 			return probe.NewError(e)
 		}
 		return nil
 	}
-	policyStr, e := c.api.GetBucketPolicy(ctx, bucket)
+	policyStr, e := c.api.GetBucketPolicyWithContext(ctx, bucket)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -1308,7 +1305,7 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 	}
 	p.Statements = policy.SetPolicy(p.Statements, policy.BucketPolicy(bucketPolicy), bucket, object)
 	if len(p.Statements) == 0 {
-		if e = c.api.SetBucketPolicy(ctx, bucket, ""); e != nil {
+		if e = c.api.SetBucketPolicyWithContext(ctx, bucket, ""); e != nil {
 			return probe.NewError(e)
 		}
 		return nil
@@ -1317,7 +1314,7 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 	if e != nil {
 		return probe.NewError(e)
 	}
-	if e = c.api.SetBucketPolicy(ctx, bucket, string(policyB)); e != nil {
+	if e = c.api.SetBucketPolicyWithContext(ctx, bucket, string(policyB)); e != nil {
 		return probe.NewError(e)
 	}
 	return nil
@@ -1328,12 +1325,12 @@ func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string,
 	if isGoogle(c.targetURL.Host) {
 		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
 		// https://github.com/minio/mc/issues/3073
-		return c.api.ListObjects(ctx, bucket, object, isRecursive, doneCh)
+		return c.api.ListObjectsV2WithContext(ctx, bucket, object, isRecursive, doneCh)
 	}
 	if metadata {
-		return c.api.ListObjectsV2WithMetadata(ctx, bucket, object, isRecursive, doneCh)
+		return c.api.ListObjectsV2WithMetadataWithContext(ctx, bucket, object, isRecursive, doneCh)
 	}
-	return c.api.ListObjectsV2(ctx, bucket, object, isRecursive, doneCh)
+	return c.api.ListObjectsV2WithContext(ctx, bucket, object, isRecursive, doneCh)
 }
 
 func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object string) (*ClientContent, *probe.Error) {
@@ -1342,7 +1339,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 	// Prefix to pass to minio-go listing in order to fetch a given object/directory
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectMultipartInfo := range c.api.ListIncompleteUploads(ctx, bucket, prefix, nonRecursive, nil) {
+	for objectMultipartInfo := range c.api.ListIncompleteUploadsWithContext(ctx, bucket, prefix, nonRecursive, nil) {
 		if objectMultipartInfo.Err != nil {
 			return nil, probe.NewError(objectMultipartInfo.Err)
 		}
@@ -1405,7 +1402,7 @@ func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 	if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
 		// Issue HEAD request first but ignore no such key error
 		// so we can check if there is such prefix which exists
-		ctnt, err := c.getObjectStat(bucket, object, opts)
+		ctnt, err := c.getObjectStat(ctx, bucket, object, opts)
 		if err == nil {
 			return ctnt, err
 		}
@@ -1436,8 +1433,9 @@ func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 }
 
 // getObjectStat returns the metadata of an object from a HEAD call.
-func (c *S3Client) getObjectStat(bucket, object string, opts minio.StatObjectOptions) (*ClientContent, *probe.Error) {
-	objectStat, e := c.api.StatObject(bucket, object, opts)
+func (c *S3Client) getObjectStat(ctx context.Context, bucket, object string, opts minio.StatObjectOptions) (*ClientContent, *probe.Error) {
+	objectMetadata := &ClientContent{}
+	objectStat, e := c.api.StatObjectWithContext(ctx, bucket, object, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
@@ -1458,7 +1456,7 @@ func (c *S3Client) getObjectStat(bucket, object string, opts minio.StatObjectOpt
 		}
 		return nil, probe.NewError(e)
 	}
-	objectMetadata := c.objectInfo2ClientContent(bucket, objectStat)
+	objectMetadata = c.objectInfo2ClientContent(bucket, objectStat)
 	return objectMetadata, nil
 }
 
@@ -1587,7 +1585,7 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
-		buckets, err := c.api.ListBuckets(ctx)
+		buckets, err := c.api.ListBucketsWithContext(ctx)
 		if err != nil {
 			contentCh <- &ClientContent{
 				Err: probe.NewError(err),
@@ -1596,7 +1594,7 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 		}
 		isRecursive := false
 		for _, bucket := range buckets {
-			for object := range c.api.ListIncompleteUploads(ctx, bucket.Name, o, isRecursive, nil) {
+			for object := range c.api.ListIncompleteUploadsWithContext(ctx, bucket.Name, o, isRecursive, nil) {
 				if object.Err != nil {
 					contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
@@ -1624,7 +1622,7 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 		}
 	default:
 		isRecursive := false
-		for object := range c.api.ListIncompleteUploads(ctx, b, o, isRecursive, nil) {
+		for object := range c.api.ListIncompleteUploadsWithContext(ctx, b, o, isRecursive, nil) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
@@ -1658,7 +1656,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
-		buckets, err := c.api.ListBuckets(ctx)
+		buckets, err := c.api.ListBucketsWithContext(ctx)
 		if err != nil {
 			contentCh <- &ClientContent{
 				Err: probe.NewError(err),
@@ -1667,7 +1665,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 		}
 		isRecursive := true
 		for _, bucket := range buckets {
-			for object := range c.api.ListIncompleteUploads(ctx, bucket.Name, o, isRecursive, nil) {
+			for object := range c.api.ListIncompleteUploadsWithContext(ctx, bucket.Name, o, isRecursive, nil) {
 				if object.Err != nil {
 					contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
@@ -1686,7 +1684,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 		}
 	default:
 		isRecursive := true
-		for object := range c.api.ListIncompleteUploads(ctx, b, o, isRecursive, nil) {
+		for object := range c.api.ListIncompleteUploadsWithContext(ctx, b, o, isRecursive, nil) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
@@ -1735,7 +1733,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutineDirOpt(ctx context.Context, c
 	var listDir func(bucket, object string) bool
 	listDir = func(bucket, object string) (isStop bool) {
 		isRecursive := false
-		for entry := range c.api.ListIncompleteUploads(ctx, bucket, object, isRecursive, nil) {
+		for entry := range c.api.ListIncompleteUploadsWithContext(ctx, bucket, object, isRecursive, nil) {
 			if entry.Err != nil {
 				url := c.targetURL.Clone()
 				url.Path = c.joinPath(bucket, object)
@@ -1778,7 +1776,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutineDirOpt(ctx context.Context, c
 	if bucket == "" && object == "" {
 		var e error
 		allBuckets = true
-		buckets, e = c.api.ListBuckets(ctx)
+		buckets, e = c.api.ListBucketsWithContext(ctx)
 		if e != nil {
 			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return
@@ -1876,7 +1874,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 
 // Returns bucket stat info of current bucket.
 func (c *S3Client) bucketStat(ctx context.Context, bucket string) (*ClientContent, *probe.Error) {
-	exists, e := c.api.BucketExists(ctx, bucket)
+	exists, e := c.api.BucketExistsWithContext(ctx, bucket)
 	if e != nil {
 		return nil, probe.NewError(e)
 	}
@@ -1936,7 +1934,7 @@ func (c *S3Client) listRecursiveInRoutineDirOpt(ctx context.Context, contentCh c
 	if bucket == "" && object == "" {
 		var e error
 		allBuckets = true
-		buckets, e = c.api.ListBuckets(ctx)
+		buckets, e = c.api.ListBucketsWithContext(ctx)
 		if e != nil {
 			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return
@@ -1983,7 +1981,7 @@ func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientCont
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
-		buckets, e := c.api.ListBuckets(ctx)
+		buckets, e := c.api.ListBucketsWithContext(ctx)
 		if e != nil {
 			contentCh <- &ClientContent{
 				Err: probe.NewError(e),
@@ -2039,7 +2037,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
-		buckets, err := c.api.ListBuckets(ctx)
+		buckets, err := c.api.ListBucketsWithContext(ctx)
 		if err != nil {
 			contentCh <- &ClientContent{
 				Err: probe.NewError(err),
@@ -2077,7 +2075,7 @@ func (c *S3Client) ShareDownload(ctx context.Context, expires time.Duration) (st
 	bucket, object := c.url2BucketAndObject()
 	// No additional request parameters are set for the time being.
 	reqParams := make(url.Values)
-	presignedURL, e := c.api.PresignedGetObject(ctx, bucket, object, expires, reqParams)
+	presignedURL, e := c.api.PresignedGetObjectWithContext(ctx, bucket, object, expires, reqParams)
 	if e != nil {
 		return "", probe.NewError(e)
 	}
@@ -2121,14 +2119,14 @@ func (c *S3Client) SetObjectLockConfig(ctx context.Context, mode minio.Retention
 	// FIXME: This is too ugly, fix minio-go
 	vuint := (uint)(validity)
 	if mode != "" && vuint > 0 && unit != "" {
-		e := c.api.SetBucketObjectLockConfig(ctx, bucket, &mode, &vuint, &unit)
+		e := c.api.SetBucketObjectLockConfigWithContext(ctx, bucket, &mode, &vuint, &unit)
 		if e != nil {
 			return probe.NewError(e).Trace(c.GetURL().String())
 		}
 		return nil
 	}
 	if mode == "" && vuint == 0 && unit == "" {
-		e := c.api.SetBucketObjectLockConfig(ctx, bucket, nil, nil, nil)
+		e := c.api.SetBucketObjectLockConfigWithContext(ctx, bucket, nil, nil, nil)
 		if e != nil {
 			return probe.NewError(e).Trace(c.GetURL().String())
 		}
@@ -2147,7 +2145,7 @@ func (c *S3Client) PutObjectRetention(ctx context.Context, mode minio.RetentionM
 			Mode:             &mode,
 			GovernanceBypass: bypassGovernance,
 		}
-		e := c.api.PutObjectRetention(ctx, bucket, object, opts)
+		e := c.api.PutObjectRetentionWithContext(ctx, bucket, object, opts)
 		if e != nil {
 			return probe.NewError(e).Trace(c.GetURL().String())
 		}
@@ -2164,7 +2162,7 @@ func (c *S3Client) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHold
 		opts := minio.PutObjectLegalHoldOptions{
 			Status: &lhold,
 		}
-		e := c.api.PutObjectLegalHold(ctx, bucket, object, opts)
+		e := c.api.PutObjectLegalHoldWithContext(ctx, bucket, object, opts)
 		if e != nil {
 			return probe.NewError(e).Trace(c.GetURL().String())
 		}
@@ -2177,7 +2175,7 @@ func (c *S3Client) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHold
 func (c *S3Client) GetObjectLockConfig(ctx context.Context) (minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
-	mode, validity, unit, e := c.api.GetBucketObjectLockConfig(ctx, bucket)
+	mode, validity, unit, e := c.api.GetBucketObjectLockConfigWithContext(ctx, bucket)
 	if e != nil {
 		return "", 0, "", probe.NewError(e).Trace(c.GetURL().String())
 	}
@@ -2199,7 +2197,7 @@ func (c *S3Client) GetTags(ctx context.Context) (*tags.Tags, *probe.Error) {
 	}
 
 	if objectName == "" {
-		tags, err := c.api.GetBucketTagging(ctx, bucketName)
+		tags, err := c.api.GetBucketTaggingWithContext(ctx, bucketName)
 		if err != nil {
 			return nil, probe.NewError(err)
 		}
@@ -2207,7 +2205,7 @@ func (c *S3Client) GetTags(ctx context.Context) (*tags.Tags, *probe.Error) {
 		return tags, nil
 	}
 
-	s, err := c.api.GetObjectTagging(ctx, bucketName, objectName)
+	s, err := c.api.GetObjectTaggingWithContext(ctx, bucketName, objectName)
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
@@ -2233,9 +2231,9 @@ func (c *S3Client) SetTags(ctx context.Context, tagString string) *probe.Error {
 	}
 
 	if objectName == "" {
-		err = c.api.SetBucketTagging(ctx, bucketName, tags)
+		err = c.api.SetBucketTaggingWithContext(ctx, bucketName, tags)
 	} else {
-		err = c.api.PutObjectTagging(ctx, bucketName, objectName, tags.ToMap())
+		err = c.api.PutObjectTaggingWithContext(ctx, bucketName, objectName, tags.ToMap())
 	}
 
 	if err != nil {
@@ -2254,9 +2252,9 @@ func (c *S3Client) DeleteTags(ctx context.Context) *probe.Error {
 
 	var err error
 	if objectName == "" {
-		err = c.api.DeleteBucketTagging(ctx, bucketName)
+		err = c.api.DeleteBucketTaggingWithContext(ctx, bucketName)
 	} else {
-		err = c.api.RemoveObjectTagging(ctx, bucketName, objectName)
+		err = c.api.RemoveObjectTaggingWithContext(ctx, bucketName, objectName)
 	}
 
 	if err != nil {
@@ -2273,7 +2271,7 @@ func (c *S3Client) GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration
 		return ilm.LifecycleConfiguration{}, probe.NewError(BucketNameEmpty{})
 	}
 
-	lifecycleXML, e := c.api.GetBucketLifecycle(ctx, bucket)
+	lifecycleXML, e := c.api.GetBucketLifecycleWithContext(ctx, bucket)
 	if e != nil {
 		return ilm.LifecycleConfiguration{}, probe.NewError(e)
 	}
@@ -2302,7 +2300,7 @@ func (c *S3Client) SetLifecycle(ctx context.Context, ilmCfg ilm.LifecycleConfigu
 		}
 	}
 
-	if e := c.api.SetBucketLifecycle(ctx, bucket, string(lifecycleXML)); e != nil {
+	if e := c.api.SetBucketLifecycleWithContext(ctx, bucket, string(lifecycleXML)); e != nil {
 		return probe.NewError(e)
 	}
 

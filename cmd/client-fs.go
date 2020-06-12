@@ -511,7 +511,7 @@ func (f *fsClient) List(ctx context.Context, isRecursive, isIncomplete, isMetada
 		if showDir == DirNone {
 			go f.listRecursiveInRoutine(contentCh, isMetadata)
 		} else {
-			go f.listDirOpt(ctx, contentCh, isIncomplete, isMetadata, showDir)
+			go f.listDirOpt(contentCh, isIncomplete, isMetadata, showDir)
 		}
 	} else {
 		go f.listInRoutine(contentCh, isMetadata)
@@ -702,7 +702,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent, isMetadata boo
 }
 
 // List files recursively using non-recursive mode.
-func (f *fsClient) listDirOpt(ctx context.Context, contentCh chan *ClientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
+func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
 	defer close(contentCh)
 
 	// Trim trailing / or \.
@@ -1059,7 +1059,7 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	return st, nil
 }
 
-func (f *fsClient) AddUserAgent(ctx context.Context, _, _ string) {
+func (f *fsClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags

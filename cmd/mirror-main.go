@@ -262,7 +262,7 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	if pErr != nil {
 		return sURLs.WithError(pErr)
 	}
-	clnt.AddUserAgent(ctx, uaMirrorAppName, Version)
+	clnt.AddUserAgent(uaMirrorAppName, Version)
 	contentCh := make(chan *ClientContent, 1)
 	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)

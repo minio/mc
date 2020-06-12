@@ -87,7 +87,7 @@ type Client interface {
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
-	AddUserAgent(ctx context.Context, app, version string)
+	AddUserAgent(app, version string)
 
 	// Tagging operations
 	GetTags(ctx context.Context) (*tags.Tags, *probe.Error)
