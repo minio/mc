@@ -38,7 +38,7 @@ const (
 	differInType                            // differs in type, exfile/directory
 	differInFirst                           // only in source (FIRST)
 	differInSecond                          // only in target (SECOND)
-	differInMMSourceMTime                   // differs in multi-master source modtime
+	differInAASourceMTime                   // differs in active-active source modtime
 )
 
 func (d differType) String() string {
@@ -49,7 +49,7 @@ func (d differType) String() string {
 		return "size"
 	case differInMetadata:
 		return "metadata"
-	case differInMMSourceMTime:
+	case differInAASourceMTime:
 		return "mm-source-mtime"
 	case differInType:
 		return "type"
@@ -61,7 +61,7 @@ func (d differType) String() string {
 	return "unknown"
 }
 
-const multiMasterSourceModTimeKey = "X-Amz-Meta-Mm-Source-Mtime"
+const activeActiveSourceModTimeKey = "X-Amz-Meta-Mm-Source-Mtime"
 
 func oldestNonNullTime(t1, t2 time.Time) time.Time {
 	if t1.IsZero() {
@@ -77,9 +77,9 @@ func oldestNonNullTime(t1, t2 time.Time) time.Time {
 	return t2
 }
 
-// multiMasterModTimeUpdated tries to calculate if the object copy in the target
+// activeActiveModTimeUpdated tries to calculate if the object copy in the target
 // is older than the one in the source by comparing the modtime of the data.
-func multiMasterModTimeUpdated(src, dst *ClientContent) bool {
+func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
 	if src == nil || dst == nil {
 		return false
 	}
@@ -91,15 +91,15 @@ func multiMasterModTimeUpdated(src, dst *ClientContent) bool {
 		return false
 	}
 
-	_, ok1 := src.UserMetadata[multiMasterSourceModTimeKey]
-	_, ok2 := dst.UserMetadata[multiMasterSourceModTimeKey]
+	_, ok1 := src.UserMetadata[activeActiveSourceModTimeKey]
+	_, ok2 := dst.UserMetadata[activeActiveSourceModTimeKey]
 	if !ok1 && !ok2 {
 		// No multimaster context found, consider src & dst as similar
 		return false
 	}
 
-	srcOriginLastModified, _ := time.Parse(time.RFC3339Nano, src.UserMetadata[multiMasterSourceModTimeKey])
-	dstOriginLastModified, _ := time.Parse(time.RFC3339Nano, dst.UserMetadata[multiMasterSourceModTimeKey])
+	srcOriginLastModified, _ := time.Parse(time.RFC3339Nano, src.UserMetadata[activeActiveSourceModTimeKey])
+	dstOriginLastModified, _ := time.Parse(time.RFC3339Nano, dst.UserMetadata[activeActiveSourceModTimeKey])
 
 	srcActualModTime := oldestNonNullTime(src.Time, srcOriginLastModified)
 	dstActualModTime := oldestNonNullTime(dst.Time, dstOriginLastModified)
@@ -109,7 +109,7 @@ func multiMasterModTimeUpdated(src, dst *ClientContent) bool {
 
 func metadataEqual(m1, m2 map[string]string) bool {
 	for k, v := range m1 {
-		if k == multiMasterSourceModTimeKey {
+		if k == activeActiveSourceModTimeKey {
 			continue
 		}
 		if m2[k] != v {
@@ -117,7 +117,7 @@ func metadataEqual(m1, m2 map[string]string) bool {
 		}
 	}
 	for k, v := range m2 {
-		if k == multiMasterSourceModTimeKey {
+		if k == activeActiveSourceModTimeKey {
 			continue
 		}
 		if m1[k] != v {
@@ -245,11 +245,11 @@ func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL stri
 					firstContent:  srcCtnt,
 					secondContent: tgtCtnt,
 				}
-			} else if multiMasterModTimeUpdated(srcCtnt, tgtCtnt) {
+			} else if activeActiveModTimeUpdated(srcCtnt, tgtCtnt) {
 				diffCh <- diffMessage{
 					FirstURL:      srcCtnt.URL.String(),
 					SecondURL:     tgtCtnt.URL.String(),
-					Diff:          differInMMSourceMTime,
+					Diff:          differInAASourceMTime,
 					firstContent:  srcCtnt,
 					secondContent: tgtCtnt,
 				}
