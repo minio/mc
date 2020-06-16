@@ -987,13 +987,19 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 
 	if lockModeStr != "" {
 		opts.Mode = &lockMode
+		opts.SendContentMd5 = true
 	}
 
 	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
 		delete(metadata, AmzObjectLockLegalHold)
 		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
+		opts.SendContentMd5 = true
 	}
-
+	if opts.LegalHold == "" && opts.Mode == nil {
+		if _, _, _, err := c.api.GetBucketObjectLockConfig(bucket); err == nil {
+			opts.SendContentMd5 = true
+		}
+	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
