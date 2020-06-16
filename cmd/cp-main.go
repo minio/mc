@@ -244,28 +244,28 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 
 	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
 	if isMvCmd && urls.Error == nil {
-		bgRemove(sourcePath)
+		bgRemove(ctx, sourcePath)
 	}
 
 	return urls
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cpURLs URLs, pg Progress, isMvCmd bool) URLs {
+func doCopyFake(ctx context.Context, cpURLs URLs, pg Progress, isMvCmd bool) URLs {
 	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
 
 	if isMvCmd {
 		sourcePath := filepath.ToSlash(filepath.Join(cpURLs.SourceAlias, cpURLs.SourceContent.URL.Path))
-		bgRemove(sourcePath)
+		bgRemove(ctx, sourcePath)
 	}
 
 	return cpURLs
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
+func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -289,7 +289,7 @@ func doPrepareCopyURLs(session *sessionV8, cancelCopy context.CancelFunc) (total
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareCopyURLs(sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan)
+	URLsCh := prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan)
 	done := false
 	for !done {
 		select {
@@ -341,10 +341,7 @@ func doPrepareCopyURLs(session *sessionV8, cancelCopy context.CancelFunc) (total
 	return
 }
 
-func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
-	ctx, cancelCopy := context.WithCancel(globalContext)
-	defer cancelCopy()
-
+func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
 
@@ -366,7 +363,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 		isCopied = isLastFactory(session.Header.LastCopied)
 
 		if !session.HasData() {
-			totalBytes, totalObjects = doPrepareCopyURLs(session, cancelCopy)
+			totalBytes, totalObjects = doPrepareCopyURLs(ctx, session, cancelCopy)
 		} else {
 			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
 		}
@@ -403,7 +400,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 
 		go func() {
 			totalBytes := int64(0)
-			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL, isRecursive,
+			for cpURLs := range prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive,
 				encKeyDB, olderThan, newerThan) {
 				if cpURLs.Error != nil {
 					// Print in new line and adjust to top so that we
@@ -509,7 +506,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
-						return doCopyFake(cpURLs, pg, isMvCmd)
+						return doCopyFake(ctx, cpURLs, pg, isMvCmd)
 					}
 				} else {
 					queueCh <- func() URLs {
@@ -618,33 +615,36 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 }
 
 // mainCopy is the entry point for cp command.
-func mainCopy(ctx *cli.Context) error {
+func mainCopy(cliCtx *cli.Context) error {
+	ctx, cancelCopy := context.WithCancel(globalContext)
+	defer cancelCopy()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// Parse metadata.
 	userMetaMap := make(map[string]string)
-	if ctx.String("attr") != "" {
-		userMetaMap, err = getMetaDataEntry(ctx.String("attr"))
-		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
+	if cliCtx.String("attr") != "" {
+		userMetaMap, err = getMetaDataEntry(cliCtx.String("attr"))
+		fatalIf(err, "Unable to parse attribute %v", cliCtx.String("attr"))
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, encKeyDB, false)
+	checkCopySyntax(ctx, cliCtx, encKeyDB, false)
 
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	recursive := ctx.Bool("recursive")
-	olderThan := ctx.String("older-than")
-	newerThan := ctx.String("newer-than")
-	storageClass := ctx.String("storage-class")
-	retentionMode := ctx.String(rmFlag)
-	retentionDuration := ctx.String(rdFlag)
-	legalHold := strings.ToUpper(ctx.String(lhFlag))
+	recursive := cliCtx.Bool("recursive")
+	olderThan := cliCtx.String("older-than")
+	newerThan := cliCtx.String("newer-than")
+	storageClass := cliCtx.String("storage-class")
+	retentionMode := cliCtx.String(rmFlag)
+	retentionDuration := cliCtx.String(rdFlag)
+	legalHold := strings.ToUpper(cliCtx.String(lhFlag))
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := ctx.String("encrypt-key"); key != "" {
+	if key := cliCtx.String("encrypt-key"); key != "" {
 		sseKeys = key
 	}
 
@@ -652,12 +652,12 @@ func mainCopy(ctx *cli.Context) error {
 		sseKeys, err = getDecodedKey(sseKeys)
 		fatalIf(err, "Unable to parse encryption keys.")
 	}
-	sse := ctx.String("encrypt")
+	sse := cliCtx.String("encrypt")
 
 	var session *sessionV8
 
-	if ctx.Bool("continue") {
-		sessionID := getHash("cp", ctx.Args())
+	if cliCtx.Bool("continue") {
+		sessionID := getHash("cp", cliCtx.Args())
 		if isSessionExists(sessionID) {
 			session, err = loadSessionV8(sessionID)
 			fatalIf(err.Trace(sessionID), "Unable to load session.")
@@ -673,14 +673,14 @@ func mainCopy(ctx *cli.Context) error {
 			session.Header.CommandStringFlags[lhFlag] = legalHold
 			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 			session.Header.CommandStringFlags["encrypt"] = sse
-			session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
+			session.Header.CommandBoolFlags["session"] = cliCtx.Bool("continue")
 
-			if ctx.Bool("preserve") {
-				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
+			if cliCtx.Bool("preserve") {
+				session.Header.CommandBoolFlags["preserve"] = cliCtx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
-			session.Header.CommandBoolFlags["md5"] = ctx.Bool("md5")
-			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
+			session.Header.CommandBoolFlags["md5"] = cliCtx.Bool("md5")
+			session.Header.CommandBoolFlags["disable-multipart"] = cliCtx.Bool("disable-multipart")
 
 			var e error
 			if session.Header.RootPath, e = os.Getwd(); e != nil {
@@ -689,11 +689,11 @@ func mainCopy(ctx *cli.Context) error {
 			}
 
 			// extract URLs.
-			session.Header.CommandArgs = ctx.Args()
+			session.Header.CommandArgs = cliCtx.Args()
 		}
 	}
 
-	e := doCopySession(ctx, session, encKeyDB, false)
+	e := doCopySession(ctx, cancelCopy, cliCtx, session, encKeyDB, false)
 	if session != nil {
 		session.Delete()
 	}

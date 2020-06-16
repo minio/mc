@@ -119,7 +119,7 @@ func (f *fsClient) GetURL() ClientURL {
 }
 
 // Select replies a stream of query results.
-func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "Select",
 		APIType: "filesystem",
@@ -127,7 +127,7 @@ func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts Select
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(options WatchOptions) (*WatchObject, *probe.Error) {
+func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error) {
 	eventChan := make(chan []EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan struct{})
@@ -253,7 +253,7 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 
 /// Object operations.
 
-func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -372,13 +372,13 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metada
 	if metadata[metaDataKey] != "" {
 		meta := make(map[string][]string)
 		meta[metaDataKey] = append(meta[metaDataKey], metadata[metaDataKey])
-		return f.put(reader, size, meta, progress)
+		return f.put(ctx, reader, size, meta, progress)
 	}
-	return f.put(reader, size, nil, progress)
+	return f.put(ctx, reader, size, nil, progress)
 }
 
 // ShareDownload - share download not implemented for filesystem.
-func (f *fsClient) ShareDownload(expires time.Duration) (string, *probe.Error) {
+func (f *fsClient) ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
 		API:     "ShareDownload",
 		APIType: "filesystem",
@@ -394,7 +394,7 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
 	rc, e := os.Open(source)
 	if e != nil {
 		err := f.toClientError(e, source)
@@ -403,14 +403,14 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, t
 	defer rc.Close()
 
 	destination := f.PathURL.Path
-	if _, err := f.put(rc, size, map[string][]string{}, progress); err != nil {
+	if _, err := f.put(ctx, rc, size, map[string][]string{}, progress); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
@@ -464,7 +464,7 @@ func deleteFile(deletePath string) error {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
+func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	// Goroutine reads from contentCh and removes the entry in content.
@@ -503,7 +503,7 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh
 }
 
 // List - list files and folders.
-func (f *fsClient) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *ClientContent {
+func (f *fsClient) List(ctx context.Context, isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent)
 	filteredCh := make(chan *ClientContent)
 
@@ -877,7 +877,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetad
 }
 
 // MakeBucket - create a new bucket.
-func (f *fsClient) MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error {
+func (f *fsClient) MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error {
 	// TODO: ignoreExisting has no effect currently. In the future, we want
 	// to call os.Mkdir() when ignoredExisting is disabled and os.MkdirAll()
 	// otherwise.
@@ -890,7 +890,7 @@ func (f *fsClient) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 }
 
 // Set object lock configuration of bucket.
-func (f *fsClient) SetObjectLockConfig(mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
+func (f *fsClient) SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectLockConfig",
 		APIType: "filesystem",
@@ -898,7 +898,7 @@ func (f *fsClient) SetObjectLockConfig(mode minio.RetentionMode, validity uint64
 }
 
 // Get object lock configuration of bucket.
-func (f *fsClient) GetObjectLockConfig() (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+func (f *fsClient) GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
 	return "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "filesystem",
@@ -906,7 +906,7 @@ func (f *fsClient) GetObjectLockConfig() (mode minio.RetentionMode, validity uin
 }
 
 // GetAccessRules - unsupported API
-func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
+func (f *fsClient) GetAccessRules(ctx context.Context) (map[string]string, *probe.Error) {
 	return map[string]string{}, probe.NewError(APINotImplemented{
 		API:     "GetBucketPolicy",
 		APIType: "filesystem",
@@ -914,7 +914,7 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
+func (f *fsClient) PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
 		APIType: "filesystem",
@@ -922,7 +922,7 @@ func (f *fsClient) PutObjectRetention(mode minio.RetentionMode, retainUntilDate 
 }
 
 // Set object legal hold for a given object.
-func (f *fsClient) PutObjectLegalHold(lhold minio.LegalHoldStatus) *probe.Error {
+func (f *fsClient) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
 		APIType: "filesystem",
@@ -930,7 +930,7 @@ func (f *fsClient) PutObjectLegalHold(lhold minio.LegalHoldStatus) *probe.Error 
 }
 
 // GetAccess - get access policy permissions.
-func (f *fsClient) GetAccess() (access string, policyJSON string, err *probe.Error) {
+func (f *fsClient) GetAccess(ctx context.Context) (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
 	if runtime.GOOS == "windows" {
 		return "", "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
@@ -955,7 +955,7 @@ func (f *fsClient) GetAccess() (access string, policyJSON string, err *probe.Err
 }
 
 // SetAccess - set access policy permissions.
-func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
+func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error {
 	// For windows this feature is not implemented.
 	// JSON policy for fs is not yet implemented.
 	if runtime.GOOS == "windows" || isJSON {
@@ -987,7 +987,7 @@ func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
+func (f *fsClient) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
@@ -1063,7 +1063,7 @@ func (f *fsClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (f *fsClient) GetTags() (*tags.Tags, *probe.Error) {
+func (f *fsClient) GetTags(ctx context.Context) (*tags.Tags, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "filesystem",
@@ -1071,7 +1071,7 @@ func (f *fsClient) GetTags() (*tags.Tags, *probe.Error) {
 }
 
 // Set Object tags
-func (f *fsClient) SetTags(tags string) *probe.Error {
+func (f *fsClient) SetTags(ctx context.Context, tags string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectTagging",
 		APIType: "filesystem",
@@ -1079,7 +1079,7 @@ func (f *fsClient) SetTags(tags string) *probe.Error {
 }
 
 // Delete object tags
-func (f *fsClient) DeleteTags() *probe.Error {
+func (f *fsClient) DeleteTags(ctx context.Context) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteObjectTagging",
 		APIType: "filesystem",
@@ -1087,7 +1087,7 @@ func (f *fsClient) DeleteTags() *probe.Error {
 }
 
 // Get lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) GetLifecycle() (ilm.LifecycleConfiguration, *probe.Error) {
+func (f *fsClient) GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration, *probe.Error) {
 	return ilm.LifecycleConfiguration{}, probe.NewError(APINotImplemented{
 		API:     "GetLifecycle",
 		APIType: "filesystem",
@@ -1095,7 +1095,7 @@ func (f *fsClient) GetLifecycle() (ilm.LifecycleConfiguration, *probe.Error) {
 }
 
 // Set lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) SetLifecycle(_ ilm.LifecycleConfiguration) *probe.Error {
+func (f *fsClient) SetLifecycle(ctx context.Context, _ ilm.LifecycleConfiguration) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetLifecycle",
 		APIType: "filesystem",

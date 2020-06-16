@@ -73,6 +73,7 @@ VERSION:
 
 // Main starts mc application
 func Main(args []string) {
+
 	if len(args) > 1 {
 		switch args[1] {
 		case "mc", filepath.Base(args[0]):

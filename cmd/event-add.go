@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/fatih/color"
@@ -104,19 +105,22 @@ func (u eventAddMessage) String() string {
 	return msg
 }
 
-func mainEventAdd(ctx *cli.Context) error {
+func mainEventAdd(cliCtx *cli.Context) error {
+	ctx, cancelEventAdd := context.WithCancel(globalContext)
+	defer cancelEventAdd()
+
 	console.SetColor("Event", color.New(color.FgGreen, color.Bold))
 
-	checkEventAddSyntax(ctx)
+	checkEventAddSyntax(cliCtx)
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	path := args[0]
 	arn := args[1]
-	ignoreExisting := ctx.Bool("p")
+	ignoreExisting := cliCtx.Bool("p")
 
-	event := strings.Split(ctx.String("event"), ",")
-	prefix := ctx.String("prefix")
-	suffix := ctx.String("suffix")
+	event := strings.Split(cliCtx.String("event"), ",")
+	prefix := cliCtx.String("prefix")
+	suffix := cliCtx.String("suffix")
 
 	client, err := newClient(path)
 	if err != nil {
@@ -128,7 +132,7 @@ func mainEventAdd(ctx *cli.Context) error {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
 
-	err = s3Client.AddNotificationConfig(arn, event, prefix, suffix, ignoreExisting)
+	err = s3Client.AddNotificationConfig(ctx, arn, event, prefix, suffix, ignoreExisting)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
 	printMsg(eventAddMessage{
 		ARN:    arn,

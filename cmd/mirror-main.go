@@ -251,7 +251,7 @@ func (m mirrorMessage) JSON() string {
 }
 
 // doRemove - removes files on target.
-func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
+func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	if mj.isFake {
 		return sURLs.WithError(nil)
 	}
@@ -267,7 +267,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
 	isRemoveBucket := false
-	errorCh := clnt.Remove(false, isRemoveBucket, false, contentCh)
+	errorCh := clnt.Remove(ctx, false, isRemoveBucket, false, contentCh)
 	for pErr := range errorCh {
 		if pErr != nil {
 			switch pErr.ToGoError().(type) {
@@ -291,7 +291,7 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 			// cannot create targetclient
 			return sURLs.WithError(err)
 		}
-		_, err = targetClient.Stat(false, false, tgtSSE)
+		_, err = targetClient.Stat(ctx, false, false, tgtSSE)
 		if err == nil {
 			if !sURLs.SourceContent.RetentionEnabled && !sURLs.SourceContent.LegalHoldEnabled {
 				return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
@@ -501,7 +501,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mirrorURL.TotalSize = mj.status.Get()
 			if mirrorURL.TargetContent != nil && (mj.isRemove || mj.activeActive) {
 				mj.queueCh <- func() URLs {
-					return mj.doRemove(mirrorURL)
+					return mj.doRemove(ctx, mirrorURL)
 				}
 			}
 		}
@@ -541,8 +541,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 	}
 }
 
-func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
-	return mj.watcher.Join(sourceClient, true)
+func (mj *mirrorJob) watchURL(ctx context.Context, sourceClient Client) *probe.Error {
+	return mj.watcher.Join(ctx, sourceClient, true)
 }
 
 // Fetch urls that need to be mirrored
@@ -592,7 +592,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			} else if sURLs.TargetContent != nil && mj.isRemove {
 				mj.queueCh <- func() URLs {
-					return mj.doRemove(sURLs)
+					return mj.doRemove(ctx, sURLs)
 				}
 			}
 		case <-globalContext.Done():
@@ -692,8 +692,8 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 }
 
 // copyBucketPolicies - copy policies from source to dest
-func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
-	rules, err := srcClt.GetAccessRules()
+func copyBucketPolicies(ctx context.Context, srcClt, dstClt Client, isOverwrite bool) *probe.Error {
+	rules, err := srcClt.GetAccessRules(ctx)
 	if err != nil {
 		switch err.ToGoError().(type) {
 		case APINotImplemented:
@@ -703,14 +703,14 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 	}
 	// Set found rules to target bucket if permitted
 	for _, r := range rules {
-		originalRule, _, err := dstClt.GetAccess()
+		originalRule, _, err := dstClt.GetAccess(ctx)
 		if err != nil {
 			return err
 		}
 		// Set rule only if it doesn't exist in the target bucket
 		// or force flag is activated
 		if originalRule == "none" || isOverwrite {
-			err = dstClt.SetAccess(r, false)
+			err = dstClt.SetAccess(ctx, r, false)
 			if err != nil {
 				return err
 			}
@@ -743,20 +743,20 @@ func getEventPathURLWin(srcURL, eventPath string) string {
 }
 
 // runMirror - mirrors all buckets to another S3 server
-func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
+func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
 	// This is kept for backward compatibility, `--force` means
 	// --overwrite.
-	isOverwrite := ctx.Bool("force")
+	isOverwrite := cli.Bool("force")
 	if !isOverwrite {
-		isOverwrite = ctx.Bool("overwrite")
+		isOverwrite = cli.Bool("overwrite")
 	}
 
 	// Parse metadata.
 	userMetaMap := make(map[string]string)
-	if ctx.String("attr") != "" {
+	if cli.String("attr") != "" {
 		var err *probe.Error
-		userMetaMap, err = getMetaDataEntry(ctx.String("attr"))
-		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
+		userMetaMap, err = getMetaDataEntry(cli.String("attr"))
+		fatalIf(err, "Unable to parse attribute %v", cli.String("attr"))
 	}
 
 	srcClt, err := newClient(srcURL)
@@ -781,26 +781,29 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
-		ctx.Bool("fake"),
-		ctx.Bool("remove"),
+		cli.Bool("fake"),
+		cli.Bool("remove"),
 		isOverwrite,
-		ctx.Bool("watch"),
-		ctx.Bool("a"),
-		ctx.Bool("multi-master") || ctx.Bool("active-active"),
-		ctx.StringSlice("exclude"),
-		ctx.String("older-than"),
-		ctx.String("newer-than"),
-		ctx.String("storage-class"),
+		cli.Bool("watch"),
+		cli.Bool("a"),
+		cli.Bool("multi-master") || cli.Bool("active-active"),
+		cli.StringSlice("exclude"),
+		cli.String("older-than"),
+		cli.String("newer-than"),
+		cli.String("storage-class"),
 		userMetaMap,
 		encKeyDB,
-		ctx.Bool("md5"),
-		ctx.Bool("disable-multipart"),
+		cli.Bool("md5"),
+		cli.Bool("disable-multipart"),
 	)
 
 	go func() {
 		<-globalContext.Done()
 		os.Exit(globalErrorExitStatus)
 	}()
+
+	ctx, cancelMirror := context.WithCancel(globalContext)
+	defer cancelMirror()
 
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
@@ -826,28 +829,28 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 
 			if d.Diff == differInFirst {
 				withLock := false
-				mode, validity, unit, err := newSrcClt.GetObjectLockConfig()
+				mode, validity, unit, err := newSrcClt.GetObjectLockConfig(ctx)
 				if err == nil {
 					withLock = true
 				}
 				// Bucket only exists in the source, create the same bucket in the destination
-				if err := newDstClt.MakeBucket(ctx.String("region"), false, withLock); err != nil {
+				if err := newDstClt.MakeBucket(ctx, cli.String("region"), false, withLock); err != nil {
 					errorIf(err, "Unable to create bucket at `"+newTgtURL+"`.")
 					continue
 				}
 				// object lock configuration set on bucket
 				if mode != "" {
-					errorIf(newDstClt.SetObjectLockConfig(mode, validity, unit),
+					errorIf(newDstClt.SetObjectLockConfig(ctx, mode, validity, unit),
 						"Unable to set object lock config in `"+newTgtURL+"`.")
 				}
-				errorIf(copyBucketPolicies(newSrcClt, newDstClt, isOverwrite),
+				errorIf(copyBucketPolicies(ctx, newSrcClt, newDstClt, isOverwrite),
 					"Unable to copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
 			}
 
 			if mj.isWatch {
 				// monitor mode will watch the source folders for changes,
 				// and queue them for copying.
-				if err := mj.watchURL(newSrcClt); err != nil {
+				if err := mj.watchURL(ctx, newSrcClt); err != nil {
 					if mj.activeActive {
 						errorIf(err, "Failed to start monitoring.")
 						return true
@@ -856,9 +859,9 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				}
 			}
 		}
-	} else if _, err := dstClt.Stat(false, false, nil); err != nil {
+	} else if _, err := dstClt.Stat(ctx, false, false, nil); err != nil {
 		withLock := false
-		mode, validity, unit, err := srcClt.GetObjectLockConfig()
+		mode, validity, unit, err := srcClt.GetObjectLockConfig(ctx)
 		if err == nil {
 			withLock = true
 		}
@@ -866,26 +869,26 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		// Create bucket if it doesn't exist at destination.
 		// ignore if already exists.
 		if mj.activeActive {
-			err = dstClt.MakeBucket(ctx.String("region"), true, withLock)
+			err = dstClt.MakeBucket(ctx, cli.String("region"), true, withLock)
 			errorIf(err, "Unable to create bucket at `"+dstURL+"`.")
 			if err != nil {
 				return true
 			}
 		} else {
-			mj.status.fatalIf(dstClt.MakeBucket(ctx.String("region"), true, withLock),
+			mj.status.fatalIf(dstClt.MakeBucket(ctx, cli.String("region"), true, withLock),
 				"Unable to create bucket at `"+dstURL+"`.")
 		}
 
 		// object lock configuration set on bucket
 		if mode != "" {
-			err = dstClt.SetObjectLockConfig(mode, validity, unit)
+			err = dstClt.SetObjectLockConfig(ctx, mode, validity, unit)
 			errorIf(err, "Unable to set object lock config in `"+dstURL+"`.")
 			if err != nil && mj.activeActive {
 				return true
 			}
 		}
 
-		err = copyBucketPolicies(srcClt, dstClt, isOverwrite)
+		err = copyBucketPolicies(ctx, srcClt, dstClt, isOverwrite)
 		errorIf(err, "Unable to copy bucket policies to `"+dstClt.GetURL().String()+"`.")
 		if err != nil && mj.activeActive {
 			return true
@@ -895,7 +898,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 	if !mirrorAllBuckets && mj.isWatch {
 		// monitor mode will watch the source folders for changes,
 		// and queue them for copying.
-		if err := mj.watchURL(srcClt); err != nil {
+		if err := mj.watchURL(ctx, srcClt); err != nil {
 			if mj.activeActive {
 				errorIf(err, "Failed to start monitoring.")
 				return true
@@ -904,26 +907,26 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		}
 	}
 
-	ctxt, cancelMirror := context.WithCancel(context.Background())
-	defer cancelMirror()
-
 	// Start mirroring job
-	return mj.mirror(ctxt, cancelMirror)
+	return mj.mirror(ctx, cancelMirror)
 }
 
 // Main entry point for mirror command.
-func mainMirror(ctx *cli.Context) error {
+func mainMirror(cliCtx *cli.Context) error {
+	ctx, cancelMirror := context.WithCancel(globalContext)
+	defer cancelMirror()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'mirror' cli arguments.
-	checkMirrorSyntax(ctx, encKeyDB)
+	checkMirrorSyntax(ctx, cliCtx, encKeyDB)
 
 	// Additional command specific theme customization.
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 
 	srcURL := args[0]
 	tgtURL := args[1]
@@ -937,14 +940,14 @@ func mainMirror(ctx *cli.Context) error {
 		}
 	}
 
-	if ctx.Bool("multi-master") || ctx.Bool("active-active") {
+	if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
 		for {
-			runMirror(srcURL, tgtURL, ctx, encKeyDB)
+			runMirror(srcURL, tgtURL, cliCtx, encKeyDB)
 			time.Sleep(time.Second * 2)
 		}
 	}
 
-	if errorDetected := runMirror(srcURL, tgtURL, ctx, encKeyDB); errorDetected {
+	if errorDetected := runMirror(srcURL, tgtURL, cliCtx, encKeyDB); errorDetected {
 		return exitStatus(globalErrorExitStatus)
 	}
 

@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -159,7 +160,7 @@ func addHost(alias string, hostCfgV9 hostConfigV9) {
 
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
 // using v4 signature then v2 in case of failure.
-func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
+func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (string, *probe.Error) {
 	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bucket-sign-")
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
@@ -178,7 +179,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 			return "", err
 		}
 
-		if _, err := s3Client.Stat(false, false, nil); err != nil {
+		if _, err := s3Client.Stat(ctx, false, false, nil); err != nil {
 			e := err.ToGoError()
 			if _, ok := e.(BucketDoesNotExist); ok {
 				// Bucket doesn't exist, means signature probing worked successfully.
@@ -209,7 +210,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 
 // BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func BuildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
+func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
 	s3Config := NewS3Config(url, &hostConfigV9{
 		AccessKey: accessKey,
@@ -225,7 +226,7 @@ func BuildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *pro
 		return s3Config, nil
 	}
 	// Probe S3 signature version
-	api, err := probeS3Signature(accessKey, secretKey, url)
+	api, err := probeS3Signature(ctx, accessKey, secretKey, url)
 	if err != nil {
 		return nil, err.Trace(url, accessKey, secretKey, api, lookup)
 	}
@@ -272,21 +273,24 @@ func fetchHostKeys(args cli.Args) (string, string) {
 	return accessKey, secretKey
 }
 
-func mainConfigHostAdd(ctx *cli.Context) error {
+func mainConfigHostAdd(cli *cli.Context) error {
 
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 	var (
-		args   = ctx.Args()
+		args   = cli.Args()
 		alias  = cleanAlias(args.Get(0))
 		url    = trimTrailingSeparator(args.Get(1))
-		api    = ctx.String("api")
-		lookup = ctx.String("lookup")
+		api    = cli.String("api")
+		lookup = cli.String("lookup")
 	)
 	accessKey, secretKey := fetchHostKeys(args)
-	checkConfigHostAddSyntax(ctx, accessKey, secretKey)
+	checkConfigHostAddSyntax(cli, accessKey, secretKey)
 
-	s3Config, err := BuildS3Config(url, accessKey, secretKey, api, lookup)
-	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
+	ctx, cancelHostAdd := context.WithCancel(globalContext)
+	defer cancelHostAdd()
+
+	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, lookup)
+	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new config from the provided credentials.")
 
 	addHost(alias, hostConfigV9{
 		URL:       s3Config.HostURL,

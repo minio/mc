@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
+	"context"
 	"io"
 	"io/ioutil"
 	"os"
@@ -84,7 +85,7 @@ func headURL(sourceURL string, encKeyDB map[string][]prefixSSEPair, nlines int64
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if reader, metadata, err = getSourceStreamMetadataFromURL(sourceURL, encKeyDB); err != nil {
+		if reader, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]

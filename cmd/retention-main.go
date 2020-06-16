@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -116,6 +117,9 @@ func getRetainUntilDate(validity uint64, unit minio.ValidityUnit) (string, *prob
 
 // setRetention - Set Retention for all objects within a given prefix.
 func setRetention(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance, isRecursive bool) error {
+	ctx, cancelSetRetention := context.WithCancel(globalContext)
+	defer cancelSetRetention()
+
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
@@ -130,7 +134,7 @@ func setRetention(urlStr string, mode minio.RetentionMode, validity uint64, unit
 	alias, _, _ := mustExpandAlias(urlStr)
 
 	var cErr error
-	for content := range clnt.List(isRecursive, false, false, DirNone) {
+	for content := range clnt.List(ctx, isRecursive, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
@@ -152,7 +156,7 @@ func setRetention(urlStr string, mode minio.RetentionMode, validity uint64, unit
 			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
-		err = newClnt.PutObjectRetention(mode, retainUntil, bypassGovernance)
+		err = newClnt.PutObjectRetention(ctx, mode, retainUntil, bypassGovernance)
 		if err != nil {
 			printMsg(retentionCmdMessage{
 				Mode:     mode,

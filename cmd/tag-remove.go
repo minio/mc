@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -74,15 +76,18 @@ func checkRemoveTagSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainRemoveTag(ctx *cli.Context) error {
-	checkRemoveTagSyntax(ctx)
+func mainRemoveTag(cliCtx *cli.Context) error {
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
+
+	checkRemoveTagSyntax(cliCtx)
 
 	console.SetColor("Remove", color.New(color.FgGreen))
 
-	targetURL := ctx.Args().Get(0)
+	targetURL := cliCtx.Args().Get(0)
 	clnt, pErr := newClient(targetURL)
 	fatalIf(pErr, "Unable to initialize target "+targetURL)
-	pErr = clnt.DeleteTags()
+	pErr = clnt.DeleteTags(ctx)
 	fatalIf(pErr, "Unable to remove tags for "+targetURL)
 
 	printMsg(tagRemoveMessage{

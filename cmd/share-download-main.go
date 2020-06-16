@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -66,15 +67,15 @@ EXAMPLES:
 }
 
 // checkShareDownloadSyntax - validate command-line args.
-func checkShareDownloadSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
-	args := ctx.Args()
+func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+	args := cliCtx.Args()
 	if !args.Present() {
-		cli.ShowCommandHelpAndExit(ctx, "download", 1) // last argument is exit code.
+		cli.ShowCommandHelpAndExit(cliCtx, "download", 1) // last argument is exit code.
 	}
 
 	// Parse expiry.
 	expiry := shareDefaultExpiry
-	expireArg := ctx.String("expire")
+	expireArg := cliCtx.String("expire")
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
@@ -90,10 +91,10 @@ func checkShareDownloadSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEP
 	}
 
 	// Validate if object exists only if the `--recursive` flag was NOT specified
-	isRecursive := ctx.Bool("recursive")
+	isRecursive := cliCtx.Bool("recursive")
 	if !isRecursive {
-		for _, url := range ctx.Args() {
-			_, _, err := url2Stat(url, false, encKeyDB)
+		for _, url := range cliCtx.Args() {
+			_, _, err := url2Stat(ctx, url, false, encKeyDB)
 			if err != nil {
 				fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 			}
@@ -102,7 +103,7 @@ func checkShareDownloadSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEP
 }
 
 // doShareURL share files from target.
-func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration) *probe.Error {
+func doShareDownloadURL(ctx context.Context, targetURL string, isRecursive bool, expiry time.Duration) *probe.Error {
 	targetAlias, targetURLFull, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -125,7 +126,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 	// Channel which will receive objects whose URLs need to be shared
 	objectsCh := make(chan *ClientContent)
 
-	content, err := clnt.Stat(isIncomplete, false, nil)
+	content, err := clnt.Stat(ctx, isIncomplete, false, nil)
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
@@ -146,7 +147,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 		// Recursive mode: Share list of objects
 		go func() {
 			defer close(objectsCh)
-			for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
+			for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
 				objectsCh <- content
 			}
 		}()
@@ -168,7 +169,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 		}
 
 		// Generate share URL.
-		shareURL, err := newClnt.ShareDownload(expiry)
+		shareURL, err := newClnt.ShareDownload(ctx, expiry)
 		if err != nil {
 			// add objectURL and expiry as part of the trace arguments.
 			return err.Trace(objectURL, "expiry="+expiry.String())
@@ -190,13 +191,16 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 }
 
 // main for share download.
-func mainShareDownload(ctx *cli.Context) error {
+func mainShareDownload(cliCtx *cli.Context) error {
+	ctx, cancelShareDownload := context.WithCancel(globalContext)
+	defer cancelShareDownload()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check input arguments.
-	checkShareDownloadSyntax(ctx, encKeyDB)
+	checkShareDownloadSyntax(ctx, cliCtx, encKeyDB)
 
 	// Initialize share config folder.
 	initShareConfig()
@@ -205,16 +209,16 @@ func mainShareDownload(ctx *cli.Context) error {
 	shareSetColor()
 
 	// Set command flags from context.
-	isRecursive := ctx.Bool("recursive")
+	isRecursive := cliCtx.Bool("recursive")
 	expiry := shareDefaultExpiry
-	if ctx.String("expire") != "" {
+	if cliCtx.String("expire") != "" {
 		var e error
-		expiry, e = time.ParseDuration(ctx.String("expire"))
-		fatalIf(probe.NewError(e), "Unable to parse expire=`"+ctx.String("expire")+"`.")
+		expiry, e = time.ParseDuration(cliCtx.String("expire"))
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+cliCtx.String("expire")+"`.")
 	}
 
-	for _, targetURL := range ctx.Args() {
-		err := doShareDownloadURL(targetURL, isRecursive, expiry)
+	for _, targetURL := range cliCtx.Args() {
+		err := doShareDownloadURL(ctx, targetURL, isRecursive, expiry)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:

@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -109,23 +110,23 @@ func (d diffMessage) JSON() string {
 	return string(diffJSONBytes)
 }
 
-func checkDiffSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
-	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
+func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+	if len(cliCtx.Args()) != 2 {
+		cli.ShowCommandHelpAndExit(cliCtx, "diff", 1) // last argument is exit code
 	}
-	for _, arg := range ctx.Args() {
+	for _, arg := range cliCtx.Args() {
 		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Unable to validate empty argument.")
+			fatalIf(errInvalidArgument().Trace(cliCtx.Args()...), "Unable to validate empty argument.")
 		}
 	}
-	URLs := ctx.Args()
+	URLs := cliCtx.Args()
 	firstURL := URLs[0]
 	secondURL := URLs[1]
 
 	// Diff only works between two directories, verify them below.
 
 	// Verify if firstURL is accessible.
-	_, firstContent, err := url2Stat(firstURL, false, encKeyDB)
+	_, firstContent, err := url2Stat(ctx, firstURL, false, encKeyDB)
 	if err != nil {
 		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
@@ -136,7 +137,7 @@ func checkDiffSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	}
 
 	// Verify if secondURL is accessible.
-	_, secondContent, err := url2Stat(secondURL, false, encKeyDB)
+	_, secondContent, err := url2Stat(ctx, secondURL, false, encKeyDB)
 	if err != nil {
 		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
 	}
@@ -189,13 +190,16 @@ func doDiffMain(firstURL, secondURL string) error {
 }
 
 // mainDiff main for 'diff'.
-func mainDiff(ctx *cli.Context) error {
+func mainDiff(cliCtx *cli.Context) error {
+	ctx, cancelDiff := context.WithCancel(globalContext)
+	defer cancelDiff()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'diff' cli arguments.
-	checkDiffSyntax(ctx, encKeyDB)
+	checkDiffSyntax(ctx, cliCtx, encKeyDB)
 
 	// Additional command specific theme customization.
 	console.SetColor("DiffMessage", color.New(color.FgGreen, color.Bold))
@@ -206,7 +210,7 @@ func mainDiff(ctx *cli.Context) error {
 	console.SetColor("DiffMetadata", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffMMSourceMTime", color.New(color.FgYellow, color.Bold))
 
-	URLs := ctx.Args()
+	URLs := cliCtx.Args()
 	firstURL := URLs.Get(0)
 	secondURL := URLs.Get(1)
 

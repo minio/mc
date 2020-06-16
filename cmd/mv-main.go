@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -181,7 +182,7 @@ func (rm *removeManager) readErrors(errorCh <-chan *probe.Error, targetURL strin
 	}()
 }
 
-func (rm *removeManager) add(targetAlias, targetURL string) {
+func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string) {
 	if atomic.LoadInt32(&rm.isClosed) != 0 {
 		return
 	}
@@ -198,7 +199,7 @@ func (rm *removeManager) add(targetAlias, targetURL string) {
 		}
 
 		contentCh := make(chan *ClientContent)
-		errorCh := client.Remove(false, false, false, contentCh)
+		errorCh := client.Remove(ctx, false, false, false, contentCh)
 		rm.readErrors(errorCh, targetURL)
 
 		clientInfo = &removeClientInfo{
@@ -236,7 +237,7 @@ var rmManager = &removeManager{
 	doneCh:    make(chan struct{}),
 }
 
-func bgRemove(url string) {
+func bgRemove(ctx context.Context, url string) {
 	remove := func(targetAlias, targetURL string) {
 		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 		if pErr != nil {
@@ -246,7 +247,7 @@ func bgRemove(url string) {
 		contentCh := make(chan *ClientContent, 1)
 		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
-		errorCh := clnt.Remove(false, false, false, contentCh)
+		errorCh := clnt.Remove(ctx, false, false, false, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
@@ -266,27 +267,30 @@ func bgRemove(url string) {
 		return
 	}
 
-	rmManager.add(targetAlias, targetURL)
+	rmManager.add(ctx, targetAlias, targetURL)
 }
 
 // mainMove is the entry point for mv command.
-func mainMove(ctx *cli.Context) error {
+func mainMove(cliCtx *cli.Context) error {
+	ctx, cancelMove := context.WithCancel(globalContext)
+	defer cancelMove()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// Parse metadata.
 	userMetaMap := make(map[string]string)
-	if ctx.String("attr") != "" {
-		userMetaMap, err = getMetaDataEntry(ctx.String("attr"))
-		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
+	if cliCtx.String("attr") != "" {
+		userMetaMap, err = getMetaDataEntry(cliCtx.String("attr"))
+		fatalIf(err, "Unable to parse attribute %v", cliCtx.String("attr"))
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, encKeyDB, true)
+	checkCopySyntax(ctx, cliCtx, encKeyDB, true)
 
-	if ctx.NArg() == 2 {
-		args := ctx.Args()
+	if cliCtx.NArg() == 2 {
+		args := cliCtx.Args()
 		srcURL := args.Get(0)
 		dstURL := args.Get(1)
 		if srcURL == dstURL {
@@ -294,14 +298,14 @@ func mainMove(ctx *cli.Context) error {
 		}
 	}
 
-	for _, urlStr := range ctx.Args() {
+	for _, urlStr := range cliCtx.Args() {
 		client, err := newClient(urlStr)
 		if err != nil {
 			fatalIf(err.Trace(), "Cannot parse the provided url.")
 		}
 
 		if s3Client, ok := client.(*S3Client); ok {
-			if _, _, _, err = s3Client.GetObjectLockConfig(); err == nil {
+			if _, _, _, err = s3Client.GetObjectLockConfig(ctx); err == nil {
 				fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 			}
 		}
@@ -310,12 +314,12 @@ func mainMove(ctx *cli.Context) error {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	recursive := ctx.Bool("recursive")
-	olderThan := ctx.String("older-than")
-	newerThan := ctx.String("newer-than")
-	storageClass := ctx.String("storage-class")
+	recursive := cliCtx.Bool("recursive")
+	olderThan := cliCtx.String("older-than")
+	newerThan := cliCtx.String("newer-than")
+	storageClass := cliCtx.String("storage-class")
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := ctx.String("encrypt-key"); key != "" {
+	if key := cliCtx.String("encrypt-key"); key != "" {
 		sseKeys = key
 	}
 
@@ -323,12 +327,12 @@ func mainMove(ctx *cli.Context) error {
 		sseKeys, err = getDecodedKey(sseKeys)
 		fatalIf(err, "Unable to parse encryption keys.")
 	}
-	sse := ctx.String("encrypt")
+	sse := cliCtx.String("encrypt")
 
 	var session *sessionV8
 
-	if ctx.Bool("continue") {
-		sessionID := getHash("mv", ctx.Args())
+	if cliCtx.Bool("continue") {
+		sessionID := getHash("mv", cliCtx.Args())
 		if isSessionExists(sessionID) {
 			session, err = loadSessionV8(sessionID)
 			fatalIf(err.Trace(sessionID), "Unable to load session.")
@@ -341,13 +345,13 @@ func mainMove(ctx *cli.Context) error {
 			session.Header.CommandStringFlags["storage-class"] = storageClass
 			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 			session.Header.CommandStringFlags["encrypt"] = sse
-			session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
+			session.Header.CommandBoolFlags["session"] = cliCtx.Bool("continue")
 
-			if ctx.Bool("preserve") {
-				session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
+			if cliCtx.Bool("preserve") {
+				session.Header.CommandBoolFlags["preserve"] = cliCtx.Bool("preserve")
 			}
 			session.Header.UserMetaData = userMetaMap
-			session.Header.CommandBoolFlags["disable-multipart"] = ctx.Bool("disable-multipart")
+			session.Header.CommandBoolFlags["disable-multipart"] = cliCtx.Bool("disable-multipart")
 
 			var e error
 			if session.Header.RootPath, e = os.Getwd(); e != nil {
@@ -356,11 +360,11 @@ func mainMove(ctx *cli.Context) error {
 			}
 
 			// extract URLs.
-			session.Header.CommandArgs = ctx.Args()
+			session.Header.CommandArgs = cliCtx.Args()
 		}
 	}
 
-	e := doCopySession(ctx, session, encKeyDB, true)
+	e := doCopySession(ctx, cancelMove, cliCtx, session, encKeyDB, true)
 	if session != nil {
 		session.Delete()
 	}

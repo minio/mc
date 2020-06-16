@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -183,7 +184,7 @@ func urlJoinPath(url1, url2 string) string {
 }
 
 // url2Stat returns stat info for URL.
-func url2Stat(urlStr string, fileAttr bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *ClientContent, err *probe.Error) {
+func url2Stat(ctx context.Context, urlStr string, fileAttr bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -191,7 +192,7 @@ func url2Stat(urlStr string, fileAttr bool, encKeyDB map[string][]prefixSSEPair)
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(false, fileAttr, sse)
+	content, err = client.Stat(ctx, false, fileAttr, sse)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
@@ -231,7 +232,7 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 	isRecursive := false
 	isIncomplete := incomplete
 	isFetchMeta := false
-	for entry := range clnt.List(isRecursive, isIncomplete, isFetchMeta, DirNone) {
+	for entry := range clnt.List(globalContext, isRecursive, isIncomplete, isFetchMeta, DirNone) {
 		return entry.Err == nil
 	}
 	return false

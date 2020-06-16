@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -127,7 +128,7 @@ func getStandardizedURL(targetURL string) string {
 }
 
 // statURL - simple or recursive listing
-func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
+func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
 	var stats []*ClientContent
 	var clnt Client
 	clnt, err := newClient(targetURL)
@@ -143,7 +144,7 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
 	var cErr error
-	for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
+	for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -176,7 +177,7 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
-		_, stat, err := url2Stat(url, true, encKeyDB)
+		_, stat, err := url2Stat(ctx, url, true, encKeyDB)
 		if err != nil {
 			stat = content
 		}

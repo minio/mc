@@ -47,56 +47,56 @@ const defaultMultipartThreadsNum = 4
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error)
-	List(isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *ClientContent
+	Stat(ctx context.Context, isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error)
+	List(ctx context.Context, isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *ClientContent
 
 	// Bucket operations
-	MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error
+	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
 	// Object lock config
-	SetObjectLockConfig(mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
-	GetObjectLockConfig() (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
+	SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
+	GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
-	GetAccess() (access string, policyJSON string, error *probe.Error)
-	GetAccessRules() (policyRules map[string]string, error *probe.Error)
-	SetAccess(access string, isJSON bool) *probe.Error
+	GetAccess(ctx context.Context) (access string, policyJSON string, error *probe.Error)
+	GetAccessRules(ctx context.Context) (policyRules map[string]string, error *probe.Error)
+	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error
+	Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error
 
 	// Runs select expression on object storage on specific files.
-	Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
+	Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
 
 	// I/O operations with metadata.
-	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
+	Get(ctx context.Context, sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
 	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (n int64, err *probe.Error)
 
 	// Object Locking related API
-	PutObjectRetention(mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
-	PutObjectLegalHold(hold minio.LegalHoldStatus) *probe.Error
+	PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
+	PutObjectLegalHold(ctx context.Context, hold minio.LegalHoldStatus) *probe.Error
 
 	// I/O operations with expiration
-	ShareDownload(expires time.Duration) (string, *probe.Error)
+	ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error)
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
-	Watch(options WatchOptions) (*WatchObject, *probe.Error)
+	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
 	AddUserAgent(app, version string)
 
 	// Tagging operations
-	GetTags() (*tags.Tags, *probe.Error)
-	SetTags(tags string) *probe.Error
-	DeleteTags() *probe.Error
+	GetTags(ctx context.Context) (*tags.Tags, *probe.Error)
+	SetTags(ctx context.Context, tags string) *probe.Error
+	DeleteTags(ctx context.Context) *probe.Error
 
 	// Lifecycle operations
-	GetLifecycle() (ilm.LifecycleConfiguration, *probe.Error)
-	SetLifecycle(lfcCfg ilm.LifecycleConfiguration) *probe.Error
+	GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration, *probe.Error)
+	SetLifecycle(ctx context.Context, lfcCfg ilm.LifecycleConfiguration) *probe.Error
 }
 
 // ClientContent - Content container for content metadata
