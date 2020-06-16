@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -100,16 +101,19 @@ func (t tagListMessage) String() string {
 	return strings.Join(strs, "\n")
 }
 
-func mainListTag(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
+func mainListTag(cliCtx *cli.Context) error {
+	ctx, cancelListTag := context.WithCancel(globalContext)
+	defer cancelListTag()
+
+	if len(cliCtx.Args()) != 1 {
+		cli.ShowCommandHelpAndExit(cliCtx, "list", globalErrorExitStatus)
 	}
 
-	targetURL := ctx.Args().Get(0)
+	targetURL := cliCtx.Args().Get(0)
 	clnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
-	tags, err := clnt.GetTags()
+	tags, err := clnt.GetTags(ctx)
 	fatalIf(err, "Unable to fetch tags for "+targetURL)
 
 	tagMap := tags.ToMap()

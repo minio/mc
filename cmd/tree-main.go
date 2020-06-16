@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -105,11 +106,11 @@ EXAMPLES:
 }
 
 // checkTreeSyntax - validate all the passed arguments
-func checkTreeSyntax(ctx *cli.Context) {
-	args := ctx.Args()
+func checkTreeSyntax(ctx context.Context, cliCtx *cli.Context) {
+	args := cliCtx.Args()
 
-	if ctx.IsSet("depth") {
-		if ctx.Int("depth") < -1 || ctx.Int("depth") == 0 {
+	if cliCtx.IsSet("depth") {
+		if cliCtx.Int("depth") < -1 || cliCtx.Int("depth") == 0 {
 			fatalIf(errInvalidArgument().Trace(args...), "please set a proper depth, for example: '--depth 1' to limit the tree output, default (-1) output displays everything")
 		}
 	}
@@ -119,14 +120,14 @@ func checkTreeSyntax(ctx *cli.Context) {
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(url, false, nil); err != nil && !isURLPrefixExists(url, false) {
+		if _, _, err := url2Stat(ctx, url, false, nil); err != nil && !isURLPrefixExists(url, false) {
 			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 		}
 	}
 }
 
 // doTree - list all entities inside a folder in a tree format.
-func doTree(url string, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
+func doTree(ctx context.Context, url string, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
 
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	if !strings.HasSuffix(targetURL, "/") {
@@ -206,7 +207,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 			}
 
 			if depth == -1 || level <= depth {
-				if err := doTree(url, level+1, end, currbranchString, depth, includeFiles); err != nil {
+				if err := doTree(ctx, url, level+1, end, currbranchString, depth, includeFiles); err != nil {
 					return err
 				}
 			}
@@ -215,7 +216,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 		return nil
 	}
 
-	for content := range clnt.List(false, false, false, DirNone) {
+	for content := range clnt.List(ctx, false, false, false, DirNone) {
 
 		if !includeFiles && !content.Type.IsDir() {
 			continue
@@ -245,27 +246,29 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 }
 
 // mainTree - is a handler for mc tree command
-func mainTree(ctx *cli.Context) error {
+func mainTree(cliCtx *cli.Context) error {
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
 
-	// check 'tree' cli arguments.
-	checkTreeSyntax(ctx)
+	// check 'tree' cliCtx arguments.
+	checkTreeSyntax(ctx, cliCtx)
 
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	// mimic operating system tool behavior.
-	if !ctx.Args().Present() {
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
 
-	includeFiles := ctx.Bool("files")
-	depth := ctx.Int("depth")
+	includeFiles := cliCtx.Bool("files")
+	depth := cliCtx.Int("depth")
 
 	var cErr error
 	for _, targetURL := range args {
 		if !globalJSON {
-			if e := doTree(targetURL, 1, false, "", depth, includeFiles); e != nil {
+			if e := doTree(ctx, targetURL, 1, false, "", depth, includeFiles); e != nil {
 				cErr = e
 			}
 		} else {
@@ -275,7 +278,7 @@ func mainTree(ctx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(clnt, true, false); e != nil {
+			if e := doList(ctx, clnt, true, false); e != nil {
 				cErr = e
 			}
 		}

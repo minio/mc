@@ -104,10 +104,10 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 // Check if the passed URL represents a folder. It may or may not exist yet.
 // If it exists, we can easily check if it is a folder, if it doesn't exist,
 // we can guess if the url is a folder from how it looks.
-func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
+func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefixSSEPair) bool {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(aliasURL, false, keys)
+	_, targetContent, err := url2Stat(ctx, aliasURL, false, keys)
 	if err == nil {
 		return targetContent.Type.IsDir()
 	}
@@ -141,24 +141,24 @@ func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 }
 
 // getSourceStreamMetadataFromURL gets a reader from URL.
-func getSourceStreamMetadataFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser,
+func getSourceStreamMetadataFromURL(ctx context.Context, urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser,
 	metadata map[string]string, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
 	sseKey := getSSE(urlStr, encKeyDB[alias])
-	return getSourceStream(alias, urlStrFull, true, sseKey, false)
+	return getSourceStream(ctx, alias, urlStrFull, true, sseKey, false)
 }
 
 // getSourceStreamFromURL gets a reader from URL.
-func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser, err *probe.Error) {
+func getSourceStreamFromURL(ctx context.Context, urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
 	sse := getSSE(urlStr, encKeyDB[alias])
-	reader, _, err = getSourceStream(alias, urlStrFull, false, sse, false)
+	reader, _, err = getSourceStream(ctx, alias, urlStrFull, false, sse, false)
 	return reader, err
 }
 
@@ -210,12 +210,12 @@ func isReadAt(reader io.Reader) (ok bool) {
 }
 
 // getSourceStream gets a reader from URL.
-func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.ServerSide, preserve bool) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
+func getSourceStream(ctx context.Context, alias string, urlStr string, fetchStat bool, sse encrypt.ServerSide, preserve bool) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
-	reader, err = sourceClnt.Get(sse)
+	reader, err = sourceClnt.Get(ctx, sse)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
@@ -241,7 +241,7 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 			}
 			st.ETag = oinfo.ETag
 		} else {
-			st, err = sourceClnt.Stat(false, preserve, sse)
+			st, err = sourceClnt.Stat(ctx, false, preserve, sse)
 			if err != nil {
 				return nil, nil, err.Trace(alias, urlStr)
 			}
@@ -290,7 +290,7 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 			retainUntilDate = t.UTC()
 		}
 	}
-	if err := targetClnt.PutObjectRetention(lockMode, retainUntilDate, false); err != nil {
+	if err := targetClnt.PutObjectRetention(ctx, lockMode, retainUntilDate, false); err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil
@@ -334,7 +334,7 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 }
 
 // copySourceToTargetURL copies to targetURL from source.
-func copySourceToTargetURL(alias, urlStr, source, mode, until, legalHold string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+func copySourceToTargetURL(ctx context.Context, alias, urlStr, source, mode, until, legalHold string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
 
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
@@ -344,7 +344,7 @@ func copySourceToTargetURL(alias, urlStr, source, mode, until, legalHold string,
 	metadata[AmzObjectLockMode] = mode
 	metadata[AmzObjectLockRetainUntilDate] = until
 	metadata[AmzObjectLockLegalHold] = legalHold
-	err = targetClnt.Copy(source, size, progress, srcSSE, tgtSSE, metadata, disableMultipart)
+	err = targetClnt.Copy(ctx, source, size, progress, srcSSE, tgtSSE, metadata, disableMultipart)
 
 	if err != nil {
 		return err.Trace(alias, urlStr)
@@ -369,13 +369,13 @@ func filterMetadata(metadata map[string]string) map[string]string {
 
 // getAllMetadata - returns a map of user defined function
 // by combining the usermetadata of object and values passed by attr keyword
-func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs, preserve bool) (map[string]string, *probe.Error) {
+func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs, preserve bool) (map[string]string, *probe.Error) {
 	metadata := make(map[string]string)
 	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURLStr)
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
-	st, err := sourceClnt.Stat(false, preserve, srcSSE)
+	st, err := sourceClnt.Stat(ctx, false, preserve, srcSSE)
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
@@ -456,7 +456,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		// If no metadata populated already by the caller
 		// just do a Stat() to obtain the metadata.
 		if len(metadata) == 0 {
-			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
+			metadata, err = getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
 			if err != nil {
 				return urls.WithError(err.Trace(sourceURL.String()))
 			}
@@ -477,14 +477,14 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			metadata[k] = v
 		}
 
-		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, mode, until,
+		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, mode, until,
 			legalHold, length, progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart)
 	} else {
 		if urls.SourceContent.RetentionEnabled {
 			// If no metadata populated already by the caller
 			// just do a Stat() to obtain the metadata.
 			if len(metadata) == 0 {
-				metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
+				metadata, err = getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
 				if err != nil {
 					return urls.WithError(err.Trace(sourceURL.String()))
 				}
@@ -495,7 +495,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		}
 		var reader io.ReadCloser
 		// Proceed with regular stream copy.
-		reader, metadata, err = getSourceStream(sourceAlias, sourceURL.String(), true, srcSSE, preserve)
+		reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), true, srcSSE, preserve)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}

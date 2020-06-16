@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -86,12 +87,15 @@ func (l legalHoldCmdMessage) JSON() string {
 
 // setRetention - Set Retention for all objects within a given prefix.
 func setLegalHold(urlStr string, lhold minio.LegalHoldStatus, isRecursive bool) error {
+	ctx, cancelLegalHold := context.WithCancel(globalContext)
+	defer cancelLegalHold()
+
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 	if !isRecursive {
-		err = clnt.PutObjectLegalHold(lhold)
+		err = clnt.PutObjectLegalHold(ctx, lhold)
 		if err != nil {
 			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
 		} else {
@@ -107,7 +111,7 @@ func setLegalHold(urlStr string, lhold minio.LegalHoldStatus, isRecursive bool) 
 	alias, _, _ := mustExpandAlias(urlStr)
 	var cErr error
 	errorsFound := false
-	for content := range clnt.List(isRecursive, false, false, DirNone) {
+	for content := range clnt.List(ctx, isRecursive, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
@@ -119,7 +123,7 @@ func setLegalHold(urlStr string, lhold minio.LegalHoldStatus, isRecursive bool) 
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
-		probeErr := newClnt.PutObjectLegalHold(lhold)
+		probeErr := newClnt.PutObjectLegalHold(ctx, lhold)
 		if probeErr != nil {
 			errorsFound = true
 			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `"+content.URL.Path+"` successfully")

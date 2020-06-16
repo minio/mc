@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -129,21 +130,21 @@ func (u watchMessage) String() string {
 	return msg
 }
 
-func mainWatch(ctx *cli.Context) error {
+func mainWatch(cliCtx *cli.Context) error {
 	console.SetColor("Time", color.New(color.FgGreen))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("EventType", color.New(color.FgCyan, color.Bold))
 	console.SetColor("ObjectName", color.New(color.Bold))
 
-	checkWatchSyntax(ctx)
+	checkWatchSyntax(cliCtx)
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	path := args[0]
 
-	prefix := ctx.String("prefix")
-	suffix := ctx.String("suffix")
-	events := strings.Split(ctx.String("events"), ",")
-	recursive := ctx.Bool("recursive")
+	prefix := cliCtx.String("prefix")
+	suffix := cliCtx.String("suffix")
+	events := strings.Split(cliCtx.String("events"), ",")
+	recursive := cliCtx.Bool("recursive")
 
 	s3Client, pErr := newClient(path)
 	if pErr != nil {
@@ -157,8 +158,11 @@ func mainWatch(ctx *cli.Context) error {
 		Suffix:    suffix,
 	}
 
+	ctx, cancelWatch := context.WithCancel(globalContext)
+	defer cancelWatch()
+
 	// Start watching on events
-	wo, err := s3Client.Watch(options)
+	wo, err := s3Client.Watch(ctx, options)
 	fatalIf(err, "Cannot watch on the specified bucket.")
 
 	// Initialize.. waitgroup to track the go-routine.

@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/minio/cli"
@@ -84,11 +85,14 @@ func checkILMImportSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainILMImport(ctx *cli.Context) error {
-	checkILMImportSyntax(ctx)
+func mainILMImport(cliCtx *cli.Context) error {
+	ctx, cancelILMImport := context.WithCancel(globalContext)
+	defer cancelILMImport()
+
+	checkILMImportSyntax(cliCtx)
 	setILMDisplayColorScheme()
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
 	client, err := newClient(urlStr)
@@ -97,7 +101,7 @@ func mainILMImport(ctx *cli.Context) error {
 	ilmCfg, err := readILMConfig()
 	fatalIf(err.Trace(args...), "Unable to read ILM configuration")
 
-	fatalIf(client.SetLifecycle(ilmCfg).Trace(urlStr), "Unable to set new lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, ilmCfg).Trace(urlStr), "Unable to set new lifecycle rules")
 
 	printMsg(ilmImportMessage{
 		Status: "success",

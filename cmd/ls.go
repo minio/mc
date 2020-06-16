@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -106,14 +107,15 @@ func getKey(c *ClientContent) string {
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt Client, isRecursive, isIncomplete bool) error {
+func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool) error {
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+
 	var cErr error
-	for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
+	for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.

@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/fatih/color"
@@ -73,23 +74,23 @@ EXAMPLES:
 }
 
 // checkStatSyntax - validate all the passed arguments
-func checkStatSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
-	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "stat", 1) // last argument is exit code
+func checkStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+	if !cliCtx.Args().Present() {
+		cli.ShowCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
 	}
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
 		}
 	}
 	// extract URLs.
-	URLs := ctx.Args()
+	URLs := cliCtx.Args()
 	isIncomplete := false
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, encKeyDB)
+		_, _, err := url2Stat(ctx, url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
@@ -97,7 +98,10 @@ func checkStatSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 }
 
 // mainStat - is a handler for mc stat command
-func mainStat(ctx *cli.Context) error {
+func mainStat(cliCtx *cli.Context) error {
+	ctx, cancelStat := context.WithCancel(globalContext)
+	defer cancelStat()
+
 	// Additional command specific theme customization.
 	console.SetColor("Name", color.New(color.Bold, color.FgCyan))
 	console.SetColor("Date", color.New(color.FgWhite))
@@ -106,24 +110,24 @@ func mainStat(ctx *cli.Context) error {
 	console.SetColor("Metadata", color.New(color.FgWhite))
 
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'stat' cli arguments.
-	checkStatSyntax(ctx, encKeyDB)
+	checkStatSyntax(ctx, cliCtx, encKeyDB)
 
 	// Set command flags from context.
-	isRecursive := ctx.Bool("recursive")
+	isRecursive := cliCtx.Bool("recursive")
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	// mimic operating system tool behavior.
-	if !ctx.Args().Present() {
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
 
 	var cErr error
 	for _, targetURL := range args {
-		stats, err := statURL(targetURL, false, isRecursive, encKeyDB)
+		stats, err := statURL(ctx, targetURL, false, isRecursive, encKeyDB)
 		if err != nil {
 			fatalIf(err, "Unable to stat `"+targetURL+"`.")
 		}

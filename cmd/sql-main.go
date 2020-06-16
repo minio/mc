@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -308,7 +309,7 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if r, metadata, err = getSourceStreamMetadataFromURL(sourceURL, encKeyDB); err != nil {
+		if r, metadata, err = getSourceStreamMetadataFromURL(globalContext, sourceURL, encKeyDB); err != nil {
 			return nil, err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]
@@ -381,6 +382,9 @@ func isCSVOrJSON(inOpts map[string]map[string]string) bool {
 }
 
 func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair, selOpts SelectObjectOpts, csvHdrs []string, writeHdr bool) *probe.Error {
+	ctx, cancelSelect := context.WithCancel(globalContext)
+	defer cancelSelect()
+
 	alias, _, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -392,7 +396,7 @@ func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair
 	}
 
 	sseKey := getSSE(targetURL, encKeyDB[alias])
-	outputer, err := targetClnt.Select(expression, sseKey, selOpts)
+	outputer, err := targetClnt.Select(ctx, expression, sseKey, selOpts)
 	if err != nil {
 		return err.Trace(targetURL, expression)
 	}
@@ -430,28 +434,31 @@ func checkSQLSyntax(ctx *cli.Context) {
 }
 
 // mainSQL is the main entry point for sql command.
-func mainSQL(ctx *cli.Context) error {
+func mainSQL(cliCtx *cli.Context) error {
+	ctx, cancelSQL := context.WithCancel(globalContext)
+	defer cancelSQL()
+
 	var (
 		csvHdrs []string
 		selOpts SelectObjectOpts
 		query   string
 	)
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// validate sql input arguments.
-	checkSQLSyntax(ctx)
+	checkSQLSyntax(cliCtx)
 	// extract URLs.
-	URLs := ctx.Args()
+	URLs := cliCtx.Args()
 	writeHdr := true
 	for _, url := range URLs {
-		if _, targetContent, err := url2Stat(url, false, encKeyDB); err != nil {
+		if _, targetContent, err := url2Stat(ctx, url, false, encKeyDB); err != nil {
 			errorIf(err.Trace(url), "Unable to run sql for "+url+".")
 			continue
 		} else if !targetContent.Type.IsDir() {
 			if writeHdr {
-				query, csvHdrs, selOpts = getAndValidateArgs(ctx, encKeyDB, url)
+				query, csvHdrs, selOpts = getAndValidateArgs(cliCtx, encKeyDB, url)
 			}
 			errorIf(sqlSelect(url, query, encKeyDB, selOpts, csvHdrs, writeHdr).Trace(url), "Unable to run sql")
 			writeHdr = false
@@ -464,13 +471,13 @@ func mainSQL(ctx *cli.Context) error {
 			continue
 		}
 
-		for content := range clnt.List(ctx.Bool("recursive"), false, false, DirNone) {
+		for content := range clnt.List(ctx, cliCtx.Bool("recursive"), false, false, DirNone) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue
 			}
 			if writeHdr {
-				query, csvHdrs, selOpts = getAndValidateArgs(ctx, encKeyDB, targetAlias+content.URL.Path)
+				query, csvHdrs, selOpts = getAndValidateArgs(cliCtx, encKeyDB, targetAlias+content.URL.Path)
 			}
 			contentType := mimedb.TypeByExtension(filepath.Ext(content.URL.Path))
 			for _, cTypeSuffix := range supportedContentTypes {

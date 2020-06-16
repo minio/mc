@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -139,7 +140,7 @@ func checkCatSyntax(ctx *cli.Context) {
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	var reader io.ReadCloser
 	size := int64(-1)
 	switch sourceURL {
@@ -152,11 +153,11 @@ func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error 
 		// downloaded object is equal to the original one. FS files
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
-		client, content, err := url2Stat(sourceURL, false, encKeyDB)
+		client, content, err := url2Stat(ctx, sourceURL, false, encKeyDB)
 		if err == nil && client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
-		if reader, err = getSourceStreamFromURL(sourceURL, encKeyDB); err != nil {
+		if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
 		defer reader.Close()
@@ -210,17 +211,20 @@ func catOut(r io.Reader, size int64) *probe.Error {
 }
 
 // mainCat is the main entry point for cat command.
-func mainCat(ctx *cli.Context) error {
+func mainCat(cliCtx *cli.Context) error {
+	ctx, cancelCat := context.WithCancel(globalContext)
+	defer cancelCat()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
-	checkCatSyntax(ctx)
+	checkCatSyntax(cliCtx)
 
 	// Set command flags from context.
 	stdinMode := false
-	if !ctx.Args().Present() {
+	if !cliCtx.Args().Present() {
 		stdinMode = true
 	}
 
@@ -231,11 +235,11 @@ func mainCat(ctx *cli.Context) error {
 	}
 
 	// if Args contain `-`, we need to preserve its order specially.
-	args := []string(ctx.Args())
-	if ctx.Args().First() == "-" {
+	args := []string(cliCtx.Args())
+	if cliCtx.Args().First() == "-" {
 		for i, arg := range os.Args {
 			if arg == "cat" {
-				// Overwrite ctx.Args with os.Args.
+				// Overwrite cliCtx.Args with os.Args.
 				args = os.Args[i+1:]
 				break
 			}
@@ -244,7 +248,7 @@ func mainCat(ctx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(url, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(catURL(ctx, url, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil

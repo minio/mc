@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 
 	"github.com/minio/minio-go/v6"
@@ -102,12 +103,15 @@ func (u eventRemoveMessage) String() string {
 	return msg
 }
 
-func mainEventRemove(ctx *cli.Context) error {
+func mainEventRemove(cliCtx *cli.Context) error {
+	ctx, cancelEventRemove := context.WithCancel(globalContext)
+	defer cancelEventRemove()
+
 	console.SetColor("Event", color.New(color.FgGreen, color.Bold))
 
-	checkEventRemoveSyntax(ctx)
+	checkEventRemoveSyntax(cliCtx)
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	path := args.Get(0)
 
 	arn := ""
@@ -126,11 +130,11 @@ func mainEventRemove(ctx *cli.Context) error {
 	}
 
 	// flags for the attributes of the even
-	event := ctx.String("event")
-	prefix := ctx.String("prefix")
-	suffix := ctx.String("suffix")
+	event := cliCtx.String("event")
+	prefix := cliCtx.String("prefix")
+	suffix := cliCtx.String("suffix")
 
-	err = s3Client.RemoveNotificationConfig(arn, event, prefix, suffix)
+	err = s3Client.RemoveNotificationConfig(ctx, arn, event, prefix, suffix)
 	if err != nil {
 		if err.Cause == minio.ErrNoNotificationConfigMatch {
 			fatalIf(err, "Remove event failed.")

@@ -138,8 +138,8 @@ func dirDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (
 func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
 	// Set default values for listing.
 	isIncomplete := false // we will not compare any incomplete objects.
-	srcCh := sourceClnt.List(isRecursive, isIncomplete, isMetadata, dirOpt)
-	tgtCh := targetClnt.List(isRecursive, isIncomplete, isMetadata, dirOpt)
+	srcCh := sourceClnt.List(globalContext, isRecursive, isIncomplete, isMetadata, dirOpt)
+	tgtCh := targetClnt.List(globalContext, isRecursive, isIncomplete, isMetadata, dirOpt)
 
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh

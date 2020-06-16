@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -154,8 +155,8 @@ EXAMPLES:
 }
 
 // checkFindSyntax - validate the passed arguments
-func checkFindSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
-	args := ctx.Args()
+func checkFindSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+	args := cliCtx.Args()
 	if !args.Present() {
 		args = []string{"./"} // No args just default to present directory.
 	} else if args.Get(0) == "." {
@@ -170,10 +171,10 @@ func checkFindSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 
 	// Extract input URLs and validate.
 	for _, url := range args {
-		_, _, err := url2Stat(url, false, encKeyDB)
+		_, _, err := url2Stat(ctx, url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, false) {
 			// Bucket name empty is a valid error for 'find myminio' unless we are using watch, treat it as such.
-			if _, ok := err.ToGoError().(BucketNameEmpty); ok && !ctx.Bool("watch") {
+			if _, ok := err.ToGoError().(BucketNameEmpty); ok && !cliCtx.Bool("watch") {
 				continue
 			}
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
@@ -207,18 +208,21 @@ type findContext struct {
 }
 
 // mainFind - handler for mc find commands
-func mainFind(ctx *cli.Context) error {
+func mainFind(cliCtx *cli.Context) error {
+	ctx, cancelFind := context.WithCancel(globalContext)
+	defer cancelFind()
+
 	// Additional command specific theme customization.
 	console.SetColor("Find", color.New(color.FgGreen, color.Bold))
 	console.SetColor("FindExecErr", color.New(color.FgRed, color.Italic, color.Bold))
 
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
-	checkFindSyntax(ctx, encKeyDB)
+	checkFindSyntax(ctx, cliCtx, encKeyDB)
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	if !args.Present() {
 		args = []string{"./"} // Not args present default to present directory.
 	} else if args.Get(0) == "." {
@@ -230,11 +234,11 @@ func mainFind(ctx *cli.Context) error {
 
 	var olderThan, newerThan string
 
-	if ctx.String("older-than") != "" {
-		olderThan = ctx.String("older-than")
+	if cliCtx.String("older-than") != "" {
+		olderThan = cliCtx.String("older-than")
 	}
-	if ctx.String("newer-than") != "" {
-		newerThan = ctx.String("newer-than")
+	if cliCtx.String("newer-than") != "" {
+		newerThan = cliCtx.String("newer-than")
 	}
 
 	// Use 'e' to indicate Go error, this is a convention followed in `mc`. For probe.Error we call it
@@ -242,14 +246,14 @@ func mainFind(ctx *cli.Context) error {
 	var e error
 	var largerSize, smallerSize uint64
 
-	if ctx.String("larger") != "" {
-		largerSize, e = humanize.ParseBytes(ctx.String("larger"))
-		fatalIf(probe.NewError(e).Trace(ctx.String("larger")), "Unable to parse input bytes.")
+	if cliCtx.String("larger") != "" {
+		largerSize, e = humanize.ParseBytes(cliCtx.String("larger"))
+		fatalIf(probe.NewError(e).Trace(cliCtx.String("larger")), "Unable to parse input bytes.")
 	}
 
-	if ctx.String("smaller") != "" {
-		smallerSize, e = humanize.ParseBytes(ctx.String("smaller"))
-		fatalIf(probe.NewError(e).Trace(ctx.String("smaller")), "Unable to parse input bytes.")
+	if cliCtx.String("smaller") != "" {
+		smallerSize, e = humanize.ParseBytes(cliCtx.String("smaller"))
+		fatalIf(probe.NewError(e).Trace(cliCtx.String("smaller")), "Unable to parse input bytes.")
 	}
 
 	targetAlias, _, hostCfg, err := expandAlias(args[0])
@@ -260,20 +264,20 @@ func mainFind(ctx *cli.Context) error {
 		targetFullURL = hostCfg.URL
 	}
 
-	return doFind(&findContext{
-		Context:       ctx,
-		maxDepth:      ctx.Uint("maxdepth"),
-		execCmd:       ctx.String("exec"),
-		printFmt:      ctx.String("print"),
-		namePattern:   ctx.String("name"),
-		pathPattern:   ctx.String("path"),
-		regexPattern:  ctx.String("regex"),
-		ignorePattern: ctx.String("ignore"),
+	return doFind(ctx, &findContext{
+		Context:       cliCtx,
+		maxDepth:      cliCtx.Uint("maxdepth"),
+		execCmd:       cliCtx.String("exec"),
+		printFmt:      cliCtx.String("print"),
+		namePattern:   cliCtx.String("name"),
+		pathPattern:   cliCtx.String("path"),
+		regexPattern:  cliCtx.String("regex"),
+		ignorePattern: cliCtx.String("ignore"),
 		olderThan:     olderThan,
 		newerThan:     newerThan,
 		largerSize:    largerSize,
 		smallerSize:   smallerSize,
-		watch:         ctx.Bool("watch"),
+		watch:         cliCtx.Bool("watch"),
 		targetAlias:   targetAlias,
 		targetURL:     args[0],
 		targetFullURL: targetFullURL,

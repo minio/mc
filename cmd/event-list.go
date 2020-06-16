@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/color"
@@ -96,14 +97,17 @@ func (u eventListMessage) String() string {
 	return msg
 }
 
-func mainEventList(ctx *cli.Context) error {
+func mainEventList(cliCtx *cli.Context) error {
+	ctx, cancelEventList := context.WithCancel(globalContext)
+	defer cancelEventList()
+
 	console.SetColor("ARN", color.New(color.FgGreen, color.Bold))
 	console.SetColor("Event", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Filter", color.New(color.Bold))
 
-	checkEventListSyntax(ctx)
+	checkEventListSyntax(cliCtx)
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	path := args[0]
 	arn := ""
 	if len(args) > 1 {
@@ -120,7 +124,7 @@ func mainEventList(ctx *cli.Context) error {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
 
-	configs, err := s3Client.ListNotificationConfigs(arn)
+	configs, err := s3Client.ListNotificationConfigs(ctx, arn)
 	fatalIf(err, "Cannot list notifications on the specified bucket.")
 
 	for _, config := range configs {

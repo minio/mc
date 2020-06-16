@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/fatih/color"
@@ -76,9 +77,9 @@ EXAMPLES:
 }
 
 // checkListSyntax - validate all the passed arguments
-func checkListSyntax(ctx *cli.Context) {
-	args := ctx.Args()
-	if !ctx.Args().Present() {
+func checkListSyntax(ctx context.Context, cliCtx *cli.Context) {
+	args := cliCtx.Args()
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
 	for _, arg := range args {
@@ -87,11 +88,11 @@ func checkListSyntax(ctx *cli.Context) {
 		}
 	}
 	// extract URLs.
-	URLs := ctx.Args()
-	isIncomplete := ctx.Bool("incomplete")
+	URLs := cliCtx.Args()
+	isIncomplete := cliCtx.Bool("incomplete")
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, nil)
+		_, _, err := url2Stat(ctx, url, false, nil)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
@@ -106,23 +107,26 @@ func checkListSyntax(ctx *cli.Context) {
 }
 
 // mainList - is a handler for mc ls command
-func mainList(ctx *cli.Context) error {
+func mainList(cliCtx *cli.Context) error {
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
+
 	// Additional command specific theme customization.
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
 
-	// check 'ls' cli arguments.
-	checkListSyntax(ctx)
+	// check 'ls' cliCtx arguments.
+	checkListSyntax(ctx, cliCtx)
 
 	// Set command flags from context.
-	isRecursive := ctx.Bool("recursive")
-	isIncomplete := ctx.Bool("incomplete")
+	isRecursive := cliCtx.Bool("recursive")
+	isIncomplete := cliCtx.Bool("incomplete")
 
-	args := ctx.Args()
+	args := cliCtx.Args()
 	// mimic operating system tool behavior.
-	if !ctx.Args().Present() {
+	if !cliCtx.Args().Present() {
 		args = []string{"."}
 	}
 
@@ -130,10 +134,9 @@ func mainList(ctx *cli.Context) error {
 	for _, targetURL := range args {
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 			var st *ClientContent
-			st, err = clnt.Stat(isIncomplete, false, nil)
+			st, err = clnt.Stat(ctx, isIncomplete, false, nil)
 			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)
@@ -141,7 +144,7 @@ func mainList(ctx *cli.Context) error {
 			}
 		}
 
-		if e := doList(clnt, isRecursive, isIncomplete); e != nil {
+		if e := doList(ctx, clnt, isRecursive, isIncomplete); e != nil {
 			cErr = e
 		}
 	}

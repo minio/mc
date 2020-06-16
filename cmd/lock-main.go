@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -99,11 +100,14 @@ func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.V
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 
+	ctx, cancelLock := context.WithCancel(globalContext)
+	defer cancelLock()
+
 	if clearLock || mode != "" {
-		err = client.SetObjectLockConfig(mode, validity, unit)
+		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
 		fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
 	} else {
-		mode, validity, unit, err = client.GetObjectLockConfig()
+		mode, validity, unit, err = client.GetObjectLockConfig(ctx)
 		fatalIf(err, "Cannot get object lock configuration on the specified bucket.")
 	}
 

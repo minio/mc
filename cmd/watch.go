@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -140,8 +141,8 @@ func (w *Watcher) Wait() {
 }
 
 // Join the watcher with client
-func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
-	wo, err := client.Watch(WatchOptions{
+func (w *Watcher) Join(ctx context.Context, client Client, recursive bool) *probe.Error {
+	wo, err := client.Watch(ctx, WatchOptions{
 		Recursive: recursive,
 		Events:    []string{"put", "delete"},
 	})
