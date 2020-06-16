@@ -127,7 +127,7 @@ func checkTreeSyntax(ctx context.Context, cliCtx *cli.Context) {
 }
 
 // doTree - list all entities inside a folder in a tree format.
-func doTree(url string, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
+func doTree(ctx context.Context, url string, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
 
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	if !strings.HasSuffix(targetURL, "/") {
@@ -207,7 +207,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 			}
 
 			if depth == -1 || level <= depth {
-				if err := doTree(url, level+1, end, currbranchString, depth, includeFiles); err != nil {
+				if err := doTree(ctx, url, level+1, end, currbranchString, depth, includeFiles); err != nil {
 					return err
 				}
 			}
@@ -216,7 +216,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 		return nil
 	}
 
-	for content := range clnt.List(globalContext, false, false, false, DirNone) {
+	for content := range clnt.List(ctx, false, false, false, DirNone) {
 
 		if !includeFiles && !content.Type.IsDir() {
 			continue
@@ -268,7 +268,7 @@ func mainTree(cliCtx *cli.Context) error {
 	var cErr error
 	for _, targetURL := range args {
 		if !globalJSON {
-			if e := doTree(targetURL, 1, false, "", depth, includeFiles); e != nil {
+			if e := doTree(ctx, targetURL, 1, false, "", depth, includeFiles); e != nil {
 				cErr = e
 			}
 		} else {

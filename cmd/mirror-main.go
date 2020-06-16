@@ -802,7 +802,7 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 		os.Exit(globalErrorExitStatus)
 	}()
 
-	ctx, cancelMirror := context.WithCancel(context.Background())
+	ctx, cancelMirror := context.WithCancel(globalContext)
 	defer cancelMirror()
 
 	if mirrorAllBuckets {

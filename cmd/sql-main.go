@@ -309,7 +309,7 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if r, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, encKeyDB); err != nil {
+		if r, metadata, err = getSourceStreamMetadataFromURL(globalContext, sourceURL, encKeyDB); err != nil {
 			return nil, err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]
@@ -471,7 +471,7 @@ func mainSQL(cliCtx *cli.Context) error {
 			continue
 		}
 
-		for content := range clnt.List(globalContext, cliCtx.Bool("recursive"), false, false, DirNone) {
+		for content := range clnt.List(ctx, cliCtx.Bool("recursive"), false, false, DirNone) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue
