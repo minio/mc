@@ -478,7 +478,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 						cpURLs.TargetContent.RetentionEnabled = true
 					}
 					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
-					cpURLs.TargetContent.LegalHold = session.Header.CommandStringFlags[lhFlag]
+					cpURLs.TargetContent.LegalHold = strings.ToUpper(session.Header.CommandStringFlags[lhFlag])
 					if cpURLs.TargetContent.LegalHold != "" {
 						cpURLs.TargetContent.LegalHoldEnabled = true
 					}
@@ -491,7 +491,7 @@ func doCopySession(cli *cli.Context, session *sessionV8, encKeyDB map[string][]p
 						cpURLs.TargetContent.RetentionDuration = rd
 					}
 					if lh := cli.String(lhFlag); lh != "" {
-						cpURLs.TargetContent.LegalHold = lh
+						cpURLs.TargetContent.LegalHold = strings.ToUpper(lh)
 						cpURLs.TargetContent.LegalHoldEnabled = true
 					}
 				}
@@ -642,7 +642,7 @@ func mainCopy(ctx *cli.Context) error {
 	storageClass := ctx.String("storage-class")
 	retentionMode := ctx.String(rmFlag)
 	retentionDuration := ctx.String(rdFlag)
-	legalHold := ctx.String(lhFlag)
+	legalHold := strings.ToUpper(ctx.String(lhFlag))
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := ctx.String("encrypt-key"); key != "" {
 		sseKeys = key
