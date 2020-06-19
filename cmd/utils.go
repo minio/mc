@@ -17,10 +17,13 @@
 package cmd
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"net"
@@ -432,4 +435,87 @@ func centerText(s string, w int) string {
 	fmt.Fprintf(&sb, "%s", s)
 	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Floor(padding))))
 	return sb.String()
+}
+
+// Compress the given folder path with tar gzip and write the result to output
+func compress(folder string, output io.Writer) error {
+	zr := gzip.NewWriter(output)
+	tw := tar.NewWriter(zr)
+
+	folder = filepath.Clean(folder)
+
+	filepath.Walk(folder, func(file string, fi os.FileInfo, err error) error {
+		fname := strings.TrimPrefix(filepath.ToSlash(file), folder)
+		if fname == "" {
+			return nil
+		}
+
+		header, err := tar.FileInfoHeader(fi, file)
+		if err != nil {
+			return err
+		}
+		header.Name = strings.TrimPrefix(fname, "/")
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if fi.IsDir() {
+			return nil
+		}
+
+		data, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(tw, data)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err := tw.Close(); err != nil {
+		return err
+	}
+	if err := zr.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Decompress the content of the archive in the folder path
+func decompress(src io.Reader, folder string) error {
+	zr, err := gzip.NewReader(src)
+	if err != nil {
+		return err
+	}
+	tr := tar.NewReader(zr)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		fileName := filepath.Join(folder, header.Name)
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(fileName, 0700); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+			f.Close()
+		}
+	}
+
+	return nil
 }

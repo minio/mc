@@ -279,6 +279,11 @@ func initMC() {
 		fatalIf(createCAsDir().Trace(), "Unable to create `CAs` directory.")
 	}
 
+	// Check if snaps dir exists
+	if !isSnapsDirExists() {
+		fatalIf(createSnapsDir().Trace(), "Unable to create `snaps` directory.")
+	}
+
 	// Load all authority certificates present in CAs dir
 	loadRootCAs()
 
@@ -412,6 +417,7 @@ var appCmds = []cli.Command{
 	headCmd,
 	pipeCmd,
 	shareCmd,
+	snapCmd,
 	findCmd,
 	sqlCmd,
 	statCmd,

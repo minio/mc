@@ -575,6 +575,10 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 	}
 
 	if hostCfg == nil {
+		if alias != "" {
+			return snapNew(alias, urlStr)
+		}
+
 		// No matching host config. So we treat it like a
 		// filesystem.
 		fsClient, fsErr := fsNew(urlStr)
@@ -598,6 +602,7 @@ var urlRgx = regexp.MustCompile("^https?://")
 
 // newClient gives a new client interface
 func newClient(aliasedURL string) (Client, *probe.Error) {
+
 	alias, urlStrFull, hostCfg, err := expandAlias(aliasedURL)
 	if err != nil {
 		return nil, err.Trace(aliasedURL)
@@ -607,5 +612,6 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 	if hostCfg == nil && urlRgx.MatchString(aliasedURL) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
+
 	return newClientFromAlias(alias, urlStrFull)
 }

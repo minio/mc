@@ -503,6 +503,16 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 	return errorCh
 }
 
+func (f *fsClient) Snapshot(ctx context.Context, timeRef time.Time) <-chan *ClientContent {
+	contentCh := make(chan *ClientContent, 1)
+	contentCh <- &ClientContent{Err: probe.NewError(APINotImplemented{
+		API:     "SetObjectLockConfig",
+		APIType: "filesystem",
+	})}
+	close(contentCh)
+	return contentCh
+}
+
 // List - list files and folders.
 func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent)
@@ -998,6 +1008,13 @@ func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *p
 		return probe.NewError(e)
 	}
 	return nil
+}
+
+func (f *fsClient) StatWithOptions(ctx context.Context, _, _ bool, _ StatOptions) (*ClientContent, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{
+		API:     "StatWithOptions",
+		APIType: "filesystem",
+	})
 }
 
 // Stat - get metadata from path.

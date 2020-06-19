@@ -146,6 +146,39 @@ func (u ClientURL) Clone() ClientURL {
 	}
 }
 
+func (u ClientURL) BucketAndPrefix() (string, string) {
+	if u.Type == fileSystem {
+		return "", u.Path
+	}
+	path := filepath.ToSlash(u.Path)
+	path = strings.TrimPrefix(path, "/")
+	s := strings.SplitN(path, "/", 2)
+	switch len(s) {
+	case 0:
+		return "", ""
+	case 1:
+		return s[0], ""
+	default:
+		return s[0], s[1]
+	}
+}
+
+func (u ClientURL) Endpoint() string {
+	var buf bytes.Buffer
+	if u.Type == fileSystem {
+		return ""
+	}
+
+	buf.WriteString(u.Scheme)
+	buf.WriteByte(':')
+	buf.WriteString("//")
+	if h := u.Host; h != "" {
+		buf.WriteString(h)
+	}
+
+	return buf.String()
+}
+
 // String convert URL into its canonical form.
 func (u ClientURL) String() string {
 	var buf bytes.Buffer

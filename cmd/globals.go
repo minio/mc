@@ -32,6 +32,8 @@ const (
 	globalMCCertsDir   = "certs"
 	globalMCCAsDir     = "CAs"
 
+	globalMCSnapsDir = "snaps"
+
 	// session config and shared urls related constants
 	globalSessionDir           = "session"
 	globalSharedURLsDataDir    = "share"

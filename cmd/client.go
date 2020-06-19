@@ -89,6 +89,8 @@ type Client interface {
 
 	List(ctx context.Context, opts ListOptions) <-chan *ClientContent
 
+	Snapshot(ctx context.Context, timeRef time.Time) <-chan *ClientContent
+
 	// Bucket operations
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
 	// Object lock config
