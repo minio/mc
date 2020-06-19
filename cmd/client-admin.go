@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2017-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6/pkg/credentials"
 	"github.com/minio/minio/pkg/madmin"
 )
 
@@ -63,9 +64,15 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var api *madmin.AdminClient
 		var found bool
 		if api, found = clientCache[confSum]; !found {
+			// Admin API only supports signature v4.
+			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
+
 			// Not found. Instantiate a new MinIO
 			var e error
-			api, e = madmin.New(hostName, config.AccessKey, config.SecretKey, useTLS)
+			api, e = madmin.NewWithOptions(hostName, &madmin.Options{
+				Creds:  creds,
+				Secure: useTLS,
+			})
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
