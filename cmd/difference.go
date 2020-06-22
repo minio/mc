@@ -341,7 +341,15 @@ func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, t
 			if err != nil {
 				// handle this specifically for filesystem related errors.
 				switch err.ToGoError().(type) {
-				case PathNotFound, PathInsufficientPermission:
+				case PathNotFound, PathInsufficientPermission, APINotImplemented:
+					diffCh <- diffMessage{
+						Error: err,
+					}
+					return
+				}
+
+				stopAtErr := "A header or query you provided requested a function that is not implemented."
+				if strings.Contains(err.String(), stopAtErr) {
 					diffCh <- diffMessage{
 						Error: err,
 					}
