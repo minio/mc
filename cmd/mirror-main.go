@@ -335,10 +335,11 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	}
 
 	if mj.opts.activeActive {
+		srcModTime := getSourceModTimeKey(sURLs.SourceContent.Metadata)
 		// If the source object already has source modtime attribute set, then
 		// use it in target. Otherwise use the S3 modtime instead.
-		if sURLs.SourceContent.Metadata[activeActiveSourceModTimeKey] != "" {
-			sURLs.TargetContent.Metadata[activeActiveSourceModTimeKey] = sURLs.SourceContent.Metadata[activeActiveSourceModTimeKey]
+		if srcModTime != "" {
+			sURLs.TargetContent.Metadata[activeActiveSourceModTimeKey] = srcModTime
 		} else {
 			sURLs.TargetContent.Metadata[activeActiveSourceModTimeKey] = sURLs.SourceContent.Time.Format(time.RFC3339Nano)
 		}
@@ -465,7 +466,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				encKeyDB:         mj.opts.encKeyDB,
 			}
 			if mj.opts.activeActive &&
-				mirrorURL.SourceContent.Metadata[activeActiveSourceModTimeKey] != "" {
+				(getSourceModTimeKey(mirrorURL.SourceContent.Metadata) != "" ||
+					getSourceModTimeKey(mirrorURL.SourceContent.UserMetadata) != "") {
 				// If source has active-active attributes, it means that the
 				// object was uploaded by "mc mirror", hence ignore the event
 				// to avoid copying it.
@@ -541,7 +543,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 	mj.m.Lock()
 	defer mj.m.Unlock()
 
-	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.opts)
+	URLsCh := prepareMirrorURLs(ctx, mj.sourceURL, mj.targetURL, mj.opts)
 
 	for {
 		select {
@@ -716,7 +718,7 @@ func getEventPathURLWin(srcURL, eventPath string) string {
 }
 
 // runMirror - mirrors all buckets to another S3 server
-func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
+func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
 	// This is kept for backward compatibility, `--force` means
 	// --overwrite.
 	isOverwrite := cli.Bool("force")
@@ -757,7 +759,7 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 		isFake:           cli.Bool("fake"),
 		isRemove:         cli.Bool("remove"),
 		isOverwrite:      isOverwrite,
-		isWatch:          cli.Bool("watch"),
+		isWatch:          cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active"),
 		isMetadata:       cli.Bool("a") || cli.Bool("multi-master") || cli.Bool("active-active") || len(userMetadata) > 0,
 		md5:              cli.Bool("md5"),
 		disableMultipart: cli.Bool("disable-multipart"),
@@ -770,20 +772,12 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 		activeActive:     cli.Bool("multi-master") || cli.Bool("active-active"),
 	})
 
-	go func() {
-		<-globalContext.Done()
-		os.Exit(globalErrorExitStatus)
-	}()
-
-	ctx, cancelMirror := context.WithCancel(globalContext)
-	defer cancelMirror()
-
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
-		for d := range dirDifference(srcClt, dstClt, srcURL, dstURL) {
+		for d := range dirDifference(ctx, srcClt, dstClt, srcURL, dstURL) {
 			if d.Error != nil {
 				if mj.opts.activeActive {
-					errorIf(d.Error, "Failed to start mirroring.")
+					errorIf(d.Error, "Failed to start mirroring.. retrying")
 					return true
 				}
 				mj.status.fatalIf(d.Error, "Failed to start mirroring.")
@@ -825,7 +819,7 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 				// and queue them for copying.
 				if err := mj.watchURL(ctx, newSrcClt); err != nil {
 					if mj.opts.activeActive {
-						errorIf(err, "Failed to start monitoring.")
+						errorIf(err, "Failed to start monitoring.. retrying")
 						return true
 					}
 					mj.status.fatalIf(err, "Failed to start monitoring.")
@@ -873,14 +867,12 @@ func runMirror(srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]pr
 		// and queue them for copying.
 		if err := mj.watchURL(ctx, srcClt); err != nil {
 			if mj.opts.activeActive {
-				errorIf(err, "Failed to start monitoring.")
+				errorIf(err, "Failed to start monitoring.. retrying")
 				return true
 			}
 			mj.status.fatalIf(err, "Failed to start monitoring.")
 		}
 	}
-
-	// Start mirroring job
 	return mj.mirror(ctx, cancelMirror)
 }
 
@@ -913,16 +905,19 @@ func mainMirror(cliCtx *cli.Context) error {
 		}
 	}
 
-	if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
-		for {
-			runMirror(srcURL, tgtURL, cliCtx, encKeyDB)
-			time.Sleep(time.Second * 2)
+	for {
+		select {
+		case <-ctx.Done():
+			return exitStatus(globalErrorExitStatus)
+		default:
+			if errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB); errorDetected {
+				if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
+					time.Sleep(2 * time.Second)
+					continue
+				}
+				return exitStatus(globalErrorExitStatus)
+			}
+			return nil
 		}
 	}
-
-	if errorDetected := runMirror(srcURL, tgtURL, cliCtx, encKeyDB); errorDetected {
-		return exitStatus(globalErrorExitStatus)
-	}
-
-	return nil
 }

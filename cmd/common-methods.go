@@ -381,11 +381,11 @@ func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSS
 	}
 
 	for k, v := range st.Metadata {
-		metadata[k] = v
+		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
 	for k, v := range urls.TargetContent.UserMetadata {
-		metadata[k] = v
+		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
 	return filterMetadata(metadata), nil
@@ -462,19 +462,20 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			}
 		}
 
+		// Get metadata from target content as well
+		for k, v := range urls.TargetContent.Metadata {
+			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+
+		// Get userMetadata from target content as well
+		for k, v := range urls.TargetContent.UserMetadata {
+			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+
 		sourcePath := filepath.ToSlash(sourceURL.Path)
 		if urls.SourceContent.RetentionEnabled {
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
 			return urls.WithError(err.Trace(sourceURL.String()))
-		}
-
-		// Get metadata from target content as well
-		for k, v := range urls.TargetContent.Metadata {
-			metadata[k] = v
-		}
-		// Get userMetadata from target content as well
-		for k, v := range urls.TargetContent.UserMetadata {
-			metadata[k] = v
 		}
 
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, mode, until,
@@ -490,9 +491,20 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 				}
 			}
 
+			// Get metadata from target content as well
+			for k, v := range urls.TargetContent.Metadata {
+				metadata[http.CanonicalHeaderKey(k)] = v
+			}
+
+			// Get userMetadata from target content as well
+			for k, v := range urls.TargetContent.UserMetadata {
+				metadata[http.CanonicalHeaderKey(k)] = v
+			}
+
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
+
 		var reader io.ReadCloser
 		// Proceed with regular stream copy.
 		reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), true, srcSSE, preserve)
@@ -503,11 +515,12 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 
 		// Get metadata from target content as well
 		for k, v := range urls.TargetContent.Metadata {
-			metadata[k] = v
+			metadata[http.CanonicalHeaderKey(k)] = v
 		}
+
 		// Get userMetadata from target content as well
 		for k, v := range urls.TargetContent.UserMetadata {
-			metadata[k] = v
+			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
 		if isReadAt(reader) {

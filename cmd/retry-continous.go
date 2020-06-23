@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"context"
 	"math/rand"
 	"sync"
 	"time"
@@ -51,7 +52,7 @@ func (r *lockedRandSource) Seed(seed int64) {
 var random = rand.New(&lockedRandSource{src: rand.NewSource(time.Now().UTC().UnixNano())})
 
 // newRetryTimerContinous creates a timer with exponentially increasing delays forever.
-func newRetryTimerContinous(unit time.Duration, cap time.Duration, jitter float64, doneCh chan struct{}) <-chan int {
+func newRetryTimerContinous(ctx context.Context, unit time.Duration, cap time.Duration, jitter float64) <-chan int {
 	attemptCh := make(chan int)
 
 	// normalize jitter to the range [0, 1.0]
@@ -86,14 +87,17 @@ func newRetryTimerContinous(unit time.Duration, cap time.Duration, jitter float6
 		var nextBackoff int
 		for {
 			select {
-			// Attempts starts.
 			case attemptCh <- nextBackoff:
 				nextBackoff++
-			case <-doneCh:
-				// Stop the routine.
+			case <-ctx.Done():
 				return
 			}
-			time.Sleep(exponentialBackoffWait(nextBackoff))
+
+			select {
+			case <-time.After(exponentialBackoffWait(nextBackoff)):
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 	return attemptCh

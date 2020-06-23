@@ -149,7 +149,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 }
 
 // doDiffMain runs the diff.
-func doDiffMain(firstURL, secondURL string) error {
+func doDiffMain(ctx context.Context, firstURL, secondURL string) error {
 	// Source and targets are always directories
 	sourceSeparator := string(newClientURL(firstURL).Separator)
 	if !strings.HasSuffix(firstURL, sourceSeparator) {
@@ -177,7 +177,7 @@ func doDiffMain(firstURL, secondURL string) error {
 	}
 
 	// Diff first and second urls.
-	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL, false) {
+	for diffMsg := range objectDifference(ctx, firstClient, secondClient, firstURL, secondURL, true) {
 		if diffMsg.Error != nil {
 			errorIf(diffMsg.Error, "Unable to calculate objects difference.")
 			// Ignore error and proceed to next object.
@@ -214,5 +214,5 @@ func mainDiff(cliCtx *cli.Context) error {
 	firstURL := URLs.Get(0)
 	secondURL := URLs.Get(1)
 
-	return doDiffMain(firstURL, secondURL)
+	return doDiffMain(ctx, firstURL, secondURL)
 }

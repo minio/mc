@@ -70,9 +70,9 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	}
 
 	/****** Generic rules *******/
-	if !cliCtx.Bool("watch") {
+	if !cliCtx.Bool("watch") && !cliCtx.Bool("active-active") && !cliCtx.Bool("multi-master") {
 		_, srcContent, err := url2Stat(ctx, srcURL, false, encKeyDB)
-		// incomplete uploads are not necessary for copy operation, no need to verify for them.
+		// incomplete uploads are not necessary for mirror operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
 			errorIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
@@ -96,7 +96,7 @@ func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
 	return false
 }
 
-func deltaSourceTarget(sourceURL, targetURL string, opts mirrorOptions, URLsCh chan<- URLs) {
+func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mirrorOptions, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -126,7 +126,7 @@ func deltaSourceTarget(sourceURL, targetURL string, opts mirrorOptions, URLsCh c
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL, opts.isMetadata) {
+	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, opts.isMetadata) {
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
 			URLsCh <- URLs{Error: diffMsg.Error}
@@ -208,8 +208,8 @@ type mirrorOptions struct {
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(sourceURL string, targetURL string, opts mirrorOptions) <-chan URLs {
+func prepareMirrorURLs(ctx context.Context, sourceURL string, targetURL string, opts mirrorOptions) <-chan URLs {
 	URLsCh := make(chan URLs)
-	go deltaSourceTarget(sourceURL, targetURL, opts, URLsCh)
+	go deltaSourceTarget(ctx, sourceURL, targetURL, opts, URLsCh)
 	return URLsCh
 }
