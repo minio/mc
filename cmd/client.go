@@ -26,6 +26,7 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/minio/minio-go/v7/pkg/replication"
 )
 
 // DirOpt - list directory option.
@@ -138,6 +139,10 @@ type Client interface {
 	// Versioning operations
 	GetVersioning(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
 	SetVersioning(ctx context.Context, status string) *probe.Error
+	// Replication operations
+	GetReplication(ctx context.Context) (replication.Config, *probe.Error)
+	SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error
+	RemoveReplication(ctx context.Context) *probe.Error
 }
 
 // ClientContent - Content container for content metadata

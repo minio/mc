@@ -17,6 +17,8 @@ trace       show http trace for MinIO server
 console     show console logs for MinIO server
 prometheus  manages prometheus config
 kms         perform KMS management operations
+bucket      manage buckets defined in the MinIO server
+
 ```
 
 ## 1.  Download MinIO Client
@@ -307,6 +309,7 @@ Skip SSL certificate verification.
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
 | [**prometheus** - manages prometheus config settings](#prometheus)     |
+| [**bucket** - manages buckets defined in the MinIO server](#bucket)     |
 
 <a name="update"></a>
 ### Command `update` - updates all MinIO servers
@@ -732,7 +735,7 @@ mc admin trace myminio
 172.16.238.1 Host: 172.16.238.3:9000
 172.16.238.1 X-Amz-Date: 20190123T231705Z
 172.16.238.1 Authorization: AWS4-HMAC-SHA256 Credential=minio/20190123/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=8385097f264efaf1b71a9b56514b8166bb0a03af8552f83e2658f877776c46b3
-172.16.238.1 User-Agent: MinIO (linux; amd64) minio-go/v6.0.8 mc/2019-01-23T23:15:38Z
+172.16.238.1 User-Agent: MinIO (linux; amd64) minio-go/v7.0.8 mc/2019-01-23T23:15:38Z
 172.16.238.1 X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 172.16.238.1
 172.16.238.1 <BODY>
@@ -852,7 +855,7 @@ Key: test-key-1
  	 • Encryption ✔
  	 • Decryption ✔
 ```
-
+<a name = "bucket"></a>
 <a name="quota"></a>
 ### Command `quota` - Set/Get bucket quota
 `quota` command to set or get bucket quota on MinIO server.
@@ -888,4 +891,49 @@ mc admin bucket quota myminio/mybucket --hard 64MB
 
 ```
 mc admin bucket quota myminio/mybucket --clear
+```
+
+<a name="replication"></a>
+### Command `replication` - Set/Get/Remove bucket replication target
+`replication` command to set or get bucket replication target on MinIO server.
+
+```
+NAME:
+  mc admin bucket replication - manage bucket replication
+
+USAGE:
+  mc admin bucket replication set TARGET http(s)://ACCESSKEY:SECRETKEY@REPLICA_URL/REPLICA_BUCKET [--path | --api]
+
+REPLICA_BUCKET:
+  Also called as replication target bucket.
+
+REPLICA_URL:
+  Also called as replication endpoint.
+
+ACCESSKEY:
+  Also called as username.
+
+SECRETKEY:
+  Also called as password.
+
+
+```
+*Example: Set a new replication target `ReplicaBucket` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to replication endpoint.
+*
+
+```
+mc admin bucket replication set myminio/srcbucket https://foobar:foobar12345@minio2:9000/ReplicaBucket --path ON --api s3v4
+Replication ARN = `arn:minio:s3::a5aefe40-1b81-4a6d-b5f6-eeee1e703459:*`
+```
+
+*Example: Get replication target configured for bucket 'srcbucket' on MinIO.*
+
+```
+mc admin bucket replication get myminio/srcbucket
+```
+
+*Example: Remove bucket replication target configured for bucket 'srcbucket' on MinIO.*
+
+```
+mc admin bucket replication remove myminio/srcbucket
 ```

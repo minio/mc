@@ -44,6 +44,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/policy"
+	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/minio/pkg/mimedb"
@@ -2406,4 +2407,42 @@ func (c *S3Client) SetVersioning(ctx context.Context, status string) *probe.Erro
 		return probe.NewError(fmt.Errorf("Invalid versioning status"))
 	}
 	return probe.NewError(err)
+}
+
+// GetReplication - gets replication configuration for a given bucket.
+func (c *S3Client) GetReplication(ctx context.Context) (replication.Config, *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return replication.Config{}, probe.NewError(BucketNameEmpty{})
+	}
+
+	replicationCfg, e := c.api.GetBucketReplication(ctx, bucket)
+	if e != nil {
+		return replication.Config{}, probe.NewError(e)
+	}
+	return replicationCfg, nil
+}
+
+// RemoveReplication - removes replication configuration for a given bucket.
+func (c *S3Client) RemoveReplication(ctx context.Context) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
+	e := c.api.RemoveBucketReplication(ctx, bucket)
+	return probe.NewError(e)
+}
+
+// SetReplication sets replication configuration for a given bucket.
+func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
+	if e := c.api.SetBucketReplication(ctx, bucket, *cfg); e != nil {
+		return probe.NewError(e)
+	}
+	return nil
 }

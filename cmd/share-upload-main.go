@@ -143,7 +143,7 @@ func saveSharedURL(objectURL string, shareURL string, expiry time.Duration, cont
 }
 
 // doShareUploadURL uploads files to the target.
-func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, contentType string) *probe.Error {
+func doShareUploadURL(ctx context.Context, objectURL string, isRecursive bool, expiry time.Duration, contentType string) *probe.Error {
 	clnt, err := newClient(objectURL)
 	if err != nil {
 		return err.Trace(objectURL)
@@ -176,10 +176,12 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 }
 
 // main for share upload command.
-func mainShareUpload(ctx *cli.Context) error {
+func mainShareUpload(cliCtx *cli.Context) error {
+	ctx, cancelShareDownload := context.WithCancel(globalContext)
+	defer cancelShareDownload()
 
 	// check input arguments.
-	checkShareUploadSyntax(ctx)
+	checkShareUploadSyntax(cliCtx)
 
 	// Initialize share config folder.
 	initShareConfig()
@@ -188,18 +190,18 @@ func mainShareUpload(ctx *cli.Context) error {
 	shareSetColor()
 
 	// Set command flags from context.
-	isRecursive := ctx.Bool("recursive")
-	expireArg := ctx.String("expire")
+	isRecursive := cliCtx.Bool("recursive")
+	expireArg := cliCtx.String("expire")
 	expiry := shareDefaultExpiry
-	contentType := ctx.String("content-type")
+	contentType := cliCtx.String("content-type")
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
 		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
-	for _, targetURL := range ctx.Args() {
-		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
+	for _, targetURL := range cliCtx.Args() {
+		err := doShareUploadURL(ctx, targetURL, isRecursive, expiry, contentType)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
