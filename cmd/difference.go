@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -63,18 +64,20 @@ func (d differType) String() string {
 
 const activeActiveSourceModTimeKey = "X-Amz-Meta-Mm-Source-Mtime"
 
-func oldestNonNullTime(t1, t2 time.Time) time.Time {
-	if t1.IsZero() {
-		return t2
+func getSourceModTimeKey(metadata map[string]string) string {
+	if metadata[activeActiveSourceModTimeKey] != "" {
+		return metadata[activeActiveSourceModTimeKey]
 	}
-	if t2.IsZero() {
-		return t1
+	if metadata[strings.ToLower(activeActiveSourceModTimeKey)] != "" {
+		return metadata[strings.ToLower(activeActiveSourceModTimeKey)]
 	}
-	if t1.Before(t2) {
-		return t1
+	if metadata[strings.ToLower("Mm-Source-Mtime")] != "" {
+		return metadata[strings.ToLower("Mm-Source-Mtime")]
 	}
-
-	return t2
+	if metadata["Mm-Source-Mtime"] != "" {
+		return metadata["Mm-Source-Mtime"]
+	}
+	return ""
 }
 
 // activeActiveModTimeUpdated tries to calculate if the object copy in the target
@@ -91,18 +94,39 @@ func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
 		return false
 	}
 
-	_, ok1 := src.UserMetadata[activeActiveSourceModTimeKey]
-	_, ok2 := dst.UserMetadata[activeActiveSourceModTimeKey]
-	if !ok1 && !ok2 {
-		// No multimaster context found, consider src & dst as similar
+	srcModTime := getSourceModTimeKey(src.UserMetadata)
+	dstModTime := getSourceModTimeKey(dst.UserMetadata)
+	if srcModTime == "" && dstModTime == "" {
+		// No active-active mirror context found, consider src & dst as similar
 		return false
 	}
 
-	srcOriginLastModified, _ := time.Parse(time.RFC3339Nano, src.UserMetadata[activeActiveSourceModTimeKey])
-	dstOriginLastModified, _ := time.Parse(time.RFC3339Nano, dst.UserMetadata[activeActiveSourceModTimeKey])
+	var srcOriginLastModified, dstOriginLastModified time.Time
+	var err error
+	if srcModTime != "" {
+		srcOriginLastModified, err = time.Parse(time.RFC3339Nano, srcModTime)
+		if err != nil {
+			// failure to parse source modTime, modTime tampered ignore the file
+			return false
+		}
+	}
+	if dstModTime != "" {
+		dstOriginLastModified, err = time.Parse(time.RFC3339Nano, dstModTime)
+		if err != nil {
+			// failure to parse source modTime, modTime tampered ignore the file
+			return false
+		}
+	}
 
-	srcActualModTime := oldestNonNullTime(src.Time, srcOriginLastModified)
-	dstActualModTime := oldestNonNullTime(dst.Time, dstOriginLastModified)
+	srcActualModTime := src.Time
+	if !srcOriginLastModified.IsZero() && srcOriginLastModified.After(src.Time) {
+		srcActualModTime = srcOriginLastModified
+	}
+
+	dstActualModTime := dst.Time
+	if !dstOriginLastModified.IsZero() && dstOriginLastModified.After(dst.Time) {
+		dstActualModTime = dstOriginLastModified
+	}
 
 	return srcActualModTime.After(dstActualModTime)
 }
@@ -110,6 +134,9 @@ func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
 func metadataEqual(m1, m2 map[string]string) bool {
 	for k, v := range m1 {
 		if k == activeActiveSourceModTimeKey {
+			continue
+		}
+		if k == strings.ToLower(activeActiveSourceModTimeKey) {
 			continue
 		}
 		if m2[k] != v {
@@ -120,6 +147,9 @@ func metadataEqual(m1, m2 map[string]string) bool {
 		if k == activeActiveSourceModTimeKey {
 			continue
 		}
+		if k == strings.ToLower(activeActiveSourceModTimeKey) {
+			continue
+		}
 		if m1[k] != v {
 			return false
 		}
@@ -127,19 +157,19 @@ func metadataEqual(m1, m2 map[string]string) bool {
 	return true
 }
 
-func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool) (diffCh chan diffMessage) {
-	return difference(sourceClnt, targetClnt, sourceURL, targetURL, isMetadata, true, false, DirNone)
+func objectDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool) (diffCh chan diffMessage) {
+	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, isMetadata, true, false, DirNone)
 }
 
-func dirDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(sourceClnt, targetClnt, sourceURL, targetURL, false, false, true, DirFirst)
+func dirDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
+	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, false, false, true, DirFirst)
 }
 
-func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
+func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
 	// Set default values for listing.
 	isIncomplete := false // we will not compare any incomplete objects.
-	srcCh := sourceClnt.List(globalContext, isRecursive, isIncomplete, isMetadata, dirOpt)
-	tgtCh := targetClnt.List(globalContext, isRecursive, isIncomplete, isMetadata, dirOpt)
+	srcCh := sourceClnt.List(ctx, isRecursive, isIncomplete, isMetadata, dirOpt)
+	tgtCh := targetClnt.List(ctx, isRecursive, isIncomplete, isMetadata, dirOpt)
 
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh
@@ -296,17 +326,17 @@ func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL stri
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
+func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
 	diffCh = make(chan diffMessage, 10000)
 
 	go func() {
 		defer close(diffCh)
 
-		doneCh := make(chan struct{}, 1)
-		defer close(doneCh)
+		retryCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-		for range newRetryTimerContinous(time.Second, time.Second*30, minio.MaxJitter, doneCh) {
-			err := differenceInternal(sourceClnt, targetClnt, sourceURL, targetURL,
+		for range newRetryTimerContinous(retryCtx, time.Second, time.Second*30, minio.MaxJitter) {
+			err := differenceInternal(retryCtx, sourceClnt, targetClnt, sourceURL, targetURL,
 				isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
 			if err != nil {
 				// handle this specifically for filesystem related errors.
