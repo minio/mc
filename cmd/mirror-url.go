@@ -96,7 +96,7 @@ func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
 	return false
 }
 
-func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemove, isMetadata bool, excludeOptions []string, URLsCh chan<- URLs, encKeyDB map[string][]prefixSSEPair) {
+func deltaSourceTarget(sourceURL, targetURL string, opts mirrorOptions, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -126,7 +126,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL, isMetadata) {
+	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL, opts.isMetadata) {
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
 			URLsCh <- URLs{Error: diffMsg.Error}
@@ -135,13 +135,13 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 
 		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
 		//Skip the source object if it matches the Exclude options provided
-		if matchExcludeOptions(excludeOptions, srcSuffix) {
+		if matchExcludeOptions(opts.excludeOptions, srcSuffix) {
 			continue
 		}
 
 		tgtSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
 		//Skip the target object if it matches the Exclude options provided
-		if matchExcludeOptions(excludeOptions, tgtSuffix) {
+		if matchExcludeOptions(opts.excludeOptions, tgtSuffix) {
 			continue
 		}
 
@@ -151,7 +151,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 		case differInType:
 			URLsCh <- URLs{Error: errInvalidTarget(diffMsg.SecondURL)}
 		case differInSize, differInMetadata, differInAASourceMTime:
-			if !isOverwrite && !isFake {
+			if !opts.isOverwrite && !opts.isFake && !opts.activeActive {
 				// Size or time or etag differs but --overwrite not set.
 				URLsCh <- URLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
 				continue
@@ -181,7 +181,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 				TargetContent: targetContent,
 			}
 		case differInSecond:
-			if !isRemove && !isFake {
+			if !opts.isRemove && !opts.isFake {
 				continue
 			}
 			URLsCh <- URLs{
@@ -196,9 +196,20 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 	}
 }
 
+type mirrorOptions struct {
+	isFake, isOverwrite, activeActive bool
+	isWatch, isRemove, isMetadata     bool
+	excludeOptions                    []string
+	encKeyDB                          map[string][]prefixSSEPair
+	md5, disableMultipart             bool
+	olderThan, newerThan              string
+	storageClass                      string
+	userMetadata                      map[string]string
+}
+
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(sourceURL string, targetURL string, isFake, isOverwrite, isRemove, isMetadata bool, excludeOptions []string, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
+func prepareMirrorURLs(sourceURL string, targetURL string, opts mirrorOptions) <-chan URLs {
 	URLsCh := make(chan URLs)
-	go deltaSourceTarget(sourceURL, targetURL, isFake, isOverwrite, isRemove, isMetadata, excludeOptions, URLsCh, encKeyDB)
+	go deltaSourceTarget(sourceURL, targetURL, opts, URLsCh)
 	return URLsCh
 }
