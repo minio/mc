@@ -163,25 +163,24 @@ func lineTrunc(content string, maxLen int) string {
 
 // isOlder returns true if the passed object is older than olderRef
 func isOlder(ti time.Time, olderRef string) bool {
-	objectAge := UTCNow().Sub(ti)
-	var e error
-	var olderThan time.Duration
-	if olderRef != "" {
-		olderThan, e = ioutils.ParseDurationTime(olderRef)
-		fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`.")
+	if olderRef == "" {
+		return false
 	}
+	objectAge := time.Since(ti)
+	olderThan, e := ioutils.ParseDurationTime(olderRef)
+	fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`.")
 	return objectAge < olderThan
 }
 
 // isNewer returns true if the passed object is newer than newerRef
 func isNewer(ti time.Time, newerRef string) bool {
-	objectAge := UTCNow().Sub(ti)
-	var e error
-	var newerThan time.Duration
-	if newerRef != "" {
-		newerThan, e = ioutils.ParseDurationTime(newerRef)
-		fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`.")
+	if newerRef == "" {
+		return false
 	}
+
+	objectAge := time.Since(ti)
+	newerThan, e := ioutils.ParseDurationTime(newerRef)
+	fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`.")
 	return objectAge >= newerThan
 }
 
