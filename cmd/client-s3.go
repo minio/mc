@@ -1325,7 +1325,7 @@ func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string,
 	if isGoogle(c.targetURL.Host) {
 		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
 		// https://github.com/minio/mc/issues/3073
-		return c.api.ListObjectsV2WithContext(ctx, bucket, object, isRecursive, doneCh)
+		return c.api.ListObjectsWithContext(ctx, bucket, object, isRecursive, doneCh)
 	}
 	if metadata {
 		return c.api.ListObjectsV2WithMetadataWithContext(ctx, bucket, object, isRecursive, doneCh)
