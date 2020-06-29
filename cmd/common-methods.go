@@ -444,9 +444,6 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		legalHold = urls.TargetContent.LegalHold
 	}
 
-	for k, v := range urls.SourceContent.UserMetadata {
-		metadata[http.CanonicalHeaderKey(k)] = v
-	}
 	for k, v := range urls.SourceContent.Metadata {
 		metadata[http.CanonicalHeaderKey(k)] = v
 	}
