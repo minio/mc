@@ -1242,7 +1242,7 @@ FLAGS:
 mc ilm list --expiry myminio/testbucket
    ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
- Devices |  dev/  |    ✓    |   ✓    | 17 Sep 2020  |     ✗      |           |               |
+ Devices |  dev/  |    ✓    |   ✓   | 17 Sep 2020  |     ✗      |           |               |
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
 ```
 
