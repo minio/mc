@@ -18,12 +18,11 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"time"
-
-	"encoding/json"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -158,36 +157,30 @@ func createSnapshot(snapName string, s3Path string, at time.Time) *probe.Error {
 		return probe.NewError(e)
 	}
 
-	var (
-		bucketMarker   string
-		snapshotMarker *os.File
-	)
+	var snapshotMarker snapshotSerializer
+	defer snapshotMarker.CleanUp()
 
-	defer func() {
-		if snapshotMarker != nil {
-			snapshotMarker.Close()
-		}
-	}()
-
+	var entry SnapshotEntry
 	for s := range s3Client.Snapshot(context.Background(), at) {
 		if s.Err != nil {
 			return s.Err
 		}
 		bucket, key := s.URL.BucketAndPrefix()
 
-		if bucketMarker != bucket {
-			if snapshotMarker != nil {
-				snapshotMarker.Close()
-			}
-			snapshotMarker, err = createSnapshotFile(snapName, filepath.Join("buckets", bucket))
+		if snapshotMarker.bucket != bucket {
+			// Close previous if any.
+			err := snapshotMarker.Close()
 			if err != nil {
 				return err
 			}
-
-			bucketMarker = bucket
+			// Switch to new.
+			err = snapshotMarker.ResetFile(snapName, bucket)
+			if err != nil {
+				return err
+			}
 		}
 
-		entry := SnapshotEntry{
+		entry = SnapshotEntry{
 			Key:            key,
 			VersionID:      s.VersionID,
 			Size:           s.Size,
@@ -197,21 +190,20 @@ func createSnapshot(snapName string, s3Path string, at time.Time) *probe.Error {
 			IsDeleteMarker: s.IsDeleteMarker,
 			IsLatest:       s.IsLatest,
 		}
-		data, e := entry.MarshalMsg([]byte{})
+
+		// Write object type, currently only 0 is used and 255 indicates EOF.
+		e := snapshotMarker.WriteInt8(0)
 		if e != nil {
 			return probe.NewError(e)
 		}
-		_, e = snapshotMarker.Write(data)
-		if e != nil {
-			return probe.NewError(e)
-		}
-		_, e = snapshotMarker.Write([]byte{'\n'})
+		e = entry.EncodeMsg(snapshotMarker.Writer)
 		if e != nil {
 			return probe.NewError(e)
 		}
 	}
 
-	return nil
+	return snapshotMarker.Close()
+
 }
 
 // main entry point for snapshot create.

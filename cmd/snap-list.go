@@ -34,7 +34,7 @@ var (
 
 var snapList = cli.Command{
 	Name:   "list",
-	Usage:  "List all snapshots decriptions stored locally",
+	Usage:  "List all snapshots descriptions stored locally",
 	Action: mainSnapList,
 	Before: setGlobalsFromContext,
 	Flags:  append(snapListFlags, globalFlags...),
@@ -45,7 +45,7 @@ USAGE:
   {{.HelpName}} [TARGET]
 
 EXAMPLES:
-  1. List all created snapshosts in the local machine
+  1. List all created snapshots in the local machine
      {{.Prompt}} {{.HelpName}}
 
   2. List the contents of a snapshot
@@ -65,7 +65,7 @@ func listSnapshots() ([]os.FileInfo, *probe.Error) {
 	}
 
 	entries, e := ioutil.ReadDir(snapsDir)
-	if err != nil {
+	if e != nil {
 		return nil, probe.NewError(e)
 	}
 

@@ -17,8 +17,8 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -167,8 +167,8 @@ func (s *snapClient) Snapshot(ctx context.Context, timeRef time.Time) <-chan *Cl
 
 // url2BucketAndObject gives bucketName and objectName from URL path.
 func (s *snapClient) url2BucketAndObject() (bucketName, objectName string) {
-	path := s.PathURL.Path
-	tokens := splitStr(path, string(s.PathURL.Separator), 3)
+	p := s.PathURL.Path
+	tokens := splitStr(p, string(s.PathURL.Separator), 3)
 	return tokens[1], tokens[2]
 }
 
@@ -178,44 +178,65 @@ func (s *snapClient) List(ctx context.Context, isRecursive, _, _ bool, showDir D
 	return contentCh
 }
 
-func (s *snapClient) getBucketContents(ctx context.Context, bucket string, contentCh chan *ClientContent, filter func(SnapshotEntry) (SnapshotEntry, filterAction)) {
-	f, err := openSnapshotFile(filepath.Join(s.snapName, "buckets", bucket))
+// getBucketContents returns bucket content
+func (s *snapClient) getBucketContents(ctx context.Context, bucket string, contentCh chan *ClientContent, filter func(*SnapshotEntry) filterAction) {
+	dec, err := newSnapShotReaderFile(s.snapName, bucket)
 	if err != nil {
 		contentCh <- &ClientContent{Err: err}
 		return
 	}
-	defer f.Close()
+	defer dec.CleanUp()
 
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		var (
-			entry  SnapshotEntry
-			action filterAction
-		)
-		_, e := entry.UnmarshalMsg(line)
-		if e != nil {
-			contentCh <- &ClientContent{Err: probe.NewError(e)}
+	var entry SnapshotEntry
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			contentCh <- &ClientContent{Err: probe.NewError(ctx.Err())}
+			return
+		default:
+		}
+		// Read object type
+		t, err := dec.ReadUint8()
+		if err != nil {
+			contentCh <- &ClientContent{Err: probe.NewError(err)}
+			return
+		}
+		// This can be extended in the future if more object types are needed
+		// without breaking backwards compatibility.
+		switch t {
+		case 0:
+		case 255: // EOF marker.
+			return
+		default:
+			contentCh <- &ClientContent{Err: probe.NewError(errors.New("unknown type identifier"))}
+			return
+		}
+
+		var action filterAction
+		err = entry.DecodeMsg(dec.Reader)
+		if err != nil {
+			contentCh <- &ClientContent{Err: probe.NewError(err)}
 			return
 		}
 
 		if filter != nil {
-			entry, action = filter(entry)
+			action = filter(&entry)
 			if action == filterSkipEntry {
 				continue
 			}
 		}
 
-		url := s.PathURL.Clone()
-		url.Path = path.Join("/", bucket, entry.Key)
+		u := s.PathURL.Clone()
+		u.Path = path.Join("/", bucket, entry.Key)
 
 		var mod os.FileMode
 		if entry.Key == "" || strings.HasSuffix(entry.Key, "/") {
-			mod ^= os.ModeDir
+			mod |= os.ModeDir
 		}
 
 		c := &ClientContent{
-			URL:            url,
+			URL:            u,
 			Type:           mod,
 			VersionID:      entry.VersionID,
 			Size:           entry.Size,
@@ -231,12 +252,6 @@ func (s *snapClient) getBucketContents(ctx context.Context, bucket string, conte
 			break
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		contentCh <- &ClientContent{Err: probe.NewError(err)}
-		return
-	}
-
 }
 
 func (s *snapClient) listBuckets(ctx context.Context, contentCh chan *ClientContent, isRecursive, _, _ bool, showDir DirOpt) {
@@ -261,11 +276,11 @@ func (s *snapClient) listBuckets(ctx context.Context, contentCh chan *ClientCont
 		return
 	}
 
-	filter := func(entry SnapshotEntry) (SnapshotEntry, filterAction) {
+	filter := func(entry *SnapshotEntry) filterAction {
 		if entry.IsDeleteMarker {
-			return SnapshotEntry{}, filterSkipEntry
+			return filterSkipEntry
 		}
-		return entry, filterNoAction
+		return filterNoAction
 	}
 
 	for _, b := range buckets {
@@ -285,12 +300,12 @@ func (s *snapClient) list(ctx context.Context, contentCh chan *ClientContent, is
 
 	var lastKey string
 
-	filter := func(entry SnapshotEntry) (SnapshotEntry, filterAction) {
+	filter := func(entry *SnapshotEntry) filterAction {
 		if !strings.HasPrefix(entry.Key, prefix) {
-			return SnapshotEntry{}, filterSkipEntry
+			return filterSkipEntry
 		}
 		if entry.IsDeleteMarker {
-			return SnapshotEntry{}, filterSkipEntry
+			return filterSkipEntry
 		}
 		if !isRecursive {
 			tmpKey := strings.TrimPrefix(entry.Key, prefix)
@@ -299,11 +314,11 @@ func (s *snapClient) list(ctx context.Context, contentCh chan *ClientContent, is
 				entry.Key = tmpKey[:len(prefix)+idx+1]
 			}
 			if entry.Key == lastKey {
-				return SnapshotEntry{}, filterSkipEntry
+				return filterSkipEntry
 			}
 			lastKey = entry.Key
 		}
-		return entry, filterNoAction
+		return filterNoAction
 	}
 
 	s.getBucketContents(ctx, bucket, contentCh, filter)
@@ -389,11 +404,11 @@ const (
 func (s *snapClient) statBucket(ctx context.Context, bucket string) (content *ClientContent, err *probe.Error) {
 	contentCh := make(chan *ClientContent, 1)
 
-	filter := func(entry SnapshotEntry) (SnapshotEntry, filterAction) {
+	filter := func(entry *SnapshotEntry) filterAction {
 		if entry.IsDeleteMarker {
-			return SnapshotEntry{}, filterSkipEntry
+			return filterSkipEntry
 		}
-		return SnapshotEntry{}, filterAbort
+		return filterAbort
 	}
 
 	s.getBucketContents(ctx, bucket, contentCh, filter)
@@ -424,17 +439,18 @@ func (s *snapClient) StatWithOptions(ctx context.Context, _, _ bool, opts StatOp
 
 	object = strings.TrimSuffix(object, "/")
 
-	filter := func(entry SnapshotEntry) (SnapshotEntry, filterAction) {
+	filter := func(entry *SnapshotEntry) filterAction {
 		if entry.IsDeleteMarker {
-			return SnapshotEntry{}, filterSkipEntry
+			return filterSkipEntry
 		}
 		if strings.HasPrefix(entry.Key, object+"/") {
-			return SnapshotEntry{Key: object + "/"}, filterAbort
+			*entry = SnapshotEntry{Key: object + "/"}
+			return filterAbort
 		}
 		if entry.Key != object {
-			return SnapshotEntry{}, filterSkipEntry
+			return filterSkipEntry
 		}
-		return entry, filterAbort
+		return filterAbort
 	}
 
 	contentCh := make(chan *ClientContent, 1)
