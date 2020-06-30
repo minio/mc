@@ -17,9 +17,13 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -253,12 +257,62 @@ func accessPermToString(perm accessPerms) string {
 	return policy
 }
 
+func askForConfirmation(msg string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("%s [y/n]: ", msg)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
+}
+
+func isPermHigher(perm1 string, perm2 string) (ret bool) {
+	switch perm1 {
+	case "none":
+		return false
+	case "readonly", "writeonly":
+		if perm2 == "readwrite" {
+			return false
+		}
+	case "readwrite":
+		if perm2 == "readwrite" {
+			return false
+		}
+	}
+	return true
+}
+
 // doSetAccess do set access.
 func doSetAccess(ctx context.Context, targetURL string, targetPERMS accessPerms) *probe.Error {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
+
+	// Check if there is some overlapping existing rules
+	if !globalJSON {
+		rules, err := clnt.GetAccessRules(ctx)
+		if err != nil {
+			return err.Trace(targetURL)
+		}
+		path := strings.TrimPrefix(clnt.GetURL().Path, "/")
+		for k, v := range rules {
+			if strings.HasPrefix(k, path) && isPermHigher(accessPermToString(targetPERMS), v) {
+				if !askForConfirmation(fmt.Sprintf("You are exposing another sub-resource (`%s`, `%s`), do you confirm? ", k, v)) {
+					return probe.NewError(errors.New("aborted by the user"))
+				}
+			}
+		}
+	}
+
 	policy := accessPermToString(targetPERMS)
 	if err = clnt.SetAccess(ctx, policy, false); err != nil {
 		return err.Trace(targetURL, string(targetPERMS))
@@ -451,6 +505,7 @@ func runPolicyCmd(args cli.Args) {
 		perms, policyStr, probeErr = doGetAccess(ctx, targetURL)
 
 	}
+
 	// Upon error exit.
 	if probeErr != nil {
 		switch probeErr.ToGoError().(type) {
@@ -461,11 +516,13 @@ func runPolicyCmd(args cli.Args) {
 				"Unable to "+operation+" policy `"+string(perms)+"` for `"+targetURL+"`.")
 		}
 	}
+
 	policyJSON := map[string]interface{}{}
 	if policyStr != "" {
 		e := json.Unmarshal([]byte(policyStr), &policyJSON)
 		fatalIf(probe.NewError(e), "Cannot unmarshal custom policy file.")
 	}
+
 	printMsg(policyMessage{
 		Status:    "success",
 		Operation: operation,
