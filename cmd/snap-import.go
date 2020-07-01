@@ -30,6 +30,7 @@ var (
 	snapImportFlags = []cli.Flag{}
 )
 
+// FIXME:
 var snapImport = cli.Command{
 	Name:   "import",
 	Usage:  "Import a snapshot from JSON snapshot archive",

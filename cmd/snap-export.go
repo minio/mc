@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -29,6 +28,7 @@ var (
 	snapExportFlags = []cli.Flag{}
 )
 
+// FIXME:
 var snapExport = cli.Command{
 	Name:   "export",
 	Usage:  "Export a snapshot to JSON format",
@@ -55,48 +55,6 @@ func parseSnapExportSyntax(ctx *cli.Context) (snapName string) {
 	}
 
 	return args.Get(0)
-}
-
-func listSnapshotBuckets(snapName string) ([]string, *probe.Error) {
-	snapsDir, err := getSnapsDir()
-	if err != nil {
-		return nil, err
-	}
-
-	snapFile := filepath.Join(snapsDir, snapName)
-	if _, err := os.Stat(snapFile); err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	var buckets []string
-	bucketsFI, e := ioutil.ReadDir(filepath.Join(snapFile, "buckets"))
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-
-	for _, bucket := range bucketsFI {
-		buckets = append(buckets, bucket.Name())
-	}
-
-	return buckets, nil
-}
-
-func openSnapshotFile(snapName string) (*os.File, *probe.Error) {
-	snapsDir, err := getSnapsDir()
-	if err != nil {
-		return nil, err
-	}
-
-	snapFile := filepath.Join(snapsDir, snapName)
-	if _, err := os.Stat(snapFile); err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	f, e := os.Open(snapFile)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-	return f, nil
 }
 
 func exportSnapshot(snapName string) *probe.Error {

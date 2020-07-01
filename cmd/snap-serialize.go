@@ -18,9 +18,10 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
 	"io"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -31,12 +32,21 @@ import (
 
 var zFastEnc *zstd.Encoder
 var zFastEncInit sync.Once
+var zstdDec *zstd.Decoder
+var zstdDecInit sync.Once
 
 func fastZstdEncoder() *zstd.Encoder {
 	zFastEncInit.Do(func() {
 		zFastEnc, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedFastest), zstd.WithWindowSize(1<<20))
 	})
 	return zFastEnc
+}
+
+func zstdDecoder() *zstd.Decoder {
+	zstdDecInit.Do(func() {
+		zstdDec, _ = zstd.NewReader(nil)
+	})
+	return zstdDec
 }
 
 // snapshotSerializer serializes snapshot data.
@@ -72,8 +82,7 @@ const snapshotSerializeVersion = 1
 // A fancy 4 byte identifier and a 1 byte version.
 var snapshotSerializeHeader = []byte{0x73, 0x4b, 0xe5, 0x6c, snapshotSerializeVersion}
 
-// ResetFile will reset output to a file.
-// Close should have been called before using this except if unused.
+// newSnapshotSerializer will serialize to a supplied writer.
 func newSnapshotSerializer(w io.Writer) (*snapshotSerializer, *probe.Error) {
 	var s snapshotSerializer
 	s.out = w
@@ -97,6 +106,8 @@ func (s *snapshotSerializer) AddTarget(t S3Target) *probe.Error {
 	s.packet.calcCRC()
 	return probe.NewError(s.packet.EncodeMsg(s.msg))
 }
+
+const bucketEntriesBlockSize = 1 << 20
 
 // StartBucket will start a bucket.
 // Entries into the bucket can be written to the returned channel.
@@ -128,9 +139,8 @@ func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry
 	// Allow a reasonable buffer.
 	entries := make(chan SnapshotEntry, 10000)
 	go func() {
-		const blockSize = 1 << 20
 		// Make slightly larger temp block.
-		tmp := make([]byte, 0, blockSize+1<<10)
+		tmp := make([]byte, 0, bucketEntriesBlockSize+1<<10)
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
@@ -140,12 +150,19 @@ func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry
 			}
 			tmp, err = e.MarshalMsg(tmp)
 			s.setAsyncErr(err)
-			if len(tmp) > blockSize {
+			if len(tmp) >= bucketEntriesBlockSize {
 				encBlock(tmp)
 				tmp = tmp[:0]
 			}
 		}
-		encBlock(tmp)
+		if s.asyncErr == nil {
+			encBlock(tmp)
+		}
+		if s.asyncErr == nil {
+			// Add end bucket packet.
+			s.packet.reset(typeBucketEnd)
+			s.setAsyncErr(s.packet.EncodeMsg(s.msg))
+		}
 	}()
 	return entries, nil
 }
@@ -186,28 +203,29 @@ func (s *snapshotSerializer) FinishTarget() *probe.Error {
 
 // snapshotDeserializer handles de-serializing a bucket snapshot.
 type snapshotDeserializer struct {
-	*msgp.Reader
-
-	bucket  string
+	msg     *msgp.Reader
 	version uint8
-	comp    *zstd.Decoder
-	in      io.ReadCloser
+	packet  snapPacket
+
+	in io.Reader
 }
 
-// ResetFile will reset output to a file.
-// Close should have been called before using this except if unused.
-func newSnapShotReaderFile(snapName, bucket string) (*snapshotDeserializer, *probe.Error) {
-	s := snapshotDeserializer{}
-	r, perr := openSnapshotFile(filepath.Join(snapName, "buckets", bucket))
-	if perr != nil {
-		return nil, perr
+func newSnapShotReader(r io.Reader) (*snapshotDeserializer, *probe.Error) {
+	s := snapshotDeserializer{
+		msg: msgp.NewReader(r),
+		in:  r,
 	}
-	s.in = r
-	s.bucket = bucket
 
 	// Read header + version.
-	var tmp = make([]byte, len(snapshotSerializeHeader))
-	_, err := io.ReadFull(r, tmp)
+	sz, err := s.msg.ReadBytesHeader()
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+	if int(sz) != len(snapshotSerializeHeader) {
+		return nil, probe.NewError(errors.New("header signature length mismatch"))
+	}
+	var tmp = make([]byte, sz)
+	_, err = s.msg.ReadFull(tmp)
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
@@ -222,17 +240,200 @@ func newSnapShotReaderFile(snapName, bucket string) (*snapshotDeserializer, *pro
 	}
 	s.version = tmp[4]
 
-	s.comp, err = zstd.NewReader(r, zstd.WithDecoderConcurrency(2))
-	if err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	s.Reader = msgp.NewReader(s.comp)
 	return &s, nil
 }
 
-// CleanUp will close file and clean up.
-func (s *snapshotDeserializer) CleanUp() {
-	s.in.Close()
-	s.comp.Close()
+// nextPacket will read the next packet.
+// It will only skip if type is typeSkip
+func (s *snapshotDeserializer) nextPacket() *probe.Error {
+	for {
+		s.packet.reset(typeInvalid)
+		err := s.packet.DecodeMsg(s.msg)
+		if err != nil {
+			return probe.NewError(err)
+		}
+		switch s.packet.Type {
+		case typeSkip:
+			continue
+		case typeInvalid:
+			return probe.NewError(errors.New("invalid packet type"))
+		}
+		return nil
+	}
+}
+
+// nextPacketType will read the next packet.
+// Unless it is skippable it must be the type specified.
+func (s *snapshotDeserializer) nextPacketType(want packetType) *probe.Error {
+	for {
+		err := s.nextPacket()
+		if err != nil {
+			return err
+		}
+		switch s.packet.Type {
+		case want:
+			return nil
+		default:
+			if !s.packet.skippable() {
+				return probe.NewError(fmt.Errorf("unexpected packet type: want %d, got %d", want, s.packet.Type))
+			}
+		}
+		return nil
+	}
+}
+
+// nextPacketOneOf will read the next packet with one of the specified types.
+// Unless it is skippable it must be one of the type specified.
+func (s *snapshotDeserializer) nextPacketOneOf(want ...packetType) *probe.Error {
+	var ok [256]bool
+	for _, v := range want {
+		ok[v] = true
+	}
+	for {
+		err := s.nextPacket()
+		if err != nil {
+			return err
+		}
+		if ok[s.packet.Type] {
+			return nil
+		}
+		if !s.packet.skippable() {
+			return probe.NewError(fmt.Errorf("unexpected packet type: want one of %v, got %d", want, s.packet.Type))
+		}
+		return nil
+	}
+}
+
+// skipUntil will skip until another packet type is found.
+func (s *snapshotDeserializer) skipUntilNot(t packetType, skipSkippable bool) *probe.Error {
+	for {
+		err := s.nextPacket()
+		if err != nil {
+			return err
+		}
+		switch s.packet.Type {
+		case t:
+			continue
+		default:
+			if skipSkippable && s.packet.skippable() {
+				continue
+			}
+			return nil
+		}
+	}
+}
+
+// ReadTarget will read a target from the stream.
+// If the next packet is not a target an error is returned.
+func (s *snapshotDeserializer) ReadTarget() (*S3Target, *probe.Error) {
+	if err := s.nextPacketType(typeTargetStart); err != nil {
+		return nil, err
+	}
+	if err := s.packet.CRCok(); err != nil {
+		return nil, err
+	}
+	var dst S3Target
+	_, err := dst.UnmarshalMsg(s.packet.Payload)
+	return &dst, probe.NewError(err)
+}
+
+// ReadBucket will read a bucket header from the stream.
+// If the next packet is not a bucket an error is returned.
+// If there are no more buckets for the target nil, nil is returned.
+func (s *snapshotDeserializer) ReadBucket() (*SnapshotBucket, *probe.Error) {
+	if err := s.nextPacketOneOf(typeBucketHeader, typeTargetEnd); err != nil {
+		return nil, err
+	}
+	if s.packet.Type == typeTargetEnd {
+		return nil, nil
+	}
+	if err := s.packet.CRCok(); err != nil {
+		return nil, err
+	}
+	var dst SnapshotBucket
+	_, err := dst.UnmarshalMsg(s.packet.Payload)
+	return &dst, probe.NewError(err)
+}
+
+// FindBucket will read buckets until the specified bucket is found.
+// Will return nil, nil if the bucket cannot be found.
+func (s *snapshotDeserializer) FindBucket(bucket string) (*SnapshotBucket, *probe.Error) {
+	for {
+		if err := s.nextPacketOneOf(typeBucketHeader, typeTargetEnd); err != nil {
+			return nil, err
+		}
+		switch s.packet.Type {
+		case typeTargetEnd:
+			return nil, nil
+		case typeBucketHeader:
+			if err := s.packet.CRCok(); err != nil {
+				return nil, err
+			}
+			var dst SnapshotBucket
+			if _, err := dst.UnmarshalMsg(s.packet.Payload); err != nil {
+				probe.NewError(err)
+			}
+			if dst.Name == bucket {
+				return &dst, nil
+			}
+			// Skip entries...
+			if err := s.skipUntilNot(typeBucketEntries, true); err != nil {
+				return nil, err
+			}
+		}
+		// We should only get the types above.
+		return nil, probe.NewError(errors.New("internal error: unexpected packet type"))
+	}
+}
+
+// SkipBucketEntries will skip bucket entries.
+func (s *snapshotDeserializer) SkipBucketEntries() *probe.Error {
+	for {
+		if err := s.skipUntilNot(typeBucketEntries, true); err != nil {
+			return err
+		}
+		if s.packet.Type == typeBucketEnd {
+			return nil
+		}
+		if !s.packet.skippable() {
+			return probe.NewError(fmt.Errorf("unexpected packet type %d", s.packet))
+		}
+	}
+}
+
+// BucketEntries will return all bucket entries.
+// The channel will be closed when there are no more entries.
+// If an error occurs it will be returned and the channel will be closed.
+func (s *snapshotDeserializer) BucketEntries(ctx context.Context, entries chan<- SnapshotEntry) *probe.Error {
+	defer close(entries)
+	var dst SnapshotEntry
+	var tmp = make([]byte, bucketEntriesBlockSize+(1<<10))
+	dec := zstdDecoder()
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return probe.NewError(ctx.Err())
+		default:
+		}
+		if err := s.nextPacketType(typeBucketEntries); err != nil {
+			if s.packet.Type == typeBucketEnd {
+				err = nil
+			}
+			return err
+		}
+		var err error
+		tmp, err = dec.DecodeAll(s.packet.Payload, tmp[:0])
+		if err != nil {
+			return probe.NewError(err)
+		}
+		todo := tmp
+		for len(todo) > 0 {
+			todo, err = dst.UnmarshalMsg(todo)
+			if err != nil {
+				return probe.NewError(err)
+			}
+			entries <- dst
+		}
+	}
 }

@@ -20,13 +20,16 @@ package cmd
 
 import (
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/cespare/xxhash"
+	"github.com/minio/mc/pkg/probe"
 )
 
 type SnapshotBucket struct {
-	ID string `msg:"id"`
+	Name string `msg:"name"`
 }
 
 type SnapshotEntry struct {
@@ -56,9 +59,10 @@ const (
 	// Keep zero value unused for error detection.
 	typeInvalid packetType = iota
 	typeTargetStart
+	typeTargetEnd
 	typeBucketHeader
 	typeBucketEntries
-	typeTargetEnd
+	typeBucketEnd
 )
 
 const (
@@ -88,4 +92,25 @@ func (s *snapPacket) calcCRC() {
 	h := xxhash.Sum64(s.Payload)
 	s.CRC = s.CRC[:4]
 	binary.LittleEndian.PutUint32(s.CRC, uint32(h)^uint32(h>>32))
+}
+
+// Returns true if there is CRC and it matches.
+func (s *snapPacket) CRCok() *probe.Error {
+	if len(s.Payload) == 0 && len(s.CRC) == 0 {
+		return nil
+	}
+	if len(s.CRC) != 4 {
+		return probe.NewError(errors.New("want CRC value, but none was present"))
+	}
+	want := binary.LittleEndian.Uint32(s.CRC)
+	h := xxhash.Sum64(s.Payload)
+	got := uint32(h) ^ uint32(h>>32)
+	if want != got {
+		probe.NewError(fmt.Errorf("crc mismatch: want %x, got %x", want, got))
+	}
+	return nil
+}
+
+func (s *snapPacket) skippable() bool {
+	return s.Type >= typeSkip
 }

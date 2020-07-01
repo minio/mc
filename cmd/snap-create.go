@@ -18,7 +18,9 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,12 +101,33 @@ func createSnapshotFile(snapName string) (*os.File, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 	snapFile := filepath.Join(snapsDir, snapName)
-	if !strings.HasSuffix(snapFile, ".snap") {
+	if !strings.HasSuffix(snapFile, snapshotSuffix) {
 		snapFile += ".snap"
 	}
 
-	// TODO: Check if exists?
+	// TODO: Allow overwrites?
+	if _, err := os.Stat(snapFile); os.IsExist(err) {
+		return nil, probe.NewError(errors.New("snapshot already exists"))
+	}
+
 	f, e := os.OpenFile(snapFile, os.O_WRONLY|os.O_CREATE, 0600)
+	return f, probe.NewError(e)
+}
+
+func openSnapshotFile(snapName string) (*os.File, *probe.Error) {
+	snapsDir, perr := getSnapsDir()
+	if perr != nil {
+		return nil, perr
+	}
+
+	snapFile := filepath.Join(snapsDir, snapName)
+	if !strings.HasSuffix(snapFile, snapshotSuffix) {
+		snapFile += ".snap"
+	}
+	if _, err := os.Stat(snapFile); err != nil {
+		return nil, probe.NewError(err)
+	}
+	f, e := os.Open(snapFile)
 	return f, probe.NewError(e)
 }
 
@@ -118,14 +141,19 @@ func createSnapshot(snapName string, s3Path string, at time.Time) (perr *probe.E
 	if err != nil {
 		return err
 	}
-
-	f, err := createSnapshotFile(snapName)
-	if err != nil {
-		return err
+	var out io.Writer
+	if snapName == "-" {
+		out = os.Stdout
+	} else {
+		f, err := createSnapshotFile(snapName)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		out = f
 	}
-	defer f.Close()
 
-	ser, err := newSnapshotSerializer(f)
+	ser, err := newSnapshotSerializer(out)
 	if err != nil {
 		return err
 	}
@@ -158,7 +186,7 @@ func createSnapshot(snapName string, s3Path string, at time.Time) (perr *probe.E
 				close(entries)
 			}
 			// Switch to new.
-			entries, err = ser.StartBucket(SnapshotBucket{ID: bucket})
+			entries, err = ser.StartBucket(SnapshotBucket{Name: bucket})
 			if err != nil {
 				return err
 			}

@@ -281,10 +281,10 @@ func (z *SnapshotBucket) DecodeMsg(dc *msgp.Reader) (err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "id":
-			z.ID, err = dc.ReadString()
+		case "name":
+			z.Name, err = dc.ReadString()
 			if err != nil {
-				err = msgp.WrapError(err, "ID")
+				err = msgp.WrapError(err, "Name")
 				return
 			}
 		default:
@@ -301,14 +301,14 @@ func (z *SnapshotBucket) DecodeMsg(dc *msgp.Reader) (err error) {
 // EncodeMsg implements msgp.Encodable
 func (z SnapshotBucket) EncodeMsg(en *msgp.Writer) (err error) {
 	// map header, size 1
-	// write "id"
-	err = en.Append(0x81, 0xa2, 0x69, 0x64)
+	// write "name"
+	err = en.Append(0x81, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	if err != nil {
 		return
 	}
-	err = en.WriteString(z.ID)
+	err = en.WriteString(z.Name)
 	if err != nil {
-		err = msgp.WrapError(err, "ID")
+		err = msgp.WrapError(err, "Name")
 		return
 	}
 	return
@@ -318,9 +318,9 @@ func (z SnapshotBucket) EncodeMsg(en *msgp.Writer) (err error) {
 func (z SnapshotBucket) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
-	// string "id"
-	o = append(o, 0x81, 0xa2, 0x69, 0x64)
-	o = msgp.AppendString(o, z.ID)
+	// string "name"
+	o = append(o, 0x81, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	o = msgp.AppendString(o, z.Name)
 	return
 }
 
@@ -342,10 +342,10 @@ func (z *SnapshotBucket) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "id":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
+		case "name":
+			z.Name, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "ID")
+				err = msgp.WrapError(err, "Name")
 				return
 			}
 		default:
@@ -362,7 +362,7 @@ func (z *SnapshotBucket) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z SnapshotBucket) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID)
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name)
 	return
 }
 

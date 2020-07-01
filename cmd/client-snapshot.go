@@ -18,18 +18,14 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"io"
-	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/minio/mc/cmd/ilm"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
@@ -39,48 +35,48 @@ import (
 type snapClient struct {
 	PathURL *ClientURL
 
+	dec      *snapshotDeserializer
 	snapName string
 	s3Target Client
 }
 
 // snapNew - instantiate a new snapshot
-func snapNew(snapName, spath string) (Client, *probe.Error) {
-	f, err := openSnapshotFile(filepath.Join(snapName, "metadata.json"))
+func snapNew(snapName string) (Client, *probe.Error) {
+	var in io.Reader
+	if snapName == "-" {
+		in = os.Stdout
+	} else {
+		f, err := openSnapshotFile(snapName)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		in = f
+	}
+
+	r, err := newSnapShotReader(in)
 	if err != nil {
-		return &snapClient{}, err
+		return nil, err
 	}
 
-	metadataBytes, e := ioutil.ReadAll(f)
-	if e != nil {
-		return &snapClient{}, probe.NewError(e)
+	tgt, err := r.ReadTarget()
+	if err != nil {
+		return nil, err
 	}
 
-	var s3Target S3Target
-	e = json.Unmarshal(metadataBytes, &s3Target)
-	if e != nil {
-		return &snapClient{}, probe.NewError(e)
-	}
-
-	pathURL := strings.TrimPrefix(spath, snapName)
-
-	hostCfg := hostConfigV9(s3Target)
-
-	u, e := url.Parse(s3Target.URL)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-	u.Path = path.Join(u.Path, pathURL)
-
-	s3Config := NewS3Config(u.String(), &hostCfg)
+	hostCfg := hostConfigV9(*tgt)
+	s3Config := NewS3Config(tgt.URL, &hostCfg)
 	clnt, err := S3New(s3Config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &snapClient{
-		PathURL:  newClientURL(normalizePath(pathURL)),
+		// FIXME: No idea if this is correct
+		PathURL:  newClientURL(normalizePath(snapName)),
 		snapName: snapName,
 		s3Target: clnt,
+		dec:      r,
 	}, nil
 }
 
@@ -178,93 +174,70 @@ func (s *snapClient) List(ctx context.Context, isRecursive, _, _ bool, showDir D
 	return contentCh
 }
 
-// getBucketContents returns bucket content
-func (s *snapClient) getBucketContents(ctx context.Context, bucket string, contentCh chan *ClientContent, filter func(*SnapshotEntry) filterAction) {
-	dec, err := newSnapShotReaderFile(s.snapName, bucket)
+// getBucketContents returns bucket content.
+// The deserializer must be queued up for bucket contents.
+func (s *snapClient) getBucketContents(ctx context.Context, bucket SnapshotBucket, contentCh chan *ClientContent, filter func(*SnapshotEntry) filterAction) {
+	entries := make(chan SnapshotEntry, 10000)
+	var wg sync.WaitGroup
+	go func() {
+		defer wg.Done()
+		for entry := range entries {
+			var action filterAction
+			if filter != nil {
+				action = filter(&entry)
+				if action == filterSkipEntry {
+					continue
+				}
+			}
+			u := s.PathURL.Clone()
+			u.Path = path.Join("/", bucket.Name, entry.Key)
+
+			var mod os.FileMode
+			if entry.Key == "" || strings.HasSuffix(entry.Key, "/") {
+				mod |= os.ModeDir
+			}
+
+			c := &ClientContent{
+				URL:            u,
+				Type:           mod,
+				VersionID:      entry.VersionID,
+				Size:           entry.Size,
+				Time:           entry.ModTime,
+				ETag:           entry.ETag,
+				StorageClass:   entry.StorageClass,
+				IsDeleteMarker: entry.IsDeleteMarker,
+				IsLatest:       entry.IsLatest,
+			}
+			contentCh <- c
+
+			if action == filterAbort {
+				break
+			}
+		}
+	}()
+
+	err := s.dec.BucketEntries(ctx, entries)
+	wg.Wait()
 	if err != nil {
 		contentCh <- &ClientContent{Err: err}
 		return
-	}
-	defer dec.CleanUp()
-
-	var entry SnapshotEntry
-	done := ctx.Done()
-	for {
-		select {
-		case <-done:
-			contentCh <- &ClientContent{Err: probe.NewError(ctx.Err())}
-			return
-		default:
-		}
-		// Read object type
-		t, err := dec.ReadUint8()
-		if err != nil {
-			contentCh <- &ClientContent{Err: probe.NewError(err)}
-			return
-		}
-		// This can be extended in the future if more object types are needed
-		// without breaking backwards compatibility.
-		switch t {
-		case 0:
-		case 255: // EOF marker.
-			return
-		default:
-			contentCh <- &ClientContent{Err: probe.NewError(errors.New("unknown type identifier"))}
-			return
-		}
-
-		var action filterAction
-		err = entry.DecodeMsg(dec.Reader)
-		if err != nil {
-			contentCh <- &ClientContent{Err: probe.NewError(err)}
-			return
-		}
-
-		if filter != nil {
-			action = filter(&entry)
-			if action == filterSkipEntry {
-				continue
-			}
-		}
-
-		u := s.PathURL.Clone()
-		u.Path = path.Join("/", bucket, entry.Key)
-
-		var mod os.FileMode
-		if entry.Key == "" || strings.HasSuffix(entry.Key, "/") {
-			mod |= os.ModeDir
-		}
-
-		c := &ClientContent{
-			URL:            u,
-			Type:           mod,
-			VersionID:      entry.VersionID,
-			Size:           entry.Size,
-			Time:           entry.ModTime,
-			ETag:           entry.ETag,
-			StorageClass:   entry.StorageClass,
-			IsDeleteMarker: entry.IsDeleteMarker,
-			IsLatest:       entry.IsLatest,
-		}
-		contentCh <- c
-
-		if action == filterAbort {
-			break
-		}
 	}
 }
 
 func (s *snapClient) listBuckets(ctx context.Context, contentCh chan *ClientContent, isRecursive, _, _ bool, showDir DirOpt) {
-	buckets, err := listSnapshotBuckets(s.snapName)
-	if err != nil {
-		contentCh <- &ClientContent{Err: err}
-		return
-	}
-
 	if !isRecursive {
-		for _, b := range buckets {
+		// List all buckets, but no content.
+		for {
+			b, err := s.dec.ReadBucket()
+			if err != nil {
+				contentCh <- &ClientContent{Err: err}
+				return
+			}
+			if b == nil {
+				return
+			}
 			url := s.PathURL.Clone()
-			url.Path = path.Join("/", b)
+			url.Path = path.Join("/", b.Name)
 
 			c := &ClientContent{
 				URL:  url,
@@ -272,8 +245,12 @@ func (s *snapClient) listBuckets(ctx context.Context, contentCh chan *ClientCont
 			}
 
 			contentCh <- c
+			err = s.dec.SkipBucketEntries()
+			if err != nil {
+				contentCh <- &ClientContent{Err: err}
+				return
+			}
 		}
-		return
 	}
 
 	filter := func(entry *SnapshotEntry) filterAction {
@@ -283,12 +260,21 @@ func (s *snapClient) listBuckets(ctx context.Context, contentCh chan *ClientCont
 		return filterNoAction
 	}
 
-	for _, b := range buckets {
-		s.getBucketContents(ctx, b, contentCh, filter)
+	for {
+		b, err := s.dec.ReadBucket()
+		if err != nil {
+			contentCh <- &ClientContent{Err: err}
+			return
+		}
+		if b == nil {
+			return
+		}
+		s.getBucketContents(ctx, *b, contentCh, filter)
 	}
 }
 
 // List - list files and folders.
+// FIXME: showDir appears to be unused
 func (s *snapClient) list(ctx context.Context, contentCh chan *ClientContent, isRecursive, _, _ bool, showDir DirOpt) {
 	defer close(contentCh)
 
@@ -320,8 +306,16 @@ func (s *snapClient) list(ctx context.Context, contentCh chan *ClientContent, is
 		}
 		return filterNoAction
 	}
-
-	s.getBucketContents(ctx, bucket, contentCh, filter)
+	b, err := s.dec.FindBucket(bucket)
+	if err != nil {
+		contentCh <- &ClientContent{Err: err}
+		return
+	}
+	if b == nil {
+		contentCh <- &ClientContent{Err: probe.NewError(BucketDoesNotExist{Bucket: bucket})}
+		return
+	}
+	s.getBucketContents(ctx, *b, contentCh, filter)
 }
 
 // MakeBucket - create a new bucket.
@@ -402,27 +396,22 @@ const (
 )
 
 func (s *snapClient) statBucket(ctx context.Context, bucket string) (content *ClientContent, err *probe.Error) {
-	contentCh := make(chan *ClientContent, 1)
-
-	filter := func(entry *SnapshotEntry) filterAction {
-		if entry.IsDeleteMarker {
-			return filterSkipEntry
-		}
-		return filterAbort
+	b, err := s.dec.FindBucket(bucket)
+	if err != nil {
+		return nil, err
 	}
-
-	s.getBucketContents(ctx, bucket, contentCh, filter)
-
-	content = <-contentCh
-	if content == nil {
+	if b == nil {
 		return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 	}
 
-	if content.Err != nil {
-		return nil, content.Err
-	}
+	u := s.PathURL.Clone()
+	u.Path = path.Join("/", b.Name)
 
-	return content, nil
+	// TODO: Include more information
+	return &ClientContent{
+		URL: u,
+		Err: nil,
+	}, nil
 }
 
 // Stat - get metadata from path.
@@ -435,6 +424,14 @@ func (s *snapClient) StatWithOptions(ctx context.Context, _, _ bool, opts StatOp
 
 	if object == "" {
 		return s.statBucket(ctx, bucket)
+	}
+
+	b, err := s.dec.FindBucket(bucket)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 	}
 
 	object = strings.TrimSuffix(object, "/")
@@ -453,9 +450,8 @@ func (s *snapClient) StatWithOptions(ctx context.Context, _, _ bool, opts StatOp
 		return filterAbort
 	}
 
-	contentCh := make(chan *ClientContent, 1)
-
-	s.getBucketContents(ctx, bucket, contentCh, filter)
+	contentCh := make(chan *ClientContent, 2)
+	s.getBucketContents(ctx, *b, contentCh, filter)
 
 	content = <-contentCh
 	if content == nil {

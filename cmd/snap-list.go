@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -31,6 +32,8 @@ import (
 var (
 	snapListFlags = []cli.Flag{}
 )
+
+const snapshotSuffix = ".snap"
 
 var snapList = cli.Command{
 	Name:   "list",
@@ -71,7 +74,7 @@ func listSnapshots() ([]os.FileInfo, *probe.Error) {
 
 	var snapshots []os.FileInfo
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !strings.HasSuffix(entry.Name(), snapshotSuffix) {
 			continue
 		}
 		snapshots = append(snapshots, entry)
@@ -105,5 +108,4 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		defer cancelList()
 		return doList(ctx, clnt, true, false)
 	}
-
 }
