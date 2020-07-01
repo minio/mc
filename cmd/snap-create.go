@@ -18,10 +18,10 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -88,47 +88,27 @@ func checkSnapCreateSyntax(cliCtx *cli.Context) (snapName string, url string, re
 	return snapName, targetURL, refTime
 }
 
-func initSnapshotDir(snapName string) *probe.Error {
-	snapsDir, err := getSnapsDir()
+func createSnapshotFile(snapName string) (*os.File, *probe.Error) {
+	snapsDir, perr := getSnapsDir()
+	if perr != nil {
+		return nil, perr
+	}
+
+	err := os.MkdirAll(snapsDir, 0700)
 	if err != nil {
-		return err
+		return nil, probe.NewError(err)
+	}
+	snapFile := filepath.Join(snapsDir, snapName)
+	if !strings.HasSuffix(snapFile, ".snap") {
+		snapFile += ".snap"
 	}
 
-	snapDir := filepath.Join(snapsDir, snapName)
-
-	if _, e := os.Stat(snapDir); e == nil {
-		return probe.NewError(errors.New("snapshot already exist"))
-	} else {
-		if !os.IsNotExist(e) {
-			return probe.NewError(e)
-		}
-	}
-
-	e := os.MkdirAll(filepath.Join(snapDir, "buckets"), 0700)
-	if e != nil {
-		return probe.NewError(e)
-	}
-
-	return nil
-}
-
-func createSnapshotFile(snapName, filename string) (*os.File, *probe.Error) {
-	snapsDir, err := getSnapsDir()
-	if err != nil {
-		return nil, err
-	}
-
-	snapDir := filepath.Join(snapsDir, snapName)
-	snapFile := filepath.Join(snapDir, filename)
-
+	// TODO: Check if exists?
 	f, e := os.OpenFile(snapFile, os.O_WRONLY|os.O_CREATE, 0600)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-	return f, nil
+	return f, probe.NewError(e)
 }
 
-func createSnapshot(snapName string, s3Path string, at time.Time) *probe.Error {
+func createSnapshot(snapName string, s3Path string, at time.Time) (perr *probe.Error) {
 	alias, urlStr, hostCfg, err := expandAlias(s3Path)
 	if err != nil {
 		return err
@@ -139,48 +119,52 @@ func createSnapshot(snapName string, s3Path string, at time.Time) *probe.Error {
 		return err
 	}
 
-	err = initSnapshotDir(snapName)
+	f, err := createSnapshotFile(snapName)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
-	metadataFile, err := createSnapshotFile(snapName, "metadata.json")
+	ser, err := newSnapshotSerializer(f)
 	if err != nil {
 		return err
 	}
-	defer metadataFile.Close()
-	metadataBytes, e := json.Marshal(S3Target(*hostCfg))
-	if e != nil {
-		return probe.NewError(e)
+	err = ser.AddTarget(S3Target(*hostCfg))
+	if err != nil {
+		return err
 	}
-	if _, e := metadataFile.Write(metadataBytes); e != nil {
-		return probe.NewError(e)
-	}
+	defer func() {
+		if r := recover(); r != nil {
+			perr = probe.NewError(fmt.Errorf("panic during encode: %v", r))
+		}
+		if perr == nil {
+			perr = ser.FinishTarget()
+		}
+	}()
 
-	var snapshotMarker snapshotSerializer
-	defer snapshotMarker.CleanUp()
-
-	var entry SnapshotEntry
+	var entries chan<- SnapshotEntry
+	var currentBucket string
 	for s := range s3Client.Snapshot(context.Background(), at) {
 		if s.Err != nil {
 			return s.Err
 		}
+		if ser.HasError() {
+			close(entries)
+			return probe.NewError(ser.GetAsyncErr())
+		}
 		bucket, key := s.URL.BucketAndPrefix()
-
-		if snapshotMarker.bucket != bucket {
-			// Close previous if any.
-			err := snapshotMarker.Close()
-			if err != nil {
-				return err
+		if currentBucket != bucket || entries == nil {
+			if entries != nil {
+				close(entries)
 			}
 			// Switch to new.
-			err = snapshotMarker.ResetFile(snapName, bucket)
+			entries, err = ser.StartBucket(SnapshotBucket{ID: bucket})
 			if err != nil {
 				return err
 			}
 		}
 
-		entry = SnapshotEntry{
+		entries <- SnapshotEntry{
 			Key:            key,
 			VersionID:      s.VersionID,
 			Size:           s.Size,
@@ -190,20 +174,11 @@ func createSnapshot(snapName string, s3Path string, at time.Time) *probe.Error {
 			IsDeleteMarker: s.IsDeleteMarker,
 			IsLatest:       s.IsLatest,
 		}
-
-		// Write object type, currently only 0 is used and 255 indicates EOF.
-		e := snapshotMarker.WriteInt8(0)
-		if e != nil {
-			return probe.NewError(e)
-		}
-		e = entry.EncodeMsg(snapshotMarker.Writer)
-		if e != nil {
-			return probe.NewError(e)
-		}
 	}
-
-	return snapshotMarker.Close()
-
+	if entries != nil {
+		close(entries)
+	}
+	return probe.NewError(ser.GetAsyncErr())
 }
 
 // main entry point for snapshot create.

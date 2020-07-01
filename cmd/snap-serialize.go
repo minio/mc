@@ -21,20 +21,48 @@ import (
 	"errors"
 	"io"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/tinylib/msgp/msgp"
 )
 
+var zFastEnc *zstd.Encoder
+var zFastEncInit sync.Once
+
+func fastZstdEncoder() *zstd.Encoder {
+	zFastEncInit.Do(func() {
+		zFastEnc, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedFastest), zstd.WithWindowSize(1<<20))
+	})
+	return zFastEnc
+}
+
 // snapshotSerializer serializes snapshot data.
 // Can be initialized with zero value data.
+//
+// Serialization format:
+//
+// All content is msgpack encoded.
+//
+// Header: Blob, must be 5 bytes, 4 bytes signature, 1 byte version.
+//
+// Packets: snapPacket objects
+//  - Contains packet type (uint8) an optional CRC (4 byte blob)
+//    and a blob payload depending on the packet type.
+//
+// Packets are order dependent.
 type snapshotSerializer struct {
-	*msgp.Writer
+	msg *msgp.Writer
+	mu  sync.Mutex
 
-	bucket string
-	comp   *zstd.Encoder
-	out    io.WriteCloser
+	packet   snapPacket
+	out      io.Writer
+	asyncErr error
+
+	// Will be one if async error occurs
+	hasAsyncErr int32
 }
 
 // snapshotSerializeVersion identifies the version in case breaking changes
@@ -46,71 +74,114 @@ var snapshotSerializeHeader = []byte{0x73, 0x4b, 0xe5, 0x6c, snapshotSerializeVe
 
 // ResetFile will reset output to a file.
 // Close should have been called before using this except if unused.
-func (s *snapshotSerializer) ResetFile(snapName, bucket string) *probe.Error {
-	w, perr := createSnapshotFile(snapName, filepath.Join("buckets", bucket))
-	if perr != nil {
-		return perr
-	}
+func newSnapshotSerializer(w io.Writer) (*snapshotSerializer, *probe.Error) {
+	var s snapshotSerializer
 	s.out = w
-	s.bucket = bucket
+	s.msg = msgp.NewWriter(w)
 
-	// Add version.
-	_, err := w.Write(snapshotSerializeHeader)
+	// Add header+version.
+	return &s, probe.NewError(s.msg.WriteBytes(snapshotSerializeHeader))
+}
+
+// AddTarget will add a target to the stream.
+// The following belongs to the target until typeTargetEnd is on the stream.
+func (s *snapshotSerializer) AddTarget(t S3Target) *probe.Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var err error
+	s.packet.reset(typeTargetStart)
+	s.packet.Payload, err = t.MarshalMsg(s.packet.Payload[:0])
 	if err != nil {
 		return probe.NewError(err)
 	}
-	s.out = w
-	if s.comp == nil {
-		s.comp, err = zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest), zstd.WithZeroFrames(true))
-		if err != nil {
-			return probe.NewError(err)
+	s.packet.calcCRC()
+	return probe.NewError(s.packet.EncodeMsg(s.msg))
+}
+
+// StartBucket will start a bucket.
+// Entries into the bucket can be written to the returned channel.
+// The serializer should not be used until the channel has been closed.
+func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry, *probe.Error) {
+	var err error
+	s.packet.reset(typeBucketHeader)
+	s.packet.Payload, err = b.MarshalMsg(s.packet.Payload[:0])
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+	s.packet.calcCRC()
+	err = s.packet.EncodeMsg(s.msg)
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	enc := fastZstdEncoder()
+	encBlock := func(b []byte) {
+		if len(b) == 0 || s.asyncErr != nil {
+			return
 		}
-	} else {
-		s.comp.Reset(w)
+		s.packet.reset(typeBucketEntries)
+		s.packet.Payload = enc.EncodeAll(b, s.packet.Payload[:0])
+		// zstd has crc, so we don't add it again.
+		s.setAsyncErr(s.packet.EncodeMsg(s.msg))
 	}
 
-	if s.Writer == nil {
-		s.Writer = msgp.NewWriter(s.comp)
-	} else {
-		s.Writer.Reset(s.comp)
-	}
-	return nil
+	// Allow a reasonable buffer.
+	entries := make(chan SnapshotEntry, 10000)
+	go func() {
+		const blockSize = 1 << 20
+		// Make slightly larger temp block.
+		tmp := make([]byte, 0, blockSize+1<<10)
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		for e := range entries {
+			if s.asyncErr != nil {
+				continue
+			}
+			tmp, err = e.MarshalMsg(tmp)
+			s.setAsyncErr(err)
+			if len(tmp) > blockSize {
+				encBlock(tmp)
+				tmp = tmp[:0]
+			}
+		}
+		encBlock(tmp)
+	}()
+	return entries, nil
 }
 
-// Close will write EOF marker and close the current output.
-// If no output has been set nil is returned.
-func (s *snapshotSerializer) Close() *probe.Error {
-	if s.Writer == nil {
-		return nil
-	}
-	// Write 255 as EOF.
-	err := s.WriteInt8(255)
-	if err != nil {
-		return probe.NewError(err)
-	}
-	err = s.Writer.Flush()
-	if err != nil {
-		return probe.NewError(err)
-	}
-	err = s.comp.Flush()
-	if err != nil {
-		return probe.NewError(err)
-	}
-	err = s.out.Close()
-	s.out = nil
-	return probe.NewError(err)
+// hasError returns whether an async error has been recorded.
+func (s *snapshotSerializer) HasError() bool {
+	return atomic.LoadInt32(&s.hasAsyncErr) != 0
 }
 
-// CleanUp will clean up the compressor.
-func (s *snapshotSerializer) CleanUp() {
-	if s.comp != nil {
-		s.comp.Close()
+// getAsyncErr allows to get an async error, but requires that any operations are stopped.
+func (s *snapshotSerializer) GetAsyncErr() error {
+	s.mu.Lock()
+	defer s.mu.Lock()
+	return s.asyncErr
+}
+
+// setAsyncErr can be used to update the async error state.
+// The caller must hold the serializer lock.
+func (s *snapshotSerializer) setAsyncErr(err error) {
+	if err == nil || s.asyncErr != nil {
+		return
 	}
-	// Be sure we close the file.
-	if s.out != nil {
-		s.out.Close()
-		s.out = nil
+	atomic.StoreInt32(&s.hasAsyncErr, 1)
+	s.asyncErr = err
+}
+
+// FinishTarget will append a "snapshot end" packet and flush the output.
+func (s *snapshotSerializer) FinishTarget() *probe.Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.packet.reset(typeTargetEnd)
+	err := s.packet.EncodeMsg(s.msg)
+	if err != nil {
+		probe.NewError(err)
 	}
+	return probe.NewError(s.msg.Flush())
 }
 
 // snapshotDeserializer handles de-serializing a bucket snapshot.

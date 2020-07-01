@@ -24,37 +24,37 @@ func (z *S3Target) DecodeMsg(dc *msgp.Reader) (err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "URL":
+		case "url":
 			z.URL, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "URL")
 				return
 			}
-		case "AccessKey":
+		case "accessKey":
 			z.AccessKey, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "AccessKey")
 				return
 			}
-		case "SecretKey":
+		case "secretKey":
 			z.SecretKey, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "SecretKey")
 				return
 			}
-		case "SessionToken":
+		case "sessionToken":
 			z.SessionToken, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "SessionToken")
 				return
 			}
-		case "API":
+		case "api":
 			z.API, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "API")
 				return
 			}
-		case "Lookup":
+		case "lookup":
 			z.Lookup, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "Lookup")
@@ -73,9 +73,23 @@ func (z *S3Target) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 6
-	// write "URL"
-	err = en.Append(0x86, 0xa3, 0x55, 0x52, 0x4c)
+	// omitempty: check for empty values
+	zb0001Len := uint32(6)
+	var zb0001Mask uint8 /* 6 bits */
+	if z.SessionToken == "" {
+		zb0001Len--
+		zb0001Mask |= 0x8
+	}
+	// variable map header, size zb0001Len
+	err = en.Append(0x80 | uint8(zb0001Len))
+	if err != nil {
+		return
+	}
+	if zb0001Len == 0 {
+		return
+	}
+	// write "url"
+	err = en.Append(0xa3, 0x75, 0x72, 0x6c)
 	if err != nil {
 		return
 	}
@@ -84,8 +98,8 @@ func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "URL")
 		return
 	}
-	// write "AccessKey"
-	err = en.Append(0xa9, 0x41, 0x63, 0x63, 0x65, 0x73, 0x73, 0x4b, 0x65, 0x79)
+	// write "accessKey"
+	err = en.Append(0xa9, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x4b, 0x65, 0x79)
 	if err != nil {
 		return
 	}
@@ -94,8 +108,8 @@ func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "AccessKey")
 		return
 	}
-	// write "SecretKey"
-	err = en.Append(0xa9, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79)
+	// write "secretKey"
+	err = en.Append(0xa9, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79)
 	if err != nil {
 		return
 	}
@@ -104,18 +118,20 @@ func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "SecretKey")
 		return
 	}
-	// write "SessionToken"
-	err = en.Append(0xac, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x6b, 0x65, 0x6e)
-	if err != nil {
-		return
+	if (zb0001Mask & 0x8) == 0 { // if not empty
+		// write "sessionToken"
+		err = en.Append(0xac, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x6b, 0x65, 0x6e)
+		if err != nil {
+			return
+		}
+		err = en.WriteString(z.SessionToken)
+		if err != nil {
+			err = msgp.WrapError(err, "SessionToken")
+			return
+		}
 	}
-	err = en.WriteString(z.SessionToken)
-	if err != nil {
-		err = msgp.WrapError(err, "SessionToken")
-		return
-	}
-	// write "API"
-	err = en.Append(0xa3, 0x41, 0x50, 0x49)
+	// write "api"
+	err = en.Append(0xa3, 0x61, 0x70, 0x69)
 	if err != nil {
 		return
 	}
@@ -124,8 +140,8 @@ func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "API")
 		return
 	}
-	// write "Lookup"
-	err = en.Append(0xa6, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70)
+	// write "lookup"
+	err = en.Append(0xa6, 0x6c, 0x6f, 0x6f, 0x6b, 0x75, 0x70)
 	if err != nil {
 		return
 	}
@@ -140,24 +156,37 @@ func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *S3Target) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 6
-	// string "URL"
-	o = append(o, 0x86, 0xa3, 0x55, 0x52, 0x4c)
+	// omitempty: check for empty values
+	zb0001Len := uint32(6)
+	var zb0001Mask uint8 /* 6 bits */
+	if z.SessionToken == "" {
+		zb0001Len--
+		zb0001Mask |= 0x8
+	}
+	// variable map header, size zb0001Len
+	o = append(o, 0x80|uint8(zb0001Len))
+	if zb0001Len == 0 {
+		return
+	}
+	// string "url"
+	o = append(o, 0xa3, 0x75, 0x72, 0x6c)
 	o = msgp.AppendString(o, z.URL)
-	// string "AccessKey"
-	o = append(o, 0xa9, 0x41, 0x63, 0x63, 0x65, 0x73, 0x73, 0x4b, 0x65, 0x79)
+	// string "accessKey"
+	o = append(o, 0xa9, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x4b, 0x65, 0x79)
 	o = msgp.AppendString(o, z.AccessKey)
-	// string "SecretKey"
-	o = append(o, 0xa9, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79)
+	// string "secretKey"
+	o = append(o, 0xa9, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79)
 	o = msgp.AppendString(o, z.SecretKey)
-	// string "SessionToken"
-	o = append(o, 0xac, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x6b, 0x65, 0x6e)
-	o = msgp.AppendString(o, z.SessionToken)
-	// string "API"
-	o = append(o, 0xa3, 0x41, 0x50, 0x49)
+	if (zb0001Mask & 0x8) == 0 { // if not empty
+		// string "sessionToken"
+		o = append(o, 0xac, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x6b, 0x65, 0x6e)
+		o = msgp.AppendString(o, z.SessionToken)
+	}
+	// string "api"
+	o = append(o, 0xa3, 0x61, 0x70, 0x69)
 	o = msgp.AppendString(o, z.API)
-	// string "Lookup"
-	o = append(o, 0xa6, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70)
+	// string "lookup"
+	o = append(o, 0xa6, 0x6c, 0x6f, 0x6f, 0x6b, 0x75, 0x70)
 	o = msgp.AppendString(o, z.Lookup)
 	return
 }
@@ -180,37 +209,37 @@ func (z *S3Target) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "URL":
+		case "url":
 			z.URL, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "URL")
 				return
 			}
-		case "AccessKey":
+		case "accessKey":
 			z.AccessKey, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "AccessKey")
 				return
 			}
-		case "SecretKey":
+		case "secretKey":
 			z.SecretKey, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "SecretKey")
 				return
 			}
-		case "SessionToken":
+		case "sessionToken":
 			z.SessionToken, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "SessionToken")
 				return
 			}
-		case "API":
+		case "api":
 			z.API, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "API")
 				return
 			}
-		case "Lookup":
+		case "lookup":
 			z.Lookup, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Lookup")
@@ -231,6 +260,109 @@ func (z *S3Target) UnmarshalMsg(bts []byte) (o []byte, err error) {
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *S3Target) Msgsize() (s int) {
 	s = 1 + 4 + msgp.StringPrefixSize + len(z.URL) + 10 + msgp.StringPrefixSize + len(z.AccessKey) + 10 + msgp.StringPrefixSize + len(z.SecretKey) + 13 + msgp.StringPrefixSize + len(z.SessionToken) + 4 + msgp.StringPrefixSize + len(z.API) + 7 + msgp.StringPrefixSize + len(z.Lookup)
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
+func (z *SnapshotBucket) DecodeMsg(dc *msgp.Reader) (err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, err = dc.ReadMapHeader()
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, err = dc.ReadMapKeyPtr()
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "id":
+			z.ID, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		default:
+			err = dc.Skip()
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z SnapshotBucket) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 1
+	// write "id"
+	err = en.Append(0x81, 0xa2, 0x69, 0x64)
+	if err != nil {
+		return
+	}
+	err = en.WriteString(z.ID)
+	if err != nil {
+		err = msgp.WrapError(err, "ID")
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z SnapshotBucket) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "id"
+	o = append(o, 0x81, 0xa2, 0x69, 0x64)
+	o = msgp.AppendString(o, z.ID)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *SnapshotBucket) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "id":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z SnapshotBucket) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID)
 	return
 }
 
@@ -509,5 +641,168 @@ func (z *SnapshotEntry) UnmarshalMsg(bts []byte) (o []byte, err error) {
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SnapshotEntry) Msgsize() (s int) {
 	s = 1 + 2 + msgp.StringPrefixSize + len(z.Key) + 4 + msgp.StringPrefixSize + len(z.VersionID) + 2 + msgp.Int64Size + 3 + msgp.TimeSize + 3 + msgp.StringPrefixSize + len(z.StorageClass) + 5 + msgp.StringPrefixSize + len(z.ETag) + 4 + msgp.BoolSize + 3 + msgp.BoolSize
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
+func (z *packetType) DecodeMsg(dc *msgp.Reader) (err error) {
+	{
+		var zb0001 uint8
+		zb0001, err = dc.ReadUint8()
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = packetType(zb0001)
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z packetType) EncodeMsg(en *msgp.Writer) (err error) {
+	err = en.WriteUint8(uint8(z))
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z packetType) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendUint8(o, uint8(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *packetType) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var zb0001 uint8
+		zb0001, bts, err = msgp.ReadUint8Bytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = packetType(zb0001)
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z packetType) Msgsize() (s int) {
+	s = msgp.Uint8Size
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
+func (z *snapPacket) DecodeMsg(dc *msgp.Reader) (err error) {
+	var zb0001 uint32
+	zb0001, err = dc.ReadArrayHeader()
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	if zb0001 != 3 {
+		err = msgp.ArrayError{Wanted: 3, Got: zb0001}
+		return
+	}
+	{
+		var zb0002 uint8
+		zb0002, err = dc.ReadUint8()
+		if err != nil {
+			err = msgp.WrapError(err, "Type")
+			return
+		}
+		z.Type = packetType(zb0002)
+	}
+	z.CRC, err = dc.ReadBytes(z.CRC)
+	if err != nil {
+		err = msgp.WrapError(err, "CRC")
+		return
+	}
+	z.Payload, err = dc.ReadBytes(z.Payload)
+	if err != nil {
+		err = msgp.WrapError(err, "Payload")
+		return
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z *snapPacket) EncodeMsg(en *msgp.Writer) (err error) {
+	// array header, size 3
+	err = en.Append(0x93)
+	if err != nil {
+		return
+	}
+	err = en.WriteUint8(uint8(z.Type))
+	if err != nil {
+		err = msgp.WrapError(err, "Type")
+		return
+	}
+	err = en.WriteBytes(z.CRC)
+	if err != nil {
+		err = msgp.WrapError(err, "CRC")
+		return
+	}
+	err = en.WriteBytes(z.Payload)
+	if err != nil {
+		err = msgp.WrapError(err, "Payload")
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z *snapPacket) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// array header, size 3
+	o = append(o, 0x93)
+	o = msgp.AppendUint8(o, uint8(z.Type))
+	o = msgp.AppendBytes(o, z.CRC)
+	o = msgp.AppendBytes(o, z.Payload)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *snapPacket) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadArrayHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	if zb0001 != 3 {
+		err = msgp.ArrayError{Wanted: 3, Got: zb0001}
+		return
+	}
+	{
+		var zb0002 uint8
+		zb0002, bts, err = msgp.ReadUint8Bytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err, "Type")
+			return
+		}
+		z.Type = packetType(zb0002)
+	}
+	z.CRC, bts, err = msgp.ReadBytesBytes(bts, z.CRC)
+	if err != nil {
+		err = msgp.WrapError(err, "CRC")
+		return
+	}
+	z.Payload, bts, err = msgp.ReadBytesBytes(bts, z.Payload)
+	if err != nil {
+		err = msgp.WrapError(err, "Payload")
+		return
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *snapPacket) Msgsize() (s int) {
+	s = 1 + msgp.Uint8Size + msgp.BytesPrefixSize + len(z.CRC) + msgp.BytesPrefixSize + len(z.Payload)
 	return
 }

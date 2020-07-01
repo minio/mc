@@ -14,11 +14,20 @@
  * limitations under the License.
  */
 
-//go:generate msgp
+//go:generate msgp -unexported $GOFILE
 
 package cmd
 
-import "time"
+import (
+	"encoding/binary"
+	"time"
+
+	"github.com/cespare/xxhash"
+)
+
+type SnapshotBucket struct {
+	ID string `msg:"id"`
+}
 
 type SnapshotEntry struct {
 	Key            string    `msg:"k"`
@@ -32,10 +41,51 @@ type SnapshotEntry struct {
 }
 
 type S3Target struct {
-	URL          string `json:"url"`
-	AccessKey    string `json:"accessKey"`
-	SecretKey    string `json:"secretKey"`
-	SessionToken string `json:"sessionToken,omitempty"`
-	API          string `json:"api"`
-	Lookup       string `json:"lookup"`
+	URL          string `msg:"url"`
+	AccessKey    string `msg:"accessKey"`
+	SecretKey    string `msg:"secretKey"`
+	SessionToken string `msg:"sessionToken,omitempty"`
+	API          string `msg:"api"`
+	Lookup       string `msg:"lookup"`
+}
+
+// packetType is the type of a packet in the serialization format.
+type packetType uint8
+
+const (
+	// Keep zero value unused for error detection.
+	typeInvalid packetType = iota
+	typeTargetStart
+	typeBucketHeader
+	typeBucketEntries
+	typeTargetEnd
+)
+
+const (
+	// Entries >= typeSkip are safe to skip if not known.
+	typeSkip packetType = iota + 127
+)
+
+// Packet format for stream.
+// Adding/removing fields will be a breaking change.
+//msgp:tuple snapPacket
+type snapPacket struct {
+	Type    packetType
+	CRC     []byte // optional, only if payload doesn't contain it.
+	Payload []byte
+}
+
+func (s *snapPacket) reset(t packetType) {
+	s.Type = t
+	s.Payload = s.Payload[:0]
+	if cap(s.CRC) < 4 {
+		s.CRC = make([]byte, 0, 4)
+	}
+	s.CRC = s.CRC[:0]
+}
+
+func (s *snapPacket) calcCRC() {
+	h := xxhash.Sum64(s.Payload)
+	s.CRC = s.CRC[:4]
+	binary.LittleEndian.PutUint32(s.CRC, uint32(h)^uint32(h>>32))
 }
