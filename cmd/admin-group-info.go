@@ -27,7 +27,7 @@ var adminGroupInfoCmd = cli.Command{
 	Name:   "info",
 	Usage:  "display group info",
 	Action: mainAdminGroupInfo,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

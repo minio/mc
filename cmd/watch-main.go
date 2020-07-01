@@ -56,7 +56,7 @@ var watchCmd = cli.Command{
 	Name:   "watch",
 	Usage:  "listen for object notification events",
 	Action: mainWatch,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(watchFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

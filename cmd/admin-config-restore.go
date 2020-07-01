@@ -29,7 +29,7 @@ import (
 var adminConfigRestoreCmd = cli.Command{
 	Name:   "restore",
 	Usage:  "rollback back changes to a specific config history",
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Action: mainAdminConfigRestore,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:

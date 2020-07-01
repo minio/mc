@@ -77,7 +77,7 @@ var adminBucketQuotaCmd = cli.Command{
 	Name:   "quota",
 	Usage:  "Manage bucket quota",
 	Action: mainAdminBucketQuota,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(adminQuotaFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    {{.HelpName}} - {{.Usage}}

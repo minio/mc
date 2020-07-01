@@ -44,7 +44,7 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "list buckets and objects",
 	Action: mainList,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

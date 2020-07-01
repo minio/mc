@@ -43,7 +43,7 @@ var historyListFlags = []cli.Flag{
 var adminConfigHistoryCmd = cli.Command{
 	Name:   "history",
 	Usage:  "show all historic configuration changes",
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Action: mainAdminConfigHistory,
 	Flags:  append(append([]cli.Flag{}, globalFlags...), historyListFlags...),
 	CustomHelpTemplate: `NAME:

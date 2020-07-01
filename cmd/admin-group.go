@@ -22,7 +22,6 @@ var adminGroupCmd = cli.Command{
 	Name:   "group",
 	Usage:  "manage groups",
 	Action: mainAdminGroup,
-	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminGroupAddCmd,
