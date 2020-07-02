@@ -576,7 +576,8 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 
 	if hostCfg == nil {
 		if alias != "" {
-			return snapNew(alias, urlStr)
+			//FIXME: ????? Incomplete?
+			return snapNew(alias)
 		}
 
 		// No matching host config. So we treat it like a
