@@ -34,7 +34,7 @@ var tagListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "list tags of a bucket or an object",
 	Action: mainListTag,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

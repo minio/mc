@@ -30,7 +30,7 @@ var ilmAddCmd = cli.Command{
 	Name:   "add",
 	Usage:  "add a lifecycle configuration rule to existing (if any) rule(s) on a bucket",
 	Action: mainILMAdd,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(ilmAddFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

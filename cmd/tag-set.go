@@ -30,7 +30,7 @@ var tagSetCmd = cli.Command{
 	Name:   "set",
 	Usage:  "set tags for a bucket(s) and object(s)",
 	Action: mainSetTag,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

@@ -35,7 +35,7 @@ var eventListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "list bucket notifications",
 	Action: mainEventList,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(eventListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

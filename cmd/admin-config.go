@@ -22,7 +22,6 @@ var adminConfigCmd = cli.Command{
 	Name:   "config",
 	Usage:  "manage MinIO server configuration",
 	Action: mainAdminConfig,
-	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminConfigGetCmd,

@@ -30,7 +30,7 @@ var adminPolicySetCmd = cli.Command{
 	Name:   "set",
 	Usage:  "set IAM policy on a user or group",
 	Action: mainAdminPolicySet,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

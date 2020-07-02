@@ -31,7 +31,7 @@ import (
 var adminConfigSetCmd = cli.Command{
 	Name:   "set",
 	Usage:  "interactively set a config key parameters",
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Action: mainAdminConfigSet,
 	Flags:  append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

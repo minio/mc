@@ -34,7 +34,7 @@ var adminUserAddCmd = cli.Command{
 	Name:   "add",
 	Usage:  "add a new user",
 	Action: mainAdminUserAdd,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

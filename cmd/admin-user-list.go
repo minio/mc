@@ -27,7 +27,7 @@ var adminUserListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "list all users",
 	Action: mainAdminUserList,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

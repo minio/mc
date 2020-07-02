@@ -40,7 +40,7 @@ var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "generate URLs for download access",
 	Action: mainShareDownload,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

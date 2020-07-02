@@ -49,7 +49,7 @@ var adminConsoleCmd = cli.Command{
 	Name:            "console",
 	Usage:           "show console logs for MinIO server",
 	Action:          mainAdminConsole,
-	Before:          setGlobalsFromContext,
+	Before:          initBeforeRunningCmd,
 	Flags:           append(adminConsoleFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:

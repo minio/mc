@@ -33,7 +33,7 @@ var shareList = cli.Command{
 	Name:   "list",
 	Usage:  "list previously shared objects",
 	Action: mainShareList,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(shareListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} COMMAND - {{.Usage}}

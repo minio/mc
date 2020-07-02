@@ -76,7 +76,7 @@ var treeCmd = cli.Command{
 	Name:   "tree",
 	Usage:  "list buckets and objects in a tree format",
 	Action: mainTree,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(treeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

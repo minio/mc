@@ -79,7 +79,7 @@ var sqlCmd = cli.Command{
 	Name:   "sql",
 	Usage:  "run sql queries on objects",
 	Action: mainSQL,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(append(sqlFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

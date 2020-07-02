@@ -22,7 +22,6 @@ var adminPrometheusCmd = cli.Command{
 	Name:            "prometheus",
 	Usage:           "manages prometheus config",
 	Action:          mainAdminPrometheus,
-	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	Subcommands: []cli.Command{

@@ -31,7 +31,7 @@ import (
 var adminTopLocksCmd = cli.Command{
 	Name:   "locks",
 	Usage:  "Get a list of the 10 oldest locks on a MinIO cluster.",
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Action: mainAdminTopLocks,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
