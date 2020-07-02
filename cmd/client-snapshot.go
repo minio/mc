@@ -44,16 +44,18 @@ type snapClient struct {
 func snapNew(snapName string) (Client, *probe.Error) {
 	var in io.Reader
 	if snapName == "-" {
-		in = os.Stdout
-	} else {
-		f, err := openSnapshotFile(snapName)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		in = f
+		return snapNewReader(snapName, in)
 	}
+	f, err := openSnapshotFile(snapName)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return snapNewReader(snapName, f)
+}
 
+// snapNewReader - instantiate a new snapshot from a reader.
+func snapNewReader(snapName string, in io.Reader) (Client, *probe.Error) {
 	r, err := newSnapShotReader(in)
 	if err != nil {
 		return nil, err

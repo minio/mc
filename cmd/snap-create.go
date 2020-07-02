@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -35,6 +34,10 @@ var (
 		cli.StringFlag{
 			Name:  "rewind",
 			Usage: "Rewind to the state of the data in the specified time",
+		},
+		cli.BoolFlag{
+			Name:  "overwrite",
+			Usage: "Allow overwriting snapshots",
 		},
 	}
 )
@@ -90,7 +93,7 @@ func checkSnapCreateSyntax(cliCtx *cli.Context) (snapName string, url string, re
 	return snapName, targetURL, refTime
 }
 
-func createSnapshotFile(snapName string) (*os.File, *probe.Error) {
+func createSnapshotFile(snapName string, overwrite bool) (*os.File, *probe.Error) {
 	snapsDir, perr := getSnapsDir()
 	if perr != nil {
 		return nil, perr
@@ -105,12 +108,13 @@ func createSnapshotFile(snapName string) (*os.File, *probe.Error) {
 		snapFile += ".snap"
 	}
 
-	// TODO: Allow overwrites?
-	if _, err := os.Stat(snapFile); os.IsExist(err) {
-		return nil, probe.NewError(errors.New("snapshot already exists"))
+	if !overwrite {
+		if _, err := os.Stat(snapFile); err == nil {
+			return nil, probe.NewError(fmt.Errorf("%q already exists. Use --overwrite to allow overwriting", snapName))
+		}
 	}
 
-	f, e := os.OpenFile(snapFile, os.O_WRONLY|os.O_CREATE, 0600)
+	f, e := os.OpenFile(snapFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	return f, probe.NewError(e)
 }
 
@@ -131,7 +135,7 @@ func openSnapshotFile(snapName string) (*os.File, *probe.Error) {
 	return f, probe.NewError(e)
 }
 
-func createSnapshot(snapName string, s3Path string, at time.Time) (perr *probe.Error) {
+func createSnapshot(snapName string, s3Path string, at time.Time, overwrite bool) (perr *probe.Error) {
 	alias, urlStr, hostCfg, err := expandAlias(s3Path)
 	if err != nil {
 		return err
@@ -145,7 +149,7 @@ func createSnapshot(snapName string, s3Path string, at time.Time) (perr *probe.E
 	if snapName == "-" {
 		out = os.Stdout
 	} else {
-		f, err := createSnapshotFile(snapName)
+		f, err := createSnapshotFile(snapName, overwrite)
 		if err != nil {
 			return err
 		}
@@ -190,6 +194,7 @@ func createSnapshot(snapName string, s3Path string, at time.Time) (perr *probe.E
 			if err != nil {
 				return err
 			}
+			currentBucket = bucket
 		}
 
 		entries <- SnapshotEntry{
@@ -215,6 +220,6 @@ func mainSnapCreate(ctx *cli.Context) error {
 	snapName, s3Path, at := checkSnapCreateSyntax(ctx)
 
 	// Create a snapshot.
-	fatalIf(createSnapshot(snapName, s3Path, at).Trace(), "Unable to create a new snapshot.")
+	fatalIf(createSnapshot(snapName, s3Path, at, ctx.Bool("overwrite")).Trace(), "Unable to create a new snapshot.")
 	return nil
 }

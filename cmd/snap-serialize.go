@@ -30,16 +30,16 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
-var zFastEnc *zstd.Encoder
-var zFastEncInit sync.Once
+var zstdEnc *zstd.Encoder
+var zstdEncInit sync.Once
 var zstdDec *zstd.Decoder
 var zstdDecInit sync.Once
 
 func fastZstdEncoder() *zstd.Encoder {
-	zFastEncInit.Do(func() {
-		zFastEnc, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedFastest), zstd.WithWindowSize(1<<20))
+	zstdEncInit.Do(func() {
+		zstdEnc, _ = zstd.NewWriter(nil, zstd.WithWindowSize(1<<20))
 	})
-	return zFastEnc
+	return zstdEnc
 }
 
 func zstdDecoder() *zstd.Decoder {
@@ -126,14 +126,16 @@ func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry
 	}
 
 	enc := fastZstdEncoder()
-	encBlock := func(b []byte) {
+	encBlock := func(b []byte) []byte {
 		if len(b) == 0 || s.asyncErr != nil {
-			return
+			return b[:0]
 		}
 		s.packet.reset(typeBucketEntries)
 		s.packet.Payload = enc.EncodeAll(b, s.packet.Payload[:0])
+
 		// zstd has crc, so we don't add it again.
 		s.setAsyncErr(s.packet.EncodeMsg(s.msg))
+		return b[:0]
 	}
 
 	// Allow a reasonable buffer.
@@ -151,12 +153,11 @@ func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry
 			tmp, err = e.MarshalMsg(tmp)
 			s.setAsyncErr(err)
 			if len(tmp) >= bucketEntriesBlockSize {
-				encBlock(tmp)
-				tmp = tmp[:0]
+				tmp = encBlock(tmp)
 			}
 		}
 		if s.asyncErr == nil {
-			encBlock(tmp)
+			tmp = encBlock(tmp)
 		}
 		if s.asyncErr == nil {
 			// Add end bucket packet.
@@ -175,7 +176,7 @@ func (s *snapshotSerializer) HasError() bool {
 // getAsyncErr allows to get an async error, but requires that any operations are stopped.
 func (s *snapshotSerializer) GetAsyncErr() error {
 	s.mu.Lock()
-	defer s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.asyncErr
 }
 
@@ -229,7 +230,7 @@ func newSnapShotReader(r io.Reader) (*snapshotDeserializer, *probe.Error) {
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
-	if !bytes.Equal(tmp, snapshotSerializeHeader[:4]) {
+	if !bytes.Equal(tmp[:4], snapshotSerializeHeader[:4]) {
 		return nil, probe.NewError(errors.New("header signature mismatch"))
 	}
 	// Check version.
