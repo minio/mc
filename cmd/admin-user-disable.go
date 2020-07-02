@@ -28,7 +28,7 @@ var adminUserDisableCmd = cli.Command{
 	Name:   "disable",
 	Usage:  "disable user",
 	Action: mainAdminUserDisable,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

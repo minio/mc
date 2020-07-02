@@ -30,7 +30,7 @@ var tagRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove tags assigned to a bucket or an object",
 	Action: mainRemoveTag,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

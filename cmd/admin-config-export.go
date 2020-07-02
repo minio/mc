@@ -25,7 +25,7 @@ import (
 var adminConfigExportCmd = cli.Command{
 	Name:   "export",
 	Usage:  "export all config keys to STDOUT",
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Action: mainAdminConfigExport,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:

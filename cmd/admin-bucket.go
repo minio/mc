@@ -22,7 +22,6 @@ var adminBucketCmd = cli.Command{
 	Name:   "bucket",
 	Usage:  "manage buckets defined in the MinIO server",
 	Action: mainAdminBucket,
-	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminBucketQuotaCmd,

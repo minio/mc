@@ -29,7 +29,7 @@ var adminPolicyInfoCmd = cli.Command{
 	Name:   "info",
 	Usage:  "show info on a policy",
 	Action: mainAdminPolicyInfo,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

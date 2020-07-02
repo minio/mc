@@ -27,7 +27,7 @@ var adminUserRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove user",
 	Action: mainAdminUserRemove,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

@@ -28,7 +28,7 @@ var adminUserEnableCmd = cli.Command{
 	Name:   "enable",
 	Usage:  "enable user",
 	Action: mainAdminUserEnable,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

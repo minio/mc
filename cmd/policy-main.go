@@ -46,7 +46,7 @@ var policyCmd = cli.Command{
 	Name:   "policy",
 	Usage:  "manage anonymous access to buckets and objects",
 	Action: mainPolicy,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(policyFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
   {{.HelpName}} - {{.Usage}}

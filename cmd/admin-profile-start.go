@@ -38,7 +38,7 @@ var adminProfileStartCmd = cli.Command{
 	Name:            "start",
 	Usage:           "start recording profile data",
 	Action:          mainAdminProfileStart,
-	Before:          setGlobalsFromContext,
+	Before:          initBeforeRunningCmd,
 	Flags:           append(adminProfileStartFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:

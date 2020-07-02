@@ -47,7 +47,7 @@ var rbCmd = cli.Command{
 	Name:   "rb",
 	Usage:  "remove a bucket",
 	Action: mainRemoveBucket,
-	Before: setGlobalsFromContext,
+	Before: initBeforeRunningCmd,
 	Flags:  append(rbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

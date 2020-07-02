@@ -26,7 +26,6 @@ var ilmCmd = cli.Command{
 	Name:            "ilm",
 	Usage:           "configure bucket lifecycle",
 	Action:          mainILM,
-	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	Subcommands: []cli.Command{
