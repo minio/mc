@@ -839,7 +839,7 @@ func (c *S3Client) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadClos
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
 // such that large file sizes will be copied in multipart manner on server
 // side.
-func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -912,7 +912,7 @@ func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress
 }
 
 // Put - upload an object with custom metadata.
-func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
+func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})

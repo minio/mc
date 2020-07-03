@@ -90,7 +90,7 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass st
 	if storageClass != "" {
 		metadata = map[string]string{"X-Amz-Storage-Class": storageClass}
 	}
-	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey, false, false, metadata)
+	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey, false, false, false, metadata)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
