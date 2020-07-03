@@ -62,6 +62,7 @@ func removeSnapshot(snapName string) *probe.Error {
 		return probe.NewError(err)
 	}
 
+	// FIXME:
 	e := os.RemoveAll(snapDir)
 	if e != nil {
 		return probe.NewError(e)

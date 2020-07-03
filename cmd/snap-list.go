@@ -102,7 +102,7 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		}
 		return nil
 	} else {
-		clnt, err := newClient(snapshot)
+		clnt, err := newClient(snapshotPrefix + snapshot)
 		fatalIf(err.Trace(), "Unable to list snapshot")
 		ctx, cancelList := context.WithCancel(globalContext)
 		defer cancelList()

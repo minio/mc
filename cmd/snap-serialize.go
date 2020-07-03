@@ -30,25 +30,6 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
-var zstdEnc *zstd.Encoder
-var zstdEncInit sync.Once
-var zstdDec *zstd.Decoder
-var zstdDecInit sync.Once
-
-func fastZstdEncoder() *zstd.Encoder {
-	zstdEncInit.Do(func() {
-		zstdEnc, _ = zstd.NewWriter(nil, zstd.WithWindowSize(1<<20))
-	})
-	return zstdEnc
-}
-
-func zstdDecoder() *zstd.Decoder {
-	zstdDecInit.Do(func() {
-		zstdDec, _ = zstd.NewReader(nil)
-	})
-	return zstdDec
-}
-
 // snapshotSerializer serializes snapshot data.
 // Can be initialized with zero value data.
 //
@@ -437,4 +418,24 @@ func (s *snapshotDeserializer) BucketEntries(ctx context.Context, entries chan<-
 			entries <- dst
 		}
 	}
+}
+
+// Singleton encoder/decoders.
+var zstdEnc *zstd.Encoder
+var zstdEncInit sync.Once
+var zstdDec *zstd.Decoder
+var zstdDecInit sync.Once
+
+func fastZstdEncoder() *zstd.Encoder {
+	zstdEncInit.Do(func() {
+		zstdEnc, _ = zstd.NewWriter(nil, zstd.WithWindowSize(1<<20))
+	})
+	return zstdEnc
+}
+
+func zstdDecoder() *zstd.Decoder {
+	zstdDecInit.Do(func() {
+		zstdDec, _ = zstd.NewReader(nil)
+	})
+	return zstdDec
 }

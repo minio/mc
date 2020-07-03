@@ -43,6 +43,9 @@ type snapClient struct {
 // snapNew - instantiate a new snapshot
 func snapNew(snapName string) (Client, *probe.Error) {
 	var in io.Reader
+	if strings.HasPrefix(snapName, snapshotPrefix) {
+		snapName = strings.TrimPrefix(snapName, snapshotPrefix)
+	}
 	if snapName == "-" {
 		return snapNewReader(snapName, in)
 	}
@@ -50,7 +53,6 @@ func snapNew(snapName string) (Client, *probe.Error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	return snapNewReader(snapName, f)
 }
 
@@ -181,6 +183,7 @@ func (s *snapClient) List(ctx context.Context, isRecursive, _, _ bool, showDir D
 func (s *snapClient) getBucketContents(ctx context.Context, bucket SnapshotBucket, contentCh chan *ClientContent, filter func(*SnapshotEntry) filterAction) {
 	entries := make(chan SnapshotEntry, 10000)
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for entry := range entries {
