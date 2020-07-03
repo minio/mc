@@ -17,8 +17,8 @@
 package cmd
 
 import (
+	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -28,10 +28,9 @@ var (
 	snapExportFlags = []cli.Flag{}
 )
 
-// FIXME:
 var snapExport = cli.Command{
 	Name:   "export",
-	Usage:  "Export a snapshot to JSON format",
+	Usage:  "Export a snapshot to stdout",
 	Action: mainSnapExport,
 	Before: setGlobalsFromContext,
 	Flags:  append(snapExportFlags, globalFlags...),
@@ -57,22 +56,18 @@ func parseSnapExportSyntax(ctx *cli.Context) (snapName string) {
 	return args.Get(0)
 }
 
-func exportSnapshot(snapName string) *probe.Error {
-	snapsDir, err := getSnapsDir()
-	if err != nil {
-		return err
+func exportSnapshot(output io.Writer, snapName string) *probe.Error {
+	snapFile, perr := getSnapsFile(snapName)
+	if perr != nil {
+		return perr
 	}
-
-	snapDir := filepath.Join(snapsDir, snapName)
-	if _, err := os.Stat(snapDir); err != nil {
+	f, err := os.Open(snapFile)
+	if err != nil {
 		return probe.NewError(err)
 	}
-
-	e := compress(snapDir, os.Stdout)
-	if e != nil {
-		return probe.NewError(e)
-	}
-	return nil
+	defer f.Close()
+	_, err = io.Copy(output, f)
+	return probe.NewError(err)
 }
 
 // main entry point for snapshot create.
@@ -82,6 +77,6 @@ func mainSnapExport(ctx *cli.Context) error {
 	snapName := parseSnapExportSyntax(ctx)
 
 	// Create a snapshot.
-	fatalIf(exportSnapshot(snapName).Trace(), "Unable to export the specified snapshot")
+	fatalIf(exportSnapshot(os.Stdout, snapName).Trace(), "Unable to export the specified snapshot")
 	return nil
 }

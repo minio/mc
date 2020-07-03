@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -52,18 +51,15 @@ func parseSnapRemoveSyntax(ctx *cli.Context) string {
 }
 
 func removeSnapshot(snapName string) *probe.Error {
-	snapsDir, err := getSnapsDir()
+	snapFile, err := getSnapsFile(snapName)
 	if err != nil {
 		return err
 	}
-
-	snapDir := filepath.Join(snapsDir, snapName)
-	if _, err := os.Stat(snapDir); err != nil {
+	if _, err := os.Stat(snapFile); err != nil {
 		return probe.NewError(err)
 	}
 
-	// FIXME:
-	e := os.RemoveAll(snapDir)
+	e := os.Remove(snapFile)
 	if e != nil {
 		return probe.NewError(e)
 	}

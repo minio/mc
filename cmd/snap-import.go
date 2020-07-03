@@ -17,23 +17,25 @@
 package cmd
 
 import (
-	"errors"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 )
 
 var (
-	snapImportFlags = []cli.Flag{}
+	snapImportFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "overwrite",
+			Usage: "Allow overwriting snapshots",
+		},
+	}
 )
 
-// FIXME:
 var snapImport = cli.Command{
 	Name:   "import",
-	Usage:  "Import a snapshot from JSON snapshot archive",
+	Usage:  "Import a snapshot from stdin",
 	Action: mainSnapImport,
 	Before: setGlobalsFromContext,
 	Flags:  append(snapImportFlags, globalFlags...),
@@ -59,31 +61,17 @@ func parseSnapImportSyntax(ctx *cli.Context) (snapName string) {
 	return args.Get(0)
 }
 
-func importSnapshot(input io.Reader, snapName string) *probe.Error {
-	snapsDir, err := getSnapsDir()
+func importSnapshot(ctx *cli.Context, input io.Reader, snapName string) *probe.Error {
+	f, perr := createSnapshotFile(snapName, ctx.Bool("overwrite"))
+	if perr != nil {
+		return perr
+	}
+	_, err := io.Copy(f, input)
 	if err != nil {
-		return err
+		f.Close()
+		return probe.NewError(err)
 	}
-
-	snapDir := filepath.Join(snapsDir, snapName)
-	if _, e := os.Stat(snapDir); e == nil {
-		return probe.NewError(errors.New("snapshot already exist"))
-	} else {
-		if !os.IsNotExist(e) {
-			return probe.NewError(e)
-		}
-	}
-
-	e := os.Mkdir(snapDir, 0700)
-	if e != nil {
-		return probe.NewError(e)
-	}
-
-	e = decompress(os.Stdin, snapDir)
-	if e != nil {
-		return probe.NewError(e)
-	}
-	return nil
+	return probe.NewError(f.Close())
 }
 
 // main entry point for snapshot import
@@ -92,7 +80,7 @@ func mainSnapImport(ctx *cli.Context) error {
 	snapName := parseSnapExportSyntax(ctx)
 
 	// Create a snapshot.
-	err := importSnapshot(os.Stdin, snapName)
+	err := importSnapshot(ctx, os.Stdin, snapName)
 	fatalIf(err.Trace(), "Unable to import the specified snapshot")
 	return nil
 }

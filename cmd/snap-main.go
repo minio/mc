@@ -19,6 +19,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -78,4 +79,15 @@ func createSnapsDir() *probe.Error {
 func mainSnap(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
+}
+
+func getSnapsFile(snapName string) (string, *probe.Error) {
+	snapsDir, err := getSnapsDir()
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasSuffix(snapName, snapshotSuffix) {
+		snapName = snapName + snapshotSuffix
+	}
+	return filepath.Join(snapsDir, snapName), nil
 }
