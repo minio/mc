@@ -297,7 +297,7 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 }
 
 // putTargetStream writes to URL from Reader.
-func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
+func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
@@ -312,7 +312,7 @@ func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold 
 	if legalHold != "" {
 		metadata[AmzObjectLockLegalHold] = legalHold
 	}
-	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, md5, disableMultipart)
+	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, md5, disableMultipart, preserve)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -320,7 +320,7 @@ func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold 
 }
 
 // putTargetStreamWithURL writes to URL from reader. If length=-1, read until EOF.
-func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide, md5, disableMultipart bool, metadata map[string]string) (int64, *probe.Error) {
+func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide, md5, disableMultipart, preserve bool, metadata map[string]string) (int64, *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
@@ -330,7 +330,7 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 		metadata = map[string]string{}
 	}
 	metadata["Content-Type"] = contentType
-	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, metadata, nil, sse, md5, disableMultipart)
+	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, metadata, nil, sse, md5, disableMultipart, preserve)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
@@ -344,7 +344,7 @@ func copySourceToTargetURL(ctx context.Context, alias, urlStr, source, mode, unt
 	metadata[AmzObjectLockMode] = mode
 	metadata[AmzObjectLockRetainUntilDate] = until
 	metadata[AmzObjectLockLegalHold] = legalHold
-	err = targetClnt.Copy(ctx, source, size, progress, srcSSE, tgtSSE, metadata, disableMultipart)
+	err = targetClnt.Copy(ctx, source, size, progress, srcSSE, tgtSSE, metadata, disableMultipart, false)
 
 	if err != nil {
 		return err.Trace(alias, urlStr)
@@ -455,7 +455,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	if sourceAlias == targetAlias {
 		// If no metadata populated already by the caller
 		// just do a Stat() to obtain the metadata.
-		if len(metadata) == 0 {
+		if len(metadata) == 0 && preserve {
 			metadata, err = getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
 			if err != nil {
 				return urls.WithError(err.Trace(sourceURL.String()))
@@ -484,7 +484,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		if urls.SourceContent.RetentionEnabled {
 			// If no metadata populated already by the caller
 			// just do a Stat() to obtain the metadata.
-			if len(metadata) == 0 {
+			if len(metadata) == 0 && preserve {
 				metadata, err = getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls, preserve)
 				if err != nil {
 					return urls.WithError(err.Trace(sourceURL.String()))
@@ -526,12 +526,12 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		if isReadAt(reader) {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
 				legalHold, reader, length, filterMetadata(metadata),
-				progress, tgtSSE, urls.MD5, urls.DisableMultipart)
+				progress, tgtSSE, urls.MD5, urls.DisableMultipart, preserve)
 		} else {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
 				legalHold, io.LimitReader(reader, length),
 				length, filterMetadata(metadata), progress, tgtSSE, urls.MD5,
-				urls.DisableMultipart)
+				urls.DisableMultipart, preserve)
 		}
 	}
 	if err != nil {

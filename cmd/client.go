@@ -62,14 +62,14 @@ type Client interface {
 	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error
+	Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error
 
 	// Runs select expression on object storage on specific files.
 	Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
 
 	// I/O operations with metadata.
 	Get(ctx context.Context, sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
-	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (n int64, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (n int64, err *probe.Error)
 
 	// Object Locking related API
 	PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
