@@ -253,7 +253,7 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 
 /// Object operations.
 
-func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader, preserve bool) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -289,7 +289,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metada
 	}
 
 	attr := make(map[string]string)
-	if len(metadata[metaDataKey]) != 0 {
+	if len(metadata[metaDataKey]) != 0 && preserve {
 		attr, e = parseAttribute(metadata[metaDataKey][0])
 		if e != nil {
 			tmpFile.Close()
@@ -347,7 +347,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metada
 		return totalWritten, err.Trace(objectPartPath, objectPath)
 	}
 
-	if len(attr) != 0 {
+	if len(attr) != 0 && preserve {
 		atime, e := strconv.ParseInt(attr["atime"], 10, 64)
 		if e != nil {
 			return totalWritten, probe.NewError(e)
@@ -368,13 +368,13 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metada
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
 	if metadata[metaDataKey] != "" {
 		meta := make(map[string][]string)
 		meta[metaDataKey] = append(meta[metaDataKey], metadata[metaDataKey])
-		return f.put(ctx, reader, size, meta, progress)
+		return f.put(ctx, reader, size, meta, progress, preserve)
 	}
-	return f.put(ctx, reader, size, nil, progress)
+	return f.put(ctx, reader, size, nil, progress, preserve)
 }
 
 // ShareDownload - share download not implemented for filesystem.
@@ -394,7 +394,7 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, preserve bool) *probe.Error {
 	rc, e := os.Open(source)
 	if e != nil {
 		err := f.toClientError(e, source)
@@ -403,7 +403,7 @@ func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress
 	defer rc.Close()
 
 	destination := f.PathURL.Path
-	if _, err := f.put(ctx, rc, size, map[string][]string{}, progress); err != nil {
+	if _, err := f.put(ctx, rc, size, map[string][]string{}, progress, preserve); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil
