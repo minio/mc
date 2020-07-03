@@ -56,10 +56,6 @@ type snapshotSerializer struct {
 	hasAsyncErr int32
 }
 
-// snapshotSerializeVersion identifies the version in case breaking changes
-// must be made this can be bumped to detect
-const snapshotSerializeVersion = 1
-
 // A fancy 4 byte identifier and a 1 byte version.
 var snapshotSerializeHeader = []byte{0x73, 0x4b, 0xe5, 0x6c, snapshotSerializeVersion}
 
@@ -218,12 +214,10 @@ func newSnapShotReader(r io.Reader) (*snapshotDeserializer, *probe.Error) {
 		return nil, probe.NewError(errors.New("header signature mismatch"))
 	}
 	// Check version.
-	switch tmp[4] {
-	case 1:
-	default:
-		return nil, probe.NewError(errors.New("unknown content version"))
-	}
 	s.version = tmp[4]
+	if s.version > snapshotSerializeVersion {
+		return nil, probe.NewError(errors.New("unknown snapshot content version"))
+	}
 
 	return &s, nil
 }

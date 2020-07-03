@@ -28,6 +28,25 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
+// snapshotSerializeVersion identifies the version in case breaking changes
+// must be made this can be bumped to detect.
+const snapshotSerializeVersion = 1
+
+// Serialized types can be extended mostly with the same rules as JSON:
+//
+// New fields have zero values.
+// Removed fields are ignored.
+//
+// Breaking changes:
+//
+// Renaming the *serialized* name will break require conversion.
+// Changing the type will in most cases be breaking.
+// A breaking change can be implemented by bumping snapshotSerializeVersion and providing conversion.
+//
+// If a breaking change must be done the serializer keeps track of the saved version.
+// That way older versions can be de-serialized and converted.
+// If the saved snapshotSerializeVersion is bigger than the current
+
 type SnapshotBucket struct {
 	Name string `msg:"name"`
 }
@@ -53,20 +72,38 @@ type S3Target struct {
 }
 
 // packetType is the type of a packet in the serialization format.
+// New packet types should bump snapshotSerializeVersion unless the
+// packets are 'skippable', meaning ID >= 127 in which case they are
+// ignored by older versions.
+// Changes in packet ordering are also breaking and require a version bump.
 type packetType uint8
 
 const (
 	// Keep zero value unused for error detection.
 	typeInvalid packetType = iota
+
+	// Always first packet on stream.
 	typeTargetStart
+
+	// Always last packet on stream.
 	typeTargetEnd
+
+	// Indicates a bucket starting.
+	// Each bucket should only be represented once on a stream.
+	// Must end with typeBucketEnd and cannot be nested.
 	typeBucketHeader
+
+	// Can only be between typeBucketHeader and typeBucketEnd.
+	// More than one packet is allowed consecutively.
 	typeBucketEntries
+
+	// Indicates end of a bucket.
 	typeBucketEnd
 )
 
 const (
 	// Entries >= typeSkip are safe to skip if not known.
+	// typeSkip is reserved.
 	typeSkip packetType = iota + 127
 )
 
@@ -79,6 +116,7 @@ type snapPacket struct {
 	Payload []byte
 }
 
+// reset the packet and prepare for a new payload.
 func (s *snapPacket) reset(t packetType) {
 	s.Type = t
 	s.Payload = s.Payload[:0]
@@ -88,7 +126,11 @@ func (s *snapPacket) reset(t packetType) {
 	s.CRC = s.CRC[:0]
 }
 
+// calcCRC will calculate a CRC of the current payload.
 func (s *snapPacket) calcCRC() {
+	if len(s.Payload) == 0 {
+		return
+	}
 	h := xxhash.Sum64(s.Payload)
 	s.CRC = s.CRC[:4]
 	binary.LittleEndian.PutUint32(s.CRC, uint32(h)^uint32(h>>32))
@@ -111,6 +153,7 @@ func (s *snapPacket) CRCok() *probe.Error {
 	return nil
 }
 
+// skippable returns whether a packet type is skippable.
 func (s *snapPacket) skippable() bool {
 	return s.Type >= typeSkip
 }
