@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -29,6 +30,10 @@ var (
 		cli.BoolFlag{
 			Name:  "overwrite",
 			Usage: "Allow overwriting snapshots",
+		},
+		cli.StringFlag{
+			Name:  "retarget",
+			Usage: "Retarget imported snapshot to another server alias",
 		},
 	}
 )
@@ -62,14 +67,28 @@ func parseSnapImportSyntax(ctx *cli.Context) (snapName string) {
 }
 
 func importSnapshot(ctx *cli.Context, input io.Reader, snapName string) *probe.Error {
-	f, perr := createSnapshotFile(snapName, ctx.Bool("overwrite"))
-	if perr != nil {
-		return perr
+	f, err := createSnapshotFile(snapName, ctx.Bool("overwrite"))
+	if err != nil {
+		return err
 	}
-	_, err := io.Copy(f, input)
+
+	var target *S3Target
+	if alias := ctx.String("retarget"); len(alias) > 0 {
+		_, _, hostCfg, err := expandAlias(alias)
+		if err != nil {
+			return err
+		}
+		if hostCfg == nil {
+			return probe.NewError(fmt.Errorf("unknown target %q", alias))
+		}
+		t := S3Target(*hostCfg)
+		target = &t
+	}
+
+	err = copySnapshot(f, input, target)
 	if err != nil {
 		f.Close()
-		return probe.NewError(err)
+		return err
 	}
 	return probe.NewError(f.Close())
 }

@@ -439,6 +439,45 @@ func (s *snapshotDeserializer) BucketEntries(ctx context.Context, entries chan<-
 	}
 }
 
+// copySnapshot will copy the input to output, optionally replace the target.
+func copySnapshot(w io.Writer, r io.Reader, reTarget *S3Target) *probe.Error {
+	src, err := newSnapShotReader(r)
+	if err != nil {
+		return err
+	}
+	tgt, err := src.ReadTarget()
+	if reTarget == nil {
+		reTarget = tgt
+	}
+	dst, err := newSnapshotSerializer(w)
+	if err != nil {
+		return err
+	}
+	dst.AddTarget(*reTarget)
+	// Copy remaining
+	for {
+		err := src.nextPacket()
+		if err != nil {
+			return err
+		}
+		// Check CRC if added.
+		if len(src.packet.CRC) > 0 {
+			err = src.packet.CRCok()
+			if err != nil {
+				return err
+			}
+		}
+		if src.packet.Type == typeTargetEnd {
+			return dst.FinishTarget()
+		}
+		dst.packet = src.packet
+		e := dst.packet.EncodeMsg(dst.msg)
+		if e != nil {
+			return probe.NewError(e)
+		}
+	}
+}
+
 // Singleton encoder/decoders.
 var zstdEnc *zstd.Encoder
 var zstdEncInit sync.Once
