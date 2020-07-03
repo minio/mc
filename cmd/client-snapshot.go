@@ -41,23 +41,23 @@ type snapClient struct {
 }
 
 // snapNew - instantiate a new snapshot
-func snapNew(snapName string) (Client, *probe.Error) {
+func snapNew(snapName, clientURL string) (Client, *probe.Error) {
 	var in io.Reader
 	if strings.HasPrefix(snapName, snapshotPrefix) {
 		snapName = strings.TrimPrefix(snapName, snapshotPrefix)
 	}
 	if snapName == "-" {
-		return snapNewReader(snapName, in)
+		return snapNewReader(snapName, clientURL, in)
 	}
 	f, err := openSnapshotFile(snapName)
 	if err != nil {
 		return nil, err
 	}
-	return snapNewReader(snapName, f)
+	return snapNewReader(snapName, clientURL, f)
 }
 
 // snapNewReader - instantiate a new snapshot from a reader.
-func snapNewReader(snapName string, in io.Reader) (Client, *probe.Error) {
+func snapNewReader(snapName, clientURL string, in io.Reader) (Client, *probe.Error) {
 	r, err := newSnapShotReader(in)
 	if err != nil {
 		return nil, err
@@ -74,10 +74,12 @@ func snapNewReader(snapName string, in io.Reader) (Client, *probe.Error) {
 	if err != nil {
 		return nil, err
 	}
-
+	pu := newClientURL(normalizePath(clientURL))
+	if pu.Separator != '/' {
+		pu.Path = strings.ReplaceAll(pu.Path, "/", string(pu.Separator))
+	}
 	return &snapClient{
-		// FIXME: No idea if this is correct
-		PathURL:  newClientURL(normalizePath(snapName)),
+		PathURL:  pu,
 		snapName: snapName,
 		s3Target: clnt,
 		dec:      r,
@@ -187,6 +189,12 @@ func (s *snapClient) getBucketContents(ctx context.Context, bucket SnapshotBucke
 	go func() {
 		defer wg.Done()
 		for entry := range entries {
+			select {
+			case <-ctx.Done():
+				contentCh <- &ClientContent{Err: probe.NewError(ctx.Err())}
+				return
+			default:
+			}
 			var action filterAction
 			if filter != nil {
 				action = filter(&entry)

@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -98,7 +99,8 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		snapshots, err := listSnapshots()
 		fatalIf(err.Trace(), "Unable to list snapshots")
 		for _, s := range snapshots {
-			fmt.Printf("[%s] %s\n", s.ModTime().String(), s.Name())
+			name := strings.TrimSuffix(s.Name(), snapshotSuffix)
+			fmt.Printf("[%s] %s\n", s.ModTime().Round(time.Second).String(), name)
 		}
 		return nil
 	} else {

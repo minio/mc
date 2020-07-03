@@ -574,11 +574,13 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 		return nil, err.Trace(alias, urlStr)
 	}
 
-	if hostCfg == nil {
-		if strings.HasPrefix(urlStr, snapshotPrefix) {
-			return snapNew(urlStr)
-		}
+	if strings.HasPrefix(alias, snapshotPrefix) {
+		alias = strings.TrimPrefix(alias, snapshotPrefix)
+		urlStr = strings.TrimPrefix(urlStr, snapshotPrefix)
+		return snapNew(alias, urlStr)
+	}
 
+	if hostCfg == nil {
 		// No matching host config. So we treat it like a
 		// filesystem.
 		fsClient, fsErr := fsNew(urlStr)

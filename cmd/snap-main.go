@@ -42,7 +42,7 @@ var snapCmd = cli.Command{
 }
 
 // snapshotPrefix is prepended to a snapshot so the client can identify it.
-const snapshotPrefix = "snap://"
+const snapshotPrefix = "[snapshot]"
 
 // isSnapsDirExists - verify if snaps directory exists.
 func isSnapsDirExists() bool {

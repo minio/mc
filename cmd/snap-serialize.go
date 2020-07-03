@@ -285,7 +285,6 @@ func (s *snapshotDeserializer) nextPacketOneOf(want ...packetType) *probe.Error 
 		if !s.packet.skippable() {
 			return probe.NewError(fmt.Errorf("unexpected packet type: want one of %v, got %d", want, s.packet.Type))
 		}
-		return nil
 	}
 }
 
@@ -304,6 +303,22 @@ func (s *snapshotDeserializer) skipUntilNot(t packetType, skipSkippable bool) *p
 				continue
 			}
 			return nil
+		}
+	}
+}
+
+// skipUntil will skip until another packet type is found.
+func (s *snapshotDeserializer) skipUntil(t packetType) *probe.Error {
+	for {
+		err := s.nextPacket()
+		if err != nil {
+			return err
+		}
+		switch s.packet.Type {
+		case t:
+			return nil
+		default:
+			continue
 		}
 	}
 }
@@ -362,9 +377,10 @@ func (s *snapshotDeserializer) FindBucket(bucket string) (*SnapshotBucket, *prob
 				return &dst, nil
 			}
 			// Skip entries...
-			if err := s.skipUntilNot(typeBucketEntries, true); err != nil {
+			if err := s.skipUntil(typeBucketEnd); err != nil {
 				return nil, err
 			}
+			continue
 		}
 		// We should only get the types above.
 		return nil, probe.NewError(errors.New("internal error: unexpected packet type"))
