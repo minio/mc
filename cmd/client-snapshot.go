@@ -170,7 +170,17 @@ func (s *snapClient) Snapshot(ctx context.Context, timeRef time.Time) <-chan *Cl
 func (s *snapClient) url2BucketAndObject() (bucketName, objectName string) {
 	p := s.PathURL.Path
 	tokens := splitStr(p, string(s.PathURL.Separator), 3)
-	return tokens[1], tokens[2]
+	// Snapshots have '/' as separator.
+	prefix := tokens[2]
+	if s.PathURL.Separator != '/' {
+		prefix = strings.Map(func(r rune) rune {
+			if r == s.PathURL.Separator {
+				return '/'
+			}
+			return r
+		}, prefix)
+	}
+	return tokens[1], prefix
 }
 
 func (s *snapClient) List(ctx context.Context, isRecursive, _, _ bool, showDir DirOpt) <-chan *ClientContent {
