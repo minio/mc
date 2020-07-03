@@ -1236,26 +1236,29 @@ FLAGS:
 
 ```
 
-*Example: List the lifecycle management rules (expiration date/days fields)*
+*Example: List the lifecycle management rules*
 
 ```
-mc ilm list --expiry myminio/testbucket
+mc ilm list myminio/testbucket
    ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
- Devices |  dev/  |    ✓    |   ✓   | 17 Sep 2020  |     ✗      |           |               |
+ Devices |  dev/  |    ✓    |   ✓    | 17 Sep 2020  |     ✗      |           |               |
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
 ```
 
-*Example: Add rule for testbucket on s3*
+For more details about the lifecycle configuration, refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html)
+
+
+*Example: Add rule for testbucket on play*
 ```
-mc ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" --transition-date "2020-05-01" --storage-class "GLACIER" s3/testbucket
-Lifecycle configuration rule added with ID `Devices` to s3/testbucket.
+mc ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" play/testbucket
+Lifecycle configuration rule added with ID `Devices` to play/testbucket.
 ```
 
 *Example: Remove the lifecycle management configuration rule given by ID "Documents"*
 ```
-mc ilm remove --id "Documents" s3/testbucket
-Rule ID `Documents` from target s3/testbucket removed.
+mc ilm remove --id "Documents" play/testbucket
+Rule ID `Documents` from target play/testbucket removed.
 ```
 
 <a name="policy"></a>
