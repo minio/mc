@@ -94,15 +94,19 @@ const bucketEntriesBlockSize = 1 << 20
 // Entries into the bucket can be written to the returned channel.
 // The serializer should not be used until the channel has been closed.
 func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry, *probe.Error) {
+	s.mu.Lock()
+
 	var err error
 	s.packet.reset(typeBucketHeader)
 	s.packet.Payload, err = b.MarshalMsg(s.packet.Payload[:0])
 	if err != nil {
+		s.mu.Unlock()
 		return nil, probe.NewError(err)
 	}
 	s.packet.calcCRC()
 	err = s.packet.EncodeMsg(s.msg)
 	if err != nil {
+		s.mu.Unlock()
 		return nil, probe.NewError(err)
 	}
 
@@ -122,10 +126,9 @@ func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry
 	// Allow a reasonable buffer.
 	entries := make(chan SnapshotEntry, 10000)
 	go func() {
+		defer s.mu.Unlock()
 		// Make slightly larger temp block.
 		tmp := make([]byte, 0, bucketEntriesBlockSize+1<<10)
-		s.mu.Lock()
-		defer s.mu.Unlock()
 
 		for e := range entries {
 			if s.asyncErr != nil {
