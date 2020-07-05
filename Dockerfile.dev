@@ -1,10 +1,8 @@
-FROM alpine:3.10
+FROM alpine:3.12
 
 COPY mc /usr/bin/
+COPY CREDITS /
 
-RUN \
-     apk add --no-cache ca-certificates && \
-     echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf \
-     chmod +x /usr/bin/mc
+RUN apk add --no-cache ca-certificates
 
 ENTRYPOINT ["mc"]
