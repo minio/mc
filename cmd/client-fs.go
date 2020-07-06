@@ -224,7 +224,7 @@ func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 
 func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 	if val, ok := attr["mode"]; ok {
-		mode, e := strconv.ParseUint(val, 10, 32)
+		mode, e := strconv.ParseUint(val, 0, 32)
 		if e != nil {
 			return probe.NewError(e)
 		}
@@ -257,6 +257,15 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 	// Attempt to change the owner.
 	if gidExists && uidExists {
 		if e := fd.Chown(uid, gid); e != nil {
+			return probe.NewError(e)
+		}
+	} else if uidExists {
+		if e := fd.Chown(uid, -1); e != nil {
+			return probe.NewError(e)
+		}
+
+	} else {
+		if e := fd.Chown(-1, gid); e != nil {
 			return probe.NewError(e)
 		}
 	}
