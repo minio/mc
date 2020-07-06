@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine
+FROM golang:1.13-alpine as build
 
 LABEL maintainer="MinIO Inc <dev@min.io>"
 
@@ -11,12 +11,12 @@ RUN  \
      git clone https://github.com/minio/mc && cd mc && \
      go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
-FROM alpine:3.10
+FROM alpine:3.12
 
-COPY --from=0 /go/bin/mc /usr/bin/mc
+COPY --from=build /go/bin/mc /usr/bin/mc
 
 RUN  \
-     apk add --no-cache ca-certificates && \
-     echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf
+     apk add --no-cache ca-certificates 'curl>7.61.0' && \
+     curl -s -q -O https://raw.githubusercontent.com/minio/minio/master/CREDITS
 
 ENTRYPOINT ["mc"]

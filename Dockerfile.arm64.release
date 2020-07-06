@@ -1,7 +1,9 @@
-FROM alpine:3.12
+FROM multiarch/qemu-user-static:x86_64-arm as qemu
+FROM arm64v8/alpine:3.12
 
-MAINTAINER MinIO Inc <dev@min.io>
+LABEL maintainer="MinIO Inc <dev@min.io>"
 
+COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 COPY mc /usr/bin/mc
 
 RUN apk add --no-cache ca-certificates 'curl>7.61.0' && \
