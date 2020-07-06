@@ -12,7 +12,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.9.4 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/klauspost/compress v1.10.3
-	github.com/kurin/blazer v0.5.4-0.20200327014341-8f90a40f8af7 // indirect
 	github.com/mattn/go-isatty v0.0.8
 	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
