@@ -223,29 +223,51 @@ func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 }
 
 func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
-	mode, e := strconv.ParseUint(attr["mode"], 10, 32)
-	if e != nil {
-		return probe.NewError(e)
+	if val, ok := attr["mode"]; ok {
+		mode, e := strconv.ParseUint(val, 0, 32)
+		if e != nil {
+			return probe.NewError(e)
+		}
+
+		// Attempt to change the file mode.
+		if e := fd.Chmod(os.FileMode(mode)); e != nil {
+			return probe.NewError(e)
+		}
 	}
 
-	// Attempt to change the file mode.
-	if e := fd.Chmod(os.FileMode(mode)); e != nil {
-		return probe.NewError(e)
+	var uid, gid int
+	var gidExists, uidExists bool
+	var e error
+	if val, ok := attr["uid"]; ok {
+		uid, e = strconv.Atoi(val)
+		if e != nil {
+			return probe.NewError(e)
+		}
+		uidExists = true
 	}
 
-	uid, e := strconv.Atoi(attr["uid"])
-	if e != nil {
-		return probe.NewError(e)
-	}
-
-	gid, e := strconv.Atoi(attr["gid"])
-	if e != nil {
-		return probe.NewError(e)
+	if val, ok := attr["gid"]; ok {
+		gid, e = strconv.Atoi(val)
+		if e != nil {
+			return probe.NewError(e)
+		}
+		gidExists = true
 	}
 
 	// Attempt to change the owner.
-	if e := fd.Chown(uid, gid); e != nil {
-		return probe.NewError(e)
+	if gidExists && uidExists {
+		if e := fd.Chown(uid, gid); e != nil {
+			return probe.NewError(e)
+		}
+	} else if uidExists {
+		if e := fd.Chown(uid, -1); e != nil {
+			return probe.NewError(e)
+		}
+
+	} else {
+		if e := fd.Chown(-1, gid); e != nil {
+			return probe.NewError(e)
+		}
 	}
 
 	return nil
@@ -348,19 +370,30 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metada
 	}
 
 	if len(attr) != 0 && preserve {
-		atime, e := strconv.ParseInt(attr["atime"], 10, 64)
-		if e != nil {
-			return totalWritten, probe.NewError(e)
+		var atime, mtime int64
+		var e error
+		var atimeChanged, mtimeChanged bool
+		if val, ok := attr["atime"]; ok {
+			atime, e = strconv.ParseInt(val, 10, 64)
+			if e != nil {
+				return totalWritten, probe.NewError(e)
+			}
+			atimeChanged = true
 		}
 
-		mtime, e := strconv.ParseInt(attr["mtime"], 10, 64)
-		if e != nil {
-			return totalWritten, probe.NewError(e)
+		if val, ok := attr["mtime"]; ok {
+			mtime, e = strconv.ParseInt(val, 10, 64)
+			if e != nil {
+				return totalWritten, probe.NewError(e)
+			}
+			mtimeChanged = true
 		}
 
 		// Attempt to change the access and modify time
-		if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
-			return totalWritten, probe.NewError(e)
+		if atimeChanged && mtimeChanged {
+			if e := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(mtime, 0)); e != nil {
+				return totalWritten, probe.NewError(e)
+			}
 		}
 	}
 
