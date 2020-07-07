@@ -837,7 +837,6 @@ USAGE:
   mc admin kms key COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 ```
 
-
 *Example: Display status information for the default master key*
 
 ```sh
@@ -847,11 +846,19 @@ Key: my-minio-key
  	 • Decryption ✔
 ```
 
+*Example: Create a new master key at the KMS*
+
+```sh
+mc admin kms key create play my-key
+
+Created master key `my-key` successfully
+```
+
 *Example: Display status information for one particular master key*
 
 ```sh
-mc admin kms key status play test-key-1
-Key: test-key-1
+mc admin kms key status play my-key
+Key: my-key
  	 • Encryption ✔
  	 • Decryption ✔
 ```
