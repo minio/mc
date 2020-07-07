@@ -22,9 +22,9 @@ import (
 
 const (
 	// rule ID field column width in table output
-	idColumnWidth int = 12
+	idColumnWidth int = 16
 	// rule prefix field column width in table output
-	prefixColumnWidth int = 10
+	prefixColumnWidth int = 16
 	// StatusColumnWidth column width in table output
 	statusColumnWidth int = 12
 	// ExpiryColumnWidth column width in table output
@@ -302,7 +302,10 @@ func checkAddTableCell(rowArr *[]string, rowCheck map[string]int, cellInfo table
 	if colIdx, ok := rowCheck[cellInfo.labelKey]; ok {
 		if len(cellInfo.label)%2 != 0 && len(cellInfo.label) < cellInfo.columnWidth {
 			cellInfo.label += " "
+		} else if len(cellInfo.label) > (cellInfo.columnWidth - 2) { // 2 dots to indicate text longer than column width
+			cellInfo.label = cellInfo.label[:(cellInfo.columnWidth-6)] + ".."
 		}
+
 		(*rowArr)[colIdx] = getAlignedText(cellInfo.label, cellInfo.align, cellInfo.columnWidth)
 	}
 }
