@@ -53,7 +53,7 @@ EXAMPLES:
 
   2. Add rule for testbucket on s3. Both expiry and transition are number of days.
      {{.Prompt}} {{.HelpName}} --id "Docs" --prefix "doc/" \
-          --expiry-days "200" --transition-days "300 days" \
+          --expiry-days "300" --transition-days "200" \
           --storage-class "GLACIER" s3/testbucket
 
   3. Add rule for testbucket on s3. Only expiry is given as number of days and transition is not set.
