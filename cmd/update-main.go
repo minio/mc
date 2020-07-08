@@ -30,6 +30,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-update"
+	"github.com/mattn/go-ieproxy"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -244,6 +245,7 @@ func downloadReleaseURL(releaseChecksumURL string, timeout time.Duration) (conte
 	client := &http.Client{
 		Timeout: timeout,
 		Transport: &http.Transport{
+			Proxy: ieproxy.GetProxyFunc(),
 			// need to close connection after usage.
 			DisableKeepAlives: true,
 		},
