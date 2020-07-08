@@ -37,6 +37,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mattn/go-ieproxy"
 	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
@@ -149,7 +150,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 
 			tr := &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
+				Proxy: ieproxy.GetProxyFunc(),
 				DialContext: (&net.Dialer{
 					Timeout:   10 * time.Second,
 					KeepAlive: 15 * time.Second,
