@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mattn/go-ieproxy"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v6/pkg/credentials"
@@ -90,7 +91,7 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			}
 
 			var transport http.RoundTripper = &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
+				Proxy: ieproxy.GetProxyFunc(),
 				DialContext: (&net.Dialer{
 					Timeout:   10 * time.Second,
 					KeepAlive: 15 * time.Second,

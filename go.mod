@@ -9,6 +9,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/klauspost/compress v1.10.3
+	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20200707152854-14885ef98d83
