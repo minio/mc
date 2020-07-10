@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -56,7 +57,7 @@ func snapNew(snapName, clientURL string) (Client, *probe.Error) {
 }
 
 // snapNewReader - instantiate a new snapshot from a reader.
-func snapNewReader(snapName, clientURL string, in io.Reader) (Client, *probe.Error) {
+func snapNewReader(snapName, snapAliasedURL string, in io.Reader) (Client, *probe.Error) {
 	r, err := newSnapShotReader(in)
 	if err != nil {
 		return nil, err
@@ -68,12 +69,22 @@ func snapNewReader(snapName, clientURL string, in io.Reader) (Client, *probe.Err
 	}
 
 	hostCfg := hostConfigV9(*tgt)
-	s3Config := NewS3Config(tgt.URL, &hostCfg)
+
+	snapTargetPath := strings.TrimPrefix(snapAliasedURL, snapName)
+	s3TargetURL, e := url.Parse(tgt.URL)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	s3TargetURL.Path = path.Join(s3TargetURL.Path, snapTargetPath)
+
+	s3Config := NewS3Config(s3TargetURL.String(), &hostCfg)
 	clnt, err := S3New(s3Config)
 	if err != nil {
 		return nil, err
 	}
-	pu := newClientURL(normalizePath(strings.TrimPrefix(clientURL, snapName)))
+
+	pu := newClientURL(normalizePath(snapTargetPath))
 	if pu.Separator != '/' {
 		pu.Path = strings.ReplaceAll(pu.Path, "/", string(pu.Separator))
 	}
