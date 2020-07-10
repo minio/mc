@@ -399,7 +399,7 @@ func (s *snapshotDeserializer) SkipBucketEntries() *probe.Error {
 // BucketEntries will return all bucket entries.
 // The channel will be closed when there are no more entries.
 // If an error occurs it will be returned and the channel will be closed.
-func (s *snapshotDeserializer) BucketEntries(ctx context.Context, entries chan<- SnapshotEntry) *probe.Error {
+func (s *snapshotDeserializer) BucketEntries(ctx context.Context, entries chan<- SnapshotEntry, doneCh chan struct{}) *probe.Error {
 	defer close(entries)
 	var dst SnapshotEntry
 	var tmp = make([]byte, bucketEntriesBlockSize+(1<<10))
@@ -407,6 +407,8 @@ func (s *snapshotDeserializer) BucketEntries(ctx context.Context, entries chan<-
 	done := ctx.Done()
 	for {
 		select {
+		case <-doneCh:
+			return nil
 		case <-done:
 			return probe.NewError(ctx.Err())
 		default:

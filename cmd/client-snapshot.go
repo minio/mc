@@ -193,8 +193,11 @@ func (s *snapClient) List(ctx context.Context, isRecursive, _, _ bool, showDir D
 // The deserializer must be queued up for bucket contents.
 func (s *snapClient) getBucketContents(ctx context.Context, bucket SnapshotBucket, contentCh chan *ClientContent, filter func(*SnapshotEntry) filterAction) {
 	entries := make(chan SnapshotEntry, 10000)
+	doneCh := make(chan struct{})
+
 	var wg sync.WaitGroup
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
 		for entry := range entries {
@@ -233,12 +236,13 @@ func (s *snapClient) getBucketContents(ctx context.Context, bucket SnapshotBucke
 			contentCh <- c
 
 			if action == filterAbort {
+				close(doneCh)
 				break
 			}
 		}
 	}()
 
-	err := s.dec.BucketEntries(ctx, entries)
+	err := s.dec.BucketEntries(ctx, entries, doneCh)
 	wg.Wait()
 	if err != nil {
 		contentCh <- &ClientContent{Err: err}
