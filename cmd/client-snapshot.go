@@ -435,8 +435,9 @@ func (s *snapClient) statBucket(ctx context.Context, bucket string) (content *Cl
 
 	// TODO: Include more information
 	return &ClientContent{
-		URL: u,
-		Err: nil,
+		URL:  u,
+		Type: os.ModeDir,
+		Err:  nil,
 	}, nil
 }
 
