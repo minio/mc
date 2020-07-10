@@ -73,7 +73,7 @@ func snapNewReader(snapName, clientURL string, in io.Reader) (Client, *probe.Err
 	if err != nil {
 		return nil, err
 	}
-	pu := newClientURL(normalizePath(clientURL))
+	pu := newClientURL(normalizePath(strings.TrimPrefix(clientURL, snapName)))
 	if pu.Separator != '/' {
 		pu.Path = strings.ReplaceAll(pu.Path, "/", string(pu.Separator))
 	}
