@@ -1,9 +1,9 @@
-FROM multiarch/qemu-user-static:x86_64-arm as qemu
+FROM multiarch/qemu-user-static:x86_64-aarch64 as qemu
 FROM arm64v8/alpine:3.12
 
 LABEL maintainer="MinIO Inc <dev@min.io>"
 
-COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
 
 RUN apk add --no-cache ca-certificates 'curl>7.61.0' && \
     curl -s -q https://dl.minio.io/client/mc/release/linux-arm64/mc -o /usr/bin/mc && \
