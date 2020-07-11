@@ -4,9 +4,10 @@ FROM s390x/alpine:3.12
 LABEL maintainer="MinIO Inc <dev@min.io>"
 
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
-COPY mc /usr/bin/mc
 
 RUN apk add --no-cache ca-certificates 'curl>7.61.0' && \
+    curl -s -q https://dl.minio.io/client/mc/release/linux-s390x/mc -o /usr/bin/mc && \
+    chmod +x /usr/bin/mc && \
     curl -s -q -O https://raw.githubusercontent.com/minio/minio/release/CREDITS
-    
+
 ENTRYPOINT ["mc"]
