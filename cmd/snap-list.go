@@ -31,7 +31,12 @@ import (
 )
 
 var (
-	snapListFlags = []cli.Flag{}
+	snapListFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "file, f",
+			Usage: "Use the snapshot file",
+		},
+	}
 )
 
 const snapshotSuffix = ".snap"
@@ -54,6 +59,10 @@ EXAMPLES:
 
   2. List the contents of a snapshot
      {{.Prompt}} {{.HelpName}} my-snapshot-name
+
+  3. List the contents of a snapshot file in the local machine
+     {{.Prompt}} {{.HelpName}} -f /path/to/my-snapshot.snap
+
 `,
 }
 
@@ -104,8 +113,24 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		}
 		return nil
 	} else {
-		clnt, err := newClient(snapshotPrefix + snapshot)
+		var (
+			clnt Client
+			err  *probe.Error
+		)
+
+		if cmdCtx.Bool("file") {
+			f, e := os.Open(snapshot)
+			if e != nil {
+				err = probe.NewError(e)
+			} else {
+				clnt, err = snapNewReader("dummy-alias", "dummy-alias/", f)
+			}
+		} else {
+			clnt, err = newClient(snapshotPrefix + snapshot)
+		}
+
 		fatalIf(err.Trace(), "Unable to list snapshot")
+
 		ctx, cancelList := context.WithCancel(globalContext)
 		defer cancelList()
 		return doList(ctx, clnt, true, false)

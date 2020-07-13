@@ -604,7 +604,6 @@ var urlRgx = regexp.MustCompile("^https?://")
 
 // newClient gives a new client interface
 func newClient(aliasedURL string) (Client, *probe.Error) {
-
 	alias, urlStrFull, hostCfg, err := expandAlias(aliasedURL)
 	if err != nil {
 		return nil, err.Trace(aliasedURL)
