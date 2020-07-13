@@ -334,7 +334,7 @@ func (s *snapClient) list(ctx context.Context, contentCh chan *ClientContent, is
 			tmpKey := strings.TrimPrefix(entry.Key, prefix)
 			idx := strings.Index(tmpKey, "/")
 			if idx > 0 {
-				entry.Key = tmpKey[:len(prefix)+idx+1]
+				entry.Key = entry.Key[:len(prefix)+idx+1]
 			}
 			if entry.Key == lastKey {
 				return filterSkipEntry
