@@ -17,17 +17,27 @@
 package cmd
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
-	snapRemoveFlags = []cli.Flag{}
+	snapRemoveFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "force, f",
+			Usage: "Force removing the snapshot without a prompt",
+		},
+	}
 )
 
 var snapRemove = cli.Command{
@@ -67,11 +77,34 @@ func (r removeSnapMsg) JSON() string {
 }
 
 // Validate command-line args.
-func parseSnapRemoveSyntax(ctx *cli.Context) string {
-	return ctx.Args().Get(0)
+func parseSnapRemoveSyntax(ctx *cli.Context) (string, bool) {
+	return ctx.Args().Get(0), ctx.Bool("force")
 }
 
-func removeSnapshot(snapName string) *probe.Error {
+func removeSnapshot(snapName string, force bool) *probe.Error {
+	approved, answered := false, false
+	isTerminal := terminal.IsTerminal(int(os.Stdin.Fd()))
+	if !force && !globalJSON && !globalQuiet && isTerminal {
+		for !answered {
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Printf("Are you sure you want to remove this snapshot ? [y/n] ")
+			value, _, _ := reader.ReadLine()
+			switch strings.ToLower(string(value)) {
+			case "y", "yes":
+				approved = true
+				answered = true
+			case "n", "no":
+				answered = true
+			}
+		}
+	} else {
+		approved = true
+	}
+
+	if !approved {
+		return probe.NewError(errors.New("user declined snapshot deletion"))
+	}
+
 	snapFile, err := getSnapsFile(snapName)
 	if err != nil {
 		return err
@@ -93,9 +126,8 @@ func mainSnapRemove(ctx *cli.Context) error {
 	console.SetColor("SnapDeletion", color.New(color.FgGreen))
 
 	// Validate command-line args.
-	snapshotName := parseSnapRemoveSyntax(ctx)
-
-	fatalIf(removeSnapshot(snapshotName).Trace(), "Unable to remove the specified snapshot")
+	snapshotName, force := parseSnapRemoveSyntax(ctx)
+	fatalIf(removeSnapshot(snapshotName, force).Trace(), "Unable to remove the specified snapshot")
 
 	printMsg(removeSnapMsg{Status: "success", SnapshotName: snapshotName})
 	return nil
