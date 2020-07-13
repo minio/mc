@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -64,6 +64,25 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} -f /path/to/my-snapshot.snap
 
 `,
+}
+
+// listSnapMsg container for snap creation message structure
+type listSnapMsg struct {
+	Status       string    `json:"success"`
+	SnapshotName string    `json:"snapshot"`
+	ModTime      time.Time `json:"modTime"`
+}
+
+func (r listSnapMsg) String() string {
+	return console.Colorize("Time", "["+r.ModTime.Round(time.Second).String()+"]") + " " + r.SnapshotName
+}
+
+func (r listSnapMsg) JSON() string {
+	r.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(r, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonMessageBytes)
 }
 
 // Validate command-line args.
@@ -109,7 +128,7 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		fatalIf(err.Trace(), "Unable to list snapshots")
 		for _, s := range snapshots {
 			name := strings.TrimSuffix(s.Name(), snapshotSuffix)
-			fmt.Printf("[%s] %s\n", s.ModTime().Round(time.Second).String(), name)
+			printMsg(listSnapMsg{SnapshotName: name, ModTime: s.ModTime()})
 		}
 		return nil
 	} else {
@@ -119,6 +138,7 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		)
 
 		if cmdCtx.Bool("file") {
+			// We are going to list a snapshot file in the local machine
 			f, e := os.Open(snapshot)
 			if e != nil {
 				err = probe.NewError(e)

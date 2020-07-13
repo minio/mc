@@ -25,8 +25,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/console"
 )
 
 var (
@@ -61,6 +64,24 @@ EXAMPLES:
   2. Create a new snapshot of a particular bucket with the state of 24 hours earlier
       {{.Prompt}} {{.HelpName}} my-snapshot-name s3/mybucket/ --rewind 24h
 `,
+}
+
+// createSnapMsg container for snap creation message structure
+type createSnapMsg struct {
+	Status       string `json:"success"`
+	SnapshotName string `json:"snapshot"`
+}
+
+func (r createSnapMsg) String() string {
+	return console.Colorize("SnapCreation", "The snapshot `"+r.SnapshotName+"` is created.")
+}
+
+func (r createSnapMsg) JSON() string {
+	r.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(r, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonMessageBytes)
 }
 
 // validate command-line args.
@@ -216,10 +237,16 @@ func createSnapshot(snapName string, s3Path string, at time.Time, overwrite bool
 
 // main entry point for snapshot create.
 func mainSnapCreate(ctx *cli.Context) error {
+	console.SetColor("SnapCreation", color.New(color.FgGreen))
+
 	// Validate command-line args.
 	snapName, s3Path, at := checkSnapCreateSyntax(ctx)
 
 	// Create a snapshot.
 	fatalIf(createSnapshot(snapName, s3Path, at, ctx.Bool("overwrite")).Trace(), "Unable to create a new snapshot.")
+	printMsg(createSnapMsg{
+		Status:       "success",
+		SnapshotName: snapName,
+	})
 	return nil
 }
