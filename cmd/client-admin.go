@@ -29,7 +29,7 @@ import (
 	"github.com/mattn/go-ieproxy"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v6/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio/pkg/madmin"
 )
 

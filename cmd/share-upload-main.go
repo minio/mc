@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -149,7 +150,7 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 	}
 
 	// Generate pre-signed access info.
-	shareURL, uploadInfo, err := clnt.ShareUpload(isRecursive, expiry, contentType)
+	shareURL, uploadInfo, err := clnt.ShareUpload(context.Background(), isRecursive, expiry, contentType)
 	if err != nil {
 		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
 	}

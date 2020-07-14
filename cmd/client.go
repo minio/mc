@@ -24,9 +24,8 @@ import (
 
 	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/encrypt"
-	"github.com/minio/minio-go/v6/pkg/tags"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
 )
 
 // DirOpt - list directory option.
@@ -77,7 +76,7 @@ type Client interface {
 
 	// I/O operations with expiration
 	ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error)
-	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
+	ShareUpload(context.Context, bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
@@ -90,7 +89,7 @@ type Client interface {
 	AddUserAgent(app, version string)
 
 	// Tagging operations
-	GetTags(ctx context.Context) (*tags.Tags, *probe.Error)
+	GetTags(ctx context.Context) (map[string]string, *probe.Error)
 	SetTags(ctx context.Context, tags string) *probe.Error
 	DeleteTags(ctx context.Context) *probe.Error
 
