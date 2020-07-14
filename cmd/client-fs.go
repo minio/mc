@@ -421,7 +421,7 @@ func (f *fsClient) ShareUpload(ctx context.Context, startsWith bool, expires tim
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, preserve bool) *probe.Error {
+func (f *fsClient) Copy(ctx context.Context, source, _ string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, preserve bool) *probe.Error {
 	rc, e := os.Open(source)
 	if e != nil {
 		err := f.toClientError(e, source)
@@ -437,7 +437,7 @@ func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
@@ -530,18 +530,18 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 }
 
 // List - list files and folders.
-func (f *fsClient) List(ctx context.Context, isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *ClientContent {
+func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent)
 	filteredCh := make(chan *ClientContent)
 
-	if isRecursive {
-		if showDir == DirNone {
-			go f.listRecursiveInRoutine(contentCh, isMetadata)
+	if opts.isRecursive {
+		if opts.showDir == DirNone {
+			go f.listRecursiveInRoutine(contentCh, opts.isFetchMeta)
 		} else {
-			go f.listDirOpt(contentCh, isIncomplete, isMetadata, showDir)
+			go f.listDirOpt(contentCh, opts.isIncomplete, opts.isFetchMeta, opts.showDir)
 		}
 	} else {
-		go f.listInRoutine(contentCh, isMetadata)
+		go f.listInRoutine(contentCh, opts.isFetchMeta)
 	}
 
 	// This function filters entries from any  listing go routine
@@ -549,7 +549,7 @@ func (f *fsClient) List(ctx context.Context, isRecursive, isIncomplete, isMetada
 	// only show partly uploaded files,
 	go func() {
 		for c := range contentCh {
-			if isIncomplete {
+			if opts.isIncomplete {
 				if !strings.HasSuffix(c.URL.Path, partSuffix) {
 					continue
 				}
@@ -1014,8 +1014,8 @@ func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *p
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
-	st, err := f.fsStat(isIncomplete)
+func (f *fsClient) Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error) {
+	st, err := f.fsStat(opts.incomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
 	}
@@ -1032,7 +1032,7 @@ func (f *fsClient) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 	path := f.PathURL.String()
 	// Populates meta data with file system attribute only in case of
 	// when preserve flag is passed.
-	if isPreserve {
+	if opts.preserve {
 		fileAttr, err := disk.GetFileSystemAttrs(path)
 		if err != nil {
 			return content, nil

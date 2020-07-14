@@ -65,7 +65,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	// Verify previously create files and list them.
 	var contents []*ClientContent
-	for content := range fsClient.List(globalContext, false, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, ListOptions{showDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -93,7 +93,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List non recursive to list only top level files.
-	for content := range fsClient.List(globalContext, false, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, ListOptions{showDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -109,7 +109,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(globalContext, true, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, ListOptions{isRecursive: true, showDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -153,7 +153,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(globalContext, true, false, false, DirNone) {
+	for content := range fsClient.List(globalContext, ListOptions{isRecursive: true, showDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -210,7 +210,7 @@ func (s *TestSuite) TestStatBucket(c *C) {
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
 	c.Assert(err, IsNil)
-	_, err = fsClient.Stat(context.Background(), false, false, nil)
+	_, err = fsClient.Stat(context.Background(), StatOptions{})
 	c.Assert(err, IsNil)
 }
 
@@ -275,7 +275,7 @@ func (s *TestSuite) TestGet(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	reader, err = fsClient.Get(context.Background(), nil)
+	reader, err = fsClient.Get(context.Background(), GetOptions{})
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
 	_, e = io.Copy(&results, reader)
@@ -303,7 +303,7 @@ func (s *TestSuite) TestGetRange(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	reader, err = fsClient.Get(context.Background(), nil)
+	reader, err = fsClient.Get(context.Background(), GetOptions{})
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
 	buf := make([]byte, 5)
@@ -334,7 +334,7 @@ func (s *TestSuite) TestStatObject(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	content, err := fsClient.Stat(context.Background(), false, false, nil)
+	content, err := fsClient.Stat(context.Background(), StatOptions{})
 	c.Assert(err, IsNil)
 	c.Assert(content.Size, Equals, int64(dataLen))
 }
@@ -359,6 +359,6 @@ func (s *TestSuite) TestCopy(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	err = fsClientTarget.Copy(context.Background(), sourcePath, int64(len(data)), nil, nil, nil, nil, false, false)
+	err = fsClientTarget.Copy(context.Background(), sourcePath, "", int64(len(data)), nil, nil, nil, nil, false, false)
 	c.Assert(err, IsNil)
 }

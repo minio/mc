@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -453,7 +454,7 @@ func mainSQL(cliCtx *cli.Context) error {
 	URLs := cliCtx.Args()
 	writeHdr := true
 	for _, url := range URLs {
-		if _, targetContent, err := url2Stat(ctx, url, false, encKeyDB); err != nil {
+		if _, targetContent, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}); err != nil {
 			errorIf(err.Trace(url), "Unable to run sql for "+url+".")
 			continue
 		} else if !targetContent.Type.IsDir() {
@@ -471,7 +472,7 @@ func mainSQL(cliCtx *cli.Context) error {
 			continue
 		}
 
-		for content := range clnt.List(ctx, cliCtx.Bool("recursive"), false, false, DirNone) {
+		for content := range clnt.List(ctx, ListOptions{isRecursive: cliCtx.Bool("recursive"), showDir: DirNone}) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue

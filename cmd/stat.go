@@ -144,7 +144,7 @@ func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bo
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
 	var cErr error
-	for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
+	for content := range clnt.List(ctx, ListOptions{isRecursive: isRecursive, isIncomplete: isIncomplete, showDir: DirNone}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -177,7 +177,7 @@ func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bo
 			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
-		_, stat, err := url2Stat(ctx, url, true, encKeyDB)
+		_, stat, err := url2Stat(ctx, url, "", true, encKeyDB, time.Time{})
 		if err != nil {
 			stat = content
 		}

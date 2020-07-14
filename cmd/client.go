@@ -43,11 +43,38 @@ const (
 // Default number of multipart workers for a Put operation.
 const defaultMultipartThreadsNum = 4
 
+// GetOptions holds options of the GET operation
+type GetOptions struct {
+	sse       encrypt.ServerSide
+	versionID string
+}
+
+// StatOptions holds options of the HEAD operation
+type StatOptions struct {
+	incomplete bool
+	preserve   bool
+	sse        encrypt.ServerSide
+	timeRef    time.Time
+	versionID  string
+}
+
+// ListOptions holds options for listing operation
+type ListOptions struct {
+	isRecursive       bool
+	isIncomplete      bool
+	isFetchMeta       bool
+	withOlderVersions bool
+	withDeleteMarkers bool
+	timeRef           time.Time
+	showDir           DirOpt
+}
+
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(ctx context.Context, isIncomplete, isPreserve bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error)
-	List(ctx context.Context, isRecursive, isIncomplete, isFetchMeta bool, showDir DirOpt) <-chan *ClientContent
+	Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error)
+
+	List(ctx context.Context, opts ListOptions) <-chan *ClientContent
 
 	// Bucket operations
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
@@ -61,13 +88,14 @@ type Client interface {
 	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error
+	Copy(ctx context.Context, source, versionID string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error
 
 	// Runs select expression on object storage on specific files.
 	Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
 
 	// I/O operations with metadata.
-	Get(ctx context.Context, sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
+	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, err *probe.Error)
+
 	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (n int64, err *probe.Error)
 
 	// Object Locking related API
@@ -119,6 +147,9 @@ type ClientContent struct {
 	BypassGovernance  bool
 	LegalHoldEnabled  bool
 	LegalHold         string
+	VersionID         string
+	IsDeleteMarker    bool
+	IsLatest          bool
 
 	Err *probe.Error
 }

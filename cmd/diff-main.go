@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -126,7 +127,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	// Diff only works between two directories, verify them below.
 
 	// Verify if firstURL is accessible.
-	_, firstContent, err := url2Stat(ctx, firstURL, false, encKeyDB)
+	_, firstContent, err := url2Stat(ctx, firstURL, "", false, encKeyDB, time.Time{})
 	if err != nil {
 		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
@@ -137,7 +138,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	}
 
 	// Verify if secondURL is accessible.
-	_, secondContent, err := url2Stat(ctx, secondURL, false, encKeyDB)
+	_, secondContent, err := url2Stat(ctx, secondURL, "", false, encKeyDB, time.Time{})
 	if err != nil {
 		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
 	}

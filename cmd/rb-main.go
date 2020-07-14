@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -127,7 +128,7 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 
 	go func() {
 		defer close(contentCh)
-		for content := range clnt.List(ctx, true, false, false, DirLast) {
+		for content := range clnt.List(ctx, ListOptions{isRecursive: true, showDir: DirLast}) {
 			if content.Err != nil {
 				contentCh <- content
 				continue
@@ -177,7 +178,7 @@ func isNamespaceRemoval(ctx context.Context, url string) bool {
 	//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 	url = filepath.ToSlash(filepath.Clean(url))
 	// namespace removal applies only for non FS. So filter out if passed url represents a directory
-	if !isAliasURLDir(ctx, url, nil) {
+	if !isAliasURLDir(ctx, url, nil, time.Time{}) {
 		_, path := url2Alias(url)
 		return (path == "")
 	}
@@ -205,7 +206,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
-		_, err = clnt.Stat(ctx, false, false, nil)
+		_, err = clnt.Stat(ctx, StatOptions{})
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
@@ -218,7 +219,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		}
 
 		isEmpty := true
-		for range clnt.List(ctx, true, false, false, DirNone) {
+		for range clnt.List(ctx, ListOptions{isRecursive: true, showDir: DirNone}) {
 			isEmpty = false
 			break
 		}

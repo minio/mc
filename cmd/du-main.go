@@ -105,9 +105,7 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 		return 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
-	isRecursive := false
-	isIncomplete := false
-	contentCh := clnt.List(globalContext, isRecursive, isIncomplete, false, DirFirst)
+	contentCh := clnt.List(globalContext, ListOptions{isRecursive: false, showDir: DirFirst})
 	size := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {

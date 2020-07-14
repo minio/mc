@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2014-2019 MinIO, Inc.
+ * MinIO Client (C) 2014-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,25 @@ package cmd
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
 
 // ls specific flags.
 var (
 	lsFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "back in time",
+		},
+		cli.BoolFlag{
+			Name:  "versions",
+			Usage: "List all versions",
+		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "list recursively",
@@ -76,8 +86,23 @@ EXAMPLES:
 `,
 }
 
+func parseRewindFlag(rewind string) (timeRef time.Time) {
+	if rewind != "" {
+		if t, e := time.Parse(time.RFC3339, rewind); e == nil {
+			timeRef = t
+		} else {
+			if duration, e := time.ParseDuration(rewind); e == nil {
+				timeRef = time.Now().Add(-duration)
+			} else {
+				fatalIf(probe.NewError(e), "Unable to parse --rewind argument")
+			}
+		}
+	}
+	return
+}
+
 // checkListSyntax - validate all the passed arguments
-func checkListSyntax(ctx context.Context, cliCtx *cli.Context) {
+func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, bool, time.Time, bool) {
 	args := cliCtx.Args()
 	if !cliCtx.Args().Present() {
 		args = []string{"."}
@@ -87,12 +112,18 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) {
 			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
 		}
 	}
-	// extract URLs.
-	URLs := cliCtx.Args()
-	isIncomplete := cliCtx.Bool("incomplete")
 
-	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url, false, nil)
+	isRecursive := cliCtx.Bool("recursive")
+	isIncomplete := cliCtx.Bool("incomplete")
+	withOlderVersions := cliCtx.Bool("versions")
+
+	timeRef := parseRewindFlag(cliCtx.String("rewind"))
+	if timeRef.IsZero() && withOlderVersions {
+		timeRef = time.Now().UTC()
+	}
+
+	for _, url := range cliCtx.Args() {
+		_, _, err := url2Stat(ctx, url, "", false, nil, timeRef)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
@@ -104,6 +135,8 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
 	}
+
+	return args, isRecursive, isIncomplete, timeRef, withOlderVersions
 }
 
 // mainList - is a handler for mc ls command
@@ -118,17 +151,7 @@ func mainList(cliCtx *cli.Context) error {
 	console.SetColor("Time", color.New(color.FgGreen))
 
 	// check 'ls' cliCtx arguments.
-	checkListSyntax(ctx, cliCtx)
-
-	// Set command flags from context.
-	isRecursive := cliCtx.Bool("recursive")
-	isIncomplete := cliCtx.Bool("incomplete")
-
-	args := cliCtx.Args()
-	// mimic operating system tool behavior.
-	if !cliCtx.Args().Present() {
-		args = []string{"."}
-	}
+	args, isRecursive, isIncomplete, timeRef, withOlderVersions := checkListSyntax(ctx, cliCtx)
 
 	var cErr error
 	for _, targetURL := range args {
@@ -136,7 +159,7 @@ func mainList(cliCtx *cli.Context) error {
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 			var st *ClientContent
-			st, err = clnt.Stat(ctx, isIncomplete, false, nil)
+			st, err = clnt.Stat(ctx, StatOptions{incomplete: isIncomplete})
 			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)
@@ -144,7 +167,7 @@ func mainList(cliCtx *cli.Context) error {
 			}
 		}
 
-		if e := doList(ctx, clnt, isRecursive, isIncomplete); e != nil {
+		if e := doList(ctx, clnt, isRecursive, isIncomplete, timeRef, withOlderVersions); e != nil {
 			cErr = e
 		}
 	}

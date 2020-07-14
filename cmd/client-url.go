@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/mimedb"
@@ -184,7 +185,7 @@ func urlJoinPath(url1, url2 string) string {
 }
 
 // url2Stat returns stat info for URL.
-func url2Stat(ctx context.Context, urlStr string, fileAttr bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *ClientContent, err *probe.Error) {
+func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -192,7 +193,7 @@ func url2Stat(ctx context.Context, urlStr string, fileAttr bool, encKeyDB map[st
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(ctx, false, fileAttr, sse)
+	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID})
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
@@ -229,10 +230,7 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 	if err != nil {
 		return false
 	}
-	isRecursive := false
-	isIncomplete := incomplete
-	isFetchMeta := false
-	for entry := range clnt.List(globalContext, isRecursive, isIncomplete, isFetchMeta, DirNone) {
+	for entry := range clnt.List(globalContext, ListOptions{isRecursive: false, isIncomplete: incomplete, isFetchMeta: false, showDir: DirNone}) {
 		return entry.Err == nil
 	}
 	return false

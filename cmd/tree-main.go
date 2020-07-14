@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -120,7 +121,7 @@ func checkTreeSyntax(ctx context.Context, cliCtx *cli.Context) {
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(ctx, url, false, nil); err != nil && !isURLPrefixExists(url, false) {
+		if _, _, err := url2Stat(ctx, url, "", false, nil, time.Time{}); err != nil && !isURLPrefixExists(url, false) {
 			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 		}
 	}
@@ -216,7 +217,7 @@ func doTree(ctx context.Context, url string, level int, leaf bool, branchString 
 		return nil
 	}
 
-	for content := range clnt.List(ctx, false, false, false, DirNone) {
+	for content := range clnt.List(ctx, ListOptions{isRecursive: false, showDir: DirNone}) {
 
 		if !includeFiles && !content.Type.IsDir() {
 			continue
@@ -278,7 +279,7 @@ func mainTree(cliCtx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(ctx, clnt, true, false); e != nil {
+			if e := doList(ctx, clnt, true, false, time.Time{}, false); e != nil {
 				cErr = e
 			}
 		}

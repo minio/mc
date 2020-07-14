@@ -44,18 +44,26 @@ type contentMessage struct {
 	Key      string    `json:"key"`
 	ETag     string    `json:"etag"`
 	URL      string    `json:"url,omitempty"`
+
+	VersionID      string `json:"versionId,omitempty"`
+	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 }
 
 // String colorized string message.
 func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
-	message = message + console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
-	message = func() string {
-		if c.Filetype == "folder" {
-			return message + console.Colorize("Dir", c.Key)
-		}
-		return message + console.Colorize("File", c.Key)
-	}()
+	message += console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
+	if c.Filetype == "folder" {
+		return message + console.Colorize("Dir", c.Key)
+	}
+	if c.VersionID != "" {
+		message += " [" + c.VersionID + "] "
+	}
+	if c.IsDeleteMarker {
+		message += console.Colorize("File", fmt.Sprintf("\033[9m%s\033[0m", c.Key))
+	} else {
+		message += console.Colorize("File", c.Key)
+	}
 	return message
 }
 
@@ -87,6 +95,8 @@ func parseContent(c *ClientContent) contentMessage {
 	content.ETag = md5sum
 	// Convert OS Type to match console file printing style.
 	content.Key = getKey(c)
+	content.VersionID = c.VersionID
+	content.IsDeleteMarker = c.IsDeleteMarker
 	return content
 }
 
@@ -107,7 +117,7 @@ func getKey(c *ClientContent) string {
 }
 
 // doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool) error {
+func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, timeRef time.Time, withOlderVersions bool) error {
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
@@ -115,7 +125,14 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool) er
 	}
 
 	var cErr error
-	for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
+	for content := range clnt.List(ctx, ListOptions{
+		isRecursive:       isRecursive,
+		isIncomplete:      isIncomplete,
+		timeRef:           timeRef,
+		withOlderVersions: withOlderVersions,
+		withDeleteMarkers: true,
+		showDir:           DirNone,
+	}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.

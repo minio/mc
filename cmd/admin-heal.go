@@ -221,7 +221,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 		fatalIf(err.Trace(clnt.GetURL().String()), "Unable to create client for URL ", aliasedURL)
 		return nil
 	}
-	for content := range clnt.List(globalContext, false, false, false, DirNone) {
+	for content := range clnt.List(globalContext, ListOptions{isRecursive: false, showDir: DirNone}) {
 		if content.Err != nil {
 			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to heal bucket `"+bucket+"`.")
 			return nil

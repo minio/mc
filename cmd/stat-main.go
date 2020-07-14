@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -90,7 +91,7 @@ func checkStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	isIncomplete := false
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url, false, encKeyDB)
+		_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{})
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
