@@ -604,14 +604,108 @@ loop:
 // validate the passed metadataString and populate the map
 func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	metaDataMap := make(map[string]string)
-	for _, metaData := range strings.Split(metadataString, ";") {
-		metaDataEntry := strings.SplitN(metaData, "=", 2)
-		if len(metaDataEntry) != 2 {
-			return nil, probe.NewError(ErrInvalidMetadata)
+	r := strings.NewReader(metadataString)
+
+	type pToken int
+	const (
+		KEY pToken = iota
+		VALUE
+	)
+
+	type pState int
+	const (
+		NORMAL pState = iota
+		QSTRING
+		DQSTRING
+	)
+
+	var key, value strings.Builder
+
+	writeRune := func(ch rune, pt pToken) {
+		if pt == KEY {
+			key.WriteRune(ch)
+		} else if pt == VALUE {
+			value.WriteRune(ch)
+		} else {
+			panic("Invalid parser token type")
 		}
-		metaDataMap[http.CanonicalHeaderKey(metaDataEntry[0])] = metaDataEntry[1]
 	}
-	return metaDataMap, nil
+
+	ps := NORMAL
+	pt := KEY
+	p := 0
+
+	for ;;p++ {
+		ch, _, err := r.ReadRune()
+		if err != nil {
+			//eof
+			if ps == QSTRING || ps == DQSTRING || pt == KEY {
+				return nil, probe.NewError(ErrInvalidMetadata)
+			}
+			metaDataMap[http.CanonicalHeaderKey(key.String())] = value.String()
+			return metaDataMap, nil
+		}
+
+		if ch == '"' {
+			if ps == DQSTRING {
+				ps = NORMAL
+			} else if ps == QSTRING {
+				writeRune(ch, pt)
+			} else if ps == NORMAL {
+				ps = DQSTRING
+			} else {
+				break
+			}
+			continue
+		}
+
+		if ch == '\'' {
+			if ps == QSTRING {
+				ps = NORMAL
+			} else if ps == DQSTRING {
+				writeRune(ch, pt)
+			} else if ps == NORMAL {
+				ps = QSTRING
+			} else {
+				break
+			}
+			continue
+		}
+
+		if ch == '=' {
+			if ps == QSTRING || ps == DQSTRING {
+				writeRune(ch, pt)
+			} else if pt == KEY {
+				pt = VALUE
+			} else if pt == VALUE {
+				writeRune(ch, pt)
+			} else {
+				break
+			}
+			continue
+		}
+
+		if ch == ';' {
+			if ps == QSTRING || ps == DQSTRING {
+				writeRune(ch, pt)
+			} else if pt == KEY {
+				return nil, probe.NewError(ErrInvalidMetadata)
+			} else if pt == VALUE {
+				metaDataMap[http.CanonicalHeaderKey(key.String())] = value.String()
+				key.Reset()
+				value.Reset()
+				pt = KEY
+			} else {
+				break
+			}
+			continue
+		}
+
+		writeRune(ch, pt)
+	}
+
+	fatalErr := fmt.Sprintf("Invalid parser state at index: %d", p)
+	panic(fatalErr)
 }
 
 // mainCopy is the entry point for cp command.
