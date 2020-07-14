@@ -113,11 +113,10 @@ func mainListTag(cliCtx *cli.Context) error {
 	clnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
-	tags, err := clnt.GetTags(ctx)
+	tagsMap, err := clnt.GetTags(ctx)
 	fatalIf(err, "Unable to fetch tags for "+targetURL)
 
-	tagMap := tags.ToMap()
-	if len(tagMap) == 0 {
+	if len(tagsMap) == 0 {
 		fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)
 	}
 
@@ -126,7 +125,7 @@ func mainListTag(cliCtx *cli.Context) error {
 	console.SetColor("Value", color.New(color.FgYellow))
 
 	printMsg(tagListMessage{
-		Tags:   tagMap,
+		Tags:   tagsMap,
 		Status: "success",
 		URL:    targetURL,
 	})

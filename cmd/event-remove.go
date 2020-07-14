@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v7"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"

@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/encrypt"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
 
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"

@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v7"
 )
 
 // lockedRandSource provides protected rand source, implements rand.Source interface.

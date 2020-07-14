@@ -38,9 +38,8 @@ import (
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/encrypt"
-	"github.com/minio/minio-go/v6/pkg/tags"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
 )
 
 // filesystem client
@@ -419,7 +418,7 @@ func (f *fsClient) ShareDownload(ctx context.Context, expires time.Duration) (st
 }
 
 // ShareUpload - share upload not implemented for filesystem.
-func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
+func (f *fsClient) ShareUpload(ctx context.Context, startsWith bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
 	return "", nil, probe.NewError(APINotImplemented{
 		API:     "ShareUpload",
 		APIType: "filesystem",
@@ -1096,7 +1095,7 @@ func (f *fsClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (f *fsClient) GetTags(ctx context.Context) (*tags.Tags, *probe.Error) {
+func (f *fsClient) GetTags(ctx context.Context) (map[string]string, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "filesystem",

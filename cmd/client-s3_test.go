@@ -25,7 +25,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 
-	minio "github.com/minio/minio-go/v6"
+	minio "github.com/minio/minio-go/v7"
 	. "gopkg.in/check.v1"
 )
 

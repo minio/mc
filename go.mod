@@ -12,17 +12,19 @@ require (
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20200707152854-14885ef98d83
+	github.com/minio/minio v0.0.0-20200714163805-778e9c864f67
 	github.com/minio/minio-go/v6 v6.0.58-0.20200612001654-a57fec8037ec
+	github.com/minio/minio-go/v7 v7.0.0-20200714085548-47e386e2cde8
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953
 	github.com/rjeczalik/notify v0.9.2
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	golang.org/x/text v0.3.2
+	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/text v0.3.3
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.2.8

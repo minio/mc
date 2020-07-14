@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio-go/v6/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
 )
 
 func TestParseEncryptionKeys(t *testing.T) {

@@ -33,8 +33,8 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/encrypt"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
 )
 
 // decode if the key is encoded key and returns the key

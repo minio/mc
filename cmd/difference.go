@@ -25,7 +25,7 @@ import (
 	// golang does not support flat keys for path matching, find does
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v7"
 	"golang.org/x/text/unicode/norm"
 )
 
