@@ -635,7 +635,7 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	pt := KEY
 	p := 0
 
-	for ;;p++ {
+	for ; ; p++ {
 		ch, _, err := r.ReadRune()
 		if err != nil {
 			//eof
