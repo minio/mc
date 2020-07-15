@@ -50,7 +50,7 @@ type fsClient struct {
 const (
 	partSuffix     = ".part.minio"
 	slashSeperator = "/"
-	metaDataKey    = "X-Amz-Meta-Mc-Attrs"
+	metadataKey    = "X-Amz-Meta-Mc-Attrs"
 )
 
 var ( // GOOS specific ignore list.
@@ -274,7 +274,7 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 
 /// Object operations.
 
-func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader, preserve bool) (int64, *probe.Error) {
+func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, meta map[string]string, progress io.Reader, preserve bool) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -310,8 +310,8 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metada
 	}
 
 	attr := make(map[string]string)
-	if len(metadata[metaDataKey]) != 0 && preserve {
-		attr, e = parseAttribute(metadata[metaDataKey][0])
+	if _, ok := meta[metadataKey]; ok && preserve {
+		attr, e = parseAttribute(meta[metadataKey])
 		if e != nil {
 			tmpFile.Close()
 			return 0, probe.NewError(e)
@@ -401,12 +401,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, metada
 
 // Put - create a new file with metadata.
 func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
-	if metadata[metaDataKey] != "" {
-		meta := make(map[string][]string)
-		meta[metaDataKey] = append(meta[metaDataKey], metadata[metaDataKey])
-		return f.put(ctx, reader, size, meta, progress, preserve)
-	}
-	return f.put(ctx, reader, size, nil, progress, preserve)
+	return f.put(ctx, reader, size, metadata, progress, preserve)
 }
 
 // ShareDownload - share download not implemented for filesystem.
@@ -435,7 +430,7 @@ func (f *fsClient) Copy(ctx context.Context, source string, size int64, progress
 	defer rc.Close()
 
 	destination := f.PathURL.Path
-	if _, err := f.put(ctx, rc, size, map[string][]string{}, progress, preserve); err != nil {
+	if _, err := f.put(ctx, rc, size, metadata, progress, preserve); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil
@@ -1035,13 +1030,6 @@ func (f *fsClient) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 	}
 
 	path := f.PathURL.String()
-	metaData, pErr := getAllXattrs(path)
-	if pErr != nil {
-		return content, nil
-	}
-	for k, v := range metaData {
-		content.Metadata[k] = v
-	}
 	// Populates meta data with file system attribute only in case of
 	// when preserve flag is passed.
 	if isPreserve {
@@ -1049,7 +1037,14 @@ func (f *fsClient) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 		if err != nil {
 			return content, nil
 		}
-		content.Metadata[metaDataKey] = fileAttr
+		metaData, pErr := getAllXattrs(path)
+		if pErr != nil {
+			return content, nil
+		}
+		for k, v := range metaData {
+			content.Metadata[k] = v
+		}
+		content.Metadata[metadataKey] = fileAttr
 	}
 
 	return content, nil
