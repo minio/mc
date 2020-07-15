@@ -840,7 +840,7 @@ func (c *S3Client) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadClos
 // such that large file sizes will be copied in multipart manner on server
 // side.
 func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error {
-	dstBucket, _ := c.url2BucketAndObject()
+	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
@@ -855,7 +855,11 @@ func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress
 	}
 
 	destOpts := minio.CopyDestOptions{
+		Bucket:     dstBucket,
+		Object:     dstObject,
 		Encryption: tgtSSE,
+		Progress:   progress,
+		Size:       size,
 	}
 
 	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
@@ -878,11 +882,6 @@ func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress
 	// Assign metadata after irrelevant parts are delete above
 	destOpts.UserMetadata = metadata
 
-	// // Destination object
-	// dst, e := minio.CopyDestOptions(dstBucket, dstObject, destOpts)
-	// if e != nil {
-	// 	return probe.NewError(e)
-	// }
 	var e error
 	if disableMultipart {
 		_, e = c.api.CopyObject(ctx, destOpts, srcOpts)
