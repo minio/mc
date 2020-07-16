@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -114,7 +115,12 @@ func mainListTag(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
 	tagsMap, err := clnt.GetTags(ctx)
-	fatalIf(err, "Unable to fetch tags for "+targetURL)
+	if err != nil {
+		if minio.ToErrorResponse(err.ToGoError()).Code == "NoSuchTagSet" {
+			fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)
+		}
+		fatalIf(err, "Unable to fetch tags for "+targetURL)
+	}
 
 	if len(tagsMap) == 0 {
 		fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)

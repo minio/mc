@@ -22,10 +22,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 // DirOpt - list directory option.
@@ -94,8 +94,8 @@ type Client interface {
 	DeleteTags(ctx context.Context) *probe.Error
 
 	// Lifecycle operations
-	GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration, *probe.Error)
-	SetLifecycle(ctx context.Context, lfcCfg ilm.LifecycleConfiguration) *probe.Error
+	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error)
+	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
 }
 
 // ClientContent - Content container for content metadata

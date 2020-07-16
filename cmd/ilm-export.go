@@ -21,9 +21,9 @@ import (
 	"errors"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 var ilmExportCmd = cli.Command{
@@ -51,13 +51,13 @@ EXAMPLES:
 }
 
 type ilmExportMessage struct {
-	Status    string                     `json:"status"`
-	Target    string                     `json:"target"`
-	ILMConfig ilm.LifecycleConfiguration `json:"ilmConfig"`
+	Status string                   `json:"status"`
+	Target string                   `json:"target"`
+	Config *lifecycle.Configuration `json:"config"`
 }
 
 func (i ilmExportMessage) String() string {
-	msgBytes, e := json.MarshalIndent(i.ILMConfig, "", " ")
+	msgBytes, e := json.MarshalIndent(i.Config, "", " ")
 	fatalIf(probe.NewError(e), "Unable to export ILM configuration")
 
 	return string(msgBytes)
@@ -98,9 +98,9 @@ func mainILMExport(cliCtx *cli.Context) error {
 	}
 
 	printMsg(ilmExportMessage{
-		Status:    "success",
-		Target:    urlStr,
-		ILMConfig: ilmCfg,
+		Status: "success",
+		Target: urlStr,
+		Config: ilmCfg,
 	})
 
 	return nil

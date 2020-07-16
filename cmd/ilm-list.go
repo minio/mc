@@ -27,6 +27,7 @@ import (
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -82,10 +83,10 @@ EXAMPLES:
 }
 
 type ilmListMessage struct {
-	Status    string                     `json:"status"`
-	Target    string                     `json:"target"`
-	Context   *cli.Context               `json:"-"`
-	ILMConfig ilm.LifecycleConfiguration `json:"ilmConfig"`
+	Status  string                   `json:"status"`
+	Target  string                   `json:"target"`
+	Context *cli.Context             `json:"-"`
+	Config  *lifecycle.Configuration `json:"config"`
 }
 
 func (i ilmListMessage) String() string {
@@ -102,7 +103,7 @@ func (i ilmListMessage) String() string {
 	var tagRows map[string][]string
 	var tbl PrettyTable
 
-	ilm.PopulateILMDataForDisplay(i.ILMConfig, &hdrLabelIndexMap, &alignedHdrLabels,
+	ilm.PopulateILMDataForDisplay(i.Config, &hdrLabelIndexMap, &alignedHdrLabels,
 		&cellDataNoTags, &cellDataWithTags, &tagRows,
 		showAll, showMinimum, showExpiry, showTransition)
 
@@ -276,10 +277,10 @@ func mainILMList(cliCtx *cli.Context) error {
 	}
 
 	printMsg(ilmListMessage{
-		Status:    "success",
-		Target:    urlStr,
-		Context:   cliCtx,
-		ILMConfig: ilmCfg,
+		Status:  "success",
+		Target:  urlStr,
+		Context: cliCtx,
+		Config:  ilmCfg,
 	})
 
 	return nil
