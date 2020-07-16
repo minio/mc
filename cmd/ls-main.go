@@ -18,11 +18,13 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
@@ -91,7 +93,11 @@ func parseRewindFlag(rewind string) (timeRef time.Time) {
 		if t, e := time.Parse(time.RFC3339, rewind); e == nil {
 			timeRef = t
 		} else {
-			if duration, e := time.ParseDuration(rewind); e == nil {
+			if duration, e := ioutils.ParseDurationTime(rewind); e == nil {
+				if duration < 0 {
+					fatalIf(probe.NewError(errors.New("negative duration is not supported")),
+						"Unable to parse --rewind argument")
+				}
 				timeRef = time.Now().Add(-duration)
 			} else {
 				fatalIf(probe.NewError(e), "Unable to parse --rewind argument")
