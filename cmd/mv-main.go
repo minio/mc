@@ -77,7 +77,7 @@ var mvCmd = cli.Command{
 	Name:   "mv",
 	Usage:  "move objects",
 	Action: mainMove,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(mvFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

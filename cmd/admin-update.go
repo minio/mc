@@ -30,7 +30,7 @@ var adminServerUpdateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "update all MinIO servers",
 	Action: mainAdminServerUpdate,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

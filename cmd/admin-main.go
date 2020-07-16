@@ -34,6 +34,7 @@ var adminCmd = cli.Command{
 	Usage:           "manage MinIO servers",
 	Action:          mainAdmin,
 	HideHelpCommand: true,
+	Before:          setGlobalsFromContext,
 	Flags:           append(adminFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		adminServiceCmd,

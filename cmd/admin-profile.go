@@ -24,6 +24,7 @@ var adminProfileCmd = cli.Command{
 	Name:   "profile",
 	Usage:  "generate profile data for debugging purposes",
 	Action: mainAdminProfile,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminProfileStartCmd,

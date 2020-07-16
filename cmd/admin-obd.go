@@ -56,7 +56,7 @@ var adminOBDCmd = cli.Command{
 	Name:   "obd",
 	Usage:  "run on-board diagnostics",
 	Action: mainAdminOBD,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(adminOBDFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

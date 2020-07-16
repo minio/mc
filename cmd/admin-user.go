@@ -22,6 +22,7 @@ var adminUserCmd = cli.Command{
 	Name:   "user",
 	Usage:  "manage users",
 	Action: mainAdminUser,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminUserAddCmd,

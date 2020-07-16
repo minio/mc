@@ -30,7 +30,7 @@ import (
 var adminConfigImportCmd = cli.Command{
 	Name:   "import",
 	Usage:  "import multiple config keys from STDIN",
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Action: mainAdminConfigImport,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:

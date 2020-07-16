@@ -33,7 +33,7 @@ var adminPolicyAddCmd = cli.Command{
 	Name:   "add",
 	Usage:  "add new policy",
 	Action: mainAdminPolicyAdd,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

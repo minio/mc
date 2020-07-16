@@ -27,6 +27,7 @@ var configHostCmd = cli.Command{
 	Name:   "host",
 	Usage:  "add, remove and list hosts in configuration file",
 	Action: mainConfigHost,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		configHostAddCmd,

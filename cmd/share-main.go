@@ -34,6 +34,7 @@ var shareCmd = cli.Command{
 	Name:            "share",
 	Usage:           "generate URL for temporary access to an object",
 	Action:          mainShare,
+	Before:          setGlobalsFromContext,
 	Flags:           append(shareFlags, globalFlags...),
 	HideHelpCommand: true,
 	Subcommands: []cli.Command{

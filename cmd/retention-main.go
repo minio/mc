@@ -50,7 +50,7 @@ var retentionCmd = cli.Command{
 	Name:   "retention",
 	Usage:  "set retention for object(s)",
 	Action: mainRetention,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(rFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

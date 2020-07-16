@@ -117,7 +117,7 @@ var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "synchronize object(s) to a remote site",
 	Action: mainMirror,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(mirrorFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

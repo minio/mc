@@ -42,7 +42,7 @@ var shareUpload = cli.Command{
 	Name:   "upload",
 	Usage:  "generate `curl` command to upload objects without requiring access/secret keys",
 	Action: mainShareUpload,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(shareUploadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

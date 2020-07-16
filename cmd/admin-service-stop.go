@@ -28,7 +28,7 @@ var adminServiceStopCmd = cli.Command{
 	Name:   "stop",
 	Usage:  "stop MinIO server",
 	Action: mainAdminServiceStop,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

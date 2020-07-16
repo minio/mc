@@ -40,7 +40,7 @@ var statCmd = cli.Command{
 	Name:   "stat",
 	Usage:  "show object metadata",
 	Action: mainStat,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(statFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

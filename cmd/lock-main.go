@@ -43,7 +43,7 @@ var lockCmd = cli.Command{
 	Name:   "lock",
 	Usage:  "set and get object lock configuration",
 	Action: mainLock,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(lockFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

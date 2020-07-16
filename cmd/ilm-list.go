@@ -49,7 +49,7 @@ var ilmListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "pretty print bucket lifecycle configuration",
 	Action: mainILMList,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(ilmListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

@@ -78,7 +78,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "remove objects",
 	Action: mainRm,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(rmFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

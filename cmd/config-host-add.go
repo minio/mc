@@ -50,7 +50,7 @@ var configHostAddCmd = cli.Command{
 	ShortName:       "a",
 	Usage:           "add a new host to configuration file",
 	Action:          mainConfigHostAdd,
-	Before:          initBeforeRunningCmd,
+	Before:          setGlobalsFromContext,
 	Flags:           append(hostAddFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:

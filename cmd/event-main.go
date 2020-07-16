@@ -27,6 +27,7 @@ var eventCmd = cli.Command{
 	Usage:           "configure object notifications",
 	HideHelpCommand: true,
 	Action:          mainEvent,
+	Before:          setGlobalsFromContext,
 	Flags:           append(eventFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		eventAddCmd,

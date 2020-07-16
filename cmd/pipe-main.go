@@ -42,7 +42,7 @@ var pipeCmd = cli.Command{
 	Name:   "pipe",
 	Usage:  "stream STDIN to an object",
 	Action: mainPipe,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(pipeFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

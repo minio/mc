@@ -44,7 +44,7 @@ var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "display object contents",
 	Action: mainCat,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(catFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

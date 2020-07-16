@@ -38,7 +38,7 @@ var adminInfoCmd = cli.Command{
 	Name:   "info",
 	Usage:  "display MinIO server information",
 	Action: mainAdminInfo,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

@@ -24,6 +24,7 @@ var tagCmd = cli.Command{
 	Name:            "tag",
 	Usage:           "manage tags for bucket(s) and object(s)",
 	Action:          mainTag,
+	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	Subcommands: []cli.Command{

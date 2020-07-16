@@ -104,7 +104,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "copy objects",
 	Action: mainCopy,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(cpFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

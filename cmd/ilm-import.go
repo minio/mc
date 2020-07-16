@@ -31,7 +31,7 @@ var ilmImportCmd = cli.Command{
 	Name:   "import",
 	Usage:  "import lifecycle configuration in JSON format",
 	Action: mainILMImport,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

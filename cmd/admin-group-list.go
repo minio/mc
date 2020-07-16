@@ -27,7 +27,7 @@ var adminGroupListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "display list of groups",
 	Action: mainAdminGroupList,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

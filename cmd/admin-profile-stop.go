@@ -31,7 +31,7 @@ var adminProfileStopCmd = cli.Command{
 	Name:            "stop",
 	Usage:           "stop and download profile data",
 	Action:          mainAdminProfileStop,
-	Before:          initBeforeRunningCmd,
+	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
