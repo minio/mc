@@ -492,14 +492,16 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						cpURLs.TargetContent.LegalHoldEnabled = true
 					}
 				}
+
+				preserve := cli.Bool("preserve")
 				if cli.String("attr") != "" {
+					preserve = true
 					userMetaMap, _ := getMetaDataEntry(cli.String("attr"))
 					for metadataKey, metaDataVal := range userMetaMap {
 						cpURLs.TargetContent.UserMetadata[metadataKey] = metaDataVal
 					}
 				}
 
-				preserve := cli.Bool("preserve")
 				cpURLs.MD5 = cli.Bool("md5")
 				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
