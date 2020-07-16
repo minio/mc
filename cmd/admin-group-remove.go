@@ -28,7 +28,7 @@ var adminGroupRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove group or members from a group",
 	Action: mainAdminGroupRemove,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

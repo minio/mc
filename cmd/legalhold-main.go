@@ -41,7 +41,7 @@ var legalHoldCmd = cli.Command{
 	Name:   "legalhold",
 	Usage:  "set legal hold for object(s)",
 	Action: mainLegalHold,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(lhFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

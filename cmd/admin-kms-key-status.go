@@ -28,7 +28,7 @@ var adminKMSKeyStatusCmd = cli.Command{
 	Name:   "status",
 	Usage:  "request status information for a KMS master key",
 	Action: mainAdminKMSKeyStatus,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

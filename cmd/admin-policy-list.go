@@ -27,7 +27,7 @@ var adminPolicyListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "list all policies",
 	Action: mainAdminPolicyList,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

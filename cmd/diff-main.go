@@ -38,7 +38,7 @@ var diffCmd = cli.Command{
 	Name:   "diff",
 	Usage:  "list differences in object name, size, and date between two buckets",
 	Action: mainDiff,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

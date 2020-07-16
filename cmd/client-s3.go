@@ -883,7 +883,7 @@ func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress
 	destOpts.UserMetadata = metadata
 
 	var e error
-	if disableMultipart {
+	if disableMultipart || size < 64*1024*1024 {
 		_, e = c.api.CopyObject(ctx, destOpts, srcOpts)
 	} else {
 		_, e = c.api.ComposeObject(ctx, destOpts, srcOpts)

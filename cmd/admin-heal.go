@@ -67,7 +67,7 @@ var adminHealCmd = cli.Command{
 	Name:            "heal",
 	Usage:           "heal disks, buckets and objects on MinIO server",
 	Action:          mainAdminHeal,
-	Before:          initBeforeRunningCmd,
+	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:

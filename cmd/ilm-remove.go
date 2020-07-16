@@ -45,7 +45,7 @@ var ilmRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove (if any) existing lifecycle configuration rule with the id",
 	Action: mainILMRemove,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(ilmRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

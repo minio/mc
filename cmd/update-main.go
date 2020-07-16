@@ -42,7 +42,6 @@ import (
 var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "update mc to latest release",
-	Before: func(*cli.Context) error { return nil },
 	Action: mainUpdate,
 	Flags: []cli.Flag{
 		cli.BoolFlag{

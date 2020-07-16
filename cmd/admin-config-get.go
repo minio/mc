@@ -27,7 +27,7 @@ import (
 var adminConfigGetCmd = cli.Command{
 	Name:   "get",
 	Usage:  "interactively retrieve a config key parameters",
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Action: mainAdminConfigGet,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:

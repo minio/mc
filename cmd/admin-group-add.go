@@ -32,7 +32,7 @@ var adminGroupAddCmd = cli.Command{
 	Name:   "add",
 	Usage:  "add users to a new or existing group",
 	Action: mainAdminGroupAdd,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

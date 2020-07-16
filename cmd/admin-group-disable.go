@@ -24,7 +24,7 @@ var adminGroupDisableCmd = cli.Command{
 	Name:   "disable",
 	Usage:  "Disable a group",
 	Action: mainAdminGroupEnableDisable,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

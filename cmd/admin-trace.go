@@ -53,7 +53,7 @@ var adminTraceCmd = cli.Command{
 	Name:            "trace",
 	Usage:           "show http trace for MinIO server",
 	Action:          mainAdminTrace,
-	Before:          initBeforeRunningCmd,
+	Before:          setGlobalsFromContext,
 	Flags:           append(adminTraceFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:

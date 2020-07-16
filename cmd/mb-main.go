@@ -49,7 +49,7 @@ var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "make a bucket",
 	Action: mainMakeBucket,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

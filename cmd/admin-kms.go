@@ -22,6 +22,7 @@ var adminKMSCmd = cli.Command{
 	Name:   "kms",
 	Usage:  "perform KMS management operations",
 	Action: mainAdminKMS,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminKMSKeyCmd,

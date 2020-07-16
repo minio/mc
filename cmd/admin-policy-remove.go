@@ -27,7 +27,7 @@ var adminPolicyRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove policy",
 	Action: mainAdminPolicyRemove,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

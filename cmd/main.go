@@ -255,6 +255,30 @@ func installAutoCompletion() {
 	}
 }
 
+func registerBefore(ctx *cli.Context) error {
+	if ctx.IsSet("config-dir") {
+		// Set the config directory.
+		setMcConfigDir(ctx.String("config-dir"))
+	} else if ctx.GlobalIsSet("config-dir") {
+		// Set the config directory.
+		setMcConfigDir(ctx.GlobalString("config-dir"))
+	}
+
+	// Set global flags.
+	setGlobalsFromContext(ctx)
+
+	// Migrate any old version of config / state files to newer format.
+	migrate()
+
+	// Initialize default config files.
+	initMC()
+
+	// Check if config can be read.
+	checkConfig()
+
+	return nil
+}
+
 // findClosestCommands to match a given string with commands trie tree.
 func findClosestCommands(command string) []string {
 	var closestCommands []string
@@ -292,26 +316,6 @@ func checkUpdate(ctx *cli.Context) {
 			})
 		}
 	}
-}
-
-// All the routines that need to be done before running any mc command
-func initBeforeRunningCmd(ctx *cli.Context) error {
-	// Set global variables from the context
-	setGlobalsFromContext(ctx)
-
-	// Set the config directory.
-	setMcConfigDir(ctx.GlobalString("config-dir"))
-
-	// Migrate any old version of config / state files to newer format.
-	migrate()
-
-	// Initialize default config files.
-	initMC()
-
-	// Check if config can be read.
-	checkConfig()
-
-	return nil
 }
 
 var appCmds = []cli.Command{
@@ -373,6 +377,7 @@ func registerApp(name string) *cli.App {
 		return exitStatus(globalErrorExitStatus)
 	}
 
+	app.Before = registerBefore
 	app.ExtraInfo = func() map[string]string {
 		if globalDebug {
 			return getSystemData()

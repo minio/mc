@@ -46,7 +46,7 @@ var headCmd = cli.Command{
 	Name:   "head",
 	Usage:  "display first 'n' lines of an object",
 	Action: mainHead,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(append(headFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

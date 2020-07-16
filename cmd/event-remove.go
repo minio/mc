@@ -54,7 +54,7 @@ var eventRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove a bucket notification; '--force' removes all bucket notifications",
 	Action: mainEventRemove,
-	Before: initBeforeRunningCmd,
+	Before: setGlobalsFromContext,
 	Flags:  append(eventRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

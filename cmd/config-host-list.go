@@ -30,7 +30,7 @@ var configHostListCmd = cli.Command{
 	ShortName:       "ls",
 	Usage:           "list hosts in configuration file",
 	Action:          mainConfigHostList,
-	Before:          initBeforeRunningCmd,
+	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:

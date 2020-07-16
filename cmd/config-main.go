@@ -37,6 +37,7 @@ var configCmd = cli.Command{
 	Name:            "config",
 	Usage:           "configure MinIO client",
 	Action:          mainConfig,
+	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,
 	Flags:           append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{
