@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20200714163805-778e9c864f67
-	github.com/minio/minio-go/v7 v7.0.0-20200714085548-47e386e2cde8
+	github.com/minio/minio-go/v7 v7.0.0-20200717002236-16b4b137ee4b
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

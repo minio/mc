@@ -33,13 +33,13 @@ import (
 	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
 
-	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/disk"
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 // filesystem client
@@ -1114,15 +1114,15 @@ func (f *fsClient) DeleteTags(ctx context.Context) *probe.Error {
 }
 
 // Get lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration, *probe.Error) {
-	return ilm.LifecycleConfiguration{}, probe.NewError(APINotImplemented{
+func (f *fsClient) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{
 		API:     "GetLifecycle",
 		APIType: "filesystem",
 	})
 }
 
 // Set lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) SetLifecycle(ctx context.Context, _ ilm.LifecycleConfiguration) *probe.Error {
+func (f *fsClient) SetLifecycle(ctx context.Context, _ *lifecycle.Configuration) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetLifecycle",
 		APIType: "filesystem",

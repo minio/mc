@@ -23,17 +23,18 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 // Extracts the tags provided by user. The tagfilter array will be put in lifecycleRule structure.
-func extractILMTags(tagLabelVal string) []LifecycleTag {
-	var ilmTagKVList []LifecycleTag
+func extractILMTags(tagLabelVal string) []lifecycle.Tag {
+	var ilmTagKVList []lifecycle.Tag
 	for _, tag := range strings.Split(tagLabelVal, tagSeperator) {
 		if tag == "" {
 			// split returns empty for empty tagLabelVal, skip it.
 			continue
 		}
-		lfcTag := LifecycleTag{}
+		lfcTag := lifecycle.Tag{}
 		kvs := strings.SplitN(tag, keyValSeperator, 2)
 		if len(kvs) == 2 {
 			lfcTag.Key = kvs[0]
@@ -49,41 +50,40 @@ func extractILMTags(tagLabelVal string) []LifecycleTag {
 // Some of these rules are enforced by Amazon S3 standards.
 // For example: Transition has to happen before Expiry.
 // Storage class must be specified if transition date/days is provided.
-func validateTranExpDate(rule LifecycleRule) error {
-	expirySet := (rule.Expiration != nil)
-	expiryDateSet := expirySet && rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()
-	expiryDaySet := expirySet && rule.Expiration.ExpirationInDays > 0
+func validateTranExpDate(rule lifecycle.Rule) error {
+	expiryDateSet := rule.Expiration.IsDateNull()
+	expiryDaySet := rule.Expiration.IsDaysNull()
 
-	transitionSet := (rule.Transition != nil)
-	transitionDateSet := transitionSet && (rule.Transition.TransitionDate != nil && !rule.Transition.TransitionDate.IsZero())
-	transitionDaySet := transitionSet && (rule.Transition.TransitionInDays > 0)
+	transitionSet := !rule.Transition.IsNull()
+	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
+	transitionDaySet := transitionSet && !rule.Transition.IsDaysNull()
 	errMsg := "Error in Transition/Expiration Date/days compatibility. Transition should happen before Expiration"
 	if transitionDateSet && expiryDateSet {
-		if rule.Expiration.ExpirationDate.Before(*(rule.Transition.TransitionDate)) {
+		if rule.Expiration.Date.Before(rule.Transition.Date.Time) {
 			return errors.New(errMsg)
 		}
 	}
 	if transitionDaySet && expiryDaySet {
-		if rule.Transition.TransitionInDays >= rule.Expiration.ExpirationInDays {
+		if rule.Transition.Days >= rule.Expiration.Days {
 			return errors.New(errMsg)
 		}
 	}
 	return nil
 }
 
-func validateTranDays(rule LifecycleRule) error {
-	transitionSet := (rule.Transition != nil)
-	transitionDaySet := transitionSet && (rule.Transition.TransitionInDays > 0)
-	if transitionDaySet && rule.Transition.TransitionInDays < 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
+func validateTranDays(rule lifecycle.Rule) error {
+	transitionSet := !rule.Transition.IsNull()
+	transitionDaySet := transitionSet && !rule.Transition.IsDaysNull()
+	if transitionDaySet && rule.Transition.Days < 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
 		return errors.New("Transition Date/Days are less than or equal to 30 when Storage class is STANDARD_IA")
 	}
 	return nil
 }
 
 // Amazon S3 requires a minimum of one action for a rule to be added.
-func validateRuleAction(rule LifecycleRule) error {
-	expirySet := (rule.Expiration != nil)
-	transitionSet := (rule.Transition != nil)
+func validateRuleAction(rule lifecycle.Rule) error {
+	expirySet := !rule.Expiration.IsNull()
+	transitionSet := !rule.Transition.IsNull()
 	if !expirySet && !transitionSet {
 		errMsg := "At least one action (Expiry or Transition) needs to be specified in a rule."
 		return errors.New(errMsg)
@@ -92,28 +92,28 @@ func validateRuleAction(rule LifecycleRule) error {
 }
 
 // Check if any date is before than cur date
-func validateTranExpCurdate(rule LifecycleRule) error {
-	var err error
-	expirySet := (rule.Expiration != nil)
-	transitionSet := (rule.Transition != nil)
-	transitionDateSet := transitionSet && (rule.Transition.TransitionDate != nil && !rule.Transition.TransitionDate.IsZero())
-	expiryDateSet := expirySet && rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()
+func validateTranExpCurdate(rule lifecycle.Rule) error {
+	var e error
+	expirySet := !rule.Expiration.IsNull()
+	transitionSet := !rule.Transition.IsNull()
+	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
+	expiryDateSet := expirySet && !rule.Expiration.IsDateNull()
 	currentTime := time.Now()
 	curTimeStr := currentTime.Format(defaultILMDateFormat)
-	currentTime, err = time.Parse(defaultILMDateFormat, curTimeStr)
-	if err != nil {
-		return err
+	currentTime, e = time.Parse(defaultILMDateFormat, curTimeStr)
+	if e != nil {
+		return e
 	}
-	if expirySet && expiryDateSet && rule.Expiration.ExpirationDate.Before(currentTime) {
-		err = errors.New("Expiry date falls before or on today's date")
-	} else if transitionSet && transitionDateSet && rule.Transition.TransitionDate.Before(currentTime) {
-		err = errors.New("Transition date falls before or on today's date")
+	if expirySet && expiryDateSet && rule.Expiration.Date.Before(currentTime) {
+		e = errors.New("Expiry date falls before or on today's date")
+	} else if transitionSet && transitionDateSet && rule.Transition.Date.Before(currentTime) {
+		e = errors.New("Transition date falls before or on today's date")
 	}
-	return err
+	return e
 }
 
 // Check S3 compatibility for the new rule and some other basic checks.
-func validateILMRule(rule LifecycleRule) *probe.Error {
+func validateILMRule(rule lifecycle.Rule) *probe.Error {
 	if e := validateRuleAction(rule); e != nil {
 		return probe.NewError(e)
 	}
@@ -130,23 +130,23 @@ func validateILMRule(rule LifecycleRule) *probe.Error {
 }
 
 // Returns valid lifecycleTransition to be included in lifecycleRule
-func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (transition LifecycleTransition, err *probe.Error) {
+func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (transition lifecycle.Transition, err *probe.Error) {
 	storageClass = strings.ToUpper(storageClass) // Just-in-case the user has entered lower case characters.
 	if storageClass != "" {
 		if transitionDateStr != "" {
 			transitionDate, e := time.Parse(defaultILMDateFormat, transitionDateStr)
 			if e != nil {
-				return LifecycleTransition{}, probe.NewError(e)
+				return lifecycle.Transition{}, probe.NewError(e)
 			}
-			transition.TransitionDate = &transitionDate
+			transition.Date = lifecycle.ExpirationDate{Time: transitionDate}
 		} else if transitionDayStr != "" {
 			transitionDay, e := strconv.Atoi(transitionDayStr)
 			if e != nil {
-				return LifecycleTransition{}, probe.NewError(e)
+				return lifecycle.Transition{}, probe.NewError(e)
 			}
-			transition.TransitionInDays = transitionDay
+			transition.Days = lifecycle.ExpirationDays(transitionDay)
 		} else {
-			return LifecycleTransition{}, probe.NewError(errors.New("if storage class is set a valid transitionDate or transitionDay must be set"))
+			return lifecycle.Transition{}, probe.NewError(errors.New("if storage class is set a valid transitionDate or transitionDay must be set"))
 		}
 		transition.StorageClass = storageClass
 	}
@@ -155,16 +155,16 @@ func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (
 }
 
 // Returns lifecycleExpiration to be included in lifecycleRule
-func parseExpiry(expiryDateStr, expiryDayStr string) (lfcExp LifecycleExpiration, err *probe.Error) {
+func parseExpiry(expiryDateStr, expiryDayStr string) (lfcExp lifecycle.Expiration, err *probe.Error) {
 	if expiryDateStr != "" {
 		date, e := time.Parse(defaultILMDateFormat, expiryDateStr)
 		if e != nil {
-			return LifecycleExpiration{}, probe.NewError(e)
+			return lifecycle.Expiration{}, probe.NewError(e)
 		}
 		if date.IsZero() {
-			return LifecycleExpiration{}, probe.NewError(errors.New("expiration date cannot be set to zero"))
+			return lifecycle.Expiration{}, probe.NewError(errors.New("expiration date cannot be set to zero"))
 		}
-		lfcExp.ExpirationDate = &date
+		lfcExp.Date = lifecycle.ExpirationDate{Time: date}
 	}
 
 	if expiryDayStr != "" {
@@ -173,9 +173,9 @@ func parseExpiry(expiryDateStr, expiryDayStr string) (lfcExp LifecycleExpiration
 			return lfcExp, probe.NewError(e)
 		}
 		if days == 0 {
-			return LifecycleExpiration{}, probe.NewError(errors.New("expiration days cannot be set to zero"))
+			return lifecycle.Expiration{}, probe.NewError(errors.New("expiration days cannot be set to zero"))
 		}
-		lfcExp.ExpirationInDays = days
+		lfcExp.Days = lifecycle.ExpirationDays(days)
 	}
 
 	return lfcExp, nil

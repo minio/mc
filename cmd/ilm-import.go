@@ -21,9 +21,9 @@ import (
 	"os"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -67,15 +67,17 @@ func (i ilmImportMessage) JSON() string {
 }
 
 // readILMConfig read from stdin, returns XML.
-func readILMConfig() (ilm.LifecycleConfiguration, *probe.Error) {
+func readILMConfig() (*lifecycle.Configuration, *probe.Error) {
 	// User is expected to enter the lifecycleConfiguration instance contents in JSON format
-	var ilmCfg ilm.LifecycleConfiguration
+	var cfg = lifecycle.NewConfiguration()
+
 	// Consume json from STDIN
 	dec := json.NewDecoder(os.Stdin)
-	if e := dec.Decode(&ilmCfg); e != nil {
-		return ilmCfg, probe.NewError(e)
+	if e := dec.Decode(cfg); e != nil {
+		return cfg, probe.NewError(e)
 	}
-	return ilmCfg, nil
+
+	return cfg, nil
 }
 
 // checkILMImportSyntax - validate arguments passed by user

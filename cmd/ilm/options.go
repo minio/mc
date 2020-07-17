@@ -23,6 +23,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 const defaultILMDateFormat string = "2006-01-02"
@@ -73,7 +74,10 @@ func getRightAligned(label string, maxLen int) string {
 }
 
 // RemoveILMRule - Remove the ILM rule (with ilmID) from the configuration in XML that is provided.
-func RemoveILMRule(lfcCfg LifecycleConfiguration, ilmID string) (LifecycleConfiguration, *probe.Error) {
+func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Configuration, *probe.Error) {
+	if lfcCfg == nil {
+		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
+	}
 	if len(lfcCfg.Rules) == 0 {
 		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
 	}
@@ -105,69 +109,60 @@ type lifecycleOptions struct {
 	StorageClass   string
 }
 
-func (opts lifecycleOptions) ToConfig(lfcCfg LifecycleConfiguration) (LifecycleConfiguration, *probe.Error) {
-	ilmExpiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays)
+func (opts lifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
+	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays)
 	if err != nil {
-		return lfcCfg, err.Trace(opts.ExpiryDate, opts.ExpiryDays)
+		return nil, err.Trace(opts.ExpiryDate, opts.ExpiryDays)
 	}
 
-	ilmTransition, err := parseTransition(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
+	transition, err := parseTransition(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
 	if err != nil {
-		return lfcCfg, err.Trace(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
+		return nil, err.Trace(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
 	}
 
-	andVal := LifecycleAndOperator{
+	andVal := lifecycle.And{
 		Tags: extractILMTags(opts.Tags),
 	}
 
-	filter := LifecycleRuleFilter{Prefix: opts.Prefix}
+	filter := lifecycle.Filter{Prefix: opts.Prefix}
 	if len(andVal.Tags) > 0 {
-		filter.And = &andVal
+		filter.And = andVal
 		filter.And.Prefix = opts.Prefix
 		filter.Prefix = ""
 	}
 
-	var expP *LifecycleExpiration
-	var transP *LifecycleTransition
-	if ilmTransition.IsSet() {
-		transP = &ilmTransition
-	}
-	if ilmExpiry.IsSet() {
-		expP = &ilmExpiry
-	}
-
-	newRule := LifecycleRule{
+	newRule := lifecycle.Rule{
 		ID:         opts.ID,
-		RuleFilter: &filter,
+		RuleFilter: filter,
 		Status: func() string {
 			if opts.Status {
 				return "Enabled"
 			}
 			return "Disabled"
 		}(),
-		Expiration: expP,
-		Transition: transP,
+		Expiration: expiry,
+		Transition: transition,
 	}
 
 	if err := validateILMRule(newRule); err != nil {
-		return lfcCfg, err.Trace(opts.ID)
+		return nil, err.Trace(opts.ID)
 	}
 
 	ruleFound := false
-	for i, rule := range lfcCfg.Rules {
+	for i, rule := range config.Rules {
 		if rule.ID != newRule.ID {
 			continue
 		}
-		lfcCfg.Rules[i] = newRule
+		config.Rules[i] = newRule
 		ruleFound = true
 		break
 	}
 
 	if !ruleFound {
-		lfcCfg.Rules = append(lfcCfg.Rules, newRule)
+		config.Rules = append(config.Rules, newRule)
 	}
 
-	return lfcCfg, nil
+	return config, nil
 }
 
 func getLifecycleOptions(ctx *cli.Context) lifecycleOptions {
@@ -186,7 +181,7 @@ func getLifecycleOptions(ctx *cli.Context) lifecycleOptions {
 
 // ApplyNewILMConfig apply new lifecycle rules to existing lifecycle configuration, this
 // function returns modified/overwritten rules if any.
-func ApplyNewILMConfig(ctx *cli.Context, lfcCfg LifecycleConfiguration) (LifecycleConfiguration, *probe.Error) {
+func ApplyNewILMConfig(ctx *cli.Context, config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
 	opts := getLifecycleOptions(ctx)
-	return opts.ToConfig(lfcCfg)
+	return opts.ToConfig(config)
 }

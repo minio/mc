@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -37,12 +36,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/policy"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/tags"
@@ -246,18 +246,18 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 		return probe.NewError(e)
 	}
 
-	accountArn := minio.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
-	nc := minio.NewNotificationConfig(accountArn)
+	accountArn := notification.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
+	nc := notification.NewConfig(accountArn)
 
 	// Configure events
 	for _, event := range events {
 		switch event {
 		case "put":
-			nc.AddEvents(minio.ObjectCreatedAll)
+			nc.AddEvents(notification.ObjectCreatedAll)
 		case "delete":
-			nc.AddEvents(minio.ObjectRemovedAll)
+			nc.AddEvents(notification.ObjectRemovedAll)
 		case "get":
-			nc.AddEvents(minio.ObjectAccessedAll)
+			nc.AddEvents(notification.ObjectAccessedAll)
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -316,22 +316,22 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 	if len(fields) != 6 {
 		return errInvalidArgument().Trace(fields...)
 	}
-	accountArn := minio.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
+	accountArn := notification.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
 
 	// if we are passed filters for either events, suffix or prefix, then only delete the single event that matches
 	// the arguments
 	if event != "" || suffix != "" || prefix != "" {
 		// Translate events to type events for comparison
 		events := strings.Split(event, ",")
-		var eventsTyped []minio.NotificationEventType
+		var eventsTyped []notification.EventType
 		for _, e := range events {
 			switch e {
 			case "put":
-				eventsTyped = append(eventsTyped, minio.ObjectCreatedAll)
+				eventsTyped = append(eventsTyped, notification.ObjectCreatedAll)
 			case "delete":
-				eventsTyped = append(eventsTyped, minio.ObjectRemovedAll)
+				eventsTyped = append(eventsTyped, notification.ObjectRemovedAll)
 			case "get":
-				eventsTyped = append(eventsTyped, minio.ObjectAccessedAll)
+				eventsTyped = append(eventsTyped, notification.ObjectAccessedAll)
 			default:
 				return errInvalidArgument().Trace(events...)
 			}
@@ -392,7 +392,7 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 	}
 
 	// Generate pretty event names from event types
-	prettyEventNames := func(eventsTypes []minio.NotificationEventType) []string {
+	prettyEventNames := func(eventsTypes []notification.EventType) []string {
 		var result []string
 		for _, eventType := range eventsTypes {
 			result = append(result, string(eventType))
@@ -400,7 +400,7 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 		return result
 	}
 
-	getFilters := func(config minio.NotificationConfig) (prefix, suffix string) {
+	getFilters := func(config notification.Config) (prefix, suffix string) {
 		if config.Filter == nil {
 			return
 		}
@@ -420,7 +420,7 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 		if arn != "" && config.Topic != arn {
 			continue
 		}
-		prefix, suffix := getFilters(config.NotificationConfig)
+		prefix, suffix := getFilters(config.Config)
 		configs = append(configs, NotificationConfig{ID: config.ID,
 			Arn:    config.Topic,
 			Events: prettyEventNames(config.Events),
@@ -432,7 +432,7 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 		if arn != "" && config.Queue != arn {
 			continue
 		}
-		prefix, suffix := getFilters(config.NotificationConfig)
+		prefix, suffix := getFilters(config.Config)
 		configs = append(configs, NotificationConfig{ID: config.ID,
 			Arn:    config.Queue,
 			Events: prettyEventNames(config.Events),
@@ -444,7 +444,7 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 		if arn != "" && config.Lambda != arn {
 			continue
 		}
-		prefix, suffix := getFilters(config.NotificationConfig)
+		prefix, suffix := getFilters(config.Config)
 		configs = append(configs, NotificationConfig{ID: config.ID,
 			Arn:    config.Lambda,
 			Events: prettyEventNames(config.Events),
@@ -626,7 +626,7 @@ func (c *S3Client) Select(ctx context.Context, expression string, sse encrypt.Se
 	return reader, nil
 }
 
-func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []EventInfo {
+func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo {
 	var eventsInfo = make([]EventInfo, len(ninfo.Records))
 	for i, record := range ninfo.Records {
 		bucketName := record.S3.Bucket.Name
@@ -700,7 +700,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []Even
 				Port:         record.Source.Port,
 				UserAgent:    record.Source.UserAgent,
 			}
-		} else if record.EventName == minio.ObjectAccessedGet {
+		} else if record.EventName == notification.ObjectAccessedGet {
 			eventsInfo[i] = EventInfo{
 				Time:         record.EventTime,
 				Size:         record.S3.Object.Size,
@@ -711,7 +711,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo minio.NotificationInfo) []Even
 				Port:         record.Source.Port,
 				UserAgent:    record.Source.UserAgent,
 			}
-		} else if record.EventName == minio.ObjectAccessedHead {
+		} else if record.EventName == notification.ObjectAccessedHead {
 			eventsInfo[i] = EventInfo{
 				Time:         record.EventTime,
 				Size:         record.S3.Object.Size,
@@ -737,11 +737,11 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 	for _, event := range options.Events {
 		switch event {
 		case "put":
-			events = append(events, string(minio.ObjectCreatedAll))
+			events = append(events, string(notification.ObjectCreatedAll))
 		case "delete":
-			events = append(events, string(minio.ObjectRemovedAll))
+			events = append(events, string(notification.ObjectRemovedAll))
 		case "get":
-			events = append(events, string(minio.ObjectAccessedAll))
+			events = append(events, string(notification.ObjectAccessedAll))
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -2199,12 +2199,12 @@ func (c *S3Client) GetTags(ctx context.Context) (map[string]string, *probe.Error
 		return tags.ToMap(), nil
 	}
 
-	tagMap, err := c.api.GetObjectTagging(ctx, bucketName, objectName, minio.GetObjectTaggingOptions{})
+	tags, err := c.api.GetObjectTagging(ctx, bucketName, objectName, minio.GetObjectTaggingOptions{})
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
 
-	return tagMap, nil
+	return tags.ToMap(), nil
 }
 
 // SetTags - Set tags of bucket or object.
@@ -2222,7 +2222,7 @@ func (c *S3Client) SetTags(ctx context.Context, tagString string) *probe.Error {
 	if objectName == "" {
 		err = c.api.SetBucketTagging(ctx, bucketName, tags)
 	} else {
-		err = c.api.PutObjectTagging(ctx, bucketName, objectName, tags.ToMap(), minio.PutObjectTaggingOptions{})
+		err = c.api.PutObjectTagging(ctx, bucketName, objectName, tags, minio.PutObjectTaggingOptions{})
 	}
 
 	if err != nil {
@@ -2241,7 +2241,7 @@ func (c *S3Client) DeleteTags(ctx context.Context) *probe.Error {
 
 	var err error
 	if objectName == "" {
-		err = c.api.DeleteBucketTagging(ctx, bucketName)
+		err = c.api.RemoveBucketTagging(ctx, bucketName)
 	} else {
 		err = c.api.RemoveObjectTagging(ctx, bucketName, objectName, minio.RemoveObjectTaggingOptions{})
 	}
@@ -2254,42 +2254,28 @@ func (c *S3Client) DeleteTags(ctx context.Context) *probe.Error {
 }
 
 // GetLifecycle - Get current lifecycle configuration.
-func (c *S3Client) GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration, *probe.Error) {
+func (c *S3Client) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
-		return ilm.LifecycleConfiguration{}, probe.NewError(BucketNameEmpty{})
+		return nil, probe.NewError(BucketNameEmpty{})
 	}
 
-	lifecycleXML, e := c.api.GetBucketLifecycle(ctx, bucket)
+	config, e := c.api.GetBucketLifecycle(ctx, bucket)
 	if e != nil {
-		return ilm.LifecycleConfiguration{}, probe.NewError(e)
+		return nil, probe.NewError(e)
 	}
 
-	lfcCfg := ilm.LifecycleConfiguration{}
-	if e = xml.Unmarshal([]byte(lifecycleXML), &lfcCfg); e != nil && e != io.EOF {
-		return lfcCfg, probe.NewError(e)
-	}
-
-	return lfcCfg, nil
+	return config, nil
 }
 
 // SetLifecycle - Set lifecycle configuration on a bucket
-func (c *S3Client) SetLifecycle(ctx context.Context, ilmCfg ilm.LifecycleConfiguration) *probe.Error {
+func (c *S3Client) SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
 
-	var lifecycleXML []byte
-	if len(ilmCfg.Rules) != 0 {
-		var e error
-		lifecycleXML, e = xml.Marshal(ilmCfg)
-		if e != nil {
-			return probe.NewError(e)
-		}
-	}
-
-	if e := c.api.SetBucketLifecycle(ctx, bucket, string(lifecycleXML)); e != nil {
+	if e := c.api.SetBucketLifecycle(ctx, bucket, config); e != nil {
 		return probe.NewError(e)
 	}
 

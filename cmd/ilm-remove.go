@@ -56,7 +56,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 DESCRIPTION:
   Remove a lifecycle configuration rule for the bucket by ID, optionally you can remove
   all the lifecycle rules on a bucket with '--all --force' option.
@@ -65,7 +64,7 @@ EXAMPLES:
   1. Remove the lifecycle management configuration rule given by ID "Documents" for testbucket on alias 'myminio'. ID is case sensitive.
      {{.Prompt}} {{.HelpName}} --id "Documents" myminio/testbucket
 
-  2. Remove ALL the lifecycle management configuration rules for testbucket on alias 'myminio'. 
+  2. Remove ALL the lifecycle management configuration rules for testbucket on alias 'myminio'.
      Because the result is complete removal, the use of --force flag is enforced.
      {{.Prompt}} {{.HelpName}} --all --force myminio/testbucket
 `,

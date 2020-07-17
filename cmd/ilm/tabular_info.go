@@ -18,6 +18,8 @@ package ilm
 
 import (
 	"strconv"
+
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 const (
@@ -100,7 +102,7 @@ type showDetails struct {
 
 // PopulateILMDataForDisplay based on showDetails determined by user input, populate the ILM display
 // table with information. Table is constructed row-by-row. Headers are first, then the rest of the rows.
-func PopulateILMDataForDisplay(ilmCfg LifecycleConfiguration, rowCheck *map[string]int, alignedHdrLabels *[]string,
+func PopulateILMDataForDisplay(ilmCfg *lifecycle.Configuration, rowCheck *map[string]int, alignedHdrLabels *[]string,
 	cellDataNoTags *[][]string, cellDataWithTags *[][]string, tagRows *map[string][]string,
 	showAll, showMin, showExpiry, showTransition bool) {
 
@@ -201,18 +203,16 @@ func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts s
 }
 
 // The right kind of tick is returned. Cross-tick if expiry is not set.
-func getExpiryTick(rule LifecycleRule) string {
+func getExpiryTick(rule lifecycle.Rule) string {
 	expiryTick := crossTickCell
-	expiryDateSet := rule.Expiration != nil && rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()
-	expirySet := rule.Expiration != nil && (expiryDateSet || rule.Expiration.ExpirationInDays > 0)
-	if expirySet {
+	if !rule.Expiration.IsNull() {
 		expiryTick = tickCell
 	}
 	return expiryTick
 }
 
 // The right kind of tick is returned. Cross-tick if status is 'Disabled' & tick if status is 'Enabled'.
-func getStatusTick(rule LifecycleRule) string {
+func getStatusTick(rule lifecycle.Rule) string {
 	statusTick := crossTickCell
 	if rule.Status == statusLabelKey {
 		statusTick = tickCell
@@ -221,26 +221,22 @@ func getStatusTick(rule LifecycleRule) string {
 }
 
 // Expiry date. 'YYYY-MM-DD'. Set for 00:00:00 GMT as per the standard.
-func getExpiryDateVal(rule LifecycleRule) string {
+func getExpiryDateVal(rule lifecycle.Rule) string {
 	expiryDate := blankCell
-	expirySet := (rule.Expiration != nil)
-	expiryDateSet := expirySet && rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()
-	if expiryDateSet {
-		expiryDate = strconv.Itoa(rule.Expiration.ExpirationDate.Day()) + " " +
-			rule.Expiration.ExpirationDate.Month().String()[0:3] + " " +
-			strconv.Itoa(rule.Expiration.ExpirationDate.Year())
-	} else if expirySet && rule.Expiration.ExpirationInDays > 0 {
-		expiryDate = strconv.Itoa(rule.Expiration.ExpirationInDays) + " day(s)"
+	if !rule.Expiration.IsDateNull() {
+		expiryDate = strconv.Itoa(rule.Expiration.Date.Day()) + " " +
+			rule.Expiration.Date.Month().String()[0:3] + " " +
+			strconv.Itoa(rule.Expiration.Date.Year())
+	} else if !rule.Expiration.IsDateNull() {
+		expiryDate = strconv.Itoa(int(rule.Expiration.Days)) + " day(s)"
 	}
 	return expiryDate
 }
 
 // Cross-tick if Transition is not set.
-func getTransitionTick(rule LifecycleRule) string {
-	transitionSet := rule.Transition != nil
-	transitionDateSet := transitionSet && ((rule.Transition.TransitionDate != nil &&
-		!rule.Transition.TransitionDate.IsZero()) ||
-		rule.Transition.TransitionInDays > 0)
+func getTransitionTick(rule lifecycle.Rule) string {
+	transitionSet := !rule.Transition.IsNull()
+	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
 	if !transitionSet || !transitionDateSet {
 		return crossTickCell
 	}
@@ -248,26 +244,25 @@ func getTransitionTick(rule LifecycleRule) string {
 }
 
 // Transition date. 'YYYY-MM-DD'. Set for 00:00:00 GMT as per the standard.
-func getTransitionDate(rule LifecycleRule) string {
+func getTransitionDate(rule lifecycle.Rule) string {
 	transitionDate := blankCell
-	transitionSet := (rule.Transition != nil)
-	transitionDateSet := transitionSet && (rule.Transition.TransitionDate != nil &&
-		!rule.Transition.TransitionDate.IsZero())
-	transitionDaySet := transitionSet && (rule.Transition.TransitionInDays > 0)
+	transitionSet := !rule.Transition.IsNull()
+	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
+	transitionDaySet := transitionSet && !rule.Transition.IsDaysNull()
 	if transitionDateSet {
-		transitionDate = strconv.Itoa(rule.Transition.TransitionDate.Day()) + " " +
-			rule.Transition.TransitionDate.Month().String()[0:3] + " " +
-			strconv.Itoa(rule.Transition.TransitionDate.Year())
+		transitionDate = strconv.Itoa(rule.Transition.Date.Day()) + " " +
+			rule.Transition.Date.Month().String()[0:3] + " " +
+			strconv.Itoa(rule.Transition.Date.Year())
 	} else if transitionDaySet {
-		transitionDate = strconv.Itoa(rule.Transition.TransitionInDays) + " day(s)"
+		transitionDate = strconv.Itoa(int(rule.Transition.Days)) + " day(s)"
 	}
 	return transitionDate
 }
 
 // Storage class name for transition.
-func getStorageClassName(rule LifecycleRule) string {
+func getStorageClassName(rule lifecycle.Rule) string {
 	storageClass := blankCell
-	transitionSet := (rule.Transition != nil)
+	transitionSet := !rule.Transition.IsNull()
 	storageClassAvail := transitionSet && (rule.Transition.StorageClass != "")
 	if storageClassAvail {
 		storageClass = rule.Transition.StorageClass
@@ -276,13 +271,12 @@ func getStorageClassName(rule LifecycleRule) string {
 }
 
 // Array of Tag strings, each in key:value format
-func getTagArr(rule LifecycleRule) []string {
-	tagArr := rule.TagFilters
-	tagLth := len(rule.TagFilters)
-	if len(rule.TagFilters) == 0 && rule.RuleFilter != nil && rule.RuleFilter.And != nil {
-		tagLth = len(rule.RuleFilter.And.Tags)
-		tagArr = rule.RuleFilter.And.Tags
+func getTagArr(rule lifecycle.Rule) []string {
+	if rule.RuleFilter.And.IsEmpty() {
+		return []string{}
 	}
+	tagArr := rule.RuleFilter.And.Tags
+	tagLth := len(tagArr)
 	tagCellArr := make([]string, len(tagArr))
 	for tagIdx := 0; tagIdx < tagLth; tagIdx++ {
 		tagCellArr[tagIdx] = (tagArr[tagIdx].Key + ":" + tagArr[tagIdx].Value)
@@ -311,22 +305,20 @@ func checkAddTableCell(rowArr *[]string, rowCheck map[string]int, cellInfo table
 }
 
 // GetILMShowDataWithoutTags - Without tags
-func getILMShowDataWithoutTags(cellInfo *[][]string, rowCheck map[string]int, info LifecycleConfiguration, showOpts showDetails) {
+func getILMShowDataWithoutTags(cellInfo *[][]string, rowCheck map[string]int, info *lifecycle.Configuration, showOpts showDetails) {
 	*cellInfo = make([][]string, 0)
 	count := 0
 	for index := 0; index < len(info.Rules); index++ {
 		rule := info.Rules[index]
 
-		showExpiry := (rule.Expiration != nil) && ((rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()) ||
-			rule.Expiration.ExpirationInDays > 0)
-		transitionSet := (rule.Transition != nil) && ((rule.Transition.TransitionDate != nil && !rule.Transition.TransitionDate.IsZero()) ||
-			rule.Transition.TransitionInDays > 0)
+		showExpiry := !rule.Expiration.IsNull()
+		transitionSet := !rule.Transition.IsNull()
 		skipExpTran := (showOpts.expiry && !showExpiry) || (showOpts.transition && !transitionSet)
 		if skipExpTran {
 			continue
 		}
-		tagPresent := (rule.RuleFilter != nil) && (rule.RuleFilter.And != nil)
-		if len(rule.TagFilters) > 0 || (tagPresent && len(rule.RuleFilter.And.Tags) > 0) {
+		tagPresent := !rule.RuleFilter.And.IsEmpty()
+		if tagPresent {
 			continue
 		}
 		*cellInfo = append(*cellInfo, make([]string, 0))
@@ -353,16 +345,14 @@ func getILMShowDataWithoutTags(cellInfo *[][]string, rowCheck map[string]int, in
 }
 
 // GetILMShowDataWithTags Just the data with extra rows for extra tags
-func getILMShowDataWithTags(cellInfo *[][]string, newRows map[string][]string, rowCheck map[string]int, info LifecycleConfiguration, showOpts showDetails) {
+func getILMShowDataWithTags(cellInfo *[][]string, newRows map[string][]string, rowCheck map[string]int, info *lifecycle.Configuration, showOpts showDetails) {
 	*cellInfo = make([][]string, 0)
 	count := 0
 	for index := 0; index < len(info.Rules); index++ {
 		rule := info.Rules[index]
 
-		showExpiry := (rule.Expiration != nil) && ((rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()) ||
-			rule.Expiration.ExpirationInDays > 0)
-		transitionSet := (rule.Transition != nil) && ((rule.Transition.TransitionDate != nil && !rule.Transition.TransitionDate.IsZero()) ||
-			rule.Transition.TransitionInDays > 0)
+		showExpiry := !rule.Expiration.IsNull()
+		transitionSet := !rule.Transition.IsNull()
 		skipExpTran := (showOpts.expiry && !showExpiry) || (showOpts.transition && !transitionSet)
 		if skipExpTran {
 			continue
@@ -394,26 +384,24 @@ func getILMShowDataWithTags(cellInfo *[][]string, newRows map[string][]string, r
 	}
 }
 
-func getPrefixVal(rule LifecycleRule) string {
+func getPrefixVal(rule lifecycle.Rule) string {
 	prefixVal := ""
 	switch {
 	case rule.Prefix != "":
 		prefixVal = rule.Prefix
-	case rule.RuleFilter != nil && rule.RuleFilter.And != nil && rule.RuleFilter.And.Prefix != "":
+	case !rule.RuleFilter.And.IsEmpty():
 		prefixVal = rule.RuleFilter.And.Prefix
-	case rule.RuleFilter != nil && rule.RuleFilter.Prefix != "":
+	case rule.RuleFilter.Prefix != "":
 		prefixVal = rule.RuleFilter.Prefix
 	}
 	return prefixVal
 }
 
-func showExpiryDetails(rule LifecycleRule, showOpts showDetails) bool {
+func showExpiryDetails(rule lifecycle.Rule, showOpts showDetails) bool {
 	if showOpts.allAvailable {
 		return true
 	}
-	expirySet := (rule.Expiration != nil) &&
-		((rule.Expiration.ExpirationDate != nil && !rule.Expiration.ExpirationDate.IsZero()) ||
-			rule.Expiration.ExpirationInDays > 0)
+	expirySet := !rule.Expiration.IsNull()
 
 	return (expirySet && (showOpts.allAvailable || showOpts.expiry))
 
@@ -427,27 +415,24 @@ func showTransitionTick(showOpts showDetails) bool {
 	return (showOpts.allAvailable || showOpts.minimum)
 }
 
-func showTransitionDetails(rule LifecycleRule, showOpts showDetails) bool {
+func showTransitionDetails(rule lifecycle.Rule, showOpts showDetails) bool {
 	if showOpts.allAvailable {
 		return true
 	}
-	transitionSet := (rule.Transition != nil) &&
-		((rule.Transition.TransitionDate != nil && !rule.Transition.TransitionDate.IsZero()) ||
-			rule.Transition.TransitionInDays > 0)
+	transitionSet := !rule.Transition.IsNull()
 	transitionDetailsShow := (showOpts.allAvailable || showOpts.transition)
 	return transitionSet && transitionDetailsShow
 }
 
-func showTags(rule LifecycleRule, showOpts showDetails) bool {
+func showTags(rule lifecycle.Rule, showOpts showDetails) bool {
 	if showOpts.minimum {
 		return false
 	}
-	tagSet := showOpts.allAvailable ||
-		(len(rule.TagFilters) > 0 || (rule.RuleFilter != nil && rule.RuleFilter.And != nil && (len(rule.RuleFilter.And.Tags) > 0)))
+	tagSet := showOpts.allAvailable || !rule.RuleFilter.And.IsEmpty()
 	return tagSet
 }
 
-func getColumns(info LifecycleConfiguration, rowCheck map[string]int, alignedHdrLabels *[]string, showOpts showDetails) {
+func getColumns(info *lifecycle.Configuration, rowCheck map[string]int, alignedHdrLabels *[]string, showOpts showDetails) {
 	tagIn := false // Keep tag in the end
 	colIdx := 0
 	colWidthTbl := getILMColumnWidthTable()
