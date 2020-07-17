@@ -45,6 +45,8 @@ import (
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/policy"
 	"github.com/minio/minio-go/v7/pkg/replication"
+	"github.com/minio/minio-go/v7/pkg/sse"
+
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/minio/pkg/mimedb"
@@ -2443,6 +2445,60 @@ func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config) 
 
 	if e := c.api.SetBucketReplication(ctx, bucket, *cfg); e != nil {
 		return probe.NewError(e)
+	}
+	return nil
+}
+
+// GetEncryption - gets bucket encryption info.
+func (c *S3Client) GetEncryption(ctx context.Context) (algorithm, keyID string, err *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return "", "", probe.NewError(BucketNameEmpty{})
+	}
+
+	config, e := c.api.GetBucketEncryption(ctx, bucket)
+	if e != nil {
+		return "", "", probe.NewError(e)
+	}
+	for _, rule := range config.Rules {
+		algorithm = rule.Apply.SSEAlgorithm
+		if rule.Apply.KmsMasterKeyID != "" {
+			keyID = rule.Apply.KmsMasterKeyID
+			break
+		}
+	}
+	return algorithm, keyID, nil
+}
+
+// SetEncryption - Set encryption configuration on a bucket
+func (c *S3Client) SetEncryption(ctx context.Context, encType string, kmsKeyID string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	var config *sse.Configuration
+	switch strings.ToLower(encType) {
+	case "sse-kms":
+		config = sse.NewConfigurationSSEKMS(kmsKeyID)
+	case "sse-s3":
+		config = sse.NewConfigurationSSES3()
+	default:
+		return probe.NewError(fmt.Errorf("Invalid encryption algorithm %s", encType))
+	}
+	if err := c.api.SetBucketEncryption(ctx, bucket, config); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// DeleteEncryption - removes encryption configuration on a bucket
+func (c *S3Client) DeleteEncryption(ctx context.Context) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	if err := c.api.RemoveBucketEncryption(ctx, bucket); err != nil {
+		return probe.NewError(err)
 	}
 	return nil
 }
