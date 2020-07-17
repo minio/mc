@@ -133,20 +133,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 			}
-			// Not found. Instantiate a new MinIO
-			var e error
-
-			options := minio.Options{
-				Creds:        creds,
-				Secure:       useTLS,
-				Region:       "",
-				BucketLookup: config.Lookup,
-			}
-
-			api, e = minio.NewWithOptions(hostName, &options)
-			if e != nil {
-				return nil, probe.NewError(e)
-			}
 
 			tr := &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
@@ -200,8 +186,21 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				}
 			}
 
-			// Set the new transport.
-			api.SetCustomTransport(transport)
+			// Not found. Instantiate a new MinIO
+			var e error
+
+			options := minio.Options{
+				Creds:        creds,
+				Secure:       useTLS,
+				Region:       "",
+				BucketLookup: config.Lookup,
+				Transport:    transport,
+			}
+
+			api, e = minio.New(hostName, &options)
+			if e != nil {
+				return nil, probe.NewError(e)
+			}
 
 			// If Amazon Accelerated URL is requested enable it.
 			if isS3AcceleratedEndpoint {
@@ -1046,16 +1045,16 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 }
 
 // Remove incomplete uploads.
-func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
+func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, objectsCh <-chan minio.ObjectInfo) <-chan minio.RemoveObjectError {
 	removeObjectErrorCh := make(chan minio.RemoveObjectError)
 
 	// Goroutine reads from objectsCh and sends error to removeObjectErrorCh if any.
 	go func() {
 		defer close(removeObjectErrorCh)
 
-		for object := range objectsCh {
-			if err := c.api.RemoveIncompleteUpload(ctx, bucket, object); err != nil {
-				removeObjectErrorCh <- minio.RemoveObjectError{ObjectName: object, Err: err}
+		for info := range objectsCh {
+			if err := c.api.RemoveIncompleteUpload(ctx, bucket, info.Key); err != nil {
+				removeObjectErrorCh <- minio.RemoveObjectError{ObjectName: info.Key, Err: err}
 			}
 		}
 	}()
@@ -1074,7 +1073,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 
 	prevBucket := ""
 	// Maintain objectsCh, statusCh for each bucket
-	var objectsCh chan string
+	var objectsCh chan minio.ObjectInfo
 	var statusCh <-chan minio.RemoveObjectError
 	opts := minio.RemoveObjectsOptions{
 		GovernanceBypass: isBypass,
@@ -1100,7 +1099,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 
 			// Init objectsCh the first time.
 			if prevBucket == "" {
-				objectsCh = make(chan string)
+				objectsCh = make(chan minio.ObjectInfo)
 				prevBucket = bucket
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
@@ -1123,7 +1122,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					}
 				}
 				// Re-init objectsCh for next bucket
-				objectsCh = make(chan string)
+				objectsCh = make(chan minio.ObjectInfo)
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
 				} else {
@@ -1139,7 +1138,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				sent := false
 				for !sent {
 					select {
-					case objectsCh <- objectName:
+					case objectsCh <- minio.ObjectInfo{Key: objectName}:
 						sent = true
 					case removeStatus := <-statusCh:
 						errorCh <- probe.NewError(removeStatus.Err)
