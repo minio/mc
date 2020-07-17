@@ -38,6 +38,18 @@ func TestParseMetaData(t *testing.T) {
 		{"key1:value1;key2:value2", nil, ErrInvalidMetadata, false},
 		// using no delimiter
 		{"key1:value1:key2:value2", nil, ErrInvalidMetadata, false},
+		//success: use value in quotes
+		{"Content-Disposition='form-data; name=\"description\"'", map[string]string{"Content-Disposition": "form-data; name=\"description\""}, nil, true},
+		//success: use value in double quotes
+		{"Content-Disposition=\"form-data; name='description'\"", map[string]string{"Content-Disposition": "form-data; name='description'"}, nil, true},
+		//fail: unterminated quote
+		{"Content-Disposition='form-data; name=\"description\"", nil, ErrInvalidMetadata, false},
+		//fail: unterminated double quote
+		{"Content-Disposition=\"form-data; name='description'", nil, ErrInvalidMetadata, false},
+		//success: use value and key in quotes
+		{"\"Content-Disposition\"='form-data; name=\"description\"'", map[string]string{"Content-Disposition": "form-data; name=\"description\""}, nil, true},
+		//success: use value and key in quotes
+		{"\"Content=Disposition;Other key part=this is also key data\"='form-data; name=\"description\"'", map[string]string{"Content=Disposition;Other key part=this is also key data": "form-data; name=\"description\""}, nil, true},
 	}
 
 	for idx, testCase := range metaDataCases {
