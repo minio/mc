@@ -96,6 +96,10 @@ type Client interface {
 	// Lifecycle operations
 	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error)
 	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
+
+	// Versioning operations
+	GetVersioning(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
+	SetVersioning(ctx context.Context, status string) *probe.Error
 }
 
 // ClientContent - Content container for content metadata

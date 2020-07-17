@@ -260,6 +260,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
+	"/bucket/version": s3Completer,
+
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
 

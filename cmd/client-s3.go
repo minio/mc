@@ -2280,3 +2280,36 @@ func (c *S3Client) SetLifecycle(ctx context.Context, config *lifecycle.Configura
 
 	return nil
 }
+
+// GetVersioning - gets bucket versioning info.
+func (c *S3Client) GetVersioning(ctx context.Context) (config minio.BucketVersioningConfiguration, err *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return config, probe.NewError(BucketNameEmpty{})
+	}
+	var e error
+	config, e = c.api.GetBucketVersioning(ctx, bucket)
+	if e != nil {
+		return config, probe.NewError(e)
+	}
+
+	return config, nil
+}
+
+// SetVersioning - Set versioning configuration on a bucket
+func (c *S3Client) SetVersioning(ctx context.Context, status string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	var err error
+	switch status {
+	case "enable":
+		err = c.api.EnableVersioning(ctx, bucket)
+	case "suspend":
+		err = c.api.SuspendVersioning(ctx, bucket)
+	default:
+		return probe.NewError(fmt.Errorf("Invalid versioning status"))
+	}
+	return probe.NewError(err)
+}

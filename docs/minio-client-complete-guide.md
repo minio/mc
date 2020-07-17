@@ -300,7 +300,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 |                                                                                         |                                                                |                                                            |                                           |
 |:----------------------------------------------------------------------------------------|:---------------------------------------------------------------|:-----------------------------------------------------------|-------------------------------------------|
 | [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)  | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat) |
-| [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                | [**pipe** - stream STDIN to an object](#pipe)              |                                           |
+| [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                | [**pipe** - stream STDIN to an object](#pipe)              |  [**version** - manage bucket version](#version)                                        |
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                 | [**find** - find files and objects](#find)                 |                                           |
 | [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror) |                                                            |                                           |
 | [**config** - manage config file](#config)                                              | [**policy** - set public policy on bucket or prefix](#policy)  | [**event** - manage events on your buckets](#event)        |                                           |
@@ -1446,4 +1446,36 @@ ETag      : d41d8cd98f00b204e9800998ecf8427e
 Type      : file
 Metadata  :
   Content-Type: application/octet-stream
+```
+
+<a name="version"></a>
+### Command `version`
+`version` manages bucket versioning
+
+```
+USAGE:
+  mc bucket version TARGET [enable | suspend | info]
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Enable versioning on bucket    `mybucket`*
+
+```
+mc bucket version myminio/mybucket enable
+myminio/mybucket versioning is enabled
+```
+
+*Example: Display the versioning configuration for bucket `mybucket`*
+
+```
+mc bucket version myminio/mybucket info
+myminio/mybucket versioning status is enabled
+
+```
+*Example: Suspend versioning for bucket `mybucket`*
+```
+mc bucket version myminio/mybucket suspend
+myminio/mybucket versioning is suspended
 ```
