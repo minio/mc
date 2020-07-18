@@ -245,7 +245,6 @@ var completeCmds = map[string]complete.Predictor{
 	"/du":        complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
 	"/retention": s3Completer,
 	"/sql":       s3Completer,
-	"/lock":      complete.PredictOr(s3Complete{deepLevel: 2}),
 	"/mb":        aliasCompleter,
 
 	"/event/add":    aliasCompleter,
@@ -255,6 +254,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,
 	"/tag/set":    s3Completer,
+
+	"/bucket/lock/compliance": s3Completer,
+	"/bucket/lock/governance": s3Completer,
+	"/bucket/lock/clear":      s3Completer,
+	"/bucket/lock/info":       s3Completer,
 
 	"/share/download": s3Completer,
 	"/share/list":     nil,

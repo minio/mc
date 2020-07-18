@@ -579,10 +579,9 @@ Hello!!
 
 ```
 USAGE:
-   mc lock [FLAGS] TARGET [governance | compliance] [VALIDITY]
+   mc bucket lock TARGET [info | clear ] | [[governance | compliance] [VALIDITY]]
 
 FLAGS:
-  --clear, -c                   clears previously stored object lock configuration
   --json                        enable JSON formatted output
   --help, -h                    show help
 ```
@@ -596,19 +595,13 @@ mc lock myminio/mybucket compliance 30d
 *Example: Display the object lock configuration for bucket `mybucket`*
 
 ```
-mc lock myminio/mybucket
-COMPLIANCE mode is enabled for 30d
-```
-*Example: Display the object lock configuration for bucket `mybucket`*
-
-```
-mc lock myminio/mybucket
+mc lock myminio/mybucket info
 COMPLIANCE mode is enabled for 30d
 ```
 *Example: Clear object lock configuration for bucket `mybucket`*
 
 ```
-mc lock --clear myminio/mybucket
+mc lock myminio/mybucket clear
 Object lock configuration cleared successfully
 ```
 
