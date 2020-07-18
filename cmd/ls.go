@@ -46,6 +46,7 @@ type contentMessage struct {
 	URL      string    `json:"url,omitempty"`
 
 	VersionID      string `json:"versionId,omitempty"`
+	Index          int    `json:"index,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 }
 
@@ -56,13 +57,14 @@ func (c contentMessage) String() string {
 	if c.Filetype == "folder" {
 		return message + console.Colorize("Dir", c.Key)
 	}
-	if c.VersionID != "" {
-		message += " [" + c.VersionID + "] "
-	}
+
+	colorTag := "File"
 	if c.IsDeleteMarker {
-		message += console.Colorize("File", fmt.Sprintf("\033[9m%s\033[0m", c.Key))
-	} else {
-		message += console.Colorize("File", c.Key)
+		colorTag = "DeletedFile"
+	}
+	message += console.Colorize(colorTag, c.Key)
+	if c.VersionID != "" {
+		message += console.Colorize(colorTag, fmt.Sprintf(":%d", c.Index))
 	}
 	return message
 }
@@ -77,7 +79,7 @@ func (c contentMessage) JSON() string {
 }
 
 // parseContent parse client Content container into printer struct.
-func parseContent(c *ClientContent) contentMessage {
+func parseContent(c *ClientContent, index int) contentMessage {
 	content := contentMessage{}
 	content.Time = c.Time.Local()
 
@@ -97,6 +99,7 @@ func parseContent(c *ClientContent) contentMessage {
 	content.Key = getKey(c)
 	content.VersionID = c.VersionID
 	content.IsDeleteMarker = c.IsDeleteMarker
+	content.Index = index
 	return content
 }
 
@@ -123,6 +126,11 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+
+	var (
+		lastPath     string
+		dupPathCount int
+	)
 
 	var cErr error
 	for content := range clnt.List(ctx, ListOptions{
@@ -158,6 +166,13 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 			continue
 		}
 
+		if content.URL.Path == lastPath {
+			dupPathCount++
+		} else {
+			dupPathCount = 0
+			lastPath = content.URL.Path
+		}
+
 		// Convert any os specific delimiters to "/".
 		contentURL := filepath.ToSlash(content.URL.Path)
 		prefixPath = filepath.ToSlash(prefixPath)
@@ -167,7 +182,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		content.URL.Path = contentURL
-		parsedContent := parseContent(content)
+		parsedContent := parseContent(content, dupPathCount+1)
 		// URL is empty by default
 		// Set it to either relative dir (host) or public url (remote)
 		parsedContent.URL = clnt.GetURL().String()
