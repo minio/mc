@@ -88,20 +88,42 @@ EXAMPLES:
 `,
 }
 
+var rewindSupportedFormat = []string{
+	"2006.01.02",
+	"2006.01.02T15:04",
+	"2006.01.02T15:04:05",
+	time.RFC3339,
+}
+
+// Parse rewind flag while considering the system local time zone
 func parseRewindFlag(rewind string) (timeRef time.Time) {
 	if rewind != "" {
-		if t, e := time.Parse(time.RFC3339, rewind); e == nil {
-			timeRef = t
-		} else {
+		location, e := time.LoadLocation("Local")
+		if e != nil {
+			return
+		}
+
+		for _, format := range rewindSupportedFormat {
+			if t, e := time.ParseInLocation(format, rewind, location); e == nil {
+				timeRef = t
+				break
+			}
+		}
+
+		if timeRef.IsZero() {
+			// rewind is not parsed, check if it is a duration instead
 			if duration, e := ioutils.ParseDurationTime(rewind); e == nil {
 				if duration < 0 {
 					fatalIf(probe.NewError(errors.New("negative duration is not supported")),
 						"Unable to parse --rewind argument")
 				}
 				timeRef = time.Now().Add(-duration)
-			} else {
-				fatalIf(probe.NewError(e), "Unable to parse --rewind argument")
 			}
+		}
+
+		if timeRef.IsZero() {
+			// rewind argument still not parsed, error out
+			fatalIf(probe.NewError(errors.New("unknown format")), "Unable to parse --rewind argument")
 		}
 	}
 	return
