@@ -85,6 +85,15 @@ EXAMPLES:
 
   6. List incomplete (previously failed) uploads of objects on Amazon S3.
      {{.Prompt}} {{.HelpName}} --incomplete s3/mybucket
+
+  7. List contents at a specific time in the past if the bucket versioning is enabled.
+     {{.Prompt}} {{.HelpName}} --rewind 2020.01.01 s3/mybucket
+     {{.Prompt}} {{.HelpName}} --rewind 2020.01.01T11:30 s3/mybucket
+     {{.Prompt}} {{.HelpName}} --rewind 7d s3/mybucket
+
+  8. List all contents versions if the bucket versioning is enabled.
+     {{.Prompt}} {{.HelpName}} --versions s3/mybucket
+
 `,
 }
 
