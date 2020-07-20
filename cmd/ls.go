@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -58,13 +59,12 @@ func (c contentMessage) String() string {
 		return message + console.Colorize("Dir", c.Key)
 	}
 
-	colorTag := "File"
-	if c.IsDeleteMarker {
-		colorTag = "DeletedFile"
-	}
-	message += console.Colorize(colorTag, c.Key)
+	message += console.Colorize("File", c.Key)
 	if c.VersionID != "" {
-		message += console.Colorize(colorTag, fmt.Sprintf(":%d", c.Index))
+		message += console.Colorize("File", fmt.Sprintf(":%d", c.Index))
+		if c.IsDeleteMarker {
+			message += console.Colorize("DeletedFile", " (deleted)")
+		}
 	}
 	return message
 }
@@ -76,31 +76,6 @@ func (c contentMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)
-}
-
-// parseContent parse client Content container into printer struct.
-func parseContent(c *ClientContent, index int) contentMessage {
-	content := contentMessage{}
-	content.Time = c.Time.Local()
-
-	// guess file type.
-	content.Filetype = func() string {
-		if c.Type.IsDir() {
-			return "folder"
-		}
-		return "file"
-	}()
-
-	content.Size = c.Size
-	md5sum := strings.TrimPrefix(c.ETag, "\"")
-	md5sum = strings.TrimSuffix(md5sum, "\"")
-	content.ETag = md5sum
-	// Convert OS Type to match console file printing style.
-	content.Key = getKey(c)
-	content.VersionID = c.VersionID
-	content.IsDeleteMarker = c.IsDeleteMarker
-	content.Index = index
-	return content
 }
 
 // get content key
@@ -119,20 +94,78 @@ func getKey(c *ClientContent) string {
 	return c.URL.Path
 }
 
+// Generate printable listing from a list of client contents
+func generateContentMessages(clnt Client, ctnts []*ClientContent) (msgs []contentMessage) {
+	prefixPath := clnt.GetURL().Path
+	prefixPath = filepath.ToSlash(prefixPath)
+	if !strings.HasSuffix(prefixPath, "/") {
+		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
+	}
+	prefixPath = strings.TrimPrefix(prefixPath, "./")
+
+	for i, c := range ctnts {
+		// Convert any os specific delimiters to "/".
+		contentURL := filepath.ToSlash(c.URL.Path)
+		// Trim prefix path from the content path.
+		c.URL.Path = strings.TrimPrefix(contentURL, prefixPath)
+
+		contentMsg := contentMessage{}
+		contentMsg.Time = c.Time.Local()
+
+		// guess file type.
+		contentMsg.Filetype = func() string {
+			if c.Type.IsDir() {
+				return "folder"
+			}
+			return "file"
+		}()
+
+		contentMsg.Size = c.Size
+		md5sum := strings.TrimPrefix(c.ETag, "\"")
+		md5sum = strings.TrimSuffix(md5sum, "\"")
+		contentMsg.ETag = md5sum
+		// Convert OS Type to match console file printing style.
+		contentMsg.Key = getKey(c)
+		contentMsg.VersionID = c.VersionID
+		contentMsg.IsDeleteMarker = c.IsDeleteMarker
+		contentMsg.Index = i
+		// URL is empty by default
+		// Set it to either relative dir (host) or public url (remote)
+		contentMsg.URL = clnt.GetURL().String()
+
+		msgs = append(msgs, contentMsg)
+	}
+	return
+}
+
+// Pretty print the list of versions belonging to one object
+func printObjectVersions(clnt Client, ctntVersions []*ClientContent) {
+	// Sort versions
+	sort.Slice(ctntVersions, func(i, j int) bool {
+		if ctntVersions[i].IsLatest {
+			return true
+		}
+		if ctntVersions[j].IsLatest {
+			return false
+		}
+		return ctntVersions[i].Time.After(ctntVersions[j].Time)
+	})
+
+	msgs := generateContentMessages(clnt, ctntVersions)
+	for _, msg := range msgs {
+		printMsg(msg)
+	}
+}
+
 // doList - list all entities inside a folder.
 func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, timeRef time.Time, withOlderVersions bool) error {
-	prefixPath := clnt.GetURL().Path
-	separator := string(clnt.GetURL().Separator)
-	if !strings.HasSuffix(prefixPath, separator) {
-		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
-	}
 
 	var (
-		lastPath     string
-		dupPathCount int
+		lastPath          string
+		perObjectVersions []*ClientContent
+		cErr              error
 	)
 
-	var cErr error
 	for content := range clnt.List(ctx, ListOptions{
 		isRecursive:       isRecursive,
 		isIncomplete:      isIncomplete,
@@ -166,28 +199,16 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 			continue
 		}
 
-		if content.URL.Path == lastPath {
-			dupPathCount++
-		} else {
-			dupPathCount = 0
+		if lastPath != content.URL.Path {
+			// Print any object in the current list before reinitializing it
+			printObjectVersions(clnt, perObjectVersions)
 			lastPath = content.URL.Path
+			perObjectVersions = []*ClientContent{}
 		}
 
-		// Convert any os specific delimiters to "/".
-		contentURL := filepath.ToSlash(content.URL.Path)
-		prefixPath = filepath.ToSlash(prefixPath)
-
-		// Trim prefix of current working dir
-		prefixPath = strings.TrimPrefix(prefixPath, "."+separator)
-		// Trim prefix path from the content path.
-		contentURL = strings.TrimPrefix(contentURL, prefixPath)
-		content.URL.Path = contentURL
-		parsedContent := parseContent(content, dupPathCount+1)
-		// URL is empty by default
-		// Set it to either relative dir (host) or public url (remote)
-		parsedContent.URL = clnt.GetURL().String()
-		// Print colorized or jsonized content info.
-		printMsg(parsedContent)
+		perObjectVersions = append(perObjectVersions, content)
 	}
+
+	printObjectVersions(clnt, perObjectVersions)
 	return cErr
 }
