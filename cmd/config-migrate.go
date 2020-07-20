@@ -45,6 +45,8 @@ func migrateConfig() {
 	migrateConfigV7ToV8()
 	// Migrate config V8 to V9
 	migrateConfigV8ToV9()
+	// Migrate config V9 to V10
+	migrateConfigV9ToV10()
 }
 
 // Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.
@@ -52,13 +54,16 @@ func migrateConfigV1ToV101() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV1, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV1())
-	fatalIf(probe.NewError(e), "Unable to load config version `1`.")
 
-	// If loaded config version does not match 1.0.0, we do nothing.
-	if mcCfgV1.Version() != "1.0.0" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version `1`.")
+	if anyCfg.Version() != "1.0.0" {
 		return
 	}
+
+	mcCfgV1, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV1())
+	fatalIf(probe.NewError(e), "Unable to load config version `1`.")
 
 	// 1.0.1 is compatible to 1.0.0. We are just adding new entries.
 	cfgV101 := newConfigV101()
@@ -109,13 +114,18 @@ func migrateConfigV101ToV2() {
 	if !isMcConfigExists() {
 		return
 	}
+
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version `1`.")
+	if anyCfg.Version() != "1.0.1" {
+		return
+	}
+
 	mcCfgV101, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV101())
 	fatalIf(probe.NewError(e), "Unable to load config version `1.0.1`.")
 
 	// update to newer version
-	if mcCfgV101.Version() != "1.0.1" {
-		return
-	}
 
 	cfgV2 := newConfigV2()
 
@@ -148,13 +158,15 @@ func migrateConfigV2ToV3() {
 		return
 	}
 
-	mcCfgV2, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV2())
-	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
-
-	// update to newer version
-	if mcCfgV2.Version() != "2" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "2" {
 		return
 	}
+
+	mcCfgV2, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV2())
+	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
 
 	cfgV3 := newConfigV3()
 
@@ -187,13 +199,16 @@ func migrateConfigV3ToV4() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV3, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV3())
-	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
 
-	// update to newer version
-	if mcCfgV3.Version() != "3" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "3" {
 		return
 	}
+
+	mcCfgV3, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV3())
+	fatalIf(probe.NewError(e), "Unable to load mc config V3.")
 
 	cfgV4 := newConfigV4()
 	for k, v := range mcCfgV3.Data().(*configV3).Aliases {
@@ -226,13 +241,16 @@ func migrateConfigV4ToV5() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV4, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV4())
-	fatalIf(probe.NewError(e), "Unable to load mc config V4.")
 
-	// update to newer version
-	if mcCfgV4.Version() != "4" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "4" {
 		return
 	}
+
+	mcCfgV4, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV4())
+	fatalIf(probe.NewError(e), "Unable to load mc config V4.")
 
 	cfgV5 := newConfigV5()
 	for k, v := range mcCfgV4.Data().(*configV4).Aliases {
@@ -261,13 +279,16 @@ func migrateConfigV5ToV6() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV5, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV5())
-	fatalIf(probe.NewError(e), "Unable to load mc config V5.")
 
-	// update to newer version
-	if mcCfgV5.Version() != "5" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "5" {
 		return
 	}
+
+	mcCfgV5, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV5())
+	fatalIf(probe.NewError(e), "Unable to load mc config V5.")
 
 	cfgV6 := newConfigV6()
 
@@ -328,12 +349,15 @@ func migrateConfigV6ToV7() {
 		return
 	}
 
-	mcCfgV6, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV6())
-	fatalIf(probe.NewError(e), "Unable to load mc config V6.")
-
-	if mcCfgV6.Version() != "6" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "6" {
 		return
 	}
+
+	mcCfgV6, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV6())
+	fatalIf(probe.NewError(e), "Unable to load mc config V6.")
 
 	cfgV7 := newConfigV7()
 	aliasIndex := 0
@@ -407,12 +431,15 @@ func migrateConfigV7ToV8() {
 		return
 	}
 
-	mcCfgV7, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV7())
-	fatalIf(probe.NewError(e), "Unable to load mc config V7.")
-
-	if mcCfgV7.Version() != "7" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "7" {
 		return
 	}
+
+	mcCfgV7, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV7())
+	fatalIf(probe.NewError(e), "Unable to load mc config V7.")
 
 	cfgV8 := newConfigV8()
 	// We dropped alias support in v7. We only need to migrate host configs.
@@ -445,22 +472,23 @@ func migrateConfigV8ToV9() {
 		return
 	}
 
-	mcCfgV8, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV8())
-	fatalIf(probe.NewError(e), "Unable to load mc config V8.")
-
-	if mcCfgV8.Version() != "8" {
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "8" {
 		return
 	}
 
+	mcCfgV8, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV8())
+	fatalIf(probe.NewError(e), "Unable to load mc config V8.")
+
 	cfgV9 := newConfigV9()
-	isEmpty := true
 	// We dropped alias support in v8. We only need to migrate host configs.
 	for host, hostCfgV8 := range mcCfgV8.Data().(*configV8).Hosts {
 		// Ignore 'player', 'play' and 'dl' aliases.
 		if host == "player" || host == "dl" || host == "play" {
 			continue
 		}
-		isEmpty = false
 		hostCfgV9 := hostConfigV9{}
 		hostCfgV9.URL = hostCfgV8.URL
 		hostCfgV9.AccessKey = hostCfgV8.AccessKey
@@ -468,10 +496,6 @@ func migrateConfigV8ToV9() {
 		hostCfgV9.API = hostCfgV8.API
 		hostCfgV9.Lookup = "auto"
 		cfgV9.Hosts[host] = hostCfgV9
-	}
-	if isEmpty {
-		// Load default settings.
-		cfgV9.loadDefaults()
 	}
 
 	mcNewCfgV9, e := quick.NewConfig(cfgV9, nil)
@@ -481,4 +505,56 @@ func migrateConfigV8ToV9() {
 	fatalIf(probe.NewError(e), "Unable to save config version `9`.")
 
 	console.Infof("Successfully migrated %s from version `8` to version `9`.\n", mustGetMcConfigPath())
+}
+
+// Migrate config version `9` to `10'. Rename 'hosts' to 'aliases' and 'lookup' to 'path'
+func migrateConfigV9ToV10() {
+	if !isMcConfigExists() {
+		return
+	}
+
+	// Check the config version and quit early if the actual version is out of this function scope
+	anyCfg, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config version.")
+	if anyCfg.Version() != "9" {
+		return
+	}
+
+	mcCfgV9, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV9())
+	fatalIf(probe.NewError(e), "Unable to load mc config V8.")
+
+	cfgV10 := newConfigV10()
+	isEmpty := true
+	// We dropped alias support in v8. We only need to migrate host configs.
+	for host, hostCfgV9 := range mcCfgV9.Data().(*configV9).Hosts {
+		isEmpty = false
+		hostCfgV10 := aliasConfigV10{}
+		hostCfgV10.URL = hostCfgV9.URL
+		hostCfgV10.AccessKey = hostCfgV9.AccessKey
+		hostCfgV10.SecretKey = hostCfgV9.SecretKey
+		hostCfgV10.API = hostCfgV9.API
+		switch hostCfgV9.Lookup {
+		case "dns":
+			hostCfgV10.Path = "off"
+		case "path":
+			hostCfgV10.Path = "on"
+		default:
+			hostCfgV10.Path = "auto"
+		}
+
+		cfgV10.Aliases[host] = hostCfgV10
+	}
+
+	if isEmpty {
+		// Load default settings.
+		cfgV10.loadDefaults()
+	}
+
+	mcNewCfgV10, e := quick.NewConfig(cfgV10, nil)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `10`.")
+
+	e = mcNewCfgV10.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version `10`.")
+
+	console.Infof("Successfully migrated %s from version `9` to version `10`.\n", mustGetMcConfigPath())
 }

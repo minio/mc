@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	globalMCConfigVersion = "9"
+	globalMCConfigVersion = "10"
 
 	globalMCConfigFile = "config.json"
 	globalMCCertsDir   = "certs"

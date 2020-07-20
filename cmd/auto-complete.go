@@ -136,10 +136,10 @@ func (adm adminConfigComplete) Predict(a complete.Args) (prediction []string) {
 
 	arg := a.Last
 	lastArg := a.LastCompleted
-	if _, ok := conf.Hosts[filepath.Clean(a.LastCompleted)]; !ok {
+	if _, ok := conf.Aliases[filepath.Clean(a.LastCompleted)]; !ok {
 		if strings.IndexByte(arg, '/') == -1 {
 			// Only predict alias since '/' is not found
-			for alias := range conf.Hosts {
+			for alias := range conf.Aliases {
 				if strings.HasPrefix(alias, arg) {
 					prediction = append(prediction, alias+"/")
 				}
@@ -173,7 +173,7 @@ func (s3 s3Complete) Predict(a complete.Args) (prediction []string) {
 
 	if strings.IndexByte(arg, '/') == -1 {
 		// Only predict alias since '/' is not found
-		for alias := range conf.Hosts {
+		for alias := range conf.Aliases {
 			if strings.HasPrefix(alias, arg) {
 				prediction = append(prediction, alias+"/")
 			}
@@ -210,7 +210,7 @@ func (al aliasComplete) Predict(a complete.Args) (prediction []string) {
 	}
 
 	arg := a.Last
-	for alias := range conf.Hosts {
+	for alias := range conf.Aliases {
 		if strings.HasPrefix(alias, arg) {
 			prediction = append(prediction, alias+"/")
 		}

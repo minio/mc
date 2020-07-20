@@ -48,7 +48,7 @@ var errUnrecognizedDiffType = func(diff differType) *probe.Error {
 type invalidAliasedURLErr error
 
 var errInvalidAliasedURL = func(URL string) *probe.Error {
-	msg := "Use `mc config host add mycloud " + URL + " ...` to add an alias. Use the alias for S3 operations."
+	msg := "Use `mc alias set mycloud " + URL + " ...` to add an alias. Use the alias for S3 operations."
 	return probe.NewError(invalidAliasedURLErr(errors.New(msg))).Untrace()
 }
 

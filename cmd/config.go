@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,29 +105,29 @@ func mustGetMcConfigPath() string {
 	return path
 }
 
-// newMcConfig - initializes a new version '9' config.
-func newMcConfig() *configV9 {
-	cfg := newConfigV9()
+// newMcConfig - initializes a new version '10' config.
+func newMcConfig() *configV10 {
+	cfg := newConfigV10()
 	cfg.loadDefaults()
 	return cfg
 }
 
 // loadMcConfigCached - returns loadMcConfig with a closure for config cache.
-func loadMcConfigFactory() func() (*configV9, *probe.Error) {
+func loadMcConfigFactory() func() (*configV10, *probe.Error) {
 	// Load once and cache in a closure.
-	cfgCache, err := loadConfigV9()
+	cfgCache, err := loadConfigV10()
 
 	// loadMcConfig - reads configuration file and returns config.
-	return func() (*configV9, *probe.Error) {
+	return func() (*configV10, *probe.Error) {
 		return cfgCache, err
 	}
 }
 
 // loadMcConfig - returns configuration, initialized later.
-var loadMcConfig func() (*configV9, *probe.Error)
+var loadMcConfig func() (*configV10, *probe.Error)
 
 // saveMcConfig - saves configuration file and returns error if any.
-func saveMcConfig(config *configV9) *probe.Error {
+func saveMcConfig(config *configV10) *probe.Error {
 	if config == nil {
 		return errInvalidArgument().Trace()
 	}
@@ -138,7 +138,7 @@ func saveMcConfig(config *configV9) *probe.Error {
 	}
 
 	// Save the config.
-	if err := saveConfigV9(config); err != nil {
+	if err := saveConfigV10(config); err != nil {
 		return err.Trace(mustGetMcConfigPath())
 	}
 
@@ -172,16 +172,16 @@ func isValidAlias(alias string) bool {
 	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-_]+$").MatchString(alias)
 }
 
-// getHostConfig retrieves host specific configuration such as access keys, signature type.
-func getHostConfig(alias string) (*hostConfigV9, *probe.Error) {
+// getAliasConfig retrieves host specific configuration such as access keys, signature type.
+func getAliasConfig(alias string) (*aliasConfigV10, *probe.Error) {
 	mcCfg, err := loadMcConfig()
 	if err != nil {
 		return nil, err.Trace(alias)
 	}
 
 	// if host is exact return quickly.
-	if _, ok := mcCfg.Hosts[alias]; ok {
-		hostCfg := mcCfg.Hosts[alias]
+	if _, ok := mcCfg.Aliases[alias]; ok {
+		hostCfg := mcCfg.Aliases[alias]
 		return &hostCfg, nil
 	}
 
@@ -190,22 +190,22 @@ func getHostConfig(alias string) (*hostConfigV9, *probe.Error) {
 }
 
 // mustGetHostConfig retrieves host specific configuration such as access keys, signature type.
-func mustGetHostConfig(alias string) *hostConfigV9 {
-	hostCfg, _ := getHostConfig(alias)
+func mustGetHostConfig(alias string) *aliasConfigV10 {
+	aliasCfg, _ := getAliasConfig(alias)
 	// If alias is not found,
 	// look for it in the environment variable.
-	if hostCfg == nil {
+	if aliasCfg == nil {
 		if envConfig, ok := os.LookupEnv(mcEnvHostPrefix + alias); ok {
-			hostCfg, _ = expandAliasFromEnv(envConfig)
+			aliasCfg, _ = expandAliasFromEnv(envConfig)
 		}
 	}
-	if hostCfg == nil {
+	if aliasCfg == nil {
 		if envConfig, ok := os.LookupEnv(mcEnvHostsDeprecatedPrefix + alias); ok {
 			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias), "`MC_HOSTS_<alias>` environment variable is deprecated. Please use `MC_HOST_<alias>` instead for the same functionality.")
-			hostCfg, _ = expandAliasFromEnv(envConfig)
+			aliasCfg, _ = expandAliasFromEnv(envConfig)
 		}
 	}
-	return hostCfg
+	return aliasCfg
 }
 
 var (
@@ -265,13 +265,13 @@ const (
 	mcEnvHostsDeprecatedPrefix = "MC_HOSTS_"
 )
 
-func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
+func expandAliasFromEnv(envURL string) (*aliasConfigV10, *probe.Error) {
 	u, accessKey, secretKey, sessionToken, err := parseEnvURLStr(envURL)
 	if err != nil {
 		return nil, err.Trace(envURL)
 	}
 
-	return &hostConfigV9{
+	return &aliasConfigV10{
 		URL:          u.String(),
 		API:          "S3v4",
 		AccessKey:    accessKey,
@@ -281,7 +281,7 @@ func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
 }
 
 // expandAlias expands aliased URL if any match is found, returns as is otherwise.
-func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV9, err *probe.Error) {
+func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *aliasConfigV10, err *probe.Error) {
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
 
@@ -296,22 +296,22 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostC
 	}
 
 	if ok {
-		hostCfg, err = expandAliasFromEnv(envConfig)
+		aliasCfg, err = expandAliasFromEnv(envConfig)
 		if err != nil {
 			return "", "", nil, err.Trace(aliasedURL)
 		}
-		return alias, urlJoinPath(hostCfg.URL, path), hostCfg, nil
+		return alias, urlJoinPath(aliasCfg.URL, path), aliasCfg, nil
 	}
 
 	// Find the matching alias entry and expand the URL.
-	if hostCfg = mustGetHostConfig(alias); hostCfg != nil {
-		return alias, urlJoinPath(hostCfg.URL, path), hostCfg, nil
+	if aliasCfg = mustGetHostConfig(alias); aliasCfg != nil {
+		return alias, urlJoinPath(aliasCfg.URL, path), aliasCfg, nil
 	}
 	return "", aliasedURL, nil, nil // No matching entry found. Return original URL as is.
 }
 
 // mustExpandAlias expands aliased URL if any match is found, returns as is otherwise.
-func mustExpandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV9) {
-	alias, urlStr, hostCfg, _ = expandAlias(aliasedURL)
-	return alias, urlStr, hostCfg
+func mustExpandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *aliasConfigV10) {
+	alias, urlStr, aliasCfg, _ = expandAlias(aliasedURL)
+	return alias, urlStr, aliasCfg
 }

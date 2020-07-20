@@ -131,21 +131,21 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 
 // newAdminClient gives a new client interface
 func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
-	alias, urlStrFull, hostCfg, err := expandAlias(aliasedURL)
+	alias, urlStrFull, aliasCfg, err := expandAlias(aliasedURL)
 	if err != nil {
 		return nil, err.Trace(aliasedURL)
 	}
 	// Verify if the aliasedURL is a real URL, fail in those cases
 	// indicating the user to add alias.
-	if hostCfg == nil && urlRgx.MatchString(aliasedURL) {
+	if aliasCfg == nil && urlRgx.MatchString(aliasedURL) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
 
-	if hostCfg == nil {
+	if aliasCfg == nil {
 		return nil, probe.NewError(fmt.Errorf("No valid configuration found for '%s' host alias", urlStrFull))
 	}
 
-	s3Config := NewS3Config(urlStrFull, hostCfg)
+	s3Config := NewS3Config(urlStrFull, aliasCfg)
 
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {

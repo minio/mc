@@ -22,7 +22,7 @@ import (
 )
 
 // Check if version of the config is valid
-func validateConfigVersion(config *configV9) (bool, string) {
+func validateConfigVersion(config *configV10) (bool, string) {
 	if config.Version != globalMCConfigVersion {
 		return false, fmt.Sprintf("Config version '%s' does not match mc config version '%s', please update your binary.\n",
 			config.Version, globalMCConfigVersion)
@@ -31,7 +31,7 @@ func validateConfigVersion(config *configV9) (bool, string) {
 }
 
 // Verifies the config file of the MinIO Client
-func validateConfigFile(config *configV9) (bool, []string) {
+func validateConfigFile(config *configV10) (bool, []string) {
 	ok, err := validateConfigVersion(config)
 	var validationSuccessful = true
 	var errors []string
@@ -39,18 +39,18 @@ func validateConfigFile(config *configV9) (bool, []string) {
 		validationSuccessful = false
 		errors = append(errors, err)
 	}
-	hosts := config.Hosts
-	for _, hostConfig := range hosts {
-		hostConfigHealthOk, hostErrors := validateConfigHost(hostConfig)
-		if !hostConfigHealthOk {
+	aliases := config.Aliases
+	for _, aliasConfig := range aliases {
+		aliasConfigHealthOk, aliasErrors := validateConfigHost(aliasConfig)
+		if !aliasConfigHealthOk {
 			validationSuccessful = false
-			errors = append(errors, hostErrors...)
+			errors = append(errors, aliasErrors...)
 		}
 	}
 	return validationSuccessful, errors
 }
 
-func validateConfigHost(host hostConfigV9) (bool, []string) {
+func validateConfigHost(host aliasConfigV10) (bool, []string) {
 	var validationSuccessful = true
 	var hostErrors []string
 	if !isValidAPI(strings.ToLower(host.API)) {

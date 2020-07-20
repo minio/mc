@@ -79,3 +79,14 @@ func isValidLookup(lookup string) (ok bool) {
 	}
 	return false
 }
+
+// isValidPath - validates the alias path config
+func isValidPath(path string) (ok bool) {
+	l := strings.ToLower(strings.TrimSpace(path))
+	for _, v := range []string{"on", "off", "auto"} {
+		if l == v {
+			return true
+		}
+	}
+	return false
+}

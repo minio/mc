@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,12 @@ func fixConfig() {
 	 */
 }
 
+// ConfigAnyVersion is a generic structure to parse any
+// config.json version file and only extracts its version number
+type ConfigAnyVersion struct {
+	Version string
+}
+
 /////////////////// Broken Config V3 ///////////////////
 type brokenHostConfigV3 struct {
 	AccessKeyID     string
@@ -73,13 +79,17 @@ func fixConfigV3() {
 	if !isMcConfigExists() {
 		return
 	}
+
+	// Check if this is the correct version to fix
+	configAllVersions, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config.")
+	if configAllVersions.Version() != "3" {
+		return
+	}
+
 	brokenCfgV3 := newBrokenConfigV3()
 	brokenMcCfgV3, e := quick.LoadConfig(mustGetMcConfigPath(), nil, brokenCfgV3)
 	fatalIf(probe.NewError(e), "Unable to load config.")
-
-	if brokenMcCfgV3.Version() != "3" {
-		return
-	}
 
 	cfgV3 := newConfigV3()
 	isMutated := false
@@ -122,12 +132,15 @@ func fixConfigV6ForHosts() {
 		return
 	}
 
-	brokenMcCfgV6, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV6())
+	// Check the current config version
+	configAllVersions, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
 	fatalIf(probe.NewError(e), "Unable to load config.")
-
-	if brokenMcCfgV6.Version() != "6" {
+	if configAllVersions.Version() != "6" {
 		return
 	}
+
+	brokenMcCfgV6, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV6())
+	fatalIf(probe.NewError(e), "Unable to load config.")
 
 	newCfgV6 := newConfigV6()
 	isMutated := false
@@ -175,15 +188,18 @@ func fixConfigV6() {
 	if !isMcConfigExists() {
 		return
 	}
+
+	configAllVersions, e := quick.LoadConfig(mustGetMcConfigPath(), nil, &ConfigAnyVersion{})
+	fatalIf(probe.NewError(e), "Unable to load config.")
+	if configAllVersions.Version() != "6" {
+		return
+	}
+
 	config, e := quick.NewConfig(newConfigV6(), nil)
 	fatalIf(probe.NewError(e), "Unable to initialize config.")
 
 	e = config.Load(mustGetMcConfigPath())
 	fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to load config.")
-
-	if config.Data().(*configV6).Version != "6" {
-		return
-	}
 
 	newConfig := new(configV6)
 	isMutated := false

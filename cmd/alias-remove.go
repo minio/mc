@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2017-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,13 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var configHostRemoveCmd = cli.Command{
-	Name:            "remove",
-	ShortName:       "rm",
-	Usage:           "remove a host from configuration file",
-	Action:          mainConfigHostRemove,
+var aliasRemoveCmd = cli.Command{
+	Name:      "remove",
+	ShortName: "rm",
+	Usage:     "remove an alias from configuration file",
+	Action: func(ctx *cli.Context) error {
+		return mainAliasRemove(ctx, false)
+	},
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
@@ -40,19 +42,19 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove "goodisk" from config.
+  1. Remove "goodisk" alias from the configuration.
      {{.Prompt}} {{.HelpName}} goodisk
 
 `,
 }
 
-// checkConfigHostRemoveSyntax - verifies input arguments to 'config host remove'.
-func checkConfigHostRemoveSyntax(ctx *cli.Context) {
+// checkAliasRemoveSyntax - verifies input arguments to 'alias remove'.
+func checkAliasRemoveSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 
 	if len(ctx.Args()) != 1 {
 		fatalIf(errInvalidArgument().Trace(args...),
-			"Incorrect number of arguments for remove host command.")
+			"Incorrect number of arguments for alias remove command.")
 	}
 
 	alias := cleanAlias(args.Get(0))
@@ -61,28 +63,31 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainConfigHost is the handle for "mc config host rm" command.
-func mainConfigHostRemove(ctx *cli.Context) error {
-	checkConfigHostRemoveSyntax(ctx)
+// mainAliasRemove is the handle for "mc alias rm" command.
+func mainAliasRemove(ctx *cli.Context, deprecated bool) error {
+	checkAliasRemoveSyntax(ctx)
 
-	console.SetColor("HostMessage", color.New(color.FgGreen))
+	console.SetColor("AliasMessage", color.New(color.FgGreen))
 
 	args := ctx.Args()
 	alias := args.Get(0)
-	removeHost(alias) // Remove a host.
+
+	aliasMsg := removeAlias(alias) // Remove an alias
+	aliasMsg.op = "remove"
+	printMsg(aliasMsg)
 	return nil
 }
 
-// removeHost - removes a host.
-func removeHost(alias string) {
+// removeAlias - removes an alias.
+func removeAlias(alias string) aliasMessage {
 	conf, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
 
-	// Remove host.
-	delete(conf.Hosts, alias)
+	// Remove the alias from the config.
+	delete(conf.Aliases, alias)
 
 	err = saveMcConfig(conf)
-	fatalIf(err.Trace(alias), "Unable to save deleted hosts in config version `"+globalMCConfigVersion+"`.")
+	fatalIf(err.Trace(alias), "Unable to save the delete alias in config version `"+globalMCConfigVersion+"`.")
 
-	printMsg(hostMessage{op: "remove", Alias: alias})
+	return aliasMessage{Alias: alias}
 }
