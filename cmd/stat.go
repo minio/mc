@@ -17,15 +17,22 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/minio/minio-go/v7/pkg/notification"
+	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -152,12 +159,13 @@ func getStandardizedURL(targetURL string) string {
 // statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
 // HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
 // from GET listing.
-func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
+func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, []*BucketInfo, *probe.Error) {
 	var stats []*ClientContent
+	var bucketStats []*BucketInfo
 	var clnt Client
 	clnt, err := newClient(targetURL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	targetAlias, _, _ := mustExpandAlias(targetURL)
@@ -208,7 +216,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
-			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
+			return nil, nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
 		if versionID != "" {
@@ -217,10 +225,25 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 			}
 		}
 
-		_, stat, err := url2Stat(ctx, url, versionID, true, encKeyDB, timeRef)
+		clnt, stat, err := url2Stat(ctx, url, versionID, true, encKeyDB, timeRef)
 		if err != nil {
-			stat = content
+			continue
 		}
+		// if stat is on a bucket and non-recursive mode, serve the bucket metadata
+		if clnt != nil && !isRecursive && stat.Type.IsDir() {
+			bstat, err := clnt.GetBucketInfo(ctx)
+			if err == nil {
+				// Convert any os specific delimiters to "/".
+				contentURL := filepath.ToSlash(bstat.URL.Path)
+				prefixPath = filepath.ToSlash(prefixPath)
+				// Trim prefix path from the content path.
+				contentURL = strings.TrimPrefix(contentURL, prefixPath)
+				bstat.URL.Path = contentURL
+				bucketStats = append(bucketStats, &bstat)
+				continue
+			}
+		}
+
 		// Convert any os specific delimiters to "/".
 		contentURL := filepath.ToSlash(stat.URL.Path)
 		prefixPath = filepath.ToSlash(prefixPath)
@@ -230,5 +253,168 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		stats = append(stats, stat)
 	}
 
-	return stats, probe.NewError(cErr)
+	return stats, bucketStats, probe.NewError(cErr)
+}
+
+// BucketInfo holds info about a bucket
+type BucketInfo struct {
+	URL        ClientURL   `json:"-"`
+	Key        string      `json:"name"`
+	Date       time.Time   `json:"lastModified"`
+	Size       int64       `json:"size"`
+	Type       os.FileMode `json:"-"`
+	Versioning struct {
+		Status    string `json:"status"`
+		MFADelete string `json:"MFADelete"`
+	} `json:"Versioning,omitempty"`
+	Encryption struct {
+		Algorithm string `json:"algorithm,omitempty"`
+		KeyID     string `json:"keyId,omitempty"`
+	} `json:"Encryption,omitempty"`
+	Locking struct {
+		Enabled  string              `json:"enabled"`
+		Mode     minio.RetentionMode `json:"mode"`
+		Validity string              `json:"validity"`
+	} `json:"ObjectLock,omitempty"`
+	Replication struct {
+		Enabled bool               `json:"enabled"`
+		Config  replication.Config `json:"config,omitempty"`
+	} `json:"Replication"`
+	Policy struct {
+		Type string `json:"type"`
+		Text string `json:"policy,omitempty"`
+	} `json:"Policy,omitempty"`
+	Location string            `json:"location"`
+	Tagging  map[string]string `json:"tagging,omitempty"`
+	ILM      struct {
+		Config *lifecycle.Configuration `json:"config,omitempty"`
+	} `json:"ilm,omitempty"`
+	Notification struct {
+		Config notification.Configuration `json:"config,omitempty"`
+	} `json:"notification,omitempty"`
+}
+
+// Tags returns stringified tag list.
+func (i BucketInfo) Tags() string {
+	keys := []string{}
+	for key := range i.Tagging {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	strs := []string{}
+	for _, key := range keys {
+		strs = append(
+			strs,
+			fmt.Sprintf("%v:%v", console.Colorize("Key", key), console.Colorize("Value", i.Tagging[key])),
+		)
+	}
+
+	return strings.Join(strs, ", ")
+}
+
+type bucketInfoMessage struct {
+	Op       string
+	URL      string     `json:"url"`
+	Status   string     `json:"status"`
+	Metadata BucketInfo `json:"metadata"`
+}
+
+func (v bucketInfoMessage) JSON() string {
+	v.Status = "success"
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", " ")
+	// Disable escaping special chars to display XML tags correctly
+	enc.SetEscapeHTML(false)
+
+	fatalIf(probe.NewError(enc.Encode(v)), "Unable to marshal into JSON.")
+	return buf.String()
+
+}
+
+func (v bucketInfoMessage) String() string {
+	var b strings.Builder
+	info := v.Metadata
+
+	keyStr := getKey(&ClientContent{URL: v.Metadata.URL, Type: v.Metadata.Type})
+	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
+	fmt.Fprintln(&b, console.Colorize("Name", key))
+	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Date", v.Metadata.Date.Local().Format(printDate)))
+	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Metadata.Size))))
+	fType := func() string {
+		if v.Metadata.Type.IsDir() {
+			return "folder"
+		}
+		return "file"
+	}()
+	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Type", fType))
+	fmt.Fprintf(&b, fmt.Sprintf("%-10s:\n", "Metadata"))
+	placeHolder := ""
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
+	if info.Encryption.Algorithm == "" {
+		fmt.Fprintf(&b, console.Colorize("Unset", "Not Set"))
+	} else {
+		fmt.Fprintf(&b, console.Colorize("Key", "\n\tAlgorithm:"))
+		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.Algorithm))
+		fmt.Fprintf(&b, console.Colorize("Key", "\n\tKey ID:"))
+		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.KeyID))
+	}
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Versioning: ")
+
+	if info.Versioning.Status == "" {
+		fmt.Fprintf(&b, console.Colorize("Unset", "Un-versioned"))
+	} else {
+		fmt.Fprintf(&b, console.Colorize("Set", info.Versioning.Status))
+	}
+
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "LockConfiguration: ")
+	fmt.Fprintln(&b)
+
+	if info.Locking.Mode != "" {
+		fmt.Fprintf(&b, "%4s%s", placeHolder, "RetentionMode: ")
+		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Mode))
+		fmt.Fprintln(&b)
+		fmt.Fprintf(&b, "%4s%s", placeHolder, "Retention Until Date: ")
+		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Validity))
+	}
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Notification: ")
+	if len(info.Notification.Config.TopicConfigs) > 0 {
+		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+	} else {
+		fmt.Fprintf(&b, console.Colorize("UnSet", "Unset"))
+	}
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Replication: ")
+	if info.Replication.Enabled {
+		fmt.Fprintf(&b, console.Colorize("Set", "Enabled"))
+	} else {
+		fmt.Fprintf(&b, console.Colorize("UnSet", "Disabled"))
+	}
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Policy: ")
+	if info.Policy.Type == "none" {
+		fmt.Fprintf(&b, console.Colorize("UnSet", info.Policy.Type))
+	} else {
+		fmt.Fprintf(&b, console.Colorize("Set", info.Policy.Type))
+	}
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
+	fmt.Fprintf(&b, console.Colorize("Generic", info.Location))
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Tagging: ")
+	fmt.Fprintf(&b, console.Colorize("Generic", info.Tags()))
+	fmt.Fprintln(&b)
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
+	if info.ILM.Config == nil {
+		fmt.Fprintf(&b, console.Colorize("UnSet", "Not Set"))
+	} else {
+		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+	}
+	fmt.Fprintln(&b)
+
+	return b.String()
 }

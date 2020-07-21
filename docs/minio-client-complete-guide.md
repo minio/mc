@@ -1483,10 +1483,21 @@ ENVIRONMENT VARIABLES:
 ```
 mc stat play/mybucket
 Name      : mybucket/
-Date      : 2018-02-06 18:06:51 PST
-Size      : 0B
+Date      : 1969-12-31 16:00:00 PST
+Size      : 0 B
 Type      : folder
-```
+Metadata  :
+  Encryption: Not Set
+  Versioning: Enabled
+  LockConfiguration:
+    RetentionMode: COMPLIANCE
+    Retention Until Date: 1DAYS
+  Notification: Unset
+  Replication: Enabled
+  Policy: none
+  Location: us-east-1
+  Tagging: key1:value1, key2:value2
+  ILM: Not Set
 
 *Example: Display information on an encrypted object "myobject" in "mybucket" on https://play.min.io.*
 
