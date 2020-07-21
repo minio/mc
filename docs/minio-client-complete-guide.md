@@ -302,7 +302,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)  | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat) |
 | [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                | [**pipe** - stream STDIN to an object](#pipe)              |  [**version** - manage bucket version](#version)                                        |
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                 | [**find** - find files and objects](#find)                 |                                           |
-| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror) |                                                            |                                           |
+| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror) | [**ilm** - configure bucket lifecycle] (#ilm)              |                                           |
 | [**config** - manage config file](#config)                                              | [**policy** - set public policy on bucket or prefix](#policy)  | [**event** - manage events on your buckets](#event)        |                                           |
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                         | [**stat** - stat contents of objects and folders](#stat)   |                                           |
 | [**head** - display first 'n' lines of an object](#head)                                | [**lock** - set and get object lock configuration](#lock)      | [**retention** - set retention for object(s)](#retention)  |                                           |
@@ -1214,6 +1214,51 @@ mc event add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ 
 
 ```
 mc event remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
+```
+
+<a name="ilm"></a>
+### Command `ilm`
+``ilm`` provides a convenient way to setup various bucket lifecycle configurations.
+
+```
+USAGE:
+  mc ilm COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  list    pretty print bucket lifecycle configuration
+  add     add a lifecycle configuration rule to existing (if any) rule(s) on a bucket
+  remove  remove (if any) existing lifecycle configuration rule with the id
+  export  export lifecycle configuration in JSON format
+  import  import lifecycle configuration in JSON format
+
+FLAGS:
+  --help, -h                    show help
+
+```
+
+*Example: List the lifecycle management rules*
+
+```
+mc ilm list myminio/testbucket
+   ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
+---------|--------|---------|--------|--------------|------------|-----------|---------------|------
+ Devices |  dev/  |    ✓    |   ✓   | 17 Sep 2020  |     ✗      |           |               |
+---------|--------|---------|--------|--------------|------------|-----------|---------------|------
+```
+
+For more details about the lifecycle configuration, refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html)
+
+
+*Example: Add rule for testbucket on play*
+```
+mc ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" play/testbucket
+Lifecycle configuration rule added with ID `Devices` to play/testbucket.
+```
+
+*Example: Remove the lifecycle management configuration rule given by ID "Documents"*
+```
+mc ilm remove --id "Documents" play/testbucket
+Rule ID `Documents` from target play/testbucket removed.
 ```
 
 <a name="policy"></a>
