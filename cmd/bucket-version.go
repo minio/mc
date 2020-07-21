@@ -1,0 +1,151 @@
+/*
+ * MinIO Client (C) 2020 MinIO, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package cmd
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/fatih/color"
+	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
+	"github.com/minio/mc/pkg/probe"
+
+	"github.com/minio/minio/pkg/console"
+)
+
+var bucketVersionCmd = cli.Command{
+	Name:   "version",
+	Usage:  "manage bucket versioning",
+	Action: mainBucketVersion,
+	Before: setGlobalsFromContext,
+	Flags:  globalFlags,
+	CustomHelpTemplate: `NAME:
+   {{.HelpName}} - {{.Usage}}
+ 
+ USAGE:
+   {{.HelpName}} TARGET
+ 
+ FLAGS:
+   {{range .VisibleFlags}}{{.}}
+   {{end}}
+ EXAMPLES:
+   1. Display bucket versioning status for bucket "mybucket".
+	  {{.Prompt}} {{.HelpName}} myminio/mybucket info
+
+   2. Enable versioning on bucket "mybucket" for alias "myminio".
+      {{.Prompt}} {{.HelpName}} myminio/mybucket enable
+ 
+   3. Suspend versioning on bucket "mybucket" for alias "myminio".
+      {{.Prompt}} {{.HelpName}} myminio/mybucket suspend 
+`,
+}
+
+// checkBucketVersionSyntax - validate all the passed arguments
+func checkBucketVersionSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
+	}
+}
+
+type bucketVersionMessage struct {
+	Op         string
+	Status     string `json:"status"`
+	URL        string `json:"url"`
+	Versioning struct {
+		Status    string `json:"status"`
+		MFADelete string `json:"MFADelete"`
+	} `json:"versioning"`
+}
+
+func (v bucketVersionMessage) JSON() string {
+	v.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(v, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
+}
+
+func (v bucketVersionMessage) String() string {
+	switch v.Op {
+	case "info":
+		msg := ""
+		switch v.Versioning.Status {
+		case "":
+			msg = fmt.Sprintf("%s is un-versioned", v.URL)
+		default:
+			msg = fmt.Sprintf("%s versioning status is %s", v.URL, strings.ToLower(v.Versioning.Status))
+		}
+		return console.Colorize("BucketVersionMessage", msg)
+	case "enable":
+		return console.Colorize("BucketVersionMessage", fmt.Sprintf("%s versioning is enabled", v.URL))
+	case "suspend":
+		return console.Colorize("BucketVersionMessage", fmt.Sprintf("%s versioning is suspended", v.URL))
+	}
+	return ""
+}
+
+// mainBucketVersion is the handler for "mc bucket version" command.
+func mainBucketVersion(ctx *cli.Context) error {
+	checkBucketVersionSyntax(ctx)
+
+	console.SetColor("BucketVersionMessage", color.New(color.FgGreen))
+
+	// Get the alias parameter from cli
+	args := ctx.Args()
+	aliasedURL := args.Get(0)
+	// Create a new Client
+	client, err := newClient(aliasedURL)
+	fatalIf(err, "Unable to initialize connection.")
+
+	if len(args) != 2 {
+		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
+	}
+	op := ""
+	switch strings.ToLower(args[1]) {
+	case "enable":
+		op = strings.ToLower(args[1])
+	case "suspend":
+		op = strings.ToLower(args[1])
+	case "info":
+		op = strings.ToLower(args[1])
+	default:
+		fatalIf(probe.NewError(fmt.Errorf("Unknown argument %s passed", args[1])), "Invalid argument")
+	}
+
+	switch op {
+	case "info":
+		vConfig, e := client.GetVersioning(globalContext)
+		fatalIf(e, "Cannot get version info")
+		vMsg := bucketVersionMessage{
+			Op:     op,
+			Status: "success",
+			URL:    aliasedURL,
+		}
+		vMsg.Versioning.Status = vConfig.Status
+		vMsg.Versioning.MFADelete = vConfig.MFADelete
+		printMsg(vMsg)
+	case "enable", "suspend":
+		fatalIf(client.SetVersioning(globalContext, args[1]), "Cannot set versioning status")
+		printMsg(bucketVersionMessage{
+			Op:     op,
+			Status: "success",
+			URL:    aliasedURL,
+		})
+	}
+
+	return nil
+}
