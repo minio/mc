@@ -43,9 +43,9 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	tgtURL := URLs[1]
 
 	if cliCtx.Bool("force") && cliCtx.Bool("remove") {
-		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead with `--remove` for the same functionality.")
+		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead with `--remove` for the same functionality.")
 	} else if cliCtx.Bool("force") {
-		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead for the same functionality.")
+		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead for the same functionality.")
 	}
 
 	tgtClientURL := newClientURL(tgtURL)
@@ -75,7 +75,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 		// incomplete uploads are not necessary for mirror operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
-			errorIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
+			fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}
 
 		if err == nil {
