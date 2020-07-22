@@ -1397,7 +1397,11 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	//     - /path/to/empty_directory
 	//     - /path/to/empty_directory/
 
-	if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
+	// First an HEAD call is issued, this is faster than doing listing even if the object exists
+	// because the list could be very large. At the same time, the HEAD call is avoided if the
+	// object already contains a trailing prefix or we passed rewind flag to know the object version
+	// created just before the rewind parameter.
+	if !strings.HasSuffix(object, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
 		// Issue HEAD request first but ignore no such key error
 		// so we can check if there is such prefix which exists
 		ctnt, err := c.getObjectStat(ctx, bucket, object, minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID})
@@ -1420,6 +1424,11 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
+
+		if objectStat.Key == prefix {
+			return c.objectInfo2ClientContent(bucket, objectStat), nil
+		}
+
 		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = c.targetURL.Clone()
 			objectMetadata.Type = os.ModeDir

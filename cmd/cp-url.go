@@ -68,7 +68,7 @@ func guessCopyURLType(ctx context.Context, sourceURLs []string, targetURL string
 
 		// If target is a folder, it is Type B.
 		if isAliasURLDir(ctx, targetURL, keys, timeRef) {
-			return copyURLsTypeB, "", nil
+			return copyURLsTypeB, sourceContent.VersionID, nil
 		}
 		// else Type A.
 		return copyURLsTypeA, sourceContent.VersionID, nil
