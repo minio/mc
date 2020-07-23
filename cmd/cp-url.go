@@ -20,6 +20,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/minio/mc/pkg/probe"
 )
@@ -51,45 +52,45 @@ const (
 
 // guessCopyURLType guesses the type of clientURL. This approach all allows prepareURL
 // functions to accurately report failure causes.
-func guessCopyURLType(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair) (copyURLsType, *probe.Error) {
+func guessCopyURLType(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair, timeRef time.Time) (copyURLsType, string, *probe.Error) {
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
 		sourceURL := sourceURLs[0]
-		_, sourceContent, err := url2Stat(ctx, sourceURL, false, keys)
+		_, sourceContent, err := url2Stat(ctx, sourceURL, "", false, keys, timeRef)
 		if err != nil {
-			return copyURLsTypeInvalid, err
+			return copyURLsTypeInvalid, "", err
 		}
 
 		// If recursion is ON, it is type C.
 		// If source is a folder, it is Type C.
 		if sourceContent.Type.IsDir() || isRecursive {
-			return copyURLsTypeC, nil
+			return copyURLsTypeC, "", nil
 		}
 
 		// If target is a folder, it is Type B.
-		if isAliasURLDir(ctx, targetURL, keys) {
-			return copyURLsTypeB, nil
+		if isAliasURLDir(ctx, targetURL, keys, timeRef) {
+			return copyURLsTypeB, sourceContent.VersionID, nil
 		}
 		// else Type A.
-		return copyURLsTypeA, nil
+		return copyURLsTypeA, sourceContent.VersionID, nil
 	}
 
 	// Multiple source args and target is a folder. It is Type D.
-	if isAliasURLDir(ctx, targetURL, keys) {
-		return copyURLsTypeD, nil
+	if isAliasURLDir(ctx, targetURL, keys, timeRef) {
+		return copyURLsTypeD, "", nil
 	}
 
-	return copyURLsTypeInvalid, errInvalidArgument().Trace()
+	return copyURLsTypeInvalid, "", errInvalidArgument().Trace()
 }
 
 // SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeA(ctx context.Context, sourceURL string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func prepareCopyURLsTypeA(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(ctx, sourceURL, false, encKeyDB)
+	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{})
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -116,13 +117,13 @@ func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targ
 
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
 // prepareCopyURLsTypeB - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeB(ctx context.Context, sourceURL string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func prepareCopyURLsTypeB(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(ctx, sourceURL, false, encKeyDB)
+	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{})
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -150,7 +151,7 @@ func makeCopyContentTypeB(sourceAlias string, sourceContent *ClientContent, targ
 
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
 // prepareCopyRecursiveURLTypeC - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeC(ctx context.Context, sourceURL, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
+func prepareCopyURLsTypeC(ctx context.Context, sourceURL, targetURL string, isRecursive bool, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
@@ -165,8 +166,7 @@ func prepareCopyURLsTypeC(ctx context.Context, sourceURL, targetURL string, isRe
 			return
 		}
 
-		isIncomplete := false
-		for sourceContent := range sourceClient.List(ctx, isRecursive, isIncomplete, false, DirNone) {
+		for sourceContent := range sourceClient.List(ctx, ListOptions{isRecursive: isRecursive, timeRef: timeRef, showDir: DirNone}) {
 			if sourceContent.Err != nil {
 				// Listing failed.
 				copyURLsCh <- URLs{Error: sourceContent.Err.Trace(sourceClient.GetURL().String())}
@@ -200,12 +200,12 @@ func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent
 
 // MULTI-SOURCE - Type D: copy([](f|d...), d) -> []B
 // prepareCopyURLsTypeE - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeD(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
+func prepareCopyURLsTypeD(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
 	copyURLsCh := make(chan URLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs) {
 		defer close(copyURLsCh)
 		for _, sourceURL := range sourceURLs {
-			for cpURLs := range prepareCopyURLsTypeC(ctx, sourceURL, targetURL, isRecursive, encKeyDB) {
+			for cpURLs := range prepareCopyURLsTypeC(ctx, sourceURL, targetURL, isRecursive, timeRef, encKeyDB) {
 				copyURLsCh <- cpURLs
 			}
 		}
@@ -214,30 +214,30 @@ func prepareCopyURLsTypeD(ctx context.Context, sourceURLs []string, targetURL st
 }
 
 // prepareCopyURLs - prepares target and source clientURLs for copying.
-func prepareCopyURLs(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair, olderThan, newerThan string) chan URLs {
+func prepareCopyURLs(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair, olderThan, newerThan string, timeRef time.Time) chan URLs {
 	copyURLsCh := make(chan URLs)
-	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs, encKeyDB map[string][]prefixSSEPair) {
+	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs, encKeyDB map[string][]prefixSSEPair, timeRef time.Time) {
 		defer close(copyURLsCh)
-		cpType, err := guessCopyURLType(ctx, sourceURLs, targetURL, isRecursive, encKeyDB)
+		cpType, cpVersion, err := guessCopyURLType(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, timeRef)
 		fatalIf(err.Trace(), "Unable to guess the type of copy operation.")
 
 		switch cpType {
 		case copyURLsTypeA:
-			copyURLsCh <- prepareCopyURLsTypeA(ctx, sourceURLs[0], targetURL, encKeyDB)
+			copyURLsCh <- prepareCopyURLsTypeA(ctx, sourceURLs[0], cpVersion, targetURL, encKeyDB)
 		case copyURLsTypeB:
-			copyURLsCh <- prepareCopyURLsTypeB(ctx, sourceURLs[0], targetURL, encKeyDB)
+			copyURLsCh <- prepareCopyURLsTypeB(ctx, sourceURLs[0], cpVersion, targetURL, encKeyDB)
 		case copyURLsTypeC:
-			for cURLs := range prepareCopyURLsTypeC(ctx, sourceURLs[0], targetURL, isRecursive, encKeyDB) {
+			for cURLs := range prepareCopyURLsTypeC(ctx, sourceURLs[0], targetURL, isRecursive, timeRef, encKeyDB) {
 				copyURLsCh <- cURLs
 			}
 		case copyURLsTypeD:
-			for cURLs := range prepareCopyURLsTypeD(ctx, sourceURLs, targetURL, isRecursive, encKeyDB) {
+			for cURLs := range prepareCopyURLsTypeD(ctx, sourceURLs, targetURL, isRecursive, timeRef, encKeyDB) {
 				copyURLsCh <- cURLs
 			}
 		default:
 			copyURLsCh <- URLs{Error: errInvalidArgument().Trace(sourceURLs...)}
 		}
-	}(sourceURLs, targetURL, copyURLsCh, encKeyDB)
+	}(sourceURLs, targetURL, copyURLsCh, encKeyDB, timeRef)
 
 	finalCopyURLsCh := make(chan URLs)
 	go func() {

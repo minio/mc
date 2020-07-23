@@ -379,9 +379,6 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 	// construct new pathes to list public objects
 	alias, path := url2Alias(targetURL)
 
-	isRecursive := recursive
-	isIncomplete := false
-
 	// Iterate over policy rules to fetch public urls, then search
 	// for objects under those urls
 	for k, v := range policies {
@@ -401,13 +398,13 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 		clnt, err := newClient(newURL)
 		fatalIf(err.Trace(newURL), "Unable to initialize target `"+targetURL+"`.")
 		// Search for public objects
-		for content := range clnt.List(globalContext, isRecursive, isIncomplete, false, DirFirst) {
+		for content := range clnt.List(globalContext, ListOptions{isRecursive: recursive, showDir: DirFirst}) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}
 
-			if content.Type.IsDir() && isRecursive {
+			if content.Type.IsDir() && recursive {
 				continue
 			}
 

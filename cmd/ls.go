@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -44,18 +45,27 @@ type contentMessage struct {
 	Key      string    `json:"key"`
 	ETag     string    `json:"etag"`
 	URL      string    `json:"url,omitempty"`
+
+	VersionID      string `json:"versionId,omitempty"`
+	Index          int    `json:"index,omitempty"`
+	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 }
 
 // String colorized string message.
 func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
-	message = message + console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
-	message = func() string {
-		if c.Filetype == "folder" {
-			return message + console.Colorize("Dir", c.Key)
+	message += console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
+	if c.Filetype == "folder" {
+		return message + console.Colorize("Dir", c.Key)
+	}
+
+	message += console.Colorize("File", c.Key)
+	if c.VersionID != "" {
+		message += console.Colorize("File", fmt.Sprintf(":%d", c.Index))
+		if c.IsDeleteMarker {
+			message += console.Colorize("DeletedFile", " (deleted)")
 		}
-		return message + console.Colorize("File", c.Key)
-	}()
+	}
 	return message
 }
 
@@ -66,28 +76,6 @@ func (c contentMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)
-}
-
-// parseContent parse client Content container into printer struct.
-func parseContent(c *ClientContent) contentMessage {
-	content := contentMessage{}
-	content.Time = c.Time.Local()
-
-	// guess file type.
-	content.Filetype = func() string {
-		if c.Type.IsDir() {
-			return "folder"
-		}
-		return "file"
-	}()
-
-	content.Size = c.Size
-	md5sum := strings.TrimPrefix(c.ETag, "\"")
-	md5sum = strings.TrimSuffix(md5sum, "\"")
-	content.ETag = md5sum
-	// Convert OS Type to match console file printing style.
-	content.Key = getKey(c)
-	return content
 }
 
 // get content key
@@ -106,16 +94,86 @@ func getKey(c *ClientContent) string {
 	return c.URL.Path
 }
 
-// doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool) error {
+// Generate printable listing from a list of client contents
+func generateContentMessages(clnt Client, ctnts []*ClientContent) (msgs []contentMessage) {
 	prefixPath := clnt.GetURL().Path
-	separator := string(clnt.GetURL().Separator)
-	if !strings.HasSuffix(prefixPath, separator) {
-		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
+	prefixPath = filepath.ToSlash(prefixPath)
+	if !strings.HasSuffix(prefixPath, "/") {
+		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
 	}
+	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
-	var cErr error
-	for content := range clnt.List(ctx, isRecursive, isIncomplete, false, DirNone) {
+	for i, c := range ctnts {
+		// Convert any os specific delimiters to "/".
+		contentURL := filepath.ToSlash(c.URL.Path)
+		// Trim prefix path from the content path.
+		c.URL.Path = strings.TrimPrefix(contentURL, prefixPath)
+
+		contentMsg := contentMessage{}
+		contentMsg.Time = c.Time.Local()
+
+		// guess file type.
+		contentMsg.Filetype = func() string {
+			if c.Type.IsDir() {
+				return "folder"
+			}
+			return "file"
+		}()
+
+		contentMsg.Size = c.Size
+		md5sum := strings.TrimPrefix(c.ETag, "\"")
+		md5sum = strings.TrimSuffix(md5sum, "\"")
+		contentMsg.ETag = md5sum
+		// Convert OS Type to match console file printing style.
+		contentMsg.Key = getKey(c)
+		contentMsg.VersionID = c.VersionID
+		contentMsg.IsDeleteMarker = c.IsDeleteMarker
+		contentMsg.Index = i
+		// URL is empty by default
+		// Set it to either relative dir (host) or public url (remote)
+		contentMsg.URL = clnt.GetURL().String()
+
+		msgs = append(msgs, contentMsg)
+	}
+	return
+}
+
+// Pretty print the list of versions belonging to one object
+func printObjectVersions(clnt Client, ctntVersions []*ClientContent) {
+	// Sort versions
+	sort.Slice(ctntVersions, func(i, j int) bool {
+		if ctntVersions[i].IsLatest {
+			return true
+		}
+		if ctntVersions[j].IsLatest {
+			return false
+		}
+		return ctntVersions[i].Time.After(ctntVersions[j].Time)
+	})
+
+	msgs := generateContentMessages(clnt, ctntVersions)
+	for _, msg := range msgs {
+		printMsg(msg)
+	}
+}
+
+// doList - list all entities inside a folder.
+func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, timeRef time.Time, withOlderVersions bool) error {
+
+	var (
+		lastPath          string
+		perObjectVersions []*ClientContent
+		cErr              error
+	)
+
+	for content := range clnt.List(ctx, ListOptions{
+		isRecursive:       isRecursive,
+		isIncomplete:      isIncomplete,
+		timeRef:           timeRef,
+		withOlderVersions: withOlderVersions,
+		withDeleteMarkers: true,
+		showDir:           DirNone,
+	}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -141,21 +199,16 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool) er
 			continue
 		}
 
-		// Convert any os specific delimiters to "/".
-		contentURL := filepath.ToSlash(content.URL.Path)
-		prefixPath = filepath.ToSlash(prefixPath)
+		if lastPath != content.URL.Path {
+			// Print any object in the current list before reinitializing it
+			printObjectVersions(clnt, perObjectVersions)
+			lastPath = content.URL.Path
+			perObjectVersions = []*ClientContent{}
+		}
 
-		// Trim prefix of current working dir
-		prefixPath = strings.TrimPrefix(prefixPath, "."+separator)
-		// Trim prefix path from the content path.
-		contentURL = strings.TrimPrefix(contentURL, prefixPath)
-		content.URL.Path = contentURL
-		parsedContent := parseContent(content)
-		// URL is empty by default
-		// Set it to either relative dir (host) or public url (remote)
-		parsedContent.URL = clnt.GetURL().String()
-		// Print colorized or jsonized content info.
-		printMsg(parsedContent)
+		perObjectVersions = append(perObjectVersions, content)
 	}
+
+	printObjectVersions(clnt, perObjectVersions)
 	return cErr
 }

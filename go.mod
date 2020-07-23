@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20200714163805-778e9c864f67
-	github.com/minio/minio-go/v7 v7.0.2-0.20200718235721-f0e2f3ae3678
+	github.com/minio/minio-go/v7 v7.0.2-0.20200722162308-e0105ca08252
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -23,6 +23,7 @@ require (
 	github.com/rjeczalik/notify v0.9.2
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/sys v0.0.0-20200720211630-cb9d2d5c5666 // indirect
 	golang.org/x/text v0.3.3
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 	gopkg.in/h2non/filetype.v1 v1.0.5

@@ -25,6 +25,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -153,7 +154,7 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 		// downloaded object is equal to the original one. FS files
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
-		client, content, err := url2Stat(ctx, sourceURL, false, encKeyDB)
+		client, content, err := url2Stat(ctx, sourceURL, "", false, encKeyDB, time.Time{})
 		if err == nil && client.GetURL().Type == objectStorage {
 			size = content.Size
 		}

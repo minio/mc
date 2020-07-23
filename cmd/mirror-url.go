@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/minio/pkg/wildcard"
@@ -71,7 +72,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 
 	/****** Generic rules *******/
 	if !cliCtx.Bool("watch") && !cliCtx.Bool("active-active") && !cliCtx.Bool("multi-master") {
-		_, srcContent, err := url2Stat(ctx, srcURL, false, encKeyDB)
+		_, srcContent, err := url2Stat(ctx, srcURL, "", false, encKeyDB, time.Time{})
 		// incomplete uploads are not necessary for mirror operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {

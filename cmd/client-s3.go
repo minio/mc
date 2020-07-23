@@ -809,12 +809,14 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 	return wo, nil
 }
 
-// Get - get object with metadata.
-func (c *S3Client) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
+// Get - get object with GET options.
+func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	opts := minio.GetObjectOptions{}
-	opts.ServerSideEncryption = sse
-	reader, e := c.api.GetObject(ctx, bucket, object, opts)
+	reader, e := c.api.GetObject(ctx, bucket, object,
+		minio.GetObjectOptions{
+			ServerSideEncryption: opts.sse,
+			VersionID:            opts.versionID,
+		})
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -838,7 +840,7 @@ func (c *S3Client) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadClos
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
 // such that large file sizes will be copied in multipart manner on server
 // side.
-func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error {
+func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, progress io.Reader) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -850,39 +852,40 @@ func (c *S3Client) Copy(ctx context.Context, source string, size int64, progress
 	srcOpts := minio.CopySrcOptions{
 		Bucket:     tokens[1],
 		Object:     tokens[2],
-		Encryption: srcSSE,
+		Encryption: opts.srcSSE,
+		VersionID:  opts.versionID,
 	}
 
 	destOpts := minio.CopyDestOptions{
 		Bucket:     dstBucket,
 		Object:     dstObject,
-		Encryption: tgtSSE,
+		Encryption: opts.tgtSSE,
 		Progress:   progress,
-		Size:       size,
+		Size:       opts.size,
 	}
 
-	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
+	if lockModeStr, ok := opts.metadata[AmzObjectLockMode]; ok {
 		destOpts.Mode = minio.RetentionMode(strings.ToUpper(lockModeStr))
-		delete(metadata, AmzObjectLockMode)
+		delete(opts.metadata, AmzObjectLockMode)
 	}
 
-	if retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]; ok {
-		delete(metadata, AmzObjectLockRetainUntilDate)
+	if retainUntilDateStr, ok := opts.metadata[AmzObjectLockRetainUntilDate]; ok {
+		delete(opts.metadata, AmzObjectLockRetainUntilDate)
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
 			destOpts.RetainUntilDate = t.UTC()
 		}
 	}
 
-	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
+	if lh, ok := opts.metadata[AmzObjectLockLegalHold]; ok {
 		destOpts.LegalHold = minio.LegalHoldStatus(lh)
-		delete(metadata, AmzObjectLockLegalHold)
+		delete(opts.metadata, AmzObjectLockLegalHold)
 	}
 
 	// Assign metadata after irrelevant parts are delete above
-	destOpts.UserMetadata = metadata
+	destOpts.UserMetadata = opts.metadata
 
 	var e error
-	if disableMultipart || size < 64*1024*1024 {
+	if opts.disableMultipart || opts.size < 64*1024*1024 {
 		_, e = c.api.CopyObject(ctx, destOpts, srcOpts)
 	} else {
 		_, e = c.api.ComposeObject(ctx, destOpts, srcOpts)
@@ -1314,8 +1317,12 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 	return nil
 }
 
-// listObjectWrapper - select ObjectList version depending on the target hostname
-func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, doneCh chan struct{}, metadata bool) <-chan minio.ObjectInfo {
+// listObjectWrapper - select ObjectList mode depending on arguments
+func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool) <-chan minio.ObjectInfo {
+	if !timeRef.IsZero() || withVersions {
+		return c.listVersions(ctx, bucket, object, isRecursive, timeRef, withVersions, withDeleteMarkers)
+	}
+
 	if isGoogle(c.targetURL.Host) {
 		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
 		// https://github.com/minio/mc/issues/3073
@@ -1359,7 +1366,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata. It also returns
 // a DIR type content if a prefix does exist in the server.
-func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse encrypt.ServerSide) (*ClientContent, *probe.Error) {
+func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, *probe.Error) {
 	c.Lock()
 	defer c.Unlock()
 	bucket, object := c.url2BucketAndObject()
@@ -1378,7 +1385,7 @@ func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 	}
 
 	// If the request is for incomplete upload stat, handle it here.
-	if isIncomplete {
+	if opts.incomplete {
 		return c.statIncompleteUpload(ctx, bucket, object)
 	}
 
@@ -1390,13 +1397,14 @@ func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 	//     - /path/to/empty_directory
 	//     - /path/to/empty_directory/
 
-	opts := minio.StatObjectOptions{}
-	opts.ServerSideEncryption = sse
-
-	if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
+	// First an HEAD call is issued, this is faster than doing listing even if the object exists
+	// because the list could be very large. At the same time, the HEAD call is avoided if the
+	// object already contains a trailing prefix or we passed rewind flag to know the object version
+	// created just before the rewind parameter.
+	if !strings.HasSuffix(object, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
 		// Issue HEAD request first but ignore no such key error
 		// so we can check if there is such prefix which exists
-		ctnt, err := c.getObjectStat(ctx, bucket, object, opts)
+		ctnt, err := c.getObjectStat(ctx, bucket, object, minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID})
 		if err == nil {
 			return ctnt, err
 		}
@@ -1412,10 +1420,15 @@ func (c *S3Client) Stat(ctx context.Context, isIncomplete, isPreserve bool, sse 
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, nil, false) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
+
+		if objectStat.Key == prefix {
+			return c.objectInfo2ClientContent(bucket, objectStat), nil
+		}
+
 		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = c.targetURL.Clone()
 			objectMetadata.Type = os.ModeDir
@@ -1541,31 +1554,110 @@ func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 
 /// Bucket API operations.
 
+func (c *S3Client) snapshot(ctx context.Context, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool) <-chan *ClientContent {
+	bucket, object := c.url2BucketAndObject()
+	contentCh := make(chan *ClientContent)
+	go func() {
+		defer close(contentCh)
+		for objectVersion := range c.listVersions(ctx, bucket, object, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers) {
+			contentCh <- c.objectInfo2ClientContent(bucket, objectVersion)
+		}
+	}()
+	return contentCh
+}
+
+func (c *S3Client) listVersions(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool) chan minio.ObjectInfo {
+	objectInfoCh := make(chan minio.ObjectInfo)
+	go func() {
+		defer close(objectInfoCh)
+		c.listVersionsRoutine(ctx, b, o, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers, objectInfoCh)
+	}()
+	return objectInfoCh
+}
+
+func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool, objectInfoCh chan minio.ObjectInfo) {
+	if timeRef.IsZero() {
+		timeRef = time.Now().UTC()
+	}
+
+	var buckets []string
+	if b == "" {
+		bucketsInfo, err := c.api.ListBuckets(ctx)
+		if err != nil {
+			objectInfoCh <- minio.ObjectInfo{
+				Err: err,
+			}
+			return
+		}
+		for _, b := range bucketsInfo {
+			buckets = append(buckets, b.Name)
+		}
+	} else {
+		buckets = append(buckets, b)
+	}
+
+	for _, b := range buckets {
+		var skipKey string
+		for objectVersion := range c.api.ListObjects(ctx, b, minio.ListObjectsOptions{
+			Prefix:       o,
+			Recursive:    isRecursive,
+			WithVersions: true,
+		}) {
+			if objectVersion.Err != nil {
+				objectInfoCh <- objectVersion
+				return
+			}
+
+			if !includeOlderVersions && skipKey == objectVersion.Key {
+				// Skip current version if not are asked to list all versions
+				// and we already listed the current object key name
+				continue
+			}
+
+			if objectVersion.LastModified.Before(timeRef) {
+				skipKey = objectVersion.Key
+
+				// Skip if this is a delete marker and we are not asked to list it
+				if !withDeleteMarkers && objectVersion.IsDeleteMarker {
+					continue
+				}
+
+				objectInfoCh <- objectVersion
+			}
+		}
+	}
+}
+
 // List - list at delimited path, if not recursive.
-func (c *S3Client) List(ctx context.Context, isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *ClientContent {
+func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
 	c.Lock()
 	defer c.Unlock()
 
 	contentCh := make(chan *ClientContent)
-	if isIncomplete {
-		if isRecursive {
-			if showDir == DirNone {
+
+	if !opts.timeRef.IsZero() || opts.withOlderVersions {
+		return c.snapshot(ctx, opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers)
+	}
+
+	if opts.isIncomplete {
+		if opts.isRecursive {
+			if opts.showDir == DirNone {
 				go c.listIncompleteRecursiveInRoutine(ctx, contentCh)
 			} else {
-				go c.listIncompleteRecursiveInRoutineDirOpt(ctx, contentCh, showDir)
+				go c.listIncompleteRecursiveInRoutineDirOpt(ctx, contentCh, opts.showDir)
 			}
 		} else {
 			go c.listIncompleteInRoutine(ctx, contentCh)
 		}
 	} else {
-		if isRecursive {
-			if showDir == DirNone {
-				go c.listRecursiveInRoutine(ctx, contentCh, isMetadata)
+		if opts.isRecursive {
+			if opts.showDir == DirNone {
+				go c.listRecursiveInRoutine(ctx, contentCh, opts.isFetchMeta)
 			} else {
-				go c.listRecursiveInRoutineDirOpt(ctx, contentCh, showDir, isMetadata)
+				go c.listRecursiveInRoutineDirOpt(ctx, contentCh, opts.showDir, opts.isFetchMeta)
 			}
 		} else {
-			go c.listInRoutine(ctx, contentCh, isMetadata)
+			go c.listInRoutine(ctx, contentCh, opts.isFetchMeta)
 		}
 	}
 
@@ -1784,8 +1876,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutineDirOpt(ctx context.Context, c
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
 	} else if strings.HasSuffix(object, string(c.targetURL.Separator)) {
 		// Get stat of given object is a directory.
-		isIncomplete := true
-		content, perr := c.Stat(ctx, isIncomplete, false, nil)
+		content, perr := c.Stat(ctx, StatOptions{incomplete: true})
 		cContent = content
 		if perr != nil {
 			contentCh <- &ClientContent{Err: perr.Trace(bucket)}
@@ -1847,6 +1938,10 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.ETag = entry.ETag
 	content.Time = entry.LastModified
 	content.Expires = entry.Expires
+	content.VersionID = entry.VersionID
+	content.StorageClass = entry.StorageClass
+	content.IsDeleteMarker = entry.IsDeleteMarker
+	content.IsLatest = entry.IsLatest
 	content.Metadata = map[string]string{}
 	content.UserMetadata = map[string]string{}
 	for k, v := range entry.UserMetadata {
@@ -1885,7 +1980,7 @@ func (c *S3Client) listRecursiveInRoutineDirOpt(ctx context.Context, contentCh c
 	var listDir func(bucket, object string) bool
 	listDir = func(bucket, object string) (isStop bool) {
 		isRecursive := false
-		for entry := range c.listObjectWrapper(ctx, bucket, object, isRecursive, nil, metadata) {
+		for entry := range c.listObjectWrapper(ctx, bucket, object, isRecursive, time.Time{}, false, false, metadata) {
 			if entry.Err != nil {
 				url := c.targetURL.Clone()
 				url.Path = c.joinPath(bucket, object)
@@ -1942,8 +2037,7 @@ func (c *S3Client) listRecursiveInRoutineDirOpt(ctx context.Context, contentCh c
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
 	} else {
 		// Get stat of given object is a directory.
-		isIncomplete := false
-		content, perr := c.Stat(ctx, isIncomplete, false, nil)
+		content, perr := c.Stat(ctx, StatOptions{})
 		cContent = content
 		if perr != nil {
 			contentCh <- &ClientContent{Err: perr.Trace(bucket)}
@@ -1993,7 +2087,7 @@ func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientCont
 		contentCh <- content
 	default:
 		isRecursive := false
-		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, nil, metadata) {
+		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, metadata) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
@@ -2039,7 +2133,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 		}
 		for _, bucket := range buckets {
 			isRecursive := true
-			for object := range c.listObjectWrapper(ctx, bucket.Name, o, isRecursive, nil, metadata) {
+			for object := range c.listObjectWrapper(ctx, bucket.Name, o, isRecursive, time.Time{}, false, false, metadata) {
 				if object.Err != nil {
 					contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
@@ -2051,7 +2145,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 		}
 	default:
 		isRecursive := true
-		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, nil, metadata) {
+		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, metadata) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),

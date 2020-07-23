@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/minio/pkg/console"
@@ -42,10 +43,12 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	srcURLs := URLs[:len(URLs)-1]
 	tgtURL := URLs[len(URLs)-1]
 	isRecursive := cliCtx.Bool("recursive")
+	rewind := cliCtx.String("rewind")
+	timeRef := parseRewindFlag(rewind)
 
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
-		_, _, err := url2Stat(ctx, srcURL, false, encKeyDB)
+		_, _, err := url2Stat(ctx, srcURL, "", false, encKeyDB, timeRef)
 		if err != nil {
 			console.Fatalf("Unable to validate source %s\n", srcURL)
 		}
@@ -73,20 +76,20 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	}
 
 	// Guess CopyURLsType based on source and target URLs.
-	copyURLsType, err := guessCopyURLType(ctx, srcURLs, tgtURL, isRecursive, encKeyDB)
+	copyURLsType, _, err := guessCopyURLType(ctx, srcURLs, tgtURL, isRecursive, encKeyDB, timeRef)
 	if err != nil {
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
 	}
 
 	switch copyURLsType {
 	case copyURLsTypeA: // File -> File.
-		checkCopySyntaxTypeA(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd)
+		checkCopySyntaxTypeA(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeB: // File -> Folder.
-		checkCopySyntaxTypeB(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd)
+		checkCopySyntaxTypeB(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeC: // Folder... -> Folder.
-		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, encKeyDB, isMvCmd)
+		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeD: // File1...FileN -> Folder.
-		checkCopySyntaxTypeD(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd)
+		checkCopySyntaxTypeD(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd, timeRef)
 	default:
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
 	}
@@ -98,13 +101,13 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
-func checkCopySyntaxTypeA(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool) {
+func checkCopySyntaxTypeA(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(ctx, srcURL, false, keys)
+	_, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
@@ -113,13 +116,13 @@ func checkCopySyntaxTypeA(ctx context.Context, srcURLs []string, tgtURL string, 
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
-func checkCopySyntaxTypeB(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool) {
+func checkCopySyntaxTypeB(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(ctx, srcURL, false, keys)
+	_, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
@@ -127,7 +130,7 @@ func checkCopySyntaxTypeB(ctx context.Context, srcURLs []string, tgtURL string, 
 	}
 
 	// Check target.
-	if _, tgtContent, err := url2Stat(ctx, tgtURL, false, keys); err == nil {
+	if _, tgtContent, err := url2Stat(ctx, tgtURL, "", false, keys, timeRef); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}
@@ -135,21 +138,21 @@ func checkCopySyntaxTypeB(ctx context.Context, srcURLs []string, tgtURL string, 
 }
 
 // checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid folder.
-func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, isRecursive bool, keys map[string][]prefixSSEPair, isMvCmd bool) {
+func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, isRecursive bool, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 
 	// Check target.
-	if _, tgtContent, err := url2Stat(ctx, tgtURL, false, keys); err == nil {
+	if _, tgtContent, err := url2Stat(ctx, tgtURL, "", false, keys, timeRef); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}
 	}
 
 	for _, srcURL := range srcURLs {
-		c, srcContent, err := url2Stat(ctx, srcURL, false, keys)
+		c, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil {
@@ -184,10 +187,10 @@ func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, 
 }
 
 // checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.
-func checkCopySyntaxTypeD(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool) {
+func checkCopySyntaxTypeD(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
 	// Source can be anything: file, dir, dir...
 	// Check target if it is a dir
-	if _, tgtContent, err := url2Stat(ctx, tgtURL, false, keys); err == nil {
+	if _, tgtContent, err := url2Stat(ctx, tgtURL, "", false, keys, timeRef); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}

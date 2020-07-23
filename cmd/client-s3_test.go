@@ -178,7 +178,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(globalContext, false, false, false, DirNone) {
+	for content := range s3c.List(globalContext, ListOptions{showDir: DirNone}) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
@@ -187,7 +187,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(globalContext, false, false, false, DirNone) {
+	for content := range s3c.List(globalContext, ListOptions{showDir: DirNone}) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
@@ -196,7 +196,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(globalContext, false, false, false, DirNone) {
+	for content := range s3c.List(globalContext, ListOptions{showDir: DirNone}) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsRegular(), Equals, true)
 	}
@@ -227,7 +227,7 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 
-	reader, err = s3c.Get(context.Background(), nil)
+	reader, err = s3c.Get(context.Background(), GetOptions{})
 	c.Assert(err, IsNil)
 	var buffer bytes.Buffer
 	{

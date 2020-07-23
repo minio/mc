@@ -249,7 +249,7 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 	var prevKeyName string
 
 	// iterate over all content which is within the given directory
-	for content := range ctx.clnt.List(globalContext, true, false, false, DirNone) {
+	for content := range ctx.clnt.List(globalContext, ListOptions{isRecursive: true, showDir: DirNone}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -422,7 +422,7 @@ func getShareURL(ctx context.Context, path string) string {
 	clnt, err := newClientFromAlias(targetAlias, targetURLFull)
 	fatalIf(err.Trace(targetAlias, targetURLFull), "Unable to initialize client instance from alias.")
 
-	content, err := clnt.Stat(ctx, false, false, nil)
+	content, err := clnt.Stat(ctx, StatOptions{})
 	fatalIf(err.Trace(targetURLFull, targetAlias), "Unable to lookup file/object.")
 
 	// Skip if its a directory.

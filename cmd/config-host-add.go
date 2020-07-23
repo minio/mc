@@ -179,7 +179,7 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (st
 			return "", err
 		}
 
-		if _, err := s3Client.Stat(ctx, false, false, nil); err != nil {
+		if _, err := s3Client.Stat(ctx, StatOptions{}); err != nil {
 			e := err.ToGoError()
 			if _, ok := e.(BucketDoesNotExist); ok {
 				// Bucket doesn't exist, means signature probing worked successfully.
