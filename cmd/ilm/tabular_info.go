@@ -227,7 +227,7 @@ func getExpiryDateVal(rule lifecycle.Rule) string {
 		expiryDate = strconv.Itoa(rule.Expiration.Date.Day()) + " " +
 			rule.Expiration.Date.Month().String()[0:3] + " " +
 			strconv.Itoa(rule.Expiration.Date.Year())
-	} else if !rule.Expiration.IsDateNull() {
+	} else if !rule.Expiration.IsDaysNull() {
 		expiryDate = strconv.Itoa(int(rule.Expiration.Days)) + " day(s)"
 	}
 	return expiryDate

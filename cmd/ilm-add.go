@@ -23,6 +23,8 @@ import (
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -145,7 +147,13 @@ func mainILMAdd(cliCtx *cli.Context) error {
 
 	// Configuration that is already set.
 	lfcCfg, err := client.GetLifecycle(ctx)
-	fatalIf(err.Trace(args...), "Unable to fetch lifecycle rules for "+urlStr)
+	if err != nil {
+		if e := err.ToGoError(); minio.ToErrorResponse(e).Code == "NoSuchLifecycleConfiguration" {
+			lfcCfg = lifecycle.NewConfiguration()
+		} else {
+			fatalIf(err.Trace(args...), "Unable to fetch lifecycle rules for "+urlStr)
+		}
+	}
 
 	// Configuration that needs to be set is returned by ilm.GetILMConfigToSet.
 	// A new rule is added or the rule (if existing) is replaced
