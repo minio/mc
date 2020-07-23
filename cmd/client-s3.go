@@ -840,7 +840,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
 // such that large file sizes will be copied in multipart manner on server
 // side.
-func (c *S3Client) Copy(ctx context.Context, source, sourceVersionID string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error {
+func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, progress io.Reader) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -852,40 +852,40 @@ func (c *S3Client) Copy(ctx context.Context, source, sourceVersionID string, siz
 	srcOpts := minio.CopySrcOptions{
 		Bucket:     tokens[1],
 		Object:     tokens[2],
-		Encryption: srcSSE,
-		VersionID:  sourceVersionID,
+		Encryption: opts.srcSSE,
+		VersionID:  opts.versionID,
 	}
 
 	destOpts := minio.CopyDestOptions{
 		Bucket:     dstBucket,
 		Object:     dstObject,
-		Encryption: tgtSSE,
+		Encryption: opts.tgtSSE,
 		Progress:   progress,
-		Size:       size,
+		Size:       opts.size,
 	}
 
-	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
+	if lockModeStr, ok := opts.metadata[AmzObjectLockMode]; ok {
 		destOpts.Mode = minio.RetentionMode(strings.ToUpper(lockModeStr))
-		delete(metadata, AmzObjectLockMode)
+		delete(opts.metadata, AmzObjectLockMode)
 	}
 
-	if retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]; ok {
-		delete(metadata, AmzObjectLockRetainUntilDate)
+	if retainUntilDateStr, ok := opts.metadata[AmzObjectLockRetainUntilDate]; ok {
+		delete(opts.metadata, AmzObjectLockRetainUntilDate)
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
 			destOpts.RetainUntilDate = t.UTC()
 		}
 	}
 
-	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
+	if lh, ok := opts.metadata[AmzObjectLockLegalHold]; ok {
 		destOpts.LegalHold = minio.LegalHoldStatus(lh)
-		delete(metadata, AmzObjectLockLegalHold)
+		delete(opts.metadata, AmzObjectLockLegalHold)
 	}
 
 	// Assign metadata after irrelevant parts are delete above
-	destOpts.UserMetadata = metadata
+	destOpts.UserMetadata = opts.metadata
 
 	var e error
-	if disableMultipart || size < 64*1024*1024 {
+	if opts.disableMultipart || opts.size < 64*1024*1024 {
 		_, e = c.api.CopyObject(ctx, destOpts, srcOpts)
 	} else {
 		_, e = c.api.ComposeObject(ctx, destOpts, srcOpts)

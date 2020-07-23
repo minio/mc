@@ -421,7 +421,7 @@ func (f *fsClient) ShareUpload(ctx context.Context, startsWith bool, expires tim
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(ctx context.Context, source, _ string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, preserve bool) *probe.Error {
+func (f *fsClient) Copy(ctx context.Context, source string, opts CopyOptions, progress io.Reader) *probe.Error {
 	rc, e := os.Open(source)
 	if e != nil {
 		err := f.toClientError(e, source)
@@ -430,7 +430,7 @@ func (f *fsClient) Copy(ctx context.Context, source, _ string, size int64, progr
 	defer rc.Close()
 
 	destination := f.PathURL.Path
-	if _, err := f.put(ctx, rc, size, metadata, progress, preserve); err != nil {
+	if _, err := f.put(ctx, rc, opts.size, opts.metadata, progress, opts.isPreserve); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil

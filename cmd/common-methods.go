@@ -344,8 +344,16 @@ func copySourceToTargetURL(ctx context.Context, alias, urlStr, source, sourceVer
 	metadata[AmzObjectLockMode] = mode
 	metadata[AmzObjectLockRetainUntilDate] = until
 	metadata[AmzObjectLockLegalHold] = legalHold
-	err = targetClnt.Copy(ctx, source, sourceVersionID, size, progress, srcSSE, tgtSSE, metadata, disableMultipart, preserve)
 
+	opts := CopyOptions{
+		versionID: sourceVersionID,
+		size:      size,
+		srcSSE:    srcSSE, tgtSSE: tgtSSE,
+		metadata:         metadata,
+		disableMultipart: disableMultipart,
+		isPreserve:       preserve}
+
+	err = targetClnt.Copy(ctx, source, opts, progress)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}

@@ -358,7 +358,6 @@ func (s *TestSuite) TestCopy(c *C) {
 	}, nil, nil, false, false, false)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
-
-	err = fsClientTarget.Copy(context.Background(), sourcePath, "", int64(len(data)), nil, nil, nil, nil, false, false)
+	err = fsClientTarget.Copy(context.Background(), sourcePath, CopyOptions{size: int64(len(data))}, nil)
 	c.Assert(err, IsNil)
 }

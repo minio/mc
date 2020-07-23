@@ -69,6 +69,16 @@ type ListOptions struct {
 	showDir           DirOpt
 }
 
+// CopyOptions holds options for copying operation
+type CopyOptions struct {
+	versionID        string
+	size             int64
+	srcSSE, tgtSSE   encrypt.ServerSide
+	metadata         map[string]string
+	disableMultipart bool
+	isPreserve       bool
+}
+
 // Client - client interface
 type Client interface {
 	// Common operations
@@ -88,7 +98,7 @@ type Client interface {
 	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(ctx context.Context, source, versionID string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, isPreserve bool) *probe.Error
+	Copy(ctx context.Context, source string, opts CopyOptions, progress io.Reader) *probe.Error
 
 	// Runs select expression on object storage on specific files.
 	Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
