@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -78,7 +79,15 @@ func (r removeSnapMsg) JSON() string {
 
 // Validate command-line args.
 func parseSnapRemoveSyntax(ctx *cli.Context) (string, bool) {
-	return ctx.Args().Get(0), ctx.Bool("force")
+	args := ctx.Args()
+	if len(args) != 1 {
+		cli.ShowCommandHelpAndExit(ctx, "remove", globalErrorExitStatus)
+	}
+
+	snapshotName := ctx.Args().Get(0)
+	snapshotName = filepath.ToSlash(snapshotName)
+	snapshotName = strings.TrimRight(snapshotName, "/")
+	return snapshotName, ctx.Bool("force")
 }
 
 func removeSnapshot(snapName string, force bool) *probe.Error {
