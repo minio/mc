@@ -748,7 +748,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	// Check if we are only trying to mirror one bucket from source.
 	if dstClt.GetURL().Type == objectStorage &&
 		dstClt.GetURL().Path == string(dstClt.GetURL().Separator) && !mirrorAllBuckets {
-		dstURL = urlJoinPath(dstURL, filepath.Base(srcClt.GetURL().Path))
+		dstURL = urlJoinPath(dstURL, srcClt.GetURL().Path+"/")
 
 		dstClt, err = newClient(dstURL)
 		fatalIf(err, "Unable to initialize `"+dstURL+"`.")
