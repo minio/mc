@@ -30,21 +30,12 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var (
-	lockFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "clear, c",
-			Usage: "clears previously stored object lock configuration",
-		},
-	}
-)
-
-var lockCmd = cli.Command{
+var bucketLockCmd = cli.Command{
 	Name:   "lock",
 	Usage:  "set and get object lock configuration",
 	Action: mainLock,
 	Before: setGlobalsFromContext,
-	Flags:  append(lockFlags, globalFlags...),
+	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -62,10 +53,10 @@ EXAMPLES:
      $ {{.HelpName}} myminio/mybucket compliance 30d
 
    2. Get object lock configuration
-     $ {{.HelpName}} myminio/mybucket
+     $ {{.HelpName}} myminio/mybucket info
 
    3. Clear object lock configuration
-     $ {{.HelpName}} --clear myminio/mybucket
+     $ {{.HelpName}} myminio/mybucket clear
 `,
 }
 
@@ -80,7 +71,7 @@ type lockCmdMessage struct {
 // Colorized message for console printing.
 func (m lockCmdMessage) String() string {
 	if m.Mode == "" {
-		return "Object lock configuration cleared successfully"
+		return console.Colorize("Clear", "Object lock configuration cleared successfully")
 	}
 
 	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", m.Mode), console.Colorize("Validity", m.Validity))
@@ -94,7 +85,7 @@ func (m lockCmdMessage) JSON() string {
 }
 
 // lock - set/get object lock configuration.
-func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, clearLock bool) error {
+func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, op string) error {
 	client, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
@@ -102,8 +93,7 @@ func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.V
 
 	ctx, cancelLock := context.WithCancel(globalContext)
 	defer cancelLock()
-
-	if clearLock || mode != "" {
+	if op == "clear" || mode != "" {
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
 		fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
 	} else {
@@ -150,10 +140,7 @@ func parseRetentionValidity(validityStr string, m minio.RetentionMode) (uint64, 
 func mainLock(ctx *cli.Context) error {
 	console.SetColor("Mode", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Validity", color.New(color.FgYellow))
-
-	// lock specific flags.
-	clearLock := ctx.Bool("clear")
-
+	console.SetColor("Clear", color.New(color.FgGreen))
 	args := ctx.Args()
 
 	var urlStr string
@@ -161,16 +148,21 @@ func mainLock(ctx *cli.Context) error {
 	var validity uint64
 	var unit minio.ValidityUnit
 	var err *probe.Error
-
+	var op string
 	switch l := len(args); l {
-	case 1:
+	case 2:
 		urlStr = args[0]
-	case 3:
-		urlStr = args[0]
-		if clearLock {
-			fatalIf(errInvalidArgument().Trace(urlStr), "clear flag must be passed with target alone")
+		switch args[1] {
+		case "info":
+			op = "info"
+		case "clear":
+			op = "clear"
+		default:
+			fatalIf(err.Trace(args...), "unable to parse input arguments")
 		}
-
+	case 3:
+		op = "set"
+		urlStr = args[0]
 		mode = minio.RetentionMode(strings.ToUpper(args[1]))
 		validity, unit, err = parseRetentionValidity(args[2], mode)
 		if err != nil {
@@ -180,5 +172,5 @@ func mainLock(ctx *cli.Context) error {
 		cli.ShowCommandHelpAndExit(ctx, "lock", 1)
 	}
 
-	return lock(urlStr, mode, validity, unit, clearLock)
+	return lock(urlStr, mode, validity, unit, op)
 }

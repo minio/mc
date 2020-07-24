@@ -30,6 +30,7 @@ var bucketCmd = cli.Command{
 	HideHelpCommand: true,
 	Flags:           append(bucketFlags, globalFlags...),
 	Subcommands: []cli.Command{
+		bucketLockCmd,
 		bucketVersionCmd,
 	},
 }
