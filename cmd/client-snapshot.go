@@ -42,9 +42,7 @@ type snapClient struct {
 
 // snapNew - instantiate a new snapshot
 func snapNew(snapName, clientURL string) (Client, *probe.Error) {
-	if strings.HasPrefix(snapName, snapshotPrefix) {
-		snapName = strings.TrimPrefix(snapName, snapshotPrefix)
-	}
+	snapName = strings.TrimPrefix(snapName, snapshotPrefix)
 	if snapName == "-" {
 		return snapNewReader(snapName, clientURL, os.Stdin)
 	}

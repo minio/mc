@@ -146,6 +146,7 @@ func (u ClientURL) Clone() ClientURL {
 	}
 }
 
+// BucketAndPrefix splits the url to bucket and prefix
 func (u ClientURL) BucketAndPrefix() (string, string) {
 	if u.Type == fileSystem {
 		return "", u.Path
@@ -163,6 +164,7 @@ func (u ClientURL) BucketAndPrefix() (string, string) {
 	}
 }
 
+// Endpoint returns the string format of this client url
 func (u ClientURL) Endpoint() string {
 	var buf bytes.Buffer
 	if u.Type == fileSystem {

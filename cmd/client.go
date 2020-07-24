@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,13 +80,6 @@ type CopyOptions struct {
 	metadata         map[string]string
 	disableMultipart bool
 	isPreserve       bool
-}
-
-type SnapshotOptions struct {
-	isRecursive       bool
-	timeRef           time.Time
-	withOlderVersions bool
-	withDeleteMarkers bool
 }
 
 // Client - client interface

@@ -97,7 +97,7 @@ func importSnapshot(ctx *cli.Context, input io.Reader, snapName string) *probe.E
 // main entry point for snapshot import
 func mainSnapImport(ctx *cli.Context) error {
 	// Validate command-line args.
-	snapName := parseSnapExportSyntax(ctx)
+	snapName := parseSnapImportSyntax(ctx)
 
 	// Create a snapshot.
 	err := importSnapshot(ctx, os.Stdin, snapName)

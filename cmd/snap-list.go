@@ -131,28 +131,28 @@ func mainSnapList(cmdCtx *cli.Context) error {
 			printMsg(listSnapMsg{SnapshotName: name, ModTime: s.ModTime()})
 		}
 		return nil
-	} else {
-		var (
-			clnt Client
-			err  *probe.Error
-		)
-
-		if cmdCtx.Bool("file") {
-			// We are going to list a snapshot file in the local machine
-			f, e := os.Open(snapshot)
-			if e != nil {
-				err = probe.NewError(e)
-			} else {
-				clnt, err = snapNewReader("dummy-alias", "dummy-alias/", f)
-			}
-		} else {
-			clnt, err = newClient(snapshotPrefix + snapshot)
-		}
-
-		fatalIf(err.Trace(), "Unable to list snapshot")
-
-		ctx, cancelList := context.WithCancel(globalContext)
-		defer cancelList()
-		return doList(ctx, clnt, true, false, time.Time{}, true)
 	}
+
+	var (
+		clnt Client
+		err  *probe.Error
+	)
+
+	if cmdCtx.Bool("file") {
+		// We are going to list a snapshot file in the local machine
+		f, e := os.Open(snapshot)
+		if e != nil {
+			err = probe.NewError(e)
+		} else {
+			clnt, err = snapNewReader("dummy-alias", "dummy-alias/", f)
+		}
+	} else {
+		clnt, err = newClient(snapshotPrefix + snapshot)
+	}
+
+	fatalIf(err.Trace(), "Unable to list snapshot")
+
+	ctx, cancelList := context.WithCancel(globalContext)
+	defer cancelList()
+	return doList(ctx, clnt, true, false, time.Time{}, true)
 }

@@ -47,10 +47,12 @@ const snapshotSerializeVersion = 1
 // That way older versions can be de-serialized and converted.
 // If the saved snapshotSerializeVersion is bigger than the current
 
+// SnapshotBucket is a msgp entry indicating this is a new bucket
 type SnapshotBucket struct {
 	Name string `msg:"name"`
 }
 
+// SnapshotEntry represents an S3 object
 type SnapshotEntry struct {
 	Key            string    `msg:"k"`
 	VersionID      string    `msg:"vid"`
@@ -62,6 +64,7 @@ type SnapshotEntry struct {
 	IsLatest       bool      `msg:"il"`
 }
 
+// S3Target represents the S3 endpoint
 type S3Target struct {
 	URL          string `msg:"url"`
 	AccessKey    string `msg:"accessKey"`
