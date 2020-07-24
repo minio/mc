@@ -45,14 +45,15 @@ var snapImport = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(snapImportFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-  {{.HelpName}} COMMAND - {{.Usage}}
+  {{.HelpName}} {{.Usage}}
 
 USAGE:
-  {{.HelpName}} COMMAND
-
-COMMAND:
+  {{.HelpName}} MY-SNAPSHOT-NAME
 
 EXAMPLES:
+  1. Import a new snapshot from a .snap file
+      {{.Prompt}} {{.HelpName}} my-snapshot-name </path/to/snapshot.snap
+
 `,
 }
 
@@ -60,10 +61,10 @@ EXAMPLES:
 func parseSnapImportSyntax(ctx *cli.Context) (snapName string) {
 	args := ctx.Args()
 	if len(args) != 1 {
-		// fatalIf(errors.New("wrong arguments"), "")
+		cli.ShowCommandHelpAndExit(ctx, "import", globalErrorExitStatus)
 	}
 
-	return args.Get(0)
+	return cleanSnapName(args.Get(0))
 }
 
 func importSnapshot(ctx *cli.Context, input io.Reader, snapName string) *probe.Error {

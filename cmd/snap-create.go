@@ -84,6 +84,12 @@ func (r createSnapMsg) JSON() string {
 	return string(jsonMessageBytes)
 }
 
+func cleanSnapName(name string) string {
+	name = filepath.ToSlash(name)
+	name = strings.TrimRight(name, "/")
+	return name
+}
+
 // validate command-line args.
 func checkSnapCreateSyntax(cliCtx *cli.Context) (snapName string, url string, refTime time.Time) {
 	var perr *probe.Error
@@ -93,7 +99,7 @@ func checkSnapCreateSyntax(cliCtx *cli.Context) (snapName string, url string, re
 		cli.ShowCommandHelpAndExit(cliCtx, "create", globalErrorExitStatus)
 	}
 
-	snapName = args.Get(0)
+	snapName = cleanSnapName(args.Get(0))
 	targetURL := args.Get(1)
 	_, perr = newClient(targetURL)
 	fatalIf(perr.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")

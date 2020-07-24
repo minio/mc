@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -48,7 +47,7 @@ var snapRemove = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(snapRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-  {{.HelpName}} COMMAND - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} SNAPSHOT-NAME
@@ -84,10 +83,7 @@ func parseSnapRemoveSyntax(ctx *cli.Context) (string, bool) {
 		cli.ShowCommandHelpAndExit(ctx, "remove", globalErrorExitStatus)
 	}
 
-	snapshotName := ctx.Args().Get(0)
-	snapshotName = filepath.ToSlash(snapshotName)
-	snapshotName = strings.TrimRight(snapshotName, "/")
-	return snapshotName, ctx.Bool("force")
+	return cleanSnapName(ctx.Args().Get(0)), ctx.Bool("force")
 }
 
 func removeSnapshot(snapName string, force bool) *probe.Error {

@@ -48,19 +48,19 @@ var snapList = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(snapListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-  {{.HelpName}} COMMAND - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} [TARGET]
 
 EXAMPLES:
-  1. List all created snapshots in the local machine
+  1. List all created snapshots
      {{.Prompt}} {{.HelpName}}
 
   2. List the contents of a snapshot
      {{.Prompt}} {{.HelpName}} my-snapshot-name
 
-  3. List the contents of a snapshot file in the local machine
+  3. List the contents of a snapshot file stored in the local machine
      {{.Prompt}} {{.HelpName}} -f /path/to/my-snapshot.snap
 
 `,
@@ -87,7 +87,7 @@ func (r listSnapMsg) JSON() string {
 
 // Validate command-line args.
 func parseSnapListSyntax(ctx *cli.Context) string {
-	return ctx.Args().First()
+	return cleanSnapName(ctx.Args().First())
 }
 
 func listSnapshots() ([]os.FileInfo, *probe.Error) {

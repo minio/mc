@@ -35,14 +35,15 @@ var snapExport = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(snapExportFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-  {{.HelpName}} COMMAND - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} COMMAND
-
-COMMAND:
+  {{.HelpName}} MY-SNAPSHOT-NAME
 
 EXAMPLES:
+  1. Export a snapshot to a file
+      {{.Prompt}} {{.HelpName}} my-snapshot-name >/path/to/snapshot.snap
+
 `,
 }
 
@@ -50,10 +51,10 @@ EXAMPLES:
 func parseSnapExportSyntax(ctx *cli.Context) (snapName string) {
 	args := ctx.Args()
 	if len(args) != 1 {
-		// fatalIf(errors.New("wrong arguments"), "")
+		cli.ShowCommandHelpAndExit(ctx, "export", globalErrorExitStatus)
 	}
 
-	return args.Get(0)
+	return cleanSnapName(args.Get(0))
 }
 
 func exportSnapshot(output io.Writer, snapName string) *probe.Error {
