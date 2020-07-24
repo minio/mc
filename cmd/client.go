@@ -82,14 +82,19 @@ type CopyOptions struct {
 	isPreserve       bool
 }
 
+type SnapshotOptions struct {
+	isRecursive       bool
+	timeRef           time.Time
+	withOlderVersions bool
+	withDeleteMarkers bool
+}
+
 // Client - client interface
 type Client interface {
 	// Common operations
 	Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error)
 
 	List(ctx context.Context, opts ListOptions) <-chan *ClientContent
-
-	Snapshot(ctx context.Context, timeRef time.Time) <-chan *ClientContent
 
 	// Bucket operations
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error

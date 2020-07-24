@@ -87,7 +87,6 @@ func (r createSnapMsg) JSON() string {
 // validate command-line args.
 func checkSnapCreateSyntax(cliCtx *cli.Context) (snapName string, url string, refTime time.Time) {
 	var perr *probe.Error
-	var err error
 
 	args := cliCtx.Args()
 	if len(args) != 2 {
@@ -99,15 +98,8 @@ func checkSnapCreateSyntax(cliCtx *cli.Context) (snapName string, url string, re
 	_, perr = newClient(targetURL)
 	fatalIf(perr.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
-	rewindStr := cliCtx.String("rewind")
-	if rewindStr != "" {
-		refTime, err = time.Parse(time.RFC3339, rewindStr)
-		if err != nil {
-			d, err := time.ParseDuration(rewindStr)
-			fatalIf(probe.NewError(err), "Unable to parse at argument.")
-			refTime = time.Now().Add(-d)
-		}
-	} else {
+	refTime = parseRewindFlag(cliCtx.String("rewind"))
+	if refTime.IsZero() {
 		refTime = time.Now().UTC()
 	}
 
@@ -197,7 +189,7 @@ func createSnapshot(snapName string, s3Path string, at time.Time, overwrite bool
 
 	var entries chan<- SnapshotEntry
 	var currentBucket string
-	for s := range s3Client.Snapshot(context.Background(), at) {
+	for s := range s3Client.List(context.Background(), ListOptions{timeRef: at, isRecursive: true}) {
 		if s.Err != nil {
 			return s.Err
 		}

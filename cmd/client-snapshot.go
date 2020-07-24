@@ -26,11 +26,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/encrypt"
-	"github.com/minio/minio-go/v6/pkg/tags"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 type snapClient struct {
@@ -118,7 +117,7 @@ func (s *snapClient) Watch(ctx context.Context, options WatchOptions) (*WatchObj
 
 /// Object operations.
 
-func (s *snapClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart bool) (int64, *probe.Error) {
+func (s *snapClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (int64, *probe.Error) {
 	return 0, probe.NewError(APINotImplemented{
 		API:     "Put",
 		APIType: "snapshot",
@@ -132,7 +131,7 @@ func (s *snapClient) ShareDownload(ctx context.Context, expires time.Duration) (
 	})
 }
 
-func (s *snapClient) ShareUpload(startsWith bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
+func (s *snapClient) ShareUpload(ctx context.Context, startsWith bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
 	return "", nil, probe.NewError(APINotImplemented{
 		API:     "ShareUpload",
 		APIType: "snapshot",
@@ -140,20 +139,16 @@ func (s *snapClient) ShareUpload(startsWith bool, expires time.Duration, content
 }
 
 // Copy - copy data from source to destination
-func (s *snapClient) Copy(ctx context.Context, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart bool) *probe.Error {
+func (s *snapClient) Copy(ctx context.Context, source string, opts CopyOptions, progress io.Reader) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "Copy",
 		APIType: "snapshot",
 	})
 }
 
-func (s *snapClient) Get(ctx context.Context, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
-	return s.GetWithOptions(ctx, GetOptions{sse: sse})
-}
-
 // Get returns reader and any additional metadata.
-func (s *snapClient) GetWithOptions(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
-	return s.s3Target.GetWithOptions(ctx, opts)
+func (s *snapClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
+	return s.s3Target.Get(ctx, opts)
 }
 
 // Remove - remove entry read from clientContent channel.
@@ -194,9 +189,9 @@ func (s *snapClient) url2BucketAndObject() (bucketName, objectName string) {
 	return tokens[1], prefix
 }
 
-func (s *snapClient) List(ctx context.Context, isRecursive, _, _ bool, showDir DirOpt) <-chan *ClientContent {
+func (s *snapClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent)
-	go s.list(ctx, contentCh, isRecursive, false, false, showDir)
+	go s.list(ctx, contentCh, opts.isRecursive, false, false, opts.showDir)
 	return contentCh
 }
 
@@ -420,10 +415,6 @@ func (s *snapClient) SetAccess(ctx context.Context, access string, isJSON bool) 
 	})
 }
 
-func (s *snapClient) Stat(ctx context.Context, _, _ bool, sse encrypt.ServerSide) (content *ClientContent, err *probe.Error) {
-	return s.StatWithOptions(ctx, false, false, StatOptions{sse: sse})
-}
-
 type filterAction int
 
 const (
@@ -453,7 +444,7 @@ func (s *snapClient) statBucket(ctx context.Context, bucket string) (content *Cl
 }
 
 // Stat - get metadata from path.
-func (s *snapClient) StatWithOptions(ctx context.Context, _, _ bool, opts StatOptions) (content *ClientContent, err *probe.Error) {
+func (s *snapClient) Stat(ctx context.Context, _ StatOptions) (content *ClientContent, err *probe.Error) {
 	bucket, object := s.url2BucketAndObject()
 
 	if bucket == "" {
@@ -507,7 +498,7 @@ func (s *snapClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (s *snapClient) GetTags(ctx context.Context) (*tags.Tags, *probe.Error) {
+func (s *snapClient) GetTags(ctx context.Context) (map[string]string, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "snapshot",
@@ -531,15 +522,33 @@ func (s *snapClient) DeleteTags(ctx context.Context) *probe.Error {
 }
 
 // Get lifecycle configuration for a given bucket, not implemented.
-func (s *snapClient) GetLifecycle(ctx context.Context) (ilm.LifecycleConfiguration, *probe.Error) {
-	return ilm.LifecycleConfiguration{}, probe.NewError(APINotImplemented{
+func (s *snapClient) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{
 		API:     "GetLifecycle",
 		APIType: "snapshot",
 	})
 }
 
 // Set lifecycle configuration for a given bucket, not implemented.
-func (s *snapClient) SetLifecycle(ctx context.Context, _ ilm.LifecycleConfiguration) *probe.Error {
+func (s *snapClient) SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetLifecycle",
+		APIType: "snapshot",
+	})
+}
+
+// Versioning operations
+
+// Not implemeneted
+func (s *snapClient) GetVersioning(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
+	return minio.BucketVersioningConfiguration{}, probe.NewError(APINotImplemented{
+		API:     "GetLifecycle",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) SetVersioning(ctx context.Context, status string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetLifecycle",
 		APIType: "snapshot",

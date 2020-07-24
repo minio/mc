@@ -1554,9 +1554,11 @@ func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 }
 
 /// Bucket API operations.
-func (c *S3Client) Snapshot(ctx context.Context, timeRef time.Time) <-chan *ClientContent {
+
+/*
+func (c *S3Client) Snapshot(ctx context.Context, isRecursive bool, timeRef time.Time) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent)
-	go c.snapshot(ctx, timeRef, contentCh)
+	go c.snapshot(ctx, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers)
 	return contentCh
 }
 
@@ -1591,8 +1593,7 @@ func (c *S3Client) snapshot(ctx context.Context, timeRef time.Time, contentCh ch
 	for _, b := range buckets {
 		var skipKey string
 
-		doneCh := make(chan struct{})
-		for objectVersion := range c.api.ListObjectVersions(b, o, true, doneCh) {
+		for objectVersion := range c.api.ListObjects(ctx, b, minio.ListObjectsOptions{Prefix: o, Recursive: true, WithVersions: true}) {
 			if objectVersion.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(objectVersion.Err),
@@ -1612,6 +1613,19 @@ func (c *S3Client) snapshot(ctx context.Context, timeRef time.Time, contentCh ch
 			}
 		}
 	}
+}
+*/
+
+func (c *S3Client) snapshot(ctx context.Context, isRecursive bool, timeRef time.Time, withOlderVersions, withDeleteMarkers bool) <-chan *ClientContent {
+	bucket, object := c.url2BucketAndObject()
+	contentCh := make(chan *ClientContent)
+	go func() {
+		defer close(contentCh)
+		for objectVersion := range c.listVersions(ctx, bucket, object, isRecursive, timeRef, withOlderVersions, withDeleteMarkers) {
+			contentCh <- c.objectInfo2ClientContent(bucket, objectVersion)
+		}
+	}()
+	return contentCh
 }
 
 func (c *S3Client) listVersions(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool) chan minio.ObjectInfo {
@@ -1998,30 +2012,6 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	}
 
 	return content
-}
-
-// Convert objectVersionInfo to ClientContent
-func (c *S3Client) objectVersionInfo2ClientContent(bucket string, entry minio.ObjectVersionInfo) *ClientContent {
-	content := ClientContent{}
-	url := c.targetURL.Clone()
-	// Join bucket and incoming object key.
-	url.Path = c.joinPath(bucket, entry.Key)
-	content.URL = url
-	content.VersionID = entry.VersionID
-	content.StorageClass = entry.StorageClass
-	content.IsDeleteMarker = entry.IsDeleteMarker
-	content.IsLatest = entry.IsLatest
-	content.Size = entry.Size
-	content.ETag = entry.ETag
-	content.Time = entry.LastModified
-	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) && entry.Size == 0 && entry.LastModified.IsZero() {
-		content.Type = os.ModeDir
-		content.Time = time.Now()
-	} else {
-		content.Type = os.FileMode(0664)
-	}
-
-	return &content
 }
 
 // Returns bucket stat info of current bucket.
