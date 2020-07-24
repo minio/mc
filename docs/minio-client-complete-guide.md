@@ -1211,7 +1211,7 @@ mc event remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 
 <a name="ilm"></a>
 ### Command `ilm`
-``ilm`` - A convenient way manage bucket lifecycle configuration.
+``ilm`` - A convenient way to manage bucket lifecycle configuration.
 
 ```
 USAGE:
