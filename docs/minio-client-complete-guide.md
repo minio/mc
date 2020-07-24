@@ -595,13 +595,13 @@ mc lock myminio/mybucket compliance 30d
 *Example: Display the object lock configuration for bucket `mybucket`*
 
 ```
-mc lock myminio/mybucket info
+mc bucket lock myminio/mybucket info
 COMPLIANCE mode is enabled for 30d
 ```
 *Example: Clear object lock configuration for bucket `mybucket`*
 
 ```
-mc lock myminio/mybucket clear
+mc bucket lock myminio/mybucket clear
 Object lock configuration cleared successfully
 ```
 
