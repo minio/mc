@@ -481,6 +481,7 @@ func (s *snapClient) Stat(ctx context.Context, _ StatOptions) (content *ClientCo
 
 	contentCh := make(chan *ClientContent, 2)
 	s.getBucketContents(ctx, *b, contentCh, filter)
+	close(contentCh)
 
 	content = <-contentCh
 	if content == nil {
