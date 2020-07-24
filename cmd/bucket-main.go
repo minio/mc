@@ -31,6 +31,7 @@ var bucketCmd = cli.Command{
 	Flags:           append(bucketFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		bucketLockCmd,
+		bucketReplicateCmd,
 		bucketVersionCmd,
 	},
 }

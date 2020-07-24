@@ -40,6 +40,7 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/minio/minio-go/v7/pkg/replication"
 )
 
 // filesystem client
@@ -1143,4 +1144,29 @@ func (f *fsClient) SetVersioning(ctx context.Context, status string) *probe.Erro
 		API:     "SetVersioning",
 		APIType: "filesystem",
 	})
+}
+
+// Get replication configuration for a given bucket, not implemented.
+func (f *fsClient) GetReplication(ctx context.Context) (replication.Config, *probe.Error) {
+	return replication.Config{}, probe.NewError(APINotImplemented{
+		API:     "GetReplication",
+		APIType: "filesystem",
+	})
+}
+
+// Set replication configuration for a given bucket, not implemented.
+func (f *fsClient) SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetReplication",
+		APIType: "filesystem",
+	})
+}
+
+// Remove replication configuration for a given bucket. Not implemented
+func (f *fsClient) RemoveReplication(ctx context.Context) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "RemoveReplication",
+		APIType: "filesystem",
+	})
+
 }

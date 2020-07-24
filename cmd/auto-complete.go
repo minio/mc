@@ -264,7 +264,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
-	"/bucket/version": s3Completer,
+	"/bucket/replicate": s3Completer,
+	"/bucket/version":   s3Completer,
 
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
@@ -312,9 +313,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/config/host/add":    nil,
-	"/config/host/list":   aliasCompleter,
-	"/config/host/remove": aliasCompleter,
+	"/admin/bucket/replication": aliasCompleter,
+	"/admin/bucket/remote":      aliasCompleter,
+	"/config/host/add":          nil,
+	"/config/host/list":         aliasCompleter,
+	"/config/host/remove":       aliasCompleter,
 
 	"/update":  nil,
 	"/version": nil,
