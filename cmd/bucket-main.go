@@ -24,12 +24,13 @@ var (
 
 var bucketCmd = cli.Command{
 	Name:            "bucket",
-	Usage:           "manage bucket",
+	Usage:           "manage bucket configuration",
 	Action:          mainBucket,
 	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,
 	Flags:           append(bucketFlags, globalFlags...),
 	Subcommands: []cli.Command{
+		bucketILMCmd,
 		bucketLockCmd,
 		bucketReplicateCmd,
 		bucketVersionCmd,

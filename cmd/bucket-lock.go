@@ -32,7 +32,7 @@ import (
 
 var bucketLockCmd = cli.Command{
 	Name:   "lock",
-	Usage:  "set and get object lock configuration",
+	Usage:  "manage default bucket object lock configuration",
 	Action: mainLock,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

@@ -247,9 +247,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/sql":       s3Completer,
 	"/mb":        aliasCompleter,
 
-	"/event/add":    aliasCompleter,
-	"/event/list":   aliasCompleter,
-	"/event/remove": aliasCompleter,
+	"/event/add":    s3Complete{deepLevel: 2},
+	"/event/list":   s3Complete{deepLevel: 2},
+	"/event/remove": s3Complete{deepLevel: 2},
 
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,
@@ -264,8 +264,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
-	"/bucket/replicate": s3Completer,
-	"/bucket/version":   s3Completer,
+	"/bucket/ilm":       s3Complete{deepLevel: 2},
+	"/bucket/replicate": s3Complete{deepLevel: 2},
+	"/bucket/version":   s3Complete{deepLevel: 2},
 
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,

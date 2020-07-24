@@ -339,7 +339,6 @@ var appCmds = []cli.Command{
 	diffCmd,
 	rmCmd,
 	eventCmd,
-	ilmCmd,
 	watchCmd,
 	policyCmd,
 	tagCmd,
