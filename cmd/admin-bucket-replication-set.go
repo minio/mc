@@ -126,17 +126,6 @@ func (r replicationMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// isValidPath - validates if bucket path is of valid type
-func isValidPath(path string) (ok bool) {
-	l := strings.ToLower(strings.TrimSpace(path))
-	for _, v := range []string{"on", "off", "auto"} {
-		if l == v {
-			return true
-		}
-	}
-	return false
-}
-
 // fetchReplicationTarget - returns the dest bucket, dest endpoint, access and secret key
 func fetchReplicationTarget(cli *cli.Context) (sourceBucket string, replTarget *madmin.BucketReplicationTarget, err error) {
 	args := cli.Args()
