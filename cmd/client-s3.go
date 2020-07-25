@@ -1096,6 +1096,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		for content := range contentCh {
 			// Convert content.URL.Path to objectName for objectsCh.
 			bucket, objectName := c.splitPath(content.URL.Path)
+			objectVersionID := content.VersionID
 
 			// We don't treat path when bucket is
 			// empty, just skip it when it happens.
@@ -1144,7 +1145,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				sent := false
 				for !sent {
 					select {
-					case objectsCh <- minio.ObjectInfo{Key: objectName}:
+					case objectsCh <- minio.ObjectInfo{Key: objectName, VersionID: objectVersionID}:
 						sent = true
 					case removeStatus := <-statusCh:
 						errorCh <- probe.NewError(removeStatus.Err)
