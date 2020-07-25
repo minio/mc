@@ -893,22 +893,22 @@ mc admin bucket quota myminio/mybucket --hard 64MB
 mc admin bucket quota myminio/mybucket --clear
 ```
 
-<a name="replication"></a>
-### Command `replication` - Set/Get/Remove bucket replication target
-`replication` command to set or get bucket replication target on MinIO server.
+<a name="remote"></a>
+### Command `remote` - Manage bucket targets
+`remote` command manages remote bucket targets on MinIO server.
 
 ```
 NAME:
-  mc admin bucket replication - manage bucket replication
+  mc admin bucket remote - manage bucket targets
 
 USAGE:
-  mc admin bucket replication set TARGET http(s)://ACCESSKEY:SECRETKEY@REPLICA_URL/REPLICA_BUCKET [--path | --api]
+  mc admin bucket remote set TARGET http(s)://ACCESSKEY:SECRETKEY@TARGET_URL/TARGET_BUCKET [--path | --api] --type
 
-REPLICA_BUCKET:
-  Also called as replication target bucket.
+TARGET_BUCKET:
+  Also called as target bucket.
 
-REPLICA_URL:
-  Also called as replication endpoint.
+TARGET_URL:
+  Also called as remote endpoint.
 
 ACCESSKEY:
   Also called as username.
@@ -918,22 +918,28 @@ SECRETKEY:
 
 
 ```
-*Example: Set a new replication target `ReplicaBucket` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to replication endpoint.
+*Example: Set a new replication target `targetbucket` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint.
 *
 
 ```
-mc admin bucket replication set myminio/srcbucket https://foobar:foobar12345@minio2:9000/ReplicaBucket --path ON --api s3v4
-Replication ARN = `arn:minio:s3::a5aefe40-1b81-4a6d-b5f6-eeee1e703459:*`
+mc admin bucket remote set myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --path ON --type "replica"
+ARN = `arn:minio:replica::1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
 ```
 
-*Example: Get replication target configured for bucket 'srcbucket' on MinIO.*
+*Example: Get remote target for replication on bucket 'srcbucket' in MinIO.*
 
 ```
-mc admin bucket replication get myminio/srcbucket
+mc admin bucket remote list myminio/srcbucket --type "replica"
 ```
 
-*Example: Remove bucket replication target configured for bucket 'srcbucket' on MinIO.*
+*Example: List remote target(s) on bucket 'srcbucket' in MinIO.*
 
 ```
-mc admin bucket replication remove myminio/srcbucket
+mc admin bucket remote list myminio/srcbucket
+```
+
+*Example: Remove bucket target configured for bucket 'srcbucket' on MinIO with arn `arn:minio:replica::1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`.*
+
+```
+mc admin bucket remote remove myminio/srcbucket --arn "arn:minio:replica::1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket"
 ```

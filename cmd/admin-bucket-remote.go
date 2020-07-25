@@ -18,22 +18,23 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminBucketCmd = cli.Command{
-	Name:   "bucket",
-	Usage:  "manage buckets defined in the MinIO server",
-	Action: mainAdminBucket,
+var adminBucketRemoteCmd = cli.Command{
+	Name:   "remote",
+	Usage:  "Manage bucket targets",
+	Action: mainadminBucketRemote,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminBucketQuotaCmd,
-		adminBucketRemoteCmd,
+		adminBucketRemoteSetCmd,
+		adminBucketRemoteListCmd,
+		adminBucketRemoteRemoveCmd,
 	},
 	HideHelpCommand: true,
 }
 
-// mainAdminBucket is the handle for "mc admin bucket" command.
-func mainAdminBucket(ctx *cli.Context) error {
+// mainadminBucketRemote is the handle for "mc admin bucket replication" command.
+func mainadminBucketRemote(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "quota", "replication" have their own main.
+	// Sub-commands like "set", "get" have their own main.
 }

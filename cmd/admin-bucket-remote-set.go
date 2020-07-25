@@ -1,0 +1,219 @@
+/*
+ * MinIO Client (C) 2020 MinIO, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package cmd
+
+import (
+	"fmt"
+	"net/url"
+	"regexp"
+	"strings"
+
+	"github.com/fatih/color"
+	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
+	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/auth"
+	"github.com/minio/minio/pkg/console"
+	"github.com/minio/minio/pkg/madmin"
+)
+
+var adminBucketRemoteSetFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "path-style",
+		Value: "auto",
+		Usage: "path style supported by the server. Valid options are '[on,off,auto]'",
+	},
+	cli.StringFlag{
+		Name:  "type",
+		Usage: "Type of ARN. Valid options are '[replica]'",
+	},
+}
+var adminBucketRemoteSetCmd = cli.Command{
+	Name:   "set",
+	Usage:  "set a new remote target",
+	Action: mainAdminBucketRemoteSet,
+	Before: setGlobalsFromContext,
+	Flags:  append(globalFlags, adminBucketRemoteSetFlags...),
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@TARGET_URL/TARGET_BUCKET [--path ]
+
+TARGET:
+   Also called as alias/sourcebucketname
+
+TARGET_BUCKET:
+  Also called as remote target bucket.
+
+TARGET_URL:
+  Also called as remote endpoint.
+
+ACCESSKEY:
+  Also called as username.
+
+SECRETKEY:
+  Also called as password.
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Set a new remote replication target 'replicabucket' on https://minio2:9000 for bucket 'srcbucket' on MinIO server.
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} myminio/srcbucket https://foobar:foo12345@minio2:9000/replicabucket --type "replica"
+     {{.EnableHistory}}
+`,
+}
+
+// checkAdminBucketRemoteSetSyntax - validate all the passed arguments
+func checkAdminBucketRemoteSetSyntax(ctx *cli.Context) {
+	argsNr := len(ctx.Args())
+	if argsNr < 2 {
+		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+	}
+	if argsNr > 2 {
+		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
+			"Incorrect number of arguments for remote set command.")
+	}
+	if !ctx.IsSet("type") {
+		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "type flag is required")
+	}
+
+}
+
+// RemoteMessage container for content message structure
+type RemoteMessage struct {
+	op           string
+	Status       string `json:"status"`
+	AccessKey    string `json:"accessKey,omitempty"`
+	SecretKey    string `json:"secretKey,omitempty"`
+	SourceBucket string `json:"sourceBucket"`
+	TargetURL    string `json:"TargetURL,omitempty"`
+	TargetBucket string `json:"TargetBucket,omitempty"`
+	RemoteARN    string `json:"RemoteARN,omitempty"`
+	Path         string `json:"path,omitempty"`
+	Type         string `json:"type"`
+}
+
+func (r RemoteMessage) String() string {
+	switch r.op {
+	case "list":
+		message := console.Colorize("TargetURL", fmt.Sprintf("%s ", r.TargetURL))
+		message += console.Colorize("SourceBucket", r.SourceBucket)
+		message += console.Colorize("Arrow", "->")
+		message += console.Colorize("TargetBucket", r.TargetBucket)
+		message += " "
+		message += console.Colorize("ARN", r.RemoteARN)
+		return message
+	case "remove":
+		return console.Colorize("RemoteMessage", "Removed Remote target for `"+r.SourceBucket+"` bucket successfully.")
+	case "set":
+		return console.Colorize("RemoteMessage", "Remote ARN = `"+r.RemoteARN+"`.")
+	}
+	return ""
+}
+
+// JSON returns jsonified message
+func (r RemoteMessage) JSON() string {
+	r.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(r, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonMessageBytes)
+}
+
+var targetKeys = regexp.MustCompile("^(https?://)(.*?):(.*?)@(.*?)/(.*?)$")
+
+// fetchRemoteTarget - returns the dest bucket, dest endpoint, access and secret key
+func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin.BucketTarget) {
+	args := cli.Args()
+	argCount := len(args)
+	if argCount < 2 {
+		fatalIf(probe.NewError(fmt.Errorf("Missing Remote target configuration")), "Unable to parse remote target")
+	}
+	_, sourceBucket = url2Alias(args[0])
+	TargetURL := args[1]
+	path := cli.String("path-style")
+	if !isValidPath(path) {
+		fatalIf(errInvalidArgument().Trace(path),
+			"Unrecognized bucket path style. Valid options are `[on,off, auto]`.")
+	}
+	parts := targetKeys.FindStringSubmatch(TargetURL)
+	if len(parts) != 6 {
+		fatalIf(probe.NewError(fmt.Errorf("invalid url format")), "Malformed Remote target URL")
+	}
+	accessKey := parts[2]
+	secretKey := parts[3]
+	parsedURL := fmt.Sprintf("%s%s", parts[1], parts[4])
+	TargetBucket := strings.TrimSuffix(parts[5], slashSeperator)
+	TargetBucket = strings.TrimPrefix(TargetBucket, slashSeperator)
+	u, cerr := url.Parse(parsedURL)
+	if cerr != nil {
+		fatalIf(probe.NewError(cerr), "Malformed Remote target URL")
+	}
+	secure := u.Scheme == "https"
+
+	arnType := cli.String("type")
+	if !madmin.ArnType(arnType).IsValid() {
+		fatalIf(errInvalidArgument().Trace(arnType), "Invalid --type flag. Valid option is `[replica]`.")
+	}
+
+	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+	creds := &auth.Credentials{AccessKey: accessKey, SecretKey: secretKey}
+	bktTarget = &madmin.BucketTarget{
+		TargetBucket: TargetBucket,
+		Secure:       secure,
+		Credentials:  creds,
+		Endpoint:     u.Host,
+		Path:         path,
+		API:          "s3v4",
+		Type:         madmin.ArnType(arnType),
+	}
+	return sourceBucket, bktTarget
+}
+
+// mainAdminBucketRemoteSet is the handle for "mc admin bucket remote set" command.
+func mainAdminBucketRemoteSet(ctx *cli.Context) error {
+	checkAdminBucketRemoteSetSyntax(ctx)
+
+	console.SetColor("RemoteMessage", color.New(color.FgGreen))
+
+	// Get the alias parameter from cli
+	args := ctx.Args()
+	aliasedURL := args.Get(0)
+	// Create a new MinIO Admin Client
+	client, cerr := newAdminClient(aliasedURL)
+	fatalIf(cerr, "Unable to initialize admin connection.")
+
+	sourceBucket, bktTarget := fetchRemoteTarget(ctx)
+	arn, e := client.SetBucketTarget(globalContext, sourceBucket, bktTarget)
+	if e != nil {
+		fatalIf(probe.NewError(e), "Cannot add new Remote target")
+	}
+
+	printMsg(RemoteMessage{
+		op:           "set",
+		TargetURL:    bktTarget.URL(),
+		TargetBucket: bktTarget.TargetBucket,
+		AccessKey:    bktTarget.Credentials.AccessKey,
+		SourceBucket: sourceBucket,
+		RemoteARN:    arn,
+	})
+
+	return nil
+}
