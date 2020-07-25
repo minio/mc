@@ -22,9 +22,9 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var ilmCmd = cli.Command{
+var bucketILMCmd = cli.Command{
 	Name:            "ilm",
-	Usage:           "configure bucket lifecycle",
+	Usage:           "manage bucket lifecycle",
 	Action:          mainILM,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

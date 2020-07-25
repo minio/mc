@@ -34,7 +34,7 @@ import (
 
 var bucketReplicateCmd = cli.Command{
 	Name:   "replicate",
-	Usage:  "configure bucket replication",
+	Usage:  "manage bucket replication",
 	Action: mainReplicate,
 	Before: setGlobalsFromContext,
 	Flags:  append(replicateFlags, globalFlags...),
