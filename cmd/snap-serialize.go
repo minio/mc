@@ -137,7 +137,7 @@ func (s *snapshotSerializer) StartBucket(b SnapshotBucket) (chan<- SnapshotEntry
 			}
 		}
 		if s.asyncErr == nil {
-			tmp = encBlock(tmp)
+			_ = encBlock(tmp)
 		}
 		if s.asyncErr == nil {
 			// Add end bucket packet.
@@ -441,7 +441,7 @@ func copySnapshot(w io.Writer, r io.Reader, reTarget *S3Target) *probe.Error {
 	if err != nil {
 		return err
 	}
-	tgt, err := src.ReadTarget()
+	tgt, _ := src.ReadTarget()
 	if reTarget == nil {
 		reTarget = tgt
 	}
