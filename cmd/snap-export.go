@@ -40,6 +40,9 @@ var snapExport = cli.Command{
 USAGE:
   {{.HelpName}} MY-SNAPSHOT-NAME
 
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
   1. Export a snapshot to a file
       {{.Prompt}} {{.HelpName}} my-snapshot-name >/path/to/snapshot.snap

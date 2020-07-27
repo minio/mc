@@ -30,6 +30,7 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/minio/minio-go/v7/pkg/replication"
 )
 
 type snapClient struct {
@@ -550,6 +551,32 @@ func (s *snapClient) GetVersioning(ctx context.Context) (minio.BucketVersioningC
 func (s *snapClient) SetVersioning(ctx context.Context, status string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetLifecycle",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) GetReplication(ctx context.Context) (replication.Config, *probe.Error) {
+	return replication.Config{}, probe.NewError(APINotImplemented{
+		API:     "GetReplication",
+		APIType: "snapshot",
+	})
+
+}
+
+// Not implemented
+func (s *snapClient) SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetReplication",
+		APIType: "snapshot",
+	})
+
+}
+
+// Not implemented
+func (s *snapClient) RemoveReplication(ctx context.Context) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "RemoveReplication",
 		APIType: "snapshot",
 	})
 }

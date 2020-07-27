@@ -50,6 +50,9 @@ var snapImport = cli.Command{
 USAGE:
   {{.HelpName}} MY-SNAPSHOT-NAME
 
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
   1. Import a new snapshot from a .snap file
       {{.Prompt}} {{.HelpName}} my-snapshot-name </path/to/snapshot.snap

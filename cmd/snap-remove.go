@@ -52,6 +52,9 @@ var snapRemove = cli.Command{
 USAGE:
   {{.HelpName}} SNAPSHOT-NAME
 
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
   1. Remove a snapshot from the local machine
       {{.Prompt}} {{.HelpName}} my-snapshot-name

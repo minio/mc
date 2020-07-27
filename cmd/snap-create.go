@@ -57,6 +57,9 @@ var snapCreate = cli.Command{
 USAGE:
   {{.HelpName}} SNAPSHOT-NAME S3-PATH
 
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
   1. Create a new snapshot from an S3 server
       {{.Prompt}} {{.HelpName}} my-snapshot-name s3/

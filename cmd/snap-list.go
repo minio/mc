@@ -53,6 +53,9 @@ var snapList = cli.Command{
 USAGE:
   {{.HelpName}} [TARGET]
 
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
   1. List all created snapshots
      {{.Prompt}} {{.HelpName}}

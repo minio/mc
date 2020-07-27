@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015-2020 MinIO, Inc.
+ * MinIO Client (C) 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1554,67 +1554,6 @@ func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 }
 
 /// Bucket API operations.
-
-/*
-func (c *S3Client) Snapshot(ctx context.Context, isRecursive bool, timeRef time.Time) <-chan *ClientContent {
-	contentCh := make(chan *ClientContent)
-	go c.snapshot(ctx, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers)
-	return contentCh
-}
-
-func (c *S3Client) snapshot(ctx context.Context, timeRef time.Time, contentCh chan *ClientContent) {
-	defer close(contentCh)
-
-	if timeRef.IsZero() {
-		contentCh <- &ClientContent{
-			Err: probe.NewError(errors.New("time reference should be provided")),
-		}
-		return
-	}
-
-	b, o := c.url2BucketAndObject()
-
-	var buckets []string
-	if b == "" {
-		bucketsInfo, err := c.api.ListBuckets(ctx)
-		if err != nil {
-			contentCh <- &ClientContent{
-				Err: probe.NewError(err),
-			}
-			return
-		}
-		for _, b := range bucketsInfo {
-			buckets = append(buckets, b.Name)
-		}
-	} else {
-		buckets = append(buckets, b)
-	}
-
-	for _, b := range buckets {
-		var skipKey string
-
-		for objectVersion := range c.api.ListObjects(ctx, b, minio.ListObjectsOptions{Prefix: o, Recursive: true, WithVersions: true}) {
-			if objectVersion.Err != nil {
-				contentCh <- &ClientContent{
-					Err: probe.NewError(objectVersion.Err),
-				}
-				return
-			}
-
-			if skipKey == objectVersion.Key {
-				// A good version with the same key name
-				// has already been sent to the caller
-				continue
-			}
-
-			if objectVersion.LastModified.Before(timeRef) {
-				contentCh <- c.objectVersionInfo2ClientContent(b, objectVersion)
-				skipKey = objectVersion.Key
-			}
-		}
-	}
-}
-*/
 
 func (c *S3Client) snapshot(ctx context.Context, isRecursive bool, timeRef time.Time, withOlderVersions, withDeleteMarkers bool) <-chan *ClientContent {
 	bucket, object := c.url2BucketAndObject()
