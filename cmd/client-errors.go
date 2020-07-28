@@ -16,7 +16,10 @@
 
 package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 /// Collection of standard errors
 
@@ -154,9 +157,14 @@ func (e EmptyPath) Error() string {
 }
 
 // ObjectMissing (EINVAL) - object key missing.
-type ObjectMissing struct{}
+type ObjectMissing struct {
+	timeRef time.Time
+}
 
 func (e ObjectMissing) Error() string {
+	if !e.timeRef.IsZero() {
+		return "Object did not exist at `" + e.timeRef.Format(time.RFC1123) + "`"
+	}
 	return "Object does not exist"
 }
 

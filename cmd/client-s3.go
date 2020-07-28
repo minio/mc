@@ -1410,7 +1410,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return ctnt, err
 		}
 		// Ignore object missing error but return for other errors
-		if !errors.As(err.ToGoError(), &ObjectMissing{}) {
+		if !errors.As(err.ToGoError(), &ObjectMissing{opts.timeRef}) {
 			return nil, err
 		}
 	}
@@ -1437,7 +1437,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		}
 	}
 
-	return nil, probe.NewError(ObjectMissing{})
+	return nil, probe.NewError(ObjectMissing{opts.timeRef})
 }
 
 // getObjectStat returns the metadata of an object from a HEAD call.
