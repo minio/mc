@@ -77,6 +77,9 @@ EXAMPLES:
   5. Display the content of encrypted object. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
      {{.Prompt}} {{.HelpName}} --encrypt-key "play/my-bucket/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  play/my-bucket/my-object
+
+  6. Display the content of an object 10 days earlier
+     {{.Prompt}} {{.HelpName}} --rewind 10d play/my-bucket/my-object
 `,
 }
 
