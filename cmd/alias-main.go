@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2014-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,29 +23,44 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var configHostCmd = cli.Command{
-	Name:   "host",
-	Usage:  "add, remove and list hosts in configuration file",
-	Action: mainConfigHost,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		configHostAddCmd,
-		configHostRemoveCmd,
-		configHostListCmd,
-	},
+//   Configure an alias in MinIO Client
+//
+//   ----
+//   NOTE: that the alias command only writes values to the config file.
+//   It does not use any configuration values from the environment variables.
+//
+//   One needs to edit configuration file manually, this is purposefully done
+//   so to avoid taking credentials over cli arguments. It is a security precaution
+//   ----
+//
+
+var (
+	aliasFlags = []cli.Flag{}
+)
+
+var aliasCmd = cli.Command{
+	Name:            "alias",
+	Usage:           "set, remove and list aliases in configuration file",
+	Action:          mainAlias,
+	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,
+	Flags:           append(aliasFlags, globalFlags...),
+	Subcommands: []cli.Command{
+		aliasSetCmd,
+		aliasListCmd,
+		aliasRemoveCmd,
+	},
 }
 
-// mainConfigHost is the handle for "mc config host" command.
-func mainConfigHost(ctx *cli.Context) error {
+// mainAlias is the handle for "mc alias" command. provides sub-commands which write configuration data in json format to config file.
+func mainAlias(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "remove", "list" have their own main.
+	// Sub-commands like add, list and remove have their own main.
 }
 
-// hostMessage container for content message structure
-type hostMessage struct {
+// aliasMessage container for content message structure
+type aliasMessage struct {
 	op          string
 	prettyPrint bool
 	Status      string `json:"status"`
@@ -54,13 +69,15 @@ type hostMessage struct {
 	AccessKey   string `json:"accessKey,omitempty"`
 	SecretKey   string `json:"secretKey,omitempty"`
 	API         string `json:"api,omitempty"`
-	Lookup      string `json:"lookup,omitempty"`
+	Path        string `json:"path,omitempty"`
+	// Deprecated field, replaced by Path
+	Lookup string `json:"lookup,omitempty"`
 }
 
 // Print the config information of one alias, when prettyPrint flag
 // is activated, fields contents are cut and '...' will be added to
 // show a pretty table of all aliases configurations
-func (h hostMessage) String() string {
+func (h aliasMessage) String() string {
 	switch h.op {
 	case "list":
 		// Create a new pretty table with cols configuration
@@ -70,20 +87,27 @@ func (h hostMessage) String() string {
 			Row{"AccessKey", "AccessKey"},
 			Row{"SecretKey", "SecretKey"},
 			Row{"API", "API"},
-			Row{"Lookup", "Lookup"},
+			Row{"Path", "Path"},
 		)
-		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, h.Lookup)
+		// Handle deprecated lookup
+		path := h.Path
+		if path == "" {
+			path = h.Lookup
+		}
+		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, path)
 	case "remove":
-		return console.Colorize("HostMessage", "Removed `"+h.Alias+"` successfully.")
-	case "add":
-		return console.Colorize("HostMessage", "Added `"+h.Alias+"` successfully.")
+		return console.Colorize("AliasMessage", "Removed `"+h.Alias+"` successfully.")
+	case "add": // add is deprecated
+		fallthrough
+	case "set":
+		return console.Colorize("AliasMessage", "Added `"+h.Alias+"` successfully.")
 	default:
 		return ""
 	}
 }
 
 // JSON jsonified host message
-func (h hostMessage) JSON() string {
+func (h aliasMessage) JSON() string {
 	h.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(h, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")

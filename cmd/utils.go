@@ -125,7 +125,7 @@ func splitStr(path, sep string, n int) []string {
 
 // NewS3Config simply creates a new Config struct using the passed
 // parameters.
-func NewS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
+func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
@@ -137,13 +137,13 @@ func NewS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	s3Config.Insecure = globalInsecure
 
 	s3Config.HostURL = urlStr
-	if hostCfg != nil {
-		s3Config.AccessKey = hostCfg.AccessKey
-		s3Config.SecretKey = hostCfg.SecretKey
-		s3Config.SessionToken = hostCfg.SessionToken
-		s3Config.Signature = hostCfg.API
+	if aliasCfg != nil {
+		s3Config.AccessKey = aliasCfg.AccessKey
+		s3Config.SecretKey = aliasCfg.SecretKey
+		s3Config.SessionToken = aliasCfg.SessionToken
+		s3Config.Signature = aliasCfg.API
 	}
-	s3Config.Lookup = getLookupType(hostCfg.Lookup)
+	s3Config.Lookup = getLookupType(aliasCfg.Path)
 	return s3Config
 }
 
@@ -189,9 +189,9 @@ func isNewer(ti time.Time, newerRef string) bool {
 func getLookupType(l string) minio.BucketLookupType {
 	l = strings.ToLower(l)
 	switch l {
-	case "dns":
+	case "off":
 		return minio.BucketLookupDNS
-	case "path":
+	case "on":
 		return minio.BucketLookupPath
 	}
 	return minio.BucketLookupAuto

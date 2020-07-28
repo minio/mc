@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2017-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -34,24 +35,27 @@ import (
 
 const cred = "YellowItalics"
 
-var hostAddFlags = []cli.Flag{
+var aliasSetFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "lookup",
+		Name:  "path",
 		Value: "auto",
-		Usage: "bucket lookup supported by the server. Valid options are '[dns,path,auto]'",
+		Usage: "bucket path lookup supported by the server. Valid options are '[auto, on, off]'",
 	},
 	cli.StringFlag{
 		Name:  "api",
 		Usage: "API signature. Valid options are '[S3v4, S3v2]'",
 	},
 }
-var configHostAddCmd = cli.Command{
-	Name:            "add",
-	ShortName:       "a",
-	Usage:           "add a new host to configuration file",
-	Action:          mainConfigHostAdd,
+
+var aliasSetCmd = cli.Command{
+	Name:      "set",
+	ShortName: "s",
+	Usage:     "set a new alias to configuration file",
+	Action: func(cli *cli.Context) error {
+		return mainAliasSet(cli, false)
+	},
 	Before:          setGlobalsFromContext,
-	Flags:           append(hostAddFlags, globalFlags...),
+	Flags:           append(aliasSetFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -93,18 +97,19 @@ EXAMPLES:
 `,
 }
 
-// checkConfigHostAddSyntax - verifies input arguments to 'config host add'.
-func checkConfigHostAddSyntax(ctx *cli.Context, accessKey string, secretKey string) {
+// checkAliasSetSyntax - verifies input arguments to 'alias set'.
+func checkAliasSetSyntax(ctx *cli.Context, accessKey string, secretKey string, deprecated bool) {
 	args := ctx.Args()
 	argsNr := len(args)
 	if argsNr > 4 || argsNr < 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for host add command.")
+			"Incorrect number of arguments for alias set command.")
 	}
 
 	alias := cleanAlias(args.Get(0))
 	url := args.Get(1)
 	api := ctx.String("api")
+	path := ctx.String("path")
 	bucketLookup := ctx.String("lookup")
 
 	if !isValidAlias(alias) {
@@ -130,32 +135,38 @@ func checkConfigHostAddSyntax(ctx *cli.Context, accessKey string, secretKey stri
 			"Unrecognized API signature. Valid options are `[S3v4, S3v2]`.")
 	}
 
-	if !isValidLookup(bucketLookup) {
-		fatalIf(errInvalidArgument().Trace(bucketLookup),
-			"Unrecognized bucket lookup. Valid options are `[dns,auto, path]`.")
+	if deprecated {
+		if !isValidLookup(bucketLookup) {
+			fatalIf(errInvalidArgument().Trace(bucketLookup),
+				"Unrecognized bucket lookup. Valid options are `[dns,auto, path]`.")
+		}
+	} else {
+		if !isValidPath(path) {
+			fatalIf(errInvalidArgument().Trace(bucketLookup),
+				"Unrecognized path value. Valid options are `[auto, on, off]`.")
+		}
 	}
 }
 
-// addHost - add a host config.
-func addHost(alias string, hostCfgV9 hostConfigV9) {
-	mcCfgV9, err := loadMcConfig()
+// setAlias - set an alias config.
+func setAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
+	mcCfgV10, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config `"+mustGetMcConfigPath()+"`.")
 
 	// Add new host.
-	mcCfgV9.Hosts[alias] = hostCfgV9
+	mcCfgV10.Aliases[alias] = aliasCfgV10
 
-	err = saveMcConfig(mcCfgV9)
+	err = saveMcConfig(mcCfgV10)
 	fatalIf(err.Trace(alias), "Unable to update hosts in config version `"+mustGetMcConfigPath()+"`.")
 
-	printMsg(hostMessage{
-		op:        "add",
+	return aliasMessage{
 		Alias:     alias,
-		URL:       hostCfgV9.URL,
-		AccessKey: hostCfgV9.AccessKey,
-		SecretKey: hostCfgV9.SecretKey,
-		API:       hostCfgV9.API,
-		Lookup:    hostCfgV9.Lookup,
-	})
+		URL:       aliasCfgV10.URL,
+		AccessKey: aliasCfgV10.AccessKey,
+		SecretKey: aliasCfgV10.SecretKey,
+		API:       aliasCfgV10.API,
+		Path:      aliasCfgV10.Path,
+	}
 }
 
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
@@ -210,13 +221,12 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (st
 
 // BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
-
-	s3Config := NewS3Config(url, &hostConfigV9{
+func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path string) (*Config, *probe.Error) {
+	s3Config := NewS3Config(url, &aliasConfigV10{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
-		Lookup:    lookup,
+		Path:      path,
 	})
 
 	// If api is provided we do not auto probe signature, this is
@@ -228,7 +238,7 @@ func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, lookup s
 	// Probe S3 signature version
 	api, err := probeS3Signature(ctx, accessKey, secretKey, url)
 	if err != nil {
-		return nil, err.Trace(url, accessKey, secretKey, api, lookup)
+		return nil, err.Trace(url, accessKey, secretKey, api, path)
 	}
 
 	s3Config.Signature = api
@@ -236,8 +246,8 @@ func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, lookup s
 	return s3Config, nil
 }
 
-// fetchHostKeys - returns the user accessKey and secretKey
-func fetchHostKeys(args cli.Args) (string, string) {
+// fetchAliasKeys - returns the user accessKey and secretKey
+func fetchAliasKeys(args cli.Args) (string, string) {
 	accessKey := ""
 	secretKey := ""
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
@@ -273,31 +283,52 @@ func fetchHostKeys(args cli.Args) (string, string) {
 	return accessKey, secretKey
 }
 
-func mainConfigHostAdd(cli *cli.Context) error {
-
-	console.SetColor("HostMessage", color.New(color.FgGreen))
+func mainAliasSet(cli *cli.Context, deprecated bool) error {
+	console.SetColor("AliasMessage", color.New(color.FgGreen))
 	var (
-		args   = cli.Args()
-		alias  = cleanAlias(args.Get(0))
-		url    = trimTrailingSeparator(args.Get(1))
-		api    = cli.String("api")
-		lookup = cli.String("lookup")
+		args  = cli.Args()
+		alias = cleanAlias(args.Get(0))
+		url   = trimTrailingSeparator(args.Get(1))
+		api   = cli.String("api")
+		path  = cli.String("path")
 	)
-	accessKey, secretKey := fetchHostKeys(args)
-	checkConfigHostAddSyntax(cli, accessKey, secretKey)
 
-	ctx, cancelHostAdd := context.WithCancel(globalContext)
-	defer cancelHostAdd()
+	// Support deprecated lookup flag
+	if deprecated {
+		lookup := strings.ToLower(strings.TrimSpace(cli.String("lookup")))
+		switch lookup {
+		case "", "auto":
+			path = "auto"
+		case "path":
+			path = "on"
+		case "dns":
+			path = "off"
+		default:
+		}
+	}
 
-	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, lookup)
-	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new config from the provided credentials.")
+	accessKey, secretKey := fetchAliasKeys(args)
+	checkAliasSetSyntax(cli, accessKey, secretKey, deprecated)
 
-	addHost(alias, hostConfigV9{
+	ctx, cancelAliasAdd := context.WithCancel(globalContext)
+	defer cancelAliasAdd()
+
+	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, path)
+	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+
+	msg := setAlias(alias, aliasConfigV10{
 		URL:       s3Config.HostURL,
 		AccessKey: s3Config.AccessKey,
 		SecretKey: s3Config.SecretKey,
 		API:       s3Config.Signature,
-		Lookup:    lookup,
-	}) // Add a host with specified credentials.
+		Path:      path,
+	}) // Add an alias with specified credentials.
+
+	msg.op = "set"
+	if deprecated {
+		msg.op = "add"
+	}
+
+	printMsg(msg)
 	return nil
 }

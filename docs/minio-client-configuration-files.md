@@ -26,37 +26,42 @@ config.json is the configuration file for MinIO Client, it gets generated after 
 ```
 cat config.json 
 {
-	"version": "8",
-	"hosts": {
+	"version": "10",
+	"aliases": {
 		"XL": {
 			"url": "http://127.0.0.1:9000",
 			"accessKey": "YI7S1CKXB76RGOGT6R8W",
 			"secretKey": "FJ9PWUVNXGPfiI72WMRFepN3LsFgW3MjsxSALroV",
-			"api": "S3v4"
+			"api": "S3v4",
+                        "path": "auto"
 		},
 		"fs": {
 			"url": "http://127.0.0.1:9000",
 			"accessKey": "YI7S1CKXB76RGOGT6R8W",
 			"secretKey": "FJ9PWUVNXGPfiI72WMRFepN3LsFgW3MjsxSALroV",
-			"api": "S3v4"
+			"api": "S3v4",
+                        "path": "auto"
 		},
 		"gcs": {
 			"url": "https://storage.googleapis.com",
 			"accessKey": "YOUR-ACCESS-KEY-HERE",
 			"secretKey": "YOUR-SECRET-KEY-HERE",
-			"api": "S3v2"
+			"api": "S3v2",
+                        "path": "auto"
 		},
 		"play": {
 			"url": "https://play.min.io",
 			"accessKey": "Q3AM3UQ867SPQQA43P2F",
 			"secretKey": "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
-			"api": "S3v4"
+			"api": "S3v4",
+                        "path": "auto"
 		},
 		"s3": {
 			"url": "https://s3.amazonaws.com",
 			"accessKey": "YOUR-ACCESS-KEY-HERE",
 			"secretKey": "YOUR-SECRET-KEY-HERE",
-			"api": "S3v4"
+			"api": "S3v4",
+                        "path": "auto"
 		}
 	}
 }
@@ -64,7 +69,7 @@ cat config.json
 
 ``version`` tells the version of the file.
 
-``hosts``  stores authentication credentials which will be used by MinIO Client.
+``aliases``  stores authentication credentials which will be used by MinIO Client.
 
 #### ``config.json.old``
 This file keeps previous config file version details.

@@ -3,6 +3,7 @@
 MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
+alias      set up an alias for an S3 server
 ls         list buckets and objects
 mb         make a bucket
 rb         remove a bucket
@@ -29,7 +30,6 @@ watch      listen for object notification events
 policy     manage anonymous access to buckets and objects
 tag        manage tags for bucket(s) and object(s)
 admin      manage MinIO servers
-config     manage MinIO client
 update     update mc to latest release
 ```
 
@@ -52,7 +52,7 @@ docker run minio/mc:edge ls play
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
-then use the [`mc config` command](#3-add-a-cloud-storage-service).
+then use the [`mc alias` command](#3-add-a-cloud-storage-service).
 
 ### Homebrew (macOS)
 Install mc packages using [Homebrew](http://brew.sh/)
@@ -123,7 +123,7 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 #### Usage
 
 ```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
+mc alias set <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
 ```
 
 Keys must be supplied by argument or standard input.
@@ -135,21 +135,21 @@ MinIO server displays URL, access and secret keys.
 
 
 ```
-mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
+mc alias set minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
 ```
 
 ### Example - Amazon S3 Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
 ```
-mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
+mc alias set s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
 ```
 
 ### Example - Google Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
 ```
-mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+mc alias set gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
 ### Example - Specify keys using standard input
@@ -157,7 +157,7 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 #### Prompt
 
 ```
-mc config host add minio http://192.168.1.51 --api S3v4
+mc alias set minio http://192.168.1.51 --api S3v4
 Enter Access Key: BKIKJAA5BMMU2RHO6IBB
 Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
@@ -166,7 +166,7 @@ Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 
 ```
 echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
-mc config host add minio http://192.168.1.51 --api S3v4
+mc alias set minio http://192.168.1.51 --api S3v4
 ```
 
 ### Specify temporary host configuration through environment variable
@@ -303,7 +303,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                | [**pipe** - stream STDIN to an object](#pipe)              |  [**version** - manage bucket version](#version)                                        |
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                 | [**find** - find files and objects](#find)                 |                                           |
 | [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror) | [**ilm** - manage bucket lifecycle](#ilm)              |                                           |
-| [**config** - manage config file](#config)                                              | [**policy** - set public policy on bucket or prefix](#policy)  | [**event** - manage events on your buckets](#event)        |[**replicate** - manage bucket replication](#replicate)                                           |
+| [**alias** - manage aliases](#alias)                                              | [**policy** - set public policy on bucket or prefix](#policy)  | [**event** - manage events on your buckets](#event)        |[**replicate** - manage bucket replication](#replicate)                                           |
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                         | [**stat** - stat contents of objects and folders](#stat)   |                                           |
 | [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock)      | [**retention** - set retention for object(s)](#retention)  |                                           |
 | [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                   | [**legalhold** - set legal hold for object(s)](#legalhold) |                                           |
@@ -1437,18 +1437,18 @@ Replication configuration removed successfully from myminio/testbucket.
 ### Command `admin`
 Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
 
-<a name="config"></a>
-### Command `config`
-`config host` command provides a convenient way to manage host entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.
+<a name="alias"></a>
+### Command `alias`
+`alias` command provides a convenient way to manage aliases entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.
 
 ```
 USAGE:
-  mc config host COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+  mc alias COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  add, a      add a new host to configuration file
-  remove, rm  remove a host from configuration file
-  list, ls    lists hosts in configuration file
+  set, s      add a new alias to configuration file
+  remove, rm  remove an alias from configuration file
+  list, ls    lists aliases in configuration file
 
 FLAGS:
   --help, -h                       show help
@@ -1456,24 +1456,24 @@ FLAGS:
 
 *Example: Manage Config File*
 
-Add MinIO server access and secret keys to config file host entry. Note that, the history feature of your shell may record these keys and pose a security risk. On `bash` shell, use `set -o` and `set +o` to disable and enable history feature momentarily.
+Add MinIO server access and secret keys to config file alias entry. Note that, the history feature of your shell may record these keys and pose a security risk. On `bash` shell, use `set -o` and `set +o` to disable and enable history feature momentarily.
 
 ```
 set +o history
-mc config host add myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
+mc alias set myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
 set -o history
 ```
 
-Remove the host from the config file.
+Remove the alias from the config file.
 
 ```
-mc config host remove myminio
+mc alias remove myminio
 ```
 
-List all configured host
+List all configured aliases
 
 ```
-mc config host list
+mc alias list
 ```
 
 <a name="update"></a>

@@ -305,4 +305,29 @@ func (c *configV8) loadDefaults() {
 }
 
 /////////////////// Config V9 ///////////////////
+
+// hostConfig configuration of a host.
+type hostConfigV9 struct {
+	URL          string `json:"url"`
+	AccessKey    string `json:"accessKey"`
+	SecretKey    string `json:"secretKey"`
+	SessionToken string `json:"sessionToken,omitempty"`
+	API          string `json:"api"`
+	Lookup       string `json:"lookup"`
+}
+
+// configV8 config version.
+type configV9 struct {
+	Version string                  `json:"version"`
+	Hosts   map[string]hostConfigV9 `json:"hosts"`
+}
+
+func newConfigV9() *configV9 {
+	cfg := new(configV9)
+	cfg.Version = "9"
+	cfg.Hosts = make(map[string]hostConfigV9)
+	return cfg
+}
+
+/////////////////// Config V10 ///////////////////
 // RESERVED FOR FUTURE
