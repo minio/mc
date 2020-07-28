@@ -21,7 +21,7 @@ tree ~/.mc
 ``session`` directory keeps metadata information of all incomplete upload or mirror. You can run ``mc session list`` to list the same. 
 
 #### ``config.json``
-config.json is the configuration file for MinIO Client, it gets generated after you install and start MinIO. All the credentials, endpoint information we add via ``mc config host`` are stored/modified here. 
+config.json is the configuration file for MinIO Client, it gets generated after you install and start MinIO. All the credentials, endpoint information we add via ``mc alias`` are stored/modified here. 
 
 ```
 cat config.json 

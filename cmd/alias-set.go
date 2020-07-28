@@ -72,10 +72,10 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123
      {{.EnableHistory}}
 
-  2. Add MinIO service under "myminio" alias, to use dns style bucket lookup. For security reasons 
+  2. Add MinIO service under "myminio" alias, to use dns style bucket lookup. For security reasons
      turn off bash history momentarily.
      {{.DisableHistory}}
-     {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --lookup "dns"
+     {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --path "off"
      {{.EnableHistory}}
 
   3. Add Amazon S3 storage service under "mys3" alias. For security reasons turn off bash history momentarily.
@@ -85,14 +85,14 @@ EXAMPLES:
      {{.EnableHistory}}
 
   4. Add Amazon S3 storage service under "mys3" alias, prompting for keys.
-     {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
+     {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --path "off"
      Enter Access Key: BKIKJAA5BMMU2RHO6IBB
      Enter Secret Key: V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 
   5. Add Amazon S3 storage service under "mys3" alias using piped keys.
      {{.DisableHistory}}
      {{.Prompt}} echo -e "BKIKJAA5BMMU2RHO6IBB\nV8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
-                 {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --lookup "dns"
+                 {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --path "off"
      {{.EnableHistory}}
 `,
 }
