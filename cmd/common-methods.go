@@ -152,13 +152,13 @@ func getSourceStreamMetadataFromURL(ctx context.Context, urlStr string, encKeyDB
 }
 
 // getSourceStreamFromURL gets a reader from URL.
-func getSourceStreamFromURL(ctx context.Context, urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser, err *probe.Error) {
+func getSourceStreamFromURL(ctx context.Context, urlStr, versionID string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
 	sse := getSSE(urlStr, encKeyDB[alias])
-	reader, _, err = getSourceStream(ctx, alias, urlStrFull, "", false, sse, false)
+	reader, _, err = getSourceStream(ctx, alias, urlStrFull, versionID, false, sse, false)
 	return reader, err
 }
 

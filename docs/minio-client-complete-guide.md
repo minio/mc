@@ -429,6 +429,7 @@ USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
+  --rewind value                go back in time by specifying duration or a specific time
   --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
   --help, -h                    show help
 
@@ -456,6 +457,21 @@ Hello MinIO!!
 mc cat --encrypt-key "play/mybucket=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" play/mybucket/myencryptedobject.txt
 Hello MinIO!!
 ```
+
+*Example: Display the content of an object 10 days earlier *
+
+```
+mc cat --rewind "10d" play/mybucket/myobject
+Hello MinIO ten days earlier!
+```
+
+*Example: Display the content of an object at a specific date/time in the past *
+
+```
+mc cat --rewind "2020.03.24T10:00" play/mybucket/myobject
+Hello MinIO from the past!
+```
+
 
 <a name="sql"></a>
 ### Command `sql`

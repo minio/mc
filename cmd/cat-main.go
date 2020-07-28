@@ -1,5 +1,5 @@
 /*
- * MinIO Client, (C) 2015, 2016, 2017 MinIO, Inc.
+ * MinIO Client, (C) 2015-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,12 @@ import (
 )
 
 var (
-	// This is kept dummy for future purposes
-	// and also to add ioFlags and globalFlags
-	// in CLI registration.
-	catFlags = []cli.Flag{}
+	catFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "back in time",
+		},
+	}
 )
 
 // Display contents of a file.
@@ -75,6 +77,9 @@ EXAMPLES:
   5. Display the content of encrypted object. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
      {{.Prompt}} {{.HelpName}} --encrypt-key "play/my-bucket/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  play/my-bucket/my-object
+
+  6. Display the content of an object 10 days earlier
+     {{.Prompt}} {{.HelpName}} --rewind 10d play/my-bucket/my-object
 `,
 }
 
@@ -127,10 +132,10 @@ func (s prettyStdout) Write(input []byte) (int, error) {
 	return inputLen, nil
 }
 
-// checkCatSyntax performs command-line input validation for cat command.
-func checkCatSyntax(ctx *cli.Context) {
-	args := ctx.Args()
-	if !args.Present() {
+// parseCatSyntax performs command-line input validation for cat command.
+func parseCatSyntax(ctx *cli.Context) (args []string, rewind time.Time) {
+	args = ctx.Args()
+	if len(args) == 0 {
 		args = []string{"-"}
 	}
 	for _, arg := range args {
@@ -138,27 +143,36 @@ func checkCatSyntax(ctx *cli.Context) {
 			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag `%s` passed.", arg))
 		}
 	}
+
+	rewind = parseRewindFlag(ctx.String("rewind"))
+	return args, rewind
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func catURL(ctx context.Context, sourceURL string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	var reader io.ReadCloser
 	size := int64(-1)
 	switch sourceURL {
 	case "-":
 		reader = os.Stdin
 	default:
+		var versionID string
 		var err *probe.Error
-		// Try to stat the object, the purpose is to extract the
-		// size of S3 object so we can check if the size of the
+		// Try to stat the object, the purpose is to:
+		// 1. extract the size of S3 object so we can check if the size of the
 		// downloaded object is equal to the original one. FS files
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
-		client, content, err := url2Stat(ctx, sourceURL, "", false, encKeyDB, time.Time{})
-		if err == nil && client.GetURL().Type == objectStorage {
-			size = content.Size
+		// 2. extract the version ID if rewind flag is passed
+		if client, content, err := url2Stat(ctx, sourceURL, "", false, encKeyDB, timeRef); err == nil {
+			versionID = content.VersionID
+			if client.GetURL().Type == objectStorage {
+				size = content.Size
+			}
+		} else {
+			return err.Trace(sourceURL)
 		}
-		if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB); err != nil {
+		if reader, err = getSourceStreamFromURL(ctx, sourceURL, versionID, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
 		defer reader.Close()
@@ -221,11 +235,11 @@ func mainCat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
-	checkCatSyntax(cliCtx)
+	args, rewind := parseCatSyntax(cliCtx)
 
 	// Set command flags from context.
 	stdinMode := false
-	if !cliCtx.Args().Present() {
+	if len(args) == 0 {
 		stdinMode = true
 	}
 
@@ -236,8 +250,7 @@ func mainCat(cliCtx *cli.Context) error {
 	}
 
 	// if Args contain `-`, we need to preserve its order specially.
-	args := []string(cliCtx.Args())
-	if cliCtx.Args().First() == "-" {
+	if len(args) > 0 && args[0] == "-" {
 		for i, arg := range os.Args {
 			if arg == "cat" {
 				// Overwrite cliCtx.Args with os.Args.
@@ -249,7 +262,7 @@ func mainCat(cliCtx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(ctx, url, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(catURL(ctx, url, rewind, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil
