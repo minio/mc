@@ -1410,7 +1410,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return ctnt, err
 		}
 		// Ignore object missing error but return for other errors
-		if !errors.As(err.ToGoError(), &ObjectMissing{opts.timeRef}) {
+		if !errors.As(err.ToGoError(), &ObjectMissing{}) {
 			return nil, err
 		}
 	}
