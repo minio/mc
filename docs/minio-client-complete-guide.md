@@ -1583,29 +1583,34 @@ Metadata  :
 `version` manages bucket versioning
 
 ```
+NAME:
+  mc version - manage bucket versioning
+
 USAGE:
-  mc bucket version TARGET [enable | suspend | info]
+  mc version COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
-FLAGS:
-  --help, -h                    show help
+COMMANDS:
+  enable   Enable bucket versioning
+  suspend  Suspend bucket versioning
+  info     Show bucket versioning status  
 ```
 
-*Example: Enable versioning on bucket    `mybucket`*
+*Example: Enable versioning on bucket `mybucket`*
 
 ```
-mc bucket version myminio/mybucket enable
+mc version enable myminio/mybucket
 myminio/mybucket versioning is enabled
 ```
 
 *Example: Display the versioning configuration for bucket `mybucket`*
 
 ```
-mc bucket version myminio/mybucket info
+mc version info myminio/mybucket
 myminio/mybucket versioning status is enabled
 
 ```
 *Example: Suspend versioning for bucket `mybucket`*
 ```
-mc bucket version myminio/mybucket suspend
+mc version suspend myminio/mybucket
 myminio/mybucket versioning is suspended
 ```
