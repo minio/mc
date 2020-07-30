@@ -100,10 +100,10 @@ EXAMPLES:
 	  {{.Prompt}} {{.HelpName}} myminio/mybucket
 	
    2. Set FIFO quota for a bucket "mybucket" on MinIO.
-	  {{.Prompt}} {{.HelpName}} myminio/mybucket --fifo 64kB
+	  {{.Prompt}} {{.HelpName}} myminio/mybucket --fifo 10GB
 
    3. Set hard quota of 1gb for a bucket "mybucket" on MinIO.
-	  {{.Prompt}} {{.HelpName}} myminio/mybucket --hard 1gb
+	  {{.Prompt}} {{.HelpName}} myminio/mybucket --hard 1GB
 
    4. Clear bucket quota configured for bucket "mybucket" on MinIO.
 	  {{.Prompt}} {{.HelpName}} myminio/mybucket --clear
