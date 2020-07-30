@@ -31,6 +31,7 @@ event       manage object notifications
 watch       listen for object notification events
 policy      manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
+replicate   manage bucket server side replication
 admin       manage MinIO servers
 update      update mc to latest release
 ```
@@ -304,7 +305,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)       | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat)          |
 | [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                     | [**pipe** - stream STDIN to an object](#pipe)              | [**version** - manage bucket version](#version)    |
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 |                                                    |
-| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         |                                                    |
+| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         |  [**replicate** - manage bucket server side replication](#replicate)                                                   |
 | [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        |                                                    |
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**stat** - stat contents of objects and folders](#stat)   | [**encrypt** - manage bucket encryption](#encrypt) |
 | [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock) | [**retention** - set retention for object(s)](#retention)  |                                                    |
@@ -1585,4 +1586,87 @@ Auto encryption has been set successfully for myminio/source
 ```
 mc encrypt clear myminio/mybucket
 Auto encryption configuration has been cleared successfully.
+```
+
+<a name="replicate"></a>
+### Command `replicate`
+`replicate` manages bucket server side replication
+
+```
+NAME:
+  mc replicate - manage bucket server side replication
+
+USAGE:
+  mc replicate COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  add     add a server side replication configuration rule
+  set     modify an existing server side replication cofiguration rule
+  ls      list server side replication configuration rules
+  export  export server side replication configuration
+  import  import server side replication configuration in JSON format
+  rm      remove a server side replication configuration rule(s)
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Add replication configuration rule on `mybucket` on alias `myminio`*
+
+```
+mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1
+Replication configuration rule applied to myminio/mybucket/prefix.
+```
+
+*Example:  Disable replication configuration rule with rule Id "bsibgh8t874dnjst8hkg" on bucket "mybucket" with prefix "prefix" for alias `myminio`*
+     
+```
+mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
+```
+*Example:  Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias `myminio`.*
+
+```
+mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
+```
+
+*Example: Clear tags on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
+
+```
+mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
+```
+
+*Example: List replication configuration rules set on `mybucket` on alias `myminio`*
+
+```
+mc replicate ls myminio/mybucket
+```
+
+*Example: Clear replication configuration for bucket `mybucket` on alias `myminio`*
+
+```
+mc replicate rm --all --force myminio/mybucket
+Replication configuration has been removed successfully for myminio/mybucket
+```
+
+*Example: Remove replication configuration rule with id `bsibgh8t874dnjst8hkg` for bucket `mybucket` on alias `myminio`*
+
+```
+mc replicate rm --id "bsibgh8t874dnjst8hkg" myminio/mybucket/prefix
+Replication configuration rule with id "bsibgh8t874dnjst8hkg" has been removed successfully for myminio/mybucket
+```
+
+*Example: Import replication configuration for bucket `mybucket` on alias `myminio` from `/data/replicate/config`*
+
+```
+mc replicate import myminio/mybucket < /data/replicate/config
+Replication configuration successfully set on `myminio/mybucket`.
+```
+
+*Example: Export replication configuration for bucket `mybucket` on alias `myminio` to `/data/replicate/config`*
+
+```
+mc replicate export myminio/mybucket > /data/replicate/config
 ```

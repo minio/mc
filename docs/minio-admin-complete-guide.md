@@ -894,7 +894,7 @@ mc admin bucket quota myminio/mybucket --clear
 ```
 
 <a name="remote"></a>
-### Command `remote` - Manage bucket targets
+### Command `remote` - manage bucket targets
 `remote` command manages remote bucket targets on MinIO server.
 
 ```
@@ -905,7 +905,7 @@ USAGE:
   mc admin bucket remote set TARGET http(s)://ACCESSKEY:SECRETKEY@TARGET_URL/TARGET_BUCKET [--path | --api] --type
 
 TARGET_BUCKET:
-  Also called as target bucket.
+  Also called as remote bucket.
 
 TARGET_URL:
   Also called as remote endpoint.

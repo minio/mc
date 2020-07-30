@@ -347,6 +347,7 @@ var appCmds = []cli.Command{
 	watchCmd,
 	policyCmd,
 	tagCmd,
+	replicateCmd,
 	adminCmd,
 	configCmd,
 	updateCmd,
