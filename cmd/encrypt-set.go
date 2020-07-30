@@ -45,10 +45,10 @@ FLAGS:
 	{{end}}
 EXAMPLES:
 	1. Enable SSE-S3 auto encryption on bucket "mybucket" for alias "myminio".
-	   {{.Prompt}} {{.HelpName}} set sse-s3 myminio/mybucket
+	   {{.Prompt}} {{.HelpName}} sse-s3 myminio/mybucket
 
 	2. Enable SSE-KMS auto encryption with kms key on bucket "mybucket" for alias "s3".
-	   {{.Prompt}} {{.HelpName}} set sse-kms arn:aws:kms:us-east-1:xxx:key/xxx myminio/mybucket  
+	   {{.Prompt}} {{.HelpName}} sse-kms arn:aws:kms:us-east-1:xxx:key/xxx s3/mybucket  
 `,
 }
 
