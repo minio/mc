@@ -259,6 +259,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/tag/remove": s3Completer,
 	"/tag/set":    s3Completer,
 
+	"/version/info":    s3Complete{deepLevel: 2},
+	"/version/enable":  s3Complete{deepLevel: 2},
+	"/version/suspend": s3Complete{deepLevel: 2},
+
 	"/bucket/lock/compliance": s3Completer,
 	"/bucket/lock/governance": s3Completer,
 	"/bucket/lock/clear":      s3Completer,
@@ -270,7 +274,6 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/bucket/ilm":       s3Complete{deepLevel: 2},
 	"/bucket/replicate": s3Complete{deepLevel: 2},
-	"/bucket/version":   s3Complete{deepLevel: 2},
 
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
