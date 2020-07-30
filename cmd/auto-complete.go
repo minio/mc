@@ -251,6 +251,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/event/list":   s3Complete{deepLevel: 2},
 	"/event/remove": s3Complete{deepLevel: 2},
 
+	"/encrypt/set":   s3Complete{deepLevel: 2},
+	"/encrypt/info":  s3Complete{deepLevel: 2},
+	"/encrypt/clear": s3Complete{deepLevel: 2},
+
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,
 	"/tag/set":    s3Completer,

@@ -1170,3 +1170,27 @@ func (f *fsClient) RemoveReplication(ctx context.Context) *probe.Error {
 	})
 
 }
+
+// Get encryption info for a bucket, not implemented.
+func (f *fsClient) GetEncryption(ctx context.Context) (string, string, *probe.Error) {
+	return "", "", probe.NewError(APINotImplemented{
+		API:     "GetEncryption",
+		APIType: "filesystem",
+	})
+}
+
+// SetEncryption - Set encryption configuration on a bucket, not implemented
+func (f *fsClient) SetEncryption(ctx context.Context, algorithm, keyID string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetEncryption",
+		APIType: "filesystem",
+	})
+}
+
+// DeleteEncryption - removes encryption configuration on a bucket, not implemented
+func (f *fsClient) DeleteEncryption(ctx context.Context) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "DeleteEncryption",
+		APIType: "filesystem",
+	})
+}

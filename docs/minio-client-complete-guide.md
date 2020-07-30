@@ -26,9 +26,11 @@ diff       list differences in object name, size, and date between two buckets
 rm         remove objects
 event      manage object notifications
 bucket     manage bucket configuration
+encrypt    manage bucket encryption config
 watch      listen for object notification events
 policy     manage anonymous access to buckets and objects
 tag        manage tags for bucket(s) and object(s)
+bucket     manage bucket(s)
 admin      manage MinIO servers
 update     update mc to latest release
 ```
@@ -304,7 +306,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                 | [**find** - find files and objects](#find)                 |                                           |
 | [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror) | [**ilm** - manage bucket lifecycle](#ilm)              |                                           |
 | [**alias** - manage aliases](#alias)                                              | [**policy** - set public policy on bucket or prefix](#policy)  | [**event** - manage events on your buckets](#event)        |[**replicate** - manage bucket replication](#replicate)                                           |
-| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                         | [**stat** - stat contents of objects and folders](#stat)   |                                           |
+| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                         | [**stat** - stat contents of objects and folders](#stat)   | [**encrypt** - manage bucket encryption](#encrypt)                                          |
 | [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock)      | [**retention** - set retention for object(s)](#retention)  |                                           |
 | [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                   | [**legalhold** - set legal hold for object(s)](#legalhold) |                                           |
 
@@ -1608,4 +1610,50 @@ myminio/mybucket versioning status is enabled
 ```
 mc bucket version myminio/mybucket suspend
 myminio/mybucket versioning is suspended
+```
+<a name="encrypt"></a>
+### Command `encrypt`
+`encrypt` manages bucket encryption config
+
+```
+NAME:
+  mc encrypt - manage bucket encryption config
+
+USAGE:
+  mc encrypt COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  set    Set encryption config
+  clear  Clear encryption config
+  info   Show bucket encryption status
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Display bucket encryption status for  bucket `mybucket`*
+
+```
+mc encrypt info myminio/mybucket
+Algorithm: AES256
+```
+
+*Example: Set SSE-S3 auto encryption for bucket `mybucket` on alias `myminio`*
+
+```
+mc encrypt set sse-s3 myminio/mybucket
+Auto encryption has been set successfully for myminio/source
+```
+*Example: Set SSE-KMS auto encryption for bucket `mybucket` on alias `myminio` with KMS Key Id "arn:aws:kms:us-east-1:xxx:key/xxx"*
+
+```
+mc encrypt set sse-kms "arn:aws:kms:us-east-1:xxx:key/xxx" myminio/mybucket
+Auto encryption has been set successfully for myminio/source
+```
+
+*Example: Clear auto encryption config for bucket `mybucket` on alias `myminio`*
+
+```
+mc encrypt clear myminio/mybucket
+Auto encryption configuration has been cleared successfully.
 ```
