@@ -18,27 +18,23 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	bucketFlags = []cli.Flag{}
-)
-
-var bucketCmd = cli.Command{
-	Name:            "bucket",
-	Usage:           "manage bucket configuration",
-	Action:          mainBucket,
-	Before:          setGlobalsFromContext,
+var versioningCmd = cli.Command{
+	Name:            "versioning",
+	Usage:           "manage bucket versioning",
 	HideHelpCommand: true,
-	Flags:           append(bucketFlags, globalFlags...),
+	Action:          mainVersioning,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
 	Subcommands: []cli.Command{
-		bucketILMCmd,
-		bucketLockCmd,
-		bucketReplicateCmd,
+		versioningEnableCmd,
+		versioningSuspendCmd,
+		versioningInfoCmd,
 	},
 }
 
-// mainBucket is the handle for "mc bucket" command. provides sub-commands which allow managing/viewing bucket info.
-func mainBucket(ctx *cli.Context) error {
+// mainVersioning is the handle for "mc versioning" command.
+func mainVersioning(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "info", "encrypt" and "version" have their own main.
+	// Sub-commands like "info", "enable", "suspend" have their own main.
 }

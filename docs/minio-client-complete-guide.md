@@ -3,36 +3,36 @@
 MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
-alias      set up an alias for an S3 server
-ls         list buckets and objects
-mb         make a bucket
-rb         remove a bucket
-cp         copy objects
-mirror     synchronize object(s) to a remote site
-cat        display object contents
-head       display first 'n' lines of an object
-pipe       stream STDIN to an object
-share      generate URL for temporary access to an object
-find       search for objects
-sql        run sql queries on objects
-stat       show object metadata
-mv         move objects
-tree       list buckets and objects in a tree format
-du         summarize disk usage recursively
-lock       manage default bucket object lock configuration
-retention  set retention for object(s)
-legalhold  set legal hold for object(s)
-diff       list differences in object name, size, and date between two buckets
-rm         remove objects
-event      manage object notifications
-bucket     manage bucket configuration
-encrypt    manage bucket encryption config
-watch      listen for object notification events
-policy     manage anonymous access to buckets and objects
-tag        manage tags for bucket(s) and object(s)
-bucket     manage bucket(s)
-admin      manage MinIO servers
-update     update mc to latest release
+alias       set, remove and list aliases in configuration file
+ls          list buckets and objects
+mb          make a bucket
+rb          remove a bucket
+cp          copy objects
+mirror      synchronize object(s) to a remote site
+cat         display object contents
+head        display first 'n' lines of an object
+pipe        stream STDIN to an object
+share       generate URL for temporary access to an object
+find        search for objects
+sql         run sql queries on objects
+stat        show object metadata
+mv          move objects
+tree        list buckets and objects in a tree format
+du          summarize disk usage recursively
+retention   set retention for object(s)
+legalhold   set legal hold for object(s)
+diff        list differences in object name, size, and date between two buckets
+rm          remove objects
+versioning  manage bucket versioning
+lock        manage default bucket object lock configuration
+ilm         manage bucket lifecycle
+encrypt     manage bucket encryption config
+event       manage object notifications
+watch       listen for object notification events
+policy      manage anonymous access to buckets and objects
+tag         manage tags for bucket(s) and object(s)
+admin       manage MinIO servers
+update      update mc to latest release
 ```
 
 ## 1.  Download MinIO Client
@@ -299,16 +299,16 @@ mc version RELEASE.2020-04-25T00-43-23Z
 
 ## 7. Commands
 
-|                                                                                         |                                                                |                                                            |                                           |
-|:----------------------------------------------------------------------------------------|:---------------------------------------------------------------|:-----------------------------------------------------------|-------------------------------------------|
-| [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)  | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat) |
-| [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                | [**pipe** - stream STDIN to an object](#pipe)              |  [**version** - manage bucket version](#version)                                        |
-| [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                 | [**find** - find files and objects](#find)                 |                                           |
-| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror) | [**ilm** - manage bucket lifecycle](#ilm)              |                                           |
-| [**alias** - manage aliases](#alias)                                              | [**policy** - set public policy on bucket or prefix](#policy)  | [**event** - manage events on your buckets](#event)        |[**replicate** - manage bucket replication](#replicate)                                           |
-| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                         | [**stat** - stat contents of objects and folders](#stat)   | [**encrypt** - manage bucket encryption](#encrypt)                                          |
-| [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock)      | [**retention** - set retention for object(s)](#retention)  |                                           |
-| [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                   | [**legalhold** - set legal hold for object(s)](#legalhold) |                                           |
+|                                                                                         |                                                                     |                                                            |                                                    |
+|:----------------------------------------------------------------------------------------|:--------------------------------------------------------------------|:-----------------------------------------------------------|----------------------------------------------------|
+| [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)       | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat)          |
+| [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                     | [**pipe** - stream STDIN to an object](#pipe)              | [**version** - manage bucket version](#version)    |
+| [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 |                                                    |
+| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         |                                                    |
+| [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        |                                                    |
+| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**stat** - stat contents of objects and folders](#stat)   | [**encrypt** - manage bucket encryption](#encrypt) |
+| [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock) | [**retention** - set retention for object(s)](#retention)  |                                                    |
+| [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                        | [**legalhold** - set legal hold for object(s)](#legalhold) |                                                    |
 
 
 ###  Command `ls`
@@ -597,7 +597,7 @@ Hello!!
 
 ```
 USAGE:
-   mc bucket lock TARGET [info | clear ] | [[governance | compliance] [VALIDITY]]
+   mc lock TARGET [info | clear ] | [[governance | compliance] [VALIDITY]]
 
 FLAGS:
   --json                        enable JSON formatted output
@@ -613,13 +613,13 @@ mc lock myminio/mybucket compliance 30d
 *Example: Display the object lock configuration for bucket `mybucket`*
 
 ```
-mc bucket lock myminio/mybucket info
+mc lock myminio/mybucket info
 COMPLIANCE mode is enabled for 30d
 ```
 *Example: Clear object lock configuration for bucket `mybucket`*
 
 ```
-mc bucket lock myminio/mybucket clear
+mc lock myminio/mybucket clear
 Object lock configuration cleared successfully
 ```
 
@@ -1233,7 +1233,7 @@ mc event remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 
 ```
 USAGE:
-  mc bucket ilm COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+  mc ilm COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
   list    pretty print bucket lifecycle configuration
@@ -1250,7 +1250,7 @@ FLAGS:
 *Example: List the lifecycle management rules*
 
 ```
-mc bucket ilm list myminio/testbucket
+mc ilm list myminio/testbucket
    ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
  Devices |  dev/  |    ✓    |   ✓   | 17 Sep 2020  |     ✗      |           |               |
@@ -1262,13 +1262,13 @@ For more details about the lifecycle configuration, refer to official AWS S3 doc
 
 *Example: Add rule for testbucket on play*
 ```
-mc bucket ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" play/testbucket
+mc ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" play/testbucket
 Lifecycle configuration rule added with ID `Devices` to play/testbucket.
 ```
 
 *Example: Remove the lifecycle management configuration rule given by ID "Documents"*
 ```
-mc bucket ilm remove --id "Documents" play/testbucket
+mc ilm remove --id "Documents" play/testbucket
 Rule ID `Documents` from target play/testbucket removed.
 ```
 
@@ -1373,82 +1373,6 @@ Remove tags assigned to `testobject` in `testbucket` in alias `s3`
 ```
 mc tag remove s3/testbucket/testobject
 Tags removed for s3/testbucket/testobject.
-```
-
-<a name="replicate"></a>
-### Command `replicate`
-`replicate` - A convenient way to manage bucket replication configuration.
-
-```
-USAGE:
-  mc bucket replicate [COMMAND FLAGS | -h] TARGET
-
-FLAGS:
-  --config value                add a config.json with replication configuration
-  --clear                       remove replication configuration
-  --help, -h                    show help
-  --json                        enable JSON formatted output
-  --debug                       enable debug output
-```
-
-*Example : Set replication configuration on a bucket. The replication configuration needs to be in json format. If replication configuration is being set on MinIO, the config json should have a ReplicationArn tag. An admin user should have configured a replication target for the replication endpoint and provided a ARN via `mc admin bucket replication set` and `mc admin bucket remote` commands*
-
-Set replication configuration in `config.json` with replication ARN `arn:minio:s3::598361bf-3cec-49a7-b529-ce870a34d759:*` on `testbucket` in alias `myminio`
-```
-$ cat config.json
-{
-  "ReplicationArn":"arn:minio:s3::598361bf-3cec-49a7-b529-ce870a34d759:*",
-  "Rules": [
-    {
-      "Status": "Enabled",
-      "Priority": 1,
-      "DeleteMarkerReplication": { "Status": "Disabled" },
-      "Filter" : { "Prefix": "Tax"},
-      "Destination": {
-        "Bucket": "arn:aws:s3:::destbucket",
-        "StorageClass":"STANDARD"
-      }
-    }
-  ]
-}
-
-mc bucket replicate myminio/testbucket --config "config.json"
-Replication configuration added successfully to myminio/testbucket.
-```
-
-*Example : List replication configuration for a bucket*
-
-List replication configuration for `testbucket` in alias `myminio`
-```
-mc bucket replicate myminio/testbucket
-{
- "ReplicationArn": "arn:minio:s3::95e989fc-3d02-49f1-8d92-9c024926ce30:*",
- "Rules": [
-  {
-   "ID": "",
-   "Status": "Enabled",
-   "Priority": 1,
-   "DeleteMarkerReplication": {
-    "Status": "Disabled"
-   },
-   "Destination": {
-    "Bucket": "arn:aws:s3:::destbucket",
-    "StorageClass": "STANDARD"
-   },
-   "Filter": {
-    "Prefix": "Tax",
-   }
-  }
- ]
-}
-```
-
-*Example : Remove replication configuration on a bucket*
-
-Remove replication configuration on `testbucket` in alias `myminio`
-```
-mc bucket replicate myminio/testbucket --clear
-Replication configuration removed successfully from myminio/testbucket.
 ```
 
 <a name="admin"></a>
@@ -1580,42 +1504,43 @@ Metadata  :
   Content-Type: application/octet-stream
 ```
 
-<a name="version"></a>
+<a name="versioning"></a>
 ### Command `version`
-`version` manages bucket versioning
+`versioning` manage bucket versioning
 
 ```
 NAME:
-  mc version - manage bucket versioning
+  mc versioning - manage bucket versioning
 
 USAGE:
-  mc version COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+  mc versioning TARGET [enable | suspend | info]
 
 COMMANDS:
   enable   Enable bucket versioning
   suspend  Suspend bucket versioning
-  info     Show bucket versioning status  
+  info     Show bucket versioning status
 ```
 
 *Example: Enable versioning on bucket `mybucket`*
 
 ```
-mc version enable myminio/mybucket
+mc versioning enable myminio/mybucket
 myminio/mybucket versioning is enabled
 ```
 
 *Example: Display the versioning configuration for bucket `mybucket`*
 
 ```
-mc version info myminio/mybucket
+mc versioning info myminio/mybucket
 myminio/mybucket versioning status is enabled
 
 ```
 *Example: Suspend versioning for bucket `mybucket`*
 ```
-mc version suspend myminio/mybucket
+mc versioning suspend myminio/mybucket
 myminio/mybucket versioning is suspended
 ```
+
 <a name="encrypt"></a>
 ### Command `encrypt`
 `encrypt` manages bucket encryption config

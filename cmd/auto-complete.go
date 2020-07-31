@@ -259,21 +259,24 @@ var completeCmds = map[string]complete.Predictor{
 	"/tag/remove": s3Completer,
 	"/tag/set":    s3Completer,
 
-	"/version/info":    s3Complete{deepLevel: 2},
-	"/version/enable":  s3Complete{deepLevel: 2},
-	"/version/suspend": s3Complete{deepLevel: 2},
+	"/versioning/info":    s3Complete{deepLevel: 2},
+	"/versioning/enable":  s3Complete{deepLevel: 2},
+	"/versioning/suspend": s3Complete{deepLevel: 2},
 
-	"/bucket/lock/compliance": s3Completer,
-	"/bucket/lock/governance": s3Completer,
-	"/bucket/lock/clear":      s3Completer,
-	"/bucket/lock/info":       s3Completer,
+	"/lock/compliance": s3Completer,
+	"/lock/governance": s3Completer,
+	"/lock/clear":      s3Completer,
+	"/lock/info":       s3Completer,
 
 	"/share/download": s3Completer,
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
-	"/bucket/ilm":       s3Complete{deepLevel: 2},
-	"/bucket/replicate": s3Complete{deepLevel: 2},
+	"/ilm/list":   s3Complete{deepLevel: 2},
+	"/ilm/add":    s3Complete{deepLevel: 2},
+	"/ilm/remove": s3Complete{deepLevel: 2},
+	"/ilm/export": s3Complete{deepLevel: 2},
+	"/ilm/import": s3Complete{deepLevel: 2},
 
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
@@ -327,8 +330,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/config/host/list":         aliasCompleter,
 	"/config/host/remove":       aliasCompleter,
 
-	"/update":  nil,
-	"/version": nil,
+	"/update": nil,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

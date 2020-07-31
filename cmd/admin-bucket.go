@@ -26,7 +26,6 @@ var adminBucketCmd = cli.Command{
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminBucketQuotaCmd,
-		adminBucketReplicationCmd,
 	},
 	HideHelpCommand: true,
 }
