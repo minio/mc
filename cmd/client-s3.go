@@ -1564,6 +1564,12 @@ func (c *S3Client) snapshot(ctx context.Context, isRecursive bool, timeRef time.
 	go func() {
 		defer close(contentCh)
 		for objectVersion := range c.listVersions(ctx, bucket, object, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers) {
+			if objectVersion.Err != nil {
+				contentCh <- &ClientContent{
+					Err: probe.NewError(objectVersion.Err),
+				}
+				continue
+			}
 			contentCh <- c.objectInfo2ClientContent(bucket, objectVersion)
 		}
 	}()
