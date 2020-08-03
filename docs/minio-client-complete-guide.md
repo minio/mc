@@ -408,7 +408,7 @@ USAGE:
    mc rb [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --force                       allow a recursive remove operation with all objects versions
+  --force                       force a recursive remove operation on all object versions
   --dangerous                   allow site-wide removal of objects
   --help, -h                    show help
 
