@@ -34,7 +34,7 @@ var (
 	rbFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "force",
-			Usage: "allow a recursive remove operation with all objects versions",
+			Usage: "force a recursive remove operation on all object versions",
 		},
 		cli.BoolFlag{
 			Name:  "dangerous",
