@@ -400,15 +400,14 @@ Bucket created successfully ‘s3/mybucket’.
 ### Command `rb`
 `rb` command removes a bucket and all its contents on an object storage. On a filesystem, it behaves like `rmdir` command.
 
-Note that when a bucket is removed all policies associated with the bucket will also be removed. If you would like to just
-empty the objects in a bucket use `rm` command
+> NOTE:  When a bucket is removed all bucket configurations associated with the bucket will also be removed. All objects and their versions will be removed as well. If you need to preserve bucket and its configuration - only empty the objects and versions in a bucket use `mc rm` instead.
 
 ```
 USAGE:
    mc rb [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --force                       allow a recursive remove operation
+  --force                       force a recursive remove operation on all object versions
   --dangerous                   allow site-wide removal of objects
   --help, -h                    show help
 
