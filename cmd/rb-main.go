@@ -62,10 +62,10 @@ FLAGS:
 EXAMPLES:
   1. Remove an empty bucket on Amazon S3 cloud storage
      {{.Prompt}} {{.HelpName}} s3/mybucket
-	 
+
   2. Remove a directory hierarchy.
      {{.Prompt}} {{.HelpName}} /tmp/this/new/dir1
-	 
+
   3. Remove bucket 'jazz-songs' and all its contents
      {{.Prompt}} {{.HelpName}} --force s3/jazz-songs
 
@@ -235,7 +235,10 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		}
 
 		listCtx, listCancel := context.WithCancel(ctx)
-		for range clnt.List(listCtx, opts) {
+		for obj := range clnt.List(listCtx, opts) {
+			if obj.Err != nil {
+				continue
+			}
 			isEmpty = false
 			break
 		}
