@@ -114,7 +114,7 @@ func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 	}
 }
 
-// Delete a bucket and all its contents, versions will be removed as well.
+// Delete a bucket and all its objects and versions will be removed as well.
 func deleteBucket(ctx context.Context, url string) *probe.Error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
