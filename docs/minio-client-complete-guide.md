@@ -1504,7 +1504,7 @@ Metadata  :
 ```
 
 <a name="versioning"></a>
-### Command `version`
+### Command `versioning`
 `versioning` manage bucket versioning
 
 ```
