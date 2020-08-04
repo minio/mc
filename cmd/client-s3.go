@@ -1558,24 +1558,6 @@ func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 
 /// Bucket API operations.
 
-func (c *S3Client) snapshot(ctx context.Context, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool) <-chan *ClientContent {
-	bucket, object := c.url2BucketAndObject()
-	contentCh := make(chan *ClientContent)
-	go func() {
-		defer close(contentCh)
-		for objectVersion := range c.listVersions(ctx, bucket, object, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers) {
-			if objectVersion.Err != nil {
-				contentCh <- &ClientContent{
-					Err: probe.NewError(objectVersion.Err),
-				}
-				continue
-			}
-			contentCh <- c.objectInfo2ClientContent(bucket, objectVersion)
-		}
-	}()
-	return contentCh
-}
-
 func (c *S3Client) listVersions(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool) chan minio.ObjectInfo {
 	objectInfoCh := make(chan minio.ObjectInfo)
 	go func() {
@@ -1646,7 +1628,31 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	contentCh := make(chan *ClientContent)
 
 	if !opts.timeRef.IsZero() || opts.withOlderVersions {
-		return c.snapshot(ctx, opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers)
+		bucket, object := c.url2BucketAndObject()
+		go func() {
+			isVersion := true
+			for objectVersion := range c.listVersions(ctx, bucket, object,
+				opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
+				if objectVersion.Err != nil {
+					if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
+						isVersion = false
+						break
+					} else {
+						contentCh <- &ClientContent{
+							Err: probe.NewError(objectVersion.Err),
+						}
+						continue
+					}
+				}
+				contentCh <- c.objectInfo2ClientContent(bucket, objectVersion)
+			}
+			if !isVersion {
+				c.listRecursiveInRoutine(ctx, contentCh, false)
+			} else {
+				close(contentCh)
+			}
+		}()
+		return contentCh
 	}
 
 	if opts.isIncomplete {
