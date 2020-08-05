@@ -12,7 +12,7 @@ require (
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20200731035804-2174a228351a
+	github.com/minio/minio v0.0.0-20200807001021-adcaa6f9de88
 	github.com/minio/minio-go/v7 v7.0.5-0.20200807085956-d7db33ea7618
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0

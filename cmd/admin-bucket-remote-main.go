@@ -20,21 +20,21 @@ import "github.com/minio/cli"
 
 var adminBucketRemoteCmd = cli.Command{
 	Name:   "remote",
-	Usage:  "manage remote bucket targets",
+	Usage:  "configure remote target buckets",
 	Action: mainadminBucketRemote,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminBucketRemoteSetCmd,
+		adminBucketRemoteAddCmd,
 		adminBucketRemoteListCmd,
-		adminBucketRemoteRemoveCmd,
+		adminBucketRemoteRmCmd,
 	},
 	HideHelpCommand: true,
 }
 
-// mainadminBucketRemote is the handle for "mc admin bucket replication" command.
+// mainadminBucketRemote is the handle for "mc admin bucket remote" command.
 func mainadminBucketRemote(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "set", "get" have their own main.
+	// Sub-commands like "add", "ls", "rm" have their own main.
 }

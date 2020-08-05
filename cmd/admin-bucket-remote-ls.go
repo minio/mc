@@ -28,14 +28,14 @@ import (
 
 var adminBucketRemoteListFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "type",
-		Usage: "Type of ARN. Valid options are '[replica]'",
+		Name:  "service",
+		Usage: "Type of service. Valid options are '[replication]'",
 	},
 }
 
 var adminBucketRemoteListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "list bucket target(s)",
+	Name:   "ls",
+	Usage:  "list remote target ARN(s)",
 	Action: mainAdminBucketRemoteList,
 	Before: setGlobalsFromContext,
 	Flags:  append(globalFlags, adminBucketRemoteListFlags...),
@@ -49,18 +49,21 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get bucket target for replication on MinIO server for bucket 'srcbucket'.
-     {{.Prompt}} {{.HelpName}} myminio/srcbucket --type "replica"
+  1. Get remote bucket target for replication on MinIO server for bucket 'srcbucket'.
+     {{.Prompt}} {{.HelpName}} myminio/srcbucket --service "replication"
 
   2. List all remote bucket target(s) on MinIO server for bucket 'srcbucket'.
      {{.Prompt}} {{.HelpName}} myminio/srcbucket
+
+  3. List all remote bucket target(s) on MinIO tenant.
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 
 // checkAdminBucketRemoteListSyntax - validate all the passed arguments
 func checkAdminBucketRemoteListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 }
 
@@ -85,18 +88,19 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
-	arnType := ctx.String("type")
-	targets, e := client.ListBucketTargets(globalContext, sourceBucket, arnType)
+	svcType := ctx.String("service")
+	targets, e := client.ListRemoteTargets(globalContext, sourceBucket, svcType)
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot list remote target(s)")
-	printRemotes(aliasedURL, arnType, targets)
+	printRemotes(aliasedURL, targets)
 	return nil
 }
 
-func printRemotes(urlStr string, arnType string, targets []madmin.BucketTarget) {
-	_, sourceBucket := url2Alias(urlStr)
+func printRemotes(urlStr string, targets []madmin.BucketTarget) {
 
-	maxURLLen := 0
-	maxTgtLen := 0
+	maxURLLen := 10
+	maxTgtLen := 6
+	maxSrcLen := 6
+
 	if !globalJSON {
 		if len(targets) == 0 {
 			console.Print(console.Colorize("RemoteListEmpty", fmt.Sprintf("No remote targets found for`%s`. \n", urlStr)))
@@ -110,28 +114,38 @@ func printRemotes(urlStr string, arnType string, targets []madmin.BucketTarget) 
 			if len(t.TargetBucket) > maxTgtLen {
 				maxTgtLen = len(t.TargetBucket)
 			}
+			if len(t.SourceBucket) > maxSrcLen {
+				maxSrcLen = len(t.SourceBucket)
+			}
 		}
 		if maxURLLen > 0 {
-			console.Println(console.Colorize("RemoteListMessage", fmt.Sprintf("%-*.*s %s->%-*.*s %s", maxURLLen+8, maxURLLen+8, "Remote URL", "Source", maxTgtLen, maxTgtLen, "Target", "ARN")))
+			console.Println(console.Colorize("RemoteListMessage", fmt.Sprintf("%-*.*s %-*.*s->%-*.*s %s", maxURLLen+8, maxURLLen+8, "Remote URL", maxSrcLen, maxSrcLen, "Source", maxTgtLen, maxTgtLen, "Target", "ARN")))
 		}
 
 	}
-	var targetURL string
 	for _, target := range targets {
-		if maxURLLen > 0 {
-			targetURL = fmt.Sprintf("%-*.*s", maxURLLen+8, maxURLLen+8, target.URL())
+		targetURL := target.URL()
+		if !globalJSON {
+			if maxURLLen > 0 {
+				targetURL = fmt.Sprintf("%-*.*s", maxURLLen+8, maxURLLen+8, target.URL())
+			}
+			if maxTgtLen > 0 {
+				target.TargetBucket = fmt.Sprintf("%-*.*s", maxTgtLen, maxTgtLen, target.TargetBucket)
+			}
+
+			if maxSrcLen > 0 {
+				target.SourceBucket = fmt.Sprintf("%-*.*s", maxSrcLen, maxSrcLen, target.SourceBucket)
+			}
 		}
-		if maxTgtLen > 0 {
-			target.TargetBucket = fmt.Sprintf("%-*.*s", maxTgtLen, maxTgtLen, target.TargetBucket)
-		}
+
 		printMsg(RemoteMessage{
-			op:           "list",
+			op:           "ls",
 			AccessKey:    target.Credentials.AccessKey,
 			TargetBucket: target.TargetBucket,
 			TargetURL:    targetURL,
-			SourceBucket: sourceBucket,
+			SourceBucket: target.SourceBucket,
 			RemoteARN:    target.Arn,
-			Type:         arnType,
+			ServiceType:  string(target.Type),
 		})
 	}
 }

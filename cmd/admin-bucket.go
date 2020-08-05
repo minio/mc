@@ -35,5 +35,5 @@ var adminBucketCmd = cli.Command{
 func mainAdminBucket(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "quota", "replication" have their own main.
+	// Sub-commands like "quota", "remote" have their own main.
 }

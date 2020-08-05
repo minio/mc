@@ -331,10 +331,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/admin/bucket/remote": aliasCompleter,
-	"/config/host/add":     nil,
-	"/config/host/list":    aliasCompleter,
-	"/config/host/remove":  aliasCompleter,
+	"/admin/bucket/remote/add": aliasCompleter,
+	"/admin/bucket/remote/ls":  aliasCompleter,
+	"/admin/bucket/remote/rm":  aliasCompleter,
+
+	"/config/host/add":    nil,
+	"/config/host/list":   aliasCompleter,
+	"/config/host/remove": aliasCompleter,
 
 	"/update": nil,
 }
