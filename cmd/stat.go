@@ -42,6 +42,8 @@ type statMessage struct {
 	ExpirationRuleID  string            `json:"expirationRuleID"`
 	ReplicationStatus string            `json:"replicationStatus"`
 	Metadata          map[string]string `json:"metadata"`
+	VersionID         string            `json:"versionID,omitempty"`
+	DeleteMarker      bool              `json:"deleteMarker,omitempty"`
 }
 
 // String colorized string message.
@@ -53,6 +55,13 @@ func printStat(stat statMessage) {
 	console.Println(fmt.Sprintf("%-10s: %-6s ", "Size", humanize.IBytes(uint64(stat.Size))))
 	if stat.ETag != "" {
 		console.Println(fmt.Sprintf("%-10s: %s ", "ETag", stat.ETag))
+	}
+	if stat.VersionID != "" {
+		versionIDField := stat.VersionID
+		if stat.DeleteMarker {
+			versionIDField += " (delete-marker)"
+		}
+		console.Println(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField))
 	}
 	console.Println(fmt.Sprintf("%-10s: %s ", "Type", stat.Type))
 	if !stat.Expires.IsZero() {
@@ -123,6 +132,7 @@ func parseStat(c *ClientContent) statMessage {
 		return "file"
 	}()
 	content.Size = c.Size
+	content.VersionID = c.VersionID
 	content.Key = getKey(c)
 	content.Metadata = c.Metadata
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
@@ -142,7 +152,7 @@ func getStandardizedURL(targetURL string) string {
 // statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
 // HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
 // from GET listing.
-func statURL(ctx context.Context, targetURL, versionID string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
+func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
 	var stats []*ClientContent
 	var clnt Client
 	clnt, err := newClient(targetURL)
@@ -158,9 +168,14 @@ func statURL(ctx context.Context, targetURL, versionID string, isIncomplete, isR
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
 	lstOptions := ListOptions{isRecursive: isRecursive, isIncomplete: isIncomplete, showDir: DirNone}
-	if versionID != "" {
+	switch {
+	case versionID != "":
 		lstOptions.withOlderVersions = true
 		lstOptions.withDeleteMarkers = true
+	case !timeRef.IsZero():
+		lstOptions.withOlderVersions = includeOlderVersions
+		lstOptions.withDeleteMarkers = true
+		lstOptions.timeRef = timeRef
 	}
 	var cErr error
 	for content := range clnt.List(ctx, lstOptions) {
@@ -202,7 +217,7 @@ func statURL(ctx context.Context, targetURL, versionID string, isIncomplete, isR
 			}
 		}
 
-		_, stat, err := url2Stat(ctx, url, versionID, true, encKeyDB, time.Time{})
+		_, stat, err := url2Stat(ctx, url, versionID, true, encKeyDB, timeRef)
 		if err != nil {
 			stat = content
 		}

@@ -242,7 +242,7 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 	defer cancelRemoveSingle()
 
 	isRecursive := false
-	contents, pErr := statURL(ctx, url, versionID, isIncomplete, isRecursive, encKeyDB)
+	contents, pErr := statURL(ctx, url, versionID, time.Time{}, false, isIncomplete, isRecursive, encKeyDB)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
