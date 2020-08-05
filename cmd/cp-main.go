@@ -41,6 +41,10 @@ var (
 			Name:  "rewind",
 			Usage: "Move back in time",
 		},
+		cli.StringFlag{
+			Name:  "version-id",
+			Usage: "Pick a particular object version to copy",
+		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "copy recursively",
@@ -282,6 +286,7 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 	// Access recursive flag inside the session header.
 	isRecursive := session.Header.CommandBoolFlags["recursive"]
 	rewind := session.Header.CommandStringFlags["rewind"]
+	versionID := session.Header.CommandStringFlags["version-id"]
 	olderThan := session.Header.CommandStringFlags["older-than"]
 	newerThan := session.Header.CommandStringFlags["newer-than"]
 	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
@@ -297,7 +302,7 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan, parseRewindFlag(rewind))
+	URLsCh := prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan, parseRewindFlag(rewind), versionID)
 	done := false
 	for !done {
 		select {
@@ -406,11 +411,12 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		olderThan := cli.String("older-than")
 		newerThan := cli.String("newer-than")
 		rewind := cli.String("rewind")
+		versionID := cli.String("version-id")
 
 		go func() {
 			totalBytes := int64(0)
 			for cpURLs := range prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive,
-				encKeyDB, olderThan, newerThan, parseRewindFlag(rewind)) {
+				encKeyDB, olderThan, newerThan, parseRewindFlag(rewind), versionID) {
 				if cpURLs.Error != nil {
 					// Print in new line and adjust to top so that we
 					// don't print over the ongoing scan bar
@@ -743,6 +749,7 @@ func mainCopy(cliCtx *cli.Context) error {
 
 	recursive := cliCtx.Bool("recursive")
 	rewind := cliCtx.String("rewind")
+	versionID := cliCtx.String("version-id")
 	olderThan := cliCtx.String("older-than")
 	newerThan := cliCtx.String("newer-than")
 	storageClass := cliCtx.String("storage-class")
@@ -772,6 +779,7 @@ func mainCopy(cliCtx *cli.Context) error {
 			session.Header.CommandType = "cp"
 			session.Header.CommandBoolFlags["recursive"] = recursive
 			session.Header.CommandStringFlags["rewind"] = rewind
+			session.Header.CommandStringFlags["version-id"] = versionID
 			session.Header.CommandStringFlags["older-than"] = olderThan
 			session.Header.CommandStringFlags["newer-than"] = newerThan
 			session.Header.CommandStringFlags["storage-class"] = storageClass
