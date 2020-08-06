@@ -31,14 +31,16 @@ import (
 
 // contentMessage container for content message structure.
 type statMessage struct {
-	Status   string            `json:"status"`
-	Key      string            `json:"name"`
-	Date     time.Time         `json:"lastModified"`
-	Size     int64             `json:"size"`
-	ETag     string            `json:"etag"`
-	Type     string            `json:"type"`
-	Expires  time.Time         `json:"expires"`
-	Metadata map[string]string `json:"metadata"`
+	Status           string            `json:"status"`
+	Key              string            `json:"name"`
+	Date             time.Time         `json:"lastModified"`
+	Size             int64             `json:"size"`
+	ETag             string            `json:"etag"`
+	Type             string            `json:"type"`
+	Expires          time.Time         `json:"expires"`
+	Expiration       time.Time         `json:"expiration"`
+	ExpirationRuleID string            `json:"expirationRuleID"`
+	Metadata         map[string]string `json:"metadata"`
 }
 
 // String colorized string message.
@@ -54,6 +56,9 @@ func printStat(stat statMessage) {
 	console.Println(fmt.Sprintf("%-10s: %s ", "Type", stat.Type))
 	if !stat.Expires.IsZero() {
 		console.Println(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)))
+	}
+	if !stat.Expiration.IsZero() {
+		console.Println(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration", stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID))
 	}
 	var maxKey = 0
 	for k := range stat.Metadata {
@@ -119,6 +124,8 @@ func parseStat(c *ClientContent) statMessage {
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
 	content.Expires = c.Expires
+	content.Expiration = c.Expiration
+	content.ExpirationRuleID = c.ExpirationRuleID
 	return content
 }
 

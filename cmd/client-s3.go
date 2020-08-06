@@ -1954,6 +1954,8 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.ETag = entry.ETag
 	content.Time = entry.LastModified
 	content.Expires = entry.Expires
+	content.Expiration = entry.Expiration
+	content.ExpirationRuleID = entry.ExpirationRuleID
 	content.VersionID = entry.VersionID
 	content.StorageClass = entry.StorageClass
 	content.IsDeleteMarker = entry.IsDeleteMarker
