@@ -950,7 +950,7 @@ func (f *fsClient) PutObjectRetention(ctx context.Context, mode minio.RetentionM
 }
 
 // Set object legal hold for a given object.
-func (f *fsClient) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHoldStatus) *probe.Error {
+func (f *fsClient) PutObjectLegalHold(ctx context.Context, versionID string, lhold minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
 		APIType: "filesystem",

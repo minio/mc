@@ -111,7 +111,7 @@ type Client interface {
 
 	// Object Locking related API
 	PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
-	PutObjectLegalHold(ctx context.Context, hold minio.LegalHoldStatus) *probe.Error
+	PutObjectLegalHold(ctx context.Context, versionID string, hold minio.LegalHoldStatus) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error)

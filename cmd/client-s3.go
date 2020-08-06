@@ -2304,11 +2304,12 @@ func (c *S3Client) PutObjectRetention(ctx context.Context, mode minio.RetentionM
 }
 
 // PutObjectLegalHold - Set object legal hold for a given object.
-func (c *S3Client) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHoldStatus) *probe.Error {
+func (c *S3Client) PutObjectLegalHold(ctx context.Context, versionID string, lhold minio.LegalHoldStatus) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if lhold.IsValid() {
 		opts := minio.PutObjectLegalHoldOptions{
-			Status: &lhold,
+			Status:    &lhold,
+			VersionID: versionID,
 		}
 		e := c.api.PutObjectLegalHold(ctx, bucket, object, opts)
 		if e != nil {
