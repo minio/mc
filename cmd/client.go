@@ -141,7 +141,7 @@ type Client interface {
 	SetVersioning(ctx context.Context, status string) *probe.Error
 	// Replication operations
 	GetReplication(ctx context.Context) (replication.Config, *probe.Error)
-	SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error
+	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error
 	RemoveReplication(ctx context.Context) *probe.Error
 	// Encryption operations
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)

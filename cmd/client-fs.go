@@ -1155,7 +1155,7 @@ func (f *fsClient) GetReplication(ctx context.Context) (replication.Config, *pro
 }
 
 // Set replication configuration for a given bucket, not implemented.
-func (f *fsClient) SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error {
+func (f *fsClient) SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetReplication",
 		APIType: "filesystem",

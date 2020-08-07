@@ -2452,12 +2452,29 @@ func (c *S3Client) RemoveReplication(ctx context.Context) *probe.Error {
 }
 
 // SetReplication sets replication configuration for a given bucket.
-func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error {
-	bucket, _ := c.url2BucketAndObject()
+func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error {
+	bucket, objectPrefix := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
-
+	opts.Prefix = objectPrefix
+	switch opts.Op {
+	case replication.AddOption:
+		if e := cfg.AddRule(opts); e != nil {
+			return probe.NewError(e)
+		}
+	case replication.SetOption:
+		if e := cfg.EditRule(opts); e != nil {
+			return probe.NewError(e)
+		}
+	case replication.RemoveOption:
+		if e := cfg.RemoveRule(opts); e != nil {
+			return probe.NewError(e)
+		}
+	case replication.ImportOption:
+	default:
+		return probe.NewError(fmt.Errorf("Invalid replication option"))
+	}
 	if e := c.api.SetBucketReplication(ctx, bucket, *cfg); e != nil {
 		return probe.NewError(e)
 	}

@@ -255,6 +255,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/encrypt/info":  s3Complete{deepLevel: 2},
 	"/encrypt/clear": s3Complete{deepLevel: 2},
 
+	"/replicate/add":    s3Complete{deepLevel: 2},
+	"/replicate/set":    s3Complete{deepLevel: 2},
+	"/replicate/ls":     s3Complete{deepLevel: 2},
+	"/replicate/rm":     s3Complete{deepLevel: 2},
+	"/replicate/export": s3Complete{deepLevel: 2},
+	"/replicate/import": s3Complete{deepLevel: 2},
+
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,
 	"/tag/set":    s3Completer,
@@ -324,11 +331,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/admin/bucket/replication": aliasCompleter,
-	"/admin/bucket/remote":      aliasCompleter,
-	"/config/host/add":          nil,
-	"/config/host/list":         aliasCompleter,
-	"/config/host/remove":       aliasCompleter,
+	"/admin/bucket/remote": aliasCompleter,
+	"/config/host/add":     nil,
+	"/config/host/list":    aliasCompleter,
+	"/config/host/remove":  aliasCompleter,
 
 	"/update": nil,
 }
