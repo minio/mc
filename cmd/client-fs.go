@@ -1130,18 +1130,18 @@ func (f *fsClient) SetLifecycle(ctx context.Context, _ *lifecycle.Configuration)
 	})
 }
 
-// Get versioning info for a bucket, not implemented.
-func (f *fsClient) GetVersioning(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
+// Get version info for a bucket, not implemented.
+func (f *fsClient) GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
 	return minio.BucketVersioningConfiguration{}, probe.NewError(APINotImplemented{
-		API:     "GetVersioning",
+		API:     "GetVersion",
 		APIType: "filesystem",
 	})
 }
 
-// SetVersioning - Set versioning configuration on a bucket, not implemented
-func (f *fsClient) SetVersioning(ctx context.Context, status string) *probe.Error {
+// SetVersion - Set version configuration on a bucket, not implemented
+func (f *fsClient) SetVersion(ctx context.Context, status string) *probe.Error {
 	return probe.NewError(APINotImplemented{
-		API:     "SetVersioning",
+		API:     "SetVersion",
 		APIType: "filesystem",
 	})
 }

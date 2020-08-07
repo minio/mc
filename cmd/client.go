@@ -137,8 +137,8 @@ type Client interface {
 	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
 
 	// Versioning operations
-	GetVersioning(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
-	SetVersioning(ctx context.Context, status string) *probe.Error
+	GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
+	SetVersion(ctx context.Context, status string) *probe.Error
 	// Replication operations
 	GetReplication(ctx context.Context) (replication.Config, *probe.Error)
 	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error

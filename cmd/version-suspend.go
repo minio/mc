@@ -27,10 +27,10 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var versioningEnableCmd = cli.Command{
-	Name:   "enable",
-	Usage:  "Enable bucket versioning",
-	Action: mainVersioningEnable,
+var versionSuspendCmd = cli.Command{
+	Name:   "suspend",
+	Usage:  "Suspend bucket versioning",
+	Action: mainVersionSuspend,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -42,19 +42,19 @@ FLAGS:
     {{range .VisibleFlags}}{{.}}
     {{end}}
 EXAMPLES:
-   1. Enable versioning on bucket "mybucket" for alias "myminio".
+   1. Suspend versioning on bucket "mybucket" for alias "myminio".
       {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 
-// checkVersioningEnableSyntax - validate all the passed arguments
-func checkVersioningEnableSyntax(ctx *cli.Context) {
+// checkVersionSuspendSyntax - validate all the passed arguments
+func checkVersionSuspendSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "enable", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "suspend", 1) // last argument is exit code
 	}
 }
 
-type versionEnableMessage struct {
+type versionSuspendMessage struct {
 	Op         string
 	Status     string `json:"status"`
 	URL        string `json:"url"`
@@ -64,24 +64,24 @@ type versionEnableMessage struct {
 	} `json:"versioning"`
 }
 
-func (v versionEnableMessage) JSON() string {
+func (v versionSuspendMessage) JSON() string {
 	v.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(v, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (v versionEnableMessage) String() string {
-	return console.Colorize("versionEnableMessage", fmt.Sprintf("%s versioning is enabled", v.URL))
+func (v versionSuspendMessage) String() string {
+	return console.Colorize("versionSuspendMessage", fmt.Sprintf("%s versioning is suspended", v.URL))
 }
 
-func mainVersioningEnable(cliCtx *cli.Context) error {
-	ctx, cancelVersioningEnable := context.WithCancel(globalContext)
-	defer cancelVersioningEnable()
+func mainVersionSuspend(cliCtx *cli.Context) error {
+	ctx, cancelVersionSuspend := context.WithCancel(globalContext)
+	defer cancelVersionSuspend()
 
-	console.SetColor("versionEnableMessage", color.New(color.FgGreen))
+	console.SetColor("versionSuspendMessage", color.New(color.FgGreen))
 
-	checkVersioningEnableSyntax(cliCtx)
+	checkVersionSuspendSyntax(cliCtx)
 
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
@@ -89,9 +89,9 @@ func mainVersioningEnable(cliCtx *cli.Context) error {
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	fatalIf(client.SetVersioning(ctx, "enable"), "Cannot enable versioning")
-	printMsg(versionEnableMessage{
-		Op:     "enable",
+	fatalIf(client.SetVersion(ctx, "suspend"), "Cannot suspend versioning")
+	printMsg(versionSuspendMessage{
+		Op:     "suspend",
 		Status: "success",
 		URL:    aliasedURL,
 	})

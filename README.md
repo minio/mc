@@ -30,8 +30,8 @@ policy      manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
 lock        manage default bucket object lock configuration
 ilm         manage bucket lifecycle
-versioning  manage bucket versioning
-replicate   manage bucket replication
+version     manage bucket versioning
+replicate   configure server side bucket replication
 admin       manage MinIO servers
 update      update mc to latest release
 ```

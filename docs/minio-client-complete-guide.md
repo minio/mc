@@ -23,7 +23,7 @@ retention   set retention for object(s)
 legalhold   set legal hold for object(s)
 diff        list differences in object name, size, and date between two buckets
 rm          remove objects
-versioning  manage bucket versioning
+version     manage bucket versioning
 lock        manage default bucket object lock configuration
 ilm         manage bucket lifecycle
 encrypt     manage bucket encryption config
@@ -31,7 +31,7 @@ event       manage object notifications
 watch       listen for object notification events
 policy      manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
-replicate   manage bucket server side replication
+replicate   configure server side bucket replication
 admin       manage MinIO servers
 update      update mc to latest release
 ```
@@ -1504,16 +1504,16 @@ Metadata  :
   Content-Type: application/octet-stream
 ```
 
-<a name="versioning"></a>
-### Command `versioning`
-`versioning` manage bucket versioning
+<a name="version"></a>
+### Command `version`
+`version` manage bucket versioning
 
 ```
 NAME:
-  mc versioning - manage bucket versioning
+  mc version - manage bucket versioning
 
 USAGE:
-  mc versioning TARGET [enable | suspend | info]
+  mc version TARGET [enable | suspend | info]
 
 COMMANDS:
   enable   Enable bucket versioning
@@ -1524,20 +1524,20 @@ COMMANDS:
 *Example: Enable versioning on bucket `mybucket`*
 
 ```
-mc versioning enable myminio/mybucket
+mc version enable myminio/mybucket
 myminio/mybucket versioning is enabled
 ```
 
-*Example: Display the versioning configuration for bucket `mybucket`*
+*Example: Display the version configuration for bucket `mybucket`*
 
 ```
-mc versioning info myminio/mybucket
+mc version info myminio/mybucket
 myminio/mybucket versioning status is enabled
 
 ```
 *Example: Suspend versioning for bucket `mybucket`*
 ```
-mc versioning suspend myminio/mybucket
+mc version suspend myminio/mybucket
 myminio/mybucket versioning is suspended
 ```
 

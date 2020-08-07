@@ -266,9 +266,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/tag/remove": s3Completer,
 	"/tag/set":    s3Completer,
 
-	"/versioning/info":    s3Complete{deepLevel: 2},
-	"/versioning/enable":  s3Complete{deepLevel: 2},
-	"/versioning/suspend": s3Complete{deepLevel: 2},
+	"/version/info":    s3Complete{deepLevel: 2},
+	"/version/enable":  s3Complete{deepLevel: 2},
+	"/version/suspend": s3Complete{deepLevel: 2},
 
 	"/lock/compliance": s3Completer,
 	"/lock/governance": s3Completer,
