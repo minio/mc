@@ -77,7 +77,7 @@ func (v versioningInfoMessage) String() string {
 	msg := ""
 	switch v.Versioning.Status {
 	case "":
-		msg = fmt.Sprintf("%s is un-versioninged", v.URL)
+		msg = fmt.Sprintf("%s is un-versioned", v.URL)
 	default:
 		msg = fmt.Sprintf("%s versioning status is %s", v.URL, strings.ToLower(v.Versioning.Status))
 	}
