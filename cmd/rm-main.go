@@ -80,7 +80,7 @@ var (
 			Usage: "remove objects newer than L days, M hours and N minutes",
 		},
 		cli.BoolFlag{
-			Name:  bypass,
+			Name:  "bypass",
 			Usage: "bypass governance",
 		},
 	}
@@ -436,7 +436,7 @@ func mainRm(cliCtx *cli.Context) error {
 	isRecursive := cliCtx.Bool("recursive")
 	isFake := cliCtx.Bool("fake")
 	isStdin := cliCtx.Bool("stdin")
-	isBypass := cliCtx.Bool(bypass)
+	isBypass := cliCtx.Bool("bypass")
 	olderThan := cliCtx.String("older-than")
 	newerThan := cliCtx.String("newer-than")
 	isForce := cliCtx.Bool("force")

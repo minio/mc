@@ -297,7 +297,7 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 			retainUntilDate = t.UTC()
 		}
 	}
-	if err := targetClnt.PutObjectRetention(ctx, lockMode, retainUntilDate, false); err != nil {
+	if err := targetClnt.PutObjectRetention(ctx, "", lockMode, retainUntilDate, false); err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil
@@ -432,10 +432,13 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	// for the most part source metadata is copied over.
 	if urls.TargetContent.RetentionEnabled {
 		m := minio.RetentionMode(strings.ToUpper(urls.TargetContent.RetentionMode))
+		if m.IsValid() {
+			return urls.WithError(probe.NewError(errors.New("invalid retention mode")).Trace(targetURL.String()))
+		}
 
 		var dur uint64
 		var unit minio.ValidityUnit
-		dur, unit, err = parseRetentionValidity(urls.TargetContent.RetentionDuration, m)
+		dur, unit, err = parseRetentionValidity(urls.TargetContent.RetentionDuration)
 		if err != nil {
 			return urls.WithError(err.Trace(targetURL.String()))
 		}

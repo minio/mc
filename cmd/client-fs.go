@@ -942,9 +942,16 @@ func (f *fsClient) GetAccessRules(ctx context.Context) (map[string]string, *prob
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
+func (f *fsClient) PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
+		APIType: "filesystem",
+	})
+}
+
+func (f *fsClient) GetObjectRetention(ctx context.Context, versionID string) (minio.RetentionMode, time.Time, *probe.Error) {
+	return "", time.Time{}, probe.NewError(APINotImplemented{
+		API:     "GetObjectRetention",
 		APIType: "filesystem",
 	})
 }
