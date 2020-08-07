@@ -19,7 +19,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -28,35 +27,34 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var versioningInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "Show bucket versioning status",
-	Action: mainVersioningInfo,
+var versionEnableCmd = cli.Command{
+	Name:   "enable",
+	Usage:  "Enable bucket versioning",
+	Action: mainVersionEnable,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
+    {{.HelpName}} - {{.Usage}}
 USAGE:
-  {{.HelpName}} TARGET
+    {{.HelpName}} TARGET
 
 FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
+    {{range .VisibleFlags}}{{.}}
+    {{end}}
 EXAMPLES:
-   1. Display bucket versioning status for bucket "mybucket".
+   1. Enable versioning on bucket "mybucket" for alias "myminio".
       {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 
-// checkVersioningInfoSyntax - validate all the passed arguments
-func checkVersioningInfoSyntax(ctx *cli.Context) {
+// checkVersionEnableSyntax - validate all the passed arguments
+func checkVersionEnableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "enable", 1) // last argument is exit code
 	}
 }
 
-type versioningInfoMessage struct {
+type versionEnableMessage struct {
 	Op         string
 	Status     string `json:"status"`
 	URL        string `json:"url"`
@@ -66,31 +64,24 @@ type versioningInfoMessage struct {
 	} `json:"versioning"`
 }
 
-func (v versioningInfoMessage) JSON() string {
+func (v versionEnableMessage) JSON() string {
 	v.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(v, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (v versioningInfoMessage) String() string {
-	msg := ""
-	switch v.Versioning.Status {
-	case "":
-		msg = fmt.Sprintf("%s is un-versioninged", v.URL)
-	default:
-		msg = fmt.Sprintf("%s versioning status is %s", v.URL, strings.ToLower(v.Versioning.Status))
-	}
-	return console.Colorize("versioningInfoMessage", msg)
+func (v versionEnableMessage) String() string {
+	return console.Colorize("versionEnableMessage", fmt.Sprintf("%s versioning is enabled", v.URL))
 }
 
-func mainVersioningInfo(cliCtx *cli.Context) error {
-	ctx, cancelVersioningInfo := context.WithCancel(globalContext)
-	defer cancelVersioningInfo()
+func mainVersionEnable(cliCtx *cli.Context) error {
+	ctx, cancelVersionEnable := context.WithCancel(globalContext)
+	defer cancelVersionEnable()
 
-	console.SetColor("versioningInfoMessage", color.New(color.FgGreen))
+	console.SetColor("versionEnableMessage", color.New(color.FgGreen))
 
-	checkVersioningInfoSyntax(cliCtx)
+	checkVersionEnableSyntax(cliCtx)
 
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
@@ -98,15 +89,11 @@ func mainVersioningInfo(cliCtx *cli.Context) error {
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	vConfig, e := client.GetVersioning(ctx)
-	fatalIf(e, "Cannot get versioning info")
-	vMsg := versioningInfoMessage{
-		Op:     "info",
+	fatalIf(client.SetVersion(ctx, "enable"), "Cannot enable versioning")
+	printMsg(versionEnableMessage{
+		Op:     "enable",
 		Status: "success",
 		URL:    aliasedURL,
-	}
-	vMsg.Versioning.Status = vConfig.Status
-	vMsg.Versioning.MFADelete = vConfig.MFADelete
-	printMsg(vMsg)
+	})
 	return nil
 }

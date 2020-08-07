@@ -18,22 +18,22 @@ package cmd
 
 import "github.com/minio/cli"
 
-var versioningCmd = cli.Command{
-	Name:            "versioning",
+var versionCmd = cli.Command{
+	Name:            "version",
 	Usage:           "manage bucket versioning",
 	HideHelpCommand: true,
-	Action:          mainVersioning,
+	Action:          mainVersion,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	Subcommands: []cli.Command{
-		versioningEnableCmd,
-		versioningSuspendCmd,
-		versioningInfoCmd,
+		versionEnableCmd,
+		versionSuspendCmd,
+		versionInfoCmd,
 	},
 }
 
-// mainVersioning is the handle for "mc versioning" command.
-func mainVersioning(ctx *cli.Context) error {
+// mainVersion is the handle for "mc version" command.
+func mainVersion(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "info", "enable", "suspend" have their own main.

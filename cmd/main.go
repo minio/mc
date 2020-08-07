@@ -339,7 +339,7 @@ var appCmds = []cli.Command{
 	legalHoldCmd,
 	diffCmd,
 	rmCmd,
-	versioningCmd,
+	versionCmd,
 	bucketLockCmd,
 	bucketILMCmd,
 	encryptCmd,

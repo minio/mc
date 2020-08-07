@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var replicateCmd = cli.Command{
 	Name:            "replicate",
-	Usage:           "manage bucket server side replication",
+	Usage:           "configure server side bucket replication",
 	HideHelpCommand: true,
 	Action:          mainReplicate,
 	Before:          setGlobalsFromContext,
