@@ -894,52 +894,50 @@ mc admin bucket quota myminio/mybucket --clear
 ```
 
 <a name="remote"></a>
-### Command `remote` - manage bucket targets
+### Command `remote` - configure remote target buckets
 `remote` command manages remote bucket targets on MinIO server.
 
 ```
 NAME:
-  mc admin bucket remote - manage bucket targets
+  mc admin bucket remote - configure remote bucket targets
 
 USAGE:
-  mc admin bucket remote set TARGET http(s)://ACCESSKEY:SECRETKEY@TARGET_URL/TARGET_BUCKET [--path | --api] --type
+  mc admin bucket remote COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
-TARGET_BUCKET:
-  Also called as remote bucket.
-
-TARGET_URL:
-  Also called as remote endpoint.
-
-ACCESSKEY:
-  Also called as username.
-
-SECRETKEY:
-  Also called as password.
-
+COMMANDS:
+  add  add a new remote target
+  ls   list remote target ARN(s)
+  rm   remove configured remote target
 
 ```
-*Example: Set a new replication target `targetbucket` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint.
+*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint.
 *
 
 ```
-mc admin bucket remote set myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --path ON --type "replica"
-ARN = `arn:minio:replica::1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
+mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1"
+ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
 ```
 
 *Example: Get remote target for replication on bucket 'srcbucket' in MinIO.*
 
 ```
-mc admin bucket remote list myminio/srcbucket --type "replica"
+mc admin bucket remote ls myminio/srcbucket --service "replication"
 ```
 
 *Example: List remote target(s) on bucket 'srcbucket' in MinIO.*
 
 ```
-mc admin bucket remote list myminio/srcbucket
+mc admin bucket remote ls myminio/srcbucket
 ```
 
-*Example: Remove bucket target configured for bucket 'srcbucket' on MinIO with arn `arn:minio:replica::1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`.*
+*Example: List remote target(s) on MinIO.*
 
 ```
-mc admin bucket remote remove myminio/srcbucket --arn "arn:minio:replica::1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket"
+mc admin bucket remote ls myminio
+```
+
+*Example: Remove bucket target configured for bucket 'srcbucket' on MinIO with arn `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`.*
+
+```
+mc admin bucket remote rm myminio/srcbucket --arn "arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket"
 ```

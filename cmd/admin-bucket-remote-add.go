@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -31,36 +32,40 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
-var adminBucketRemoteSetFlags = []cli.Flag{
+var adminBucketRemoteAddFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "path-style",
+		Name:  "path",
 		Value: "auto",
-		Usage: "path style supported by the server. Valid options are '[on,off,auto]'",
+		Usage: "bucket path lookup supported by the server. Valid options are '[on,off,auto]'",
 	},
 	cli.StringFlag{
-		Name:  "type",
-		Usage: "Type of ARN. Valid options are '[replica]'",
+		Name:  "service",
+		Usage: "type of service. Valid options are '[replication]'",
+	},
+	cli.StringFlag{
+		Name:  "region",
+		Usage: "Region of the destination bucket (optional)",
 	},
 }
-var adminBucketRemoteSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set a new remote target",
-	Action: mainAdminBucketRemoteSet,
+var adminBucketRemoteAddCmd = cli.Command{
+	Name:   "add",
+	Usage:  "add a new remote target",
+	Action: mainAdminBucketRemoteAdd,
 	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, adminBucketRemoteSetFlags...),
+	Flags:  append(globalFlags, adminBucketRemoteAddFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@TARGET_URL/TARGET_BUCKET [--path ]
+  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@DEST_URL/DEST_BUCKET [--path | --region ] --service
 
 TARGET:
    Also called as alias/sourcebucketname
 
-TARGET_BUCKET:
+DEST_BUCKET:
   Also called as remote target bucket.
 
-TARGET_URL:
+DEST_URL:
   Also called as remote endpoint.
 
 ACCESSKEY:
@@ -73,27 +78,24 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set a new remote replication target 'replicabucket' on https://minio2:9000 for bucket 'srcbucket' on MinIO server.
-     {{.DisableHistory}}
-     {{.Prompt}} {{.HelpName}} myminio/srcbucket https://foobar:foo12345@minio2:9000/replicabucket --type "replica"
-     {{.EnableHistory}}
+	1. Set a new remote replication target 'replicabucket' in region "us-west-1" on https://minio2:9000 for bucket 'srcbucket' on MinIO server.
+	{{.DisableHistory}}
+	{{.Prompt}} {{.HelpName}} myminio/srcbucket https://foobar:foo12345@minio2:9000/replicabucket --service "replication" \
+								 						--region "us-west-1"
+	{{.EnableHistory}}
 `,
 }
 
-// checkAdminBucketRemoteSetSyntax - validate all the passed arguments
-func checkAdminBucketRemoteSetSyntax(ctx *cli.Context) {
+// checkAdminBucketRemoteAddSyntax - validate all the passed arguments
+func checkAdminBucketRemoteAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 2 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for remote set command.")
+			"Incorrect number of arguments for remote add command.")
 	}
-	if !ctx.IsSet("type") {
-		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "type flag is required")
-	}
-
 }
 
 // RemoteMessage container for content message structure
@@ -107,12 +109,13 @@ type RemoteMessage struct {
 	TargetBucket string `json:"TargetBucket,omitempty"`
 	RemoteARN    string `json:"RemoteARN,omitempty"`
 	Path         string `json:"path,omitempty"`
-	Type         string `json:"type"`
+	Region       string `json:"region,omitempty"`
+	ServiceType  string `json:"service"`
 }
 
 func (r RemoteMessage) String() string {
 	switch r.op {
-	case "list":
+	case "ls":
 		message := console.Colorize("TargetURL", fmt.Sprintf("%s ", r.TargetURL))
 		message += console.Colorize("SourceBucket", r.SourceBucket)
 		message += console.Colorize("Arrow", "->")
@@ -120,9 +123,9 @@ func (r RemoteMessage) String() string {
 		message += " "
 		message += console.Colorize("ARN", r.RemoteARN)
 		return message
-	case "remove":
-		return console.Colorize("RemoteMessage", "Removed Remote target for `"+r.SourceBucket+"` bucket successfully.")
-	case "set":
+	case "rm":
+		return console.Colorize("RemoteMessage", "Removed remote target for `"+r.SourceBucket+"` bucket successfully.")
+	case "add":
 		return console.Colorize("RemoteMessage", "Remote ARN = `"+r.RemoteARN+"`.")
 	}
 	return ""
@@ -148,7 +151,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	}
 	_, sourceBucket = url2Alias(args[0])
 	TargetURL := args[1]
-	path := cli.String("path-style")
+	path := cli.String("path")
 	if !isValidPath(path) {
 		fatalIf(errInvalidArgument().Trace(path),
 			"Unrecognized bucket path style. Valid options are `[on,off, auto]`.")
@@ -167,10 +170,17 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		fatalIf(probe.NewError(cerr), "Malformed Remote target URL")
 	}
 	secure := u.Scheme == "https"
-
-	arnType := cli.String("type")
-	if !madmin.ArnType(arnType).IsValid() {
-		fatalIf(errInvalidArgument().Trace(arnType), "Invalid --type flag. Valid option is `[replica]`.")
+	host := u.Host
+	if u.Port() == "" {
+		port := 80
+		if secure {
+			port = 443
+		}
+		host = host + ":" + strconv.Itoa(port)
+	}
+	serviceType := cli.String("service")
+	if !madmin.ServiceType(serviceType).IsValid() {
+		fatalIf(errInvalidArgument().Trace(serviceType), "Invalid service type. Valid option is `[replication]`.")
 	}
 
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
@@ -179,17 +189,18 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		TargetBucket: TargetBucket,
 		Secure:       secure,
 		Credentials:  creds,
-		Endpoint:     u.Host,
+		Endpoint:     host,
 		Path:         path,
 		API:          "s3v4",
-		Type:         madmin.ArnType(arnType),
+		Type:         madmin.ServiceType(serviceType),
+		Region:       cli.String("region"),
 	}
 	return sourceBucket, bktTarget
 }
 
-// mainAdminBucketRemoteSet is the handle for "mc admin bucket remote set" command.
-func mainAdminBucketRemoteSet(ctx *cli.Context) error {
-	checkAdminBucketRemoteSetSyntax(ctx)
+// mainAdminBucketRemoteAdd is the handle for "mc admin bucket remote set" command.
+func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
+	checkAdminBucketRemoteAddSyntax(ctx)
 
 	console.SetColor("RemoteMessage", color.New(color.FgGreen))
 
@@ -201,13 +212,13 @@ func mainAdminBucketRemoteSet(ctx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	sourceBucket, bktTarget := fetchRemoteTarget(ctx)
-	arn, e := client.SetBucketTarget(globalContext, sourceBucket, bktTarget)
+	arn, e := client.SetRemoteTarget(globalContext, sourceBucket, bktTarget)
 	if e != nil {
 		fatalIf(probe.NewError(e), "Cannot add new Remote target")
 	}
 
 	printMsg(RemoteMessage{
-		op:           "set",
+		op:           "add",
 		TargetURL:    bktTarget.URL(),
 		TargetBucket: bktTarget.TargetBucket,
 		AccessKey:    bktTarget.Credentials.AccessKey,
