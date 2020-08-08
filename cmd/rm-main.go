@@ -45,7 +45,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "version-id",
-			Usage: "pick a particular version id",
+			Usage: "delete a specific version of an object",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
