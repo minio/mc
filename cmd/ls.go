@@ -47,7 +47,7 @@ type contentMessage struct {
 	URL      string    `json:"url,omitempty"`
 
 	VersionID      string `json:"versionId,omitempty"`
-	Index          int    `json:"index,omitempty"`
+	VersionIndex   int    `json:"versionIndex,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 }
 
@@ -59,13 +59,16 @@ func (c contentMessage) String() string {
 		return message + console.Colorize("Dir", c.Key)
 	}
 
-	message += console.Colorize("File", c.Key)
+	fileDesc := c.Key
 	if c.VersionID != "" {
-		message += console.Colorize("File", fmt.Sprintf(":%d", c.Index))
+		fileDesc += fmt.Sprintf(" (v%d, %s", c.VersionIndex, c.VersionID)
 		if c.IsDeleteMarker {
-			message += console.Colorize("DeletedFile", " (deleted)")
+			fileDesc += ", delete-marker"
 		}
+		fileDesc += ")"
 	}
+
+	message += console.Colorize("file", fileDesc)
 	return message
 }
 
@@ -103,6 +106,8 @@ func generateContentMessages(clnt Client, ctnts []*ClientContent) (msgs []conten
 	}
 	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
+	nrVersions := len(ctnts)
+
 	for i, c := range ctnts {
 		// Convert any os specific delimiters to "/".
 		contentURL := filepath.ToSlash(c.URL.Path)
@@ -128,7 +133,7 @@ func generateContentMessages(clnt Client, ctnts []*ClientContent) (msgs []conten
 		contentMsg.Key = getKey(c)
 		contentMsg.VersionID = c.VersionID
 		contentMsg.IsDeleteMarker = c.IsDeleteMarker
-		contentMsg.Index = i
+		contentMsg.VersionIndex = nrVersions - i
 		// URL is empty by default
 		// Set it to either relative dir (host) or public url (remote)
 		contentMsg.URL = clnt.GetURL().String()
