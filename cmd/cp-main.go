@@ -43,7 +43,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "version-id",
-			Usage: "Pick a particular object version to copy",
+			Usage: "Select an object version to copy",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
