@@ -106,7 +106,8 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 	alias, _, _ := mustExpandAlias(urlStr)
 	var cErr error
 	errorsFound := false
-	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
+	objectsFound := false
+	lstOptions := ListOptions{isRecursive: true, showDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.withOlderVersions = withOlderVersions
 		lstOptions.withDeleteMarkers = true
@@ -118,7 +119,7 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
-
+		objectsFound = true
 		newClnt, perr := newClientFromAlias(alias, content.URL.String())
 		if perr != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
@@ -139,19 +140,24 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 			}
 		}
 	}
+
 	if cErr == nil && !globalJSON {
-		if errorsFound {
+		switch {
+		case errorsFound:
 			console.Print(console.Colorize("LegalHoldPartialFailure", fmt.Sprintf("Errors found while setting legal hold status on objects with prefix `%s`. \n", urlStr)))
-		} else {
+		case !objectsFound:
+			console.Print(console.Colorize("LegalHoldFailure", fmt.Sprintf("Not objects/versions found while setting legal hold status with prefix `%s`. \n", urlStr)))
+		default:
 			console.Print(console.Colorize("LegalHoldSuccess", fmt.Sprintf("Object legal hold successfully set for prefix `%s`.\n", urlStr)))
 		}
 	}
 	return cErr
 }
 
-// main for retention command.
+// main for legalhold set command.
 func mainLegalHoldSet(ctx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("LegalHoldFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
@@ -166,7 +172,11 @@ func mainLegalHoldSet(ctx *cli.Context) error {
 	withVersions := ctx.Bool("versions")
 
 	if versionID != "" && recursive {
-		fatalIf(errInvalidArgument(), "Cannot pass --version-id and --recursive at the same time")
+		fatalIf(errInvalidArgument(), "You cannot pass --version-id and --recursive at the same time")
+	}
+
+	if versionID != "" && withVersions {
+		fatalIf(errInvalidArgument(), "You cannot pass --version-id and --versions at the same time")
 	}
 
 	if rewind.IsZero() && withVersions {

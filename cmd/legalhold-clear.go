@@ -93,7 +93,11 @@ func mainLegalClearHold(ctx *cli.Context) error {
 	withVersions := ctx.Bool("versions")
 
 	if versionID != "" && recursive {
-		fatalIf(errInvalidArgument(), "Cannot pass --version-id and --recursive at the same time")
+		fatalIf(errInvalidArgument(), "You cannot pass --version-id and --recursive at the same time")
+	}
+
+	if versionID != "" && withVersions {
+		fatalIf(errInvalidArgument(), "You cannot pass --version-id and --versions at the same time")
 	}
 
 	if rewind.IsZero() && withVersions {
