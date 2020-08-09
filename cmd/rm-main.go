@@ -41,7 +41,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "back in time before removal",
+			Usage: "revert to older version of object(s) in time",
 		},
 		cli.StringFlag{
 			Name:  "version-id",
