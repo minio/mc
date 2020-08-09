@@ -278,13 +278,12 @@ github.com/minio/md5-simd v1.1.0/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77Z
 github.com/minio/minio v0.0.0-20200812095314-79ed7ce451ae h1:3mI/g3f70ZFIskMtNvUACTK2o2jeVysiB5p7wi+ay8I=
 github.com/minio/minio v0.0.0-20200812095314-79ed7ce451ae/go.mod h1:hnj2ntFYZ9U3L80leozb00ROk4/AdF0kj72n3A5e/60=
 github.com/minio/minio-go/v7 v7.0.3/go.mod h1:TA0CQCjJZHM5SJj9IjqR0NmpmQJ6bCbXifAJ3mUU6Hw=
-github.com/minio/minio-go/v7 v7.0.5-0.20200807085956-d7db33ea7618 h1:8iTb0TFs6kDGAUnhI/s2QCZOYcSTtYmY9dF+Cbc0WJo=
-github.com/minio/minio-go/v7 v7.0.5-0.20200807085956-d7db33ea7618/go.mod h1:CSt2ETZNs+bIIhWTse0mcZKZWMGrFU7Er7RR0TmkDYk=
+github.com/minio/minio-go/v7 v7.0.5-0.20200812191821-9cc34d660436 h1:EAaWyeXb1t0dR5a9rzSMoDiH1XdvKw8f8O2lEAoQZdw=
+github.com/minio/minio-go/v7 v7.0.5-0.20200812191821-9cc34d660436/go.mod h1:TA0CQCjJZHM5SJj9IjqR0NmpmQJ6bCbXifAJ3mUU6Hw=
 github.com/minio/selfupdate v0.3.1 h1:BWEFSNnrZVMUWXbXIgLDNDjbejkmpAmZvy/nCz1HlEs=
 github.com/minio/selfupdate v0.3.1/go.mod h1:b8ThJzzH7u2MkF6PcIra7KaXO9Khf6alWPvMSyTDCFM=
 github.com/minio/sha256-simd v0.1.1 h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=
 github.com/minio/sha256-simd v0.1.1/go.mod h1:B5e1o+1/KgNmWrSQK08Y6Z1Vb5pwIktudl0J58iy0KM=
-github.com/minio/simdjson-go v0.1.5 h1:6T5mHh7r3kUvgwhmFWQAjoPV5Yt5oD/VPjAI9ViH1kM=
 github.com/minio/simdjson-go v0.1.5/go.mod h1:oKURrZZEBtqObgJrSjN1Ln2n9MJj2icuBTkeJzZnvSI=
 github.com/minio/sio v0.2.0 h1:NCRCFLx0r5pRbXf65LVNjxbCGZgNQvNFQkgX3XF4BoA=
 github.com/minio/sio v0.2.0/go.mod h1:nKM5GIWSrqbOZp0uhyj6M1iA0X6xQzSGtYSaTKSCut0=

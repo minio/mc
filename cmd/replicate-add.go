@@ -53,6 +53,10 @@ var replicateAddFlags = []cli.Flag{
 		Name:  "priority",
 		Usage: "priority of the rule, should be unique and is a required field",
 	},
+	cli.StringFlag{
+		Name:  "remote-bucket",
+		Usage: "remote bucket, should be a unique value for the configuration",
+	},
 }
 
 var replicateAddCmd = cli.Command{
@@ -74,12 +78,16 @@ EXAMPLES:
 	1. Add replication configuration rule on bucket "mybucket" for alias "myminio".
 	   {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \ 
 														 --storage-class "STANDARD" \
-														 --arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1
+														 --arn 'arn:minio:replication::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
+														 --priority 1 \
+														 --remote-bucket "destbucket"
 
 	2. Add replication configuration rule with Disabled status on bucket "mybucket" for alias "myminio".
-	{{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \ 
-													--storage-class "STANDARD" --disable
-																										   --arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1
+      {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \ 
+														--storage-class "STANDARD" --disable \
+														--arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
+														--priority 1 \
+														--remote-bucket "destbucket"
 `,
 }
 
@@ -133,11 +141,12 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	}
 	opts := replication.Options{
 		TagString:    cliCtx.String("tags"),
-		Arn:          cliCtx.String("arn"),
+		RoleArn:      cliCtx.String("arn"),
 		StorageClass: cliCtx.String("storage-class"),
 		Priority:     strconv.Itoa(cliCtx.Int("priority")),
 		RuleStatus:   ruleStatus,
 		ID:           cliCtx.String("id"),
+		DestBucket:   cliCtx.String("remote-bucket"),
 		Op:           replication.AddOption,
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not add replication rule")

@@ -50,6 +50,10 @@ var replicateSetFlags = []cli.Flag{
 		Name:  "priority",
 		Usage: "priority of the rule, should be unique and is a required field",
 	},
+	cli.StringFlag{
+		Name:  "remote-bucket",
+		Usage: "destination bucket, should be a unique value for the configuration",
+	},
 }
 
 var replicateSetCmd = cli.Command{
@@ -74,7 +78,8 @@ var replicateSetCmd = cli.Command{
     2. Disable a replication configuration rule with rule ID "bsibgh8t874dnjst8hkg" on target myminio/bucket
     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg" --state disable
 
-    3. Set tags and storage class on a replication configuration with rule ID "kMYD.491" on target myminio/bucket/prefix.
+    3. Set tags and storage class on a replication configuration with rule ID "kMYD.491" on target
+	     myminio/bucket/prefix.
     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags "key1=value1&key2=value2" \
 								  --storage-class "STANDARD" --priority 2
 
@@ -140,11 +145,14 @@ func mainReplicateSet(cliCtx *cli.Context) error {
 	}
 	opts := replication.Options{
 		TagString:    cliCtx.String("tags"),
-		Arn:          cliCtx.String("arn"),
+		RoleArn:      cliCtx.String("arn"),
 		StorageClass: cliCtx.String("storage-class"),
 		RuleStatus:   state,
 		ID:           cliCtx.String("id"),
 		Op:           replication.SetOption,
+		DestBucket:   cliCtx.String("remote-bucket"),
+		IsSCSet:      cliCtx.IsSet("storage-class"),
+		IsTagSet:     cliCtx.IsSet("tags"),
 	}
 	if cliCtx.IsSet("priority") {
 		opts.Priority = strconv.Itoa(cliCtx.Int("priority"))

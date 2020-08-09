@@ -1632,7 +1632,7 @@ FLAGS:
 *Example: Add replication configuration rule on `mybucket` on alias `myminio`*
 
 ```
-mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1
+mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --remote-bucket destbucket
 Replication configuration rule applied to myminio/mybucket/prefix.
 ```
 
