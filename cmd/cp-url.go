@@ -52,10 +52,10 @@ const (
 
 // guessCopyURLType guesses the type of clientURL. This approach all allows prepareURL
 // functions to accurately report failure causes.
-func guessCopyURLType(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair, timeRef time.Time) (copyURLsType, string, *probe.Error) {
+func guessCopyURLType(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair, timeRef time.Time, versionID string) (copyURLsType, string, *probe.Error) {
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
 		sourceURL := sourceURLs[0]
-		_, sourceContent, err := url2Stat(ctx, sourceURL, "", false, keys, timeRef)
+		_, sourceContent, err := url2Stat(ctx, sourceURL, versionID, false, keys, timeRef)
 		if err != nil {
 			return copyURLsTypeInvalid, "", err
 		}
@@ -214,11 +214,11 @@ func prepareCopyURLsTypeD(ctx context.Context, sourceURLs []string, targetURL st
 }
 
 // prepareCopyURLs - prepares target and source clientURLs for copying.
-func prepareCopyURLs(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair, olderThan, newerThan string, timeRef time.Time) chan URLs {
+func prepareCopyURLs(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair, olderThan, newerThan string, timeRef time.Time, versionID string) chan URLs {
 	copyURLsCh := make(chan URLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs, encKeyDB map[string][]prefixSSEPair, timeRef time.Time) {
 		defer close(copyURLsCh)
-		cpType, cpVersion, err := guessCopyURLType(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, timeRef)
+		cpType, cpVersion, err := guessCopyURLType(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, timeRef, versionID)
 		fatalIf(err.Trace(), "Unable to guess the type of copy operation.")
 
 		switch cpType {

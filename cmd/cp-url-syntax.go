@@ -43,14 +43,23 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	srcURLs := URLs[:len(URLs)-1]
 	tgtURL := URLs[len(URLs)-1]
 	isRecursive := cliCtx.Bool("recursive")
-	rewind := cliCtx.String("rewind")
-	timeRef := parseRewindFlag(rewind)
+	timeRef := parseRewindFlag(cliCtx.String("rewind"))
+	versionID := cliCtx.String("version-id")
+
+	if versionID != "" && len(srcURLs) > 1 {
+		fatalIf(errDummy().Trace(cliCtx.Args()...), "Unable to pass --version flag with multiple copy sources arguments.")
+	}
 
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
-		_, _, err := url2Stat(ctx, srcURL, "", false, encKeyDB, timeRef)
+		_, _, err := url2Stat(ctx, srcURL, versionID, false, encKeyDB, timeRef)
 		if err != nil {
-			console.Fatalf("Unable to validate source %s\n", srcURL)
+			msg := "Unable to validate source `" + srcURL + "`"
+			if versionID != "" {
+				msg += " (" + versionID + ")"
+			}
+			msg += "."
+			console.Fatalln(msg)
 		}
 	}
 
@@ -76,7 +85,7 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	}
 
 	// Guess CopyURLsType based on source and target URLs.
-	copyURLsType, _, err := guessCopyURLType(ctx, srcURLs, tgtURL, isRecursive, encKeyDB, timeRef)
+	copyURLsType, _, err := guessCopyURLType(ctx, srcURLs, tgtURL, isRecursive, encKeyDB, timeRef, versionID)
 	if err != nil {
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
 	}
