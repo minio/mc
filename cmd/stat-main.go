@@ -128,7 +128,7 @@ func mainStat(cliCtx *cli.Context) error {
 
 	var cErr error
 	for _, targetURL := range args {
-		stats, err := statURL(ctx, targetURL, false, isRecursive, encKeyDB)
+		stats, err := statURL(ctx, targetURL, "", false, isRecursive, encKeyDB)
 		if err != nil {
 			fatalIf(err, "Unable to stat `"+targetURL+"`.")
 		}

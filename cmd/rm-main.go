@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2014, 2015 MinIO, Inc.
+ * MinIO Client (C) 2014-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,18 @@ import (
 // rm specific flags.
 var (
 	rmFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "versions",
+			Usage: "remove object(s) and all its versions",
+		},
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "revert to older version of object(s) in time",
+		},
+		cli.StringFlag{
+			Name:  "version-id",
+			Usage: "delete a specific version of an object",
+		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "remove recursively",
@@ -126,19 +138,33 @@ EXAMPLES:
 
   11. Bypass object retention in governance mode and delete the object.
       {{.Prompt}} {{.HelpName}} --bypass s3/pop-songs/
+
+  12. Remove a particular version ID.
+      {{.Prompt}} {{.HelpName}} s3/docs/money.xls --version-id "f20f3792-4bd4-4288-8d3c-b9d05b3b62f6"
+
+  13. Remove all object versions older than one year.
+      {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --versions --rewind 365d
+
 `,
 }
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	Status string `json:"status"`
-	Key    string `json:"key"`
-	Size   int64  `json:"size"`
+	Status    string    `json:"status"`
+	Key       string    `json:"key"`
+	VersionID string    `json:"versionID"`
+	ModTime   time.Time `json:"modTime"`
+	Size      int64     `json:"size"`
 }
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
-	return console.Colorize("Remove", fmt.Sprintf("Removing `%s`.", r.Key))
+	msg := console.Colorize("Remove", fmt.Sprintf("Removing `%s`", r.Key))
+	if r.VersionID != "" {
+		msg += fmt.Sprintf(" (version-id=%s, mod-time=%s)", r.VersionID, r.ModTime)
+	}
+	msg += "."
+	return msg
 }
 
 // JSON'ified message for scripting.
@@ -156,7 +182,15 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	isRecursive := cliCtx.Bool("recursive")
 	isStdin := cliCtx.Bool("stdin")
 	isDangerous := cliCtx.Bool("dangerous")
+	isVersions := cliCtx.Bool("versions")
+	versionID := cliCtx.String("version-id")
+	rewind := cliCtx.String("rewind")
 	isNamespaceRemoval := false
+
+	if versionID != "" && (isRecursive || isVersions || rewind != "") {
+		fatalIf(errDummy().Trace(),
+			"You cannot specify --version-id with any of --versions, --rewind and --recursive flags.")
+	}
 
 	for _, url := range cliCtx.Args() {
 		// clean path for aliases like s3/.
@@ -183,8 +217,8 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 		cli.ShowCommandHelpAndExit(cliCtx, "rm", exitCode)
 	}
 
-	// For all recursive operations make sure to check for 'force' flag.
-	if (isRecursive || isStdin) && !isForce {
+	// For all recursive or versions bulk deletion operations make sure to check for 'force' flag.
+	if (isVersions || isRecursive || isStdin) && !isForce {
 		if isNamespaceRemoval {
 			fatalIf(errDummy().Trace(),
 				"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
@@ -198,12 +232,13 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	}
 }
 
-func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+// Remove a single object or a single version in a versioned bucket
+func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
 	ctx, cancelRemoveSingle := context.WithCancel(globalContext)
 	defer cancelRemoveSingle()
 
 	isRecursive := false
-	contents, pErr := statURL(ctx, url, isIncomplete, isRecursive, encKeyDB)
+	contents, pErr := statURL(ctx, url, versionID, isIncomplete, isRecursive, encKeyDB)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
@@ -215,7 +250,6 @@ func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olde
 		}
 		return nil
 	}
-
 	content := contents[0]
 
 	// Skip objects older than older--than parameter if specified
@@ -264,9 +298,13 @@ func removeSingle(url string, isIncomplete, isFake, isForce, isBypass bool, olde
 	return nil
 }
 
-func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
-	ctx, cancelRemoveRecursive := context.WithCancel(globalContext)
-	defer cancelRemoveRecursive()
+// listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
+//   Use cases:
+//      * Remove objects recursively
+//      * Remove all versions of a single object
+func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+	ctx, cancelRemove := context.WithCancel(globalContext)
+	defer cancelRemove()
 
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
@@ -279,7 +317,16 @@ func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan,
 
 	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
 
-	for content := range clnt.List(ctx, ListOptions{isRecursive: true, isIncomplete: isIncomplete, showDir: DirNone}) {
+	listOpts := ListOptions{isRecursive: isRecursive, isIncomplete: isIncomplete, showDir: DirNone}
+	if !timeRef.IsZero() {
+		listOpts.withOlderVersions = withVersions
+		listOpts.withDeleteMarkers = true
+		listOpts.timeRef = timeRef
+	}
+
+	atLeastOneObjectFound := false
+
+	for content := range clnt.List(ctx, listOpts) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
 			switch content.Err.ToGoError().(type) {
@@ -290,7 +337,21 @@ func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan,
 			close(contentCh)
 			return exitStatus(globalErrorExitStatus)
 		}
+
 		urlString := content.URL.Path
+
+		if !isRecursive {
+			currentObjectURL := targetAlias + getKey(content)
+			standardizedURL := getStandardizedURL(currentObjectURL)
+			if !strings.HasPrefix(url, standardizedURL) {
+				break
+			}
+		}
+
+		// This will mark that we found at least one target object
+		// even that it could be ineligible for deletion. So we can
+		// inform the user that he was searching in an empty area
+		atLeastOneObjectFound = true
 
 		if !content.Time.IsZero() {
 			// Skip objects older than --older-than parameter, if specified
@@ -308,8 +369,10 @@ func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan,
 		}
 
 		printMsg(rmMessage{
-			Key:  targetAlias + urlString,
-			Size: content.Size,
+			Key:       targetAlias + urlString,
+			Size:      content.Size,
+			VersionID: content.VersionID,
+			ModTime:   content.Time,
 		})
 
 		if !isFake {
@@ -343,6 +406,11 @@ func removeRecursive(url string, isIncomplete, isFake, isBypass bool, olderThan,
 		return exitStatus(globalErrorExitStatus)
 	}
 
+	if !atLeastOneObjectFound {
+		errorIf(probe.NewError(ObjectMissing{}).Trace(url), "Failed to remove `"+url+"`.")
+		return exitStatus(globalErrorExitStatus)
+	}
+
 	return nil
 }
 
@@ -367,6 +435,13 @@ func mainRm(cliCtx *cli.Context) error {
 	olderThan := cliCtx.String("older-than")
 	newerThan := cliCtx.String("newer-than")
 	isForce := cliCtx.Bool("force")
+	withVersions := cliCtx.Bool("versions")
+	versionID := cliCtx.String("version-id")
+	rewind := parseRewindFlag(cliCtx.String("rewind"))
+
+	if withVersions && rewind.IsZero() {
+		rewind = time.Now().UTC()
+	}
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
@@ -375,12 +450,11 @@ func mainRm(cliCtx *cli.Context) error {
 	var e error
 	// Support multiple targets.
 	for _, url := range cliCtx.Args() {
-		if isRecursive {
-			e = removeRecursive(url, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
+		if isRecursive || withVersions {
+			e = listAndRemove(url, rewind, withVersions, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
-			e = removeSingle(url, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = remove(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
-
 		if rerr == nil {
 			rerr = e
 		}
@@ -393,12 +467,11 @@ func mainRm(cliCtx *cli.Context) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		url := scanner.Text()
-		if isRecursive {
-			e = removeRecursive(url, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
+		if isRecursive || withVersions {
+			e = listAndRemove(url, rewind, withVersions, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
-			e = removeSingle(url, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = remove(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
-
 		if rerr == nil {
 			rerr = e
 		}

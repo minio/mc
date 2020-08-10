@@ -889,6 +889,9 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
+  --versions                    remove object(s) and all its versions
+  --rewind value                revert to older version of object(s) in time
+  --version-id value            delete a specific version of an object
   --recursive, -r               remove recursively
   --force                       allow a recursive remove operation
   --dangerous                   allow site-wide removal of objects
@@ -938,6 +941,21 @@ mc rm -r --force --older-than 1d2h30m myminio/mybucket
 Removing `myminio/mybucket/dayOld1.txt`.
 Removing `myminio/mybucket/dayOld2.txt`.
 Removing `myminio/mybucket/dayOld3.txt`.
+```
+
+*Example: Remove a particular version ID.*
+
+```
+mc rm s3/docs/money.xls --version-id "f20f3792-4bd4-4288-8d3c-b9d05b3b62f6"
+Removing `s3/docs/money.xls`.
+```
+
+*Example: Remove all object versions older than one year.*
+
+```
+mc rm s3/docs/ --recursive --versions --rewind 365d
+Removing `s3/docs/foo.xls` (version-id=BgRaeIUnPgJ2gB7wj5LSB1hJ9buuHJBM, mod-time=2020-08-05 13:42:08 +0000 UTC).
+Removing `s3/docs/foo.xls` (version-id=rdHL_s7r0SKWemO.HUMCD63QbTOM9V9W, mod-time=2020-08-05 13:41:59 +0000 UTC).
 ```
 
 <a name="share"></a>

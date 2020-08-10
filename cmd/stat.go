@@ -134,8 +134,10 @@ func getStandardizedURL(targetURL string) string {
 	return filepath.FromSlash(targetURL)
 }
 
-// statURL - simple or recursive listing
-func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
+// statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
+// HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
+// from GET listing.
+func statURL(ctx context.Context, targetURL, versionID string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, *probe.Error) {
 	var stats []*ClientContent
 	var clnt Client
 	clnt, err := newClient(targetURL)
@@ -150,8 +152,13 @@ func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bo
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+	lstOptions := ListOptions{isRecursive: isRecursive, isIncomplete: isIncomplete, showDir: DirNone}
+	if versionID != "" {
+		lstOptions.withOlderVersions = true
+		lstOptions.withDeleteMarkers = true
+	}
 	var cErr error
-	for content := range clnt.List(ctx, ListOptions{isRecursive: isRecursive, isIncomplete: isIncomplete, showDir: DirNone}) {
+	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -184,7 +191,13 @@ func statURL(ctx context.Context, targetURL string, isIncomplete, isRecursive bo
 			return nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
-		_, stat, err := url2Stat(ctx, url, "", true, encKeyDB, time.Time{})
+		if versionID != "" {
+			if versionID != content.VersionID {
+				continue
+			}
+		}
+
+		_, stat, err := url2Stat(ctx, url, versionID, true, encKeyDB, time.Time{})
 		if err != nil {
 			stat = content
 		}
