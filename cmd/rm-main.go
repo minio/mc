@@ -184,11 +184,12 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	isDangerous := cliCtx.Bool("dangerous")
 	isVersions := cliCtx.Bool("versions")
 	versionID := cliCtx.String("version-id")
+	rewind := cliCtx.String("rewind")
 	isNamespaceRemoval := false
 
-	if isVersions && versionID != "" {
+	if versionID != "" && (isRecursive || isVersions || rewind != "") {
 		fatalIf(errDummy().Trace(),
-			"You cannot have both --versions and --version-id specified.")
+			"You cannot specify --version-id with any of --versions, --rewind and --recursive flags.")
 	}
 
 	for _, url := range cliCtx.Args() {
