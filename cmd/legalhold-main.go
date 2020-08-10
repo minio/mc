@@ -35,6 +35,7 @@ var legalHoldCmd = cli.Command{
 	Subcommands: []cli.Command{
 		legalHoldSetCmd,
 		legalHoldClearCmd,
+		legalHoldInfoCmd,
 	},
 }
 

@@ -2320,6 +2320,28 @@ func (c *S3Client) PutObjectLegalHold(ctx context.Context, versionID string, lho
 	return errInvalidArgument().Trace(c.GetURL().String())
 }
 
+// GetObjectLegalHold - Get object legal hold for a given object.
+func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+	var lhold minio.LegalHoldStatus
+	bucket, object := c.url2BucketAndObject()
+	opts := minio.GetObjectLegalHoldOptions{
+		VersionID: versionID,
+	}
+	lhPtr, e := c.api.GetObjectLegalHold(ctx, bucket, object, opts)
+	if e != nil {
+		errResp := minio.ToErrorResponse(e)
+		if errResp.Code != "NoSuchObjectLockConfiguration" {
+			return "", probe.NewError(e).Trace(c.GetURL().String())
+		}
+		return "", nil
+	}
+	// lhPtr can bil nil if there is no legalhold status set
+	if lhPtr != nil {
+		lhold = *lhPtr
+	}
+	return lhold, nil
+}
+
 // GetObjectLockConfig - Get object lock configuration of bucket.
 func (c *S3Client) GetObjectLockConfig(ctx context.Context) (minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()

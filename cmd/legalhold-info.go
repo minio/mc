@@ -23,12 +23,14 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio/pkg/console"
 )
 
 var (
-	lhSetFlags = []cli.Flag{
+	lhInfoFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "apply legal hold recursively",
@@ -47,12 +49,12 @@ var (
 		},
 	}
 )
-var legalHoldSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set legal hold for object(s)",
-	Action: mainLegalHoldSet,
+var legalHoldInfoCmd = cli.Command{
+	Name:   "info",
+	Usage:  "show legal hold info for object(s)",
+	Action: mainLegalHoldInfo,
 	Before: setGlobalsFromContext,
-	Flags:  append(lhSetFlags, globalFlags...),
+	Flags:  append(lhInfoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -64,23 +66,57 @@ FLAGS:
   {{end}}
 
 EXAMPLES:
-   1. Enable legal hold on a specific object
+   1. Show legal hold on a specific object
       $ {{.HelpName}} myminio/mybucket/prefix/obj.csv
 
-   2. Enable legal hold on a specific object version
+   2. Show legal hold on a specific object version
       $ {{.HelpName}} myminio/mybucket/prefix/obj.csv --version-id "HiMFUTOowG6ylfNi4LKxD3ieHbgfgrvC"
 
-   3. Enable object legal hold recursively for all objects at a prefix
+   3. Show object legal hold recursively for all objects at a prefix
       $ {{.HelpName}} myminio/mybucket/prefix --recursive
 
-   4. Enable object legal hold recursively for all objects versions older than one year
+   4. Show object legal hold recursively for all objects versions older than one year
       $ {{.HelpName}} myminio/mybucket/prefix --recursive --rewind 365d --versions
-
  `,
 }
 
-// setLegalHold - Set legalhold for all objects within a given prefix.
-func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool, lhold minio.LegalHoldStatus) error {
+// Structured message depending on the type of console.
+type legalHoldInfoMessage struct {
+	LegalHold minio.LegalHoldStatus `json:"legalhold"`
+	URLPath   string                `json:"urlpath"`
+	VersionID string                `json:"versionID"`
+	Status    string                `json:"status"`
+	Err       error                 `json:"error,omitempty"`
+}
+
+// Colorized message for console printing.
+func (l legalHoldInfoMessage) String() string {
+	if l.Err != nil {
+		return console.Colorize("LegalHoldMessageFailure", "Cannot get object legal hold status `"+l.URLPath+"`. "+l.Err.Error())
+	}
+	var msg string
+	msg += "Object: " + l.URLPath
+	if l.VersionID != "" {
+		msg += ", Version id: " + l.VersionID
+	}
+	msg += ", "
+	if l.LegalHold == "" {
+		msg += "No legalhold set"
+	} else {
+		msg += "Legalhold: " + string(l.LegalHold)
+	}
+	return console.Colorize("LegalHoldSuccess", msg)
+}
+
+// JSON'ified message for scripting.
+func (l legalHoldInfoMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(l, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
+// showLegalHoldInfo - show legalhold for one or many objects within a given prefix, with or without versioning
+func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool) error {
 	ctx, cancelLegalHold := context.WithCancel(globalContext)
 	defer cancelLegalHold()
 
@@ -89,11 +125,11 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
 	if !recursive {
-		err = clnt.PutObjectLegalHold(ctx, versionID, lhold)
+		lhold, err := clnt.GetObjectLegalHold(ctx, versionID)
 		if err != nil {
-			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
+			fatalIf(err.Trace(urlStr), "Failed to show legal hold information of `"+urlStr+"`.")
 		} else {
-			printMsg(legalHoldCmdMessage{
+			printMsg(legalHoldInfoMessage{
 				LegalHold: lhold,
 				Status:    "success",
 				URLPath:   urlStr,
@@ -125,13 +161,13 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
-		probeErr := newClnt.PutObjectLegalHold(ctx, content.VersionID, lhold)
+		lhold, probeErr := newClnt.GetObjectLegalHold(ctx, content.VersionID)
 		if probeErr != nil {
 			errorsFound = true
-			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `"+content.URL.Path+"` successfully")
+			errorIf(probeErr.Trace(content.URL.Path), "Failed to get legal hold information on `"+content.URL.Path+"`")
 		} else {
 			if !globalJSON {
-				printMsg(legalHoldCmdMessage{
+				printMsg(legalHoldInfoMessage{
 					LegalHold: lhold,
 					Status:    "success",
 					URLPath:   content.URL.Path,
@@ -144,45 +180,17 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 	if cErr == nil && !globalJSON {
 		switch {
 		case errorsFound:
-			console.Print(console.Colorize("LegalHoldPartialFailure", fmt.Sprintf("Errors found while setting legal hold status on objects with prefix `%s`. \n", urlStr)))
+			console.Print(console.Colorize("LegalHoldPartialFailure", fmt.Sprintf("Errors found while getting legal hold status on objects with prefix `%s`. \n", urlStr)))
 		case !objectsFound:
-			console.Print(console.Colorize("LegalHoldMessageFailure", fmt.Sprintf("No objects/versions found while setting legal hold status with prefix `%s`. \n", urlStr)))
-		default:
-			console.Print(console.Colorize("LegalHoldSuccess", fmt.Sprintf("Object legal hold successfully set for prefix `%s`.\n", urlStr)))
+			console.Print(console.Colorize("LegalHoldMessageFailure", fmt.Sprintf("No objects/versions found while getting legal hold status with prefix `%s`. \n", urlStr)))
 		}
 	}
 	return cErr
 }
 
-// Validate command line arguments.
-func parseLegalHoldArgs(cliCtx *cli.Context) (targetURL, versionID string, timeRef time.Time, recursive, withVersions bool) {
-	args := cliCtx.Args()
-	if len(args) != 1 {
-		cli.ShowCommandHelpAndExit(cliCtx, cliCtx.Command.Name, 1)
-	}
-
-	targetURL = args[0]
-	if targetURL == "" {
-		fatalIf(errInvalidArgument(), "You cannot pass an empty target url.")
-	}
-
-	versionID = cliCtx.String("version-id")
-	recursive = cliCtx.Bool("recursive")
-	withVersions = cliCtx.Bool("versions")
-	rewind := cliCtx.String("rewind")
-
-	if versionID != "" && (recursive || withVersions || rewind != "") {
-		fatalIf(errInvalidArgument(), "You cannot pass --version-id with any of --versions, --recursive and --rewind flags.")
-	}
-
-	timeRef = parseRewindFlag(rewind)
-	return
-}
-
-// main for legalhold set command.
-func mainLegalHoldSet(ctx *cli.Context) error {
+// main for legalhold info command.
+func mainLegalHoldInfo(ctx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
-	console.SetColor("LegalHoldFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
@@ -191,5 +199,5 @@ func mainLegalHoldSet(ctx *cli.Context) error {
 		timeRef = time.Now().UTC()
 	}
 
-	return setLegalHold(targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldEnabled)
+	return showLegalHoldInfo(targetURL, versionID, timeRef, withVersions, recursive)
 }

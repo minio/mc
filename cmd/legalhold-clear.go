@@ -48,7 +48,7 @@ var (
 var legalHoldClearCmd = cli.Command{
 	Name:   "clear",
 	Usage:  "clear legal hold for object(s)",
-	Action: mainLegalClearHold,
+	Action: mainLegalHoldClear,
 	Before: setGlobalsFromContext,
 	Flags:  append(lhClearFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
@@ -76,34 +76,17 @@ EXAMPLES:
  `,
 }
 
-// main for retention command.
-func mainLegalClearHold(ctx *cli.Context) error {
+// main for legalhold clear command.
+func mainLegalHoldClear(ctx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
-	args := ctx.Args()
-	if len(args) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "clear", 1)
+	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(ctx)
+
+	if timeRef.IsZero() && withVersions {
+		timeRef = time.Now().UTC()
 	}
 
-	versionID := ctx.String("version-id")
-	rewind := parseRewindFlag(ctx.String("rewind"))
-	recursive := ctx.Bool("recursive")
-	withVersions := ctx.Bool("versions")
-
-	if versionID != "" && recursive {
-		fatalIf(errInvalidArgument(), "You cannot pass --version-id and --recursive at the same time")
-	}
-
-	if versionID != "" && withVersions {
-		fatalIf(errInvalidArgument(), "You cannot pass --version-id and --versions at the same time")
-	}
-
-	if rewind.IsZero() && withVersions {
-		rewind = time.Now().UTC()
-	}
-
-	urlStr := args[0]
-	return setLegalHold(urlStr, versionID, rewind, withVersions, recursive, minio.LegalHoldDisabled)
+	return setLegalHold(targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldDisabled)
 }

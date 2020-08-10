@@ -957,6 +957,14 @@ func (f *fsClient) PutObjectLegalHold(ctx context.Context, versionID string, lho
 	})
 }
 
+// Get object legal hold for a given object.
+func (f *fsClient) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetObjectLegalHold",
+		APIType: "filesystem",
+	})
+}
+
 // GetAccess - get access policy permissions.
 func (f *fsClient) GetAccess(ctx context.Context) (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
