@@ -890,7 +890,7 @@ USAGE:
 
 FLAGS:
   --versions                    remove object(s) and all its versions
-  --rewind value                back in time before removal
+  --rewind value                revert to older version of object(s) in time
   --version-id value            delete a specific version of an object
   --recursive, -r               remove recursively
   --force                       allow a recursive remove operation
