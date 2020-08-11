@@ -173,8 +173,8 @@ type ClientContent struct {
 	VersionID         string
 	IsDeleteMarker    bool
 	IsLatest          bool
-
-	Err *probe.Error
+	ReplicationStatus string
+	Err               *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
