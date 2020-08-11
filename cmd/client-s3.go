@@ -2335,7 +2335,7 @@ func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (mi
 		}
 		return "", nil
 	}
-	// lhPtr can bil nil if there is no legalhold status set
+	// lhPtr can be nil if there is no legalhold status set
 	if lhPtr != nil {
 		lhold = *lhPtr
 	}

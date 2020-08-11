@@ -77,7 +77,7 @@ EXAMPLES:
 
    4. Show object legal hold recursively for all objects versions older than one year
       $ {{.HelpName}} myminio/mybucket/prefix --recursive --rewind 365d --versions
- `,
+`,
 }
 
 // Structured message depending on the type of console.
@@ -124,7 +124,7 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
-	if !recursive {
+	if !recursive && !withOlderVersions {
 		lhold, err := clnt.GetObjectLegalHold(ctx, versionID)
 		if err != nil {
 			fatalIf(err.Trace(urlStr), "Failed to show legal hold information of `"+urlStr+"`.")
@@ -143,7 +143,7 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 	var cErr error
 	errorsFound := false
 	objectsFound := false
-	lstOptions := ListOptions{isRecursive: true, showDir: DirNone}
+	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.withOlderVersions = withOlderVersions
 		lstOptions.withDeleteMarkers = true

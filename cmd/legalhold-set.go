@@ -75,8 +75,7 @@ EXAMPLES:
 
    4. Enable object legal hold recursively for all objects versions older than one year
       $ {{.HelpName}} myminio/mybucket/prefix --recursive --rewind 365d --versions
-
- `,
+`,
 }
 
 // setLegalHold - Set legalhold for all objects within a given prefix.
@@ -88,7 +87,7 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
-	if !recursive {
+	if !recursive && !withOlderVersions {
 		err = clnt.PutObjectLegalHold(ctx, versionID, lhold)
 		if err != nil {
 			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
@@ -107,7 +106,7 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 	var cErr error
 	errorsFound := false
 	objectsFound := false
-	lstOptions := ListOptions{isRecursive: true, showDir: DirNone}
+	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.withOlderVersions = withOlderVersions
 		lstOptions.withDeleteMarkers = true

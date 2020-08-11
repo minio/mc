@@ -73,7 +73,7 @@ EXAMPLES:
 
    4. Disable object legal hold recursively for all objects versions older than one year
       $ {{.HelpName}} myminio/mybucket/prefix --recursive --rewind 365d --versions
- `,
+`,
 }
 
 // main for legalhold clear command.
