@@ -1962,6 +1962,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.IsLatest = entry.IsLatest
 	content.Metadata = map[string]string{}
 	content.UserMetadata = map[string]string{}
+	content.ReplicationStatus = entry.ReplicationStatus
 	for k, v := range entry.UserMetadata {
 		content.UserMetadata[k] = v
 	}

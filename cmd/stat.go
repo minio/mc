@@ -31,16 +31,17 @@ import (
 
 // contentMessage container for content message structure.
 type statMessage struct {
-	Status           string            `json:"status"`
-	Key              string            `json:"name"`
-	Date             time.Time         `json:"lastModified"`
-	Size             int64             `json:"size"`
-	ETag             string            `json:"etag"`
-	Type             string            `json:"type"`
-	Expires          time.Time         `json:"expires"`
-	Expiration       time.Time         `json:"expiration"`
-	ExpirationRuleID string            `json:"expirationRuleID"`
-	Metadata         map[string]string `json:"metadata"`
+	Status            string            `json:"status"`
+	Key               string            `json:"name"`
+	Date              time.Time         `json:"lastModified"`
+	Size              int64             `json:"size"`
+	ETag              string            `json:"etag"`
+	Type              string            `json:"type"`
+	Expires           time.Time         `json:"expires"`
+	Expiration        time.Time         `json:"expiration"`
+	ExpirationRuleID  string            `json:"expirationRuleID"`
+	ReplicationStatus string            `json:"replicationStatus"`
+	Metadata          map[string]string `json:"metadata"`
 }
 
 // String colorized string message.
@@ -95,6 +96,9 @@ func printStat(stat statMessage) {
 			}
 		}
 	}
+	if stat.ReplicationStatus != "" {
+		console.Println(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))
+	}
 	console.Println()
 }
 
@@ -126,6 +130,7 @@ func parseStat(c *ClientContent) statMessage {
 	content.Expires = c.Expires
 	content.Expiration = c.Expiration
 	content.ExpirationRuleID = c.ExpirationRuleID
+	content.ReplicationStatus = c.ReplicationStatus
 	return content
 }
 
