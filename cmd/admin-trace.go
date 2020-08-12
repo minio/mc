@@ -61,7 +61,7 @@ var adminTraceCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS] TARGET
- 
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -156,6 +156,7 @@ type traceMessage struct {
 
 type requestInfo struct {
 	Time     time.Time         `json:"time"`
+	Proto    string            `json:"proto"`
 	Method   string            `json:"method"`
 	Path     string            `json:"path,omitempty"`
 	RawQuery string            `json:"rawQuery,omitempty"`
@@ -273,6 +274,7 @@ func (t traceMessage) JSON() string {
 		FuncName: t.Trace.FuncName,
 		RequestInfo: requestInfo{
 			Time:     rq.Time,
+			Proto:    rq.Proto,
 			Method:   rq.Method,
 			Path:     rq.Path,
 			RawQuery: rq.RawQuery,
@@ -321,6 +323,7 @@ func (t traceMessage) String() string {
 		fmt.Fprintf(b, "?%s", ri.RawQuery)
 	}
 	fmt.Fprint(b, "\n")
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("Proto: %s\n", ri.Proto)))
 	host, ok := ri.Headers["Host"]
 	if ok {
 		delete(ri.Headers, "Host")

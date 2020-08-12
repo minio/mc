@@ -1093,72 +1093,84 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				return
 			}
 		}
-		for content := range contentCh {
-			// Convert content.URL.Path to objectName for objectsCh.
-			bucket, objectName := c.splitPath(content.URL.Path)
-			objectVersionID := content.VersionID
-
-			// We don't treat path when bucket is
-			// empty, just skip it when it happens.
-			if bucket == "" {
-				continue
-			}
-
-			// Init objectsCh the first time.
-			if prevBucket == "" {
-				objectsCh = make(chan minio.ObjectInfo)
-				prevBucket = bucket
-				if isIncomplete {
-					statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
-				} else {
-					statusCh = c.api.RemoveObjects(ctx, bucket, objectsCh, opts)
+		for {
+			select {
+			case <-ctx.Done():
+				errorCh <- probe.NewError(ctx.Err())
+				return
+			case content, ok := <-contentCh:
+				if !ok {
+					goto breakout
 				}
-			}
 
-			if prevBucket != bucket {
-				if objectsCh != nil {
-					close(objectsCh)
+				// Convert content.URL.Path to objectName for objectsCh.
+				bucket, objectName := c.splitPath(content.URL.Path)
+				objectVersionID := content.VersionID
+
+				// We don't treat path when bucket is
+				// empty, just skip it when it happens.
+				if bucket == "" {
+					continue
 				}
-				for removeStatus := range statusCh {
-					errorCh <- probe.NewError(removeStatus.Err)
-				}
-				// Remove bucket if it qualifies.
-				if isRemoveBucket && !isIncomplete {
-					if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
-						errorCh <- probe.NewError(err)
+
+				// Init objectsCh the first time.
+				if prevBucket == "" {
+					objectsCh = make(chan minio.ObjectInfo)
+					prevBucket = bucket
+					if isIncomplete {
+						statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
+					} else {
+						statusCh = c.api.RemoveObjects(ctx, bucket, objectsCh, opts)
 					}
 				}
-				// Re-init objectsCh for next bucket
-				objectsCh = make(chan minio.ObjectInfo)
-				if isIncomplete {
-					statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
-				} else {
-					statusCh = c.api.RemoveObjects(ctx, bucket, objectsCh, opts)
-				}
-				prevBucket = bucket
-			}
 
-			if objectName != "" {
-				// Send object name once but continuously checks for pending
-				// errors in parallel, the reason is that minio-go RemoveObjects
-				// can block if there is any pending error not received yet.
-				sent := false
-				for !sent {
-					select {
-					case objectsCh <- minio.ObjectInfo{Key: objectName, VersionID: objectVersionID}:
-						sent = true
-					case removeStatus := <-statusCh:
+				if prevBucket != bucket {
+					if objectsCh != nil {
+						close(objectsCh)
+					}
+					for removeStatus := range statusCh {
 						errorCh <- probe.NewError(removeStatus.Err)
 					}
+					// Remove bucket if it qualifies.
+					if isRemoveBucket && !isIncomplete {
+						if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
+							errorCh <- probe.NewError(err)
+						}
+					}
+					// Re-init objectsCh for next bucket
+					objectsCh = make(chan minio.ObjectInfo)
+					if isIncomplete {
+						statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
+					} else {
+						statusCh = c.api.RemoveObjects(ctx, bucket, objectsCh, opts)
+					}
+					prevBucket = bucket
 				}
-			} else {
-				// end of bucket - close the objectsCh
-				if objectsCh != nil {
-					close(objectsCh)
+
+				if objectName != "" {
+					// Send object name once but continuously checks for pending
+					// errors in parallel, the reason is that minio-go RemoveObjects
+					// can block if there is any pending error not received yet.
+					sent := false
+					for !sent {
+						select {
+						case objectsCh <- minio.ObjectInfo{Key: objectName, VersionID: objectVersionID}:
+							sent = true
+						case removeStatus := <-statusCh:
+							errorCh <- probe.NewError(removeStatus.Err)
+						}
+					}
+				} else {
+					// end of bucket - close the objectsCh
+					if objectsCh != nil {
+						close(objectsCh)
+					}
+					objectsCh = nil
 				}
-				objectsCh = nil
 			}
 		}
+
+	breakout:
 		// Close objectsCh at end of contentCh
 		if objectsCh != nil {
 			close(objectsCh)
@@ -1597,11 +1609,11 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 		}) {
 			if objectVersion.Err != nil {
 				objectInfoCh <- objectVersion
-				return
+				continue
 			}
 
 			if !includeOlderVersions && skipKey == objectVersion.Key {
-				// Skip current version if not are asked to list all versions
+				// Skip current version if not asked to list all versions
 				// and we already listed the current object key name
 				continue
 			}
@@ -1628,29 +1640,61 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	contentCh := make(chan *ClientContent)
 
 	if !opts.timeRef.IsZero() || opts.withOlderVersions {
-		bucket, object := c.url2BucketAndObject()
+		b, o := c.url2BucketAndObject()
 		go func() {
-			isVersion := true
-			for objectVersion := range c.listVersions(ctx, bucket, object,
-				opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
-				if objectVersion.Err != nil {
-					if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
-						isVersion = false
-						break
-					} else {
-						contentCh <- &ClientContent{
-							Err: probe.NewError(objectVersion.Err),
+			switch {
+			case b == "" && o == "":
+				buckets, err := c.api.ListBuckets(ctx)
+				if err != nil {
+					contentCh <- &ClientContent{
+						Err: probe.NewError(err),
+					}
+					close(contentCh)
+					return
+				}
+				for _, bucket := range buckets {
+					isVersion := true
+					for objectVersion := range c.listVersions(ctx, bucket.Name, "",
+						opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
+						if objectVersion.Err != nil {
+							if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
+								isVersion = false
+								break
+							} else {
+								contentCh <- &ClientContent{
+									Err: probe.NewError(objectVersion.Err),
+								}
+								continue
+							}
 						}
-						continue
+						contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion)
+					}
+					if !isVersion {
+						c.listRecursiveInRoutine(ctx, contentCh, false)
 					}
 				}
-				contentCh <- c.objectInfo2ClientContent(bucket, objectVersion)
+			default:
+				isVersion := true
+				for objectVersion := range c.listVersions(ctx, b, o,
+					opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
+					if objectVersion.Err != nil {
+						if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
+							isVersion = false
+							break
+						} else {
+							contentCh <- &ClientContent{
+								Err: probe.NewError(objectVersion.Err),
+							}
+							continue
+						}
+					}
+					contentCh <- c.objectInfo2ClientContent(b, objectVersion)
+				}
+				if !isVersion {
+					c.listRecursiveInRoutine(ctx, contentCh, false)
+				}
 			}
-			if !isVersion {
-				c.listRecursiveInRoutine(ctx, contentCh, false)
-			} else {
-				close(contentCh)
-			}
+			close(contentCh)
 		}()
 		return contentCh
 	}
@@ -1948,6 +1992,9 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content := &ClientContent{}
 	url := c.targetURL.Clone()
 	// Join bucket and incoming object key.
+	if bucket == "" {
+		panic("should never happen, bucket cannot be empty")
+	}
 	url.Path = c.joinPath(bucket, entry.Key)
 	content.URL = url
 	content.Size = entry.Size
