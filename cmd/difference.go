@@ -82,7 +82,7 @@ func getSourceModTimeKey(metadata map[string]string) string {
 
 // activeActiveModTimeUpdated tries to calculate if the object copy in the target
 // is older than the one in the source by comparing the modtime of the data.
-func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
+func activeActiveModTimeUpdated(src, dst *ClientContent, isActiveActive bool) bool {
 	if src == nil || dst == nil {
 		return false
 	}
@@ -96,7 +96,7 @@ func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
 
 	srcModTime := getSourceModTimeKey(src.UserMetadata)
 	dstModTime := getSourceModTimeKey(dst.UserMetadata)
-	if srcModTime == "" && dstModTime == "" {
+	if srcModTime == "" && dstModTime == "" && isActiveActive {
 		// No active-active mirror context found, consider src & dst as similar
 		return false
 	}
@@ -157,15 +157,15 @@ func metadataEqual(m1, m2 map[string]string) bool {
 	return true
 }
 
-func objectDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool) (diffCh chan diffMessage) {
-	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, isMetadata, true, false, DirNone)
+func objectDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata, isActiveActive bool) (diffCh chan diffMessage) {
+	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, isMetadata, isActiveActive, true, false, DirNone)
 }
 
 func dirDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, false, false, true, DirFirst)
+	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, false, false, false, true, DirFirst)
 }
 
-func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
+func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata, isActiveActive, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
 	// Set default values for listing.
 	srcCh := sourceClnt.List(ctx, ListOptions{isRecursive: isRecursive, isFetchMeta: isMetadata, showDir: dirOpt})
 	tgtCh := targetClnt.List(ctx, ListOptions{isRecursive: isRecursive, isFetchMeta: isMetadata, showDir: dirOpt})
@@ -274,7 +274,7 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 					firstContent:  srcCtnt,
 					secondContent: tgtCtnt,
 				}
-			} else if activeActiveModTimeUpdated(srcCtnt, tgtCtnt) {
+			} else if activeActiveModTimeUpdated(srcCtnt, tgtCtnt, isActiveActive) {
 				diffCh <- diffMessage{
 					FirstURL:      srcCtnt.URL.String(),
 					SecondURL:     tgtCtnt.URL.String(),
@@ -325,7 +325,7 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
+func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata, isActiveActive, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
 	diffCh = make(chan diffMessage, 10000)
 
 	go func() {
@@ -336,7 +336,7 @@ func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, t
 
 		for range newRetryTimerContinous(retryCtx, time.Second, time.Second*30, minio.MaxJitter) {
 			err := differenceInternal(retryCtx, sourceClnt, targetClnt, sourceURL, targetURL,
-				isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
+				isMetadata, isActiveActive, isRecursive, returnSimilar, dirOpt, diffCh)
 			if err != nil {
 				// handle this specifically for filesystem related errors.
 				switch err.ToGoError().(type) {
