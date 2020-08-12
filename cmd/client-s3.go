@@ -1653,13 +1653,11 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 					return
 				}
 				for _, bucket := range buckets {
-					isVersion := true
 					for objectVersion := range c.listVersions(ctx, bucket.Name, "",
 						opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
 						if objectVersion.Err != nil {
 							if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
-								isVersion = false
-								break
+								goto noVersioning
 							} else {
 								contentCh <- &ClientContent{
 									Err: probe.NewError(objectVersion.Err),
@@ -1669,18 +1667,15 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 						}
 						contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion)
 					}
-					if !isVersion {
-						c.listRecursiveInRoutine(ctx, contentCh, false)
-					}
 				}
+				close(contentCh)
+				return
 			default:
-				isVersion := true
 				for objectVersion := range c.listVersions(ctx, b, o,
 					opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
 					if objectVersion.Err != nil {
 						if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
-							isVersion = false
-							break
+							goto noVersioning
 						} else {
 							contentCh <- &ClientContent{
 								Err: probe.NewError(objectVersion.Err),
@@ -1690,11 +1685,11 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 					}
 					contentCh <- c.objectInfo2ClientContent(b, objectVersion)
 				}
-				if !isVersion {
-					c.listRecursiveInRoutine(ctx, contentCh, false)
-				}
+				close(contentCh)
+				return
 			}
-			close(contentCh)
+		noVersioning:
+			c.listRecursiveInRoutine(ctx, contentCh, false)
 		}()
 		return contentCh
 	}
