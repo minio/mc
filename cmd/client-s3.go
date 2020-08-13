@@ -886,6 +886,7 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 
 	// Assign metadata after irrelevant parts are delete above
 	destOpts.UserMetadata = opts.metadata
+	destOpts.ReplaceMetadata = len(opts.metadata) > 0
 
 	var e error
 	if opts.disableMultipart || opts.size < 64*1024*1024 {
