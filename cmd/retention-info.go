@@ -17,8 +17,12 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"math"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -106,36 +110,73 @@ type retentionInfoMessage struct {
 	Err       error               `json:"error"`
 }
 
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+var reAnsi = regexp.MustCompile(ansi)
+
+func centerText(s string, w int) string {
+	var sb strings.Builder
+	textWithoutColor := reAnsi.ReplaceAllString(s, "")
+	length := len(textWithoutColor)
+	padding := float64(w-length) / 2
+	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Ceil(padding))))
+	fmt.Fprintf(&sb, "%s", s)
+	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Floor(padding))))
+	return sb.String()
+}
+
+type retentionInfoMessageList retentionInfoMessage
+
+func (m *retentionInfoMessageList) SetErr(e error) {
+	m.Err = e
+}
+
+func (m *retentionInfoMessageList) SetStatus(status string) {
+	m.Status = status
+}
+
+func (m *retentionInfoMessageList) SetMode(mode minio.RetentionMode) {
+	m.Mode = mode
+}
+
+func (m *retentionInfoMessageList) SetUntil(until time.Time) {
+	m.Until = until
+}
+
 // Colorized message for console printing.
-func (m retentionInfoMessage) String() string {
+func (m retentionInfoMessageList) String() string {
 	if m.Err != nil {
 		return console.Colorize("RetentionFailure", fmt.Sprintf("Cannot get object retention on `%s`: %s", m.URLPath, m.Err))
 	}
 
 	var msg string
-	msg += fmt.Sprintf("%s", m.URLPath)
-	if m.VersionID != "" {
-		msg += fmt.Sprintf(", Version ID: %s", m.VersionID)
-	}
+	var retentionField string
 
 	if m.Mode == "" {
-		msg += ", No retention found"
-		return console.Colorize("RetentionSuccess", msg)
-	}
-
-	msg += fmt.Sprintf(", Mode: %s", m.Mode)
-	now := time.Now()
-	if now.Before(m.Until) {
-		msg += fmt.Sprintf(", Expiring in %s", m.Until.Sub(now))
+		retentionField += console.Colorize("RetentionNotFound", "NO RETENTION")
 	} else {
-		msg += ", " + console.Colorize("RetentionExpired", fmt.Sprintf("Expired %s ago", now.Sub(m.Until)))
+		exp := ""
+		if m.Mode == minio.Governance {
+			now := time.Now()
+			if now.After(m.Until) {
+				exp = "EXPIRED"
+			}
+		}
+		retentionField += console.Colorize("RetentionSuccess", m.Mode.String()) + " " + console.Colorize("RetentionExpired", exp)
 	}
 
-	return console.Colorize("RetentionSuccess", msg)
+	msg += "[ " + centerText(retentionField, 18) + " ]  "
+
+	if m.VersionID != "" {
+		msg += console.Colorize("RetentionVersionID", m.VersionID+"  ")
+	}
+
+	msg += m.URLPath
+	return msg
 }
 
 // JSON'ified message for scripting.
-func (m retentionInfoMessage) JSON() string {
+func (m retentionInfoMessageList) JSON() string {
 	if m.Err != nil {
 		m.Status = "failure"
 	}
@@ -144,33 +185,114 @@ func (m retentionInfoMessage) JSON() string {
 	return string(msgBytes)
 }
 
+type retentionInfoMessageRecord retentionInfoMessage
+
+func (m *retentionInfoMessageRecord) SetErr(e error) {
+	m.Err = e
+}
+
+func (m *retentionInfoMessageRecord) SetStatus(status string) {
+	m.Status = status
+}
+
+func (m *retentionInfoMessageRecord) SetMode(mode minio.RetentionMode) {
+	m.Mode = mode
+}
+
+func (m *retentionInfoMessageRecord) SetUntil(until time.Time) {
+	m.Until = until
+}
+
+// Colorized message for console printing.
+func (m retentionInfoMessageRecord) String() string {
+	if m.Err != nil {
+		return console.Colorize("RetentionFailure", fmt.Sprintf("Cannot get object retention on `%s`: %s", m.URLPath, m.Err))
+	}
+
+	var msg strings.Builder
+	fmt.Fprintf(&msg, "Name    : %s\n", console.Colorize("RetentionSuccess", m.URLPath))
+
+	if m.VersionID != "" {
+		fmt.Fprintf(&msg, "Version : %s\n", console.Colorize("RetentionSuccess", m.VersionID))
+	}
+
+	fmt.Fprintf(&msg, "Mode    : ")
+	if m.Mode == "" {
+		fmt.Fprintf(&msg, console.Colorize("RetentionNotFound", "NO RETENTION"))
+	} else {
+		fmt.Fprintf(&msg, console.Colorize("RetentionSuccess", m.Mode))
+		if !m.Until.IsZero() {
+			msg.WriteString(", ")
+			exp := ""
+			now := time.Now()
+			if now.After(m.Until) {
+				prettyDuration := timeDurationToHumanizedDuration(now.Sub(m.Until)).StringShort()
+				exp = console.Colorize("RetentionExpired", "expired "+prettyDuration+" ago")
+			} else {
+				prettyDuration := timeDurationToHumanizedDuration(m.Until.Sub(now)).StringShort()
+				exp = console.Colorize("RetentionSuccess", "expiring in "+prettyDuration)
+			}
+			fmt.Fprintf(&msg, exp)
+		}
+	}
+	fmt.Fprintf(&msg, "\n")
+	return msg.String()
+}
+
+// JSON'ified message for scripting.
+func (m retentionInfoMessageRecord) JSON() string {
+	if m.Err != nil {
+		m.Status = "failure"
+	}
+	msgBytes, e := json.MarshalIndent(m, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
+}
+
+type retentionInfoMsg interface {
+	message
+	SetErr(error)
+	SetStatus(string)
+	SetMode(minio.RetentionMode)
+	SetUntil(time.Time)
+}
+
 // Show retention info for a single object or version
-func infoRetentionSingle(ctx context.Context, alias, url, versionID string) *probe.Error {
+func infoRetentionSingle(ctx context.Context, alias, url, versionID string, listStyle bool) *probe.Error {
 	newClnt, err := newClientFromAlias(alias, url)
 	if err != nil {
 		return err
 	}
 
-	msg := retentionInfoMessage{
-		URLPath:   urlJoinPath(alias, url),
-		VersionID: versionID,
+	var msg retentionInfoMsg
+
+	if listStyle {
+		msg = &retentionInfoMessageList{
+			URLPath:   urlJoinPath(alias, url),
+			VersionID: versionID,
+		}
+	} else {
+		msg = &retentionInfoMessageRecord{
+			URLPath:   urlJoinPath(alias, url),
+			VersionID: versionID,
+		}
 	}
 
 	mode, until, err := newClnt.GetObjectRetention(ctx, versionID)
 	if err != nil {
 		errResp := minio.ToErrorResponse(err.ToGoError())
 		if errResp.Code != "NoSuchObjectLockConfiguration" {
-			msg.Err = err.ToGoError()
-			msg.Status = "failure"
+			msg.SetErr(err.ToGoError())
+			msg.SetStatus("failure")
 			printMsg(msg)
 			return err
 		}
 		err = nil
 	}
 
-	msg.Status = "success"
-	msg.Mode = mode
-	msg.Until = until
+	msg.SetStatus("success")
+	msg.SetMode(mode)
+	msg.SetUntil(until)
 
 	printMsg(msg)
 	return err
@@ -192,7 +314,7 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 
 	alias, urlStr, _ := mustExpandAlias(target)
 	if versionID != "" || !isRecursive && !withOlderVersions {
-		err := infoRetentionSingle(ctx, alias, urlStr, versionID)
+		err := infoRetentionSingle(ctx, alias, urlStr, versionID, false)
 		if err != nil {
 			return exitStatus(globalErrorExitStatus)
 		}
@@ -217,7 +339,7 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 		if content.IsDeleteMarker {
 			continue
 		}
-		err := infoRetentionSingle(ctx, alias, content.URL.String(), content.VersionID)
+		err := infoRetentionSingle(ctx, alias, content.URL.String(), content.VersionID, true)
 		if err != nil {
 			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
 			cErr = exitStatus(globalErrorExitStatus)
@@ -233,6 +355,8 @@ func mainRetentionInfo(cliCtx *cli.Context) error {
 	defer cancelSetRetention()
 
 	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("RetentionNotFound", color.New(color.FgYellow))
+	console.SetColor("RetentionVersionID", color.New(color.FgGreen))
 	console.SetColor("RetentionExpired", color.New(color.FgRed, color.Bold))
 	console.SetColor("RetentionFailure", color.New(color.FgYellow))
 
