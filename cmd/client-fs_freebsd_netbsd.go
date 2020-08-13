@@ -1,4 +1,4 @@
-// +build freebsd
+// +build freebsd netbsd
 
 /*
  * MinIO Client (C) 2017 MinIO, Inc.
