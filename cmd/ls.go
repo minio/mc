@@ -97,9 +97,10 @@ func getKey(c *ClientContent) string {
 	return c.URL.Path
 }
 
-// Generate printable listing from a list of client contents
-func generateContentMessages(clnt Client, ctnts []*ClientContent) (msgs []contentMessage) {
-	prefixPath := clnt.GetURL().Path
+// Generate printable listing from a list of sorted client
+// contents, the latest created content comes first.
+func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAllVersions bool) (msgs []contentMessage) {
+	prefixPath := clntURL.Path
 	prefixPath = filepath.ToSlash(prefixPath)
 	if !strings.HasSuffix(prefixPath, "/") {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
@@ -136,15 +137,19 @@ func generateContentMessages(clnt Client, ctnts []*ClientContent) (msgs []conten
 		contentMsg.VersionIndex = nrVersions - i
 		// URL is empty by default
 		// Set it to either relative dir (host) or public url (remote)
-		contentMsg.URL = clnt.GetURL().String()
+		contentMsg.URL = clntURL.String()
 
 		msgs = append(msgs, contentMsg)
+
+		if !printAllVersions {
+			break
+		}
 	}
 	return
 }
 
 // Pretty print the list of versions belonging to one object
-func printObjectVersions(clnt Client, ctntVersions []*ClientContent) {
+func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) {
 	// Sort versions
 	sort.Slice(ctntVersions, func(i, j int) bool {
 		if ctntVersions[i].IsLatest {
@@ -156,7 +161,7 @@ func printObjectVersions(clnt Client, ctntVersions []*ClientContent) {
 		return ctntVersions[i].Time.After(ctntVersions[j].Time)
 	})
 
-	msgs := generateContentMessages(clnt, ctntVersions)
+	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
 	for _, msg := range msgs {
 		printMsg(msg)
 	}
@@ -175,7 +180,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 		isRecursive:       isRecursive,
 		isIncomplete:      isIncomplete,
 		timeRef:           timeRef,
-		withOlderVersions: withOlderVersions,
+		withOlderVersions: withOlderVersions || !timeRef.IsZero(),
 		withDeleteMarkers: true,
 		showDir:           DirNone,
 	}) {
@@ -206,7 +211,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt, perObjectVersions)
+			printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -214,6 +219,6 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 		perObjectVersions = append(perObjectVersions, content)
 	}
 
-	printObjectVersions(clnt, perObjectVersions)
+	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions)
 	return cErr
 }
