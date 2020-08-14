@@ -107,7 +107,7 @@ func (d diffMessage) JSON() string {
 	d.Status = "success"
 	diffJSONBytes, e := json.MarshalIndent(d, "", " ")
 	fatalIf(probe.NewError(e),
-		"Unable to marshal diff message `"+d.FirstURL+"`, `"+d.SecondURL+"` and `"+string(d.Diff)+"`.")
+		"Unable to marshal diff message `"+d.FirstURL+"`, `"+d.SecondURL+"` and `"+fmt.Sprint(d.Diff)+"`.")
 	return string(diffJSONBytes)
 }
 
