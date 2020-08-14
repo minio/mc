@@ -37,7 +37,11 @@ var (
 	catFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "back in time",
+			Usage: "display an earlier object version",
+		},
+		cli.StringFlag{
+			Name:  "version-id",
+			Usage: "display a specific version of an object",
 		},
 	}
 )
@@ -80,6 +84,9 @@ EXAMPLES:
 
   6. Display the content of an object 10 days earlier
      {{.Prompt}} {{.HelpName}} --rewind 10d play/my-bucket/my-object
+
+  7. Display the content of a particular object version
+     {{.Prompt}} {{.HelpName}} --version-id "1Krls24ULGi7aLw4IRww.v_bBMPju_4W" play/my-bucket/my-object
 `,
 }
 
@@ -133,8 +140,20 @@ func (s prettyStdout) Write(input []byte) (int, error) {
 }
 
 // parseCatSyntax performs command-line input validation for cat command.
-func parseCatSyntax(ctx *cli.Context) (args []string, rewind time.Time) {
+func parseCatSyntax(ctx *cli.Context) (args []string, versionID string, timeRef time.Time) {
 	args = ctx.Args()
+
+	versionID = ctx.String("version-id")
+	rewind := ctx.String("rewind")
+
+	if versionID != "" && rewind != "" {
+		fatalIf(errInvalidArgument().Trace(), "You cannot specify --version-id and --rewind at the same time")
+	}
+
+	if versionID != "" && len(args) != 1 {
+		fatalIf(errInvalidArgument().Trace(), "You need to pass at least one argument if --version-id is specified")
+	}
+
 	if len(args) == 0 {
 		args = []string{"-"}
 	}
@@ -144,19 +163,19 @@ func parseCatSyntax(ctx *cli.Context) (args []string, rewind time.Time) {
 		}
 	}
 
-	rewind = parseRewindFlag(ctx.String("rewind"))
-	return args, rewind
+	timeRef = parseRewindFlag(rewind)
+	return
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(ctx context.Context, sourceURL string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	var reader io.ReadCloser
 	size := int64(-1)
 	switch sourceURL {
 	case "-":
 		reader = os.Stdin
 	default:
-		var versionID string
+		var versionID = sourceVersion
 		var err *probe.Error
 		// Try to stat the object, the purpose is to:
 		// 1. extract the size of S3 object so we can check if the size of the
@@ -164,8 +183,10 @@ func catURL(ctx context.Context, sourceURL string, timeRef time.Time, encKeyDB m
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
 		// 2. extract the version ID if rewind flag is passed
-		if client, content, err := url2Stat(ctx, sourceURL, "", false, encKeyDB, timeRef); err == nil {
-			versionID = content.VersionID
+		if client, content, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, timeRef); err == nil {
+			if sourceVersion == "" {
+				versionID = content.VersionID
+			}
 			if client.GetURL().Type == objectStorage {
 				size = content.Size
 			}
@@ -235,7 +256,7 @@ func mainCat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
-	args, rewind := parseCatSyntax(cliCtx)
+	args, versionID, rewind := parseCatSyntax(cliCtx)
 
 	// Set command flags from context.
 	stdinMode := false
@@ -262,7 +283,7 @@ func mainCat(cliCtx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(ctx, url, rewind, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(catURL(ctx, url, versionID, rewind, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil
