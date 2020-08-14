@@ -70,6 +70,10 @@ var treeFlags = []cli.Flag{
 		Usage: "sets the depth threshold",
 		Value: -1,
 	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "shows the tree of an earlier time",
+	},
 }
 
 // trees files and folders.
@@ -106,29 +110,34 @@ EXAMPLES:
 `,
 }
 
-// checkTreeSyntax - validate all the passed arguments
-func checkTreeSyntax(ctx context.Context, cliCtx *cli.Context) {
-	args := cliCtx.Args()
+// parseTreeSyntax - validate all the passed arguments
+func parseTreeSyntax(ctx context.Context, cliCtx *cli.Context) (args []string, depth int, files bool, timeRef time.Time) {
+	args = cliCtx.Args()
+	depth = cliCtx.Int("depth")
+	files = cliCtx.Bool("files")
 
-	if cliCtx.IsSet("depth") {
-		if cliCtx.Int("depth") < -1 || cliCtx.Int("depth") == 0 {
-			fatalIf(errInvalidArgument().Trace(args...), "please set a proper depth, for example: '--depth 1' to limit the tree output, default (-1) output displays everything")
-		}
+	rewind := cliCtx.String("rewind")
+	timeRef = parseRewindFlag(rewind)
+
+	if depth < -1 || cliCtx.Int("depth") == 0 {
+		fatalIf(errInvalidArgument().Trace(args...),
+			"please set a proper depth, for example: '--depth 1' to limit the tree output, default (-1) output displays everything")
 	}
 
-	if (args.Present()) && len(args) == 0 {
+	if len(args) == 0 {
 		return
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(ctx, url, "", false, nil, time.Time{}); err != nil && !isURLPrefixExists(url, false) {
+		if _, _, err := url2Stat(ctx, url, "", false, nil, timeRef); err != nil && !isURLPrefixExists(url, false) {
 			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 		}
 	}
+	return
 }
 
 // doTree - list all entities inside a folder in a tree format.
-func doTree(ctx context.Context, url string, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
+func doTree(ctx context.Context, url string, timeRef time.Time, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
 
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	if !strings.HasSuffix(targetURL, "/") {
@@ -208,7 +217,7 @@ func doTree(ctx context.Context, url string, level int, leaf bool, branchString 
 			}
 
 			if depth == -1 || level <= depth {
-				if err := doTree(ctx, url, level+1, end, currbranchString, depth, includeFiles); err != nil {
+				if err := doTree(ctx, url, timeRef, level+1, end, currbranchString, depth, includeFiles); err != nil {
 					return err
 				}
 			}
@@ -217,14 +226,13 @@ func doTree(ctx context.Context, url string, level int, leaf bool, branchString 
 		return nil
 	}
 
-	for content := range clnt.List(ctx, ListOptions{isRecursive: false, showDir: DirNone}) {
-
-		if !includeFiles && !content.Type.IsDir() {
+	for content := range clnt.List(ctx, ListOptions{isRecursive: false, timeRef: timeRef, showDir: DirNone}) {
+		if content.Err != nil {
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to tree.")
 			continue
 		}
 
-		if content.Err != nil {
-			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to tree.")
+		if !includeFiles && !content.Type.IsDir() {
 			continue
 		}
 
@@ -251,25 +259,21 @@ func mainTree(cliCtx *cli.Context) error {
 	ctx, cancelList := context.WithCancel(globalContext)
 	defer cancelList()
 
-	// check 'tree' cliCtx arguments.
-	checkTreeSyntax(ctx, cliCtx)
-
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 
-	args := cliCtx.Args()
+	// parse 'tree' cliCtx arguments.
+	args, depth, includeFiles, timeRef := parseTreeSyntax(ctx, cliCtx)
+
 	// mimic operating system tool behavior.
-	if !cliCtx.Args().Present() {
+	if len(args) == 0 {
 		args = []string{"."}
 	}
-
-	includeFiles := cliCtx.Bool("files")
-	depth := cliCtx.Int("depth")
 
 	var cErr error
 	for _, targetURL := range args {
 		if !globalJSON {
-			if e := doTree(ctx, targetURL, 1, false, "", depth, includeFiles); e != nil {
+			if e := doTree(ctx, targetURL, timeRef, 1, false, "", depth, includeFiles); e != nil {
 				cErr = e
 			}
 		} else {
@@ -279,7 +283,7 @@ func mainTree(cliCtx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(ctx, clnt, true, false, time.Time{}, false); e != nil {
+			if e := doList(ctx, clnt, true, false, timeRef, false); e != nil {
 				cErr = e
 			}
 		}
