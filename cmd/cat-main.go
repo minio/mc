@@ -37,7 +37,7 @@ var (
 	catFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "display an object version before the specified rewind time",
+			Usage: "display an earlier object version",
 		},
 		cli.StringFlag{
 			Name:  "version-id",
