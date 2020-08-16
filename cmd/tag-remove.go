@@ -26,12 +26,19 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
+var tagRemoveFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "version-id",
+		Usage: "Remove tags of particular object version",
+	},
+}
+
 var tagRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "remove tags assigned to a bucket or an object",
 	Action: mainRemoveTag,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(tagRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -48,20 +55,30 @@ EXAMPLES:
   1. Remove the tags assigned to an object.
      {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
 
-  2. Remove the tags assigned to a bucket.
+  2. Remove the tags assigned to a particular version of an object.
+     {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" myminio/testbucket/testobject
+
+  3. Remove the tags assigned to a bucket.
      {{.Prompt}} {{.HelpName}} play/testbucket
 `,
 }
 
 // tagSetTagMessage structure will show message depending on the type of console.
 type tagRemoveMessage struct {
-	Status string `json:"status"`
-	Name   string `json:"name"`
+	Status    string `json:"status"`
+	Name      string `json:"name"`
+	VersionID string `json:"versionID"`
 }
 
 // tagRemoveMessage console colorized output.
 func (t tagRemoveMessage) String() string {
-	return console.Colorize("Remove", "Tags removed for "+t.Name+".")
+	var msg string
+	msg += "Tags removed for " + t.Name
+	if t.VersionID != "" {
+		msg += " (" + t.VersionID + ")"
+	}
+	msg += "."
+	return console.Colorize("Remove", msg)
 }
 
 // JSON tagRemoveMessage.
@@ -70,29 +87,34 @@ func (t tagRemoveMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
-func checkRemoveTagSyntax(ctx *cli.Context) {
+
+func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "remove", globalErrorExitStatus)
 	}
+
+	targetURL = ctx.Args().Get(0)
+	versionID = ctx.String("version-id")
+	return
 }
 
 func mainRemoveTag(cliCtx *cli.Context) error {
 	ctx, cancelList := context.WithCancel(globalContext)
 	defer cancelList()
 
-	checkRemoveTagSyntax(cliCtx)
-
 	console.SetColor("Remove", color.New(color.FgGreen))
 
-	targetURL := cliCtx.Args().Get(0)
+	targetURL, versionID := parseRemoveTagSyntax(cliCtx)
+
 	clnt, pErr := newClient(targetURL)
 	fatalIf(pErr, "Unable to initialize target "+targetURL)
-	pErr = clnt.DeleteTags(ctx)
+	pErr = clnt.DeleteTags(ctx, versionID)
 	fatalIf(pErr, "Unable to remove tags for "+targetURL)
 
 	printMsg(tagRemoveMessage{
-		Status: "success",
-		Name:   targetURL,
+		Status:    "success",
+		Name:      targetURL,
+		VersionID: versionID,
 	})
 	return nil
 }

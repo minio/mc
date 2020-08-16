@@ -1091,7 +1091,7 @@ func (f *fsClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (f *fsClient) GetTags(ctx context.Context) (map[string]string, *probe.Error) {
+func (f *fsClient) GetTags(ctx context.Context, _ string) (map[string]string, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "filesystem",
@@ -1099,7 +1099,7 @@ func (f *fsClient) GetTags(ctx context.Context) (map[string]string, *probe.Error
 }
 
 // Set Object tags
-func (f *fsClient) SetTags(ctx context.Context, tags string) *probe.Error {
+func (f *fsClient) SetTags(ctx context.Context, versionID, tags string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectTagging",
 		APIType: "filesystem",
@@ -1107,7 +1107,7 @@ func (f *fsClient) SetTags(ctx context.Context, tags string) *probe.Error {
 }
 
 // Delete object tags
-func (f *fsClient) DeleteTags(ctx context.Context) *probe.Error {
+func (f *fsClient) DeleteTags(ctx context.Context, versionID string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteObjectTagging",
 		APIType: "filesystem",

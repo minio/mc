@@ -31,12 +31,19 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
+var tagListFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "version-id",
+		Usage: "List tags of particular object version",
+	},
+}
+
 var tagListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "list tags of a bucket or an object",
 	Action: mainListTag,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(tagListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -53,22 +60,26 @@ EXAMPLES:
   1. List the tags assigned to an object.
      {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
 
-  2. List the tags assigned to an object in JSON format.
+  2. List the tags assigned to particular version of an object.
+     {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" myminio/testbucket/testobject
+
+  3. List the tags assigned to an object in JSON format.
      {{.Prompt}} {{.HelpName}} --json myminio/testbucket/testobject
 
-  3. List the tags assigned to a bucket.
+  4. List the tags assigned to a bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket
 
-  4. List the tags assigned to a bucket in JSON format.
+  5. List the tags assigned to a bucket in JSON format.
      {{.Prompt}} {{.HelpName}} --json s3/testbucket
 `,
 }
 
 // tagListMessage structure for displaying tag
 type tagListMessage struct {
-	Tags   map[string]string `json:"tagset,omitempty"`
-	Status string            `json:"status"`
-	URL    string            `json:"url"`
+	Tags      map[string]string `json:"tagset,omitempty"`
+	Status    string            `json:"status"`
+	URL       string            `json:"url"`
+	VersionID string            `json:"versionID"`
 }
 
 func (t tagListMessage) JSON() string {
@@ -102,19 +113,27 @@ func (t tagListMessage) String() string {
 	return strings.Join(strs, "\n")
 }
 
+// parseTagListSyntax performs command-line input validation for tag list command.
+func parseTagListSyntax(ctx *cli.Context) (targetURL string, versionID string) {
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
+	}
+
+	targetURL = ctx.Args().Get(0)
+	versionID = ctx.String("version-id")
+	return
+}
+
 func mainListTag(cliCtx *cli.Context) error {
 	ctx, cancelListTag := context.WithCancel(globalContext)
 	defer cancelListTag()
 
-	if len(cliCtx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(cliCtx, "list", globalErrorExitStatus)
-	}
+	targetURL, versionID := parseTagListSyntax(cliCtx)
 
-	targetURL := cliCtx.Args().Get(0)
 	clnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
-	tagsMap, err := clnt.GetTags(ctx)
+	tagsMap, err := clnt.GetTags(ctx, versionID)
 	if err != nil {
 		if minio.ToErrorResponse(err.ToGoError()).Code == "NoSuchTagSet" {
 			fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)
@@ -131,9 +150,10 @@ func mainListTag(cliCtx *cli.Context) error {
 	console.SetColor("Value", color.New(color.FgYellow))
 
 	printMsg(tagListMessage{
-		Tags:   tagsMap,
-		Status: "success",
-		URL:    targetURL,
+		Tags:      tagsMap,
+		Status:    "success",
+		URL:       targetURL,
+		VersionID: versionID,
 	})
 	return nil
 }

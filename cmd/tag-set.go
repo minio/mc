@@ -26,12 +26,17 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
+var tagSetFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "version-id",
+		Usage: "Set tags of particular object version",
+	},
+}
+
 var tagSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set tags for a bucket(s) and object(s)",
-	Action: mainSetTag,
+	Name: "set", Usage: "set tags for a bucket(s) and object(s)", Action: mainSetTag,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(tagSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -48,20 +53,30 @@ EXAMPLES:
   1. Assign tags to an object.
      {{.Prompt}} {{.HelpName}} play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 
-  2. Assign tags to a bucket.
+  2. Assign tags to a particuler version of an object.
+     {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+
+  3. Assign tags to a bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket "key1=value1&key2=value2&key3=value3"
 `,
 }
 
 // tagSetTagMessage structure will show message depending on the type of console.
 type tagSetMessage struct {
-	Status string `json:"status"`
-	Name   string `json:"name"`
+	Status    string `json:"status"`
+	Name      string `json:"name"`
+	VersionID string `json:"versionID"`
 }
 
 // tagSetMessage console colorized output.
 func (t tagSetMessage) String() string {
-	return console.Colorize("List", "Tags set for "+t.Name+".")
+	var msg string
+	msg += "Tags set for " + t.Name
+	if t.VersionID != "" {
+		msg += " (" + t.VersionID + ")"
+	}
+	msg += "."
+	return console.Colorize("List", msg)
 }
 
 // JSON tagSetMessage.
@@ -71,10 +86,15 @@ func (t tagSetMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func checkSetTagSyntax(ctx *cli.Context) {
+func checkSetTagSyntax(ctx *cli.Context) (targetURL, versionID, tags string) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
 		cli.ShowCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
 	}
+
+	targetURL = ctx.Args().Get(0)
+	tags = ctx.Args().Get(1)
+	versionID = ctx.String("version-id")
+	return
 }
 
 func mainSetTag(cliCtx *cli.Context) error {
@@ -84,17 +104,16 @@ func mainSetTag(cliCtx *cli.Context) error {
 	checkSetTagSyntax(cliCtx)
 	console.SetColor("List", color.New(color.FgGreen))
 
-	targetURL := cliCtx.Args().Get(0)
-	tags := cliCtx.Args().Get(1)
+	targetURL, versionID, tags := checkSetTagSyntax(cliCtx)
 
 	clnt, err := newClient(targetURL)
 	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
-	fatalIf(clnt.SetTags(ctx, tags).Trace(tags), "Failed to set tags for "+targetURL)
-
+	fatalIf(clnt.SetTags(ctx, versionID, tags).Trace(tags), "Failed to set tags for "+targetURL)
 	printMsg(tagSetMessage{
-		Status: "success",
-		Name:   targetURL,
+		Status:    "success",
+		Name:      targetURL,
+		VersionID: versionID,
 	})
 	return nil
 }
