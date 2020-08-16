@@ -435,7 +435,7 @@ func getShareURL(ctx context.Context, path string) string {
 	fatalIf(err.Trace(targetAlias, objectURL), "Unable to initialize new client from alias.")
 
 	// Set default expiry for each url (point of no longer valid), to be 7 days
-	shareURL, err := newClnt.ShareDownload(ctx, defaultSevenDays)
+	shareURL, err := newClnt.ShareDownload(ctx, "", defaultSevenDays)
 	fatalIf(err.Trace(targetAlias, objectURL), "Unable to generate share url.")
 
 	return shareURL

@@ -406,7 +406,7 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metada
 }
 
 // ShareDownload - share download not implemented for filesystem.
-func (f *fsClient) ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error) {
+func (f *fsClient) ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
 		API:     "ShareDownload",
 		APIType: "filesystem",

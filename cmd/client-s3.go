@@ -2220,10 +2220,13 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 }
 
 // ShareDownload - get a usable presigned object url to share.
-func (c *S3Client) ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error) {
+func (c *S3Client) ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	// No additional request parameters are set for the time being.
 	reqParams := make(url.Values)
+	if versionID != "" {
+		reqParams.Set("versionId", versionID)
+	}
 	presignedURL, e := c.api.PresignedGetObject(ctx, bucket, object, expires, reqParams)
 	if e != nil {
 		return "", probe.NewError(e)

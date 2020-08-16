@@ -114,7 +114,7 @@ type Client interface {
 	PutObjectLegalHold(ctx context.Context, hold minio.LegalHoldStatus) *probe.Error
 
 	// I/O operations with expiration
-	ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error)
+	ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error)
 	ShareUpload(context.Context, bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
