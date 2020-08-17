@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -35,6 +36,14 @@ var tagListFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "version-id",
 		Usage: "List tags of particular object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "Go back in time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "Select multiple versions for each object",
 	},
 }
 
@@ -63,13 +72,16 @@ EXAMPLES:
   2. List the tags assigned to particular version of an object.
      {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" myminio/testbucket/testobject
 
-  3. List the tags assigned to an object in JSON format.
+  3. List the tags assigned to an object versions that are older than one week.
+     {{.Prompt}} {{.HelpName}} --versions --rewind 7d myminio/testbucket/testobject
+
+  4. List the tags assigned to an object in JSON format.
      {{.Prompt}} {{.HelpName}} --json myminio/testbucket/testobject
 
-  4. List the tags assigned to a bucket.
+  5. List the tags assigned to a bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket
 
-  5. List the tags assigned to a bucket in JSON format.
+  6. List the tags assigned to a bucket in JSON format.
      {{.Prompt}} {{.HelpName}} --json s3/testbucket
 `,
 }
@@ -101,8 +113,9 @@ func (t tagListMessage) String() string {
 
 	maxKeyLen += 2 // add len(" :")
 	strs := []string{
-		fmt.Sprintf("%v%*v %v", console.Colorize("Name", "Name"), maxKeyLen-4, ":", console.Colorize("Name", t.URL)),
+		fmt.Sprintf("%v%*v %v", console.Colorize("Name", "Name"), maxKeyLen-4, ":", console.Colorize("Name", t.URL+" ("+t.VersionID+")")),
 	}
+
 	for _, key := range keys {
 		strs = append(
 			strs,
@@ -110,50 +123,83 @@ func (t tagListMessage) String() string {
 		)
 	}
 
+	if len(keys) == 0 {
+		strs = append(strs, console.Colorize("NoTags", "No tags found"))
+	}
+
 	return strings.Join(strs, "\n")
 }
 
 // parseTagListSyntax performs command-line input validation for tag list command.
-func parseTagListSyntax(ctx *cli.Context) (targetURL string, versionID string) {
+func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions bool) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
 	}
 
 	targetURL = ctx.Args().Get(0)
 	versionID = ctx.String("version-id")
+	withOlderVersions = ctx.Bool("versions")
+	rewind := ctx.String("rewind")
+
+	if versionID != "" && rewind != "" {
+		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind flags at the same time")
+	}
+
+	timeRef = parseRewindFlag(rewind)
 	return
+}
+
+// showTags pretty prints tags of a bucket or a specified object/version
+func showTags(ctx context.Context, clnt Client, versionID string, verbose bool) {
+	targetName := clnt.GetURL().String()
+	if versionID != "" {
+		targetName += " (" + versionID + ")"
+	}
+
+	tagsMap, err := clnt.GetTags(ctx, versionID)
+	if err != nil {
+		if minio.ToErrorResponse(err.ToGoError()).Code == "NoSuchTagSet" {
+			fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetName)
+		}
+		fatalIf(err, "Unable to fetch tags for "+targetName)
+		return
+	}
+
+	printMsg(tagListMessage{
+		Tags:      tagsMap,
+		Status:    "success",
+		URL:       clnt.GetURL().String(),
+		VersionID: versionID,
+	})
 }
 
 func mainListTag(cliCtx *cli.Context) error {
 	ctx, cancelListTag := context.WithCancel(globalContext)
 	defer cancelListTag()
 
-	targetURL, versionID := parseTagListSyntax(cliCtx)
+	console.SetColor("Name", color.New(color.Bold, color.FgCyan))
+	console.SetColor("Key", color.New(color.FgGreen))
+	console.SetColor("Value", color.New(color.FgYellow))
+	console.SetColor("NoTags", color.New(color.FgRed))
+
+	targetURL, versionID, timeRef, withVersions := parseTagListSyntax(cliCtx)
+	if timeRef.IsZero() && withVersions {
+		timeRef = time.Now().UTC()
+	}
 
 	clnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
-	tagsMap, err := clnt.GetTags(ctx, versionID)
-	if err != nil {
-		if minio.ToErrorResponse(err.ToGoError()).Code == "NoSuchTagSet" {
-			fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)
+	if timeRef.IsZero() && !withVersions {
+		showTags(ctx, clnt, versionID, true)
+	} else {
+		for content := range clnt.List(ctx, ListOptions{timeRef: timeRef, withOlderVersions: withVersions}) {
+			if content.Err != nil {
+				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			}
+			showTags(ctx, clnt, content.VersionID, false)
 		}
-		fatalIf(err, "Unable to fetch tags for "+targetURL)
 	}
 
-	if len(tagsMap) == 0 {
-		fatalIf(probe.NewError(errors.New("check 'mc tag set --help' on how to set tags")), "No tags found  for "+targetURL)
-	}
-
-	console.SetColor("Name", color.New(color.Bold, color.FgCyan))
-	console.SetColor("Key", color.New(color.FgGreen))
-	console.SetColor("Value", color.New(color.FgYellow))
-
-	printMsg(tagListMessage{
-		Tags:      tagsMap,
-		Status:    "success",
-		URL:       targetURL,
-		VersionID: versionID,
-	})
 	return nil
 }
