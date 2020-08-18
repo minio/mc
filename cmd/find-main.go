@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017-2019 MinIO, Inc.
+ * MinIO Client (C) 2017-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,14 @@ var (
 		cli.StringFlag{
 			Name:  "ignore",
 			Usage: "exclude objects matching the wildcard pattern",
+		},
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "go back in time",
+		},
+		cli.BoolFlag{
+			Name:  "versions",
+			Usage: "include all objects versions",
 		},
 		cli.StringFlag{
 			Name:  "name",
@@ -112,11 +120,12 @@ FORMAT
   Support string substitutions with special interpretations for following keywords.
   Keywords supported if target is filesystem or object storage:
 
-     {}     --> Substitutes to full path.
-     {base} --> Substitutes to basename of path.
-     {dir}  --> Substitutes to dirname of the path.
-     {size} --> Substitutes to object size of the path.
-     {time} --> Substitutes to object modified time of the path.
+     {}        --> Substitutes to full path.
+     {base}    --> Substitutes to basename of path.
+     {dir}     --> Substitutes to dirname of the path.
+     {size}    --> Substitutes to object size of the path.
+     {time}    --> Substitutes to object modified time of the path.
+     {version} --> Substitutes to object version identifier.
 
   Keywords supported if target is object storage:
 
@@ -153,6 +162,9 @@ EXAMPLES:
 
   10. List all objects up to 3 levels sub-directory deep under "s3/bucket".
       {{.Prompt}} {{.HelpName}} s3/bucket --maxdepth 3
+
+  11. Copy all versions of all objects in bucket in the local machine
+      {{.Prompt}} {{.HelpName}} s3/bucket --versions --exec "mc cp --version-id {version} {} /tmp/dir/{}.{version}"
 `,
 }
 
@@ -189,18 +201,20 @@ func checkFindSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 // ease of repurposing.
 type findContext struct {
 	*cli.Context
-	execCmd       string
-	ignorePattern string
-	namePattern   string
-	pathPattern   string
-	regexPattern  string
-	maxDepth      uint
-	printFmt      string
-	olderThan     string
-	newerThan     string
-	largerSize    uint64
-	smallerSize   uint64
-	watch         bool
+	execCmd           string
+	ignorePattern     string
+	namePattern       string
+	pathPattern       string
+	regexPattern      string
+	maxDepth          uint
+	printFmt          string
+	olderThan         string
+	newerThan         string
+	largerSize        uint64
+	smallerSize       uint64
+	watch             bool
+	timeRef           time.Time
+	withOlderVersions bool
 
 	// Internal values
 	targetAlias   string
@@ -258,6 +272,11 @@ func mainFind(cliCtx *cli.Context) error {
 		fatalIf(probe.NewError(e).Trace(cliCtx.String("smaller")), "Unable to parse input bytes.")
 	}
 
+	// Parse --rewind flag
+	timeRef := parseRewindFlag(cliCtx.String("rewind"))
+	// Get --versions flag
+	withVersions := cliCtx.Bool("versions")
+
 	targetAlias, _, hostCfg, err := expandAlias(args[0])
 	fatalIf(err.Trace(args[0]), "Unable to expand alias.")
 
@@ -267,22 +286,24 @@ func mainFind(cliCtx *cli.Context) error {
 	}
 
 	return doFind(ctx, &findContext{
-		Context:       cliCtx,
-		maxDepth:      cliCtx.Uint("maxdepth"),
-		execCmd:       cliCtx.String("exec"),
-		printFmt:      cliCtx.String("print"),
-		namePattern:   cliCtx.String("name"),
-		pathPattern:   cliCtx.String("path"),
-		regexPattern:  cliCtx.String("regex"),
-		ignorePattern: cliCtx.String("ignore"),
-		olderThan:     olderThan,
-		newerThan:     newerThan,
-		largerSize:    largerSize,
-		smallerSize:   smallerSize,
-		watch:         cliCtx.Bool("watch"),
-		targetAlias:   targetAlias,
-		targetURL:     args[0],
-		targetFullURL: targetFullURL,
-		clnt:          clnt,
+		Context:           cliCtx,
+		maxDepth:          cliCtx.Uint("maxdepth"),
+		execCmd:           cliCtx.String("exec"),
+		printFmt:          cliCtx.String("print"),
+		namePattern:       cliCtx.String("name"),
+		pathPattern:       cliCtx.String("path"),
+		regexPattern:      cliCtx.String("regex"),
+		ignorePattern:     cliCtx.String("ignore"),
+		timeRef:           timeRef,
+		withOlderVersions: withVersions,
+		olderThan:         olderThan,
+		newerThan:         newerThan,
+		largerSize:        largerSize,
+		smallerSize:       smallerSize,
+		watch:             cliCtx.Bool("watch"),
+		targetAlias:       targetAlias,
+		targetURL:         args[0],
+		targetFullURL:     targetFullURL,
+		clnt:              clnt,
 	})
 }
