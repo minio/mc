@@ -45,7 +45,12 @@ type findMessage struct {
 
 // String calls tells the console what to print and how to print it.
 func (f findMessage) String() string {
-	return console.Colorize("Find", f.contentMessage.Key)
+	var msg string
+	msg += f.contentMessage.Key
+	if f.VersionID != "" {
+		msg += " (" + f.contentMessage.VersionID + ")"
+	}
+	return console.Colorize("Find", msg)
 }
 
 // JSON formats output to be JSON output.
@@ -270,10 +275,15 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 	// following defer is a no-op.
 	defer watchFind(ctxCtx, ctx)
 
-	var prevKeyName string
+	lstOptions := ListOptions{
+		WithOlderVersions: ctx.withOlderVersions,
+		WithDeleteMarkers: false,
+		Recursive:         true,
+		ShowDir:           DirFirst,
+	}
 
 	// iterate over all content which is within the given directory
-	for content := range ctx.clnt.List(globalContext, ListOptions{Recursive: true, ShowDir: DirFirst}) {
+	for content := range ctx.clnt.List(globalContext, lstOptions) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -299,17 +309,16 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 
 		fileKeyName := getAliasedPath(ctx, content.URL.String())
 		fileContent := contentMessage{
-			Key:  fileKeyName,
-			Time: content.Time.Local(),
-			Size: content.Size,
+			Key:       fileKeyName,
+			VersionID: content.VersionID,
+			Time:      content.Time.Local(),
+			Size:      content.Size,
 		}
 
 		// Match the incoming content, didn't match return.
-		if !matchFind(ctx, fileContent) || prevKeyName == fileKeyName {
+		if !matchFind(ctx, fileContent) {
 			continue
 		} // For all matching content
-
-		prevKeyName = fileKeyName
 
 		// proceed to either exec, format the output string.
 		if ctx.execCmd != "" {
@@ -390,6 +399,16 @@ func stringsReplace(ctx context.Context, args string, fileContent contentMessage
 	// replace all instances of {"url"}
 	if strings.Contains(str, `{"url"}`) {
 		str = strings.ReplaceAll(str, `{"url"}`, strconv.Quote(getShareURL(ctx, fileContent.Key)))
+	}
+
+	// replace all instances of {version}
+	if strings.Contains(str, `{version}`) {
+		str = strings.Replace(str, `{version}`, fileContent.VersionID, -1)
+	}
+
+	// replace all instances of {"version"}
+	if strings.Contains(str, `{"version"}`) {
+		str = strings.Replace(str, `{"version"}`, strconv.Quote(fileContent.VersionID), -1)
 	}
 
 	return str
