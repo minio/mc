@@ -29,22 +29,22 @@ import (
 
 var encryptClearCmd = cli.Command{
 	Name:   "clear",
-	Usage:  "Clear encryption config",
+	Usage:  "clear encryption config",
 	Action: mainEncryptClear,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-	{{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
    
 USAGE:
-	{{.HelpName}} TARGET
+  {{.HelpName}} TARGET
    
 FLAGS:
-	{{range .VisibleFlags}}{{.}}
-	{{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
-	1. Remove auto encryption config on bucket "mybucket" for alias "myminio".
-	   {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Remove auto encryption config on bucket "mybucket" for alias "myminio".
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 

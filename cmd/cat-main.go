@@ -40,7 +40,7 @@ var (
 			Usage: "display an earlier object version",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
+			Name:  "version-id, vid",
 			Usage: "display a specific version of an object",
 		},
 	}

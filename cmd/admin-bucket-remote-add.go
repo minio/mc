@@ -44,7 +44,7 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "region",
-		Usage: "Region of the destination bucket (optional)",
+		Usage: "region of the destination bucket (optional)",
 	},
 }
 var adminBucketRemoteAddCmd = cli.Command{
@@ -60,7 +60,7 @@ USAGE:
   {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@DEST_URL/DEST_BUCKET [--path | --region ] --service
 
 TARGET:
-   Also called as alias/sourcebucketname
+  Also called as alias/sourcebucketname
 
 DEST_BUCKET:
   Also called as remote target bucket.
@@ -78,11 +78,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-	1. Set a new remote replication target 'replicabucket' in region "us-west-1" on https://minio2:9000 for bucket 'srcbucket' on MinIO server.
-	{{.DisableHistory}}
-	{{.Prompt}} {{.HelpName}} myminio/srcbucket https://foobar:foo12345@minio2:9000/replicabucket --service "replication" \
-								 						--region "us-west-1"
-	{{.EnableHistory}}
+  1. Set a new remote replication target 'replicabucket' in region "us-west-1" on https://minio2:9000 for bucket 'srcbucket' on MinIO server.
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} myminio/srcbucket \
+                 https://foobar:foo12345@minio2:9000/replicabucket \
+                 --service "replication" --region "us-west-1"
+     {{.EnableHistory}}
 `,
 }
 

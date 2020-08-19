@@ -31,7 +31,7 @@ import (
 var replicateAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "arn",
-		Usage: "Role Arn",
+		Usage: "unique role ARN",
 	},
 	cli.StringFlag{
 		Name:  "id",

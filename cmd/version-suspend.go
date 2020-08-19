@@ -29,21 +29,22 @@ import (
 
 var versionSuspendCmd = cli.Command{
 	Name:   "suspend",
-	Usage:  "Suspend bucket versioning",
+	Usage:  "suspend bucket versioning",
 	Action: mainVersionSuspend,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-    {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
+
 USAGE:
-    {{.HelpName}} TARGET
+  {{.HelpName}} ALIAS/BUCKET
 
 FLAGS:
-    {{range .VisibleFlags}}{{.}}
-    {{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
-   1. Suspend versioning on bucket "mybucket" for alias "myminio".
-      {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Suspend versioning on bucket "mybucket" for alias "myminio".
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 

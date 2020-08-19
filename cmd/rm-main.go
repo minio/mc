@@ -37,14 +37,14 @@ var (
 	rmFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "remove object(s) and all its versions",
+			Usage: "remove object(s) and all its version(s)",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "revert to older version of object(s) in time",
+			Usage: "rollback object(s) to older version(s)",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
+			Name:  "version-id, vid",
 			Usage: "delete a specific version of an object",
 		},
 		cli.BoolFlag{

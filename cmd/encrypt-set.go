@@ -30,25 +30,25 @@ import (
 
 var encryptSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "Set encryption config",
+	Usage:  "set encryption config",
 	Action: mainEncryptSet,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-	{{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
    
 USAGE:
-	{{.HelpName}} TARGET
+  {{.HelpName}} TARGET
    
 FLAGS:
-	{{range .VisibleFlags}}{{.}}
-	{{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
-	1. Enable SSE-S3 auto encryption on bucket "mybucket" for alias "myminio".
-	   {{.Prompt}} {{.HelpName}} sse-s3 myminio/mybucket
+  1. Enable SSE-S3 auto encryption on bucket "mybucket" for alias "myminio".
+     {{.Prompt}} {{.HelpName}} sse-s3 myminio/mybucket
 
-	2. Enable SSE-KMS auto encryption with kms key on bucket "mybucket" for alias "s3".
-	   {{.Prompt}} {{.HelpName}} sse-kms arn:aws:kms:us-east-1:xxx:key/xxx s3/mybucket  
+  2. Enable SSE-KMS auto encryption with kms key on bucket "mybucket" for alias "s3".
+     {{.Prompt}} {{.HelpName}} sse-kms arn:aws:kms:us-east-1:xxx:key/xxx s3/mybucket  
 `,
 }
 

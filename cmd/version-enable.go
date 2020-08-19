@@ -29,21 +29,22 @@ import (
 
 var versionEnableCmd = cli.Command{
 	Name:   "enable",
-	Usage:  "Enable bucket versioning",
+	Usage:  "enable bucket versioning",
 	Action: mainVersionEnable,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-    {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
+
 USAGE:
-    {{.HelpName}} TARGET
+  {{.HelpName}} ALIAS/BUCKET
 
 FLAGS:
-    {{range .VisibleFlags}}{{.}}
-    {{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
-   1. Enable versioning on bucket "mybucket" for alias "myminio".
-      {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Enable versioning on bucket "mybucket" for alias "myminio".
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 

@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminKMSKeyCmd = cli.Command{
 	Name:   "key",
-	Usage:  "Manage KMS master keys: Request key status information",
+	Usage:  "manage KMS master keys: Request key status information",
 	Action: mainAdminKMSKey,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

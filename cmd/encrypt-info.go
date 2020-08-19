@@ -30,22 +30,22 @@ import (
 
 var encryptInfoCmd = cli.Command{
 	Name:   "info",
-	Usage:  "Show bucket encryption status",
+	Usage:  "show bucket encryption status",
 	Action: mainEncryptInfo,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
   
 USAGE:
-	{{.HelpName}} TARGET
+  {{.HelpName}} TARGET
   
 FLAGS:
-	{{range .VisibleFlags}}{{.}}
-	{{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
-	1. Display bucket encryption status for bucket "mybucket".
-	   {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Display bucket encryption status for bucket "mybucket".
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 
