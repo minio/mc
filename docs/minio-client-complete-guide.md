@@ -946,16 +946,16 @@ Removing `myminio/mybucket/dayOld3.txt`.
 *Example: Remove a particular version ID.*
 
 ```
-mc rm s3/docs/money.xls --version-id "f20f3792-4bd4-4288-8d3c-b9d05b3b62f6"
-Removing `s3/docs/money.xls`.
+mc rm myminio/docs/money.xls --version-id "f20f3792-4bd4-4288-8d3c-b9d05b3b62f6"
+Removing `myminio/docs/money.xls` (versionId=f20f3792-4bd4-4288-8d3c-b9d05b3b62f6).
 ```
 
 *Example: Remove all object versions older than one year.*
 
 ```
-mc rm s3/docs/ --recursive --versions --rewind 365d
-Removing `s3/docs/foo.xls` (version-id=BgRaeIUnPgJ2gB7wj5LSB1hJ9buuHJBM, mod-time=2020-08-05 13:42:08 +0000 UTC).
-Removing `s3/docs/foo.xls` (version-id=rdHL_s7r0SKWemO.HUMCD63QbTOM9V9W, mod-time=2020-08-05 13:41:59 +0000 UTC).
+mc rm myminio/docs/ --recursive --versions --rewind 365d
+Removing `myminio/docs/foo.xls` (versionId=4d184091-ca84-4730-8d73-9e51a1016dc2, modTime=2019-08-05 13:42:08 +0000 UTC).
+Removing `myminio/docs/foo.xls` (versionId=9f716132-81ad-480b-a315-e44144b252a0, modTime=2019-08-05 13:41:59 +0000 UTC).
 ```
 
 <a name="share"></a>

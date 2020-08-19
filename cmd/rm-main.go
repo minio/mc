@@ -161,7 +161,11 @@ type rmMessage struct {
 func (r rmMessage) String() string {
 	msg := console.Colorize("Remove", fmt.Sprintf("Removing `%s`", r.Key))
 	if r.VersionID != "" {
-		msg += fmt.Sprintf(" (version-id=%s, mod-time=%s)", r.VersionID, r.ModTime)
+		if !r.ModTime.IsZero() {
+			msg += fmt.Sprintf(" (versionId=%s, modTime=%s)", r.VersionID, r.ModTime)
+		} else {
+			msg += fmt.Sprintf(" (versionId=%s)", r.VersionID)
+		}
 	}
 	msg += "."
 	return msg
@@ -263,8 +267,9 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 	}
 
 	printMsg(rmMessage{
-		Key:  url,
-		Size: content.Size,
+		Key:       url,
+		Size:      content.Size,
+		VersionID: versionID,
 	})
 
 	if !isFake {
@@ -279,7 +284,7 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 		}
 
 		contentCh := make(chan *ClientContent, 1)
-		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
+		contentCh <- &ClientContent{URL: *newClientURL(targetURL), VersionID: versionID}
 		close(contentCh)
 		isRemoveBucket := false
 		errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
