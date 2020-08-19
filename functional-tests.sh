@@ -708,7 +708,7 @@ function test_copy_object_with_sse_rewrite()
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
     # mc rm on with multi-object delete, deletes encrypted object without encryption key.
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
