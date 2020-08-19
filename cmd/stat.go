@@ -340,7 +340,6 @@ func (v bucketInfoMessage) String() string {
 	keyStr := getKey(&ClientContent{URL: v.Metadata.URL, Type: v.Metadata.Type})
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
 	fmt.Fprintln(&b, console.Colorize("Name", key))
-	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Date", v.Metadata.Date.Local().Format(printDate)))
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Metadata.Size))))
 	fType := func() string {
 		if v.Metadata.Type.IsDir() {
@@ -351,49 +350,43 @@ func (v bucketInfoMessage) String() string {
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Type", fType))
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s:\n", "Metadata"))
 	placeHolder := ""
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
-	if info.Encryption.Algorithm == "" {
-		fmt.Fprintf(&b, console.Colorize("Unset", "Not Set"))
-	} else {
-		fmt.Fprintf(&b, console.Colorize("Key", "\n\tAlgorithm:"))
+	if info.Encryption.Algorithm != "" {
+		fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
+		fmt.Fprintf(&b, console.Colorize("Key", "\n\tAlgorithm: "))
 		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.Algorithm))
-		fmt.Fprintf(&b, console.Colorize("Key", "\n\tKey ID:"))
+		fmt.Fprintf(&b, console.Colorize("Key", "\n\tKey ID: "))
 		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.KeyID))
+		fmt.Fprintln(&b)
 	}
-	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Versioning: ")
-
 	if info.Versioning.Status == "" {
 		fmt.Fprintf(&b, console.Colorize("Unset", "Un-versioned"))
 	} else {
 		fmt.Fprintf(&b, console.Colorize("Set", info.Versioning.Status))
 	}
-
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "LockConfiguration: ")
 	fmt.Fprintln(&b)
 
 	if info.Locking.Mode != "" {
+		fmt.Fprintf(&b, "%2s%s", placeHolder, "LockConfiguration: ")
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "RetentionMode: ")
 		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Mode))
 		fmt.Fprintln(&b)
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "Retention Until Date: ")
 		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Validity))
+		fmt.Fprintln(&b)
 	}
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Notification: ")
 	if len(info.Notification.Config.TopicConfigs) > 0 {
+		fmt.Fprintf(&b, "%2s%s", placeHolder, "Notification: ")
 		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
-	} else {
-		fmt.Fprintf(&b, console.Colorize("UnSet", "Unset"))
+		fmt.Fprintln(&b)
 	}
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Replication: ")
 	if info.Replication.Enabled {
+		fmt.Fprintf(&b, "%2s%s", placeHolder, "Replication: ")
 		fmt.Fprintf(&b, console.Colorize("Set", "Enabled"))
-	} else {
-		fmt.Fprintf(&b, console.Colorize("UnSet", "Disabled"))
+		fmt.Fprintln(&b)
 	}
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
+	fmt.Fprintf(&b, console.Colorize("Generic", info.Location))
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Policy: ")
 	if info.Policy.Type == "none" {
@@ -402,19 +395,16 @@ func (v bucketInfoMessage) String() string {
 		fmt.Fprintf(&b, console.Colorize("Set", info.Policy.Type))
 	}
 	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
-	fmt.Fprintf(&b, console.Colorize("Generic", info.Location))
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Tagging: ")
-	fmt.Fprintf(&b, console.Colorize("Generic", info.Tags()))
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
-	if info.ILM.Config == nil {
-		fmt.Fprintf(&b, console.Colorize("UnSet", "Not Set"))
-	} else {
-		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+	if info.Tags() != "" {
+		fmt.Fprintf(&b, "%2s%s", placeHolder, "Tagging: ")
+		fmt.Fprintf(&b, console.Colorize("Generic", info.Tags()))
+		fmt.Fprintln(&b)
 	}
-	fmt.Fprintln(&b)
+	if info.ILM.Config != nil {
+		fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
+		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+		fmt.Fprintln(&b)
+	}
 
 	return b.String()
 }

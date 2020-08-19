@@ -144,8 +144,6 @@ func mainStat(cliCtx *cli.Context) error {
 	console.SetColor("ETag", color.New(color.FgWhite))
 	console.SetColor("Metadata", color.New(color.FgWhite))
 	// theme specific to stat bucket
-	console.SetColor("Generic", color.New(color.FgGreen))
-	console.SetColor("SectionHeader", color.New(color.FgWhite, color.Bold))
 	console.SetColor("Key", color.New(color.FgCyan))
 	console.SetColor("Value", color.New(color.FgYellow))
 	console.SetColor("Unset", color.New(color.FgRed))

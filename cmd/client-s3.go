@@ -2679,8 +2679,10 @@ func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 		}
 	}
 
-	if _, err := c.GetReplication(ctx); err == nil {
-		b.Replication.Enabled = true
+	if rcfg, err := c.GetReplication(ctx); err == nil {
+		if !rcfg.Empty() {
+			b.Replication.Enabled = true
+		}
 	}
 	if algo, keyID, err := c.GetEncryption(ctx); err == nil {
 		b.Encryption.Algorithm = algo
