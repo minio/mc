@@ -29,7 +29,7 @@ import (
 var adminBucketRemoteListFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "service",
-		Usage: "Type of service. Valid options are '[replication]'",
+		Usage: "type of service. valid options are '[replication]'",
 	},
 }
 

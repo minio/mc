@@ -55,7 +55,7 @@ var adminHealFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "force-stop, s",
-		Usage: "Force stop a running heal sequence",
+		Usage: "force stop a running heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "remove",

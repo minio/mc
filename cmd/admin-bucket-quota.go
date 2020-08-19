@@ -75,38 +75,38 @@ func (q quotaMessage) JSON() string {
 
 var adminBucketQuotaCmd = cli.Command{
 	Name:   "quota",
-	Usage:  "Manage bucket quota",
+	Usage:  "manage bucket quota",
 	Action: mainAdminBucketQuota,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminQuotaFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
  
 USAGE:
-   {{.HelpName}} TARGET [--fifo QUOTA | --hard QUOTA | --clear]
+  {{.HelpName}} TARGET [--fifo QUOTA | --hard QUOTA | --clear]
  
 QUOTA
-   quota accepts human-readable case-insensitive number
-   suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
-   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
-   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
-   also accepted. Without suffixes the unit is bytes.
+  quota accepts human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
  
 FLAGS:
-   {{range .VisibleFlags}}{{.}}
-   {{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
-   1. Display bucket quota configured for "mybucket" on MinIO.
-	  {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Display bucket quota configured for "mybucket" on MinIO.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 	
-   2. Set FIFO quota for a bucket "mybucket" on MinIO.
-	  {{.Prompt}} {{.HelpName}} myminio/mybucket --fifo 10GB
+  2. Set FIFO quota for a bucket "mybucket" on MinIO.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --fifo 10GB
 
-   3. Set hard quota of 1gb for a bucket "mybucket" on MinIO.
-	  {{.Prompt}} {{.HelpName}} myminio/mybucket --hard 1GB
+  3. Set hard quota of 1gb for a bucket "mybucket" on MinIO.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --hard 1GB
 
-   4. Clear bucket quota configured for bucket "mybucket" on MinIO.
-	  {{.Prompt}} {{.HelpName}} myminio/mybucket --clear
+  4. Clear bucket quota configured for bucket "mybucket" on MinIO.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --clear
 `,
 }
 

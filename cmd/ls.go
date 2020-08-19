@@ -47,6 +47,7 @@ type contentMessage struct {
 	URL      string    `json:"url,omitempty"`
 
 	VersionID      string `json:"versionId,omitempty"`
+	VersionOrd     string `json:"versionOrdinal,omitempty"`
 	VersionIndex   int    `json:"versionIndex,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 }
@@ -61,7 +62,7 @@ func (c contentMessage) String() string {
 
 	fileDesc := c.Key
 	if c.VersionID != "" {
-		fileDesc += fmt.Sprintf(" (v%d, %s", c.VersionIndex, c.VersionID)
+		fileDesc += fmt.Sprintf(" (%s, vid=%s", c.VersionOrd, c.VersionID)
 		if c.IsDeleteMarker {
 			fileDesc += ", delete-marker"
 		}
@@ -134,7 +135,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		contentMsg.Key = getKey(c)
 		contentMsg.VersionID = c.VersionID
 		contentMsg.IsDeleteMarker = c.IsDeleteMarker
-		contentMsg.VersionIndex = nrVersions - i
+		contentMsg.VersionOrd = humanize.Ordinal(nrVersions - i)
 		// URL is empty by default
 		// Set it to either relative dir (host) or public url (remote)
 		contentMsg.URL = clntURL.String()

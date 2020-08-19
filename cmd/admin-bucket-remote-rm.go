@@ -26,7 +26,7 @@ import (
 var adminBucketRemoteRmFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "arn",
-		Usage: "Arn to be removed",
+		Usage: "ARN to be removed",
 	},
 }
 var adminBucketRemoteRmCmd = cli.Command{
@@ -45,9 +45,9 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove existing remote target with arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1" \
+  1. Remove existing remote target with arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
      for bucket srcbucket on MinIO server.
-    {{.Prompt}} {{.HelpName}} myminio/srcbucket --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1" 
+     {{.Prompt}} {{.HelpName}} myminio/srcbucket --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1" 
 `,
 }
 

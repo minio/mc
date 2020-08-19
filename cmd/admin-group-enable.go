@@ -28,7 +28,7 @@ import (
 
 var adminGroupEnableCmd = cli.Command{
 	Name:   "enable",
-	Usage:  "Enable a group",
+	Usage:  "enable a group",
 	Action: mainAdminGroupEnableDisable,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

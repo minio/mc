@@ -39,11 +39,11 @@ var (
 	cpFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "Move back in time",
+			Usage: "rollback object(s) to older version(s)",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
-			Usage: "Select an object version to copy",
+			Name:  "version-id, vid",
+			Usage: "select an object version to copy",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",

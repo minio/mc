@@ -30,7 +30,7 @@ import (
 
 var versionInfoCmd = cli.Command{
 	Name:   "info",
-	Usage:  "Show bucket versioning status",
+	Usage:  "show bucket versioning status",
 	Action: mainVersionInfo,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -38,7 +38,7 @@ var versionInfoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} ALIAS/BUCKET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
