@@ -954,7 +954,6 @@ Removing `myminio/docs/money.xls` (versionId=f20f3792-4bd4-4288-8d3c-b9d05b3b62f
 
 ```
 mc rm myminio/docs/ --recursive --versions --rewind 365d
-Removing `myminio/docs/foo.xls` (versionId=4d184091-ca84-4730-8d73-9e51a1016dc2, modTime=2020-08-05 13:42:08 +0000 UTC).
 Removing `myminio/docs/foo.xls` (versionId=4d184091-ca84-4730-8d73-9e51a1016dc2, modTime=2019-08-05 13:42:08 +0000 UTC).
 Removing `myminio/docs/foo.xls` (versionId=9f716132-81ad-480b-a315-e44144b252a0, modTime=2019-08-05 13:41:59 +0000 UTC).
 ```
