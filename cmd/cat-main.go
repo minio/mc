@@ -86,7 +86,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --rewind 10d play/my-bucket/my-object
 
   7. Display the content of a particular object version
-     {{.Prompt}} {{.HelpName}} --version-id "1Krls24ULGi7aLw4IRww.v_bBMPju_4W" play/my-bucket/my-object
+     {{.Prompt}} {{.HelpName}} --vid "3ddac055-89a7-40fa-8cd3-530a5581b6b8" play/my-bucket/my-object
 `,
 }
 
