@@ -43,7 +43,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "Pick earlier versions",
+			Usage: "apply legal hold for all versions",
 		},
 	}
 )

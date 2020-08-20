@@ -29,11 +29,11 @@ var (
 	lhClearFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "apply legal hold recursively",
+			Usage: "Clear legal hold recursively",
 		},
 		cli.StringFlag{
 			Name:  "version-id",
-			Usage: "apply legal hold to a specific object version",
+			Usage: "Clear legal hold of a specific object version",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
@@ -41,10 +41,11 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "Pick earlier versions",
+			Usage: "Clear legal hold for all versions",
 		},
 	}
 )
+
 var legalHoldClearCmd = cli.Command{
 	Name:   "clear",
 	Usage:  "clear legal hold for object(s)",

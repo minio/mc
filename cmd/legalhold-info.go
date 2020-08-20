@@ -33,11 +33,11 @@ var (
 	lhInfoFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "apply legal hold recursively",
+			Usage: "show legalhold information recursively",
 		},
 		cli.StringFlag{
 			Name:  "version-id",
-			Usage: "apply legal hold to a specific object version",
+			Usage: "show legalhold information of a specific object version",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
@@ -45,7 +45,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "Pick earlier versions",
+			Usage: "show legalhold information for all versions",
 		},
 	}
 )
@@ -95,17 +95,26 @@ func (l legalHoldInfoMessage) String() string {
 		return console.Colorize("LegalHoldMessageFailure", "Cannot get object legal hold status `"+l.URLPath+"`. "+l.Err.Error())
 	}
 	var msg string
-	msg += "Object: " + l.URLPath
+
+	var legalhold string
+	switch l.LegalHold {
+	case "":
+		legalhold = console.Colorize("LegalHoldNotSet", "Not set")
+	case minio.LegalHoldEnabled:
+		legalhold = console.Colorize("LegalHoldOn", l.LegalHold)
+	case minio.LegalHoldDisabled:
+		legalhold = console.Colorize("LegalHoldOff", l.LegalHold)
+	}
+
+	msg += "[ " + centerText(legalhold, 8) + " ] "
+
 	if l.VersionID != "" {
-		msg += ", Version id: " + l.VersionID
+		msg += " " + console.Colorize("LegalHoldVersion", l.VersionID) + " "
 	}
-	msg += ", "
-	if l.LegalHold == "" {
-		msg += "No legalhold set"
-	} else {
-		msg += "Legalhold: " + string(l.LegalHold)
-	}
-	return console.Colorize("LegalHoldSuccess", msg)
+
+	msg += " "
+	msg += l.URLPath
+	return msg
 }
 
 // JSON'ified message for scripting.
@@ -191,6 +200,10 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 // main for legalhold info command.
 func mainLegalHoldInfo(ctx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("LegalHoldNotSet", color.New(color.FgYellow))
+	console.SetColor("LegalHoldOn", color.New(color.FgGreen, color.Bold))
+	console.SetColor("LegalHoldOff", color.New(color.FgRed, color.Bold))
+	console.SetColor("LegalHoldVersion", color.New(color.FgGreen))
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
