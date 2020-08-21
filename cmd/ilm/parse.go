@@ -51,8 +51,8 @@ func extractILMTags(tagLabelVal string) []lifecycle.Tag {
 // For example: Transition has to happen before Expiry.
 // Storage class must be specified if transition date/days is provided.
 func validateTranExpDate(rule lifecycle.Rule) error {
-	expiryDateSet := rule.Expiration.IsDateNull()
-	expiryDaySet := rule.Expiration.IsDaysNull()
+	expiryDateSet := !rule.Expiration.IsDateNull()
+	expiryDaySet := !rule.Expiration.IsDaysNull()
 
 	transitionSet := !rule.Transition.IsNull()
 	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()

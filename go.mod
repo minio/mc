@@ -9,6 +9,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/klauspost/compress v1.10.3
+	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
@@ -21,6 +22,7 @@ require (
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.3
 	github.com/rjeczalik/notify v0.9.2
+	github.com/rs/xid v1.2.1
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	golang.org/x/sys v0.0.0-20200806125547-5acd03effb82 // indirect

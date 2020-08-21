@@ -23,17 +23,17 @@ import (
 	"github.com/minio/mc/cmd/ilm"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v7"
+	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio/pkg/console"
 )
 
-var ilmAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add a lifecycle configuration rule to existing (if any) rule(s) on a bucket",
-	Action: mainILMAdd,
+var ilmSetCmd = cli.Command{
+	Name:   "set",
+	Usage:  "modify a lifecycle configuration rule with given id",
+	Action: mainILMSet,
 	Before: setGlobalsFromContext,
-	Flags:  append(ilmAddFlags, globalFlags...),
+	Flags:  append(ilmSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -44,23 +44,25 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-  Add a lifecycle configuration rule.
+  modify a lifecycle configuration rule with given id.
 
 EXAMPLES:
-  1. Add rule for mybucket on s3. Both expiry & transition are entered as dates.
-     {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
+  1. Modify an existing rule with id "rHTY.a123". Both expiry & transition are entered as dates.
+     {{.Prompt}} {{.HelpName}} --id "rHTY.a123" \
+          --expiry-date "2020-09-17" s3/mybucket
 
-  2. Add rule for mybucket on s3. Both expiry and transition are number of days.
-     {{.Prompt}} {{.HelpName}} -expiry-date "2025-09-17" --transition-date "2025-05-01" \
-          --storage-class "GLACIER" myminio/mybucket/doc
-
-  3. Add rule for mybucket on s3. Only expiry is given as number of days and transition is not set.
-     {{.Prompt}} {{.HelpName}} -expiry-days "300" --transition-days "200" \
-          --storage-class "GLACIER" myminio/mybucket/doc
+  2.  Modify an existing rule with id "hGHKijqpo123". Both expiry and transition are number of days.
+     {{.Prompt}} {{.HelpName}} --id "hGHKijqpo123" \
+          --expiry-days "300" --transition-days "200" \
+          --storage-class "GLACIER" s3/mybucket
 `,
 }
 
-var ilmAddFlags = []cli.Flag{
+var ilmSetFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "id",
+		Usage: "id of the rule to be modified",
+	},
 	cli.StringFlag{
 		Name:  "tags",
 		Usage: "format '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>', multiple values allowed for multiple key/value pairs",
@@ -91,35 +93,39 @@ var ilmAddFlags = []cli.Flag{
 	},
 }
 
-type ilmAddMessage struct {
+type ilmSetMessage struct {
 	Status string `json:"status"`
 	Target string `json:"target"`
 	ID     string `json:"id"`
 }
 
-func (i ilmAddMessage) String() string {
+func (i ilmSetMessage) String() string {
 	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration rule added with ID `"+i.ID+"` to "+i.Target+".")
 }
 
-func (i ilmAddMessage) JSON() string {
+func (i ilmSetMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
 
 // Validate user given arguments
-func checkILMAddSyntax(ctx *cli.Context) {
+func checkILMSetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "add", globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
+	}
+	id := ctx.String("id")
+	if id == "" {
+		fatalIf(errInvalidArgument(), "ID for lifecycle rule cannot be empty, please refer mc "+ctx.Command.FullName()+" --help for more details")
 	}
 }
 
 // Calls SetBucketLifecycle with the XML representation of lifecycleConfiguration type.
-func mainILMAdd(cliCtx *cli.Context) error {
-	ctx, cancelILMAdd := context.WithCancel(globalContext)
-	defer cancelILMAdd()
+func mainILMSet(cliCtx *cli.Context) error {
+	ctx, cancelILMSet := context.WithCancel(globalContext)
+	defer cancelILMSet()
 
-	checkILMAddSyntax(cliCtx)
+	checkILMSetSyntax(cliCtx)
 	setILMDisplayColorScheme()
 	args := cliCtx.Args()
 	urlStr := args.Get(0)
@@ -137,13 +143,15 @@ func mainILMAdd(cliCtx *cli.Context) error {
 		}
 	}
 
+	// Configuration that needs to be set is returned by ilm.GetILMConfigToSet.
+	// A new rule is added or the rule (if existing) is replaced
 	opts := ilm.GetLifecycleOptions(cliCtx)
 	lfcCfg, err = opts.ToConfig(lfcCfg)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
 	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")
 
-	printMsg(ilmAddMessage{
+	printMsg(ilmSetMessage{
 		Status: "success",
 		Target: urlStr,
 		ID:     opts.ID,

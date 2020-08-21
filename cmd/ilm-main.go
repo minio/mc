@@ -30,9 +30,10 @@ var bucketILMCmd = cli.Command{
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	Subcommands: []cli.Command{
-		ilmListCmd,
+		ilmLsCmd,
 		ilmAddCmd,
-		ilmRemoveCmd,
+		ilmRmCmd,
+		ilmSetCmd,
 		ilmExportCmd,
 		ilmImportCmd,
 	},

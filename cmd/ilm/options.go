@@ -24,6 +24,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/rs/xid"
 )
 
 const defaultILMDateFormat string = "2006-01-02"
@@ -97,10 +98,12 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 	return lfcCfg, nil
 }
 
-type lifecycleOptions struct {
+// LifecycleOptions is structure to encapsulate
+type LifecycleOptions struct {
 	ID             string
 	Prefix         string
 	Status         bool
+	IsTagsSet      bool
 	Tags           string
 	ExpiryDate     string
 	ExpiryDays     string
@@ -109,7 +112,8 @@ type lifecycleOptions struct {
 	StorageClass   string
 }
 
-func (opts lifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
+// ToConfig create lifecycle.Configuration based on LifecycleOptions
+func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
 	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays)
 	if err != nil {
 		return nil, err.Trace(opts.ExpiryDate, opts.ExpiryDays)
@@ -144,16 +148,15 @@ func (opts lifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 		Transition: transition,
 	}
 
-	if err := validateILMRule(newRule); err != nil {
-		return nil, err.Trace(opts.ID)
-	}
-
 	ruleFound := false
 	for i, rule := range config.Rules {
 		if rule.ID != newRule.ID {
 			continue
 		}
-		config.Rules[i] = newRule
+		config.Rules[i] = applyRuleFields(newRule, config.Rules[i], opts.IsTagsSet)
+		if err := validateILMRule(config.Rules[i]); err != nil {
+			return nil, err.Trace(opts.ID)
+		}
 		ruleFound = true
 		break
 	}
@@ -165,11 +168,24 @@ func (opts lifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 	return config, nil
 }
 
-func getLifecycleOptions(ctx *cli.Context) lifecycleOptions {
-	return lifecycleOptions{
-		ID:             ctx.String("id"),
-		Prefix:         ctx.String("prefix"),
+// GetLifecycleOptions create LifeCycleOptions based on cli inputs
+func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
+	var id string = ctx.String("id")
+	if id == "" {
+		id = xid.New().String()
+	}
+	// split the first arg i.e. path into alias, bucket and prefix
+	result := strings.SplitN(ctx.Args().First(), "/", 3)
+	// get the prefix from path
+	var prefix string
+	if len(result) > 2 {
+		prefix = result[len(result)-1]
+	}
+	return LifecycleOptions{
+		ID:             id,
+		Prefix:         prefix,
 		Status:         !ctx.Bool("disable"),
+		IsTagsSet:      ctx.IsSet("tags"),
 		Tags:           ctx.String("tags"),
 		ExpiryDate:     ctx.String("expiry-date"),
 		ExpiryDays:     ctx.String("expiry-days"),
@@ -179,9 +195,61 @@ func getLifecycleOptions(ctx *cli.Context) lifecycleOptions {
 	}
 }
 
-// ApplyNewILMConfig apply new lifecycle rules to existing lifecycle configuration, this
-// function returns modified/overwritten rules if any.
-func ApplyNewILMConfig(ctx *cli.Context, config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
-	opts := getLifecycleOptions(ctx)
-	return opts.ToConfig(config)
+// Applies non empty fields from src to dest Rule and return the dest Rule
+func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, isTagFlagSet bool) lifecycle.Rule {
+	// since prefix is a part of command args, it is always present in the src rule and
+	// it should be always set to the destination.
+	dest.RuleFilter.Prefix = src.RuleFilter.Prefix
+
+	// If src has tags, it should override the destination
+	if len(src.RuleFilter.And.Tags) > 0 {
+		dest.RuleFilter.And.Tags = src.RuleFilter.And.Tags
+		dest.RuleFilter.And.Prefix = src.RuleFilter.And.Prefix
+		dest.RuleFilter.Prefix = ""
+	}
+
+	if src.RuleFilter.And.Tags == nil {
+		if isTagFlagSet {
+			// If src tags is empty and isTagFlagSet then user provided the --tag flag with "" value
+			// dest tags should be deleted
+			dest.RuleFilter.And.Tags = []lifecycle.Tag{}
+			dest.RuleFilter.And.Prefix = ""
+			dest.RuleFilter.Prefix = src.RuleFilter.Prefix
+		} else {
+			// Update prefixes only
+			dest.RuleFilter.And.Prefix = src.RuleFilter.Prefix
+			dest.RuleFilter.Prefix = ""
+		}
+	}
+
+	// only one of expiration day, date or transition day, date is expected
+	if !src.Expiration.IsDateNull() {
+		dest.Expiration.Date = src.Expiration.Date
+		// reset everything else
+		dest.Expiration.Days = 0
+	} else if !src.Expiration.IsDaysNull() {
+		dest.Expiration.Days = src.Expiration.Days
+		// reset everything else
+		dest.Expiration.Date = lifecycle.ExpirationDate{}
+	}
+
+	if !src.Transition.IsDateNull() {
+		dest.Transition.Date = src.Transition.Date
+		// reset everything else
+		dest.Transition.Days = 0
+	} else if !src.Transition.IsDaysNull() {
+		dest.Transition.Days = src.Transition.Days
+		// reset everything else
+		dest.Transition.Date = lifecycle.ExpirationDate{}
+	}
+
+	if src.Transition.StorageClass != "" {
+		dest.Transition.StorageClass = src.Transition.StorageClass
+	}
+
+	// Updated the status
+	if src.Status != "" {
+		dest.Status = src.Status
+	}
+	return dest
 }
