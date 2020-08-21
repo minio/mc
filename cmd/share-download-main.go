@@ -31,6 +31,10 @@ var (
 			Name:  "recursive, r",
 			Usage: "share all objects recursively",
 		},
+		cli.StringFlag{
+			Name:  "version-id",
+			Usage: "share a particular object version",
+		},
 		shareFlagExpire,
 	}
 )
@@ -90,8 +94,14 @@ func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
 	}
 
-	// Validate if object exists only if the `--recursive` flag was NOT specified
 	isRecursive := cliCtx.Bool("recursive")
+
+	versionID := cliCtx.String("version-id")
+	if versionID != "" && isRecursive {
+		fatalIf(errDummy().Trace(), "--version-id cannot be specified with --recursive flag.")
+	}
+
+	// Validate if object exists only if the `--recursive` flag was NOT specified
 	if !isRecursive {
 		for _, url := range cliCtx.Args() {
 			_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{})
@@ -103,7 +113,7 @@ func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB
 }
 
 // doShareURL share files from target.
-func doShareDownloadURL(ctx context.Context, targetURL string, isRecursive bool, expiry time.Duration) *probe.Error {
+func doShareDownloadURL(ctx context.Context, targetURL, versionID string, isRecursive bool, expiry time.Duration) *probe.Error {
 	targetAlias, targetURLFull, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -124,7 +134,7 @@ func doShareDownloadURL(ctx context.Context, targetURL string, isRecursive bool,
 	// Channel which will receive objects whose URLs need to be shared
 	objectsCh := make(chan *ClientContent)
 
-	content, err := clnt.Stat(ctx, StatOptions{})
+	content, err := clnt.Stat(ctx, StatOptions{versionID: versionID})
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
@@ -161,13 +171,14 @@ func doShareDownloadURL(ctx context.Context, targetURL string, isRecursive bool,
 			continue
 		}
 		objectURL := content.URL.String()
+		objectVersionID := content.VersionID
 		newClnt, err := newClientFromAlias(targetAlias, objectURL)
 		if err != nil {
 			return err.Trace(objectURL)
 		}
 
 		// Generate share URL.
-		shareURL, err := newClnt.ShareDownload(ctx, expiry)
+		shareURL, err := newClnt.ShareDownload(ctx, objectVersionID, expiry)
 		if err != nil {
 			// add objectURL and expiry as part of the trace arguments.
 			return err.Trace(objectURL, "expiry="+expiry.String())
@@ -208,6 +219,7 @@ func mainShareDownload(cliCtx *cli.Context) error {
 
 	// Set command flags from context.
 	isRecursive := cliCtx.Bool("recursive")
+	versionID := cliCtx.String("version-id")
 	expiry := shareDefaultExpiry
 	if cliCtx.String("expire") != "" {
 		var e error
@@ -216,7 +228,7 @@ func mainShareDownload(cliCtx *cli.Context) error {
 	}
 
 	for _, targetURL := range cliCtx.Args() {
-		err := doShareDownloadURL(ctx, targetURL, isRecursive, expiry)
+		err := doShareDownloadURL(ctx, targetURL, versionID, isRecursive, expiry)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:

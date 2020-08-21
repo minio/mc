@@ -28,6 +28,7 @@ import (
 // shareEntryV1 - container for each download/upload entries.
 type shareEntryV1 struct {
 	URL         string        `json:"share"` // Object URL.
+	VersionID   string        `json:"versionID"`
 	Date        time.Time     `json:"date"`
 	Expiry      time.Duration `json:"expiry"`
 	ContentType string        `json:"contentType,omitempty"` // Only used by upload cmd.
