@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2019 MinIO, Inc.
+ * MinIO Client (C) 2019-2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -39,6 +40,14 @@ var (
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "recursively print the total for a folder prefix",
+		},
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "move back in time",
+		},
+		cli.BoolFlag{
+			Name:  "versions",
+			Usage: "include all objects versions",
 		},
 	}
 )
@@ -68,6 +77,12 @@ EXAMPLES:
 
    2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
       {{.Prompt}} {{.HelpName}} --depth=2 s3/jazz-songs/louis/
+
+   3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time
+      {{.Prompt}} {{.HelpName}} --rewind "2020.01.01" s3/jazz-songs/
+
+   4. Summarize disk usage of 'jazz-songs' bucket with all objects versions
+      {{.Prompt}} {{.HelpName}} --versions s3/jazz-songs/
 `,
 }
 
@@ -93,7 +108,7 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
+func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
@@ -105,7 +120,12 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 		return 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
-	contentCh := clnt.List(globalContext, ListOptions{isRecursive: false, showDir: DirFirst})
+	contentCh := clnt.List(globalContext, ListOptions{
+		timeRef:           timeRef,
+		withOlderVersions: withVersions,
+		isRecursive:       false,
+		showDir:           DirFirst,
+	})
 	size := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {
@@ -134,7 +154,7 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			used, err := du(subDirAlias, depth, encKeyDB)
+			used, err := du(subDirAlias, timeRef, withVersions, depth, encKeyDB)
 			if err != nil {
 				return 0, err
 			}
@@ -166,6 +186,8 @@ func mainDu(ctx *cli.Context) error {
 		cli.ShowCommandHelpAndExit(ctx, "du", 1)
 	}
 
+	// Set colors.
+	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 
@@ -185,12 +207,12 @@ func mainDu(ctx *cli.Context) error {
 		}
 	}
 
-	// Set color.
-	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
+	withVersions := ctx.Bool("versions")
+	timeRef := parseRewindFlag(ctx.String("rewind"))
 
 	var duErr error
 	for _, urlStr := range ctx.Args() {
-		if _, err := du(urlStr, depth, encKeyDB); duErr == nil {
+		if _, err := du(urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
 			duErr = err
 		}
 	}
