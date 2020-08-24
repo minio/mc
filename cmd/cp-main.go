@@ -370,6 +370,18 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		pg = newAccounter(totalBytes)
 	}
 
+	sourceURLs := cli.Args()[:len(cli.Args())-1]
+	targetURL := cli.Args()[len(cli.Args())-1] // Last one is target
+
+	tgtClnt, err := newClient(targetURL)
+	fatalIf(err, "Unable to initialize `"+targetURL+"`.")
+
+	// Check if the target bucket has object locking enabled
+	var withLock bool
+	if _, _, _, err = tgtClnt.GetObjectLockConfig(ctx); err == nil {
+		withLock = true
+	}
+
 	if session != nil {
 		// isCopied returns true if an object has been already copied
 		// or not. This is useful when we resume from a session.
@@ -403,9 +415,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 		}()
 	} else {
-		sourceURLs := cli.Args()[:len(cli.Args())-1]
-		targetURL := cli.Args()[len(cli.Args())-1] // Last one is target
-
 		// Access recursive flag inside the session header.
 		isRecursive := cli.Bool("recursive")
 		olderThan := cli.String("older-than")
@@ -517,7 +526,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 					}
 				}
 
-				cpURLs.MD5 = cli.Bool("md5")
+				cpURLs.MD5 = cli.Bool("md5") || withLock
 				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
 				// Verify if previously copied, notify progress bar.

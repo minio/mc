@@ -1004,11 +1004,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
 		opts.SendContentMd5 = true
 	}
-	if opts.LegalHold == "" && opts.Mode == "" {
-		if _, _, _, err := c.api.GetBucketObjectLockConfig(ctx, bucket); err == nil {
-			opts.SendContentMd5 = true
-		}
-	}
+
 	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
