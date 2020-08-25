@@ -807,8 +807,15 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 				}
 				// object lock configuration set on bucket
 				if mode != "" {
-					errorIf(newDstClt.SetObjectLockConfig(ctx, mode, validity, unit),
+					err = newDstClt.SetObjectLockConfig(ctx, mode, validity, unit)
+					errorIf(err,
 						"Unable to set object lock config in `"+newTgtURL+"`.")
+					if err != nil && mj.opts.activeActive {
+						return true
+					}
+					if err == nil {
+						mj.opts.md5 = true
+					}
 				}
 				errorIf(copyBucketPolicies(ctx, newSrcClt, newDstClt, isOverwrite),
 					"Unable to copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
@@ -852,6 +859,9 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 			errorIf(err, "Unable to set object lock config in `"+dstURL+"`.")
 			if err != nil && mj.opts.activeActive {
 				return true
+			}
+			if err == nil {
+				mj.opts.md5 = true
 			}
 		}
 
