@@ -29,7 +29,7 @@ import (
 
 var tagSetFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "vid",
+		Name:  "version-id, vid",
 		Usage: "Set tags of particular object version",
 	},
 	cli.StringFlag{
@@ -63,7 +63,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 
   2. Assign tags to a particuler version of an object.
-     {{.Prompt}} {{.HelpName}} --vid "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+     {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 
   3. Assign tags to a object versions older than one week.
      {{.Prompt}} {{.HelpName}} --versions --rewind 7d play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
@@ -105,12 +105,12 @@ func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef t
 
 	targetURL = ctx.Args().Get(0)
 	tags = ctx.Args().Get(1)
-	versionID = ctx.String("vid")
+	versionID = ctx.String("version-id")
 	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
 
 	if versionID != "" && (rewind != "" || withVersions) {
-		fatalIf(errDummy().Trace(), "You cannot specify both --vid and --rewind or --versions flags at the same time")
+		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
 	}
 
 	timeRef = parseRewindFlag(rewind)

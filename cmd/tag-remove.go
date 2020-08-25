@@ -29,7 +29,7 @@ import (
 
 var tagRemoveFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "vid",
+		Name:  "version-id, vid",
 		Usage: "Remove tags of particular object version",
 	},
 	cli.StringFlag{
@@ -65,7 +65,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/testbucket/testobject
 
   2. Remove the tags assigned to a particular version of an object.
-     {{.Prompt}} {{.HelpName}} --vid "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" myminio/testbucket/testobject
+     {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" myminio/testbucket/testobject
 
   3. Remove the tags assigned to an object versions that are older than one week
      {{.Prompt}} {{.HelpName}} --versions --rewind 7d myminio/testbucket/testobject
@@ -106,12 +106,12 @@ func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRe
 	}
 
 	targetURL = ctx.Args().Get(0)
-	versionID = ctx.String("vid")
+	versionID = ctx.String("version-id")
 	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
 
 	if versionID != "" && (rewind != "" || withVersions) {
-		fatalIf(errDummy().Trace(), "You cannot specify both --vid and --rewind or --versions flags at the same time")
+		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
 	}
 
 	timeRef = parseRewindFlag(rewind)
