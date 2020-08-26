@@ -72,7 +72,7 @@ var treeFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "rewind",
-		Usage: "shows the tree of an earlier time",
+		Usage: "display tree no later than specified date",
 	},
 }
 

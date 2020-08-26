@@ -41,11 +41,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "Move back in time",
+			Usage: "select an object version at specified time",
 		},
 		cli.StringFlag{
 			Name:  "version-id, vid",
-			Usage: "Select an object version to display",
+			Usage: "select an object version to display",
 		},
 	}
 )
@@ -78,7 +78,7 @@ EXAMPLES:
 
   2. Display only first line from server encrypted object on Amazon S3.
      {{.Prompt}} {{.HelpName}} -n 1 --encrypt-key 's3/csv-data=32byteslongsecretkeymustbegiven1' s3/csv-data/population.csv
-	 
+
   3. Display only first line from server encrypted object on Amazon S3. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/json-data=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  s3/json-data/population.json

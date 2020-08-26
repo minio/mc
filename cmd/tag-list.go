@@ -35,15 +35,15 @@ import (
 var tagListFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "version-id, vid",
-		Usage: "List tags of particular object version",
+		Usage: "list tags of particular object version",
 	},
 	cli.StringFlag{
 		Name:  "rewind",
-		Usage: "Go back in time",
+		Usage: "list tags of particular object version at specified time",
 	},
 	cli.BoolFlag{
 		Name:  "versions",
-		Usage: "Select multiple versions for each object",
+		Usage: "list tags on all versions for an object",
 	},
 }
 

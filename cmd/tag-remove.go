@@ -30,15 +30,15 @@ import (
 var tagRemoveFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "version-id, vid",
-		Usage: "Remove tags of particular object version",
+		Usage: "remove tags on a specific object version",
 	},
 	cli.StringFlag{
 		Name:  "rewind",
-		Usage: "Go back in time",
+		Usage: "remove tags on an object version at specified time",
 	},
 	cli.BoolFlag{
 		Name:  "versions",
-		Usage: "Select multiple versions for each object",
+		Usage: "remote tags on multiple versions of an object",
 	},
 }
 
