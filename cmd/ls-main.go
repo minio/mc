@@ -165,8 +165,7 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, 
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
 			_, buckNameEmpty := err.ToGoError().(BucketNameEmpty)
-			_, noPath := err.ToGoError().(PathNotFound)
-			if buckNameEmpty || noPath {
+			if buckNameEmpty {
 				continue
 			}
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
