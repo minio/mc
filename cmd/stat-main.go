@@ -29,6 +29,18 @@ import (
 // stat specific flags.
 var (
 	statFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "stat on older version(s)",
+		},
+		cli.BoolFlag{
+			Name:  "versions",
+			Usage: "stat all versions",
+		},
+		cli.StringFlag{
+			Name:  "version-id, vid",
+			Usage: "stat a specific object version",
+		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "stat all objects recursively",
@@ -71,11 +83,17 @@ EXAMPLES:
   5. Stat encrypted files on Amazon S3 cloud storage. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/personal-document/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/personal-document/2019-account_report.docx
+
+  6. Stat a specific object version.
+     {{.Prompt}} {{.HelpName}} --version-id "CL3sWgdSN2pNntSf6UnZAuh2kcu8E8si" s3/personal-docs/2018-account_report.docx
+
+  7. Stat all objects versions recursively created before 1st January 2020.
+     {{.Prompt}} {{.HelpName}} --versions --rewind 2020.01.01T00:00 s3/personal-docs/
 `,
 }
 
-// checkStatSyntax - validate all the passed arguments
-func checkStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+// parseAndCheckStatSyntax - parse and validate all the passed arguments
+func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
 		cli.ShowCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
 	}
@@ -86,16 +104,32 @@ func checkStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
 		}
 	}
+
+	recursive := cliCtx.Bool("recursive")
+	versionID := cliCtx.String("version-id")
+	withVersions := cliCtx.Bool("versions")
+	rewind := parseRewindFlag(cliCtx.String("rewind"))
+
 	// extract URLs.
 	URLs := cliCtx.Args()
 	isIncomplete := false
 
+	if versionID != "" && len(args) > 1 {
+		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --version-id with multiple arguments.")
+	}
+
+	if versionID != "" && (recursive || withVersions || !rewind.IsZero()) {
+		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --version-id with either --rewind, --versions or --recursive.")
+	}
+
 	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{})
+		_, _, err := url2Stat(ctx, url, versionID, false, encKeyDB, rewind)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
 	}
+
+	return URLs, recursive, versionID, rewind, withVersions
 }
 
 // mainStat - is a handler for mc stat command
@@ -115,20 +149,19 @@ func mainStat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'stat' cli arguments.
-	checkStatSyntax(ctx, cliCtx, encKeyDB)
+	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx, encKeyDB)
+	if withVersions && rewind.IsZero() {
+		rewind = time.Now().UTC()
+	}
 
-	// Set command flags from context.
-	isRecursive := cliCtx.Bool("recursive")
-
-	args := cliCtx.Args()
 	// mimic operating system tool behavior.
-	if !cliCtx.Args().Present() {
+	if len(args) == 0 {
 		args = []string{"."}
 	}
 
 	var cErr error
 	for _, targetURL := range args {
-		stats, err := statURL(ctx, targetURL, "", false, isRecursive, encKeyDB)
+		stats, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
 		if err != nil {
 			fatalIf(err, "Unable to stat `"+targetURL+"`.")
 		}
