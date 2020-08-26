@@ -2338,13 +2338,17 @@ func (c *S3Client) GetObjectLockConfig(ctx context.Context) (minio.RetentionMode
 }
 
 // GetTags - Get tags of bucket or object.
-func (c *S3Client) GetTags(ctx context.Context) (map[string]string, *probe.Error) {
+func (c *S3Client) GetTags(ctx context.Context, versionID string) (map[string]string, *probe.Error) {
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
 	}
 
 	if objectName == "" {
+		if versionID != "" {
+			return nil, probe.NewError(errors.New("getting bucket tags does not support versioning parameters"))
+		}
+
 		tags, err := c.api.GetBucketTagging(ctx, bucketName)
 		if err != nil {
 			return nil, probe.NewError(err)
@@ -2353,7 +2357,7 @@ func (c *S3Client) GetTags(ctx context.Context) (map[string]string, *probe.Error
 		return tags.ToMap(), nil
 	}
 
-	tags, err := c.api.GetObjectTagging(ctx, bucketName, objectName, minio.GetObjectTaggingOptions{})
+	tags, err := c.api.GetObjectTagging(ctx, bucketName, objectName, minio.GetObjectTaggingOptions{VersionID: versionID})
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
@@ -2362,7 +2366,7 @@ func (c *S3Client) GetTags(ctx context.Context) (map[string]string, *probe.Error
 }
 
 // SetTags - Set tags of bucket or object.
-func (c *S3Client) SetTags(ctx context.Context, tagString string) *probe.Error {
+func (c *S3Client) SetTags(ctx context.Context, versionID, tagString string) *probe.Error {
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -2374,9 +2378,12 @@ func (c *S3Client) SetTags(ctx context.Context, tagString string) *probe.Error {
 	}
 
 	if objectName == "" {
+		if versionID != "" {
+			return probe.NewError(errors.New("setting bucket tags does not support versioning parameters"))
+		}
 		err = c.api.SetBucketTagging(ctx, bucketName, tags)
 	} else {
-		err = c.api.PutObjectTagging(ctx, bucketName, objectName, tags, minio.PutObjectTaggingOptions{})
+		err = c.api.PutObjectTagging(ctx, bucketName, objectName, tags, minio.PutObjectTaggingOptions{VersionID: versionID})
 	}
 
 	if err != nil {
@@ -2387,7 +2394,7 @@ func (c *S3Client) SetTags(ctx context.Context, tagString string) *probe.Error {
 }
 
 // DeleteTags - Delete tags of bucket or object
-func (c *S3Client) DeleteTags(ctx context.Context) *probe.Error {
+func (c *S3Client) DeleteTags(ctx context.Context, versionID string) *probe.Error {
 	bucketName, objectName := c.url2BucketAndObject()
 	if bucketName == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -2395,9 +2402,12 @@ func (c *S3Client) DeleteTags(ctx context.Context) *probe.Error {
 
 	var err error
 	if objectName == "" {
+		if versionID != "" {
+			return probe.NewError(errors.New("setting bucket tags does not support versioning parameters"))
+		}
 		err = c.api.RemoveBucketTagging(ctx, bucketName)
 	} else {
-		err = c.api.RemoveObjectTagging(ctx, bucketName, objectName, minio.RemoveObjectTaggingOptions{})
+		err = c.api.RemoveObjectTagging(ctx, bucketName, objectName, minio.RemoveObjectTaggingOptions{VersionID: versionID})
 	}
 
 	if err != nil {

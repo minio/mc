@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -26,12 +27,25 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
+var tagSetFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "Set tags of particular object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "Go back in time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "Select multiple versions for an object",
+	},
+}
+
 var tagSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set tags for a bucket(s) and object(s)",
-	Action: mainSetTag,
+	Name: "set", Usage: "set tags for a bucket and object(s)", Action: mainSetTag,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(tagSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -48,20 +62,33 @@ EXAMPLES:
   1. Assign tags to an object.
      {{.Prompt}} {{.HelpName}} play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 
-  2. Assign tags to a bucket.
+  2. Assign tags to a particuler version of an object.
+     {{.Prompt}} {{.HelpName}} --version-id "ieQq7aXsyhlhDt47YURGlrucYY3GxWHa" play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+
+  3. Assign tags to a object versions older than one week.
+     {{.Prompt}} {{.HelpName}} --versions --rewind 7d play/testbucket/testobject "key1=value1&key2=value2&key3=value3"
+
+  4. Assign tags to a bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket "key1=value1&key2=value2&key3=value3"
 `,
 }
 
 // tagSetTagMessage structure will show message depending on the type of console.
 type tagSetMessage struct {
-	Status string `json:"status"`
-	Name   string `json:"name"`
+	Status    string `json:"status"`
+	Name      string `json:"name"`
+	VersionID string `json:"versionID"`
 }
 
 // tagSetMessage console colorized output.
 func (t tagSetMessage) String() string {
-	return console.Colorize("List", "Tags set for "+t.Name+".")
+	var msg string
+	msg += "Tags set for " + t.Name
+	if t.VersionID != "" {
+		msg += " (" + t.VersionID + ")"
+	}
+	msg += "."
+	return console.Colorize("List", msg)
 }
 
 // JSON tagSetMessage.
@@ -71,30 +98,69 @@ func (t tagSetMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func checkSetTagSyntax(ctx *cli.Context) {
+func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
 		cli.ShowCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
 	}
+
+	targetURL = ctx.Args().Get(0)
+	tags = ctx.Args().Get(1)
+	versionID = ctx.String("version-id")
+	withVersions = ctx.Bool("versions")
+	rewind := ctx.String("rewind")
+
+	if versionID != "" && (rewind != "" || withVersions) {
+		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
+	}
+
+	timeRef = parseRewindFlag(rewind)
+	return
+}
+
+// Set tags to a bucket or to a specified object/version
+func setTags(ctx context.Context, clnt Client, versionID, tags string, verbose bool) {
+	targetName := clnt.GetURL().String()
+	if versionID != "" {
+		targetName += " (" + versionID + ")"
+	}
+
+	err := clnt.SetTags(ctx, versionID, tags)
+	if err != nil {
+		fatalIf(err.Trace(tags), "Failed to set tags for "+targetName)
+		return
+	}
+	printMsg(tagSetMessage{
+		Status:    "success",
+		Name:      clnt.GetURL().String(),
+		VersionID: versionID,
+	})
+
 }
 
 func mainSetTag(cliCtx *cli.Context) error {
 	ctx, cancelSetTag := context.WithCancel(globalContext)
 	defer cancelSetTag()
 
-	checkSetTagSyntax(cliCtx)
 	console.SetColor("List", color.New(color.FgGreen))
 
-	targetURL := cliCtx.Args().Get(0)
-	tags := cliCtx.Args().Get(1)
+	targetURL, versionID, timeRef, withVersions, tags := parseSetTagSyntax(cliCtx)
+	if timeRef.IsZero() && withVersions {
+		timeRef = time.Now().UTC()
+	}
 
 	clnt, err := newClient(targetURL)
 	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
-	fatalIf(clnt.SetTags(ctx, tags).Trace(tags), "Failed to set tags for "+targetURL)
+	if timeRef.IsZero() && !withVersions {
+		setTags(ctx, clnt, versionID, tags, true)
+	} else {
+		for content := range clnt.List(ctx, ListOptions{timeRef: timeRef, withOlderVersions: withVersions}) {
+			if content.Err != nil {
+				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			}
+			setTags(ctx, clnt, content.VersionID, tags, false)
+		}
+	}
 
-	printMsg(tagSetMessage{
-		Status: "success",
-		Name:   targetURL,
-	})
 	return nil
 }

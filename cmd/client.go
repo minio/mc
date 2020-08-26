@@ -128,9 +128,9 @@ type Client interface {
 	AddUserAgent(app, version string)
 
 	// Tagging operations
-	GetTags(ctx context.Context) (map[string]string, *probe.Error)
-	SetTags(ctx context.Context, tags string) *probe.Error
-	DeleteTags(ctx context.Context) *probe.Error
+	GetTags(ctx context.Context, versionID string) (map[string]string, *probe.Error)
+	SetTags(ctx context.Context, versionID, tags string) *probe.Error
+	DeleteTags(ctx context.Context, versionID string) *probe.Error
 
 	// Lifecycle operations
 	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error)
