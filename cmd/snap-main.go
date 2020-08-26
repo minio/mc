@@ -28,7 +28,7 @@ import (
 // Snapshot command
 var snapCmd = cli.Command{
 	Name:            "snap",
-	Usage:           "generate snapshots for commands",
+	Usage:           "generate snapshots of S3 objects",
 	Action:          mainSnap,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
