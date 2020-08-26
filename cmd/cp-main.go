@@ -39,7 +39,7 @@ var (
 	cpFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "rollback object(s) to older version(s)",
+			Usage: "roll back object(s) to current version at specified time",
 		},
 		cli.StringFlag{
 			Name:  "version-id, vid",

@@ -30,15 +30,15 @@ import (
 var tagSetFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "version-id, vid",
-		Usage: "Set tags of particular object version",
+		Usage: "set tags on a specific object version",
 	},
 	cli.StringFlag{
 		Name:  "rewind",
-		Usage: "Go back in time",
+		Usage: "set tags on a specific object version at specific time",
 	},
 	cli.BoolFlag{
 		Name:  "versions",
-		Usage: "Select multiple versions for an object",
+		Usage: "set tags on multiple versions for an object",
 	},
 }
 
