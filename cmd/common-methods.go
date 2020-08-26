@@ -141,14 +141,21 @@ func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefi
 }
 
 // getSourceStreamMetadataFromURL gets a reader from URL.
-func getSourceStreamMetadataFromURL(ctx context.Context, urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser,
+func getSourceStreamMetadataFromURL(ctx context.Context, aliasedURL, versionID string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser,
 	metadata map[string]string, err *probe.Error) {
-	alias, urlStrFull, _, err := expandAlias(urlStr)
+	alias, urlStrFull, _, err := expandAlias(aliasedURL)
 	if err != nil {
-		return nil, nil, err.Trace(urlStr)
+		return nil, nil, err.Trace(aliasedURL)
 	}
-	sseKey := getSSE(urlStr, encKeyDB[alias])
-	return getSourceStream(ctx, alias, urlStrFull, "", true, sseKey, false)
+	if !timeRef.IsZero() {
+		_, content, err := url2Stat(ctx, aliasedURL, "", false, nil, timeRef)
+		if err != nil {
+			return nil, nil, err
+		}
+		versionID = content.VersionID
+	}
+	sseKey := getSSE(aliasedURL, encKeyDB[alias])
+	return getSourceStream(ctx, alias, urlStrFull, versionID, true, sseKey, false)
 }
 
 // getSourceStreamFromURL gets a reader from URL.

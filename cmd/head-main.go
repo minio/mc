@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -37,6 +38,14 @@ var (
 			Name:  "n,lines",
 			Usage: "print the first 'n' lines",
 			Value: 10,
+		},
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "Move back in time",
+		},
+		cli.StringFlag{
+			Name:  "version-id, vid",
+			Usage: "Select an object version to display",
 		},
 	}
 )
@@ -77,7 +86,7 @@ EXAMPLES:
 }
 
 // headURL displays contents of a URL to stdout.
-func headURL(sourceURL string, encKeyDB map[string][]prefixSSEPair, nlines int64) *probe.Error {
+func headURL(sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, nlines int64) *probe.Error {
 	var reader io.ReadCloser
 	switch sourceURL {
 	case "-":
@@ -85,7 +94,7 @@ func headURL(sourceURL string, encKeyDB map[string][]prefixSSEPair, nlines int64
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if reader, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, encKeyDB); err != nil {
+		if reader, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, sourceVersion, timeRef, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]
@@ -150,17 +159,34 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 	return nil
 }
 
+// parseHeadSyntax performs command-line input validation for head command.
+func parseHeadSyntax(ctx *cli.Context) (args []string, versionID string, timeRef time.Time) {
+	args = ctx.Args()
+
+	versionID = ctx.String("version-id")
+	rewind := ctx.String("rewind")
+
+	if versionID != "" && rewind != "" {
+		fatalIf(errInvalidArgument().Trace(), "You cannot specify --version-id and --rewind at the same time")
+	}
+
+	if versionID != "" && len(args) != 1 {
+		fatalIf(errInvalidArgument().Trace(), "You need to pass at least one argument if --version-id is specified")
+	}
+
+	timeRef = parseRewindFlag(rewind)
+	return
+}
+
 // mainHead is the main entry point for head command.
 func mainHead(ctx *cli.Context) error {
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
-	// Set command flags from context.
-	stdinMode := false
-	if !ctx.Args().Present() {
-		stdinMode = true
-	}
+	args, versionID, timeRef := parseHeadSyntax(ctx)
+
+	stdinMode := len(args) == 0
 
 	// handle std input data.
 	if stdinMode {
@@ -170,7 +196,7 @@ func mainHead(ctx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range ctx.Args() {
-		fatalIf(headURL(url, encKeyDB, ctx.Int64("lines")).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(headURL(url, versionID, timeRef, encKeyDB, ctx.Int64("lines")).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil
