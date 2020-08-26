@@ -32,7 +32,7 @@ var (
 			Usage: "share all objects recursively",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
+			Name:  "version-id, vid",
 			Usage: "share a particular object version",
 		},
 		shareFlagExpire,

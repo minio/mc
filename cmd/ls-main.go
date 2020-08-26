@@ -34,11 +34,11 @@ var (
 	lsFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "back in time",
+			Usage: "list all object versions no later than specified date",
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "List all versions",
+			Usage: "list all versions",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",

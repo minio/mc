@@ -43,11 +43,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "move back in time",
+			Usage: "include all object versions no later than specified date",
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "include all objects versions",
+			Usage: "include all object versions",
 		},
 	}
 )

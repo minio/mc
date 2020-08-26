@@ -431,9 +431,10 @@ USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  --rewind value                go back in time by specifying duration or a specific time
-  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
-  --help, -h                    show help
+  --rewind value                   display an earlier object version
+  --version-id value, --vid value  display a specific version of an object
+  --encrypt-key value              encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                       show help
 
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
@@ -889,19 +890,20 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --versions                    remove object(s) and all its versions
-  --rewind value                revert to older version of object(s) in time
-  --version-id value            delete a specific version of an object
-  --recursive, -r               remove recursively
-  --force                       allow a recursive remove operation
-  --dangerous                   allow site-wide removal of objects
-  --incomplete, -I              remove incomplete uploads
-  --fake                        perform a fake remove operation
-  --stdin                       read object names from STDIN
-  --older-than value            remove objects older than L days, M hours and N minutes LMN[d|h|m]. (default: 0)
-  --newer-than value            remove objects newer than L days, M hours and N minutes LMN[d|h|m]. (default: 0)
-  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
-  --help, -h                    show help
+  --versions                       remove object(s) and all its versions
+  --rewind value                   roll back object(s) to current versions at specified time
+  --version-id value, --vid value  delete a specific version of an object
+  --recursive, -r                  remove recursively
+  --force                          allow a recursive remove operation
+  --dangerous                      allow site-wide removal of objects
+  --incomplete, -I                 remove incomplete uploads
+  --fake                           perform a fake remove operation
+  --stdin                          read object names from STDIN
+  --older-than value               remove objects older than L days, M hours and N minutes
+  --newer-than value               remove objects newer than L days, M hours and N minutes
+  --bypass                         bypass governance
+  --encrypt-key value              encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                       show help
 
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
@@ -1637,7 +1639,7 @@ Replication configuration rule applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Disable replication configuration rule with rule Id "bsibgh8t874dnjst8hkg" on bucket "mybucket" with prefix "prefix" for alias `myminio`*
-     
+
 ```
 mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
