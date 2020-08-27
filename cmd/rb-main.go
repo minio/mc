@@ -167,13 +167,7 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 	}()
 
 	for perr := range errorCh {
-		switch perr.ToGoError().(type) {
-		case PathInsufficientPermission:
-			errorIf(perr.Trace(url), "Failed to remove `"+url+"`.")
-			// Ignore Permission error.
-			continue
-		}
-		return perr
+		errorIf(perr.Trace(url), "Failed to remove `"+url+"`, continuing..")
 	}
 	return nil
 }
