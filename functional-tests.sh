@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# MinIO Client (C) 2017 MinIO, Inc.
+# MinIO Client (C) 2017-2020 MinIO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ declare -a MC_CMD
 
 function get_md5sum()
 {
-    filename="$FILE_1_MB"
+    filename="$1"
     out=$(md5sum "$filename" 2>/dev/null)
     rv=$?
     if [ "$rv" -eq 0 ]; then
@@ -432,7 +432,7 @@ function test_presigned_put_object()
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to upload $FILE_1_MB presigned put object url"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
-    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_65_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
@@ -472,6 +472,21 @@ function test_cat_object()
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
+
+function test_cat_stdin()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    echo "testcontent" | "${MC_CMD[@]}" cat > stdin.output
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to redirect stdin to stdout using 'mc cat'"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "42ed9fb3563d8e9c7bb522be443033f4" stdin.output
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm stdin.output
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 
 function test_mirror_list_objects()
 {
@@ -853,6 +868,7 @@ function run_test()
     test_presigned_put_object
     test_presigned_get_object
     test_cat_object
+    test_cat_stdin
     test_mirror_list_objects
     test_mirror_list_objects_storage_class
     test_copy_object_preserve_filesystem_attr

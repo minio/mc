@@ -154,9 +154,6 @@ func parseCatSyntax(ctx *cli.Context) (args []string, versionID string, timeRef 
 		fatalIf(errInvalidArgument().Trace(), "You need to pass at least one argument if --version-id is specified")
 	}
 
-	if len(args) == 0 {
-		args = []string{"-"}
-	}
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag `%s` passed.", arg))
