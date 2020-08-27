@@ -718,7 +718,7 @@ function test_copy_object_with_sse_rewrite()
     # now do a server side copy and store it unencrypted.
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     # cat the unencrypted destination object. should return data without any error
-    assert_success "$start_time" "${FUNCNAME[0]}" "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
+    "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" >"${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
@@ -745,7 +745,7 @@ function test_copy_object_with_sse_dest()
     # now do a server side copy and store it eith different encryption key.
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1},${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     # cat the destination object with the new key. should return data without any error
-    assert_success "$start_time" "${FUNCNAME[0]}" "${MC_CMD[@]}" cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
+    "${MC_CMD[@]}" cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
@@ -774,7 +774,7 @@ function test_sse_key_rotation()
     # now do a server side copy on same object and do a key rotation
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1},${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
     # cat the object with the new key. should return data without any error
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
+    "${MC_CMD[@]}" cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
