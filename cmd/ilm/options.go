@@ -100,16 +100,17 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 
 // LifecycleOptions is structure to encapsulate
 type LifecycleOptions struct {
-	ID             string
-	Prefix         string
-	Status         bool
-	IsTagsSet      bool
-	Tags           string
-	ExpiryDate     string
-	ExpiryDays     string
-	TransitionDate string
-	TransitionDays string
-	StorageClass   string
+	ID                string
+	Prefix            string
+	Status            bool
+	IsTagsSet         bool
+	IsStorageClassSet bool
+	Tags              string
+	ExpiryDate        string
+	ExpiryDays        string
+	TransitionDate    string
+	TransitionDays    string
+	StorageClass      string
 }
 
 // ToConfig create lifecycle.Configuration based on LifecycleOptions
@@ -153,7 +154,7 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 		if rule.ID != newRule.ID {
 			continue
 		}
-		config.Rules[i] = applyRuleFields(newRule, config.Rules[i], opts.IsTagsSet)
+		config.Rules[i] = applyRuleFields(newRule, config.Rules[i], opts)
 		if err := validateILMRule(config.Rules[i]); err != nil {
 			return nil, err.Trace(opts.ID)
 		}
@@ -182,21 +183,22 @@ func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
 		prefix = result[len(result)-1]
 	}
 	return LifecycleOptions{
-		ID:             id,
-		Prefix:         prefix,
-		Status:         !ctx.Bool("disable"),
-		IsTagsSet:      ctx.IsSet("tags"),
-		Tags:           ctx.String("tags"),
-		ExpiryDate:     ctx.String("expiry-date"),
-		ExpiryDays:     ctx.String("expiry-days"),
-		TransitionDate: ctx.String("transition-date"),
-		TransitionDays: ctx.String("transition-days"),
-		StorageClass:   ctx.String("storage-class"),
+		ID:                id,
+		Prefix:            prefix,
+		Status:            !ctx.Bool("disable"),
+		IsTagsSet:         ctx.IsSet("tags"),
+		IsStorageClassSet: ctx.IsSet("storage-class"),
+		Tags:              ctx.String("tags"),
+		ExpiryDate:        ctx.String("expiry-date"),
+		ExpiryDays:        ctx.String("expiry-days"),
+		TransitionDate:    ctx.String("transition-date"),
+		TransitionDays:    ctx.String("transition-days"),
+		StorageClass:      ctx.String("storage-class"),
 	}
 }
 
 // Applies non empty fields from src to dest Rule and return the dest Rule
-func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, isTagFlagSet bool) lifecycle.Rule {
+func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOptions) lifecycle.Rule {
 	// since prefix is a part of command args, it is always present in the src rule and
 	// it should be always set to the destination.
 	dest.RuleFilter.Prefix = src.RuleFilter.Prefix
@@ -209,16 +211,21 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, isTagFlagSet bool)
 	}
 
 	if src.RuleFilter.And.Tags == nil {
-		if isTagFlagSet {
+		if opts.IsTagsSet {
 			// If src tags is empty and isTagFlagSet then user provided the --tag flag with "" value
 			// dest tags should be deleted
 			dest.RuleFilter.And.Tags = []lifecycle.Tag{}
 			dest.RuleFilter.And.Prefix = ""
 			dest.RuleFilter.Prefix = src.RuleFilter.Prefix
 		} else {
-			// Update prefixes only
-			dest.RuleFilter.And.Prefix = src.RuleFilter.Prefix
-			dest.RuleFilter.Prefix = ""
+			if dest.RuleFilter.And.Tags != nil {
+				// Update prefixes only
+				dest.RuleFilter.And.Prefix = src.RuleFilter.Prefix
+				dest.RuleFilter.Prefix = ""
+			} else {
+				dest.RuleFilter.Prefix = src.RuleFilter.Prefix
+				dest.RuleFilter.And.Prefix = ""
+			}
 		}
 	}
 
@@ -243,7 +250,7 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, isTagFlagSet bool)
 		dest.Transition.Date = lifecycle.ExpirationDate{}
 	}
 
-	if src.Transition.StorageClass != "" {
+	if opts.IsStorageClassSet {
 		dest.Transition.StorageClass = src.Transition.StorageClass
 	}
 
