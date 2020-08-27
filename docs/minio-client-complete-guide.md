@@ -794,7 +794,7 @@ myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 <a name="mv"></a>
 ### Command `mv`
-`mv` command movies data from one or more sources to a target.  All move operations to object storage are verified with MD5SUM checksums. Interrupted or failed move operations can be resumed from the point of failure.
+`mv` command moves data from one or more sources to a target.  All move operations to object storage are verified with MD5SUM checksums. Interrupted or failed move operations can be resumed from the point of failure.
 
 ```
 USAGE:
