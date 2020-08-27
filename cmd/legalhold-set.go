@@ -34,16 +34,16 @@ var (
 			Usage: "apply legal hold recursively",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
+			Name:  "version-id, vid",
 			Usage: "apply legal hold to a specific object version",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "Move back in time",
+			Usage: "apply legal hold on an object version at specified time",
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "apply legal hold for all versions",
+			Usage: "apply legal hold on multiple versions of an object",
 		},
 	}
 )

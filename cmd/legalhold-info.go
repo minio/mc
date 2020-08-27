@@ -33,19 +33,19 @@ var (
 	lhInfoFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "show legalhold information recursively",
+			Usage: "show legal hold status recursively",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
-			Usage: "show legalhold information of a specific object version",
+			Name:  "version-id, vid",
+			Usage: "show legal hold status of a specific object version",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "Move back in time",
+			Usage: "show legal hold status of an object version at specified time",
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "show legalhold information for all versions",
+			Usage: "show legal hold status of multiple versions of an object",
 		},
 	}
 )
