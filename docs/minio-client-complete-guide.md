@@ -1665,7 +1665,7 @@ USAGE:
 
 COMMANDS:
   add     add a server side replication configuration rule
-  set     modify an existing server side replication cofiguration rule
+  edit    modify an existing server side replication cofiguration rule
   ls      list server side replication configuration rules
   export  export server side replication configuration
   import  import server side replication configuration in JSON format
@@ -1675,34 +1675,46 @@ FLAGS:
   --help, -h                    show help
 ```
 
-*Example: Add replication configuration rule on `mybucket` on alias `myminio`*
+*Example: Add replication configuration rule on `mybucket` on alias `myminio`.Enable delete marker replication and replication of versioned deletes for the configuration*
 
 ```
-mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --remote-bucket destbucket
+mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --remote-bucket destbucket --replicate "delete-marker,delete"
 Replication configuration rule applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Disable replication configuration rule with rule Id "bsibgh8t874dnjst8hkg" on bucket "mybucket" with prefix "prefix" for alias `myminio`*
 
 ```
-mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias `myminio`.*
 
 ```
-mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
 *Example: Clear tags on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"*
 
 ```
-mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 
+*Example: Enable delete marker replication and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
+
+```
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate "delete,delete-marker"
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
+```
+*Example: Disable delete marker and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
+
+```
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate ""
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
+```
 *Example: List replication configuration rules set on `mybucket` on alias `myminio`*
 
 ```
