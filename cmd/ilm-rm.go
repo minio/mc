@@ -41,9 +41,9 @@ var ilmRemoveFlags = []cli.Flag{
 	},
 }
 
-var ilmRemoveCmd = cli.Command{
-	Name:   "remove",
-	Usage:  "remove (if any) existing lifecycle configuration rule with the id",
+var ilmRmCmd = cli.Command{
+	Name:   "rm",
+	Usage:  "remove (if any) existing lifecycle configuration rule",
 	Action: mainILMRemove,
 	Before: setGlobalsFromContext,
 	Flags:  append(ilmRemoveFlags, globalFlags...),
@@ -61,12 +61,12 @@ DESCRIPTION:
   all the lifecycle rules on a bucket with '--all --force' option.
 
 EXAMPLES:
-  1. Remove the lifecycle management configuration rule given by ID "Documents" for testbucket on alias 'myminio'. ID is case sensitive.
-     {{.Prompt}} {{.HelpName}} --id "Documents" myminio/testbucket
+  1. Remove the lifecycle management configuration rule given by ID "bgrt1ghju" for mybucket on alias 'myminio'. ID is case sensitive.
+     {{.Prompt}} {{.HelpName}} --id "bgrt1ghju" myminio/mybucket
 
-  2. Remove ALL the lifecycle management configuration rules for testbucket on alias 'myminio'.
+  2. Remove ALL the lifecycle management configuration rules for mybucket on alias 'myminio'.
      Because the result is complete removal, the use of --force flag is enforced.
-     {{.Prompt}} {{.HelpName}} --all --force myminio/testbucket
+     {{.Prompt}} {{.HelpName}} --all --force myminio/mybucket
 `,
 }
 
@@ -93,7 +93,7 @@ func (i ilmRmMessage) JSON() string {
 
 func checkILMRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "remove", globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "rm", globalErrorExitStatus)
 	}
 
 	ilmAll := ctx.Bool("all")

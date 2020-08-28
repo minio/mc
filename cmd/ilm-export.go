@@ -42,11 +42,11 @@ DESCRIPTION:
   Exports lifecycle configuration in JSON format to STDOUT.
 
 EXAMPLES:
-  1. Export lifecycle configuration for 'testbucket' to 'lifecycle.json' file.
-     {{.Prompt}} {{.HelpName}} myminio/testbucket > lifecycle.json
+  1. Export lifecycle configuration for 'mybucket' to 'lifecycle.json' file.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket > lifecycle.json
 
-  2. Print lifecycle configuration for 'testbucket' to STDOUT.
-     {{.Prompt}} {{.HelpName}} play/testbucket
+  2. Print lifecycle configuration for 'mybucket' to STDOUT.
+     {{.Prompt}} {{.HelpName}} play/mybucket
 `,
 }
 

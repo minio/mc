@@ -51,8 +51,8 @@ func extractILMTags(tagLabelVal string) []lifecycle.Tag {
 // For example: Transition has to happen before Expiry.
 // Storage class must be specified if transition date/days is provided.
 func validateTranExpDate(rule lifecycle.Rule) error {
-	expiryDateSet := rule.Expiration.IsDateNull()
-	expiryDaySet := rule.Expiration.IsDaysNull()
+	expiryDateSet := !rule.Expiration.IsDateNull()
+	expiryDaySet := !rule.Expiration.IsDaysNull()
 
 	transitionSet := !rule.Transition.IsNull()
 	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
@@ -67,6 +67,12 @@ func validateTranExpDate(rule lifecycle.Rule) error {
 		if rule.Transition.Days >= rule.Expiration.Days {
 			return errors.New(errMsg)
 		}
+	}
+	if transitionDateSet && rule.Transition.StorageClass == "" {
+		return errors.New("if storage class is set a valid transitionDate or transitionDay must be set")
+	}
+	if transitionDaySet && rule.Transition.StorageClass == "" {
+		return errors.New("if storage class is set a valid transitionDate or transitionDay must be set")
 	}
 	return nil
 }
@@ -132,25 +138,20 @@ func validateILMRule(rule lifecycle.Rule) *probe.Error {
 // Returns valid lifecycleTransition to be included in lifecycleRule
 func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (transition lifecycle.Transition, err *probe.Error) {
 	storageClass = strings.ToUpper(storageClass) // Just-in-case the user has entered lower case characters.
-	if storageClass != "" {
-		if transitionDateStr != "" {
-			transitionDate, e := time.Parse(defaultILMDateFormat, transitionDateStr)
-			if e != nil {
-				return lifecycle.Transition{}, probe.NewError(e)
-			}
-			transition.Date = lifecycle.ExpirationDate{Time: transitionDate}
-		} else if transitionDayStr != "" {
-			transitionDay, e := strconv.Atoi(transitionDayStr)
-			if e != nil {
-				return lifecycle.Transition{}, probe.NewError(e)
-			}
-			transition.Days = lifecycle.ExpirationDays(transitionDay)
-		} else {
-			return lifecycle.Transition{}, probe.NewError(errors.New("if storage class is set a valid transitionDate or transitionDay must be set"))
+	if transitionDateStr != "" {
+		transitionDate, e := time.Parse(defaultILMDateFormat, transitionDateStr)
+		if e != nil {
+			return lifecycle.Transition{}, probe.NewError(e)
 		}
-		transition.StorageClass = storageClass
+		transition.Date = lifecycle.ExpirationDate{Time: transitionDate}
+	} else if transitionDayStr != "" {
+		transitionDay, e := strconv.Atoi(transitionDayStr)
+		if e != nil {
+			return lifecycle.Transition{}, probe.NewError(e)
+		}
+		transition.Days = lifecycle.ExpirationDays(transitionDay)
 	}
-
+	transition.StorageClass = storageClass
 	return transition, nil
 }
 

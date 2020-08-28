@@ -40,15 +40,11 @@ var ilmListFlags = []cli.Flag{
 		Name:  "transition",
 		Usage: "display only transition fields",
 	},
-	cli.BoolFlag{
-		Name:  "minimum",
-		Usage: "display minimum fields such as (id, prefix, status, transition set, expiry set)",
-	},
 }
 
-var ilmListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "pretty print bucket lifecycle configuration",
+var ilmLsCmd = cli.Command{
+	Name:   "ls",
+	Usage:  "lists lifecycle configuration rules set on a bucket",
 	Action: mainILMList,
 	Before: setGlobalsFromContext,
 	Flags:  append(ilmListFlags, globalFlags...),
@@ -62,23 +58,20 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-  Pretty prints lifecycle configuration set on a bucket.
+  List lifecycle configuration rules set on a bucket.
 
 EXAMPLES:
-  1. List the lifecycle management rules (all fields) for testbucket on alias 'myminio'.
-     {{.Prompt}} {{.HelpName}} myminio/testbucket
+  1. List the lifecycle management rules (all fields) for mybucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 
-  2. List the lifecycle management rules (expration date/days fields) for testbucket on alias 'myminio'.
-     {{.Prompt}} {{.HelpName}} --expiry myminio/testbucket
+  2. List the lifecycle management rules (expration date/days fields) for mybucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --expiry myminio/mybucket
 
-  3. List the lifecycle management rules (transition date/days, storage class fields) for testbucket on alias 'myminio'.
-     {{.Prompt}} {{.HelpName}} --transition myminio/testbucket
+  3. List the lifecycle management rules (transition date/days, storage class fields) for mybucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --transition myminio/mybucket
 
-  4. List the lifecycle management rules (minimum details) for testbucket on alias 'myminio'.
-     {{.Prompt}} {{.HelpName}} --minimum myminio/testbucket
-
-  5. List the lifecycle management rules in JSON format for testbucket on alias 'myminio'.
-     {{.Prompt}} {{.HelpName}} --json myminio/testbucket
+  4. List the lifecycle management rules in JSON format for mybucket on alias 'myminio'.
+     {{.Prompt}} {{.HelpName}} --json myminio/mybucket
 `,
 }
 
@@ -92,9 +85,9 @@ type ilmListMessage struct {
 func (i ilmListMessage) String() string {
 	showExpiry := i.Context.Bool("expiry")
 	showTransition := i.Context.Bool("transition")
-	showMinimum := i.Context.Bool("minimum")
+
 	// If none of the flags are explicitly mentioned, all fields are shown.
-	showAll := !showExpiry && !showTransition && !showMinimum
+	showAll := !showExpiry && !showTransition
 
 	var hdrLabelIndexMap map[string]int
 	var alignedHdrLabels []string
@@ -105,7 +98,7 @@ func (i ilmListMessage) String() string {
 
 	ilm.PopulateILMDataForDisplay(i.Config, &hdrLabelIndexMap, &alignedHdrLabels,
 		&cellDataNoTags, &cellDataWithTags, &tagRows,
-		showAll, showMinimum, showExpiry, showTransition)
+		showAll, showExpiry, showTransition)
 
 	// Entire table content.
 	var tblContents string
@@ -149,10 +142,9 @@ func (i ilmListMessage) JSON() string {
 	return string(msgBytes)
 }
 
-// validateILMListFlagSet - Only one of these flags needs to be set for display: --json, --expiry, --transition, --minimum
+// validateILMListFlagSet - Only one of these flags needs to be set for display: --json, --expiry, --transition
 func validateILMListFlagSet(ctx *cli.Context) bool {
-	var flags = [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json"),
-		ctx.Bool("minimum")}
+	var flags = [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json")}
 	found := false
 	for _, flag := range flags {
 		if found && flag {
@@ -167,11 +159,11 @@ func validateILMListFlagSet(ctx *cli.Context) bool {
 // checkILMListSyntax - validate arguments passed by a user
 func checkILMListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "ls", globalErrorExitStatus)
 	}
 
 	if !validateILMListFlagSet(ctx) {
-		fatalIf(errInvalidArgument(), "only one display field flag is allowed per list command. Refer mc "+ctx.Command.FullName()+" --help.")
+		fatalIf(errInvalidArgument(), "only one display field flag is allowed per ls command. Refer mc "+ctx.Command.FullName()+" --help.")
 	}
 }
 
@@ -273,7 +265,7 @@ func mainILMList(cliCtx *cli.Context) error {
 
 	if len(ilmCfg.Rules) == 0 {
 		fatalIf(probe.NewError(errors.New("lifecycle configuration not set")).Trace(urlStr),
-			"Unable to list lifecycle configuration")
+			"Unable to ls lifecycle configuration")
 	}
 
 	printMsg(ilmListMessage{

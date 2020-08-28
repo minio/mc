@@ -24,7 +24,7 @@ import (
 
 const (
 	// rule ID field column width in table output
-	idColumnWidth int = 16
+	idColumnWidth int = 22
 	// rule prefix field column width in table output
 	prefixColumnWidth int = 16
 	// StatusColumnWidth column width in table output
@@ -34,7 +34,7 @@ const (
 	// ExpiryDatesColumnWidth column width in table output
 	expiryDatesColumnWidth int = 14
 	// TagsColumnWidth column width in table output
-	tagsColumnWidth int = 18
+	tagsColumnWidth int = 24
 	// TransitionColumnWidth column width in table output
 	transitionColumnWidth int = 14
 	// TransitionDateColumnWidth column width in table output
@@ -97,14 +97,13 @@ type showDetails struct {
 	allAvailable bool
 	expiry       bool
 	transition   bool
-	minimum      bool
 }
 
 // PopulateILMDataForDisplay based on showDetails determined by user input, populate the ILM display
 // table with information. Table is constructed row-by-row. Headers are first, then the rest of the rows.
 func PopulateILMDataForDisplay(ilmCfg *lifecycle.Configuration, rowCheck *map[string]int, alignedHdrLabels *[]string,
 	cellDataNoTags *[][]string, cellDataWithTags *[][]string, tagRows *map[string][]string,
-	showAll, showMin, showExpiry, showTransition bool) {
+	showAll, showExpiry, showTransition bool) {
 
 	// We need the different column headers and their respective column index
 	// where they appear in a map data-structure format.
@@ -114,7 +113,6 @@ func PopulateILMDataForDisplay(ilmCfg *lifecycle.Configuration, rowCheck *map[st
 	*tagRows = make(map[string][]string)
 	showOpts := showDetails{
 		allAvailable: showAll,
-		minimum:      showMin,
 		expiry:       showExpiry,
 		transition:   showTransition,
 	}
@@ -160,9 +158,6 @@ func getILMColumnWidthTable() map[string]int {
 func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts showDetails,
 	cellInfo tableCellInfo, ruleID string, newRows map[string][]string) {
 	var cellLabel string
-	if showOpts.minimum {
-		return
-	}
 	multLth := len(cellInfo.multLabels)
 	if cellInfo.label != "" || multLth == 0 {
 		if colIdx, ok := rowCheck[cellInfo.labelKey]; ok {
@@ -237,7 +232,8 @@ func getExpiryDateVal(rule lifecycle.Rule) string {
 func getTransitionTick(rule lifecycle.Rule) string {
 	transitionSet := !rule.Transition.IsNull()
 	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
-	if !transitionSet || !transitionDateSet {
+	transitionDaysSet := transitionSet && !rule.Transition.IsDaysNull()
+	if !transitionSet && !transitionDateSet && !transitionDaysSet {
 		return crossTickCell
 	}
 	return tickCell
@@ -408,11 +404,11 @@ func showExpiryDetails(rule lifecycle.Rule, showOpts showDetails) bool {
 }
 
 func showExpTick(showOpts showDetails) bool {
-	return showOpts.allAvailable || showOpts.minimum
+	return showOpts.allAvailable
 }
 
 func showTransitionTick(showOpts showDetails) bool {
-	return (showOpts.allAvailable || showOpts.minimum)
+	return showOpts.allAvailable
 }
 
 func showTransitionDetails(rule lifecycle.Rule, showOpts showDetails) bool {
@@ -425,9 +421,6 @@ func showTransitionDetails(rule lifecycle.Rule, showOpts showDetails) bool {
 }
 
 func showTags(rule lifecycle.Rule, showOpts showDetails) bool {
-	if showOpts.minimum {
-		return false
-	}
 	tagSet := showOpts.allAvailable || !rule.RuleFilter.And.IsEmpty()
 	return tagSet
 }
