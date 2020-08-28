@@ -47,14 +47,14 @@ DESCRIPTION:
   Add a lifecycle configuration rule.
 
 EXAMPLES:
-  1. Add rule for mybucket on s3. Both expiry & transition are entered as dates.
+  1. Add expiration rule on mybucket.
      {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
 
-  2. Add rule for mybucket on s3. Both expiry and transition are number of days.
+  2. Add expiry and transition date rules on a prefix in mybucket.
      {{.Prompt}} {{.HelpName}} -expiry-date "2025-09-17" --transition-date "2025-05-01" \
           --storage-class "GLACIER" myminio/mybucket/doc
 
-  3. Add rule for mybucket on s3. Only expiry is given as number of days and transition is not set.
+  3. Add expiry and transition days rules on a prefix in mybucket.
      {{.Prompt}} {{.HelpName}} -expiry-days "300" --transition-days "200" \
           --storage-class "GLACIER" myminio/mybucket/doc
 `,
