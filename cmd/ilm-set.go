@@ -47,11 +47,11 @@ DESCRIPTION:
   modify a lifecycle configuration rule with given id.
 
 EXAMPLES:
-  1. Modify an existing rule with id "rHTY.a123". Both expiry & transition are entered as dates.
+  1. Modify the expiration date for an existing rule with id "rHTY.a123".
      {{.Prompt}} {{.HelpName}} --id "rHTY.a123" \
           --expiry-date "2020-09-17" s3/mybucket
 
-  2.  Modify an existing rule with id "hGHKijqpo123". Both expiry and transition are number of days.
+  2. Modify the expiration and transition days for an existing rule with id "hGHKijqpo123".
      {{.Prompt}} {{.HelpName}} --id "hGHKijqpo123" \
           --expiry-days "300" --transition-days "200" \
           --storage-class "GLACIER" s3/mybucket
