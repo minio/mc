@@ -246,9 +246,11 @@ func mainAdminOBD(ctx *cli.Context) error {
 	config := spinner("Config")
 	drive := spinner("Drive")
 	net := spinner("Net")
+	log := spinner("Log")
 
 	progress := func(info madmin.OBDInfo) bool {
-		return admin(len(info.Minio.Info.Servers) > 0) &&
+		return log(len(info.Logging.ServersLog) > 0) &&
+			admin(len(info.Minio.Info.Servers) > 0) &&
 			cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.DiskHwInfo) > 0) &&
 			osInfo(len(info.Sys.OsInfo) > 0) &&
