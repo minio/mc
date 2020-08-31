@@ -85,7 +85,7 @@ type retentionCmdMessage struct {
 // Colorized message for console printing.
 func (m retentionCmdMessage) String() string {
 	if m.Err != nil {
-		return console.Colorize("RetentionMessageFailure", fmt.Sprintf("Cannot set object retention on `%s`: %s", m.URLPath, m.Err))
+		return console.Colorize("RetentionMessageFailure", fmt.Sprintf("Unable to set object retention on `%s`: %s", m.URLPath, m.Err))
 	}
 	return console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for `%s`", m.URLPath))
 }
@@ -122,7 +122,7 @@ func setRetention(urlStr string, mode minio.RetentionMode, validity uint64, unit
 
 	clnt, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	// Quit early if urlStr does not point to an S3 server

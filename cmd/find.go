@@ -142,7 +142,7 @@ func watchFind(ctxCtx context.Context, ctx *findContext) {
 		Events:    []string{"put"},
 	}
 	watchObj, err := ctx.clnt.Watch(ctxCtx, options)
-	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given options.")
+	fatalIf(err.Trace(ctx.targetAlias), "Unable to watch with given options.")
 
 	// Loop until user CTRL-C the command line.
 	for {

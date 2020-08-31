@@ -90,7 +90,7 @@ func mainVersionSuspend(cliCtx *cli.Context) error {
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	fatalIf(client.SetVersion(ctx, "suspend"), "Cannot suspend versioning")
+	fatalIf(client.SetVersion(ctx, "suspend"), "Unable to suspend versioning")
 	printMsg(versionSuspendMessage{
 		Op:     "suspend",
 		Status: "success",

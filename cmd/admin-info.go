@@ -78,12 +78,12 @@ type clusterStruct struct {
 func (u clusterStruct) String() (msg string) {
 	// Check cluster level "Status" field for error
 	if u.Status == "error" {
-		fatal(probe.NewError(errors.New(u.Error)), "Cannot get service status")
+		fatal(probe.NewError(errors.New(u.Error)), "Unable to get service status")
 	}
 
 	// If nothing has been collected, error out
 	if u.Info.Servers == nil {
-		fatal(probe.NewError(errors.New("Cannot get service status")), "")
+		fatal(probe.NewError(errors.New("Unable to get service status")), "")
 	}
 
 	// Initialization

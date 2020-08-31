@@ -67,7 +67,7 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	policies, e := client.ListCannedPolicies(globalContext)
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot list policy")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list policy")
 
 	for k := range policies {
 		printMsg(userPolicyMessage{

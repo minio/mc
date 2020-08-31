@@ -115,7 +115,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 		return nil
 	}
 
@@ -126,7 +126,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	traceCh := client.ServiceTrace(ctxt, all, errfltr)
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
-			fatalIf(probe.NewError(traceInfo.Err), "Cannot listen to http trace")
+			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
 		if verbose {
 			printMsg(traceMessage{traceInfo})

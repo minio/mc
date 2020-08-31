@@ -84,7 +84,7 @@ func mainAdminConfigExport(ctx *cli.Context) error {
 
 	// Call get config API
 	buf, e := client.GetConfig(globalContext)
-	fatalIf(probe.NewError(e), "Cannot get server config")
+	fatalIf(probe.NewError(e), "Unable to get server config")
 
 	// Print
 	printMsg(configExportMessage{

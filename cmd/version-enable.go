@@ -90,7 +90,7 @@ func mainVersionEnable(cliCtx *cli.Context) error {
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	fatalIf(client.SetVersion(ctx, "enable"), "Cannot enable versioning")
+	fatalIf(client.SetVersion(ctx, "enable"), "Unable to enable versioning")
 	printMsg(versionEnableMessage{
 		Op:     "enable",
 		Status: "success",

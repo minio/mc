@@ -116,7 +116,7 @@ func mainEventList(cliCtx *cli.Context) error {
 
 	client, err := newClient(path)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	s3Client, ok := client.(*S3Client)
@@ -125,7 +125,7 @@ func mainEventList(cliCtx *cli.Context) error {
 	}
 
 	configs, err := s3Client.ListNotificationConfigs(ctx, arn)
-	fatalIf(err, "Cannot list notifications on the specified bucket.")
+	fatalIf(err, "Unable to list notifications on the specified bucket.")
 
 	for _, config := range configs {
 		printMsg(eventListMessage{

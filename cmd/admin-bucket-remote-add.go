@@ -91,7 +91,7 @@ EXAMPLES:
 func checkAdminBucketRemoteAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 2 {
-		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -215,11 +215,11 @@ func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
 	sourceBucket, bktTarget := fetchRemoteTarget(ctx)
 	arn, e := client.SetRemoteTarget(globalContext, sourceBucket, bktTarget)
 	if e != nil {
-		fatalIf(probe.NewError(e), "Cannot add new Remote target")
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to configure remote target")
 	}
 
 	printMsg(RemoteMessage{
-		op:           "add",
+		op:           ctx.Command.Name,
 		TargetURL:    bktTarget.URL(),
 		TargetBucket: bktTarget.TargetBucket,
 		AccessKey:    bktTarget.Credentials.AccessKey,

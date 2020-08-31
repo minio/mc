@@ -106,7 +106,7 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	if !strings.Contains(input, madmin.KvSeparator) {
 		// Call get config API
 		hr, e := client.HelpConfigKV(globalContext, args.Get(1), args.Get(2), ctx.IsSet("env"))
-		fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
+		fatalIf(probe.NewError(e), "Unable to get help for the sub-system")
 
 		// Print
 		printMsg(configHelpMessage{
@@ -120,7 +120,7 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 
 	// Call set config API
 	fatalIf(probe.NewError(client.SetConfigKV(globalContext, input)),
-		"Cannot set '%s' to server", input)
+		"Unable to set '%s' to server", input)
 
 	// Print set config result
 	printMsg(configSetMessage{

@@ -88,17 +88,17 @@ func (m lockCmdMessage) JSON() string {
 func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, op string) error {
 	client, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	ctx, cancelLock := context.WithCancel(globalContext)
 	defer cancelLock()
 	if op == "clear" || mode != "" {
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
-		fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
+		fatalIf(err, "Unable to enable object lock configuration on the specified bucket.")
 	} else {
 		mode, validity, unit, err = client.GetObjectLockConfig(ctx)
-		fatalIf(err, "Cannot get object lock configuration on the specified bucket.")
+		fatalIf(err, "Unable to get object lock configuration on the specified bucket.")
 	}
 
 	printMsg(lockCmdMessage{

@@ -89,7 +89,7 @@ func (u configHistoryMessage) String() string {
 	var s strings.Builder
 	w := tabwriter.NewWriter(&s, 1, 8, 2, ' ', 0)
 	e := HistoryTemplate.Execute(w, u.Entries)
-	fatalIf(probe.NewError(e), "Cannot initialize template writer")
+	fatalIf(probe.NewError(e), "Unable to initialize template writer")
 
 	w.Flush()
 	return s.String()
@@ -127,7 +127,7 @@ func mainAdminConfigHistory(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	if ctx.IsSet("clear") {
-		fatalIf(probe.NewError(client.ClearConfigHistoryKV(globalContext, "all")), "Cannot clear server configuration.")
+		fatalIf(probe.NewError(client.ClearConfigHistoryKV(globalContext, "all")), "Unable to clear server configuration.")
 
 		// Print
 		printMsg(configHistoryMessage{})
@@ -135,7 +135,7 @@ func mainAdminConfigHistory(ctx *cli.Context) error {
 	}
 
 	chEntries, e := client.ListConfigHistoryKV(globalContext, ctx.Int("count"))
-	fatalIf(probe.NewError(e), "Cannot list server history configuration.")
+	fatalIf(probe.NewError(e), "Unable to list server history configuration.")
 
 	hentries := make([]historyEntry, len(chEntries))
 	for i, chEntry := range chEntries {

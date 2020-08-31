@@ -301,7 +301,7 @@ func mainMove(cliCtx *cli.Context) error {
 	for _, urlStr := range cliCtx.Args() {
 		client, err := newClient(urlStr)
 		if err != nil {
-			fatalIf(err.Trace(), "Cannot parse the provided url.")
+			fatalIf(err.Trace(), "Unable to parse the provided url.")
 		}
 
 		if s3Client, ok := client.(*S3Client); ok {

@@ -464,7 +464,7 @@ func runPolicyCmd(args cli.Args) {
 	policyJSON := map[string]interface{}{}
 	if policyStr != "" {
 		e := json.Unmarshal([]byte(policyStr), &policyJSON)
-		fatalIf(probe.NewError(e), "Cannot unmarshal custom policy file.")
+		fatalIf(probe.NewError(e), "Unable to unmarshal custom policy file.")
 	}
 	printMsg(policyMessage{
 		Status:    "success",

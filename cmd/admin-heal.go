@@ -38,34 +38,34 @@ const (
 var adminHealFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "scan",
-		Usage: "select the healing scan mode (normal/deep)",
+		Usage: "[DEPRECATED] select the healing scan mode (normal/deep)",
 		Value: scanNormalMode,
 	},
 	cli.BoolFlag{
 		Name:  "recursive, r",
-		Usage: "heal recursively",
+		Usage: "[DEPRECATED] heal recursively",
 	},
 	cli.BoolFlag{
 		Name:  "dry-run, n",
-		Usage: "only inspect data, but do not mutate",
+		Usage: "[DEPRECATED] only inspect data, but do not mutate",
 	},
 	cli.BoolFlag{
 		Name:  "force-start, f",
-		Usage: "force start a new heal sequence",
+		Usage: "[DEPRECATED] force start a new heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "force-stop, s",
-		Usage: "force stop a running heal sequence",
+		Usage: "[DEPRECATED] force stop a running heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "remove",
-		Usage: "remove dangling objects in heal sequence",
+		Usage: "[DEPRECATED] remove dangling objects in heal sequence",
 	},
 }
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "heal disks, buckets and objects on MinIO server",
+	Usage:           "[DEPRECATED] heal disks, buckets and objects on MinIO server",
 	Action:          mainAdminHeal,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),
@@ -84,29 +84,7 @@ SCAN MODES:
   deep            : Heal objects which are missing or with silent data corruption on one or more disks.
 
 EXAMPLES:
-  1. To format newly replaced disks in a MinIO server with alias 'myminio'
-     {{.Prompt}} {{.HelpName}} myminio
-
-  2. Heal 'testbucket' in a MinIO server with alias 'myminio'
-     {{.Prompt}} {{.HelpName}} myminio/testbucket/
-
-  3. Heal all objects under 'dir' prefix
-     {{.Prompt}} {{.HelpName}} --recursive myminio/testbucket/dir/
-
-  4. Issue a dry-run heal operation to inspect objects health but not heal them
-     {{.Prompt}} {{.HelpName}} --dry-run myminio
-
-  5. Issue a dry-run heal operation to inspect objects health under 'dir' prefix
-     {{.Prompt}} {{.HelpName}} --recursive --dry-run myminio/testbucket/dir/
-
-  6. Force start a running heal sequence (meaning it will force kill the running heal sequence and start a new one)
-     {{.Prompt}} {{.HelpName}} --force-start myminio/testbucket/dir/
-		
-  7. Force stop a running heal sequence (meaning it will force kill the running heal sequence)
-     {{.Prompt}} {{.HelpName}} --force-stop myminio/testbucket/dir/
-		
-  8. Issue a dry-run heal operation to inspect objects health under 'dir' prefix
-     {{.Prompt}} {{.HelpName}} --dry-run myminio/testbucket/dir/
+  DEPRECATED
 `,
 }
 
@@ -207,7 +185,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 		return nil
 	}
 

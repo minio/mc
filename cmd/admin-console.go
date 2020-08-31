@@ -192,7 +192,7 @@ func mainAdminConsole(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 		return nil
 	}
 
@@ -203,7 +203,7 @@ func mainAdminConsole(ctx *cli.Context) error {
 	logCh := client.GetLogs(ctxt, node, limit, logType)
 	for logInfo := range logCh {
 		if logInfo.Err != nil {
-			fatalIf(probe.NewError(logInfo.Err), "Cannot listen to console logs")
+			fatalIf(probe.NewError(logInfo.Err), "Unable to listen to console logs")
 		}
 		// drop nodeName from output if specified as cli arg
 		if node != "" {

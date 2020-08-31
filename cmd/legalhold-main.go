@@ -73,7 +73,7 @@ type legalHoldCmdMessage struct {
 // Colorized message for console printing.
 func (l legalHoldCmdMessage) String() string {
 	if l.Err != nil {
-		return console.Colorize("LegalHoldMessageFailure", "Cannot set object legal hold status `"+l.URLPath+"`. "+l.Err.Error())
+		return console.Colorize("LegalHoldMessageFailure", "Unable to set object legal hold status `"+l.URLPath+"`. "+l.Err.Error())
 	}
 	return console.Colorize("LegalHoldSuccess", fmt.Sprintf("Object legal hold successfully set for `%s`.", l.URLPath))
 }
@@ -92,7 +92,7 @@ func setLegalHold(urlStr string, lhold minio.LegalHoldStatus, isRecursive bool) 
 
 	clnt, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 	if !isRecursive {
 		err = clnt.PutObjectLegalHold(ctx, lhold)

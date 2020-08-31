@@ -113,7 +113,7 @@ func mainAdminPolicySet(ctx *cli.Context) error {
 			IsGroup:     isGroup,
 		})
 	} else {
-		fatalIf(probe.NewError(e), "Cannot set the policy")
+		fatalIf(probe.NewError(e), "Unable to set the policy")
 	}
 	return nil
 }
