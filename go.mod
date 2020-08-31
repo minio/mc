@@ -9,12 +9,11 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/klauspost/compress v1.10.3
-	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.8
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20200812095314-79ed7ce451ae
-	github.com/minio/minio-go/v7 v7.0.5-0.20200812191821-9cc34d660436
+	github.com/minio/minio-go/v7 v7.0.6-0.20200828165911-d9070d4d8b4a
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
