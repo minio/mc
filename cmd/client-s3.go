@@ -195,7 +195,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			options := minio.Options{
 				Creds:        creds,
 				Secure:       useTLS,
-				Region:       "",
+				Region:       os.Getenv("MC_REGION"),
 				BucketLookup: config.Lookup,
 				Transport:    transport,
 			}
