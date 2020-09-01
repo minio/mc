@@ -82,20 +82,25 @@ func (c contentMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// get content key
-func getKey(c *ClientContent) string {
+// Use OS separator and adds a trailing separator if it is a dir
+func getOSDependantKey(path string, isDir bool) string {
 	sep := "/"
 
 	// for windows make sure to print in 'windows' specific style.
 	if runtime.GOOS == "windows" {
-		c.URL.Path = strings.Replace(c.URL.Path, "/", "\\", -1)
+		path = strings.Replace(path, "/", "\\", -1)
 		sep = "\\"
 	}
 
-	if c.Type.IsDir() && !strings.HasSuffix(c.URL.Path, sep) {
-		return fmt.Sprintf("%s%s", c.URL.Path, sep)
+	if isDir && !strings.HasSuffix(path, sep) {
+		return fmt.Sprintf("%s%s", path, sep)
 	}
-	return c.URL.Path
+	return path
+}
+
+// get content key
+func getKey(c *ClientContent) string {
+	return getOSDependantKey(c.URL.Path, c.Type.IsDir())
 }
 
 // Generate printable listing from a list of sorted client
@@ -149,8 +154,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 	return
 }
 
-// Pretty print the list of versions belonging to one object
-func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) {
+func sortObjectVersions(ctntVersions []*ClientContent) {
 	// Sort versions
 	sort.Slice(ctntVersions, func(i, j int) bool {
 		if ctntVersions[i].IsLatest {
@@ -161,7 +165,11 @@ func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, print
 		}
 		return ctntVersions[i].Time.After(ctntVersions[j].Time)
 	})
+}
 
+// Pretty print the list of versions belonging to one object
+func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) {
+	sortObjectVersions(ctntVersions)
 	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
 	for _, msg := range msgs {
 		printMsg(msg)
