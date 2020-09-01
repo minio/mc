@@ -432,7 +432,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	// for the most part source metadata is copied over.
 	if urls.TargetContent.RetentionEnabled {
 		m := minio.RetentionMode(strings.ToUpper(urls.TargetContent.RetentionMode))
-		if m.IsValid() {
+		if !m.IsValid() {
 			return urls.WithError(probe.NewError(errors.New("invalid retention mode")).Trace(targetURL.String()))
 		}
 
