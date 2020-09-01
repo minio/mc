@@ -159,19 +159,6 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, 
 		timeRef = time.Now().UTC()
 	}
 
-	for _, url := range cliCtx.Args() {
-		_, _, err := url2Stat(ctx, url, "", false, nil, timeRef)
-		if err != nil && !isURLPrefixExists(url, isIncomplete) {
-			// Bucket name empty is a valid error for 'ls myminio',
-			// treat it as such.
-			_, buckNameEmpty := err.ToGoError().(BucketNameEmpty)
-			if buckNameEmpty {
-				continue
-			}
-			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
-		}
-	}
-
 	return args, isRecursive, isIncomplete, timeRef, withOlderVersions
 }
 
