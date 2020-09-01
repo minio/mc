@@ -35,6 +35,6 @@ var retentionCmd = cli.Command{
 
 // main for retention command.
 func mainRetention(ctx *cli.Context) error {
-	cli.ShowCommandHelpAndExit(ctx, "retention", 1)
+	cli.ShowCommandHelpAndExit(ctx, ctx.Args().First(), 1)
 	return nil
 }
