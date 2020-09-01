@@ -629,7 +629,7 @@ mc admin config set myminio < /tmp/my-serverconfig
 
 <a name="heal"></a>
 ### Command `heal` - Heal disks, buckets and objects on MinIO server
-Healing is automatic on server side which runs on a continous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
+Healing is automatic on server side which runs on a continuous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
 
 <a name="profile"></a>
 ### Command `profile` - generate profile data for debugging purposes
