@@ -51,6 +51,10 @@ var (
 			Name:  "versions",
 			Usage: "Pick earlier versions",
 		},
+		cli.BoolFlag{
+			Name:  "default",
+			Usage: "Show bucket default retention mode",
+		},
 	}
 )
 
@@ -83,9 +87,11 @@ EXAMPLES:
   4. Show object retention for recursively for all versions of all objects under prefix
      $ {{.HelpName}} myminio/mybucket/prefix --recursive --versions
 
+  5. Show default lock retention configuration for a bucket
+     $ {{.HelpName}} --default myminio/mybucket/
 `}
 
-func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions bool) {
+func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions, defaultMode bool) {
 	args := cliCtx.Args()
 
 	target = args[0]
@@ -97,6 +103,7 @@ func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recu
 	timeRef = parseRewindFlag(cliCtx.String("rewind"))
 	withVersions = cliCtx.Bool("versions")
 	recursive = cliCtx.Bool("recursive")
+	defaultMode = cliCtx.Bool("default")
 	return
 }
 
@@ -364,7 +371,11 @@ func mainRetentionInfo(cliCtx *cli.Context) error {
 		cli.ShowCommandHelpAndExit(cliCtx, "info", 1)
 	}
 
-	target, versionID, recursive, rewind, withVersions := parseInfoRetentionArgs(cliCtx)
+	target, versionID, recursive, rewind, withVersions, bucketMode := parseInfoRetentionArgs(cliCtx)
+
+	if bucketMode {
+		return showBucketLock(target)
+	}
 
 	if withVersions && rewind.IsZero() {
 		rewind = time.Now().UTC()

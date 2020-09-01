@@ -221,7 +221,7 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 	return cErr
 }
 
-// applyBucketLock - set/get object lock configuration.
+// applyBucketLock - set object lock configuration.
 func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) error {
 	client, err := newClient(urlStr)
 	if err != nil {
@@ -237,6 +237,29 @@ func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validit
 		mode, validity, unit, err = client.GetObjectLockConfig(ctx)
 		fatalIf(err, "Cannot get object lock configuration on the specified bucket.")
 	}
+
+	printMsg(lockCmdMessage{
+		Enabled:  "Enabled",
+		Mode:     mode,
+		Validity: fmt.Sprintf("%d%s", validity, unit),
+		Status:   "success",
+	})
+
+	return nil
+}
+
+// showBucketLock - show object lock configuration.
+func showBucketLock(urlStr string) error {
+	client, err := newClient(urlStr)
+	if err != nil {
+		fatalIf(err.Trace(), "Cannot parse the provided url.")
+	}
+
+	ctx, cancelLock := context.WithCancel(globalContext)
+	defer cancelLock()
+
+	mode, validity, unit, err := client.GetObjectLockConfig(ctx)
+	fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
 
 	printMsg(lockCmdMessage{
 		Enabled:  "Enabled",
