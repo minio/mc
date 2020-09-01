@@ -113,7 +113,7 @@ func mainAdminTopLocks(ctx *cli.Context) error {
 
 	// Call top locks API
 	entries, e := client.TopLocks(globalContext)
-	fatalIf(probe.NewError(e), "Cannot get server locks list.")
+	fatalIf(probe.NewError(e), "Unable to get server locks list.")
 
 	console.SetColor("StaleLock", color.New(color.FgRed, color.Bold))
 	console.SetColor("Lock", color.New(color.FgBlue, color.Bold))

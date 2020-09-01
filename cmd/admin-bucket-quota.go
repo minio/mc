@@ -81,24 +81,24 @@ var adminBucketQuotaCmd = cli.Command{
 	Flags:  append(adminQuotaFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
- 
+
 USAGE:
   {{.HelpName}} TARGET [--fifo QUOTA | --hard QUOTA | --clear]
- 
+
 QUOTA
   quota accepts human-readable case-insensitive number
   suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
   also accepted. Without suffixes the unit is bytes.
- 
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Display bucket quota configured for "mybucket" on MinIO.
      {{.Prompt}} {{.HelpName}} myminio/mybucket
-	
+
   2. Set FIFO quota for a bucket "mybucket" on MinIO.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --fifo 10GB
 
@@ -113,7 +113,7 @@ EXAMPLES:
 // checkAdminBucketQuotaSyntax - validate all the passed arguments
 func checkAdminBucketQuotaSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "quota", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 
 	if ctx.IsSet("hard") && ctx.IsSet("fifo") {

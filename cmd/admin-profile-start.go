@@ -109,7 +109,7 @@ func mainAdminProfileStart(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 		return nil
 	}
 

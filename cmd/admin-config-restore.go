@@ -94,7 +94,7 @@ func mainAdminConfigRestore(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	fatalIf(probe.NewError(client.RestoreConfigHistoryKV(globalContext, args.Get(1))), "Cannot restore server configuration.")
+	fatalIf(probe.NewError(client.RestoreConfigHistoryKV(globalContext, args.Get(1))), "Unable to restore server configuration.")
 
 	// Print
 	printMsg(configRestoreMessage{

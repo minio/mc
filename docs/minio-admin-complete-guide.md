@@ -154,7 +154,6 @@ You may add shell aliases for info, healing.
 
 ```
 alias minfo='mc admin info'
-alias mheal='mc admin heal'
 ```
 
 ## 6. Global Options
@@ -321,7 +320,7 @@ mc admin update play
 Server `play` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
 ```
 
-#### Steps to update MinIO using a private mirror 
+#### Steps to update MinIO using a private mirror
 For using `update` command with private mirror server, you need to mirror the directory structure on `https://dl.minio.io/server/minio/release/linux-amd64/` on your private mirror server and then provide:
 
 ```
@@ -630,51 +629,7 @@ mc admin config set myminio < /tmp/my-serverconfig
 
 <a name="heal"></a>
 ### Command `heal` - Heal disks, buckets and objects on MinIO server
-`heal` command heals disks, missing buckets, objects on MinIO server. NOTE: This command is only applicable for MinIO erasure coded setup (standalone and distributed).
-
-The server already has a light background process to heal disks, buckets and objects when necessary. However, it does not detect some types of data corruption, especially the ones that rarely happen, such as silent data corruption. In that case, you need, once a while, to manually run the heal command providing this flag: `--scan deep`.
-
-To show the status of the background healing process, just type the following command: `mc admin heal your-alias`.
-
-To scan and heal everything, type: `mc admin heal -r your-alias`.
-
-```
-NAME:
-  mc admin heal - heal disks, buckets and objects on MinIO server
-
-FLAGS:
-  --scan value                     select the healing scan mode (normal/deep) (default: "normal")
-  --recursive, -r                  heal recursively
-  --dry-run, -n                    only inspect data, but do not mutate
-  --force-start, -f                force start a new heal sequence
-  --force-stop, -s                 force stop a running heal sequence
-  --remove                         remove dangling objects in heal sequence
-  --help, -h                       show help
-```
-
-*Example: Heal MinIO cluster after replacing a fresh disk, recursively heal all buckets and objects, where 'myminio' is the MinIO server alias.*
-
-```
-mc admin heal -r myminio
-```
-
-*Example: Heal MinIO cluster on a specific bucket recursively, where 'myminio' is the MinIO server alias.*
-
-```
-mc admin heal -r myminio/mybucket
-```
-
-*Example: Heal MinIO cluster on a specific object prefix recursively, where 'myminio' is the MinIO server alias.*
-
-```
-mc admin heal -r myminio/mybucket/myobjectprefix
-```
-
-*Example: Show the status of the self-healing process in a MinIO cluster.*
-
-```
-mc admin heal myminio/
-```
+Healing is automatic on server side which runs on a continuous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
 
 <a name="profile"></a>
 ### Command `profile` - generate profile data for debugging purposes

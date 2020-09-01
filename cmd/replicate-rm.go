@@ -136,7 +136,7 @@ func mainReplicateRemove(cliCtx *cli.Context) error {
 	rmForce := cliCtx.Bool("force")
 	ruleID := cliCtx.String("id")
 	if rmAll && rmForce {
-		fatalIf(client.RemoveReplication(ctx), "Cannot remove replication configuration")
+		fatalIf(client.RemoveReplication(ctx), "Unable to remove replication configuration")
 	} else {
 		opts := replication.Options{
 			ID: ruleID,

@@ -102,7 +102,7 @@ func mainEncryptInfo(cliCtx *cli.Context) error {
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
 	algorithm, keyID, e := client.GetEncryption(ctx)
-	fatalIf(e, "Cannot get encryption info")
+	fatalIf(e, "Unable to get encryption info")
 	msg := encryptInfoMessage{
 		Op:     "info",
 		Status: "success",

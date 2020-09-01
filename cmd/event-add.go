@@ -124,7 +124,7 @@ func mainEventAdd(cliCtx *cli.Context) error {
 
 	client, err := newClient(path)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	s3Client, ok := client.(*S3Client)
@@ -133,7 +133,7 @@ func mainEventAdd(cliCtx *cli.Context) error {
 	}
 
 	err = s3Client.AddNotificationConfig(ctx, arn, event, prefix, suffix, ignoreExisting)
-	fatalIf(err, "Cannot enable notification on the specified bucket.")
+	fatalIf(err, "Unable to enable notification on the specified bucket.")
 	printMsg(eventAddMessage{
 		ARN:    arn,
 		Event:  event,

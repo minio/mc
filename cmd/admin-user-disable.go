@@ -67,7 +67,7 @@ func mainAdminUserDisable(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	e := client.SetUserStatus(globalContext, args.Get(1), madmin.AccountDisabled)
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot disable user")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to disable user")
 
 	printMsg(userMessage{
 		op:        "disable",

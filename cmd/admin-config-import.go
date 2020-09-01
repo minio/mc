@@ -96,7 +96,7 @@ func mainAdminConfigImport(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call set config API
-	fatalIf(probe.NewError(client.SetConfig(globalContext, os.Stdin)), "Cannot set server config")
+	fatalIf(probe.NewError(client.SetConfig(globalContext, os.Stdin)), "Unable to set server config")
 
 	// Print
 	printMsg(configImportMessage{

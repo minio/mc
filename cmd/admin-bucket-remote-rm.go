@@ -47,7 +47,7 @@ FLAGS:
 EXAMPLES:
   1. Remove existing remote target with arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
      for bucket srcbucket on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/srcbucket --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1" 
+     {{.Prompt}} {{.HelpName}} myminio/srcbucket --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
 `,
 }
 
@@ -55,7 +55,7 @@ EXAMPLES:
 func checkAdminBucketRemoteRemoveSyntax(ctx *cli.Context) {
 
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "rm", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -70,19 +70,19 @@ func mainAdminBucketRemoteRemove(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
-	fatalIf(cerr, "Unable to initialize admin connection.")
+	fatalIf(cerr.Trace(aliasedURL), "Unable to initialize admin connection.")
 	_, sourceBucket := url2Alias(args[0])
 	if sourceBucket == "" {
 		fatalIf(errInvalidArgument(), "Source bucket not specified in `"+args[0]+"`.")
 	}
 	arn := ctx.String("arn")
 	if arn == "" {
-		fatalIf(errInvalidArgument(), "Arn needs to be specified.")
+		fatalIf(errInvalidArgument(), "ARN needs to be specified.")
 	}
-	fatalIf(probe.NewError(client.RemoveRemoteTarget(globalContext, sourceBucket, arn)).Trace(args...), "Cannot remove Remote target")
+	fatalIf(probe.NewError(client.RemoveRemoteTarget(globalContext, sourceBucket, arn)).Trace(args...), "Unable to remove remote target")
 
 	printMsg(RemoteMessage{
-		op:           "rm",
+		op:           ctx.Command.Name,
 		SourceBucket: sourceBucket,
 		RemoteARN:    arn,
 	})

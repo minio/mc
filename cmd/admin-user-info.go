@@ -66,7 +66,7 @@ func mainAdminUserInfo(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	user, e := client.GetUserInfo(globalContext, args.Get(1))
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot get user info")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
 	printMsg(userMessage{
 		op:         "info",

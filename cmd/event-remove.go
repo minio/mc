@@ -119,7 +119,7 @@ func mainEventRemove(cliCtx *cli.Context) error {
 
 	client, err := newClient(path)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	s3Client, ok := client.(*S3Client)
@@ -134,7 +134,7 @@ func mainEventRemove(cliCtx *cli.Context) error {
 
 	err = s3Client.RemoveNotificationConfig(ctx, arn, event, prefix, suffix)
 	if err != nil {
-		fatalIf(err, "Cannot disable notification on the specified bucket.")
+		fatalIf(err, "Unable to disable notification on the specified bucket.")
 	}
 
 	printMsg(eventRemoveMessage{ARN: arn})

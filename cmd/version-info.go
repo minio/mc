@@ -99,7 +99,7 @@ func mainVersionInfo(cliCtx *cli.Context) error {
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
 	vConfig, e := client.GetVersion(ctx)
-	fatalIf(e, "Cannot get versioning info")
+	fatalIf(e, "Unable to get versioning info")
 	vMsg := versioningInfoMessage{
 		Op:     "info",
 		Status: "success",

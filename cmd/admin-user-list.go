@@ -70,7 +70,7 @@ func mainAdminUserList(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	users, e := client.ListUsers(globalContext)
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot list user")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list user")
 
 	for k, v := range users {
 		printMsg(userMessage{

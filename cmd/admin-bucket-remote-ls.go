@@ -63,7 +63,7 @@ EXAMPLES:
 // checkAdminBucketRemoteListSyntax - validate all the passed arguments
 func checkAdminBucketRemoteListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -73,7 +73,7 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 
 	// Additional command specific theme customization.
 	console.SetColor("RemoteListMessage", color.New(color.Bold, color.FgHiGreen))
-	console.SetColor("RemoteListEmpty", color.New(color.FgRed))
+	console.SetColor("RemoteListEmpty", color.New(color.FgYellow))
 	console.SetColor("SourceBucket", color.New(color.FgYellow))
 	console.SetColor("TargetBucket", color.New(color.FgYellow))
 	console.SetColor("TargetURL", color.New(color.FgHiWhite))
@@ -88,14 +88,13 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
-	svcType := ctx.String("service")
-	targets, e := client.ListRemoteTargets(globalContext, sourceBucket, svcType)
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot list remote target(s)")
-	printRemotes(aliasedURL, targets)
+	targets, e := client.ListRemoteTargets(globalContext, sourceBucket, ctx.String("service"))
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list remote target")
+	printRemotes(ctx, aliasedURL, targets)
 	return nil
 }
 
-func printRemotes(urlStr string, targets []madmin.BucketTarget) {
+func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget) {
 
 	maxURLLen := 10
 	maxTgtLen := 6
@@ -103,7 +102,7 @@ func printRemotes(urlStr string, targets []madmin.BucketTarget) {
 
 	if !globalJSON {
 		if len(targets) == 0 {
-			console.Print(console.Colorize("RemoteListEmpty", fmt.Sprintf("No remote targets found for`%s`. \n", urlStr)))
+			console.Print(console.Colorize("RemoteListEmpty", fmt.Sprintf("No remote targets found for `%s`. \n", urlStr)))
 			return
 		}
 		for _, t := range targets {
@@ -139,7 +138,7 @@ func printRemotes(urlStr string, targets []madmin.BucketTarget) {
 		}
 
 		printMsg(RemoteMessage{
-			op:           "ls",
+			op:           ctx.Command.Name,
 			AccessKey:    target.Credentials.AccessKey,
 			TargetBucket: target.TargetBucket,
 			TargetURL:    targetURL,

@@ -148,7 +148,7 @@ func mainWatch(cliCtx *cli.Context) error {
 
 	s3Client, pErr := newClient(path)
 	if pErr != nil {
-		fatalIf(pErr.Trace(), "Cannot parse the provided url.")
+		fatalIf(pErr.Trace(), "Unable to parse the provided url.")
 	}
 
 	options := WatchOptions{
@@ -163,7 +163,7 @@ func mainWatch(cliCtx *cli.Context) error {
 
 	// Start watching on events
 	wo, err := s3Client.Watch(ctx, options)
-	fatalIf(err, "Cannot watch on the specified bucket.")
+	fatalIf(err, "Unable to watch on the specified bucket.")
 
 	// Initialize.. waitgroup to track the go-routine.
 	var wg sync.WaitGroup
