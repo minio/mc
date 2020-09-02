@@ -37,23 +37,23 @@ var (
 	retentionInfoFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "apply retention recursively",
+			Usage: "show retention info recursively",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
-			Usage: "apply legal hold to a specific object version",
+			Name:  "version-id, vid",
+			Usage: "show retention info of specific object version",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "Move back in time",
+			Usage: "roll back object(s) to current version at specified time",
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "Pick earlier versions",
+			Usage: "show retention info on object(s) and all its versions",
 		},
 		cli.BoolFlag{
 			Name:  "default",
-			Usage: "Show bucket default retention mode",
+			Usage: "show bucket default retention mode",
 		},
 	}
 )

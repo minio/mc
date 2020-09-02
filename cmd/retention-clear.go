@@ -30,23 +30,23 @@ var (
 	retentionClearFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "apply retention recursively",
+			Usage: "clear retention recursively",
 		},
 		cli.StringFlag{
-			Name:  "version-id",
-			Usage: "apply legal hold to a specific object version",
+			Name:  "version-id, vid",
+			Usage: "clear retention of a specific object version",
 		},
 		cli.StringFlag{
 			Name:  "rewind",
-			Usage: "Move back in time",
+			Usage: "roll back object(s) to current version at specified time",
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "Pick earlier versions",
+			Usage: "clear retention of object(s) and all its versions",
 		},
 		cli.BoolFlag{
 			Name:  "default",
-			Usage: "Set default bucket locking",
+			Usage: "set default bucket locking",
 		},
 	}
 )
