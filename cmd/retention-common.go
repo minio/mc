@@ -49,7 +49,7 @@ func (m retentionCmdMessage) String() string {
 
 	if m.Err != nil {
 		color = "RetentionFailure"
-		msg = fmt.Sprintf("Cannot %s object retention on `%s`: %s", m.Op, m.URLPath, m.Err)
+		msg = fmt.Sprintf("Unable to %s object retention on `%s`: %s", m.Op, m.URLPath, m.Err)
 	} else {
 		color = "RetentionSuccess"
 		msg = fmt.Sprintf("Object retention successfully %s%s for `%s`", m.Op, ed, m.URLPath)
@@ -161,7 +161,7 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool) error {
 	clnt, err := newClient(target)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	// Quit early if urlStr does not point to an S3 server
@@ -239,17 +239,17 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) error {
 	client, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	ctx, cancelLock := context.WithCancel(globalContext)
 	defer cancelLock()
 	if op == "clear" || mode != "" {
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
-		fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
+		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
 	} else {
 		mode, validity, unit, err = client.GetObjectLockConfig(ctx)
-		fatalIf(err, "Cannot get object lock configuration on the specified bucket.")
+		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
 	}
 
 	printMsg(lockCmdMessage{
@@ -266,14 +266,14 @@ func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validit
 func showBucketLock(urlStr string) error {
 	client, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	ctx, cancelLock := context.WithCancel(globalContext)
 	defer cancelLock()
 
 	mode, validity, unit, err := client.GetObjectLockConfig(ctx)
-	fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
+	fatalIf(err, "Unable to get object lock configuration on the specified bucket.")
 
 	printMsg(lockCmdMessage{
 		Enabled:  "Enabled",

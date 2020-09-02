@@ -153,7 +153,7 @@ func (m *retentionInfoMessageList) SetUntil(until time.Time) {
 // Colorized message for console printing.
 func (m retentionInfoMessageList) String() string {
 	if m.Err != nil {
-		return console.Colorize("RetentionFailure", fmt.Sprintf("Cannot get object retention on `%s`: %s", m.URLPath, m.Err))
+		return console.Colorize("RetentionFailure", fmt.Sprintf("Unable to get get object retention on `%s`: %s", m.URLPath, m.Err))
 	}
 
 	var msg string
@@ -213,7 +213,7 @@ func (m *retentionInfoMessageRecord) SetUntil(until time.Time) {
 // Colorized message for console printing.
 func (m retentionInfoMessageRecord) String() string {
 	if m.Err != nil {
-		return console.Colorize("RetentionFailure", fmt.Sprintf("Cannot get object retention on `%s`: %s", m.URLPath, m.Err))
+		return console.Colorize("RetentionFailure", fmt.Sprintf("Unable to get object retention on `%s`: %s", m.URLPath, m.Err))
 	}
 
 	var msg strings.Builder
@@ -309,7 +309,7 @@ func infoRetentionSingle(ctx context.Context, alias, url, versionID string, list
 func getRetention(ctx context.Context, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool) error {
 	clnt, err := newClient(target)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
 	// Quit early if urlStr does not point to an S3 server
