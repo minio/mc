@@ -19,7 +19,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -36,10 +35,10 @@ var encryptInfoCmd = cli.Command{
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-  
+
 USAGE:
   {{.HelpName}} TARGET
-  
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -52,7 +51,7 @@ EXAMPLES:
 // checkversionInfoSyntax - validate all the passed arguments
 func checkEncryptInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -79,10 +78,10 @@ func (v encryptInfoMessage) String() string {
 	case "":
 		msg = fmt.Sprintf("Auto encryption is not enabled for %s ", v.URL)
 	default:
-		msg = fmt.Sprintf("Auto encryption configuration:\n\tAlgorithm: %s ", strings.ToUpper(v.Encryption.Algorithm))
+		msg = "Auto encryption 'sse-s3' is enabled"
 	}
 	if v.Encryption.KeyID != "" {
-		msg += fmt.Sprintf("\n\tKey ID   : %s", v.Encryption.KeyID)
+		msg = fmt.Sprintf("Auto encrytion 'sse-kms' is enabled with KeyID: %s", v.Encryption.KeyID)
 	}
 	return console.Colorize("encryptInfoMessage", msg)
 }
@@ -104,7 +103,7 @@ func mainEncryptInfo(cliCtx *cli.Context) error {
 	algorithm, keyID, e := client.GetEncryption(ctx)
 	fatalIf(e, "Unable to get encryption info")
 	msg := encryptInfoMessage{
-		Op:     "info",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	}

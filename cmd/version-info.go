@@ -79,7 +79,7 @@ func (v versioningInfoMessage) String() string {
 	case "":
 		msg = fmt.Sprintf("%s is un-versioned", v.URL)
 	default:
-		msg = fmt.Sprintf("%s versioning status is %s", v.URL, strings.ToLower(v.Versioning.Status))
+		msg = fmt.Sprintf("%s versioning is %s", v.URL, strings.ToLower(v.Versioning.Status))
 	}
 	return console.Colorize("versioningInfoMessage", msg)
 }
