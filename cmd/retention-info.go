@@ -336,6 +336,8 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 	}
 
 	var cErr error
+	var atLeastOneObjectOrVersionFound bool
+
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
@@ -346,13 +348,26 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 		if content.IsDeleteMarker {
 			continue
 		}
+
+		if !isRecursive && alias+getKey(content) != getStandardizedURL(target) {
+			break
+		}
+
 		err := infoRetentionSingle(ctx, alias, content.URL.String(), content.VersionID, true)
 		if err != nil {
 			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
+
+		atLeastOneObjectOrVersionFound = true
 	}
+
+	if !atLeastOneObjectOrVersionFound {
+		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to show its retention.")
+		cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
+	}
+
 	return cErr
 }
 

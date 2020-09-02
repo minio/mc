@@ -200,6 +200,8 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 	}
 
 	var cErr error
+	var atLeastOneRetentionApplied bool
+
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
@@ -212,12 +214,24 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 			continue
 		}
 
+		if !isRecursive && alias+getKey(content) != getStandardizedURL(target) {
+			break
+		}
+
 		err := setRetentionSingle(ctx, op, alias, content.URL.String(), content.VersionID, mode, until, bypassGovernance)
 		if err != nil {
 			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
+
+		atLeastOneRetentionApplied = true
 	}
+
+	if !atLeastOneRetentionApplied {
+		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to "+op+" its retention.")
+		cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
+	}
+
 	return cErr
 }
 
