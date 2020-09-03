@@ -115,7 +115,34 @@ func (u clusterStruct) String() (msg string) {
 		if srv.State == "offline" {
 			// "PrintB" is color blue in console library package
 			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
-			msg += fmt.Sprintf("   Uptime: %s\n\n", console.Colorize("InfoFail", "offline"))
+			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
+
+			if backendType != "FS" {
+				// Info about drives on a server, only available for non-FS types
+				var OffDisks int
+				var OnDisks int
+				var dispNoOfDisks string
+				for _, disk := range srv.Disks {
+					switch disk.State {
+					case madmin.DriveStateOk:
+						fallthrough
+					case madmin.DriveStateUnformatted:
+						OnDisks++
+					default:
+						OffDisks++
+					}
+				}
+
+				totalDisksPerServer := OnDisks + OffDisks
+				totalOnlineDisksCluster += OnDisks
+				totalOfflineDisksCluster += OffDisks
+
+				dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
+				msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize("InfoFail", "OK "))
+			}
+
+			msg += "\n"
+
 			// Continue to the next server
 			continue
 		}
@@ -153,9 +180,12 @@ func (u clusterStruct) String() (msg string) {
 			var OnDisks int
 			var dispNoOfDisks string
 			for _, disk := range srv.Disks {
-				if disk.State == "ok" {
+				switch disk.State {
+				case madmin.DriveStateOk:
+					fallthrough
+				case madmin.DriveStateUnformatted:
 					OnDisks++
-				} else {
+				default:
 					OffDisks++
 				}
 			}
