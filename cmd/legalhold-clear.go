@@ -41,7 +41,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "clear legal hold on multiple versions of an object",
+			Usage: "clear legal hold on multiple versions of object(s)",
 		},
 	}
 )

@@ -19,6 +19,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -45,7 +47,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "versions",
-			Usage: "show legal hold status of multiple versions of an object",
+			Usage: "show legal hold status of multiple versions of object(s)",
 		},
 	}
 )
@@ -84,6 +86,7 @@ EXAMPLES:
 type legalHoldInfoMessage struct {
 	LegalHold minio.LegalHoldStatus `json:"legalhold"`
 	URLPath   string                `json:"urlpath"`
+	Key       string                `json:"key"`
 	VersionID string                `json:"versionID"`
 	Status    string                `json:"status"`
 	Err       error                 `json:"error,omitempty"`
@@ -92,7 +95,7 @@ type legalHoldInfoMessage struct {
 // Colorized message for console printing.
 func (l legalHoldInfoMessage) String() string {
 	if l.Err != nil {
-		return console.Colorize("LegalHoldMessageFailure", "Cannot get object legal hold status `"+l.URLPath+"`. "+l.Err.Error())
+		return console.Colorize("LegalHoldMessageFailure", "Unable to get object legal hold status `"+l.Key+"`. "+l.Err.Error())
 	}
 	var msg string
 
@@ -113,7 +116,7 @@ func (l legalHoldInfoMessage) String() string {
 	}
 
 	msg += " "
-	msg += l.URLPath
+	msg += l.Key
 	return msg
 }
 
@@ -131,17 +134,29 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 
 	clnt, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
+
+	prefixPath := clnt.GetURL().Path
+	prefixPath = filepath.ToSlash(prefixPath)
+	if !strings.HasSuffix(prefixPath, "/") {
+		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
+	}
+	prefixPath = strings.TrimPrefix(prefixPath, "./")
+
 	if !recursive && !withOlderVersions {
 		lhold, err := clnt.GetObjectLegalHold(ctx, versionID)
 		if err != nil {
 			fatalIf(err.Trace(urlStr), "Failed to show legal hold information of `"+urlStr+"`.")
 		} else {
+			contentURL := filepath.ToSlash(clnt.GetURL().Path)
+			key := strings.TrimPrefix(contentURL, prefixPath)
+
 			printMsg(legalHoldInfoMessage{
 				LegalHold: lhold,
 				Status:    "success",
-				URLPath:   urlStr,
+				URLPath:   clnt.GetURL().String(),
+				Key:       key,
 				VersionID: versionID,
 			})
 		}
@@ -155,7 +170,6 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.withOlderVersions = withOlderVersions
-		lstOptions.withDeleteMarkers = true
 		lstOptions.timeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {
@@ -164,6 +178,11 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
+
+		if !recursive && alias+getKey(content) != getStandardizedURL(urlStr) {
+			break
+		}
+
 		objectsFound = true
 		newClnt, perr := newClientFromAlias(alias, content.URL.String())
 		if perr != nil {
@@ -176,10 +195,15 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 			errorIf(probeErr.Trace(content.URL.Path), "Failed to get legal hold information on `"+content.URL.Path+"`")
 		} else {
 			if !globalJSON {
+
+				contentURL := filepath.ToSlash(content.URL.Path)
+				key := strings.TrimPrefix(contentURL, prefixPath)
+
 				printMsg(legalHoldInfoMessage{
 					LegalHold: lhold,
 					Status:    "success",
-					URLPath:   content.URL.Path,
+					URLPath:   content.URL.String(),
+					Key:       key,
 					VersionID: content.VersionID,
 				})
 			}

@@ -19,6 +19,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -85,17 +87,29 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 
 	clnt, err := newClient(urlStr)
 	if err != nil {
-		fatalIf(err.Trace(), "Cannot parse the provided url.")
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
+
+	prefixPath := clnt.GetURL().Path
+	prefixPath = filepath.ToSlash(prefixPath)
+	if !strings.HasSuffix(prefixPath, "/") {
+		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
+	}
+	prefixPath = strings.TrimPrefix(prefixPath, "./")
+
 	if !recursive && !withOlderVersions {
 		err = clnt.PutObjectLegalHold(ctx, versionID, lhold)
 		if err != nil {
 			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
 		} else {
+			contentURL := filepath.ToSlash(clnt.GetURL().Path)
+			key := strings.TrimPrefix(contentURL, prefixPath)
+
 			printMsg(legalHoldCmdMessage{
 				LegalHold: lhold,
 				Status:    "success",
-				URLPath:   urlStr,
+				URLPath:   clnt.GetURL().String(),
+				Key:       key,
 				VersionID: versionID,
 			})
 		}
@@ -109,7 +123,6 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.withOlderVersions = withOlderVersions
-		lstOptions.withDeleteMarkers = true
 		lstOptions.timeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {
@@ -118,22 +131,33 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
+
+		if !recursive && alias+getKey(content) != getStandardizedURL(urlStr) {
+			break
+		}
+
 		objectsFound = true
+
 		newClnt, perr := newClientFromAlias(alias, content.URL.String())
 		if perr != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue
 		}
+
 		probeErr := newClnt.PutObjectLegalHold(ctx, content.VersionID, lhold)
 		if probeErr != nil {
 			errorsFound = true
 			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `"+content.URL.Path+"` successfully")
 		} else {
 			if !globalJSON {
+				contentURL := filepath.ToSlash(content.URL.Path)
+				key := strings.TrimPrefix(contentURL, prefixPath)
+
 				printMsg(legalHoldCmdMessage{
 					LegalHold: lhold,
 					Status:    "success",
-					URLPath:   content.URL.Path,
+					URLPath:   content.URL.String(),
+					Key:       key,
 					VersionID: content.VersionID,
 				})
 			}
