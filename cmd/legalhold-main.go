@@ -52,9 +52,19 @@ type legalHoldCmdMessage struct {
 // Colorized message for console printing.
 func (l legalHoldCmdMessage) String() string {
 	if l.Err != nil {
-		return console.Colorize("LegalHoldMessageFailure", "Unable to set object legal hold status `"+l.URLPath+"`. "+l.Err.Error())
+		return console.Colorize("LegalHoldMessageFailure", "Unable to set object legal hold status `"+l.Key+"`. "+l.Err.Error())
 	}
-	return console.Colorize("LegalHoldSuccess", fmt.Sprintf("Object legal hold successfully set for `%s`.", l.URLPath))
+	op := "set"
+	if l.LegalHold == minio.LegalHoldDisabled {
+		op = "cleared"
+	}
+
+	msg := fmt.Sprintf("Object legal hold successfully %s for `%s`", op, l.Key)
+	if l.VersionID != "" {
+		msg += fmt.Sprintf(" (version-id=%s)", l.VersionID)
+	}
+	msg += "."
+	return console.Colorize("LegalHoldSuccess", msg)
 }
 
 // JSON'ified message for scripting.

@@ -118,7 +118,6 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 
 	alias, _, _ := mustExpandAlias(urlStr)
 	var cErr error
-	errorsFound := false
 	objectsFound := false
 	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
 	if !timeRef.IsZero() {
@@ -146,7 +145,6 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 
 		probeErr := newClnt.PutObjectLegalHold(ctx, content.VersionID, lhold)
 		if probeErr != nil {
-			errorsFound = true
 			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `"+content.URL.Path+"` successfully")
 		} else {
 			if !globalJSON {
@@ -165,13 +163,9 @@ func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions
 	}
 
 	if cErr == nil && !globalJSON {
-		switch {
-		case errorsFound:
-			console.Print(console.Colorize("LegalHoldPartialFailure", fmt.Sprintf("Errors found while setting legal hold status on objects with prefix `%s`. \n", urlStr)))
-		case !objectsFound:
-			console.Print(console.Colorize("LegalHoldMessageFailure", fmt.Sprintf("No objects/versions found while setting legal hold status with prefix `%s`. \n", urlStr)))
-		default:
-			console.Print(console.Colorize("LegalHoldSuccess", fmt.Sprintf("Object legal hold successfully set for prefix `%s`.\n", urlStr)))
+		if !objectsFound {
+			console.Print(console.Colorize("LegalHoldMessageFailure",
+				fmt.Sprintf("No objects/versions found while setting legal hold on `%s`. \n", urlStr)))
 		}
 	}
 	return cErr
