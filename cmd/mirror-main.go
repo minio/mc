@@ -787,7 +787,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 
 			if d.Diff == differInFirst {
 				withLock := false
-				mode, validity, unit, err := newSrcClt.GetObjectLockConfig(ctx)
+				_, mode, validity, unit, err := newSrcClt.GetObjectLockConfig(ctx)
 				if err == nil {
 					withLock = true
 				}
@@ -826,7 +826,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		}
 	} else if _, err := dstClt.Stat(ctx, StatOptions{}); err != nil {
 		withLock := false
-		mode, validity, unit, err := srcClt.GetObjectLockConfig(ctx)
+		_, mode, validity, unit, err := srcClt.GetObjectLockConfig(ctx)
 		if err == nil {
 			withLock = true
 		}

@@ -128,10 +128,7 @@ func (l legalHoldInfoMessage) JSON() string {
 }
 
 // showLegalHoldInfo - show legalhold for one or many objects within a given prefix, with or without versioning
-func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool) error {
-	ctx, cancelLegalHold := context.WithCancel(globalContext)
-	defer cancelLegalHold()
-
+func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -222,7 +219,7 @@ func showLegalHoldInfo(urlStr, versionID string, timeRef time.Time, withOlderVer
 }
 
 // main for legalhold info command.
-func mainLegalHoldInfo(ctx *cli.Context) error {
+func mainLegalHoldInfo(cliCtx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("LegalHoldNotSet", color.New(color.FgYellow))
 	console.SetColor("LegalHoldOn", color.New(color.FgGreen, color.Bold))
@@ -231,10 +228,15 @@ func mainLegalHoldInfo(ctx *cli.Context) error {
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
-	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(ctx)
+	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
 
-	return showLegalHoldInfo(targetURL, versionID, timeRef, withVersions, recursive)
+	ctx, cancelLegalHold := context.WithCancel(globalContext)
+	defer cancelLegalHold()
+
+	checkBucketLockSupport(ctx, targetURL)
+
+	return showLegalHoldInfo(ctx, targetURL, versionID, timeRef, withVersions, recursive)
 }

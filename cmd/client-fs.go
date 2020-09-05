@@ -926,8 +926,8 @@ func (f *fsClient) SetObjectLockConfig(ctx context.Context, mode minio.Retention
 }
 
 // Get object lock configuration of bucket.
-func (f *fsClient) GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
-	return "", 0, "", probe.NewError(APINotImplemented{
+func (f *fsClient) GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+	return "", "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "filesystem",
 	})

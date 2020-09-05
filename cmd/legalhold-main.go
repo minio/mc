@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -72,6 +73,24 @@ func (l legalHoldCmdMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(l, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
+}
+
+// Check if the bucket corresponding to the target url has
+// object locking enabled, this to show a pretty error message
+func checkBucketLockSupport(ctx context.Context, aliasedURL string) {
+	clnt, err := newClient(aliasedURL)
+	if err != nil {
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
+	}
+
+	status, _, _, _, err := clnt.GetObjectLockConfig(ctx)
+	if err != nil {
+		fatalIf(err.Trace(), "Unable to get bucket object lock configuration from `%s`", aliasedURL)
+	}
+
+	if status != "Enabled" {
+		fatalIf(errDummy().Trace(), "Remote bucket does not support locking `%s`", aliasedURL)
+	}
 }
 
 // main for retention command.

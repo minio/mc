@@ -91,7 +91,7 @@ type Client interface {
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
 	// Object lock config
 	SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
-	GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
+	GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
 	GetAccess(ctx context.Context) (access string, policyJSON string, error *probe.Error)

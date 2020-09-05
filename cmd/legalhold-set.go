@@ -81,9 +81,7 @@ EXAMPLES:
 }
 
 // setLegalHold - Set legalhold for all objects within a given prefix.
-func setLegalHold(urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool, lhold minio.LegalHoldStatus) error {
-	ctx, cancelLegalHold := context.WithCancel(globalContext)
-	defer cancelLegalHold()
+func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool, lhold minio.LegalHoldStatus) error {
 
 	clnt, err := newClient(urlStr)
 	if err != nil {
@@ -197,16 +195,21 @@ func parseLegalHoldArgs(cliCtx *cli.Context) (targetURL, versionID string, timeR
 }
 
 // main for legalhold set command.
-func mainLegalHoldSet(ctx *cli.Context) error {
+func mainLegalHoldSet(cliCtx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("LegalHoldFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
-	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(ctx)
+	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
 
-	return setLegalHold(targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldEnabled)
+	ctx, cancelLegalHold := context.WithCancel(globalContext)
+	defer cancelLegalHold()
+
+	checkBucketLockSupport(ctx, targetURL)
+
+	return setLegalHold(ctx, targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldEnabled)
 }

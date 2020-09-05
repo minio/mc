@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"time"
 
 	"github.com/fatih/color"
@@ -78,16 +79,20 @@ EXAMPLES:
 }
 
 // main for legalhold clear command.
-func mainLegalHoldClear(ctx *cli.Context) error {
+func mainLegalHoldClear(cliCtx *cli.Context) error {
 	console.SetColor("LegalHoldSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("LegalHoldPartialFailure", color.New(color.FgRed, color.Bold))
 	console.SetColor("LegalHoldMessageFailure", color.New(color.FgYellow))
 
-	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(ctx)
-
+	targetURL, versionID, timeRef, recursive, withVersions := parseLegalHoldArgs(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
 
-	return setLegalHold(targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldDisabled)
+	ctx, cancelCopy := context.WithCancel(globalContext)
+	defer cancelCopy()
+
+	checkBucketLockSupport(ctx, targetURL)
+
+	return setLegalHold(ctx, targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldDisabled)
 }
