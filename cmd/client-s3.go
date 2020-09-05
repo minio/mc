@@ -2377,7 +2377,7 @@ func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (mi
 func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
-	enabled, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
+	status, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
 	if e != nil {
 		return "", "", 0, "", probe.NewError(e).Trace(c.GetURL().String())
 	}
@@ -2385,10 +2385,10 @@ func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.Reten
 	if mode != nil && validity != nil && unit != nil {
 		// FIXME: this is too ugly, fix minio-go
 		vuint64 := uint64(*validity)
-		return enabled, *mode, vuint64, *unit, nil
+		return status, *mode, vuint64, *unit, nil
 	}
 
-	return enabled, "", 0, "", nil
+	return status, "", 0, "", nil
 }
 
 // GetTags - Get tags of bucket or object.

@@ -156,6 +156,24 @@ func parseRetentionValidity(validityStr string) (uint64, minio.ValidityUnit, *pr
 	return validity, unit, nil
 }
 
+// Check if the bucket corresponding to the target url has
+// object locking enabled, this to show a pretty error message
+func checkObjectLockSupport(ctx context.Context, aliasedURL string) {
+	clnt, err := newClient(aliasedURL)
+	if err != nil {
+		fatalIf(err.Trace(), "Unable to parse the provided url.")
+	}
+
+	status, _, _, _, err := clnt.GetObjectLockConfig(ctx)
+	if err != nil {
+		fatalIf(err.Trace(), "Unable to get bucket object lock configuration from `%s`", aliasedURL)
+	}
+
+	if status != "Enabled" {
+		fatalIf(errDummy().Trace(), "Remote bucket does not support locking `%s`", aliasedURL)
+	}
+}
+
 // Apply Retention for one object/version or many objects within a given prefix.
 func applyRetention(ctx context.Context, op, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool,
 	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool) error {
@@ -248,7 +266,7 @@ func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validit
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
 		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
 	} else {
-		mode, validity, unit, err = client.GetObjectLockConfig(ctx)
+		_, mode, validity, unit, err = client.GetObjectLockConfig(ctx)
 		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
 	}
 
@@ -272,11 +290,11 @@ func showBucketLock(urlStr string) error {
 	ctx, cancelLock := context.WithCancel(globalContext)
 	defer cancelLock()
 
-	mode, validity, unit, err := client.GetObjectLockConfig(ctx)
+	status, mode, validity, unit, err := client.GetObjectLockConfig(ctx)
 	fatalIf(err, "Unable to get object lock configuration on the specified bucket.")
 
 	printMsg(lockCmdMessage{
-		Enabled:  "Enabled",
+		Enabled:  status,
 		Mode:     mode,
 		Validity: fmt.Sprintf("%d%s", validity, unit),
 		Status:   "success",
