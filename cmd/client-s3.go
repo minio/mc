@@ -2284,23 +2284,54 @@ func (c *S3Client) SetObjectLockConfig(ctx context.Context, mode minio.Retention
 }
 
 // PutObjectRetention - Set object retention for a given object.
-func (c *S3Client) PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
+func (c *S3Client) PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 
-	if mode != "" && !retainUntilDate.IsZero() {
-		opts := minio.PutObjectRetentionOptions{
-			RetainUntilDate:  &retainUntilDate,
-			Mode:             &mode,
-			GovernanceBypass: bypassGovernance,
-		}
-		e := c.api.PutObjectRetention(ctx, bucket, object, opts)
-		if e != nil {
-			return probe.NewError(e).Trace(c.GetURL().String())
-		}
-		return nil
+	var (
+		modePtr            *minio.RetentionMode
+		retainUntilDatePtr *time.Time
+	)
+
+	if mode != "" && retainUntilDate.IsZero() {
+		return errInvalidArgument().Trace(c.GetURL().String())
 	}
 
-	return errInvalidArgument().Trace(c.GetURL().String())
+	if mode != "" {
+		modePtr = &mode
+		retainUntilDatePtr = &retainUntilDate
+	}
+
+	opts := minio.PutObjectRetentionOptions{
+		VersionID:        versionID,
+		RetainUntilDate:  retainUntilDatePtr,
+		Mode:             modePtr,
+		GovernanceBypass: bypassGovernance,
+	}
+	e := c.api.PutObjectRetention(ctx, bucket, object, opts)
+	if e != nil {
+		return probe.NewError(e).Trace(c.GetURL().String())
+	}
+	return nil
+}
+
+// GetObjectRetention - Get object retention for a given object.
+func (c *S3Client) GetObjectRetention(ctx context.Context, versionID string) (minio.RetentionMode, time.Time, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	modePtr, untilPtr, e := c.api.GetObjectRetention(ctx, bucket, object, versionID)
+	if e != nil {
+		return "", time.Time{}, probe.NewError(e).Trace(c.GetURL().String())
+	}
+	var (
+		mode  minio.RetentionMode
+		until time.Time
+	)
+	if modePtr != nil {
+		mode = *modePtr
+	}
+	if untilPtr != nil {
+		until = *untilPtr
+	}
+	return mode, until, nil
 }
 
 // PutObjectLegalHold - Set object legal hold for a given object.
@@ -2346,7 +2377,7 @@ func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (mi
 func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
-	enabled, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
+	status, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
 	if e != nil {
 		return "", "", 0, "", probe.NewError(e).Trace(c.GetURL().String())
 	}
@@ -2354,10 +2385,10 @@ func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.Reten
 	if mode != nil && validity != nil && unit != nil {
 		// FIXME: this is too ugly, fix minio-go
 		vuint64 := uint64(*validity)
-		return enabled, *mode, vuint64, *unit, nil
+		return status, *mode, vuint64, *unit, nil
 	}
 
-	return enabled, "", 0, "", nil
+	return status, "", 0, "", nil
 }
 
 // GetTags - Get tags of bucket or object.

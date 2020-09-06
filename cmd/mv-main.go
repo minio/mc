@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -294,7 +293,7 @@ func mainMove(cliCtx *cli.Context) error {
 		srcURL := args.Get(0)
 		dstURL := args.Get(1)
 		if srcURL == dstURL {
-			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Source and destination urls cannot be the same: %v.", srcURL))
+			fatalIf(errDummy().Trace(), fmt.Sprintf("Source and destination urls cannot be the same: %v.", srcURL))
 		}
 	}
 
@@ -306,7 +305,7 @@ func mainMove(cliCtx *cli.Context) error {
 
 		if s3Client, ok := client.(*S3Client); ok {
 			if _, _, _, _, err = s3Client.GetObjectLockConfig(ctx); err == nil {
-				fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
+				fatalIf(errDummy().Trace(), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 			}
 		}
 	}
