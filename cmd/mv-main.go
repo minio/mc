@@ -305,7 +305,7 @@ func mainMove(cliCtx *cli.Context) error {
 		}
 
 		if s3Client, ok := client.(*S3Client); ok {
-			if _, _, _, err = s3Client.GetObjectLockConfig(ctx); err == nil {
+			if _, _, _, _, err = s3Client.GetObjectLockConfig(ctx); err == nil {
 				fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 			}
 		}

@@ -2304,11 +2304,12 @@ func (c *S3Client) PutObjectRetention(ctx context.Context, mode minio.RetentionM
 }
 
 // PutObjectLegalHold - Set object legal hold for a given object.
-func (c *S3Client) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHoldStatus) *probe.Error {
+func (c *S3Client) PutObjectLegalHold(ctx context.Context, versionID string, lhold minio.LegalHoldStatus) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if lhold.IsValid() {
 		opts := minio.PutObjectLegalHoldOptions{
-			Status: &lhold,
+			Status:    &lhold,
+			VersionID: versionID,
 		}
 		e := c.api.PutObjectLegalHold(ctx, bucket, object, opts)
 		if e != nil {
@@ -2319,22 +2320,44 @@ func (c *S3Client) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHold
 	return errInvalidArgument().Trace(c.GetURL().String())
 }
 
+// GetObjectLegalHold - Get object legal hold for a given object.
+func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+	var lhold minio.LegalHoldStatus
+	bucket, object := c.url2BucketAndObject()
+	opts := minio.GetObjectLegalHoldOptions{
+		VersionID: versionID,
+	}
+	lhPtr, e := c.api.GetObjectLegalHold(ctx, bucket, object, opts)
+	if e != nil {
+		errResp := minio.ToErrorResponse(e)
+		if errResp.Code != "NoSuchObjectLockConfiguration" {
+			return "", probe.NewError(e).Trace(c.GetURL().String())
+		}
+		return "", nil
+	}
+	// lhPtr can be nil if there is no legalhold status set
+	if lhPtr != nil {
+		lhold = *lhPtr
+	}
+	return lhold, nil
+}
+
 // GetObjectLockConfig - Get object lock configuration of bucket.
-func (c *S3Client) GetObjectLockConfig(ctx context.Context) (minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
+func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
-	mode, validity, unit, e := c.api.GetBucketObjectLockConfig(ctx, bucket)
+	enabled, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
 	if e != nil {
-		return "", 0, "", probe.NewError(e).Trace(c.GetURL().String())
+		return "", "", 0, "", probe.NewError(e).Trace(c.GetURL().String())
 	}
 
 	if mode != nil && validity != nil && unit != nil {
 		// FIXME: this is too ugly, fix minio-go
 		vuint64 := uint64(*validity)
-		return *mode, vuint64, *unit, nil
+		return enabled, *mode, vuint64, *unit, nil
 	}
 
-	return "", 0, "", probe.NewError(fmt.Errorf("No object lock configuration set on %s", bucket)).Trace(c.GetURL().String())
+	return enabled, "", 0, "", nil
 }
 
 // GetTags - Get tags of bucket or object.

@@ -91,7 +91,7 @@ type Client interface {
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
 	// Object lock config
 	SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
-	GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
+	GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
 	GetAccess(ctx context.Context) (access string, policyJSON string, error *probe.Error)
@@ -111,7 +111,8 @@ type Client interface {
 
 	// Object Locking related API
 	PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
-	PutObjectLegalHold(ctx context.Context, hold minio.LegalHoldStatus) *probe.Error
+	PutObjectLegalHold(ctx context.Context, versionID string, hold minio.LegalHoldStatus) *probe.Error
+	GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error)
 
 	// I/O operations with expiration
 	ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error)

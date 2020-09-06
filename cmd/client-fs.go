@@ -926,8 +926,8 @@ func (f *fsClient) SetObjectLockConfig(ctx context.Context, mode minio.Retention
 }
 
 // Get object lock configuration of bucket.
-func (f *fsClient) GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
-	return "", 0, "", probe.NewError(APINotImplemented{
+func (f *fsClient) GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+	return "", "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "filesystem",
 	})
@@ -950,9 +950,17 @@ func (f *fsClient) PutObjectRetention(ctx context.Context, mode minio.RetentionM
 }
 
 // Set object legal hold for a given object.
-func (f *fsClient) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHoldStatus) *probe.Error {
+func (f *fsClient) PutObjectLegalHold(ctx context.Context, versionID string, lhold minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
+		APIType: "filesystem",
+	})
+}
+
+// Get object legal hold for a given object.
+func (f *fsClient) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetObjectLegalHold",
 		APIType: "filesystem",
 	})
 }

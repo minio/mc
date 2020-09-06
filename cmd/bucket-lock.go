@@ -97,7 +97,7 @@ func lock(urlStr string, mode minio.RetentionMode, validity uint64, unit minio.V
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
 		fatalIf(err, "Unable to enable object lock configuration on the specified bucket.")
 	} else {
-		mode, validity, unit, err = client.GetObjectLockConfig(ctx)
+		_, mode, validity, unit, err = client.GetObjectLockConfig(ctx)
 		fatalIf(err, "Unable to get object lock configuration on the specified bucket.")
 	}
 

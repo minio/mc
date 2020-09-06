@@ -378,7 +378,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 	// Check if the target bucket has object locking enabled
 	var withLock bool
-	if _, _, _, err = tgtClnt.GetObjectLockConfig(ctx); err == nil {
+	if _, _, _, _, err = tgtClnt.GetObjectLockConfig(ctx); err == nil {
 		withLock = true
 	}
 
