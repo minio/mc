@@ -17,11 +17,8 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"math"
-	"regexp"
 	"strings"
 	"time"
 
@@ -115,21 +112,6 @@ type retentionInfoMessage struct {
 	VersionID string              `json:"versionID"`
 	Status    string              `json:"status"`
 	Err       error               `json:"error"`
-}
-
-const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
-
-var reAnsi = regexp.MustCompile(ansi)
-
-func centerText(s string, w int) string {
-	var sb strings.Builder
-	textWithoutColor := reAnsi.ReplaceAllString(s, "")
-	length := len(textWithoutColor)
-	padding := float64(w-length) / 2
-	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Ceil(padding))))
-	fmt.Fprintf(&sb, "%s", s)
-	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Floor(padding))))
-	return sb.String()
 }
 
 type retentionInfoMessageList retentionInfoMessage
