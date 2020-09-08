@@ -92,9 +92,17 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	switch copyURLsType {
 	case copyURLsTypeA: // File -> File.
-		checkCopySyntaxTypeA(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd, timeRef)
+		// Check source.
+		if len(srcURLs) != 1 {
+			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
+		}
+		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeB: // File -> Folder.
-		checkCopySyntaxTypeB(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd, timeRef)
+		// Check source.
+		if len(srcURLs) != 1 {
+			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
+		}
+		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeC: // Folder... -> Folder.
 		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeD: // File1...FileN -> Folder.
@@ -110,13 +118,8 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
-func checkCopySyntaxTypeA(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
-	// Check source.
-	if len(srcURLs) != 1 {
-		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-	}
-	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef)
+func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
+	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
@@ -125,13 +128,8 @@ func checkCopySyntaxTypeA(ctx context.Context, srcURLs []string, tgtURL string, 
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
-func checkCopySyntaxTypeB(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
-	// Check source.
-	if len(srcURLs) != 1 {
-		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-	}
-	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef)
+func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
+	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
