@@ -37,9 +37,7 @@ func GetFileSystemAttrs(file string) (string, error) {
 
 	var fileAttr strings.Builder
 	fileAttr.WriteString("atime:")
-	fileAttr.WriteString(strconv.Itoa(int(st.Atim.Sec)))
-	fileAttr.WriteString("/ctime:")
-	fileAttr.WriteString(strconv.Itoa(int(st.Ctim.Sec)))
+	fileAttr.WriteString(strconv.FormatInt(st.Atim.Sec, 10) + "#" + strconv.FormatInt(st.Atim.Nsec, 10))
 	fileAttr.WriteString("/gid:")
 	fileAttr.WriteString(strconv.Itoa(int(st.Gid)))
 
@@ -52,7 +50,7 @@ func GetFileSystemAttrs(file string) (string, error) {
 	fileAttr.WriteString("/mode:")
 	fileAttr.WriteString(strconv.Itoa(int(st.Mode)))
 	fileAttr.WriteString("/mtime:")
-	fileAttr.WriteString(strconv.Itoa(int(st.Mtim.Sec)))
+	fileAttr.WriteString(strconv.FormatInt(st.Mtim.Sec, 10) + "#" + strconv.FormatInt(st.Mtim.Nsec, 10))
 	fileAttr.WriteString("/uid:")
 	fileAttr.WriteString(strconv.Itoa(int(st.Uid)))
 

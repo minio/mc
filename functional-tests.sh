@@ -613,8 +613,8 @@ function test_config_host_add()
     show "${FUNCNAME[0]}"
     start_time=$(get_time)
 
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS}1" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host list "${SERVER_ALIAS}1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias set "${SERVER_ALIAS}1" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias list "${SERVER_ALIAS}1"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -624,7 +624,7 @@ function test_config_host_add_error()
     show "${FUNCNAME[0]}"
     start_time=$(get_time)
 
-    out=$("${MC_CMD[@]}" --json config host add "${SERVER_ALIAS}1" "$ENDPOINT" "$ACCESS_KEY" "invalid-secret")
+    out=$("${MC_CMD[@]}" --json alias set "${SERVER_ALIAS}1" "$ENDPOINT" "$ACCESS_KEY" "invalid-secret")
     assert_failure "$start_time" "${FUNCNAME[0]}" show_on_success $? "adding host should fail"
     got_code=$(echo "$out" | jq -r .error.cause.error.Code)
     if [ "${got_code}" != "SignatureDoesNotMatch" ]; then
@@ -956,8 +956,8 @@ function __init__()
         echo "unable to get md5sum of $FILE_65_MB"
         exit 1
     fi
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS_TLS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias set "${SERVER_ALIAS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias set "${SERVER_ALIAS_TLS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
 
     set +e
 }
