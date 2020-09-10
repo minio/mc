@@ -28,12 +28,12 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var ilmSetCmd = cli.Command{
-	Name:   "set",
+var ilmEditCmd = cli.Command{
+	Name:   "edit",
 	Usage:  "modify a lifecycle configuration rule with given id",
-	Action: mainILMSet,
+	Action: mainILMEdit,
 	Before: setGlobalsFromContext,
-	Flags:  append(ilmSetFlags, globalFlags...),
+	Flags:  append(ilmEditFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -58,7 +58,7 @@ EXAMPLES:
 `,
 }
 
-var ilmSetFlags = []cli.Flag{
+var ilmEditFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "id",
 		Usage: "id of the rule to be modified",
@@ -93,26 +93,26 @@ var ilmSetFlags = []cli.Flag{
 	},
 }
 
-type ilmSetMessage struct {
+type ilmEditMessage struct {
 	Status string `json:"status"`
 	Target string `json:"target"`
 	ID     string `json:"id"`
 }
 
-func (i ilmSetMessage) String() string {
-	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration rule added with ID `"+i.ID+"` to "+i.Target+".")
+func (i ilmEditMessage) String() string {
+	return console.Colorize(ilmThemeResultSuccess, "Lifecycle configuration rule with ID `"+i.ID+"` modified  to "+i.Target+".")
 }
 
-func (i ilmSetMessage) JSON() string {
+func (i ilmEditMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
 
 // Validate user given arguments
-func checkILMSetSyntax(ctx *cli.Context) {
+func checkILMEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
+		cli.ShowCommandHelpAndExit(ctx, "edit", globalErrorExitStatus)
 	}
 	id := ctx.String("id")
 	if id == "" {
@@ -121,11 +121,11 @@ func checkILMSetSyntax(ctx *cli.Context) {
 }
 
 // Calls SetBucketLifecycle with the XML representation of lifecycleConfiguration type.
-func mainILMSet(cliCtx *cli.Context) error {
-	ctx, cancelILMSet := context.WithCancel(globalContext)
-	defer cancelILMSet()
+func mainILMEdit(cliCtx *cli.Context) error {
+	ctx, cancelILMEdit := context.WithCancel(globalContext)
+	defer cancelILMEdit()
 
-	checkILMSetSyntax(cliCtx)
+	checkILMEditSyntax(cliCtx)
 	setILMDisplayColorScheme()
 	args := cliCtx.Args()
 	urlStr := args.Get(0)
@@ -151,7 +151,7 @@ func mainILMSet(cliCtx *cli.Context) error {
 
 	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")
 
-	printMsg(ilmSetMessage{
+	printMsg(ilmEditMessage{
 		Status: "success",
 		Target: urlStr,
 		ID:     opts.ID,

@@ -1259,9 +1259,10 @@ USAGE:
   mc ilm COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  list    pretty print bucket lifecycle configuration
+  ls      list lifecycle configuration rules set on a bucket
   add     add a lifecycle configuration rule to existing (if any) rule(s) on a bucket
-  remove  remove (if any) existing lifecycle configuration rule with the id
+  rm      remove (if any) existing lifecycle configuration rule
+  edit    modify a lifecycle configuration rule with given id
   export  export lifecycle configuration in JSON format
   import  import lifecycle configuration in JSON format
 
@@ -1273,7 +1274,7 @@ FLAGS:
 *Example: List the lifecycle management rules*
 
 ```
-mc ilm list myminio/testbucket
+mc ilm ls myminio/testbucket
    ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
  Devices |  dev/  |    ✓    |   ✓   | 17 Sep 2020  |     ✗      |           |               |
@@ -1283,16 +1284,21 @@ mc ilm list myminio/testbucket
 For more details about the lifecycle configuration, refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html)
 
 
-*Example: Add rule for testbucket on play*
+*Example: Add rule for prefix "dev" in bucket "testbucket" on play and transition after 2 days to transition tier specified by storage class label "hdd_tier". "hdd_tier" is the label specified when setting up MinIO transition target via `mc admin bucket remote add` command*
 ```
-mc ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" play/testbucket
-Lifecycle configuration rule added with ID `Devices` to play/testbucket.
+mc ilm add --expiry-date "2020-09-17" play/testbucket/dev --transition-days 2 --storage-class "hdd_tier"
+Lifecycle configuration rule added with ID `btd6pdot8748n94elvl0` to play/testbucket/dev.
+```
+*Example: Edit the lifecycle management configuration rule given by ID "btd6pdot8748n94elvl0" to set tags*
+```
+mc ilm edit --id "Documents" --tags "k1=v1&k2=v2" play/testbucket/dev
+Lifecycle configurtaion rule with ID `btd6pdot8748n94elvl0` modified to play/testbucket/dev.
 ```
 
 *Example: Remove the lifecycle management configuration rule given by ID "Documents"*
 ```
-mc ilm remove --id "Documents" play/testbucket
-Rule ID `Documents` from target play/testbucket removed.
+mc ilm rm --id "Documents" play/testbucket/dev
+Rule ID `Documents` from target play/testbucket/dev removed.
 ```
 
 <a name="policy"></a>
