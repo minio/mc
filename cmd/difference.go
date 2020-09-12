@@ -94,11 +94,15 @@ func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
 		return false
 	}
 
+	srcActualModTime := src.Time
+	dstActualModTime := dst.Time
+
 	srcModTime := getSourceModTimeKey(src.UserMetadata)
 	dstModTime := getSourceModTimeKey(dst.UserMetadata)
 	if srcModTime == "" && dstModTime == "" {
-		// No active-active mirror context found, consider src & dst as similar
-		return false
+		// No active-active mirror context found, fallback to modTimes presented
+		// by the client content
+		return srcActualModTime.After(dstActualModTime)
 	}
 
 	var srcOriginLastModified, dstOriginLastModified time.Time
@@ -118,12 +122,10 @@ func activeActiveModTimeUpdated(src, dst *ClientContent) bool {
 		}
 	}
 
-	srcActualModTime := src.Time
 	if !srcOriginLastModified.IsZero() && srcOriginLastModified.After(src.Time) {
 		srcActualModTime = srcOriginLastModified
 	}
 
-	dstActualModTime := dst.Time
 	if !dstOriginLastModified.IsZero() && dstOriginLastModified.After(dst.Time) {
 		dstActualModTime = dstOriginLastModified
 	}
@@ -265,7 +267,7 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 				}
 				continue
 			}
-			if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
+			if srcSize != tgtSize {
 				// Regular files differing in size.
 				diffCh <- diffMessage{
 					FirstURL:      srcCtnt.URL.String(),

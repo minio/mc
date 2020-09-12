@@ -180,8 +180,8 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
   15. Cross mirror between sites in a active-active deployment.
-      Site-A: {{.Prompt}} {{.HelpName}} --watch --active-active siteA siteB
-      Site-B: {{.Prompt}} {{.HelpName}} --watch --active-active siteB siteA
+      Site-A: {{.Prompt}} {{.HelpName}} --active-active siteA siteB
+      Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
 `,
 }
 
@@ -719,13 +719,6 @@ func getEventPathURLWin(srcURL, eventPath string) string {
 
 // runMirror - mirrors all buckets to another S3 server
 func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
-	// This is kept for backward compatibility, `--force` means
-	// --overwrite.
-	isOverwrite := cli.Bool("force")
-	if !isOverwrite {
-		isOverwrite = cli.Bool("overwrite")
-	}
-
 	// Parse metadata.
 	userMetadata := make(map[string]string)
 	if cli.String("attr") != "" {
@@ -745,13 +738,25 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		(srcClt.GetURL().Type == objectStorage &&
 			srcClt.GetURL().Path == string(srcClt.GetURL().Separator))
 
-	// Create a new mirror job and execute it
-	mj := newMirrorJob(srcURL, dstURL, mirrorOptions{
+	// This is kept for backward compatibility, `--force` means
+	// --overwrite.
+	isOverwrite := cli.Bool("force")
+	if !isOverwrite {
+		isOverwrite = cli.Bool("overwrite")
+	}
+
+	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
+
+	// preserve is also expected to be overwritten if necessary
+	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
+	isOverwrite = isOverwrite || isMetadata
+
+	mopts := mirrorOptions{
 		isFake:           cli.Bool("fake"),
 		isRemove:         cli.Bool("remove"),
 		isOverwrite:      isOverwrite,
-		isWatch:          cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active"),
-		isMetadata:       cli.Bool("a") || cli.Bool("multi-master") || cli.Bool("active-active") || len(userMetadata) > 0,
+		isWatch:          isWatch,
+		isMetadata:       isMetadata,
 		md5:              cli.Bool("md5"),
 		disableMultipart: cli.Bool("disable-multipart"),
 		excludeOptions:   cli.StringSlice("exclude"),
@@ -760,8 +765,11 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		storageClass:     cli.String("storage-class"),
 		userMetadata:     userMetadata,
 		encKeyDB:         encKeyDB,
-		activeActive:     cli.Bool("multi-master") || cli.Bool("active-active"),
-	})
+		activeActive:     isWatch,
+	}
+
+	// Create a new mirror job and execute it
+	mj := newMirrorJob(srcURL, dstURL, mopts)
 
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function

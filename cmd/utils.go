@@ -29,7 +29,9 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -323,29 +325,85 @@ func isURLContains(srcURL, tgtURL, sep string) bool {
 // ErrInvalidFileSystemAttribute reflects invalid fily system attribute
 var ErrInvalidFileSystemAttribute = errors.New("Error in parsing file system attribute")
 
-// Returns a map by parsing the value of X-Amz-Meta-Mc-Attrs/X-Amz-Meta-s3Cmd-Attrs
-func parseAttribute(attrs string) (map[string]string, error) {
-	var err error
-	attribute := make(map[string]string)
-	param := strings.Split(attrs, "/")
-	for _, val := range param {
-		attr := strings.TrimSpace(val)
-		if attr == "" {
-			err = ErrInvalidFileSystemAttribute
-		} else {
-			attrVal := strings.Split(attr, ":")
-			if len(attrVal) == 2 {
-				attribute[strings.TrimSpace(attrVal[0])] = strings.TrimSpace(attrVal[1])
-			} else if len(attrVal) == 1 {
-				attribute[attrVal[0]] = ""
-			} else {
-				err = ErrInvalidFileSystemAttribute
+func parseAtimeMtime(attr map[string]string) (atime, mtime time.Time, err *probe.Error) {
+	if val, ok := attr["atime"]; ok {
+		vals := strings.SplitN(val, "#", 2)
+		atim, e := strconv.ParseInt(vals[0], 10, 64)
+		if e != nil {
+			return atime, mtime, probe.NewError(e)
+		}
+		at := syscall.Timespec{
+			Sec: atim,
+		}
+		if len(vals) == 2 {
+			atimnsec, e := strconv.ParseInt(vals[1], 10, 64)
+			if e != nil {
+				return atime, mtime, probe.NewError(e)
 			}
+			at.Nsec = atimnsec
+		}
+		atime = time.Unix(at.Unix())
+	}
+
+	if val, ok := attr["mtime"]; ok {
+		vals := strings.SplitN(val, "#", 2)
+		mtim, e := strconv.ParseInt(vals[0], 10, 64)
+		if e != nil {
+			return atime, mtime, probe.NewError(e)
+		}
+		mt := syscall.Timespec{
+			Sec: mtim,
+		}
+		if len(vals) == 2 {
+			mtimnsec, e := strconv.ParseInt(vals[1], 10, 64)
+			if e != nil {
+				return atime, mtime, probe.NewError(e)
+			}
+			mt.Nsec = mtimnsec
+		}
+		mtime = time.Unix(mt.Unix())
+	}
+	return atime, mtime, nil
+}
+
+// Returns a map by parsing the value of X-Amz-Meta-Mc-Attrs/X-Amz-Meta-s3Cmd-Attrs
+func parseAttribute(meta map[string]string) (map[string]string, error) {
+	attribute := make(map[string]string)
+	if meta == nil {
+		return attribute, nil
+	}
+
+	parseAttrs := func(attrs string) error {
+		var err error
+		param := strings.Split(attrs, "/")
+		for _, val := range param {
+			attr := strings.TrimSpace(val)
+			if attr == "" {
+				err = ErrInvalidFileSystemAttribute
+			} else {
+				attrVal := strings.Split(attr, ":")
+				if len(attrVal) == 2 {
+					attribute[strings.TrimSpace(attrVal[0])] = strings.TrimSpace(attrVal[1])
+				} else if len(attrVal) == 1 {
+					attribute[attrVal[0]] = ""
+				} else {
+					err = ErrInvalidFileSystemAttribute
+				}
+			}
+		}
+		return err
+	}
+
+	if attrs, ok := meta[metadataKey]; ok {
+		if err := parseAttrs(attrs); err != nil {
+			return attribute, err
 		}
 	}
 
-	if err != nil {
-		return nil, ErrInvalidFileSystemAttribute
+	if attrs, ok := meta[metadataKeyS3Cmd]; ok {
+		if err := parseAttrs(attrs); err != nil {
+			return attribute, err
+		}
 	}
 
 	return attribute, nil

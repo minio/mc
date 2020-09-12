@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 )
 
 // GetFileSystemAttrs return the file system attribute as string; containing mode,
@@ -37,9 +36,7 @@ func GetFileSystemAttrs(file string) (string, error) {
 
 	var fileAttr strings.Builder
 	fileAttr.WriteString("atime:")
-	fileAttr.WriteString(timespecToTime(st.Atimespec).String())
-	fileAttr.WriteString("/ctime:")
-	fileAttr.WriteString(timespecToTime(st.Ctimespec).String())
+	fileAttr.WriteString(strconv.FormatInt(st.Atimespec.Sec, 10) + "#" + strconv.FormatInt(st.Atimespec.Nsec, 10))
 	fileAttr.WriteString("/gid:")
 	fileAttr.WriteString(strconv.Itoa(int(st.Gid)))
 
@@ -52,7 +49,7 @@ func GetFileSystemAttrs(file string) (string, error) {
 	fileAttr.WriteString("/mode:")
 	fileAttr.WriteString(strconv.Itoa(int(st.Mode)))
 	fileAttr.WriteString("/mtime:")
-	fileAttr.WriteString(timespecToTime(st.Mtimespec).String())
+	fileAttr.WriteString(strconv.FormatInt(st.Mtimespec.Sec, 10) + "#" + strconv.FormatInt(st.Mtimespec.Nsec, 10))
 	fileAttr.WriteString("/uid:")
 	fileAttr.WriteString(strconv.Itoa(int(st.Uid)))
 
@@ -63,8 +60,4 @@ func GetFileSystemAttrs(file string) (string, error) {
 	}
 
 	return fileAttr.String(), nil
-}
-
-func timespecToTime(ts syscall.Timespec) time.Time {
-	return time.Unix(int64(ts.Sec), int64(ts.Nsec))
 }

@@ -786,7 +786,7 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 			for notificationInfo := range eventsCh {
 				if notificationInfo.Err != nil {
 					var perr *probe.Error
-					if nErr, ok := notificationInfo.Err.(minio.ErrorResponse); ok && nErr.Code == "APINotSupported" {
+					if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
 						perr = probe.NewError(APINotImplemented{
 							API:     "Watch",
 							APIType: c.GetURL().String(),
@@ -1341,10 +1341,7 @@ func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string,
 		// https://github.com/minio/mc/issues/3073
 		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, UseV1: true})
 	}
-	if metadata {
-		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive})
-	}
-	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive})
+	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata})
 }
 
 func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object string) (*ClientContent, *probe.Error) {
@@ -2004,6 +2001,11 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.ReplicationStatus = entry.ReplicationStatus
 	for k, v := range entry.UserMetadata {
 		content.UserMetadata[k] = v
+		attr, _ := parseAttribute(content.UserMetadata)
+		_, mtime, _ := parseAtimeMtime(attr)
+		if !mtime.IsZero() {
+			content.Time = mtime
+		}
 	}
 	for k := range entry.Metadata {
 		content.Metadata[k] = entry.Metadata.Get(k)
