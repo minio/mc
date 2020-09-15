@@ -70,7 +70,7 @@ FLAGS:
 
 EXAMPLES:
   1. Undo the last 3 uploads and/or removals of a particular object
-     {{.Prompt}} {{.HelpName}} s3/backups/file.zip
+     {{.Prompt}} {{.HelpName}} s3/backups/file.zip --last 3
 
   2. Undo the last upload/removal change of all objects under a prefix
      {{.Prompt}} {{.HelpName}} --recursive --force s3/backups/prefix/
