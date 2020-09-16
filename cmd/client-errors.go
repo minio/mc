@@ -168,6 +168,14 @@ func (e ObjectMissing) Error() string {
 	return "Object does not exist"
 }
 
+// ObjectIsDeleteMarker - object is a delete marker as latest
+type ObjectIsDeleteMarker struct {
+}
+
+func (e ObjectIsDeleteMarker) Error() string {
+	return "Object has been deleted"
+}
+
 // UnexpectedShortWrite - write wrote less bytes than expected.
 type UnexpectedShortWrite struct {
 	InputSize int

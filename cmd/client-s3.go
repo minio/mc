@@ -1442,6 +1442,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 // getObjectStat returns the metadata of an object from a HEAD call.
 func (c *S3Client) getObjectStat(ctx context.Context, bucket, object string, opts minio.StatObjectOptions) (*ClientContent, *probe.Error) {
 	objectStat, e := c.api.StatObject(ctx, bucket, object, opts)
+	objectMetadata := c.objectInfo2ClientContent(bucket, objectStat)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
@@ -1458,11 +1459,13 @@ func (c *S3Client) getObjectStat(ctx context.Context, bucket, object string, opt
 			})
 		}
 		if errResponse.Code == "NoSuchKey" {
+			if objectMetadata.IsDeleteMarker {
+				return nil, probe.NewError(ObjectIsDeleteMarker{})
+			}
 			return nil, probe.NewError(ObjectMissing{})
 		}
 		return nil, probe.NewError(e)
 	}
-	objectMetadata := c.objectInfo2ClientContent(bucket, objectStat)
 	return objectMetadata, nil
 }
 

@@ -241,20 +241,11 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 	ctx, cancelRemoveSingle := context.WithCancel(globalContext)
 	defer cancelRemoveSingle()
 
-	isRecursive := false
-	contents, pErr := statURL(ctx, url, versionID, time.Time{}, false, isIncomplete, isRecursive, encKeyDB)
+	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{})
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
-	if len(contents) == 0 {
-		if !isForce {
-			errorIf(errDummy().Trace(url), "Failed to remove `"+url+"`. Target object is not found")
-			return exitStatus(globalErrorExitStatus)
-		}
-		return nil
-	}
-	content := contents[0]
 
 	// Skip objects older than older--than parameter if specified
 	if olderThan != "" && isOlder(content.Time, olderThan) {
