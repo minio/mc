@@ -29,6 +29,7 @@ ilm         manage bucket lifecycle
 encrypt     manage bucket encryption config
 event       manage object notifications
 watch       listen for object notification events
+undo        undo PUT/DELETE operations
 policy      manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
 replicate   configure server side bucket replication
@@ -304,10 +305,10 @@ mc version RELEASE.2020-04-25T00-43-23Z
 |:----------------------------------------------------------------------------------------|:--------------------------------------------------------------------|:-----------------------------------------------------------|----------------------------------------------------|
 | [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)       | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat)          |
 | [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                     | [**pipe** - stream STDIN to an object](#pipe)              | [**version** - manage bucket version](#version)    |
-| [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 |                                                    |
-| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         |  [**replicate** - manage bucket server side replication](#replicate)                                                   |
-| [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        |                                                    |
-| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**stat** - stat contents of objects and folders](#stat)   | [**encrypt** - manage bucket encryption](#encrypt) |
+| [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 | [**undo** - undo PUT/DELETE operations](#undo)     |
+| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         | [**replicate** - manage bucket server side replication](#replicate) |
+| [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
+| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**stat** - stat contents of objects and folders](#stat)   |                                                    |
 | [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock) | [**retention** - set retention for object(s)](#retention)  |                                                    |
 | [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                        | [**legalhold** - set legal hold for object(s)](#legalhold) |                                                    |
 
@@ -1559,6 +1560,33 @@ myminio/mybucket versioning status is enabled
 ```
 mc version suspend myminio/mybucket
 myminio/mybucket versioning is suspended
+```
+
+<a name="undo"></a>
+### Command `undo`
+`undo` reverts latest PUT/DELETE operations
+
+```
+NAME:
+  mc undo - undo PUT/DELETE operations
+
+USAGE:
+  mc undo [FLAGS] SOURCE
+
+FLAGS:
+  --recursive, -r               undo last S3 put/delete operations
+  --force                       force recursive operation
+  --last value                  undo N last changes (default: 1)
+  --dry-run                     fake an undo operation
+  --help, -h                    show help
+```
+
+*Example:  Undo the last 3 uploads and/or removals of a particular object*
+```
+mc undo s3/backups/file.zip --last 3
+✓ Last delete of `CREDITS` is reverted.
+✓ Last upload of `CREDITS` (vid=mj2juHIoyvU94s8kIim5H.Z9L0QO50wO) is reverted.
+✓ Last upload of `CREDITS` (vid=przFKd1iWC7ts_8FNoIvLae8NH_BAi_X) is reverted.
 ```
 
 <a name="encrypt"></a>

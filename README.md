@@ -26,6 +26,7 @@ diff        list differences in object name, size, and date between two buckets
 rm          remove objects
 event       manage object notifications
 watch       listen for object notification events
+undo        undo PUT/DELETE operations
 policy      manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
 lock        manage default bucket object lock configuration
