@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -937,16 +938,18 @@ func mainMirror(cliCtx *cli.Context) error {
 		}
 	}
 
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
 		case <-ctx.Done():
 			return exitStatus(globalErrorExitStatus)
 		default:
-			if errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB); errorDetected {
-				if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
-					time.Sleep(2 * time.Second)
-					continue
-				}
+			errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB)
+			if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
+				time.Sleep(time.Duration(r.Float64() * float64(2*time.Second)))
+				continue
+			}
+			if errorDetected {
 				return exitStatus(globalErrorExitStatus)
 			}
 			return nil
