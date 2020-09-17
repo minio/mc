@@ -1416,7 +1416,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		// so we can check if there is such prefix which exists
 		ctnt, err := c.getObjectStat(ctx, bucket, object, minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID})
 		if err == nil {
-			return ctnt, err
+			return ctnt, nil
 		}
 		// Ignore object missing error but return for other errors
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) {
@@ -1425,8 +1425,6 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	}
 
 	nonRecursive := false
-	objectMetadata := &ClientContent{}
-
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
@@ -1435,15 +1433,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return nil, probe.NewError(objectStat.Err)
 		}
 
-		if objectStat.Key == prefix {
-			return c.objectInfo2ClientContent(bucket, objectStat), nil
-		}
-
-		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
-			objectMetadata.URL = c.targetURL.Clone()
-			objectMetadata.Type = os.ModeDir
-			return objectMetadata, nil
-		}
+		return c.objectInfo2ClientContent(bucket, objectStat), nil
 	}
 
 	return nil, probe.NewError(ObjectMissing{opts.timeRef})
@@ -2001,18 +1991,30 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.ReplicationStatus = entry.ReplicationStatus
 	for k, v := range entry.UserMetadata {
 		content.UserMetadata[k] = v
-		attr, _ := parseAttribute(content.UserMetadata)
+	}
+	for k := range entry.Metadata {
+		content.Metadata[k] = entry.Metadata.Get(k)
+	}
+	attr, _ := parseAttribute(content.UserMetadata)
+	if len(attr) > 0 {
 		_, mtime, _ := parseAtimeMtime(attr)
 		if !mtime.IsZero() {
 			content.Time = mtime
 		}
 	}
-	for k := range entry.Metadata {
-		content.Metadata[k] = entry.Metadata.Get(k)
+	attr, _ = parseAttribute(content.Metadata)
+	if len(attr) > 0 {
+		_, mtime, _ := parseAtimeMtime(attr)
+		if !mtime.IsZero() {
+			content.Time = mtime
+		}
 	}
-	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) && entry.Size == 0 && entry.LastModified.IsZero() {
+
+	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) {
 		content.Type = os.ModeDir
-		content.Time = time.Now()
+		if content.Time.IsZero() {
+			content.Time = time.Now()
+		}
 	} else {
 		content.Type = os.FileMode(0664)
 	}

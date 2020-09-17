@@ -161,17 +161,14 @@ func mainStat(cliCtx *cli.Context) error {
 
 	var cErr error
 	for _, targetURL := range args {
-		stats, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
+		contents, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
 		if err != nil {
 			fatalIf(err, "Unable to stat `"+targetURL+"`.")
 		}
-		for _, stat := range stats {
-			st := parseStat(stat)
-			if !globalJSON {
-				printStat(st)
-			} else {
-				console.Println(st.JSON())
-			}
+		for _, content := range contents {
+			stat := parseStat(content)
+			stat.singleObject = len(contents) == 1
+			printMsg(stat)
 		}
 	}
 	return cErr

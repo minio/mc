@@ -31,7 +31,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -332,17 +331,14 @@ func parseAtimeMtime(attr map[string]string) (atime, mtime time.Time, err *probe
 		if e != nil {
 			return atime, mtime, probe.NewError(e)
 		}
-		at := syscall.Timespec{
-			Sec: atim,
-		}
+		var atimnsec int64
 		if len(vals) == 2 {
-			atimnsec, e := strconv.ParseInt(vals[1], 10, 64)
+			atimnsec, e = strconv.ParseInt(vals[1], 10, 64)
 			if e != nil {
 				return atime, mtime, probe.NewError(e)
 			}
-			at.Nsec = atimnsec
 		}
-		atime = time.Unix(at.Unix())
+		atime = time.Unix(int64(atim), int64(atimnsec))
 	}
 
 	if val, ok := attr["mtime"]; ok {
@@ -351,17 +347,14 @@ func parseAtimeMtime(attr map[string]string) (atime, mtime time.Time, err *probe
 		if e != nil {
 			return atime, mtime, probe.NewError(e)
 		}
-		mt := syscall.Timespec{
-			Sec: mtim,
-		}
+		var mtimnsec int64
 		if len(vals) == 2 {
-			mtimnsec, e := strconv.ParseInt(vals[1], 10, 64)
+			mtimnsec, e = strconv.ParseInt(vals[1], 10, 64)
 			if e != nil {
 				return atime, mtime, probe.NewError(e)
 			}
-			mt.Nsec = mtimnsec
 		}
-		mtime = time.Unix(mt.Unix())
+		mtime = time.Unix(int64(mtim), int64(mtimnsec))
 	}
 	return atime, mtime, nil
 }

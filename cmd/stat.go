@@ -44,77 +44,77 @@ type statMessage struct {
 	Metadata          map[string]string `json:"metadata"`
 	VersionID         string            `json:"versionID,omitempty"`
 	DeleteMarker      bool              `json:"deleteMarker,omitempty"`
+	singleObject      bool
 }
 
-// String colorized string message.
-func printStat(stat statMessage) {
-	// Format properly for alignment based on maxKey length
+func (stat statMessage) String() (msg string) {
+	var msgBuilder strings.Builder
+	// Format properly for alignment based on maxKey leng
 	stat.Key = fmt.Sprintf("%-10s: %s", "Name", stat.Key)
-	console.Println(console.Colorize("Name", stat.Key))
-	console.Println(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)))
-	console.Println(fmt.Sprintf("%-10s: %-6s ", "Size", humanize.IBytes(uint64(stat.Size))))
+	msgBuilder.WriteString(console.Colorize("Name", stat.Key) + "\n")
+	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)) + "\n")
+	msgBuilder.WriteString(fmt.Sprintf("%-10s: %-6s ", "Size", humanize.IBytes(uint64(stat.Size))) + "\n")
 	if stat.ETag != "" {
-		console.Println(fmt.Sprintf("%-10s: %s ", "ETag", stat.ETag))
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "ETag", stat.ETag) + "\n")
 	}
 	if stat.VersionID != "" {
 		versionIDField := stat.VersionID
 		if stat.DeleteMarker {
 			versionIDField += " (delete-marker)"
 		}
-		console.Println(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField))
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField) + "\n")
 	}
-	console.Println(fmt.Sprintf("%-10s: %s ", "Type", stat.Type))
+	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Type", stat.Type) + "\n")
 	if !stat.Expires.IsZero() {
-		console.Println(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)))
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)) + "\n")
 	}
 	if !stat.Expiration.IsZero() {
-		console.Println(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration", stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID))
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
+			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
 	}
-	var maxKey = 0
+	var maxKeyMetadata = 0
+	var maxKeyEncrypted = 0
 	for k := range stat.Metadata {
 		// Skip encryption headers, we print them later.
 		if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
-			if len(k) > maxKey {
-				maxKey = len(k)
+			if len(k) > maxKeyMetadata {
+				maxKeyMetadata = len(k)
+			}
+		} else if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
+			if len(k) > maxKeyEncrypted {
+				maxKeyEncrypted = len(k)
 			}
 		}
 	}
-	if maxKey > 0 {
-		console.Println(fmt.Sprintf("%-10s:", "Metadata"))
+	if maxKeyMetadata > 0 {
+		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Metadata") + "\n")
 		for k, v := range stat.Metadata {
 			// Skip encryption headers, we print them later.
 			if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
-				console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+				msgBuilder.WriteString(fmt.Sprintf("  %-*.*s: %s ", maxKeyMetadata, maxKeyMetadata, k, v) + "\n")
 			}
 		}
 	}
 
-	maxKey = 0
-	for k := range stat.Metadata {
-		if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
-			if len(k) > maxKey {
-				maxKey = len(k)
-			}
-		}
-	}
-	if maxKey > 0 {
-		console.Println(fmt.Sprintf("%-10s:", "Encrypted"))
+	if maxKeyEncrypted > 0 {
+		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Encrypted") + "\n")
 		for k, v := range stat.Metadata {
 			if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
-				console.Println(fmt.Sprintf("  %-*.*s: %s ", maxKey, maxKey, k, v))
+				msgBuilder.WriteString(fmt.Sprintf("  %-*.*s: %s ", maxKeyEncrypted, maxKeyEncrypted, k, v) + "\n")
 			}
 		}
 	}
 	if stat.ReplicationStatus != "" {
-		console.Println(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))
 	}
-	console.Println()
+
+	return msgBuilder.String()
 }
 
 // JSON jsonified content message.
-func (c statMessage) JSON() string {
-	c.Status = "success"
-	jsonMessageBytes, e := json.MarshalIndent(c, "", " ")
+func (stat statMessage) JSON() string {
+	stat.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(stat, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)

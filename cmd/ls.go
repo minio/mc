@@ -56,10 +56,6 @@ type contentMessage struct {
 func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
 	message += console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
-	if c.Filetype == "folder" {
-		return message + console.Colorize("Dir", c.Key)
-	}
-
 	fileDesc := c.Key
 	if c.VersionID != "" {
 		fileDesc += fmt.Sprintf(" (%s, vid=%s", c.VersionOrd, c.VersionID)
@@ -69,7 +65,11 @@ func (c contentMessage) String() string {
 		fileDesc += ")"
 	}
 
-	message += console.Colorize("file", fileDesc)
+	if c.Filetype == "folder" {
+		message += console.Colorize("Dir", fileDesc)
+	} else {
+		message += console.Colorize("File", fileDesc)
+	}
 	return message
 }
 
