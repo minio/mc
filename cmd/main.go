@@ -344,6 +344,7 @@ var appCmds = []cli.Command{
 	encryptCmd,
 	eventCmd,
 	watchCmd,
+	undoCmd,
 	policyCmd,
 	tagCmd,
 	replicateCmd,
