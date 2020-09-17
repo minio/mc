@@ -14,8 +14,8 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/cli v1.22.0
+	github.com/minio/minio v0.0.0-20200916044100-b2536476c97e
 	github.com/minio/minio-go/v7 v7.0.6-0.20200901014009-5f8d15bbc5fd
-	github.com/minio/minio v0.0.0-20200828210429-cd380251b39d
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -24,9 +24,8 @@ require (
 	github.com/posener/complete v1.2.3
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
-	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	golang.org/x/sys v0.0.0-20200806125547-5acd03effb82 // indirect
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
+	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/text v0.3.3
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
