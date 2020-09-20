@@ -169,7 +169,10 @@ func mainList(cliCtx *cli.Context) error {
 
 	// Additional command specific theme customization.
 	console.SetColor("File", color.New(color.Bold))
-	console.SetColor("DeletedFile", color.New(color.Bold, color.FgRed))
+	console.SetColor("DEL", color.New(color.FgRed))
+	console.SetColor("PUT", color.New(color.FgGreen))
+	console.SetColor("VersionID", color.New(color.FgHiBlue))
+	console.SetColor("VersionOrd", color.New(color.FgHiMagenta))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))

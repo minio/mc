@@ -47,23 +47,27 @@ type contentMessage struct {
 	URL      string    `json:"url,omitempty"`
 
 	VersionID      string `json:"versionId,omitempty"`
-	VersionOrd     string `json:"versionOrdinal,omitempty"`
+	VersionOrd     int    `json:"versionOrdinal,omitempty"`
 	VersionIndex   int    `json:"versionIndex,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 }
 
 // String colorized string message.
 func (c contentMessage) String() string {
-	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
-	message += console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
-	fileDesc := c.Key
+	message := console.Colorize("Time", fmt.Sprintf("[%s]", c.Time.Format(printDate)))
+	message += console.Colorize("Size", fmt.Sprintf("%7s", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
+	fileDesc := ""
+
 	if c.VersionID != "" {
-		fileDesc += fmt.Sprintf(" (%s, vid=%s", c.VersionOrd, c.VersionID)
+		fileDesc += console.Colorize("VersionID", " "+c.VersionID) + console.Colorize("VersionOrd", fmt.Sprintf(" v%d", c.VersionOrd))
 		if c.IsDeleteMarker {
-			fileDesc += ", delete-marker"
+			fileDesc += console.Colorize("DEL", " DEL")
+		} else {
+			fileDesc += console.Colorize("PUT", " PUT")
 		}
-		fileDesc += ")"
 	}
+
+	fileDesc += " " + c.Key
 
 	if c.Filetype == "folder" {
 		message += console.Colorize("Dir", fileDesc)
@@ -140,7 +144,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		contentMsg.Key = getKey(c)
 		contentMsg.VersionID = c.VersionID
 		contentMsg.IsDeleteMarker = c.IsDeleteMarker
-		contentMsg.VersionOrd = humanize.Ordinal(nrVersions - i)
+		contentMsg.VersionOrd = nrVersions - i
 		// URL is empty by default
 		// Set it to either relative dir (host) or public url (remote)
 		contentMsg.URL = clntURL.String()
