@@ -83,8 +83,8 @@ SCAN MODES:
   normal (default): Heal objects which are missing on one or more disks.
   deep            : Heal objects which are missing or with silent data corruption on one or more disks.
 
-EXAMPLES:
-  DEPRECATED
+DEPRECATED:
+  MinIO server now supports auto-heal, this command will be removed in future.
 `,
 }
 
