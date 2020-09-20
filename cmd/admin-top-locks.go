@@ -72,9 +72,11 @@ func getTimeDiff(timeStamp time.Time) (string, string) {
 
 // String colorized oldest locks message.
 func (u lockMessage) String() string {
-	timeFieldMaxLen := 20
-	resourceFieldMaxLen := -1
-	typeFieldMaxLen := 6
+	const (
+		timeFieldMaxLen     = 20
+		resourceFieldMaxLen = -1
+		typeFieldMaxLen     = 6
+	)
 
 	lockState, timeDiff := getTimeDiff(u.Lock.Timestamp)
 	return console.Colorize(lockState, newPrettyTable("  ",
