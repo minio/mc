@@ -81,11 +81,13 @@ func checkAdminLogSyntax(ctx *cli.Context) {
 
 // Extend madmin.LogInfo to add String() and JSON() methods
 type logMessage struct {
+	Status string `json:"status"`
 	madmin.LogInfo
 }
 
 // JSON - jsonify loginfo
 func (l logMessage) JSON() string {
+	l.Status = "success"
 	logJSON, err := json.MarshalIndent(&l, "", " ")
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -209,7 +211,7 @@ func mainAdminConsole(ctx *cli.Context) error {
 		if node != "" {
 			logInfo.NodeName = ""
 		}
-		printMsg(logMessage{logInfo})
+		printMsg(logMessage{LogInfo: logInfo})
 	}
 	return nil
 }

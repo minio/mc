@@ -129,7 +129,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
 		if verbose {
-			printMsg(traceMessage{traceInfo})
+			printMsg(traceMessage{ServiceTraceInfo: traceInfo})
 			continue
 		}
 		printMsg(shortTrace(traceInfo))
@@ -139,6 +139,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 // Short trace record
 type shortTraceMsg struct {
+	Status     string    `json:"status"`
 	Host       string    `json:"host"`
 	Time       time.Time `json:"time"`
 	Client     string    `json:"client"`
@@ -151,6 +152,7 @@ type shortTraceMsg struct {
 }
 
 type traceMessage struct {
+	Status string `json:"status"`
 	madmin.ServiceTraceInfo
 }
 
@@ -207,6 +209,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 }
 
 func (s shortTraceMsg) JSON() string {
+	s.Status = "success"
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 	enc.SetIndent("", " ")
@@ -259,6 +262,7 @@ func colorizedNodeName(nodeName string) string {
 }
 
 func (t traceMessage) JSON() string {
+	t.Status = "success"
 	rqHdrs := make(map[string]string)
 	rspHdrs := make(map[string]string)
 	rq := t.Trace.ReqInfo
