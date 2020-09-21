@@ -265,7 +265,7 @@ mc: <DEBUG> Response Time:  1.220112837s
 ```
 
 ### Option [--json]
-JSON option enables parseable output in [JSON lines](http://jsonlines.org/) format.
+JSON option enables parseable output in [JSON lines](http://jsonlines.org/), also called as [NDJSON](http://ndjson.org/) format.
 
 *Example: List all buckets from MinIO play service.*
 

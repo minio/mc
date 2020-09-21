@@ -44,7 +44,7 @@ var globalFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "json",
-		Usage: "enable JSON formatted output",
+		Usage: "enable JSON lines formatted output",
 	},
 	cli.BoolFlag{
 		Name:  "debug",

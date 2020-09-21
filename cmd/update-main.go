@@ -46,7 +46,7 @@ var updateCmd = cli.Command{
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "json",
-			Usage: "enable JSON formatted output",
+			Usage: "enable JSON lines formatted output",
 		},
 	},
 	CustomHelpTemplate: `Name:
