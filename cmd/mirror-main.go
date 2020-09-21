@@ -57,6 +57,10 @@ var (
 			Usage: "watch and synchronize changes",
 		},
 		cli.BoolFlag{
+			Name:  "keep",
+			Usage: "When watch is set, this will prevent any deletes on target",
+		},
+		cli.BoolFlag{
 			Name:  "remove",
 			Usage: "remove extraneous object(s) on target",
 		},
@@ -535,7 +539,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 }
 
 func (mj *mirrorJob) watchURL(ctx context.Context, sourceClient Client) *probe.Error {
-	return mj.watcher.Join(ctx, sourceClient, true)
+	return mj.watcher.Join(ctx, sourceClient, true, !mj.opts.isKeep)
 }
 
 // Fetch urls that need to be mirrored
@@ -747,6 +751,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	}
 
 	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
+	isKeep := cli.Bool("keep")
 
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
@@ -758,6 +763,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		isOverwrite:      isOverwrite,
 		isWatch:          isWatch,
 		isMetadata:       isMetadata,
+		isKeep:           isKeep,
 		md5:              cli.Bool("md5"),
 		disableMultipart: cli.Bool("disable-multipart"),
 		excludeOptions:   cli.StringSlice("exclude"),

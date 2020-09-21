@@ -198,14 +198,14 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 }
 
 type mirrorOptions struct {
-	isFake, isOverwrite, activeActive bool
-	isWatch, isRemove, isMetadata     bool
-	excludeOptions                    []string
-	encKeyDB                          map[string][]prefixSSEPair
-	md5, disableMultipart             bool
-	olderThan, newerThan              string
-	storageClass                      string
-	userMetadata                      map[string]string
+	isFake, isOverwrite, activeActive     bool
+	isWatch, isRemove, isMetadata, isKeep bool
+	excludeOptions                        []string
+	encKeyDB                              map[string][]prefixSSEPair
+	md5, disableMultipart                 bool
+	olderThan, newerThan                  string
+	storageClass                          string
+	userMetadata                          map[string]string
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
