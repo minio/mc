@@ -173,7 +173,7 @@ type ObjectIsDeleteMarker struct {
 }
 
 func (e ObjectIsDeleteMarker) Error() string {
-	return "Object has been deleted"
+	return "Object is marked as deleted"
 }
 
 // UnexpectedShortWrite - write wrote less bytes than expected.
