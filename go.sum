@@ -296,6 +296,8 @@ github.com/minio/minio v0.0.0-20200917180950-00555c747ec5/go.mod h1:dRmX9jR9niWr
 github.com/minio/minio-go/v7 v7.0.5-0.20200811211821-14ed05478889/go.mod h1:CSt2ETZNs+bIIhWTse0mcZKZWMGrFU7Er7RR0TmkDYk=
 github.com/minio/minio-go/v7 v7.0.6-0.20200901014009-5f8d15bbc5fd h1:38hrGmWnv+C+yBcKgAWipiwRDu7Exr0kKAfy1QArW0g=
 github.com/minio/minio-go/v7 v7.0.6-0.20200901014009-5f8d15bbc5fd/go.mod h1:CSt2ETZNs+bIIhWTse0mcZKZWMGrFU7Er7RR0TmkDYk=
+github.com/minio/minio-go/v7 v7.0.6-0.20200918223035-9cefc0929b69 h1:/FOBaOo5vVZrw0QRq1mYrIoQ1tiIi6PLCtYmdb68B0Q=
+github.com/minio/minio-go/v7 v7.0.6-0.20200918223035-9cefc0929b69/go.mod h1:CSt2ETZNs+bIIhWTse0mcZKZWMGrFU7Er7RR0TmkDYk=
 github.com/minio/selfupdate v0.3.1 h1:BWEFSNnrZVMUWXbXIgLDNDjbejkmpAmZvy/nCz1HlEs=
 github.com/minio/selfupdate v0.3.1/go.mod h1:b8ThJzzH7u2MkF6PcIra7KaXO9Khf6alWPvMSyTDCFM=
 github.com/minio/sha256-simd v0.1.1 h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=

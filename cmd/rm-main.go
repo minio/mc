@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -241,34 +243,49 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 	ctx, cancelRemoveSingle := context.WithCancel(globalContext)
 	defer cancelRemoveSingle()
 
-	isRecursive := false
-	contents, pErr := statURL(ctx, url, versionID, time.Time{}, false, isIncomplete, isRecursive, encKeyDB)
+	var (
+		// A remove request can fail with 400 Bad Request when we STAT an
+		// object which is SSE-C encrypted, but we still want to continue
+		// object deletion.
+		failedWith400 bool
+
+		isDir   bool
+		size    int64
+		modTime time.Time
+	)
+
+	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{})
 	if pErr != nil {
+		errResp := minio.ToErrorResponse(pErr.ToGoError())
+		if errResp.StatusCode != http.StatusBadRequest {
+			errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
+			return exitStatus(globalErrorExitStatus)
+		}
+		failedWith400 = true
+	} else {
+		isDir = content.Type.IsDir()
+		size = content.Size
+		modTime = content.Time
+	}
+
+	if failedWith400 && olderThan != "" || newerThan != "" {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
-	if len(contents) == 0 {
-		if !isForce {
-			errorIf(errDummy().Trace(url), "Failed to remove `"+url+"`. Target object is not found")
-			return exitStatus(globalErrorExitStatus)
-		}
-		return nil
-	}
-	content := contents[0]
 
 	// Skip objects older than older--than parameter if specified
-	if olderThan != "" && isOlder(content.Time, olderThan) {
+	if olderThan != "" && isOlder(modTime, olderThan) {
 		return nil
 	}
 
 	// Skip objects older than older--than parameter if specified
-	if newerThan != "" && isNewer(content.Time, newerThan) {
+	if newerThan != "" && isNewer(modTime, newerThan) {
 		return nil
 	}
 
 	printMsg(rmMessage{
 		Key:       url,
-		Size:      content.Size,
+		Size:      size,
 		VersionID: versionID,
 	})
 
@@ -279,7 +296,8 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 			errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
 			return exitStatus(globalErrorExitStatus) // End of journey.
 		}
-		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) && content.Type.IsDir() {
+
+		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) && isDir {
 			targetURL = targetURL + string(clnt.GetURL().Separator)
 		}
 
