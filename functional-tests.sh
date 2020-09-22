@@ -173,6 +173,10 @@ function assert()
         else
             echo "mc: $func_name: $err"
         fi
+        
+        if [ "$rv" -eq 0 ]; then
+            exit 1
+        fi
 
         exit "$rv"
     fi
