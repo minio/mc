@@ -19,9 +19,11 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/console"
 )
 
 var adminKMSKeyStatusCmd = cli.Command{
@@ -43,7 +45,7 @@ EXAMPLES:
   1. Get default master key and its status from a MinIO server/cluster.
      $ {{.HelpName}} play
   2. Get the status of one particular master key from a MinIO server/cluster.
-     $ {{.HelpName}} play my-master-key 
+     $ {{.HelpName}} play my-master-key
 `,
 }
 
@@ -52,6 +54,9 @@ func mainAdminKMSKeyStatus(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "status", 1) // last argument is exit code
 	}
+
+	console.SetColor("StatusSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("StatusError", color.New(color.FgRed, color.Bold))
 
 	client, err := newAdminClient(ctx.Args().Get(0))
 	fatalIf(err, "Unable to get a configured admin connection.")
@@ -63,29 +68,48 @@ func mainAdminKMSKeyStatus(ctx *cli.Context) error {
 	status, e := client.GetKeyStatus(globalContext, keyID)
 	fatalIf(probe.NewError(e), "Failed to get status information")
 
-	printMsg(kmsKeyStatusMsg(*status))
+	printMsg(kmsKeyStatusMsg{
+		KeyID:         status.KeyID,
+		Encryption:    status.EncryptionErr == "",
+		Decryption:    status.DecryptionErr == "",
+		EncryptionErr: status.EncryptionErr,
+		DecryptionErr: status.DecryptionErr,
+	})
 	return nil
 }
 
-type kmsKeyStatusMsg madmin.KMSKeyStatus
-
-func (s kmsKeyStatusMsg) String() string {
-	msg := fmt.Sprintf("Key: %s\n", s.KeyID)
-	if s.EncryptionErr == "" {
-		msg = fmt.Sprintf("%s %s", msg, "\t • Encryption ✔\n")
-	} else {
-		return fmt.Sprintf("%s \t • Encryption failed: %s\n", msg, s.EncryptionErr)
-	}
-
-	if s.DecryptionErr == "" {
-		msg = fmt.Sprintf("%s %s", msg, "\t • Decryption ✔\n")
-	} else {
-		return fmt.Sprintf("%s \t • Decryption failed: %s\n", msg, s.DecryptionErr)
-	}
-	return msg
+type kmsKeyStatusMsg struct {
+	KeyID         string `json:"keyId"`
+	Encryption    bool   `json:"encryption"`
+	Decryption    bool   `json:"decryption"`
+	EncryptionErr string `json:"encryptionError,omitempty"`
+	DecryptionErr string `json:"decryptionError,omitempty"`
+	Status        string `json:"status"`
 }
 
 func (s kmsKeyStatusMsg) JSON() string {
-	const fmtStr = `{"key-id":"%s","encryption-error":"%s","decryption-error":"%s"}`
-	return fmt.Sprintf(fmtStr, s.KeyID, s.EncryptionErr, s.DecryptionErr)
+	s.Status = "success"
+	if !s.Encryption && !s.Decryption {
+		s.Status = "error"
+	}
+	kmsBytes, e := json.MarshalIndent(s, "", "    ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(kmsBytes)
+}
+
+func (s kmsKeyStatusMsg) String() string {
+	msg := fmt.Sprintf("Key: %s\n", s.KeyID)
+	if s.Encryption {
+		msg += "   - Encryption " + console.Colorize("StatusSuccess", "✔") + "\n"
+	} else {
+		msg += fmt.Sprintf("   - Encryption %s (%s)\n", console.Colorize("StatusError", "✗"), s.EncryptionErr)
+	}
+
+	if s.Decryption {
+		msg += "   - Decryption " + console.Colorize("StatusSuccess", "✔") + "\n"
+	} else {
+		msg += fmt.Sprintf("   - Decryption %s (%s)\n", console.Colorize("StatusError", "✗"), s.DecryptionErr)
+	}
+	return msg
 }
