@@ -55,9 +55,9 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 			"Incorrect number of arguments for remove host command.")
 	}
 
-	if !isValidAlias(args.Get(0)) {
-		fatalIf(errDummy().Trace(args.Get(0)),
-			"Invalid alias `"+args.Get(0)+"`.")
+	alias := cleanAlias(args.Get(0))
+	if !isValidAlias(alias) {
+		fatalIf(errDummy().Trace(alias), "Invalid alias `"+alias+"`.")
 	}
 }
 

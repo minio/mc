@@ -59,13 +59,6 @@ func checkConfigHostListSyntax(ctx *cli.Context) {
 		fatalIf(errInvalidArgument().Trace(args...),
 			"Incorrect number of arguments to list hosts.")
 	}
-
-	if args.Get(0) != "" {
-		if !isValidAlias(args.Get(0)) {
-			fatalIf(errDummy().Trace(args.Get(0)),
-				"Invalid alias `"+args.Get(0)+"`.")
-		}
-	}
 }
 
 func mainConfigHostList(ctx *cli.Context) error {
@@ -79,8 +72,9 @@ func mainConfigHostList(ctx *cli.Context) error {
 	console.SetColor("API", color.New(color.FgBlue))
 	console.SetColor("Lookup", color.New(color.FgCyan))
 
-	args := ctx.Args()
-	listHosts(args.Get(0)) // List all configured hosts.
+	alias := cleanAlias(ctx.Args().Get(0))
+
+	listHosts(alias) // List all configured hosts.
 	return nil
 }
 
