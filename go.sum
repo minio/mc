@@ -293,6 +293,8 @@ github.com/minio/md5-simd v1.1.0 h1:QPfiOqlZH+Cj9teu0t9b1nTBfPbyTl16Of5MeuShdK4=
 github.com/minio/md5-simd v1.1.0/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77ZrKZ0Gw=
 github.com/minio/minio v0.0.0-20200917180950-00555c747ec5 h1:GbSBKx3pg3GoPx/QwSZzVFGlp44f32zAt87fm3eMgTU=
 github.com/minio/minio v0.0.0-20200917180950-00555c747ec5/go.mod h1:dRmX9jR9niWrTvRjwHQfNdUFSsvsJM6wQbRdBMIg2YQ=
+github.com/minio/minio v0.0.0-20200922223427-0537a21b7948 h1:euKfpRJHXfO/RWCZwOsE+SBX7zywFRH+ixEU13PVkqA=
+github.com/minio/minio v0.0.0-20200922223427-0537a21b7948/go.mod h1:dRmX9jR9niWrTvRjwHQfNdUFSsvsJM6wQbRdBMIg2YQ=
 github.com/minio/minio-go/v7 v7.0.5-0.20200811211821-14ed05478889/go.mod h1:CSt2ETZNs+bIIhWTse0mcZKZWMGrFU7Er7RR0TmkDYk=
 github.com/minio/minio-go/v7 v7.0.6-0.20200901014009-5f8d15bbc5fd h1:38hrGmWnv+C+yBcKgAWipiwRDu7Exr0kKAfy1QArW0g=
 github.com/minio/minio-go/v7 v7.0.6-0.20200901014009-5f8d15bbc5fd/go.mod h1:CSt2ETZNs+bIIhWTse0mcZKZWMGrFU7Er7RR0TmkDYk=
@@ -552,6 +554,7 @@ golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae h1:Ih9Yo4hSPImZOpfGuA4bR/ORKTAbhZo2AbWNRCnevdo=
 golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200915084602-288bc346aa39 h1:356XA7ITklAU2//sYkjFeco+dH1bCRD8XCJ9FIEsvo4=
 golang.org/x/sys v0.0.0-20200915084602-288bc346aa39/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

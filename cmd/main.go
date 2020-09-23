@@ -283,17 +283,17 @@ func registerBefore(ctx *cli.Context) error {
 func findClosestCommands(command string) []string {
 	var closestCommands []string
 	for _, value := range commandsTree.PrefixMatch(command) {
-		closestCommands = append(closestCommands, value.(string))
+		closestCommands = append(closestCommands, interface{}(value).(string))
 	}
 	sort.Strings(closestCommands)
 	// Suggest other close commands - allow missed, wrongly added and even transposed characters
 	for _, value := range commandsTree.Walk(commandsTree.Root()) {
-		if sort.SearchStrings(closestCommands, value.(string)) < len(closestCommands) {
+		if sort.SearchStrings(closestCommands, interface{}(value).(string)) < len(closestCommands) {
 			continue
 		}
 		// 2 is arbitrary and represents the max allowed number of typed errors
-		if words.DamerauLevenshteinDistance(command, value.(string)) < 2 {
-			closestCommands = append(closestCommands, value.(string))
+		if words.DamerauLevenshteinDistance(command, interface{}(value).(string)) < 2 {
+			closestCommands = append(closestCommands, interface{}(value).(string))
 		}
 	}
 	return closestCommands
