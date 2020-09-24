@@ -202,7 +202,8 @@ func mainList(cliCtx *cli.Context) error {
 				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 			}
 		}
-		if e := doList(ctx, clnt, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions); e != nil {
+		_, printVersionsOrder := clnt.(*S3Client)
+		if e := doList(ctx, clnt, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, printVersionsOrder, printVersionsOrder); e != nil {
 			cErr = e
 		}
 	}

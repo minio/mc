@@ -157,5 +157,5 @@ func mainSnapList(cmdCtx *cli.Context) error {
 
 	ctx, cancelList := context.WithCancel(globalContext)
 	defer cancelList()
-	return doList(ctx, clnt, true, false, time.Time{}, true)
+	return doList(ctx, clnt, true, false, time.Time{}, false, false, false)
 }

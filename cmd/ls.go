@@ -50,6 +50,8 @@ type contentMessage struct {
 	VersionOrd     int    `json:"versionOrdinal,omitempty"`
 	VersionIndex   int    `json:"versionIndex,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
+
+	printVersionOrder, printVersionType bool
 }
 
 // String colorized string message.
@@ -59,11 +61,16 @@ func (c contentMessage) String() string {
 	fileDesc := ""
 
 	if c.VersionID != "" {
-		fileDesc += console.Colorize("VersionID", " "+c.VersionID) + console.Colorize("VersionOrd", fmt.Sprintf(" v%d", c.VersionOrd))
-		if c.IsDeleteMarker {
-			fileDesc += console.Colorize("DEL", " DEL")
-		} else {
-			fileDesc += console.Colorize("PUT", " PUT")
+		fileDesc += console.Colorize("VersionID", " "+c.VersionID)
+		if c.printVersionOrder {
+			fileDesc += console.Colorize("VersionOrd", fmt.Sprintf(" v%d", c.VersionOrd))
+		}
+		if c.printVersionType {
+			if c.IsDeleteMarker {
+				fileDesc += console.Colorize("DEL", " DEL")
+			} else {
+				fileDesc += console.Colorize("PUT", " PUT")
+			}
 		}
 	}
 
@@ -109,7 +116,7 @@ func getKey(c *ClientContent) string {
 
 // Generate printable listing from a list of sorted client
 // contents, the latest created content comes first.
-func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAllVersions bool) (msgs []contentMessage) {
+func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAllVersions, printVersionOrder, printVersionType bool) (msgs []contentMessage) {
 	prefixPath := clntURL.Path
 	prefixPath = filepath.ToSlash(prefixPath)
 	if !strings.HasSuffix(prefixPath, "/") {
@@ -126,6 +133,8 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		c.URL.Path = strings.TrimPrefix(contentURL, prefixPath)
 
 		contentMsg := contentMessage{}
+		contentMsg.printVersionOrder = printVersionOrder
+		contentMsg.printVersionType = printVersionType
 		contentMsg.Time = c.Time.Local()
 
 		// guess file type.
@@ -192,17 +201,16 @@ func (s summaryMessage) JSON() string {
 }
 
 // Pretty print the list of versions belonging to one object
-func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions, isSummary bool) {
+func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions, isSummary, printVersionOrder, printVersionType bool) {
 	sortObjectVersions(ctntVersions)
-	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
+	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions, printVersionOrder, printVersionType)
 	for _, msg := range msgs {
 		printMsg(msg)
 	}
 }
 
 // doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions bool) error {
-
+func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions, printVersionOrder, printVersionType bool) error {
 	var (
 		lastPath          string
 		perObjectVersions []*ClientContent
@@ -246,7 +254,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
+			printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary, printVersionOrder, printVersionType)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -256,7 +264,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
+	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary, printVersionOrder, printVersionType)
 
 	if isSummary {
 		printMsg(summaryMessage{
