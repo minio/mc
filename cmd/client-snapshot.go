@@ -542,7 +542,7 @@ func (s *snapClient) SetLifecycle(ctx context.Context, config *lifecycle.Configu
 // Not implemeneted
 func (s *snapClient) GetVersioning(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
 	return minio.BucketVersioningConfiguration{}, probe.NewError(APINotImplemented{
-		API:     "GetLifecycle",
+		API:     "GetVersioning",
 		APIType: "snapshot",
 	})
 }
