@@ -219,12 +219,14 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 		totalObjects      int64
 	)
 
+	enableVersioning := withOlderVersions || !timeRef.IsZero()
+
 	for content := range clnt.List(ctx, ListOptions{
-		Recursive:         isRecursive,
+		isRecursive:       isRecursive,
 		Incomplete:        isIncomplete,
 		TimeRef:           timeRef,
-		WithOlderVersions: withOlderVersions || !timeRef.IsZero(),
-		WithDeleteMarkers: true,
+		WithOlderVersions: enableVersioning,
+		WithDeleteMarkers: enableVersioning,
 		ShowDir:           DirNone,
 	}) {
 		if content.Err != nil {
