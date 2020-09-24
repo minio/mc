@@ -82,7 +82,7 @@ func newSnapClientReader(snapName, snapAliasedURL string, in io.Reader) (Client,
 		return nil, err
 	}
 
-	pu := newClientURL(normalizePath(snapTargetPath))
+	pu := newClientURL(normalizePath(snapAliasedURL))
 	if pu.Separator != '/' {
 		pu.Path = strings.ReplaceAll(pu.Path, "/", string(pu.Separator))
 	}
@@ -220,7 +220,7 @@ func (s *snapClient) getBucketContents(ctx context.Context, bucket SnapshotBucke
 				}
 			}
 			u := s.PathURL.Clone()
-			u.Path = path.Join("/", bucket.Name, entry.Key)
+			u.Path = path.Join(s.snapName, bucket.Name, entry.Key)
 
 			var mod os.FileMode
 			if entry.Key == "" || strings.HasSuffix(entry.Key, "/") {
@@ -268,7 +268,7 @@ func (s *snapClient) listBuckets(ctx context.Context, contentCh chan *ClientCont
 				return
 			}
 			url := s.PathURL.Clone()
-			url.Path = path.Join("/", b.Name)
+			url.Path = path.Join(s.snapName, b.Name)
 
 			c := &ClientContent{
 				URL:  url,
