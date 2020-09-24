@@ -82,6 +82,9 @@ EXAMPLES:
   3. Display only first line from server encrypted object on Amazon S3. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/json-data=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  s3/json-data/population.json
+
+  4. Display the first lines of a specific object version.
+     {{.Prompt}} {{.HelpName}} --version-id "3ddac055-89a7-40fa-8cd3-530a5581b6b8" s3/json-data/population.json
 `,
 }
 
