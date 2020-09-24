@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015-2020 MinIO, Inc.
+ * MinIO Client (C) 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -41,21 +41,21 @@ type snapClient struct {
 	s3Target Client
 }
 
-// snapNew - instantiate a new snapshot
-func snapNew(snapName, clientURL string) (Client, *probe.Error) {
+// newSnapClient - instantiate a new snapshot generic Client
+func newSnapClient(snapName, clientURL string) (Client, *probe.Error) {
 	snapName = strings.TrimPrefix(snapName, snapshotPrefix)
 	if snapName == "-" {
-		return snapNewReader(snapName, clientURL, os.Stdin)
+		return newSnapClientReader(snapName, clientURL, os.Stdin)
 	}
 	f, err := openSnapshotFile(snapName)
 	if err != nil {
 		return nil, err
 	}
-	return snapNewReader(snapName, clientURL, f)
+	return newSnapClientReader(snapName, clientURL, f)
 }
 
-// snapNewReader - instantiate a new snapshot from a reader.
-func snapNewReader(snapName, snapAliasedURL string, in io.Reader) (Client, *probe.Error) {
+// newSnapClientReader - instantiate a new snapshot from a reader.
+func newSnapClientReader(snapName, snapAliasedURL string, in io.Reader) (Client, *probe.Error) {
 	r, err := newSnapShotReader(in)
 	if err != nil {
 		return nil, err
@@ -434,7 +434,6 @@ func (s *snapClient) statBucket(ctx context.Context, bucket string) (content *Cl
 	u := s.PathURL.Clone()
 	u.Path = path.Join("/", b.Name)
 
-	// TODO: Include more information
 	return &ClientContent{
 		URL:  u,
 		Type: os.ModeDir,
@@ -464,6 +463,8 @@ func (s *snapClient) Stat(ctx context.Context, _ StatOptions) (content *ClientCo
 
 	object = strings.TrimSuffix(object, "/")
 
+	// filter helps navigate all objects entries in a specific bucket
+	// until it finds the specific object that we want to Stat()
 	filter := func(entry *SnapshotEntry) filterAction {
 		if entry.IsDeleteMarker {
 			return filterSkipEntry

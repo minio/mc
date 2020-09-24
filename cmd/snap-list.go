@@ -147,7 +147,7 @@ func mainSnapList(cmdCtx *cli.Context) error {
 		if e != nil {
 			err = probe.NewError(e)
 		} else {
-			clnt, err = snapNewReader("dummy-alias", "dummy-alias/", f)
+			clnt, err = newSnapClientReader("dummy-alias", "dummy-alias/", f)
 		}
 	} else {
 		clnt, err = newClient(snapshotPrefix + snapshot)

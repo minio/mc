@@ -577,7 +577,7 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 	if strings.HasPrefix(alias, snapshotPrefix) {
 		alias = strings.TrimPrefix(alias, snapshotPrefix)
 		urlStr = strings.TrimPrefix(urlStr, snapshotPrefix)
-		return snapNew(alias, urlStr)
+		return newSnapClient(alias, urlStr)
 	}
 
 	if hostCfg == nil {
