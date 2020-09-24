@@ -66,7 +66,7 @@ func snapNewReader(snapName, snapAliasedURL string, in io.Reader) (Client, *prob
 		return nil, err
 	}
 
-	hostCfg := hostConfigV9(*tgt)
+	hostCfg := aliasConfigV10(*tgt)
 
 	snapTargetPath := strings.TrimPrefix(snapAliasedURL, snapName)
 	s3TargetURL, e := url.Parse(tgt.URL)
@@ -123,7 +123,7 @@ func (s *snapClient) Put(ctx context.Context, reader io.Reader, size int64, meta
 	})
 }
 
-func (s *snapClient) ShareDownload(ctx context.Context, expires time.Duration) (string, *probe.Error) {
+func (s *snapClient) ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
 		API:     "ShareDownload",
 		APIType: "snapshot",
@@ -366,8 +366,8 @@ func (s *snapClient) SetObjectLockConfig(ctx context.Context, mode minio.Retenti
 }
 
 // Get object lock configuration of bucket.
-func (s *snapClient) GetObjectLockConfig(ctx context.Context) (mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
-	return "", 0, "", probe.NewError(APINotImplemented{
+func (s *snapClient) GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+	return "", "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "snapshot",
 	})
@@ -382,7 +382,7 @@ func (s *snapClient) GetAccessRules(ctx context.Context) (map[string]string, *pr
 }
 
 // Set object retention for a given object.
-func (s *snapClient) PutObjectRetention(ctx context.Context, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
+func (s *snapClient) PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
 		APIType: "snapshot",
@@ -390,7 +390,7 @@ func (s *snapClient) PutObjectRetention(ctx context.Context, mode minio.Retentio
 }
 
 // Set object legal hold for a given object.
-func (s *snapClient) PutObjectLegalHold(ctx context.Context, lhold minio.LegalHoldStatus) *probe.Error {
+func (s *snapClient) PutObjectLegalHold(ctx context.Context, versionID string, lhold minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
 		APIType: "snapshot",
@@ -498,7 +498,7 @@ func (s *snapClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (s *snapClient) GetTags(ctx context.Context) (map[string]string, *probe.Error) {
+func (s *snapClient) GetTags(ctx context.Context, _ string) (map[string]string, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "snapshot",
@@ -506,7 +506,7 @@ func (s *snapClient) GetTags(ctx context.Context) (map[string]string, *probe.Err
 }
 
 // Set Object tags
-func (s *snapClient) SetTags(ctx context.Context, tags string) *probe.Error {
+func (s *snapClient) SetTags(ctx context.Context, versionID, tags string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectTagging",
 		APIType: "snapshot",
@@ -514,7 +514,7 @@ func (s *snapClient) SetTags(ctx context.Context, tags string) *probe.Error {
 }
 
 // Delete object tags
-func (s *snapClient) DeleteTags(ctx context.Context) *probe.Error {
+func (s *snapClient) DeleteTags(ctx context.Context, versionID string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteObjectTagging",
 		APIType: "snapshot",
@@ -565,7 +565,7 @@ func (s *snapClient) GetReplication(ctx context.Context) (replication.Config, *p
 }
 
 // Not implemented
-func (s *snapClient) SetReplication(ctx context.Context, cfg *replication.Config) *probe.Error {
+func (s *snapClient) SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetReplication",
 		APIType: "snapshot",
@@ -577,6 +577,62 @@ func (s *snapClient) SetReplication(ctx context.Context, cfg *replication.Config
 func (s *snapClient) RemoveReplication(ctx context.Context) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "RemoveReplication",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) GetEncryption(ctx context.Context) (string, string, *probe.Error) {
+	return "", "", probe.NewError(APINotImplemented{
+		API:     "GetEncryption",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) SetEncryption(ctx context.Context, algorithm, keyID string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetEncryption",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) DeleteEncryption(ctx context.Context) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "DeleteEncryption",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+	return "", probe.NewError(APINotImplemented{
+		API:     "GetObjectLegalHold",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) GetObjectRetention(ctx context.Context, versionID string) (minio.RetentionMode, time.Time, *probe.Error) {
+	return "", time.Time{}, probe.NewError(APINotImplemented{
+		API:     "GetObjectRetention",
+		APIType: "snapshot",
+	})
+}
+
+// Not implemented
+func (s *snapClient) GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
+	return minio.BucketVersioningConfiguration{}, probe.NewError(APINotImplemented{
+		API:     "GetVersion",
+		APIType: "snapshot",
+	})
+}
+
+// SetVersion - Set version configuration on a bucket, not implemented
+func (s *snapClient) SetVersion(ctx context.Context, status string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetVersion",
 		APIType: "snapshot",
 	})
 }

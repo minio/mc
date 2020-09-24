@@ -71,7 +71,7 @@ type S3Target struct {
 	SecretKey    string `msg:"secretKey"`
 	SessionToken string `msg:"sessionToken,omitempty"`
 	API          string `msg:"api"`
-	Lookup       string `msg:"lookup"`
+	Path         string `msg:"path"`
 }
 
 // packetType is the type of a packet in the serialization format.

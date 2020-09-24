@@ -54,10 +54,10 @@ func (z *S3Target) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "API")
 				return
 			}
-		case "lookup":
-			z.Lookup, err = dc.ReadString()
+		case "path":
+			z.Path, err = dc.ReadString()
 			if err != nil {
-				err = msgp.WrapError(err, "Lookup")
+				err = msgp.WrapError(err, "Path")
 				return
 			}
 		default:
@@ -140,14 +140,14 @@ func (z *S3Target) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "API")
 		return
 	}
-	// write "lookup"
-	err = en.Append(0xa6, 0x6c, 0x6f, 0x6f, 0x6b, 0x75, 0x70)
+	// write "path"
+	err = en.Append(0xa4, 0x70, 0x61, 0x74, 0x68)
 	if err != nil {
 		return
 	}
-	err = en.WriteString(z.Lookup)
+	err = en.WriteString(z.Path)
 	if err != nil {
-		err = msgp.WrapError(err, "Lookup")
+		err = msgp.WrapError(err, "Path")
 		return
 	}
 	return
@@ -185,9 +185,9 @@ func (z *S3Target) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "api"
 	o = append(o, 0xa3, 0x61, 0x70, 0x69)
 	o = msgp.AppendString(o, z.API)
-	// string "lookup"
-	o = append(o, 0xa6, 0x6c, 0x6f, 0x6f, 0x6b, 0x75, 0x70)
-	o = msgp.AppendString(o, z.Lookup)
+	// string "path"
+	o = append(o, 0xa4, 0x70, 0x61, 0x74, 0x68)
+	o = msgp.AppendString(o, z.Path)
 	return
 }
 
@@ -239,10 +239,10 @@ func (z *S3Target) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "API")
 				return
 			}
-		case "lookup":
-			z.Lookup, bts, err = msgp.ReadStringBytes(bts)
+		case "path":
+			z.Path, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Lookup")
+				err = msgp.WrapError(err, "Path")
 				return
 			}
 		default:
@@ -259,7 +259,7 @@ func (z *S3Target) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *S3Target) Msgsize() (s int) {
-	s = 1 + 4 + msgp.StringPrefixSize + len(z.URL) + 10 + msgp.StringPrefixSize + len(z.AccessKey) + 10 + msgp.StringPrefixSize + len(z.SecretKey) + 13 + msgp.StringPrefixSize + len(z.SessionToken) + 4 + msgp.StringPrefixSize + len(z.API) + 7 + msgp.StringPrefixSize + len(z.Lookup)
+	s = 1 + 4 + msgp.StringPrefixSize + len(z.URL) + 10 + msgp.StringPrefixSize + len(z.AccessKey) + 10 + msgp.StringPrefixSize + len(z.SecretKey) + 13 + msgp.StringPrefixSize + len(z.SessionToken) + 4 + msgp.StringPrefixSize + len(z.API) + 5 + msgp.StringPrefixSize + len(z.Path)
 	return
 }
 
