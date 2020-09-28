@@ -239,15 +239,17 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 }
 
 // Remove a single object or a single version in a versioned bucket
-func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
-	ctx, cancelRemoveSingle := context.WithCancel(globalContext)
-	defer cancelRemoveSingle()
+func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+	ctx, cancel := context.WithCancel(globalContext)
+	defer cancel()
 
 	var (
-		// A remove request can fail with 400 Bad Request when we STAT an
-		// object which is SSE-C encrypted, but we still want to continue
-		// object deletion.
-		failedWith400 bool
+		// A HEAD request can fail with:
+		// - 400 Bad Request when the object SSE-C
+		// - 405 Method Not Allowed  when this is a delete marker
+		// In those cases, we still want t remove the target object/version
+		// so we simply ignore them.
+		ignoreStatError bool
 
 		isDir   bool
 		size    int64
@@ -256,20 +258,22 @@ func remove(url, versionID string, isIncomplete, isFake, isForce, isBypass bool,
 
 	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{})
 	if pErr != nil {
-		errResp := minio.ToErrorResponse(pErr.ToGoError())
-		if errResp.StatusCode != http.StatusBadRequest {
+		switch minio.ToErrorResponse(pErr.ToGoError()).StatusCode {
+		case http.StatusBadRequest, http.StatusMethodNotAllowed:
+			ignoreStatError = true
+		default:
 			errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 			return exitStatus(globalErrorExitStatus)
 		}
-		failedWith400 = true
 	} else {
 		isDir = content.Type.IsDir()
 		size = content.Size
 		modTime = content.Time
 	}
 
-	if failedWith400 && olderThan != "" || newerThan != "" {
-		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
+	// We should not proceed
+	if ignoreStatError && olderThan != "" || newerThan != "" {
+		errorIf(pErr.Trace(url), "Unable to stat `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
 
@@ -476,7 +480,7 @@ func mainRm(cliCtx *cli.Context) error {
 		if isRecursive || withVersions {
 			e = listAndRemove(url, rewind, withVersions, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
-			e = remove(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
 		if rerr == nil {
 			rerr = e
@@ -493,7 +497,7 @@ func mainRm(cliCtx *cli.Context) error {
 		if isRecursive || withVersions {
 			e = listAndRemove(url, rewind, withVersions, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
-			e = remove(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
 		if rerr == nil {
 			rerr = e
