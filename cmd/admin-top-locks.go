@@ -28,12 +28,19 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
+var topLocksFlag = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "stale",
+		Usage: "list stale locks",
+	},
+}
+
 var adminTopLocksCmd = cli.Command{
 	Name:   "locks",
 	Usage:  "get a list of the 10 oldest locks on a MinIO cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminTopLocks,
-	Flags:  globalFlags,
+	Flags:  append(globalFlags, topLocksFlag...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -114,7 +121,10 @@ func mainAdminTopLocks(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call top locks API
-	entries, e := client.TopLocks(globalContext)
+	entries, e := client.TopLocksWithOpts(globalContext, madmin.TopLockOpts{
+		Count: 10,
+		Stale: ctx.Bool("stale"),
+	})
 	fatalIf(probe.NewError(e), "Unable to get server locks list.")
 
 	console.SetColor("StaleLock", color.New(color.FgRed, color.Bold))
