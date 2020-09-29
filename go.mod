@@ -7,6 +7,8 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.7.0
+	github.com/gdamore/tcell v1.3.0
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/json-iterator/go v1.1.10
 	github.com/klauspost/compress v1.11.12
@@ -22,6 +24,7 @@ require (
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.3
 	github.com/prometheus/client_golang v1.8.0
+	github.com/rivo/tview v0.0.0-20200915114512-42866ecf6ca6
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
 	github.com/shirou/gopsutil/v3 v3.21.1
