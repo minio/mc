@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -30,7 +29,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/klauspost/compress/gzip"
 	"github.com/minio/cli"
-	cjson "github.com/minio/mc/pkg/colorjson"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
@@ -41,23 +40,24 @@ var adminOBDFlags = []cli.Flag{
 		Name:   "tests",
 		Usage:  "choose OBD tests to run [" + options.String() + "]",
 		Value:  nil,
-		EnvVar: "MC_OBD_DATA",
+		EnvVar: "MC_HEALTH_TEST,MC_OBD_TEST",
 		Hidden: true,
 	},
 	cli.DurationFlag{
 		Name:   "deadline",
 		Usage:  "maximum duration that OBD tests should be allowed to run",
 		Value:  3600 * time.Second,
-		EnvVar: "MC_OBD_DEADLINE",
+		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
 }
 
 var adminOBDCmd = cli.Command{
-	Name:   "obd",
-	Usage:  "run on-board diagnostics",
-	Action: mainAdminOBD,
-	Before: setGlobalsFromContext,
-	Flags:  append(adminOBDFlags, globalFlags...),
+	Name:    "health",
+	Aliases: []string{"obd"},
+	Usage:   "run on-board diagnostics",
+	Action:  mainAdminOBD,
+	Before:  setGlobalsFromContext,
+	Flags:   append(adminOBDFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -99,13 +99,13 @@ func (u clusterOBDStruct) JSON() string {
 // checkAdminInfoSyntax - validate arguments passed by a user
 func checkAdminOBDSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "obd", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "health", 1) // last argument is exit code
 	}
 }
 
 //compress and tar obd output
 func tarGZ(c clusterOBDStruct, alias string) error {
-	filename := fmt.Sprintf("%s-obd_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func tarGZ(c clusterOBDStruct, alias string) error {
 	defer f.Close()
 
 	defer func() {
-		fmt.Println("OBD data saved to", filename)
+		console.Infoln("Health data saved at", filename)
 	}()
 
 	gzWriter := gzip.NewWriter(f)
@@ -131,7 +131,7 @@ func tarGZ(c clusterOBDStruct, alias string) error {
 
 	warningMsgHeader := infoText(warningMsgBoundary)
 	warningMsgTrailer := infoText(warningMsgBoundary)
-	fmt.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
+	console.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
 
 	return nil
 }
@@ -177,7 +177,7 @@ func mainAdminOBD(ctx *cli.Context) error {
 			t = greenText(t)
 			sp = infoText(sp)
 			toPrint := fmt.Sprintf("%s %s %s ", dot, t, sp)
-			fmt.Printf("%s\n", toPrint)
+			console.Printf("%s\n", toPrint)
 		}
 		i := 0
 		sp := func() string {
@@ -238,15 +238,15 @@ func mainAdminOBD(ctx *cli.Context) error {
 	clusterOBDInfo := clusterOBDStruct{}
 
 	admin := spinner("Admin Info")
-	cpu := spinner("CPU")
-	diskHw := spinner("Disk Hardware")
-	osInfo := spinner("Os Info")
+	cpu := spinner("CPU Info")
+	diskHw := spinner("Disk Info")
+	osInfo := spinner("OS Info")
 	mem := spinner("Mem Info")
 	process := spinner("Process Info")
-	config := spinner("Config")
-	drive := spinner("Drive")
-	net := spinner("Net")
-	log := spinner("Log")
+	config := spinner("Server Config")
+	log := spinner("Server Log")
+	drive := spinner("Drive Test")
+	net := spinner("Network Test")
 
 	progress := func(info madmin.OBDInfo) bool {
 		return log(len(info.Logging.ServersLog) > 0) &&
@@ -284,16 +284,16 @@ func mainAdminOBD(ctx *cli.Context) error {
 	}
 
 	if globalJSON {
-		jsonBytes, err := cjson.MarshalIndent(clusterOBDInfo, "", " ")
+		jsonBytes, err := json.MarshalIndent(clusterOBDInfo, "", " ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(jsonBytes))
+		console.Println(string(jsonBytes))
 		return nil
 	}
 
 	if clusterOBDInfo.Error != "" {
-		fmt.Println(warnText("Error obtaining obd information:"), clusterOBDInfo.Error)
+		console.Println(warnText("unable to obtain health information:"), clusterOBDInfo.Error)
 		return nil
 	}
 
