@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -46,6 +47,10 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 		Name:  "region",
 		Usage: "region of the destination bucket (optional)",
 	},
+	cli.StringFlag{
+		Name: "bandwidth",
+		Usage: "Per second bandwidth limit (optional). Can be specified human-readable case-insensitive number suffixes\n\tsuch as k, m, g and t referring to the metric units KB, MB, GB and TB respectively. \n\tAdding an i to these prefixes, uses the IEC  units, so that gi refers to gibibyte or iB. \n\tA b at the end is  also accepted. Without suffixes the unit is bytes.",
+	},
 }
 var adminBucketRemoteAddCmd = cli.Command{
 	Name:   "add",
@@ -57,7 +62,7 @@ var adminBucketRemoteAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@DEST_URL/DEST_BUCKET [--path | --region ] --service
+  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@DEST_URL/DEST_BUCKET [--path | --region | --bandwidth] --service
 
 TARGET:
   Also called as alias/sourcebucketname
@@ -112,6 +117,7 @@ type RemoteMessage struct {
 	Path         string `json:"path,omitempty"`
 	Region       string `json:"region,omitempty"`
 	ServiceType  string `json:"service"`
+	Bandwidth    int64  `json:"bandwidth"`
 }
 
 func (r RemoteMessage) String() string {
@@ -183,7 +189,10 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	if !madmin.ServiceType(serviceType).IsValid() {
 		fatalIf(errInvalidArgument().Trace(serviceType), "Invalid service type. Valid option is `[replication]`.")
 	}
-
+	bandwidthStr := cli.String("bandwidth")
+	bandwidth, e := humanize.ParseBytes(bandwidthStr)
+	fatalIf(probe.NewError(e).Trace(bandwidthStr), "Unable to parse quota")
+	fmt.Printf("bandwidth:%d\n", bandwidth)
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	creds := &auth.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
@@ -195,6 +204,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		API:          "s3v4",
 		Type:         madmin.ServiceType(serviceType),
 		Region:       cli.String("region"),
+		BandwidthLimit: int64(bandwidth),
 	}
 	return sourceBucket, bktTarget
 }
