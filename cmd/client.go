@@ -149,6 +149,8 @@ type Client interface {
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)
 	SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error
 	DeleteEncryption(ctx context.Context) *probe.Error
+	// Bucket info operation
+	GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 }
 
 // ClientContent - Content container for content metadata

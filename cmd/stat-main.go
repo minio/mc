@@ -143,6 +143,11 @@ func mainStat(cliCtx *cli.Context) error {
 	console.SetColor("Size", color.New(color.FgWhite))
 	console.SetColor("ETag", color.New(color.FgWhite))
 	console.SetColor("Metadata", color.New(color.FgWhite))
+	// theme specific to stat bucket
+	console.SetColor("Key", color.New(color.FgCyan))
+	console.SetColor("Value", color.New(color.FgYellow))
+	console.SetColor("Unset", color.New(color.FgRed))
+	console.SetColor("Set", color.New(color.FgGreen))
 
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(cliCtx)
@@ -161,7 +166,7 @@ func mainStat(cliCtx *cli.Context) error {
 
 	var cErr error
 	for _, targetURL := range args {
-		contents, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
+		contents, bstats, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
 		if err != nil {
 			fatalIf(err, "Unable to stat `"+targetURL+"`.")
 		}
@@ -170,6 +175,14 @@ func mainStat(cliCtx *cli.Context) error {
 			stat.singleObject = len(contents) == 1
 			printMsg(stat)
 		}
+		for _, binfo := range bstats {
+			printMsg(bucketInfoMessage{
+				Status:   "success",
+				URL:      targetURL,
+				Metadata: *binfo,
+			})
+		}
+
 	}
 	return cErr
 

@@ -1178,3 +1178,11 @@ func (f *fsClient) DeleteEncryption(ctx context.Context) *probe.Error {
 		APIType: "filesystem",
 	})
 }
+
+// Gets bucket info
+func (f *fsClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
+	return BucketInfo{}, probe.NewError(APINotImplemented{
+		API:     "GetBucketInfo",
+		APIType: "filesystem",
+	})
+}

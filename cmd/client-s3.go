@@ -2648,3 +2648,64 @@ func (c *S3Client) DeleteEncryption(ctx context.Context) *probe.Error {
 	}
 	return nil
 }
+
+// GetBucketInfo gets info about a bucket
+func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
+	var b BucketInfo
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return b, probe.NewError(BucketNameEmpty{})
+	}
+	content, err := c.bucketStat(ctx, bucket)
+	if err != nil {
+		return b, err.Trace(bucket)
+	}
+	b.URL = content.URL
+	b.Size = content.Size
+	b.Type = content.Type
+	b.Date = content.Time
+	if vcfg, err := c.GetVersion(ctx); err == nil {
+		b.Versioning.Status = vcfg.Status
+		b.Versioning.MFADelete = vcfg.MFADelete
+	}
+	if enabled, mode, validity, unit, err := c.api.GetObjectLockConfig(ctx, bucket); err == nil {
+		if mode != nil {
+			b.Locking.Mode = *mode
+		}
+		b.Locking.Enabled = enabled
+		if validity != nil && unit != nil {
+			vuint64 := uint64(*validity)
+			b.Locking.Validity = fmt.Sprintf("%d%s", vuint64, unit)
+		}
+	}
+
+	if rcfg, err := c.GetReplication(ctx); err == nil {
+		if !rcfg.Empty() {
+			b.Replication.Enabled = true
+		}
+	}
+	if algo, keyID, err := c.GetEncryption(ctx); err == nil {
+		b.Encryption.Algorithm = algo
+		b.Encryption.KeyID = keyID
+	}
+
+	if pType, policyStr, err := c.GetAccess(ctx); err == nil {
+		b.Policy.Type = pType
+		b.Policy.Text = policyStr
+	}
+	location, e := c.api.GetBucketLocation(ctx, bucket)
+	if e != nil {
+		return b, probe.NewError(e)
+	}
+	b.Location = location
+	if tags, err := c.GetTags(ctx, ""); err == nil {
+		b.Tagging = tags
+	}
+	if lfc, err := c.GetLifecycle(ctx); err == nil {
+		b.ILM.Config = lfc
+	}
+	if nfc, err := c.api.GetBucketNotification(ctx, bucket); err == nil {
+		b.Notification.Config = nfc
+	}
+	return b, nil
+}
