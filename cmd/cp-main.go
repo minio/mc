@@ -183,8 +183,8 @@ EXAMPLES:
   18. Copy a text file to an object storage and disable multipart upload feature.
       {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
 
-  19. Pick versions while copying objects at a specific date/time in the past if the bucket versioning is enabled.
-      {{.Prompt}} {{.HelpName}} --rewind 10d myobject.txt play/mybucket
+  19. Roll back 10 days in the past to copy the content of 'mybucket'
+      {{.Prompt}} {{.HelpName}} --rewind 10d -r play/mybucket/ /tmp/dest/
 
 `,
 }
