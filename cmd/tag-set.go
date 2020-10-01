@@ -154,7 +154,7 @@ func mainSetTag(cliCtx *cli.Context) error {
 	if timeRef.IsZero() && !withVersions {
 		setTags(ctx, clnt, versionID, tags, true)
 	} else {
-		for content := range clnt.List(ctx, ListOptions{timeRef: timeRef, withOlderVersions: withVersions}) {
+		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
 			if content.Err != nil {
 				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
 			}

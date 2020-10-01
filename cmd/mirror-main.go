@@ -858,7 +858,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
 			dstInitialURL := dstURL
-			for content := range srcClt.List(ctx, ListOptions{isRecursive: false, showDir: DirNone}) {
+			for content := range srcClt.List(ctx, ListOptions{IsRecursive: false, ShowDir: DirNone}) {
 				if content.Err != nil {
 					errorIf(content.Err.Trace(srcClt.GetURL().String()), "Unable to list folder.")
 					continue
