@@ -198,10 +198,10 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 	)
 
 	for content := range clnt.List(ctx, ListOptions{
-		isRecursive:       recursive,
-		withOlderVersions: true,
-		withDeleteMarkers: true,
-		showDir:           DirNone,
+		IsRecursive:       recursive,
+		WithOlderVersions: true,
+		WithDeleteMarkers: true,
+		ShowDir:           DirNone,
 	}) {
 		if content.Err != nil {
 			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")

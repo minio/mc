@@ -1626,7 +1626,7 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 
 	contentCh := make(chan *ClientContent)
 
-	if !opts.timeRef.IsZero() || opts.withOlderVersions {
+	if !opts.TimeRef.IsZero() || opts.WithOlderVersions {
 		b, o := c.url2BucketAndObject()
 		go func() {
 			switch {
@@ -1641,7 +1641,7 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 				}
 				for _, bucket := range buckets {
 					for objectVersion := range c.listVersions(ctx, bucket.Name, "",
-						opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
+						opts.IsRecursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
 						if objectVersion.Err != nil {
 							if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 								goto noVersioning
@@ -1659,7 +1659,7 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 				return
 			default:
 				for objectVersion := range c.listVersions(ctx, b, o,
-					opts.isRecursive, opts.timeRef, opts.withOlderVersions, opts.withDeleteMarkers) {
+					opts.IsRecursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
 					if objectVersion.Err != nil {
 						if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 							goto noVersioning
@@ -1681,25 +1681,25 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 		return contentCh
 	}
 
-	if opts.isIncomplete {
-		if opts.isRecursive {
-			if opts.showDir == DirNone {
+	if opts.IsIncomplete {
+		if opts.IsRecursive {
+			if opts.ShowDir == DirNone {
 				go c.listIncompleteRecursiveInRoutine(ctx, contentCh)
 			} else {
-				go c.listIncompleteRecursiveInRoutineDirOpt(ctx, contentCh, opts.showDir)
+				go c.listIncompleteRecursiveInRoutineDirOpt(ctx, contentCh, opts.ShowDir)
 			}
 		} else {
 			go c.listIncompleteInRoutine(ctx, contentCh)
 		}
 	} else {
-		if opts.isRecursive {
-			if opts.showDir == DirNone {
-				go c.listRecursiveInRoutine(ctx, contentCh, opts.isFetchMeta)
+		if opts.IsRecursive {
+			if opts.ShowDir == DirNone {
+				go c.listRecursiveInRoutine(ctx, contentCh, opts.IsFetchMeta)
 			} else {
-				go c.listRecursiveInRoutineDirOpt(ctx, contentCh, opts.showDir, opts.isFetchMeta)
+				go c.listRecursiveInRoutineDirOpt(ctx, contentCh, opts.ShowDir, opts.IsFetchMeta)
 			}
 		} else {
-			go c.listInRoutine(ctx, contentCh, opts.isFetchMeta)
+			go c.listInRoutine(ctx, contentCh, opts.IsFetchMeta)
 		}
 	}
 

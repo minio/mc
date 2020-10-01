@@ -164,10 +164,10 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	var cErr error
 	errorsFound := false
 	objectsFound := false
-	lstOptions := ListOptions{isRecursive: recursive, showDir: DirNone}
+	lstOptions := ListOptions{IsRecursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.withOlderVersions = withOlderVersions
-		lstOptions.timeRef = timeRef
+		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.TimeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {

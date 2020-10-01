@@ -129,10 +129,10 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 	go func() {
 		defer close(contentCh)
 		opts := ListOptions{
-			isRecursive:       true,
-			withOlderVersions: true,
-			withDeleteMarkers: true,
-			showDir:           DirLast,
+			IsRecursive:       true,
+			WithOlderVersions: true,
+			WithDeleteMarkers: true,
+			ShowDir:           DirLast,
 		}
 
 		for content := range clnt.List(ctx, opts) {
@@ -222,10 +222,10 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		// Check if the bucket contains any object, version or delete marker.
 		isEmpty := true
 		opts := ListOptions{
-			isRecursive:       true,
-			showDir:           DirNone,
-			withOlderVersions: true,
-			withDeleteMarkers: true,
+			IsRecursive:       true,
+			ShowDir:           DirNone,
+			WithOlderVersions: true,
+			WithDeleteMarkers: true,
 		}
 
 		listCtx, listCancel := context.WithCancel(ctx)

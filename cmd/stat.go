@@ -175,15 +175,15 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
-	lstOptions := ListOptions{isRecursive: isRecursive, isIncomplete: isIncomplete, showDir: DirNone}
+	lstOptions := ListOptions{IsRecursive: isRecursive, IsIncomplete: isIncomplete, ShowDir: DirNone}
 	switch {
 	case versionID != "":
-		lstOptions.withOlderVersions = true
-		lstOptions.withDeleteMarkers = true
+		lstOptions.WithOlderVersions = true
+		lstOptions.WithDeleteMarkers = true
 	case !timeRef.IsZero():
-		lstOptions.withOlderVersions = includeOlderVersions
-		lstOptions.withDeleteMarkers = true
-		lstOptions.timeRef = timeRef
+		lstOptions.WithOlderVersions = includeOlderVersions
+		lstOptions.WithDeleteMarkers = true
+		lstOptions.TimeRef = timeRef
 	}
 	var cErr error
 	for content := range clnt.List(ctx, lstOptions) {

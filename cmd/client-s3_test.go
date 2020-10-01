@@ -178,7 +178,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(globalContext, ListOptions{showDir: DirNone}) {
+	for content := range s3c.List(globalContext, ListOptions{ShowDir: DirNone}) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
@@ -187,7 +187,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(globalContext, ListOptions{showDir: DirNone}) {
+	for content := range s3c.List(globalContext, ListOptions{ShowDir: DirNone}) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
@@ -196,7 +196,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err = S3New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(globalContext, ListOptions{showDir: DirNone}) {
+	for content := range s3c.List(globalContext, ListOptions{ShowDir: DirNone}) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Type.IsRegular(), Equals, true)
 	}
