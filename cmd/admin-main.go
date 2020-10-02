@@ -47,6 +47,7 @@ var adminCmd = cli.Command{
 		adminHealCmd,
 		adminProfileCmd,
 		adminTopCmd,
+		adminBwInfoCmd,
 		adminTraceCmd,
 		adminConsoleCmd,
 		adminPrometheusCmd,
