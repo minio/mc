@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	gojson "encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -37,7 +38,7 @@ import (
 
 var adminOBDFlags = []cli.Flag{
 	OBDDataTypeFlag{
-		Name:   "tests",
+		Name:   "test",
 		Usage:  "choose OBD tests to run [" + options.String() + "]",
 		Value:  nil,
 		EnvVar: "MC_HEALTH_TEST,MC_OBD_TEST",
@@ -80,12 +81,7 @@ type clusterOBDStruct struct {
 }
 
 func (u clusterOBDStruct) String() string {
-	u.Status = ""
-	data, err := json.Marshal(u)
-	if err != nil {
-		fatalIf(probe.NewError(err), "unable to marshal into JSON.")
-	}
-	return string(data)
+	return u.JSON()
 }
 
 // JSON jsonifies service status message.
@@ -119,7 +115,7 @@ func tarGZ(c clusterOBDStruct, alias string) error {
 	gzWriter := gzip.NewWriter(f)
 	defer gzWriter.Close()
 
-	enc := json.NewEncoder(gzWriter)
+	enc := gojson.NewEncoder(gzWriter)
 	if err := enc.Encode(c); err != nil {
 		return err
 	}
@@ -162,6 +158,16 @@ func mainAdminOBD(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	opts := GetOBDDataTypeSlice(ctx, "test")
+	if len(*opts) == 0 {
+		opts = &options
+	}
+
+	optsMap := make(map[madmin.OBDDataType]struct{})
+	for _, opt := range *opts {
+		optsMap[opt] = struct{}{}
+	}
+
 	spinners := []string{"/", "|", "\\", "--", "|"}
 
 	cont, cancel := context.WithCancel(globalContext)
@@ -191,7 +197,7 @@ func mainAdminOBD(ctx *cli.Context) error {
 		go func() {
 			printText(s, sp(), 0)
 			for {
-				<-time.After(500 * time.Millisecond) //2 fps
+				time.Sleep(500 * time.Millisecond) // 2 fps
 				if ctx.Err() != nil {
 					printText(s, check, 1)
 					done <- true
@@ -210,11 +216,12 @@ func mainAdminOBD(ctx *cli.Context) error {
 		}
 	}
 
-	spinner := func(resource string) func(bool) bool {
+	spinner := func(resource string, opt madmin.OBDDataType) func(bool) bool {
 		var spinStopper func()
 		done := false
 
-		if globalJSON {
+		_, ok := optsMap[opt] // check if option is enabled
+		if globalJSON || !ok {
 			return func(bool) bool {
 				return true
 			}
@@ -228,8 +235,8 @@ func mainAdminOBD(ctx *cli.Context) error {
 				spinStopper = startSpinner(resource)
 			}
 			if cond {
-				spinStopper()
 				done = true
+				spinStopper()
 			}
 			return done
 		}
@@ -237,19 +244,19 @@ func mainAdminOBD(ctx *cli.Context) error {
 
 	clusterOBDInfo := clusterOBDStruct{}
 
-	admin := spinner("Admin Info")
-	cpu := spinner("CPU Info")
-	diskHw := spinner("Disk Info")
-	osInfo := spinner("OS Info")
-	mem := spinner("Mem Info")
-	process := spinner("Process Info")
-	config := spinner("Server Config")
-	log := spinner("Server Log")
-	drive := spinner("Drive Test")
-	net := spinner("Network Test")
+	admin := spinner("Admin Info", madmin.OBDDataTypeMinioInfo)
+	cpu := spinner("CPU Info", madmin.OBDDataTypeSysCPU)
+	diskHw := spinner("Disk Info", madmin.OBDDataTypeSysDiskHw)
+	osInfo := spinner("OS Info", madmin.OBDDataTypeSysOsInfo)
+	mem := spinner("Mem Info", madmin.OBDDataTypeSysMem)
+	process := spinner("Process Info", madmin.OBDDataTypeSysLoad)
+	config := spinner("Server Config", madmin.OBDDataTypeMinioConfig)
+	log := spinner("Server Log", madmin.OBDDataTypeLog)
+	drive := spinner("Drive Test", madmin.OBDDataTypePerfDrive)
+	net := spinner("Network Test", madmin.OBDDataTypePerfNet)
 
-	progress := func(info madmin.OBDInfo) bool {
-		return log(len(info.Logging.ServersLog) > 0) &&
+	progress := func(info madmin.OBDInfo) {
+		_ = log(len(info.Logging.ServersLog) > 0) &&
 			admin(len(info.Minio.Info.Servers) > 0) &&
 			cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.DiskHwInfo) > 0) &&
@@ -258,11 +265,11 @@ func mainAdminOBD(ctx *cli.Context) error {
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config != nil) &&
 			drive(len(info.Perf.DriveInfo) > 0) &&
-			net(len(info.Perf.Net) > 1)
+			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)
 	}
 
 	// Fetch info of all servers (cluster or single server)
-	obdChan := client.ServerOBDInfo(cont, options, ctx.Duration("deadline"))
+	obdChan := client.ServerOBDInfo(cont, *opts, ctx.Duration("deadline"))
 	for adminOBDInfo := range obdChan {
 		if adminOBDInfo.Error != "" {
 			clusterOBDInfo.Status = "Error"
@@ -277,18 +284,11 @@ func mainAdminOBD(ctx *cli.Context) error {
 		progress(adminOBDInfo)
 	}
 
-	// If MinIO is not a global distXL cluster, net will never stop spinning.
-	// add this extra check to ensure that doesn't happen
-	if clusterOBDInfo.Error == "" && !progress(clusterOBDInfo.Info) {
-		net(true)
-	}
+	// cancel the context if obdChan has returned.
+	cancel()
 
 	if globalJSON {
-		jsonBytes, err := json.MarshalIndent(clusterOBDInfo, "", " ")
-		if err != nil {
-			return err
-		}
-		console.Println(string(jsonBytes))
+		printMsg(clusterOBDInfo)
 		return nil
 	}
 
@@ -365,10 +365,7 @@ func GetOBDDataTypeSlice(c *cli.Context, name string) *OBDDataTypeSlice {
 	if generic == nil {
 		return nil
 	}
-	if obdData, ok := generic.(*OBDDataTypeSlice); ok {
-		return obdData
-	}
-	return nil
+	return generic.(*OBDDataTypeSlice)
 }
 
 // GetGlobalOBDDataTypeSlice - returns the list of set OBD tests set globally
@@ -377,10 +374,7 @@ func GetGlobalOBDDataTypeSlice(c *cli.Context, name string) *OBDDataTypeSlice {
 	if generic == nil {
 		return nil
 	}
-	if obdData, ok := generic.(*OBDDataTypeSlice); ok {
-		return obdData
-	}
-	return nil
+	return generic.(*OBDDataTypeSlice)
 }
 
 // Apply - applies the flag
