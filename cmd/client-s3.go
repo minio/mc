@@ -1625,89 +1625,105 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	defer c.Unlock()
 
 	contentCh := make(chan *ClientContent)
-
-	if !opts.TimeRef.IsZero() || opts.WithOlderVersions {
-		b, o := c.url2BucketAndObject()
-		go func() {
-			switch {
-			case b == "" && o == "":
-				buckets, err := c.api.ListBuckets(ctx)
-				if err != nil {
-					contentCh <- &ClientContent{
-						Err: probe.NewError(err),
-					}
-					close(contentCh)
-					return
-				}
-				for _, bucket := range buckets {
-					for objectVersion := range c.listVersions(ctx, bucket.Name, "",
-						opts.IsRecursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
-						if objectVersion.Err != nil {
-							if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
-								goto noVersioning
-							} else {
-								contentCh <- &ClientContent{
-									Err: probe.NewError(objectVersion.Err),
-								}
-								continue
-							}
-						}
-						contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion)
-					}
-				}
-				close(contentCh)
-				return
-			default:
-				for objectVersion := range c.listVersions(ctx, b, o,
-					opts.IsRecursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
-					if objectVersion.Err != nil {
-						if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
-							goto noVersioning
-						} else {
-							contentCh <- &ClientContent{
-								Err: probe.NewError(objectVersion.Err),
-							}
-							continue
-						}
-					}
-					contentCh <- c.objectInfo2ClientContent(b, objectVersion)
-				}
-				close(contentCh)
-				return
-			}
-		noVersioning:
-			c.listRecursiveInRoutine(ctx, contentCh, false)
-		}()
-		return contentCh
-	}
-
-	if opts.IsIncomplete {
-		if opts.IsRecursive {
-			if opts.ShowDir == DirNone {
-				go c.listIncompleteRecursiveInRoutine(ctx, contentCh)
-			} else {
-				go c.listIncompleteRecursiveInRoutineDirOpt(ctx, contentCh, opts.ShowDir)
-			}
+	go func() {
+		defer close(contentCh)
+		if !opts.TimeRef.IsZero() || opts.WithOlderVersions {
+			c.versionedList(ctx, contentCh, opts)
 		} else {
-			go c.listIncompleteInRoutine(ctx, contentCh)
+			c.unversionedList(ctx, contentCh, opts)
 		}
-	} else {
-		if opts.IsRecursive {
-			if opts.ShowDir == DirNone {
-				go c.listRecursiveInRoutine(ctx, contentCh, opts.IsFetchMeta)
-			} else {
-				go c.listRecursiveInRoutineDirOpt(ctx, contentCh, opts.ShowDir, opts.IsFetchMeta)
-			}
-		} else {
-			go c.listInRoutine(ctx, contentCh, opts.IsFetchMeta)
-		}
-	}
+	}()
 
 	return contentCh
 }
 
+// versionedList returns objects versions if the S3 backend supports versioning,
+// it falls back to the regular listing if not.
+func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
+	b, o := c.url2BucketAndObject()
+	switch {
+	case b == "" && o == "":
+		buckets, err := c.api.ListBuckets(ctx)
+		if err != nil {
+			contentCh <- &ClientContent{
+				Err: probe.NewError(err),
+			}
+			return
+		}
+		for _, bucket := range buckets {
+
+			if opts.ShowDir == DirFirst {
+				contentCh <- c.bucketInfo2ClientContent(bucket)
+			}
+			for objectVersion := range c.listVersions(ctx, bucket.Name, "",
+				opts.IsRecursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
+				if objectVersion.Err != nil {
+					if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
+						goto noVersioning
+					} else {
+						contentCh <- &ClientContent{
+							Err: probe.NewError(objectVersion.Err),
+						}
+						continue
+					}
+				}
+				contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion)
+			}
+
+			if opts.ShowDir == DirLast {
+				contentCh <- c.bucketInfo2ClientContent(bucket)
+			}
+		}
+		return
+	default:
+		for objectVersion := range c.listVersions(ctx, b, o,
+			opts.IsRecursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
+			if objectVersion.Err != nil {
+				if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
+					goto noVersioning
+				} else {
+					contentCh <- &ClientContent{
+						Err: probe.NewError(objectVersion.Err),
+					}
+					continue
+				}
+			}
+			contentCh <- c.objectInfo2ClientContent(b, objectVersion)
+		}
+		return
+	}
+
+noVersioning:
+	c.unversionedList(ctx, contentCh, opts)
+
+}
+
+// unversionedList is the non versioned S3 listing
+func (c *S3Client) unversionedList(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
+	if opts.IsIncomplete {
+		if opts.IsRecursive {
+			if opts.ShowDir == DirNone {
+				c.listIncompleteRecursiveInRoutine(ctx, contentCh)
+			} else {
+				c.listIncompleteRecursiveInRoutineDirOpt(ctx, contentCh, opts.ShowDir)
+			}
+		} else {
+			c.listIncompleteInRoutine(ctx, contentCh)
+		}
+	} else {
+		if opts.IsRecursive {
+			if opts.ShowDir == DirNone {
+				c.listRecursiveInRoutine(ctx, contentCh, opts.IsFetchMeta)
+			} else {
+				c.listRecursiveInRoutineDirOpt(ctx, contentCh, opts.ShowDir, opts.IsFetchMeta)
+			}
+		} else {
+			c.listInRoutine(ctx, contentCh, opts.IsFetchMeta)
+		}
+	}
+}
+
 func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *ClientContent) {
-	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
@@ -1778,7 +1794,6 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 }
 
 func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, contentCh chan *ClientContent) {
-	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
@@ -1853,7 +1868,6 @@ func (c *S3Client) objectMultipartInfo2ClientContent(bucket string, entry minio.
 
 // Recursively lists incomplete uploads.
 func (c *S3Client) listIncompleteRecursiveInRoutineDirOpt(ctx context.Context, contentCh chan *ClientContent, dirOpt DirOpt) {
-	defer close(contentCh)
 
 	// Closure function reads list of incomplete uploads and sends to contentCh. If a directory is found, it lists
 	// incomplete uploads of the directory content recursively.
@@ -2039,7 +2053,6 @@ func (c *S3Client) bucketStat(ctx context.Context, bucket string) (*ClientConten
 
 // Recursively lists objects.
 func (c *S3Client) listRecursiveInRoutineDirOpt(ctx context.Context, contentCh chan *ClientContent, dirOpt DirOpt, metadata bool) {
-	defer close(contentCh)
 	// Closure function reads list objects and sends to contentCh. If a directory is found, it lists
 	// objects of the directory content recursively.
 	var listDir func(bucket, object string) bool
@@ -2128,7 +2141,6 @@ func (c *S3Client) listRecursiveInRoutineDirOpt(ctx context.Context, contentCh c
 }
 
 func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientContent, metadata bool) {
-	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
@@ -2184,7 +2196,6 @@ const (
 )
 
 func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *ClientContent, metadata bool) {
-	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
