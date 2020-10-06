@@ -1,6 +1,6 @@
 module github.com/minio/mc
 
-go 1.13
+go 1.14
 
 require (
 	github.com/cheggaaa/pb v1.0.28
@@ -14,7 +14,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20200927172404-27d9bd04e544
+	github.com/minio/minio v0.0.0-20201005214542-7fbfdceba3ba
 	github.com/minio/minio-go/v7 v7.0.6-0.20200923173112-bc846cb9b089
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -24,11 +24,9 @@ require (
 	github.com/posener/complete v1.2.3
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
-	github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/text v0.3.3
-	golang.org/x/tools v0.0.0-20200929223013-bf155c11ec6f // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/h2non/filetype.v1 v1.0.5
