@@ -30,7 +30,7 @@ import (
 
 // Structured message depending on the type of console.
 type retentionCmdMessage struct {
-	Op        string              `json:"op"`
+	Op        lockOpType          `json:"op"`
 	Mode      minio.RetentionMode `json:"mode"`
 	Validity  string              `json:"validity"`
 	URLPath   string              `json:"urlpath"`
@@ -43,7 +43,7 @@ type retentionCmdMessage struct {
 func (m retentionCmdMessage) String() string {
 	var color, msg string
 	ed := ""
-	if m.Op == "clear" {
+	if m.Op == lockOpClear {
 		ed = "ed"
 	}
 
@@ -71,8 +71,17 @@ func (m retentionCmdMessage) JSON() string {
 	return string(msgBytes)
 }
 
+type lockOpType string
+
+const (
+	lockOpInfo  = "info"
+	lockOpClear = "clear"
+	lockOpSet   = "set"
+)
+
 // Structured message depending on the type of console.
-type lockCmdMessage struct {
+type retentionBucketMessage struct {
+	Op       lockOpType          `json:"op"`
 	Enabled  string              `json:"enabled"`
 	Mode     minio.RetentionMode `json:"mode"`
 	Validity string              `json:"validity"`
@@ -80,16 +89,20 @@ type lockCmdMessage struct {
 }
 
 // Colorized message for console printing.
-func (m lockCmdMessage) String() string {
-	if m.Mode == "" {
-		return console.Colorize("Clear", "Object lock configuration cleared successfully")
+func (m retentionBucketMessage) String() string {
+	if m.Op == lockOpClear {
+		return console.Colorize("RetentionSuccess", "Object lock configuration cleared successfully.")
 	}
-
-	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", m.Mode), console.Colorize("Validity", m.Validity))
+	// info/set command
+	if m.Mode == "" {
+		return console.Colorize("RetentionNotFound", "No locking mode is enabled.")
+	}
+	return console.Colorize("RetentionSuccess", fmt.Sprintf("%s mode is enabled for %s.",
+		console.Colorize("Mode", m.Mode), console.Colorize("Validity", m.Validity)))
 }
 
 // JSON'ified message for scripting.
-func (m lockCmdMessage) JSON() string {
+func (m retentionBucketMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
@@ -110,7 +123,7 @@ func getRetainUntilDate(validity uint64, unit minio.ValidityUnit) (string, *prob
 	return timeStr, nil
 }
 
-func setRetentionSingle(ctx context.Context, op, alias, url, versionID string, mode minio.RetentionMode, retainUntil time.Time, bypassGovernance bool) *probe.Error {
+func setRetentionSingle(ctx context.Context, op lockOpType, alias, url, versionID string, mode minio.RetentionMode, retainUntil time.Time, bypassGovernance bool) *probe.Error {
 	newClnt, err := newClientFromAlias(alias, url)
 	if err != nil {
 		return err
@@ -175,7 +188,7 @@ func checkObjectLockSupport(ctx context.Context, aliasedURL string) {
 }
 
 // Apply Retention for one object/version or many objects within a given prefix.
-func applyRetention(ctx context.Context, op, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool,
+func applyRetention(ctx context.Context, op lockOpType, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool,
 	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool) error {
 	clnt, err := newClient(target)
 	if err != nil {
@@ -246,7 +259,7 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 	}
 
 	if !atLeastOneRetentionApplied {
-		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to "+op+" its retention.")
+		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to "+string(op)+" its retention.")
 		cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 	}
 
@@ -254,7 +267,7 @@ func applyRetention(ctx context.Context, op, target, versionID string, timeRef t
 }
 
 // applyBucketLock - set object lock configuration.
-func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) error {
+func applyBucketLock(op lockOpType, urlStr string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) error {
 	client, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -262,7 +275,7 @@ func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validit
 
 	ctx, cancelLock := context.WithCancel(globalContext)
 	defer cancelLock()
-	if op == "clear" || mode != "" {
+	if op == lockOpClear || mode != "" {
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
 		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
 	} else {
@@ -270,7 +283,8 @@ func applyBucketLock(op string, urlStr string, mode minio.RetentionMode, validit
 		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
 	}
 
-	printMsg(lockCmdMessage{
+	printMsg(retentionBucketMessage{
+		Op:       op,
 		Enabled:  "Enabled",
 		Mode:     mode,
 		Validity: fmt.Sprintf("%d%s", validity, unit),
@@ -293,7 +307,8 @@ func showBucketLock(urlStr string) error {
 	status, mode, validity, unit, err := client.GetObjectLockConfig(ctx)
 	fatalIf(err, "Unable to get object lock configuration on the specified bucket.")
 
-	printMsg(lockCmdMessage{
+	printMsg(retentionBucketMessage{
+		Op:       lockOpInfo,
 		Enabled:  status,
 		Mode:     mode,
 		Validity: fmt.Sprintf("%d%s", validity, unit),
