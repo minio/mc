@@ -87,7 +87,7 @@ func fatal(err *probe.Error, msg string, data ...interface{}) {
 		if errors.Is(e, context.Canceled) {
 			// This will replace context canceled error message
 			// that the user is seeing to a better one.
-			e = errors.New("Control-C was hit")
+			e = errors.New("Canceling upon user request")
 		}
 		errmsg = e.Error()
 	}
