@@ -92,7 +92,13 @@ func mainLegalHoldClear(cliCtx *cli.Context) error {
 	ctx, cancelCopy := context.WithCancel(globalContext)
 	defer cancelCopy()
 
-	checkBucketLockSupport(ctx, targetURL)
+	enabled, err := isBucketLockEnabled(ctx, targetURL)
+	if err != nil {
+		fatalIf(err, "Unable to clear legalhold of `%s`", targetURL)
+	}
+	if !enabled {
+		fatalIf(errDummy().Trace(), "Bucket locking needs to be enabled in order to use this feature.")
+	}
 
 	return setLegalHold(ctx, targetURL, versionID, timeRef, withVersions, recursive, minio.LegalHoldDisabled)
 }

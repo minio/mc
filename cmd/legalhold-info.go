@@ -236,7 +236,13 @@ func mainLegalHoldInfo(cliCtx *cli.Context) error {
 	ctx, cancelLegalHold := context.WithCancel(globalContext)
 	defer cancelLegalHold()
 
-	checkBucketLockSupport(ctx, targetURL)
+	enabled, err := isBucketLockEnabled(ctx, targetURL)
+	if err != nil {
+		fatalIf(err, "Unable to get legalhold info of `%s`", targetURL)
+	}
+	if !enabled {
+		fatalIf(errDummy().Trace(), "Bucket lock needs to be enabled in order to use this feature.")
+	}
 
 	return showLegalHoldInfo(ctx, targetURL, versionID, timeRef, withVersions, recursive)
 }
