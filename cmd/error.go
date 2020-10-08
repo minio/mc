@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode"
@@ -81,7 +83,13 @@ func fatal(err *probe.Error, msg string, data ...interface{}) {
 	msg = fmt.Sprintf(msg, data...)
 	errmsg := err.String()
 	if !globalDebug {
-		errmsg = err.ToGoError().Error()
+		e := err.ToGoError()
+		if errors.Is(e, context.Canceled) {
+			// This will replace context canceled error message
+			// that the user is seeing to a better one.
+			e = errors.New("Control-C was hit")
+		}
+		errmsg = e.Error()
 	}
 
 	// Remove unnecessary leading spaces in generic/detailed error messages
