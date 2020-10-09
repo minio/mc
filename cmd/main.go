@@ -361,10 +361,6 @@ var appCmds = []cli.Command{
 }
 
 func registerApp(name string) *cli.App {
-	for _, cmd := range appCmds {
-		registerCmd(cmd)
-	}
-
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",
 		Usage: "show help",
@@ -403,7 +399,7 @@ func registerApp(name string) *cli.App {
 
 	app.HideHelpCommand = true
 	app.Usage = "MinIO Client for cloud storage and filesystems."
-	app.Commands = commands
+	app.Commands = appCmds
 	app.Author = "MinIO, Inc."
 	app.Version = ReleaseTag
 	app.Flags = append(mcFlags, globalFlags...)

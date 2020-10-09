@@ -18,14 +18,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/trie"
 )
-
-// Collection of mc commands currently supported
-var commands = []cli.Command{}
-
-// Collection of mc commands currently supported in a trie tree
-var commandsTree = trie.NewTrie()
 
 // Collection of mc flags currently supported
 var globalFlags = []cli.Flag{
@@ -62,10 +55,4 @@ var ioFlags = []cli.Flag{
 		Name:  "encrypt-key",
 		Usage: "encrypt/decrypt objects (using server-side encryption with customer provided keys)",
 	},
-}
-
-// registerCmd registers a cli command
-func registerCmd(cmd cli.Command) {
-	commands = append(commands, cmd)
-	commandsTree.Insert(cmd.Name)
 }
