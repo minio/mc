@@ -38,6 +38,12 @@ var (
 	aliasFlags = []cli.Flag{}
 )
 
+var aliasSubcommands = []cli.Command{
+	aliasSetCmd,
+	aliasListCmd,
+	aliasRemoveCmd,
+}
+
 var aliasCmd = cli.Command{
 	Name:            "alias",
 	Usage:           "set, remove and list aliases in configuration file",
@@ -45,16 +51,12 @@ var aliasCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,
 	Flags:           append(aliasFlags, globalFlags...),
-	Subcommands: []cli.Command{
-		aliasSetCmd,
-		aliasListCmd,
-		aliasRemoveCmd,
-	},
+	Subcommands:     aliasSubcommands,
 }
 
 // mainAlias is the handle for "mc alias" command. provides sub-commands which write configuration data in json format to config file.
 func mainAlias(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, aliasSubcommands)
 	return nil
 	// Sub-commands like add, list and remove have their own main.
 }

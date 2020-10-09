@@ -32,6 +32,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
+	"github.com/minio/minio/pkg/trie"
 	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
 
@@ -122,9 +123,18 @@ func Main(args []string) {
 }
 
 // Function invoked when invalid command is passed.
-func commandNotFound(ctx *cli.Context, command string) {
-	msg := fmt.Sprintf("`%s` is not a mc command. See `mc --help`.", command)
-	closestCommands := findClosestCommands(command)
+func commandNotFound(ctx *cli.Context, cmds []cli.Command) {
+	command := ctx.Args().First()
+	if command == "" {
+		cli.ShowCommandHelp(ctx, command)
+		return
+	}
+	msg := fmt.Sprintf("`%s` is not a recognized command. Get help using `--help` flag.", command)
+	var commandsTree = trie.NewTrie()
+	for _, cmd := range cmds {
+		commandsTree.Insert(cmd.Name)
+	}
+	closestCommands := findClosestCommands(commandsTree, command)
 	if len(closestCommands) > 0 {
 		msg += "\n\nDid you mean one of these?\n"
 		if len(closestCommands) == 1 {
@@ -280,7 +290,7 @@ func registerBefore(ctx *cli.Context) error {
 }
 
 // findClosestCommands to match a given string with commands trie tree.
-func findClosestCommands(command string) []string {
+func findClosestCommands(commandsTree *trie.Trie, command string) []string {
 	closestCommands := commandsTree.PrefixMatch(command)
 	sort.Strings(closestCommands)
 	// Suggest other close commands - allow missed, wrongly added and even transposed characters
@@ -337,7 +347,7 @@ var appCmds = []cli.Command{
 	diffCmd,
 	rmCmd,
 	versionCmd,
-	bucketILMCmd,
+	ilmCmd,
 	encryptCmd,
 	eventCmd,
 	watchCmd,
@@ -374,7 +384,12 @@ func registerApp(name string) *cli.App {
 			return nil
 		}
 
-		cli.ShowAppHelp(ctx)
+		if ctx.Args().First() != "" {
+			commandNotFound(ctx, app.Commands)
+		} else {
+			cli.ShowAppHelp(ctx)
+		}
+
 		return exitStatus(globalErrorExitStatus)
 	}
 
@@ -393,7 +408,6 @@ func registerApp(name string) *cli.App {
 	app.Version = ReleaseTag
 	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate
-	app.CommandNotFound = commandNotFound // handler function declared above.
 	app.EnableBashCompletion = true
 
 	return app

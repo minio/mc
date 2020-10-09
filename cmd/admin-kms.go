@@ -18,20 +18,22 @@ package cmd
 
 import "github.com/minio/cli"
 
+var adminKMSSubcommands = []cli.Command{
+	adminKMSKeyCmd,
+}
+
 var adminKMSCmd = cli.Command{
-	Name:   "kms",
-	Usage:  "perform KMS management operations",
-	Action: mainAdminKMS,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		adminKMSKeyCmd,
-	},
+	Name:            "kms",
+	Usage:           "perform KMS management operations",
+	Action:          mainAdminKMS,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     adminKMSSubcommands,
 	HideHelpCommand: true,
 }
 
 // mainAdminKMS is the handle for the "mc admin kms" command.
 func mainAdminKMS(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, adminKMSSubcommands)
 	return nil
 }

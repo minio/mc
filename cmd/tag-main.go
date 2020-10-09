@@ -20,6 +20,12 @@ import (
 	"github.com/minio/cli"
 )
 
+var tagSubcommands = []cli.Command{
+	tagListCmd,
+	tagRemoveCmd,
+	tagSetCmd,
+}
+
 var tagCmd = cli.Command{
 	Name:            "tag",
 	Usage:           "manage tags for bucket and object(s)",
@@ -27,14 +33,10 @@ var tagCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
-	Subcommands: []cli.Command{
-		tagListCmd,
-		tagRemoveCmd,
-		tagSetCmd,
-	},
+	Subcommands:     tagSubcommands,
 }
 
 func mainTag(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, tagSubcommands)
 	return nil
 }

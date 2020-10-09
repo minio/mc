@@ -29,6 +29,12 @@ var (
 	shareFlags = []cli.Flag{}
 )
 
+var shareSubcommands = []cli.Command{
+	shareDownload,
+	shareUpload,
+	shareList,
+}
+
 // Share documents via URL.
 var shareCmd = cli.Command{
 	Name:            "share",
@@ -37,11 +43,7 @@ var shareCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           append(shareFlags, globalFlags...),
 	HideHelpCommand: true,
-	Subcommands: []cli.Command{
-		shareDownload,
-		shareUpload,
-		shareList,
-	},
+	Subcommands:     shareSubcommands,
 }
 
 // migrateShare migrate to newest version sequentially.
@@ -62,7 +64,7 @@ func migrateShare() {
 
 // mainShare - main handler for mc share command.
 func mainShare(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, shareSubcommands)
 	return nil
 	// Sub-commands like "upload" and "download" have their own main.
 }

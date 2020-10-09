@@ -18,6 +18,11 @@ package cmd
 
 import "github.com/minio/cli"
 
+var adminServiceSubcommands = []cli.Command{
+	adminServiceRestartCmd,
+	adminServiceStopCmd,
+}
+
 var adminServiceCmd = cli.Command{
 	Name:            "service",
 	Usage:           "restart and stop all MinIO servers",
@@ -25,15 +30,12 @@ var adminServiceCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
-	Subcommands: []cli.Command{
-		adminServiceRestartCmd,
-		adminServiceStopCmd,
-	},
+	Subcommands:     adminServiceSubcommands,
 }
 
 // mainAdmin is the handle for "mc admin service" command.
 func mainAdminService(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, adminServiceSubcommands)
 	return nil
 	// Sub-commands like "status", "restart" have their own main.
 }

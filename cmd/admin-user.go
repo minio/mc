@@ -18,26 +18,28 @@ package cmd
 
 import "github.com/minio/cli"
 
+var adminUserSubcommands = []cli.Command{
+	adminUserAddCmd,
+	adminUserDisableCmd,
+	adminUserEnableCmd,
+	adminUserRemoveCmd,
+	adminUserListCmd,
+	adminUserInfoCmd,
+}
+
 var adminUserCmd = cli.Command{
-	Name:   "user",
-	Usage:  "manage users",
-	Action: mainAdminUser,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		adminUserAddCmd,
-		adminUserDisableCmd,
-		adminUserEnableCmd,
-		adminUserRemoveCmd,
-		adminUserListCmd,
-		adminUserInfoCmd,
-	},
+	Name:            "user",
+	Usage:           "manage users",
+	Action:          mainAdminUser,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     adminUserSubcommands,
 	HideHelpCommand: true,
 }
 
 // mainAdminUser is the handle for "mc admin config" command.
 func mainAdminUser(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, adminUserSubcommands)
 	return nil
 	// Sub-commands like "get", "set" have their own main.
 }

@@ -29,17 +29,19 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
+var legalHoldSubcommands = []cli.Command{
+	legalHoldSetCmd,
+	legalHoldClearCmd,
+	legalHoldInfoCmd,
+}
+
 var legalHoldCmd = cli.Command{
-	Name:   "legalhold",
-	Usage:  "manage legal hold for object(s)",
-	Action: mainLegalHold,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		legalHoldSetCmd,
-		legalHoldClearCmd,
-		legalHoldInfoCmd,
-	},
+	Name:        "legalhold",
+	Usage:       "manage legal hold for object(s)",
+	Action:      mainLegalHold,
+	Before:      setGlobalsFromContext,
+	Flags:       globalFlags,
+	Subcommands: legalHoldSubcommands,
 }
 
 // Structured message depending on the type of console.
@@ -111,6 +113,6 @@ func getBucketLockStatus(ctx context.Context, aliasedURL string) (status string,
 
 // main for retention command.
 func mainLegalHold(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, legalHoldSubcommands)
 	return nil
 }
