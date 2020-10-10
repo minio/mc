@@ -1433,6 +1433,10 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return nil, probe.NewError(objectStat.Err)
 		}
 
+		if objectStat.Key != object {
+			break
+		}
+
 		return c.objectInfo2ClientContent(bucket, objectStat), nil
 	}
 
