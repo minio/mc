@@ -61,13 +61,13 @@ type StatOptions struct {
 
 // ListOptions holds options for listing operation
 type ListOptions struct {
-	isRecursive       bool
-	isIncomplete      bool
-	isFetchMeta       bool
-	withOlderVersions bool
-	withDeleteMarkers bool
-	timeRef           time.Time
-	showDir           DirOpt
+	IsRecursive       bool
+	IsIncomplete      bool
+	IsFetchMeta       bool
+	WithOlderVersions bool
+	WithDeleteMarkers bool
+	TimeRef           time.Time
+	ShowDir           DirOpt
 }
 
 // CopyOptions holds options for copying operation
@@ -149,6 +149,8 @@ type Client interface {
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)
 	SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error
 	DeleteEncryption(ctx context.Context) *probe.Error
+	// Bucket info operation
+	GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 }
 
 // ClientContent - Content container for content metadata

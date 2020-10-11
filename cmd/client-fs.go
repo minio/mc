@@ -506,14 +506,14 @@ func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	contentCh := make(chan *ClientContent)
 	filteredCh := make(chan *ClientContent)
 
-	if opts.isRecursive {
-		if opts.showDir == DirNone {
-			go f.listRecursiveInRoutine(contentCh, opts.isFetchMeta)
+	if opts.IsRecursive {
+		if opts.ShowDir == DirNone {
+			go f.listRecursiveInRoutine(contentCh, opts.IsFetchMeta)
 		} else {
-			go f.listDirOpt(contentCh, opts.isIncomplete, opts.isFetchMeta, opts.showDir)
+			go f.listDirOpt(contentCh, opts.IsIncomplete, opts.IsFetchMeta, opts.ShowDir)
 		}
 	} else {
-		go f.listInRoutine(contentCh, opts.isFetchMeta)
+		go f.listInRoutine(contentCh, opts.IsFetchMeta)
 	}
 
 	// This function filters entries from any  listing go routine
@@ -521,7 +521,7 @@ func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	// only show partly uploaded files,
 	go func() {
 		for c := range contentCh {
-			if opts.isIncomplete {
+			if opts.IsIncomplete {
 				if !strings.HasSuffix(c.URL.Path, partSuffix) {
 					continue
 				}
@@ -1175,6 +1175,14 @@ func (f *fsClient) SetEncryption(ctx context.Context, algorithm, keyID string) *
 func (f *fsClient) DeleteEncryption(ctx context.Context) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteEncryption",
+		APIType: "filesystem",
+	})
+}
+
+// Gets bucket info
+func (f *fsClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
+	return BucketInfo{}, probe.NewError(APINotImplemented{
+		API:     "GetBucketInfo",
 		APIType: "filesystem",
 	})
 }

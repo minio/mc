@@ -310,11 +310,11 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 		return nil
 	}
 
-	lstOptions := ListOptions{isRecursive: isRecursive, showDir: DirNone}
+	lstOptions := ListOptions{IsRecursive: isRecursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.withOlderVersions = withOlderVersions
-		lstOptions.withDeleteMarkers = true
-		lstOptions.timeRef = timeRef
+		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.WithDeleteMarkers = true
+		lstOptions.TimeRef = timeRef
 	}
 
 	var cErr error

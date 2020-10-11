@@ -18,7 +18,7 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
+	gojson "encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -30,7 +30,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/klauspost/compress/gzip"
 	"github.com/minio/cli"
-	cjson "github.com/minio/mc/pkg/colorjson"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
@@ -38,26 +38,27 @@ import (
 
 var adminOBDFlags = []cli.Flag{
 	OBDDataTypeFlag{
-		Name:   "tests",
+		Name:   "test",
 		Usage:  "choose OBD tests to run [" + options.String() + "]",
 		Value:  nil,
-		EnvVar: "MC_OBD_DATA",
+		EnvVar: "MC_HEALTH_TEST,MC_OBD_TEST",
 		Hidden: true,
 	},
 	cli.DurationFlag{
 		Name:   "deadline",
 		Usage:  "maximum duration that OBD tests should be allowed to run",
 		Value:  3600 * time.Second,
-		EnvVar: "MC_OBD_DEADLINE",
+		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
 }
 
 var adminOBDCmd = cli.Command{
-	Name:   "obd",
-	Usage:  "run on-board diagnostics",
-	Action: mainAdminOBD,
-	Before: setGlobalsFromContext,
-	Flags:  append(adminOBDFlags, globalFlags...),
+	Name:    "health",
+	Aliases: []string{"obd"},
+	Usage:   "run on-board diagnostics",
+	Action:  mainAdminOBD,
+	Before:  setGlobalsFromContext,
+	Flags:   append(adminOBDFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -80,12 +81,7 @@ type clusterOBDStruct struct {
 }
 
 func (u clusterOBDStruct) String() string {
-	u.Status = ""
-	data, err := json.Marshal(u)
-	if err != nil {
-		fatalIf(probe.NewError(err), "unable to marshal into JSON.")
-	}
-	return string(data)
+	return u.JSON()
 }
 
 // JSON jsonifies service status message.
@@ -99,13 +95,13 @@ func (u clusterOBDStruct) JSON() string {
 // checkAdminInfoSyntax - validate arguments passed by a user
 func checkAdminOBDSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "obd", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "health", 1) // last argument is exit code
 	}
 }
 
 //compress and tar obd output
 func tarGZ(c clusterOBDStruct, alias string) error {
-	filename := fmt.Sprintf("%s-obd_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
@@ -113,13 +109,13 @@ func tarGZ(c clusterOBDStruct, alias string) error {
 	defer f.Close()
 
 	defer func() {
-		fmt.Println("OBD data saved to", filename)
+		console.Infoln("Health data saved at", filename)
 	}()
 
 	gzWriter := gzip.NewWriter(f)
 	defer gzWriter.Close()
 
-	enc := json.NewEncoder(gzWriter)
+	enc := gojson.NewEncoder(gzWriter)
 	if err := enc.Encode(c); err != nil {
 		return err
 	}
@@ -131,7 +127,7 @@ func tarGZ(c clusterOBDStruct, alias string) error {
 
 	warningMsgHeader := infoText(warningMsgBoundary)
 	warningMsgTrailer := infoText(warningMsgBoundary)
-	fmt.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
+	console.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
 
 	return nil
 }
@@ -162,6 +158,16 @@ func mainAdminOBD(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	opts := GetOBDDataTypeSlice(ctx, "test")
+	if len(*opts) == 0 {
+		opts = &options
+	}
+
+	optsMap := make(map[madmin.OBDDataType]struct{})
+	for _, opt := range *opts {
+		optsMap[opt] = struct{}{}
+	}
+
 	spinners := []string{"/", "|", "\\", "--", "|"}
 
 	cont, cancel := context.WithCancel(globalContext)
@@ -177,7 +183,7 @@ func mainAdminOBD(ctx *cli.Context) error {
 			t = greenText(t)
 			sp = infoText(sp)
 			toPrint := fmt.Sprintf("%s %s %s ", dot, t, sp)
-			fmt.Printf("%s\n", toPrint)
+			console.Printf("%s\n", toPrint)
 		}
 		i := 0
 		sp := func() string {
@@ -191,7 +197,7 @@ func mainAdminOBD(ctx *cli.Context) error {
 		go func() {
 			printText(s, sp(), 0)
 			for {
-				<-time.After(500 * time.Millisecond) //2 fps
+				time.Sleep(500 * time.Millisecond) // 2 fps
 				if ctx.Err() != nil {
 					printText(s, check, 1)
 					done <- true
@@ -210,11 +216,12 @@ func mainAdminOBD(ctx *cli.Context) error {
 		}
 	}
 
-	spinner := func(resource string) func(bool) bool {
+	spinner := func(resource string, opt madmin.OBDDataType) func(bool) bool {
 		var spinStopper func()
 		done := false
 
-		if globalJSON {
+		_, ok := optsMap[opt] // check if option is enabled
+		if globalJSON || !ok {
 			return func(bool) bool {
 				return true
 			}
@@ -228,8 +235,8 @@ func mainAdminOBD(ctx *cli.Context) error {
 				spinStopper = startSpinner(resource)
 			}
 			if cond {
-				spinStopper()
 				done = true
+				spinStopper()
 			}
 			return done
 		}
@@ -237,19 +244,19 @@ func mainAdminOBD(ctx *cli.Context) error {
 
 	clusterOBDInfo := clusterOBDStruct{}
 
-	admin := spinner("Admin Info")
-	cpu := spinner("CPU")
-	diskHw := spinner("Disk Hardware")
-	osInfo := spinner("Os Info")
-	mem := spinner("Mem Info")
-	process := spinner("Process Info")
-	config := spinner("Config")
-	drive := spinner("Drive")
-	net := spinner("Net")
-	log := spinner("Log")
+	admin := spinner("Admin Info", madmin.OBDDataTypeMinioInfo)
+	cpu := spinner("CPU Info", madmin.OBDDataTypeSysCPU)
+	diskHw := spinner("Disk Info", madmin.OBDDataTypeSysDiskHw)
+	osInfo := spinner("OS Info", madmin.OBDDataTypeSysOsInfo)
+	mem := spinner("Mem Info", madmin.OBDDataTypeSysMem)
+	process := spinner("Process Info", madmin.OBDDataTypeSysLoad)
+	config := spinner("Server Config", madmin.OBDDataTypeMinioConfig)
+	log := spinner("Server Log", madmin.OBDDataTypeLog)
+	drive := spinner("Drive Test", madmin.OBDDataTypePerfDrive)
+	net := spinner("Network Test", madmin.OBDDataTypePerfNet)
 
-	progress := func(info madmin.OBDInfo) bool {
-		return log(len(info.Logging.ServersLog) > 0) &&
+	progress := func(info madmin.OBDInfo) {
+		_ = log(len(info.Logging.ServersLog) > 0) &&
 			admin(len(info.Minio.Info.Servers) > 0) &&
 			cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.DiskHwInfo) > 0) &&
@@ -258,11 +265,11 @@ func mainAdminOBD(ctx *cli.Context) error {
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config != nil) &&
 			drive(len(info.Perf.DriveInfo) > 0) &&
-			net(len(info.Perf.Net) > 1)
+			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)
 	}
 
 	// Fetch info of all servers (cluster or single server)
-	obdChan := client.ServerOBDInfo(cont, options, ctx.Duration("deadline"))
+	obdChan := client.ServerOBDInfo(cont, *opts, ctx.Duration("deadline"))
 	for adminOBDInfo := range obdChan {
 		if adminOBDInfo.Error != "" {
 			clusterOBDInfo.Status = "Error"
@@ -277,23 +284,16 @@ func mainAdminOBD(ctx *cli.Context) error {
 		progress(adminOBDInfo)
 	}
 
-	// If MinIO is not a global distXL cluster, net will never stop spinning.
-	// add this extra check to ensure that doesn't happen
-	if clusterOBDInfo.Error == "" && !progress(clusterOBDInfo.Info) {
-		net(true)
-	}
+	// cancel the context if obdChan has returned.
+	cancel()
 
 	if globalJSON {
-		jsonBytes, err := cjson.MarshalIndent(clusterOBDInfo, "", " ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(jsonBytes))
+		printMsg(clusterOBDInfo)
 		return nil
 	}
 
 	if clusterOBDInfo.Error != "" {
-		fmt.Println(warnText("Error obtaining obd information:"), clusterOBDInfo.Error)
+		console.Println(warnText("unable to obtain health information:"), clusterOBDInfo.Error)
 		return nil
 	}
 
@@ -365,10 +365,7 @@ func GetOBDDataTypeSlice(c *cli.Context, name string) *OBDDataTypeSlice {
 	if generic == nil {
 		return nil
 	}
-	if obdData, ok := generic.(*OBDDataTypeSlice); ok {
-		return obdData
-	}
-	return nil
+	return generic.(*OBDDataTypeSlice)
 }
 
 // GetGlobalOBDDataTypeSlice - returns the list of set OBD tests set globally
@@ -377,10 +374,7 @@ func GetGlobalOBDDataTypeSlice(c *cli.Context, name string) *OBDDataTypeSlice {
 	if generic == nil {
 		return nil
 	}
-	if obdData, ok := generic.(*OBDDataTypeSlice); ok {
-		return obdData
-	}
-	return nil
+	return generic.(*OBDDataTypeSlice)
 }
 
 // Apply - applies the flag

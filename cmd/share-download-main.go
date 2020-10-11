@@ -155,7 +155,7 @@ func doShareDownloadURL(ctx context.Context, targetURL, versionID string, isRecu
 		// Recursive mode: Share list of objects
 		go func() {
 			defer close(objectsCh)
-			for content := range clnt.List(ctx, ListOptions{isRecursive: isRecursive, showDir: DirNone}) {
+			for content := range clnt.List(ctx, ListOptions{IsRecursive: isRecursive, ShowDir: DirNone}) {
 				objectsCh <- content
 			}
 		}()

@@ -85,11 +85,11 @@ func (b bandwidthInfoPerBucket) String() (msg string) {
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
 	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", b.Server))
 	for bucket, sample := range b.Info.SampleResult {
-		avgAg := fmt.Sprintf("%d", sample.LimitInBytesPerSecond)
-		avgMv := fmt.Sprintf("%.4f", sample.CurrentBandwidthInBytesPerSecond)
+		limitStr := fmt.Sprintf("%d", sample.LimitInBytesPerSecond)
+		curStr := fmt.Sprintf("%.4f", sample.CurrentBandwidthInBytesPerSecond)
 		msg += fmt.Sprintf("   Bucket: %s\n", console.Colorize("Info", bucket))
-		msg += fmt.Sprintf("      Limit  : %s\n", console.Colorize("Info", avgAg))
-		msg += fmt.Sprintf("      Current Bandwidth     : %s\n", console.Colorize("Info", avgMv))
+		msg += fmt.Sprintf("      Limit  : %s\n", console.Colorize("Info", limitStr))
+		msg += fmt.Sprintf("      Current Bandwidth     : %s\n", console.Colorize("Info", curStr))
 	}
 	return msg
 }
@@ -101,7 +101,10 @@ func (b bandwidthInfoPerBucket) JSON() string {
 	return string(statusJSONBytes)
 }
 
-func getSampleBucketCollection(server string, bucket string, sampleCount int) (bwSampleCollection map[string][]bandwidth.Details, err error) {
+// getBandwidthDataBucket For the given server & the bucket in the server fetch a sample collection of bandwidth details
+// Return for the samples obtained arrange them bucket - array of details, error if any.
+func getBandwidthDataBucket(server string, bucket string) (bwSampleCollection map[string][]bandwidth.Details, err error) {
+	sampleCount := 1
 	client, pErr := newAdminClient(server)
 	bwSampleCollection = make(map[string][]bandwidth.Details)
 	var buckets []string
@@ -126,11 +129,7 @@ func getSampleBucketCollection(server string, bucket string, sampleCount int) (b
 	return bwSampleCollection, err
 }
 
-func fetchBandwidthDataBucket(server string, bucket string) (map[string][]bandwidth.Details, error) {
-	sampleCount := 1
-	return getSampleBucketCollection(server, bucket, sampleCount)
-}
-
+// buildSampleTableDataBucket - The display table is arranged per bucket.
 func buildSampleTableDataBucket(bwSampleCollection map[string][]bandwidth.Details) map[string]BandwidthDisplayVal {
 	bwDisplayCollection := make(map[string]BandwidthDisplayVal)
 	for bucket, sampleArr := range bwSampleCollection {
@@ -144,7 +143,9 @@ func buildSampleTableDataBucket(bwSampleCollection map[string][]bandwidth.Detail
 	return bwDisplayCollection
 }
 
+// printTable - Prints the table.
 func printTable(bwDisplaySample map[string]BandwidthDisplayVal) {
+	// bucket name. Max length 16. Min is 6.
 	bucketMaxLength := 16
 	bucketColLength := 6
 	var bucketKeys []string
@@ -154,7 +155,9 @@ func printTable(bwDisplaySample map[string]BandwidthDisplayVal) {
 		}
 		bucketKeys = append(bucketKeys, bucket)
 	}
+	// Buckets will be displayed in the sorted order.
 	sort.Strings(bucketKeys)
+	// Color arrangement for the table.
 	dspOrder := []col{colGreen} // Header
 	for i := 0; i < len(bwDisplaySample); i++ {
 		dspOrder = append(dspOrder, colGrey)
@@ -164,6 +167,7 @@ func printTable(bwDisplaySample map[string]BandwidthDisplayVal) {
 		printColors = append(printColors, getPrintCol(c))
 	}
 
+	// Table cell initialization of the header for the table.
 	cellText := make([][]string, len(bwDisplaySample)+1) // 1 for the header
 	tbl := console.NewTable(printColors, []bool{false, false, false}, 5)
 	bucketTitle := fmt.Sprintf("%-16v", "Bucket")
@@ -172,9 +176,11 @@ func printTable(bwDisplaySample map[string]BandwidthDisplayVal) {
 		"Limit      ",
 		"Current Bandwidth",
 	}
+	// Header separator between header & rows.
 	tbl.HeaderRowSeparator = true
 	index := 1
 
+	// Initialize row/column cell values
 	for _, bucket := range bucketKeys {
 		values := bwDisplaySample[bucket]
 		if len(bucket) > bucketMaxLength {
@@ -187,6 +193,8 @@ func printTable(bwDisplaySample map[string]BandwidthDisplayVal) {
 		}
 		index++
 	}
+
+	// Display table if data length is more than 0.
 	if len(bwDisplaySample) > 0 {
 		tbl.DisplayTable(cellText)
 	}
@@ -206,11 +214,14 @@ func mainAdminBwInfo(ctx *cli.Context) error {
 	rewindLines := 1
 	firstPrint := true
 	for {
+		// In for loop fetch bandwidth data( for all buckets or just one bucket).
 		select {
 		case <-globalContext.Done():
+			// Exit for Ctrl-c
 			os.Exit(0)
 		default:
-			bwSampleCollection, err := fetchBandwidthDataBucket(server, targetURL)
+			// Get Sample Collection of bandwidth data for a bucket.
+			bwSampleCollection, err := getBandwidthDataBucket(server, targetURL)
 			fatalIf(probe.NewError(err), "Unable to fetch bandwidth data for "+args[0])
 			bwBucketDispVal := buildSampleTableDataBucket(bwSampleCollection)
 			if globalJSON {

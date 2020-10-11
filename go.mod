@@ -1,6 +1,6 @@
 module github.com/minio/mc
 
-go 1.13
+go 1.14
 
 require (
 	github.com/cheggaaa/pb v1.0.28
