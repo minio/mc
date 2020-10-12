@@ -29,39 +29,41 @@ const (
 	check = "✔"
 )
 
+var adminCmdSubcommands = []cli.Command{
+	adminServiceCmd,
+	adminServerUpdateCmd,
+	adminInfoCmd,
+	adminUserCmd,
+	adminGroupCmd,
+	adminPolicyCmd,
+	adminConfigCmd,
+	adminHealCmd,
+	adminProfileCmd,
+	adminBwInfoCmd,
+	adminTopCmd,
+	adminTraceCmd,
+	adminConsoleCmd,
+	adminPrometheusCmd,
+	adminKMSCmd,
+	adminOBDCmd,
+	adminBucketCmd,
+}
+
 var adminCmd = cli.Command{
 	Name:            "admin",
 	Usage:           "manage MinIO servers",
 	Action:          mainAdmin,
+	Subcommands:     adminCmdSubcommands,
 	HideHelpCommand: true,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminFlags, globalFlags...),
-	Subcommands: []cli.Command{
-		adminServiceCmd,
-		adminServerUpdateCmd,
-		adminInfoCmd,
-		adminUserCmd,
-		adminGroupCmd,
-		adminPolicyCmd,
-		adminConfigCmd,
-		adminHealCmd,
-		adminProfileCmd,
-		adminTopCmd,
-		adminBwInfoCmd,
-		adminTraceCmd,
-		adminConsoleCmd,
-		adminPrometheusCmd,
-		adminKMSCmd,
-		adminOBDCmd,
-		adminBucketCmd,
-	},
 }
 
 const dateTimeFormatFilename = "2006-01-02T15-04-05.999999-07-00"
 
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, adminCmdSubcommands)
 	return nil
 	// Sub-commands like "service", "heal", "top" have their own main.
 }

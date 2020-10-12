@@ -20,21 +20,23 @@ import (
 	"github.com/minio/cli"
 )
 
+var adminProfileSubcommands = []cli.Command{
+	adminProfileStartCmd,
+	adminProfileStopCmd,
+}
+
 var adminProfileCmd = cli.Command{
-	Name:   "profile",
-	Usage:  "generate profile data for debugging purposes",
-	Action: mainAdminProfile,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		adminProfileStartCmd,
-		adminProfileStopCmd,
-	},
+	Name:            "profile",
+	Usage:           "generate profile data for debugging purposes",
+	Action:          mainAdminProfile,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     adminProfileSubcommands,
 	HideHelpCommand: true,
 }
 
 // mainAdminProfile is the handle for "mc admin profile" command.
 func mainAdminProfile(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, adminProfileSubcommands)
 	return nil
 }
