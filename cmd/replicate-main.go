@@ -18,6 +18,15 @@ package cmd
 
 import "github.com/minio/cli"
 
+var replicateSubcommands = []cli.Command{
+	replicateAddCmd,
+	replicateSetCmd,
+	replicateListCmd,
+	replicateExportCmd,
+	replicateImportCmd,
+	replicateRemoveCmd,
+}
+
 var replicateCmd = cli.Command{
 	Name:            "replicate",
 	Usage:           "configure server side bucket replication",
@@ -25,19 +34,12 @@ var replicateCmd = cli.Command{
 	Action:          mainReplicate,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands: []cli.Command{
-		replicateAddCmd,
-		replicateSetCmd,
-		replicateListCmd,
-		replicateExportCmd,
-		replicateImportCmd,
-		replicateRemoveCmd,
-	},
+	Subcommands:     replicateSubcommands,
 }
 
 // mainReplicate is the handle for "mc replicate" command.
 func mainReplicate(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, replicateSubcommands)
 	return nil
 	// Sub-commands like "list", "clear", "add" have their own main.
 }

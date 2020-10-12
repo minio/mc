@@ -22,21 +22,23 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var bucketILMCmd = cli.Command{
+var ilmSubcommands = []cli.Command{
+	ilmLsCmd,
+	ilmAddCmd,
+	ilmRmCmd,
+	ilmSetCmd,
+	ilmExportCmd,
+	ilmImportCmd,
+}
+
+var ilmCmd = cli.Command{
 	Name:            "ilm",
 	Usage:           "manage bucket lifecycle",
 	Action:          mainILM,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
-	Subcommands: []cli.Command{
-		ilmLsCmd,
-		ilmAddCmd,
-		ilmRmCmd,
-		ilmSetCmd,
-		ilmExportCmd,
-		ilmImportCmd,
-	},
+	Subcommands:     ilmSubcommands,
 }
 
 const (
@@ -50,7 +52,7 @@ const (
 )
 
 func mainILM(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, ilmSubcommands)
 	return nil
 }
 

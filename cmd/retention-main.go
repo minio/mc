@@ -20,21 +20,23 @@ import (
 	"github.com/minio/cli"
 )
 
+var retentionSubcommands = []cli.Command{
+	retentionSetCmd,
+	retentionClearCmd,
+	retentionInfoCmd,
+}
+
 var retentionCmd = cli.Command{
-	Name:   "retention",
-	Usage:  "set retention for object(s)",
-	Action: mainRetention,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		retentionSetCmd,
-		retentionClearCmd,
-		retentionInfoCmd,
-	},
+	Name:        "retention",
+	Usage:       "set retention for object(s)",
+	Action:      mainRetention,
+	Before:      setGlobalsFromContext,
+	Flags:       globalFlags,
+	Subcommands: retentionSubcommands,
 }
 
 // main for retention command.
 func mainRetention(ctx *cli.Context) error {
-	cli.ShowCommandHelpAndExit(ctx, ctx.Args().First(), 1)
+	commandNotFound(ctx, retentionSubcommands)
 	return nil
 }
