@@ -228,24 +228,33 @@ var fsCompleter = fsComplete{}
 // with their bash completer function
 var completeCmds = map[string]complete.Predictor{
 	// S3 API level commands
-	"/ls":        complete.PredictOr(s3Completer, fsCompleter),
-	"/cp":        complete.PredictOr(s3Completer, fsCompleter),
-	"/rm":        complete.PredictOr(s3Completer, fsCompleter),
-	"/rb":        complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
-	"/cat":       complete.PredictOr(s3Completer, fsCompleter),
-	"/head":      complete.PredictOr(s3Completer, fsCompleter),
-	"/diff":      complete.PredictOr(s3Completer, fsCompleter),
-	"/find":      complete.PredictOr(s3Completer, fsCompleter),
-	"/mirror":    complete.PredictOr(s3Completer, fsCompleter),
-	"/pipe":      complete.PredictOr(s3Completer, fsCompleter),
-	"/stat":      complete.PredictOr(s3Completer, fsCompleter),
-	"/watch":     complete.PredictOr(s3Completer, fsCompleter),
-	"/policy":    complete.PredictOr(s3Completer, fsCompleter),
-	"/tree":      complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
-	"/du":        complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
-	"/retention": s3Completer,
-	"/sql":       s3Completer,
-	"/mb":        aliasCompleter,
+	"/ls":     complete.PredictOr(s3Completer, fsCompleter),
+	"/cp":     complete.PredictOr(s3Completer, fsCompleter),
+	"/mv":     complete.PredictOr(s3Completer, fsCompleter),
+	"/rm":     complete.PredictOr(s3Completer, fsCompleter),
+	"/rb":     complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	"/cat":    complete.PredictOr(s3Completer, fsCompleter),
+	"/head":   complete.PredictOr(s3Completer, fsCompleter),
+	"/diff":   complete.PredictOr(s3Completer, fsCompleter),
+	"/find":   complete.PredictOr(s3Completer, fsCompleter),
+	"/mirror": complete.PredictOr(s3Completer, fsCompleter),
+	"/pipe":   complete.PredictOr(s3Completer, fsCompleter),
+	"/stat":   complete.PredictOr(s3Completer, fsCompleter),
+	"/watch":  complete.PredictOr(s3Completer, fsCompleter),
+	"/policy": complete.PredictOr(s3Completer, fsCompleter),
+	"/tree":   complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	"/du":     complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+
+	"/retention/set":   s3Completer,
+	"/retention/clear": s3Completer,
+	"/retention/info":  s3Completer,
+
+	"/legalhold/set":   s3Completer,
+	"/legalhold/clear": s3Completer,
+	"/legalhold/info":  s3Completer,
+
+	"/sql": s3Completer,
+	"/mb":  aliasCompleter,
 
 	"/event/add":    s3Complete{deepLevel: 2},
 	"/event/list":   s3Complete{deepLevel: 2},
@@ -279,11 +288,14 @@ var completeCmds = map[string]complete.Predictor{
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
-	"/ilm/list":   s3Complete{deepLevel: 2},
+	"/ilm/ls":     s3Complete{deepLevel: 2},
 	"/ilm/add":    s3Complete{deepLevel: 2},
-	"/ilm/remove": s3Complete{deepLevel: 2},
+	"/ilm/set":    s3Complete{deepLevel: 2},
+	"/ilm/rm":     s3Complete{deepLevel: 2},
 	"/ilm/export": s3Complete{deepLevel: 2},
 	"/ilm/import": s3Complete{deepLevel: 2},
+
+	"/undo": s3Completer,
 
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
@@ -334,10 +346,16 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/bucket/remote/add": aliasCompleter,
 	"/admin/bucket/remote/ls":  aliasCompleter,
 	"/admin/bucket/remote/rm":  aliasCompleter,
+	"/admin/bucket/quota":      aliasCompleter,
 
-	"/config/host/add":    nil,
-	"/config/host/list":   aliasCompleter,
-	"/config/host/remove": aliasCompleter,
+	"/admin/kms/key/create": aliasCompleter,
+	"/admin/kms/key/status": aliasCompleter,
+
+	"/admin/health": aliasCompleter,
+
+	"/alias/set":    nil,
+	"/alias/list":   aliasCompleter,
+	"/alias/remove": aliasCompleter,
 
 	"/update": nil,
 }
@@ -368,6 +386,9 @@ func cmdToCompleteCmd(cmd cli.Command, parentPath string) complete.Command {
 	complCmd.Sub = make(complete.Commands)
 
 	for _, subCmd := range cmd.Subcommands {
+		if subCmd.Hidden {
+			continue
+		}
 		complCmd.Sub[subCmd.Name] = cmdToCompleteCmd(subCmd, parentPath+"/"+cmd.Name)
 	}
 
@@ -382,6 +403,9 @@ func mainComplete() error {
 	// along with global and local flags
 	var complCmds = make(complete.Commands)
 	for _, cmd := range appCmds {
+		if cmd.Hidden {
+			continue
+		}
 		complCmds[cmd.Name] = cmdToCompleteCmd(cmd, "")
 	}
 	complFlags := flagsToCompleteFlags(globalFlags)
