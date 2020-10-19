@@ -208,56 +208,37 @@ func mustGetHostConfig(alias string) *aliasConfigV10 {
 	return aliasCfg
 }
 
-var (
-	hostKeys      = regexp.MustCompile("^(https?://)(.*?):(.*?)@(.*?)$")
-	hostKeyTokens = regexp.MustCompile("^(https?://)(.*?):(.*?):(.*?)@(.*?)$")
-)
-
-// parse url usually obtained from env.
-func parseEnvURLStr(envURL string) (*url.URL, string, string, string, *probe.Error) {
-	var accessKey, secretKey, sessionToken string
-	var parsedURL string
-	if hostKeyTokens.MatchString(envURL) {
-		parts := hostKeyTokens.FindStringSubmatch(envURL)
-		if len(parts) != 6 {
-			return nil, "", "", "", errInvalidArgument().Trace(envURL)
-		}
-		accessKey = parts[2]
-		secretKey = parts[3]
-		sessionToken = parts[4]
-		parsedURL = fmt.Sprintf("%s%s", parts[1], parts[5])
-	} else if hostKeys.MatchString(envURL) {
-		parts := hostKeys.FindStringSubmatch(envURL)
-		if len(parts) != 5 {
-			return nil, "", "", "", errInvalidArgument().Trace(envURL)
-		}
-		accessKey = parts[2]
-		secretKey = parts[3]
-		parsedURL = fmt.Sprintf("%s%s", parts[1], parts[4])
-	}
-	var u *url.URL
-	var e error
-	if parsedURL != "" {
-		u, e = url.Parse(parsedURL)
-	} else {
-		u, e = url.Parse(envURL)
-	}
+// Parse MC_HOST url obtained from the environment
+// - It supports the following formats:
+//      http(s)://access-key:secret-key@host:port/
+//    AND
+///     http(s)://access-key:secret-key:session-token@host:port/
+// - Users need to manually escape any odds characters (except for @)
+//   in order for this to work correctly.
+func parseEnvURLStr(envURL string) (endpoint, accessKey, secretKey, sessionToken string, err *probe.Error) {
+	u, e := url.Parse(envURL)
 	if e != nil {
-		return nil, "", "", "", probe.NewError(e)
+		return "", "", "", "", probe.NewError(e)
 	}
+
+	endpoint = u.Scheme + "://" + u.Host
+	accessKey = u.User.Username()
+
+	pwd, _ := u.User.Password()
+	pwdFields := strings.Split(pwd, ":")
+	secretKey = pwdFields[0]
+	if len(pwdFields) > 1 {
+		sessionToken = pwdFields[1]
+	}
+
 	// Look for if URL has invalid values and return error.
 	if !((u.Scheme == "http" || u.Scheme == "https") &&
 		(u.Path == "/" || u.Path == "") && u.Opaque == "" &&
 		!u.ForceQuery && u.RawQuery == "" && u.Fragment == "") {
-		return nil, "", "", "", errInvalidArgument().Trace(u.String())
+		return "", "", "", "", errInvalidArgument().Trace(u.String())
 	}
-	if accessKey == "" && secretKey == "" {
-		if u.User != nil {
-			accessKey = u.User.Username()
-			secretKey, _ = u.User.Password()
-		}
-	}
-	return u, accessKey, secretKey, sessionToken, nil
+
+	return
 }
 
 const (
@@ -266,13 +247,13 @@ const (
 )
 
 func expandAliasFromEnv(envURL string) (*aliasConfigV10, *probe.Error) {
-	u, accessKey, secretKey, sessionToken, err := parseEnvURLStr(envURL)
+	endpoint, accessKey, secretKey, sessionToken, err := parseEnvURLStr(envURL)
 	if err != nil {
 		return nil, err.Trace(envURL)
 	}
 
 	return &aliasConfigV10{
-		URL:          u.String(),
+		URL:          endpoint,
 		API:          "S3v4",
 		AccessKey:    accessKey,
 		SecretKey:    secretKey,

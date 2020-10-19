@@ -16,7 +16,11 @@
 
 package cmd
 
-import "testing"
+import (
+	"net"
+	"net/url"
+	"testing"
+)
 
 // Tests valid host URL functionality.
 func TestParseEnvURLStr(t *testing.T) {
@@ -29,7 +33,7 @@ func TestParseEnvURLStr(t *testing.T) {
 		port         string
 	}{
 		{
-			hostURL:   "https://minio:minio1#23@localhost:9000",
+			hostURL:   "https://minio:minio1%2323@localhost:9000",
 			accessKey: "minio",
 			secretKey: "minio1#23",
 			hostname:  "localhost",
@@ -97,7 +101,15 @@ func TestParseEnvURLStr(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run("", func(t *testing.T) {
-			url, ak, sk, token, err := parseEnvURLStr(testCase.hostURL)
+			hostURL, ak, sk, token, err := parseEnvURLStr(testCase.hostURL)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			u, e := url.Parse(hostURL)
+			if e != nil {
+				t.Fatalf("Unexpected error: %v", e)
+			}
+			hostname, port, _ := net.SplitHostPort(u.Host)
 			if testCase.accessKey != ak {
 				t.Fatalf("Expected %s, got %s", testCase.accessKey, ak)
 			}
@@ -107,11 +119,11 @@ func TestParseEnvURLStr(t *testing.T) {
 			if testCase.sessionToken != token {
 				t.Fatalf("Expected %s, got %s", testCase.sessionToken, token)
 			}
-			if testCase.hostname != url.Hostname() {
-				t.Fatalf("Expected %s, got %s", testCase.hostname, url.Hostname())
+			if testCase.hostname != hostname {
+				t.Fatalf("Expected %s, got %s", testCase.hostname, hostname)
 			}
-			if testCase.port != url.Port() {
-				t.Fatalf("Expected %s, got %s", testCase.port, url.Port())
+			if testCase.port != port {
+				t.Fatalf("Expected %s, got %s", testCase.port, port)
 			}
 			if err != nil {
 				t.Fatalf("Expected test to pass. Failed with err %s", err)
