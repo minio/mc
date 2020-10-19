@@ -19,12 +19,11 @@ stat        show object metadata
 mv          move objects
 tree        list buckets and objects in a tree format
 du          summarize disk usage recursively
-retention   set retention for object(s)
+retention   set retention for object(s) and bucket(s)
 legalhold   set legal hold for object(s)
 diff        list differences in object name, size, and date between two buckets
 rm          remove objects
 version     manage bucket versioning
-lock        manage default bucket object lock configuration
 ilm         manage bucket lifecycle
 encrypt     manage bucket encryption config
 event       manage object notifications
@@ -308,9 +307,9 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 | [**undo** - undo PUT/DELETE operations](#undo)     |
 | [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         | [**replicate** - manage bucket server side replication](#replicate) |
 | [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
-| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**stat** - stat contents of objects and folders](#stat)   |                                                    |
-| [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock) | [**retention** - set retention for object(s)](#retention)  |                                                    |
-| [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                        | [**legalhold** - set legal hold for object(s)](#legalhold) |                                                    |
+| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
+| [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
+
 
 
 ###  Command `ls`
@@ -597,44 +596,27 @@ Hello!!
 ### Command `lock`
 `lock` sets and gets object lock configuration
 
-```
-USAGE:
-   mc lock TARGET [info | clear ] | [[governance | compliance] [VALIDITY]]
-
-FLAGS:
-  --json                        enable JSON formatted output
-  --help, -h                    show help
-```
-
-*Example: Set object lock configuration of 30 day compliance on bucket `mybucket`*
-
-```
-mc lock myminio/mybucket compliance 30d
-```
-
-*Example: Display the object lock configuration for bucket `mybucket`*
-
-```
-mc lock myminio/mybucket info
-COMPLIANCE mode is enabled for 30d
-```
-*Example: Clear object lock configuration for bucket `mybucket`*
-
-```
-mc lock myminio/mybucket clear
-Object lock configuration cleared successfully
-```
+> `RELEASE.2020-09-18T00-13-21Z` deprecates and removes the `lock` command.
+The [retention](#retention) command fully replaces `lock` functionality.
 
 <a name="retention"></a>
 ### Command `retention`
-`retention` sets object retention for objects with a given prefix
+`retention` sets object retention for objects with a given prefix *or* the default
+retention settings for a bucket.
 
 ```
 USAGE:
-   mc retention [FLAGS] TARGET [governance | compliance] [VALIDITY]
+   mc retention [COMMAND] TARGET [governance | compliance] [VALIDITY]
 
+COMMANDS:
+  set           Sets retention for object(s) or bucket
+  clear         Clears retention for object(s) or bucket
+  info          Returns retention for object(s) or bucket
+  help, h       Shows a listo f commands or help for one command
+   
 FLAGS:
   --bypass                      bypass governance
+  --default                     sets the default object retention settings for the TARGET bucket. 
   --recursive, -r               apply retention recursively
   --json                        enable JSON formatted output
   --help, -h                    show help
@@ -643,7 +625,7 @@ FLAGS:
 *Example: Set governance for 30 days for object `prefix` on bucket `mybucket`*
 
 ```
-mc retention myminio/mybucket/prefix governance 30d -r
+mc retention set myminio/mybucket/prefix governance 30d -r
 Object retention successfully set for objects with prefix `myminio/mybucket/prefix`.
 
 ```
@@ -655,6 +637,22 @@ mc rm myminio/mybucket/prefix/comp.csv
 Removing `myminio/mybucket/prefix/comp.csv`.
 mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM protected and cannot be overwritten
 ```
+
+*Example: Set compliance for 30 days as default retention setting on bucket `mybucket`*
+
+```
+mc retention set --default myminio/mybucket compliance 30d
+```
+
+*Objects created in the above bucket `mybucket` cannot be deleted until the compliance period is over*
+
+```
+mc cp ~/comp.csv myminio/mybucket/data.csv
+mc rm myminio/mybucket/data.csv
+Removing `myminio/mybucket/data.csv
+mc: <ERROR> Failed to remove `myminio/mybucket/data.csv`. Object is WORM protected and cannot be overwritten
+```
+
 
 <a name="legalhold"></a>
 ### Command `legalhold`
