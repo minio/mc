@@ -606,17 +606,16 @@ retention settings for a bucket.
 
 ```
 USAGE:
-   mc retention [COMMAND] TARGET [governance | compliance] [VALIDITY]
+   mc retention COMMAND [FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
   set           Sets retention for object(s) or bucket
   clear         Clears retention for object(s) or bucket
   info          Returns retention for object(s) or bucket
-  help, h       Shows a listo f commands or help for one command
-   
+  help, h       Shows a list of commands or help for one command
+
 FLAGS:
   --bypass                      bypass governance
-  --default                     sets the default object retention settings for the TARGET bucket. 
   --recursive, -r               apply retention recursively
   --json                        enable JSON formatted output
   --help, -h                    show help
@@ -625,7 +624,7 @@ FLAGS:
 *Example: Set governance for 30 days for object `prefix` on bucket `mybucket`*
 
 ```
-mc retention set myminio/mybucket/prefix governance 30d -r
+mc retention set governance 30d myminio/mybucket/prefix -r
 Object retention successfully set for objects with prefix `myminio/mybucket/prefix`.
 
 ```
@@ -641,7 +640,7 @@ mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM 
 *Example: Set compliance for 30 days as default retention setting on bucket `mybucket`*
 
 ```
-mc retention set --default myminio/mybucket compliance 30d
+mc retention set --default compliance 30d myminio/mybucket
 ```
 
 *Objects created in the above bucket `mybucket` cannot be deleted until the compliance period is over*
@@ -660,7 +659,13 @@ mc: <ERROR> Failed to remove `myminio/mybucket/data.csv`. Object is WORM protect
 
 ```
 USAGE:
-   mc legalhold [FLAGS] TARGET [ON | OFF]
+   mc legalhold COMMAND [FLAGS | -h] TARGET
+
+COMMANDS:
+  set      set legal hold for object(s)
+  clear    clear legal hold for object(s)
+  info     show legal hold info for object(s)
+  help, h  Shows a list of commands or help for one command
 
 FLAGS:
   --recursive, -r               apply legal hold recursively
@@ -671,7 +676,7 @@ FLAGS:
 *Example: Enable legal hold for objects with prefix `prefix` on bucket `mybucket`*
 
 ```
-mc legalhold myminio/mybucket/prefix ON -r
+mc legalhold set myminio/mybucket/prefix -r
 Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
 
 ```
@@ -679,7 +684,6 @@ Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
 
 ```
 mc cp ~/test.csv myminio/mybucket/prefix/
-mc legalhold myminio/mybucket/prefix/test.csv ON
 mc rm myminio/mybucket/prefix/test.csv
 Removing `myminio/mybucket/prefix/test.csv`.
 mc: <ERROR> Failed to remove `myminio/mybucket/prefix/test.csv`. Object is WORM protected and cannot be overwritten
