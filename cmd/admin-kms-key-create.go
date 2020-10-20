@@ -28,11 +28,12 @@ import (
 )
 
 var adminKMSCreateKeyCmd = cli.Command{
-	Name:   "create",
-	Usage:  "creates a new master key at the KMS",
-	Action: mainAdminKMSCreateKey,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "create",
+	Usage:        "creates a new master key at the KMS",
+	Action:       mainAdminKMSCreateKey,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

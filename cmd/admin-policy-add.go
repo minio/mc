@@ -30,11 +30,12 @@ import (
 )
 
 var adminPolicyAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add new policy",
-	Action: mainAdminPolicyAdd,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "add",
+	Usage:        "add new policy",
+	Action:       mainAdminPolicyAdd,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

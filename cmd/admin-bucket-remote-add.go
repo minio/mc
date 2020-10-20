@@ -56,11 +56,12 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 	},
 }
 var adminBucketRemoteAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add a new remote target",
-	Action: mainAdminBucketRemoteAdd,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, adminBucketRemoteAddFlags...),
+	Name:         "add",
+	Usage:        "add a new remote target",
+	Action:       mainAdminBucketRemoteAdd,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, adminBucketRemoteAddFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

@@ -25,11 +25,12 @@ import (
 )
 
 var adminUserDisableCmd = cli.Command{
-	Name:   "disable",
-	Usage:  "disable user",
-	Action: mainAdminUserDisable,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "disable",
+	Usage:        "disable user",
+	Action:       mainAdminUserDisable,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

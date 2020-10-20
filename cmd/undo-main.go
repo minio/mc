@@ -53,11 +53,12 @@ var (
 )
 
 var undoCmd = cli.Command{
-	Name:   "undo",
-	Usage:  "undo PUT/DELETE operations",
-	Action: mainUndo,
-	Before: setGlobalsFromContext,
-	Flags:  append(undoFlags, globalFlags...),
+	Name:         "undo",
+	Usage:        "undo PUT/DELETE operations",
+	Action:       mainUndo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(undoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

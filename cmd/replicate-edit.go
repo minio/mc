@@ -62,11 +62,12 @@ var replicateEditFlags = []cli.Flag{
 }
 
 var replicateEditCmd = cli.Command{
-	Name:   "edit",
-	Usage:  "modify an existing server side replication configuration rule",
-	Action: mainReplicateEdit,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, replicateEditFlags...),
+	Name:         "edit",
+	Usage:        "modify an existing server side replication configuration rule",
+	Action:       mainReplicateEdit,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, replicateEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
    

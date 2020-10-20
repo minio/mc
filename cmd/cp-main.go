@@ -109,11 +109,12 @@ var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=v
 
 // Copy command.
 var cpCmd = cli.Command{
-	Name:   "cp",
-	Usage:  "copy objects",
-	Action: mainCopy,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(cpFlags, ioFlags...), globalFlags...),
+	Name:         "cp",
+	Usage:        "copy objects",
+	Action:       mainCopy,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(cpFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

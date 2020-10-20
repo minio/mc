@@ -78,11 +78,12 @@ var treeFlags = []cli.Flag{
 
 // trees files and folders.
 var treeCmd = cli.Command{
-	Name:   "tree",
-	Usage:  "list buckets and objects in a tree format",
-	Action: mainTree,
-	Before: setGlobalsFromContext,
-	Flags:  append(treeFlags, globalFlags...),
+	Name:         "tree",
+	Usage:        "list buckets and objects in a tree format",
+	Action:       mainTree,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(treeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

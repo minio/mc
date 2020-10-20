@@ -36,11 +36,12 @@ var (
 
 // Compute differences in object name, size, and date between two buckets.
 var diffCmd = cli.Command{
-	Name:   "diff",
-	Usage:  "list differences in object name, size, and date between two buckets",
-	Action: mainDiff,
-	Before: setGlobalsFromContext,
-	Flags:  append(diffFlags, globalFlags...),
+	Name:         "diff",
+	Usage:        "list differences in object name, size, and date between two buckets",
+	Action:       mainDiff,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

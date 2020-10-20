@@ -43,11 +43,12 @@ var ilmListFlags = []cli.Flag{
 }
 
 var ilmLsCmd = cli.Command{
-	Name:   "ls",
-	Usage:  "lists lifecycle configuration rules set on a bucket",
-	Action: mainILMList,
-	Before: setGlobalsFromContext,
-	Flags:  append(ilmListFlags, globalFlags...),
+	Name:         "ls",
+	Usage:        "lists lifecycle configuration rules set on a bucket",
+	Action:       mainILMList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(ilmListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

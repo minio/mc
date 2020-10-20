@@ -29,11 +29,12 @@ import (
 )
 
 var ilmEditCmd = cli.Command{
-	Name:   "edit",
-	Usage:  "modify a lifecycle configuration rule with given id",
-	Action: mainILMEdit,
-	Before: setGlobalsFromContext,
-	Flags:  append(ilmEditFlags, globalFlags...),
+	Name:         "edit",
+	Usage:        "modify a lifecycle configuration rule with given id",
+	Action:       mainILMEdit,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(ilmEditFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

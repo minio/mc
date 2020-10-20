@@ -56,11 +56,12 @@ var (
 )
 
 var retentionInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "show retention for object(s)",
-	Action: mainRetentionInfo,
-	Before: setGlobalsFromContext,
-	Flags:  append(retentionInfoFlags, globalFlags...),
+	Name:         "info",
+	Usage:        "show retention for object(s)",
+	Action:       mainRetentionInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(retentionInfoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

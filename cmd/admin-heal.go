@@ -67,6 +67,7 @@ var adminHealCmd = cli.Command{
 	Name:            "heal",
 	Usage:           "[DEPRECATED] heal disks, buckets and objects on MinIO server",
 	Action:          mainAdminHeal,
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),
 	HideHelpCommand: true,

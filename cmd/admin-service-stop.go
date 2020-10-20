@@ -25,11 +25,12 @@ import (
 )
 
 var adminServiceStopCmd = cli.Command{
-	Name:   "stop",
-	Usage:  "stop MinIO server",
-	Action: mainAdminServiceStop,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "stop",
+	Usage:        "stop MinIO server",
+	Action:       mainAdminServiceStop,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

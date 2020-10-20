@@ -38,11 +38,12 @@ var replicateListFlags = []cli.Flag{
 }
 
 var replicateListCmd = cli.Command{
-	Name:   "ls",
-	Usage:  "list server side replication configuration rules",
-	Action: mainReplicateList,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, replicateListFlags...),
+	Name:         "ls",
+	Usage:        "list server side replication configuration rules",
+	Action:       mainReplicateList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, replicateListFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 	 

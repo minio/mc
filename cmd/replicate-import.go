@@ -29,11 +29,12 @@ import (
 )
 
 var replicateImportCmd = cli.Command{
-	Name:   "import",
-	Usage:  "import server side replication configuration in JSON format",
-	Action: mainReplicateImport,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "import",
+	Usage:        "import server side replication configuration in JSON format",
+	Action:       mainReplicateImport,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 	  

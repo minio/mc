@@ -29,11 +29,12 @@ import (
 )
 
 var versionInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "show bucket versioning status",
-	Action: mainVersionInfo,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "info",
+	Usage:        "show bucket versioning status",
+	Action:       mainVersionInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

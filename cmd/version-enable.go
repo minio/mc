@@ -28,11 +28,12 @@ import (
 )
 
 var versionEnableCmd = cli.Command{
-	Name:   "enable",
-	Usage:  "enable bucket versioning",
-	Action: mainVersionEnable,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "enable",
+	Usage:        "enable bucket versioning",
+	Action:       mainVersionEnable,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

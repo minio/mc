@@ -24,11 +24,12 @@ import (
 )
 
 var adminUserInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "display info of a user",
-	Action: mainAdminUserInfo,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "info",
+	Usage:        "display info of a user",
+	Action:       mainAdminUserInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

@@ -24,11 +24,12 @@ import (
 )
 
 var adminPolicyRemoveCmd = cli.Command{
-	Name:   "remove",
-	Usage:  "remove policy",
-	Action: mainAdminPolicyRemove,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "remove",
+	Usage:        "remove policy",
+	Action:       mainAdminPolicyRemove,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

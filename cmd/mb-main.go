@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -46,11 +47,12 @@ var (
 
 // make a bucket.
 var mbCmd = cli.Command{
-	Name:   "mb",
-	Usage:  "make a bucket",
-	Action: mainMakeBucket,
-	Before: setGlobalsFromContext,
-	Flags:  append(mbFlags, globalFlags...),
+	Name:         "mb",
+	Usage:        "make a bucket",
+	Action:       mainMakeBucket,
+	Before:       setGlobalsFromContext,
+	OnUsageError: onUsageError,
+	Flags:        append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -152,6 +154,8 @@ func mainMakeBucket(cli *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
+
+		fmt.Println(clnt.GetURL())
 
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})

@@ -23,11 +23,12 @@ import (
 )
 
 var adminConfigExportCmd = cli.Command{
-	Name:   "export",
-	Usage:  "export all config keys to STDOUT",
-	Before: setGlobalsFromContext,
-	Action: mainAdminConfigExport,
-	Flags:  globalFlags,
+	Name:         "export",
+	Usage:        "export all config keys to STDOUT",
+	Before:       setGlobalsFromContext,
+	Action:       mainAdminConfigExport,
+	OnUsageError: onUsageError,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

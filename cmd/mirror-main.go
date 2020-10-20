@@ -117,11 +117,12 @@ var (
 
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
-	Name:   "mirror",
-	Usage:  "synchronize object(s) to a remote site",
-	Action: mainMirror,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(mirrorFlags, ioFlags...), globalFlags...),
+	Name:         "mirror",
+	Usage:        "synchronize object(s) to a remote site",
+	Action:       mainMirror,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(mirrorFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

@@ -24,11 +24,12 @@ import (
 )
 
 var adminPolicyListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "list all policies",
-	Action: mainAdminPolicyList,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "list",
+	Usage:        "list all policies",
+	Action:       mainAdminPolicyList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

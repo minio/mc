@@ -53,11 +53,12 @@ var (
 
 // list files and folders.
 var lsCmd = cli.Command{
-	Name:   "ls",
-	Usage:  "list buckets and objects",
-	Action: mainList,
-	Before: setGlobalsFromContext,
-	Flags:  append(lsFlags, globalFlags...),
+	Name:         "ls",
+	Usage:        "list buckets and objects",
+	Action:       mainList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

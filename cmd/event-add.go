@@ -50,11 +50,12 @@ var (
 )
 
 var eventAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add a new bucket notification",
-	Action: mainEventAdd,
-	Before: setGlobalsFromContext,
-	Flags:  append(eventAddFlags, globalFlags...),
+	Name:         "add",
+	Usage:        "add a new bucket notification",
+	Action:       mainEventAdd,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(eventAddFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

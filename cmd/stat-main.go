@@ -50,11 +50,12 @@ var (
 
 // show object metadata
 var statCmd = cli.Command{
-	Name:   "stat",
-	Usage:  "show object metadata",
-	Action: mainStat,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(statFlags, ioFlags...), globalFlags...),
+	Name:         "stat",
+	Usage:        "show object metadata",
+	Action:       mainStat,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(statFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

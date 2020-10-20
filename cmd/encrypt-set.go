@@ -29,11 +29,12 @@ import (
 )
 
 var encryptSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set encryption config",
-	Action: mainEncryptSet,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "set",
+	Usage:        "set encryption config",
+	Action:       mainEncryptSet,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
    

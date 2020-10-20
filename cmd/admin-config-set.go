@@ -29,11 +29,12 @@ import (
 )
 
 var adminConfigSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "interactively set a config key parameters",
-	Before: setGlobalsFromContext,
-	Action: mainAdminConfigSet,
-	Flags:  append(adminConfigEnvFlags, globalFlags...),
+	Name:         "set",
+	Usage:        "interactively set a config key parameters",
+	Before:       setGlobalsFromContext,
+	Action:       mainAdminConfigSet,
+	OnUsageError: onUsageError,
+	Flags:        append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

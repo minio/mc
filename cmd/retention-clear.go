@@ -52,11 +52,12 @@ var (
 )
 
 var retentionClearCmd = cli.Command{
-	Name:   "clear",
-	Usage:  "clear retention for object(s)",
-	Action: mainRetentionClear,
-	Before: setGlobalsFromContext,
-	Flags:  append(retentionClearFlags, globalFlags...),
+	Name:         "clear",
+	Usage:        "clear retention for object(s)",
+	Action:       mainRetentionClear,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(retentionClearFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
