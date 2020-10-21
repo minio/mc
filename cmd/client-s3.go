@@ -1654,8 +1654,16 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 			}
 			return
 		}
-		for _, bucket := range buckets {
 
+		// List only buckets if not recursive
+		if !opts.IsRecursive {
+			for _, bucket := range buckets {
+				contentCh <- c.bucketInfo2ClientContent(bucket)
+			}
+			return
+		}
+
+		for _, bucket := range buckets {
 			if opts.ShowDir == DirFirst {
 				contentCh <- c.bucketInfo2ClientContent(bucket)
 			}
