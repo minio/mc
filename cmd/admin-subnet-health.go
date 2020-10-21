@@ -52,13 +52,12 @@ var adminOBDFlags = []cli.Flag{
 	},
 }
 
-var adminOBDCmd = cli.Command{
-	Name:    "health",
-	Aliases: []string{"obd"},
-	Usage:   "run on-board diagnostics",
-	Action:  mainAdminOBD,
-	Before:  setGlobalsFromContext,
-	Flags:   append(adminOBDFlags, globalFlags...),
+var adminSubnetHealthCmd = cli.Command{
+	Name:   "health",
+	Usage:  "run health check for Subnet",
+	Action: mainAdminOBD,
+	Before: setGlobalsFromContext,
+	Flags:  append(adminOBDFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

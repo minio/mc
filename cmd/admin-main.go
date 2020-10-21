@@ -44,7 +44,8 @@ var adminCmdSubcommands = []cli.Command{
 	adminConsoleCmd,
 	adminPrometheusCmd,
 	adminKMSCmd,
-	adminOBDCmd,
+	adminHealthCmd,
+	adminSubnetCmd,
 	adminBucketCmd,
 }
 
