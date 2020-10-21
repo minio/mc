@@ -384,7 +384,12 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
 				errDuringMirror = true
 			default:
-				errorIf(sURLs.Error.Trace(), "Failed to perform mirroring.")
+				if sURLs.ErrorCond == differInUnknown {
+					errorIf(sURLs.Error.Trace(), "Failed to perform mirroring")
+				} else {
+					errorIf(sURLs.Error.Trace(),
+						"Failed to perform mirroring, with error condition (%s)", sURLs.ErrorCond)
+				}
 				errDuringMirror = true
 			}
 			if mj.opts.activeActive {

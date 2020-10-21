@@ -33,13 +33,14 @@ import (
 type differType int
 
 const (
-	differInNone          differType = iota // does not differ
-	differInSize                            // differs in size
-	differInMetadata                        // differs in metadata
-	differInType                            // differs in type, exfile/directory
-	differInFirst                           // only in source (FIRST)
-	differInSecond                          // only in target (SECOND)
-	differInAASourceMTime                   // differs in active-active source modtime
+	differInUnknown       differType = iota
+	differInNone                     // does not differ
+	differInSize                     // differs in size
+	differInMetadata                 // differs in metadata
+	differInType                     // differs in type, exfile/directory
+	differInFirst                    // only in source (FIRST)
+	differInSecond                   // only in target (SECOND)
+	differInAASourceMTime            // differs in active-active source modtime
 )
 
 func (d differType) String() string {

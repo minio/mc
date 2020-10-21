@@ -130,7 +130,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, opts.isMetadata) {
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
-			URLsCh <- URLs{Error: diffMsg.Error}
+			URLsCh <- URLs{Error: diffMsg.Error, ErrorCond: differInUnknown}
 			continue
 		}
 
@@ -154,7 +154,10 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		case differInSize, differInMetadata, differInAASourceMTime:
 			if !opts.isOverwrite && !opts.isFake && !opts.activeActive {
 				// Size or time or etag differs but --overwrite not set.
-				URLsCh <- URLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
+				URLsCh <- URLs{
+					Error:     errOverWriteNotAllowed(diffMsg.SecondURL),
+					ErrorCond: diffMsg.Diff,
+				}
 				continue
 			}
 
@@ -191,7 +194,8 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 			}
 		default:
 			URLsCh <- URLs{
-				Error: errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),
+				Error:     errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),
+				ErrorCond: diffMsg.Diff,
 			}
 		}
 	}
