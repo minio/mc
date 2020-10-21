@@ -291,7 +291,7 @@ Skip SSL certificate verification.
 ### Option [--version]
 Display the current version of `mc` installed
 
- *Example: Print version of mc.*
+*Example: Print version of mc.*
 
 ```
 mc --version
@@ -461,14 +461,14 @@ mc cat --encrypt-key "play/mybucket=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=
 Hello MinIO!!
 ```
 
-*Example: Display the content of an object 10 days earlier *
+*Example: Display the content of an object 10 days earlier*
 
 ```
 mc cat --rewind "10d" play/mybucket/myobject
 Hello MinIO ten days earlier!
 ```
 
-*Example: Display the content of an object at a specific date/time in the past *
+*Example: Display the content of an object at a specific date/time in the past*
 
 ```
 mc cat --rewind "2020.03.24T10:00" play/mybucket/myobject
