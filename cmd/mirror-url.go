@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -33,28 +34,20 @@ import (
 //   mirror(d1..., d2) -> []mirror(d1/f, d2/d1/f)
 
 // checkMirrorSyntax(URLs []string)
-func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) (srcURL, tgtURL string) {
 	if len(cliCtx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(cliCtx, "mirror", 1) // last argument is exit code.
 	}
 
 	// extract URLs.
 	URLs := cliCtx.Args()
-	srcURL := URLs[0]
-	tgtURL := URLs[1]
+	srcURL = URLs[0]
+	tgtURL = URLs[1]
 
 	if cliCtx.Bool("force") && cliCtx.Bool("remove") {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead with `--remove` for the same functionality.")
 	} else if cliCtx.Bool("force") {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead for the same functionality.")
-	}
-
-	tgtClientURL := newClientURL(tgtURL)
-	if tgtClientURL.Host != "" {
-		if tgtClientURL.Path == string(tgtClientURL.Separator) {
-			fatalIf(errInvalidArgument().Trace(tgtURL),
-				fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
-		}
 	}
 
 	_, expandedSourcePath, _ := mustExpandAlias(srcURL)
@@ -73,19 +66,30 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	/****** Generic rules *******/
 	if !cliCtx.Bool("watch") && !cliCtx.Bool("active-active") && !cliCtx.Bool("multi-master") {
 		_, srcContent, err := url2Stat(ctx, srcURL, "", false, encKeyDB, time.Time{})
-		// incomplete uploads are not necessary for mirror operation, no need to verify for them.
-		isIncomplete := false
-		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
+		if err != nil {
 			fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}
 
-		if err == nil {
-			if !srcContent.Type.IsDir() {
-				fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
+		if !srcContent.Type.IsDir() {
+			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
+		}
+
+		if srcClient.Type == fileSystem && !filepath.IsAbs(srcURL) {
+			var origSrcURL = srcURL
+			var e error
+			// Changing relative path to absolute path, if it is a local directory.
+			// Save original in case of error
+			if srcURL, e = filepath.Abs(srcURL); e != nil {
+				srcURL = origSrcURL
 			}
+		}
+
+		if !strings.HasSuffix(srcURL, string(srcContent.URL.Separator)) {
+			srcURL += string(srcContent.URL.Separator)
 		}
 	}
 
+	return
 }
 
 func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
