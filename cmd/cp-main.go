@@ -455,12 +455,11 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	var quitCh = make(chan struct{})
 	var statusCh = make(chan URLs)
 
-	parallel, queueCh := newParallelManager(statusCh)
+	parallel := newParallelManager(statusCh)
 
 	go func() {
 		gracefulStop := func() {
-			close(queueCh)
-			parallel.wait()
+			parallel.stopAndWait()
 			close(statusCh)
 		}
 
@@ -531,13 +530,13 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
-					queueCh <- func() URLs {
+					parallel.queueTask(func() URLs {
 						return doCopyFake(ctx, cpURLs, pg, isMvCmd)
-					}
+					})
 				} else {
-					queueCh <- func() URLs {
+					parallel.queueTask(func() URLs {
 						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
-					}
+					})
 				}
 			}
 		}
