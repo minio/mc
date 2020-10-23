@@ -86,7 +86,7 @@ EXAMPLES:
      {{.DisableHistory}}
      {{.Prompt}} {{.HelpName}} myminio/srcbucket \
                  https://foobar:foo12345@minio2:9000/replicabucket \
-                 --service "replication" --region "us-west-1" --label "replica1"
+                 --service "replication" --region "us-west-1" --label "hdd-tier"
      {{.EnableHistory}}
 `,
 }
