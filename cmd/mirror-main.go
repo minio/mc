@@ -202,7 +202,6 @@ type mirrorJob struct {
 	// Hold operation status information
 	status Status
 
-	queueCh  chan func() URLs
 	parallel *ParallelManager
 
 	// channel for status messages
@@ -479,9 +478,9 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				// to avoid copying it.
 				continue
 			}
-			mj.queueCh <- func() URLs {
+			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
-			}
+			})
 		} else if event.Type == EventRemove {
 			if strings.Contains(event.UserAgent, uaMirrorAppName) {
 				continue
@@ -498,9 +497,9 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
 			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
-				mj.queueCh <- func() URLs {
+				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL)
-				}
+				})
 			}
 		}
 	}
@@ -528,9 +527,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 				return
 			}
 			if err != nil {
-				mj.queueCh <- func() URLs {
+				mj.parallel.queueTask(func() URLs {
 					return URLs{Error: err}
-				}
+				})
 			}
 		case <-globalContext.Done():
 			stopParallel()
@@ -585,13 +584,13 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			sURLs.TotalSize = mj.status.Get()
 
 			if sURLs.SourceContent != nil {
-				mj.queueCh <- func() URLs {
+				mj.parallel.queueTask(func() URLs {
 					return mj.doMirror(ctx, sURLs)
-				}
+				})
 			} else if sURLs.TargetContent != nil && mj.opts.isRemove {
-				mj.queueCh <- func() URLs {
+				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, sURLs)
-				}
+				})
 			}
 		case <-globalContext.Done():
 			stopParallel()
@@ -614,8 +613,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 		go func() {
 			defer wg.Done()
 			stopParallel := func() {
-				close(mj.queueCh)
-				mj.parallel.wait()
+				mj.parallel.stopAndWait()
 				cancelMirror()
 			}
 			mj.watchMirror(ctx, stopParallel)
@@ -628,8 +626,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 		defer wg.Done()
 		stopParallel := func() {
 			if !mj.opts.isWatch {
-				close(mj.queueCh)
-				mj.parallel.wait()
+				mj.parallel.stopAndWait()
 				cancelMirror()
 			}
 		}
@@ -657,7 +654,7 @@ func newMirrorJob(srcURL, dstURL string, opts mirrorOptions) *mirrorJob {
 		watcher:   NewWatcher(UTCNow()),
 	}
 
-	mj.parallel, mj.queueCh = newParallelManager(mj.statusCh)
+	mj.parallel = newParallelManager(mj.statusCh)
 
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar

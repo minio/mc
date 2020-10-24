@@ -50,6 +50,7 @@ type ParallelManager struct {
 
 	// Channel to receive tasks to run
 	queueCh chan func() URLs
+
 	// Channel to send back results
 	resultCh chan URLs
 
@@ -134,14 +135,19 @@ func (p *ParallelManager) monitorProgress() {
 	}()
 }
 
+func (p *ParallelManager) queueTask(fn func() URLs) {
+	p.queueCh <- fn
+}
+
 // Wait for all workers to finish tasks before shutting down Parallel
-func (p *ParallelManager) wait() {
+func (p *ParallelManager) stopAndWait() {
+	close(p.queueCh)
 	p.wg.Wait()
 	close(p.stopMonitorCh)
 }
 
 // newParallelManager starts new workers waiting for executing tasks
-func newParallelManager(resultCh chan URLs) (*ParallelManager, chan func() URLs) {
+func newParallelManager(resultCh chan URLs) *ParallelManager {
 	p := &ParallelManager{
 		wg:            &sync.WaitGroup{},
 		workersNum:    0,
@@ -158,5 +164,5 @@ func newParallelManager(resultCh chan URLs) (*ParallelManager, chan func() URLs)
 	// Start monitoring tasks progress
 	p.monitorProgress()
 
-	return p, p.queueCh
+	return p
 }
