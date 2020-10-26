@@ -1196,10 +1196,7 @@ func (c *S3Client) MakeBucket(ctx context.Context, region string, ignoreExisting
 	}
 	if object != "" {
 		if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
-			object = path.Dir(object)
-		}
-		if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
-			return probe.NewError(BucketNameTopLevel{})
+			object += string(c.targetURL.Separator)
 		}
 		var retried bool
 		for {
