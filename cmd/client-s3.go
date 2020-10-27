@@ -1470,6 +1470,10 @@ func (c *S3Client) getObjectStat(ctx context.Context, bucket, object string, opt
 		}
 		return nil, probe.NewError(e)
 	}
+	// HEAD with a version ID will not return version in the response headers
+	if objectMetadata.VersionID == "" {
+		objectMetadata.VersionID = opts.VersionID
+	}
 	return objectMetadata, nil
 }
 
