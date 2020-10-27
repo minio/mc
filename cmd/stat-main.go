@@ -155,10 +155,6 @@ func mainStat(cliCtx *cli.Context) error {
 
 	// check 'stat' cli arguments.
 	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx, encKeyDB)
-	if withVersions && rewind.IsZero() {
-		rewind = time.Now().UTC()
-	}
-
 	// mimic operating system tool behavior.
 	if len(args) == 0 {
 		args = []string{"."}

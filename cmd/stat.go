@@ -180,7 +180,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	case versionID != "":
 		lstOptions.WithOlderVersions = true
 		lstOptions.WithDeleteMarkers = true
-	case !timeRef.IsZero():
+	case !timeRef.IsZero(), includeOlderVersions:
 		lstOptions.WithOlderVersions = includeOlderVersions
 		lstOptions.WithDeleteMarkers = true
 		lstOptions.TimeRef = timeRef
@@ -224,8 +224,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-
-		clnt, stat, err := url2Stat(ctx, url, versionID, true, encKeyDB, timeRef)
+		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef)
 		if err != nil {
 			continue
 		}
