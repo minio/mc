@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -929,6 +930,10 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 
 	contentType, ok := metadata["Content-Type"]
 	if ok {
+		typ, _, _ := mime.ParseMediaType(contentType)
+		if typ == "multipart/form-data" {
+			contentType = "application/octet-stream"
+		}
 		delete(metadata, "Content-Type")
 	} else {
 		// Set content-type if not specified.
