@@ -195,7 +195,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 		TimeRef:           timeRef,
 		WithOlderVersions: withOlderVersions || !timeRef.IsZero(),
 		WithDeleteMarkers: true,
-		ShowDir:           DirNone,
+		ShowDir:           DirFirst,
 	}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
