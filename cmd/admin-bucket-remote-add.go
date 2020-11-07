@@ -150,6 +150,8 @@ func (r RemoteMessage) String() string {
 		return console.Colorize("RemoteMessage", "Removed remote target for `"+r.SourceBucket+"` bucket successfully.")
 	case "add":
 		return console.Colorize("RemoteMessage", "Remote ARN = `"+r.RemoteARN+"`.")
+	case "edit":
+		return console.Colorize("RemoteMessage", "Credentials updated successfully for target with ARN:`"+r.RemoteARN+"`.")
 	}
 	return ""
 }
