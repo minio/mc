@@ -252,8 +252,15 @@ func installAutoCompletion() {
 		return
 	}
 
+	shellName := os.Getenv("SHELL")
+	if shellName == "" {
+		shellName = "$SHELL"
+	} else {
+		shellName = filepath.Base(shellName)
+	}
+
 	if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
-		console.Infoln("autocompletion is already enabled in your '$SHELLRC'")
+		console.Infoln("autocompletion is already enabled in your '" + shellName + "' shell.")
 		return
 	}
 
@@ -261,7 +268,7 @@ func installAutoCompletion() {
 	if err != nil {
 		fatalIf(probe.NewError(err), "Unable to install auto-completion.")
 	} else {
-		console.Infoln("enabled autocompletion in '$SHELLRC'. Please restart your shell.")
+		console.Infoln("enabled autocompletion in your '" + shellName + "' rc file. Please restart your shell.")
 	}
 }
 
