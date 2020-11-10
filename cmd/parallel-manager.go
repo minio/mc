@@ -29,10 +29,10 @@ const (
 
 	// Monitor tick to decide to add new workers
 	monitorPeriod = 4 * time.Second
-
-	// Number of workers added per bandwidth monitoring.
-	defaultWorkerFactor = 2
 )
+
+// Number of workers added per bandwidth monitoring.
+var defaultWorkerFactor = runtime.GOMAXPROCS(0)
 
 // ParallelManager - helps manage parallel workers to run tasks
 type ParallelManager struct {
