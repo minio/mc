@@ -18,7 +18,9 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -57,6 +59,10 @@ var replicateAddFlags = []cli.Flag{
 		Name:  "remote-bucket",
 		Usage: "remote bucket, should be a unique value for the configuration",
 	},
+	cli.StringFlag{
+		Name:  "replicate",
+		Usage: "comma separated list to enable replication of delete markers, and/or deletion of versioned objects.Valid options are \"delete-marker\", \"delete\" and \"\"",
+	},
 }
 
 var replicateAddCmd = cli.Command{
@@ -75,12 +81,15 @@ FLAGS:
 	{{range .VisibleFlags}}{{.}}
 	{{end}}
 EXAMPLES:
-	1. Add replication configuration rule on bucket "mybucket" for alias "myminio".
+	1. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate
+	   all objects with tags key1=value1, key2=value2 to destbucket, including delete markers and 
+	   versioned deletes.
 	   {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \ 
 														 --storage-class "STANDARD" \
 														 --arn 'arn:minio:replication::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
 														 --priority 1 \
 														 --remote-bucket "destbucket"
+														 --replicate "delete,delete-marker"
 
 	2. Add replication configuration rule with Disabled status on bucket "mybucket" for alias "myminio".
       {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \ 
@@ -104,6 +113,11 @@ type replicateAddMessage struct {
 	URL    string `json:"url"`
 	ID     string `json:"id"`
 }
+
+const (
+	enableStatus  = "enable"
+	disableStatus = "disable"
+)
 
 func (l replicateAddMessage) JSON() string {
 	l.Status = "success"
@@ -135,19 +149,37 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize connection.")
 	rcfg, err := client.GetReplication(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication configuration")
-	ruleStatus := "enable"
-	if cliCtx.Bool("disable") {
-		ruleStatus = "disable"
+	ruleStatus := enableStatus
+	if cliCtx.Bool(disableStatus) {
+		ruleStatus = disableStatus
 	}
+	dmReplicateStatus := disableStatus
+	deleteReplicationStatus := disableStatus
+	if cliCtx.IsSet("replicate") {
+		replSlice := strings.Split(cliCtx.String("replicate"), ",")
+		for _, opt := range replSlice {
+			switch strings.TrimSpace(strings.ToLower(opt)) {
+			case "delete-marker":
+				dmReplicateStatus = enableStatus
+			case "delete":
+				deleteReplicationStatus = enableStatus
+			default:
+				fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker\" or \"\" to disable delete marker replication")
+			}
+		}
+	}
+
 	opts := replication.Options{
-		TagString:    cliCtx.String("tags"),
-		RoleArn:      cliCtx.String("arn"),
-		StorageClass: cliCtx.String("storage-class"),
-		Priority:     strconv.Itoa(cliCtx.Int("priority")),
-		RuleStatus:   ruleStatus,
-		ID:           cliCtx.String("id"),
-		DestBucket:   cliCtx.String("remote-bucket"),
-		Op:           replication.AddOption,
+		TagString:              cliCtx.String("tags"),
+		RoleArn:                cliCtx.String("arn"),
+		StorageClass:           cliCtx.String("storage-class"),
+		Priority:               strconv.Itoa(cliCtx.Int("priority")),
+		RuleStatus:             ruleStatus,
+		ID:                     cliCtx.String("id"),
+		DestBucket:             cliCtx.String("remote-bucket"),
+		Op:                     replication.AddOption,
+		ReplicateDeleteMarkers: dmReplicateStatus,
+		ReplicateDeletes:       deleteReplicationStatus,
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not add replication rule")
 	printMsg(replicateAddMessage{

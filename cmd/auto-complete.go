@@ -265,7 +265,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/encrypt/clear": s3Complete{deepLevel: 2},
 
 	"/replicate/add":    s3Complete{deepLevel: 2},
-	"/replicate/set":    s3Complete{deepLevel: 2},
+	"/replicate/edit":   s3Complete{deepLevel: 2},
 	"/replicate/ls":     s3Complete{deepLevel: 2},
 	"/replicate/rm":     s3Complete{deepLevel: 2},
 	"/replicate/export": s3Complete{deepLevel: 2},
