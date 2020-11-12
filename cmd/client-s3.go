@@ -1200,8 +1200,12 @@ func (c *S3Client) MakeBucket(ctx context.Context, region string, ignoreExisting
 		}
 		var retried bool
 		for {
-			_, e := c.api.PutObject(ctx, bucket, object,
-				bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{})
+			_, e := c.api.PutObject(ctx, bucket, object, bytes.NewReader([]byte("")), 0,
+				// Always send Content-MD5 to succeed with bucket with
+				// locking enabled. There is no performance hit since
+				// this is always an empty object
+				minio.PutObjectOptions{SendContentMd5: true},
+			)
 			if e == nil {
 				return nil
 			}
