@@ -344,7 +344,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isI
 
 	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
 
-	listOpts := ListOptions{IsRecursive: isRecursive, IsIncomplete: isIncomplete, ShowDir: DirNone}
+	listOpts := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirLast}
 	if !timeRef.IsZero() {
 		listOpts.WithOlderVersions = withVersions
 		listOpts.WithDeleteMarkers = true

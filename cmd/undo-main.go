@@ -198,7 +198,7 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 	)
 
 	for content := range clnt.List(ctx, ListOptions{
-		IsRecursive:       recursive,
+		Recursive:         recursive,
 		WithOlderVersions: true,
 		WithDeleteMarkers: true,
 		ShowDir:           DirNone,

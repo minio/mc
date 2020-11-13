@@ -123,7 +123,7 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 	contentCh := clnt.List(globalContext, ListOptions{
 		TimeRef:           timeRef,
 		WithOlderVersions: withVersions,
-		IsRecursive:       false,
+		Recursive:         false,
 		ShowDir:           DirFirst,
 	})
 	size := int64(0)

@@ -170,8 +170,8 @@ func dirDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL
 
 func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
 	// Set default values for listing.
-	srcCh := sourceClnt.List(ctx, ListOptions{IsRecursive: isRecursive, IsFetchMeta: isMetadata, ShowDir: dirOpt})
-	tgtCh := targetClnt.List(ctx, ListOptions{IsRecursive: isRecursive, IsFetchMeta: isMetadata, ShowDir: dirOpt})
+	srcCh := sourceClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
+	tgtCh := targetClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
 
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh

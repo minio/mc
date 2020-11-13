@@ -164,7 +164,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	var cErr error
 	errorsFound := false
 	objectsFound := false
-	lstOptions := ListOptions{IsRecursive: recursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.TimeRef = timeRef

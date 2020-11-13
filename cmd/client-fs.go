@@ -506,14 +506,14 @@ func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	contentCh := make(chan *ClientContent)
 	filteredCh := make(chan *ClientContent)
 
-	if opts.IsRecursive {
+	if opts.Recursive {
 		if opts.ShowDir == DirNone {
-			go f.listRecursiveInRoutine(contentCh, opts.IsFetchMeta)
+			go f.listRecursiveInRoutine(contentCh, opts.WithMetadata)
 		} else {
-			go f.listDirOpt(contentCh, opts.IsIncomplete, opts.IsFetchMeta, opts.ShowDir)
+			go f.listDirOpt(contentCh, opts.Incomplete, opts.WithMetadata, opts.ShowDir)
 		}
 	} else {
-		go f.listInRoutine(contentCh, opts.IsFetchMeta)
+		go f.listInRoutine(contentCh, opts.WithMetadata)
 	}
 
 	// This function filters entries from any  listing go routine
@@ -521,7 +521,7 @@ func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 	// only show partly uploaded files,
 	go func() {
 		for c := range contentCh {
-			if opts.IsIncomplete {
+			if opts.Incomplete {
 				if !strings.HasSuffix(c.URL.Path, partSuffix) {
 					continue
 				}

@@ -117,7 +117,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	alias, _, _ := mustExpandAlias(urlStr)
 	var cErr error
 	objectsFound := false
-	lstOptions := ListOptions{IsRecursive: recursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.TimeRef = timeRef
