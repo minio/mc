@@ -249,7 +249,7 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 	var prevKeyName string
 
 	// iterate over all content which is within the given directory
-	for content := range ctx.clnt.List(globalContext, ListOptions{IsRecursive: true, ShowDir: DirFirst}) {
+	for content := range ctx.clnt.List(globalContext, ListOptions{Recursive: true, ShowDir: DirFirst}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.

@@ -109,7 +109,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(globalContext, ListOptions{IsRecursive: true, ShowDir: DirNone}) {
+	for content := range fsClient.List(globalContext, ListOptions{Recursive: true, ShowDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
 			break
@@ -153,7 +153,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(globalContext, ListOptions{IsRecursive: true, ShowDir: DirNone}) {
+	for content := range fsClient.List(globalContext, ListOptions{Recursive: true, ShowDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
 			break

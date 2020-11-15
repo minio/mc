@@ -175,7 +175,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
-	lstOptions := ListOptions{IsRecursive: isRecursive, IsIncomplete: isIncomplete, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirNone}
 	switch {
 	case versionID != "":
 		lstOptions.WithOlderVersions = true

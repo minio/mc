@@ -200,7 +200,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 		return nil
 	}
 
-	for content := range clnt.List(globalContext, ListOptions{IsRecursive: false, ShowDir: DirNone}) {
+	for content := range clnt.List(globalContext, ListOptions{Recursive: false, ShowDir: DirNone}) {
 		if content.Err != nil {
 			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to heal bucket `"+bucket+"`.")
 			return nil

@@ -61,9 +61,9 @@ type StatOptions struct {
 
 // ListOptions holds options for listing operation
 type ListOptions struct {
-	IsRecursive       bool
-	IsIncomplete      bool
-	IsFetchMeta       bool
+	Recursive         bool
+	Incomplete        bool
+	WithMetadata      bool
 	WithOlderVersions bool
 	WithDeleteMarkers bool
 	TimeRef           time.Time

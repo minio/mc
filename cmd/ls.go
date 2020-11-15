@@ -190,12 +190,12 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 	)
 
 	for content := range clnt.List(ctx, ListOptions{
-		IsRecursive:       isRecursive,
-		IsIncomplete:      isIncomplete,
+		Recursive:         isRecursive,
+		Incomplete:        isIncomplete,
 		TimeRef:           timeRef,
 		WithOlderVersions: withOlderVersions || !timeRef.IsZero(),
 		WithDeleteMarkers: true,
-		ShowDir:           DirFirst,
+		ShowDir:           DirNone,
 	}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {

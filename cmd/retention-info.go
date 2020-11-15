@@ -310,7 +310,7 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 		return nil
 	}
 
-	lstOptions := ListOptions{IsRecursive: isRecursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: isRecursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.WithDeleteMarkers = true

@@ -842,15 +842,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 			withLock = true
 		}
 
-		// Create bucket if it doesn't exist at destination.
-		// ignore if already exists.
-		if mj.opts.activeActive {
-			err = dstClt.MakeBucket(ctx, cli.String("region"), true, withLock)
-			errorIf(err, "Unable to create bucket at `"+dstURL+"`.")
-			if err != nil {
-				return true
-			}
-		} else {
+		if dstClt.GetURL().Path == string(dstClt.GetURL().Separator) {
 			targetAlias, targetURL, _ := mustExpandAlias(srcURL)
 			if !strings.HasSuffix(targetURL, string(srcClt.GetURL().Separator)) {
 				targetURL += string(srcClt.GetURL().Separator)
@@ -860,7 +852,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
 			dstInitialURL := dstURL
-			for content := range srcClt.List(ctx, ListOptions{IsRecursive: false, ShowDir: DirNone}) {
+			for content := range srcClt.List(ctx, ListOptions{Recursive: false, ShowDir: DirNone}) {
 				if content.Err != nil {
 					errorIf(content.Err.Trace(srcClt.GetURL().String()), "Unable to list folder.")
 					continue
@@ -875,6 +867,14 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 						"Unable to create bucket at `"+dstURL+"`.")
 				}
 
+			}
+		} else {
+			// Create bucket if it doesn't exist at destination.
+			// ignore if already exists.
+			err = dstClt.MakeBucket(ctx, cli.String("region"), true, withLock)
+			errorIf(err, "Unable to create bucket at `"+dstURL+"`.")
+			if err != nil {
+				return true
 			}
 		}
 

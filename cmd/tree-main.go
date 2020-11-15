@@ -226,7 +226,7 @@ func doTree(ctx context.Context, url string, timeRef time.Time, level int, leaf 
 		return nil
 	}
 
-	for content := range clnt.List(ctx, ListOptions{IsRecursive: false, TimeRef: timeRef, ShowDir: DirFirst}) {
+	for content := range clnt.List(ctx, ListOptions{Recursive: false, TimeRef: timeRef, ShowDir: DirFirst}) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to tree.")
 			continue

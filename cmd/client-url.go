@@ -230,7 +230,7 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 	if err != nil {
 		return false
 	}
-	for entry := range clnt.List(globalContext, ListOptions{IsRecursive: false, IsIncomplete: incomplete, IsFetchMeta: false, ShowDir: DirNone}) {
+	for entry := range clnt.List(globalContext, ListOptions{Recursive: false, Incomplete: incomplete, WithMetadata: false, ShowDir: DirNone}) {
 		return entry.Err == nil
 	}
 	return false

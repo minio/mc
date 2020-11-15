@@ -140,11 +140,14 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	// Verify if secondURL is accessible.
 	_, secondContent, err := url2Stat(ctx, secondURL, "", false, encKeyDB, time.Time{})
 	if err != nil {
-		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
+		// Destination doesn't exist is okay.
+		if _, ok := err.ToGoError().(ObjectMissing); !ok {
+			fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
+		}
 	}
 
 	// Verify if its a directory.
-	if !secondContent.Type.IsDir() {
+	if err == nil && !secondContent.Type.IsDir() {
 		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("`%s` is not a folder.", secondURL))
 	}
 }
