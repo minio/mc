@@ -776,7 +776,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	mirrorSrcBuckets := srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == string(srcClt.GetURL().Separator)
 	mirrorBucketsToBuckets := mirrorSrcBuckets && createDstBuckets
 
-	if createDstBuckets || mirrorSrcBuckets {
+	if mirrorBucketsToBuckets {
 		// Synchronize buckets using dirDifference function
 		for d := range dirDifference(ctx, srcClt, dstClt, srcURL, dstURL) {
 			if d.Error != nil {
@@ -845,6 +845,73 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 					mj.status.fatalIf(err, "Failed to start monitoring.")
 				}
 			}
+		}
+	} else if _, err := dstClt.Stat(ctx, StatOptions{}); err != nil {
+		var (
+			withLock bool
+			mode     minio.RetentionMode
+			validity uint64
+			unit     minio.ValidityUnit
+			err      *probe.Error
+		)
+		if preserve {
+			_, mode, validity, unit, err = srcClt.GetObjectLockConfig(ctx)
+			if err == nil {
+				withLock = true
+			}
+		}
+
+		if dstClt.GetURL().Path == string(dstClt.GetURL().Separator) {
+			targetAlias, targetURL, _ := mustExpandAlias(srcURL)
+			if !strings.HasSuffix(targetURL, string(srcClt.GetURL().Separator)) {
+				targetURL += string(srcClt.GetURL().Separator)
+			}
+
+			srcClt, err := newClientFromAlias(targetAlias, targetURL)
+			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
+
+			dstInitialURL := dstURL
+			for content := range srcClt.List(ctx, ListOptions{Recursive: false, ShowDir: DirNone}) {
+				if content.Err != nil {
+					errorIf(content.Err.Trace(srcClt.GetURL().String()), "Unable to list folder.")
+					continue
+				}
+
+				if content.Type.IsDir() {
+					dstURL = urlJoinPath(dstInitialURL, filepath.Base(content.URL.Path)+string(srcClt.GetURL().Separator))
+
+					dstClt, err = newClient(dstURL)
+					fatalIf(err, "Unable to initialize `"+dstURL+"`.")
+					mj.status.fatalIf(dstClt.MakeBucket(ctx, cli.String("region"), true, withLock),
+						"Unable to create bucket at `"+dstURL+"`.")
+				}
+
+			}
+		} else {
+			// Create bucket if it doesn't exist at destination.
+			// ignore if already exists.
+			err = dstClt.MakeBucket(ctx, cli.String("region"), true, withLock)
+			errorIf(err, "Unable to create bucket at `"+dstURL+"`.")
+			if err != nil {
+				return true
+			}
+		}
+
+		if preserve {
+			if mode != "" {
+				// object lock configuration set on bucket
+				err = dstClt.SetObjectLockConfig(ctx, mode, validity, unit)
+				errorIf(err, "Unable to set object lock config in `"+dstURL+"`.")
+				if err != nil && mj.opts.activeActive {
+					return true
+				}
+				if err == nil {
+					mj.opts.md5 = true
+				}
+			}
+
+			errorIf(copyBucketPolicies(ctx, srcClt, dstClt, isOverwrite),
+				"Unable to copy bucket policies to `"+dstClt.GetURL().String()+"`.")
 		}
 	}
 
