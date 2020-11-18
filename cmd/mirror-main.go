@@ -479,7 +479,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				// to avoid copying it.
 				continue
 			}
-			mj.parallel.queueTask(func() URLs {
+			mj.parallel.queueTask(sourceURL.String(), func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
 			})
 		} else if event.Type == EventRemove {
@@ -498,7 +498,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
 			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
-				mj.parallel.queueTask(func() URLs {
+				mj.parallel.queueTask(targetURL.String(), func() URLs {
 					return mj.doRemove(ctx, mirrorURL)
 				})
 			}
@@ -528,7 +528,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 				return
 			}
 			if err != nil {
-				mj.parallel.queueTask(func() URLs {
+				mj.parallel.queueTask("", func() URLs {
 					return URLs{Error: err}
 				})
 			}
@@ -585,11 +585,11 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			sURLs.TotalSize = mj.status.Get()
 
 			if sURLs.SourceContent != nil {
-				mj.parallel.queueTask(func() URLs {
+				mj.parallel.queueTask(sURLs.SourceContent.URL.String(), func() URLs {
 					return mj.doMirror(ctx, sURLs)
 				})
 			} else if sURLs.TargetContent != nil && mj.opts.isRemove {
-				mj.parallel.queueTask(func() URLs {
+				mj.parallel.queueTask(sURLs.TargetContent.URL.String(), func() URLs {
 					return mj.doRemove(ctx, sURLs)
 				})
 			}

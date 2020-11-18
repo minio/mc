@@ -36,11 +36,10 @@ var defaultWorkerFactor = runtime.GOMAXPROCS(0)
 
 // A task is a copy/mirror action that needs to be executed
 type task struct {
+	// name of the task for task dependency
+	name string
 	// The function to execute in this task
 	fn func() URLs
-	// If set to true, ensure no tasks are
-	// executed in parallel to this one.
-	barrier bool
 }
 
 // ParallelManager - helps manage parallel workers to run tasks
@@ -52,8 +51,8 @@ type ParallelManager struct {
 	sentBytes int64
 
 	// Synchronize workers
-	wg          *sync.WaitGroup
-	barrierSync sync.RWMutex
+	wg     *sync.WaitGroup
+	locker *namedLocker
 
 	// Current threads number
 	workersNum uint32
@@ -93,10 +92,8 @@ func (p *ParallelManager) addWorker() {
 			// Execute the task and send the result to channel.
 			p.resultCh <- t.fn()
 
-			if t.barrier {
-				p.barrierSync.Unlock()
-			} else {
-				p.barrierSync.RUnlock()
+			if t.name != "" {
+				p.locker.Unlock(t.name)
 			}
 		}
 	}()
@@ -152,22 +149,13 @@ func (p *ParallelManager) monitorProgress() {
 }
 
 // Queue task in parallel
-func (p *ParallelManager) queueTask(fn func() URLs) {
-	p.doQueueTask(task{fn: fn})
-}
-
-// Queue task but ensures that no tasks is running at parallel,
-// which also means wait until all concurrent tasks finish before
-// queueing this and execute it solely.
-func (p *ParallelManager) queueTaskWithBarrier(fn func() URLs) {
-	p.doQueueTask(task{fn: fn, barrier: true})
+func (p *ParallelManager) queueTask(name string, fn func() URLs) {
+	p.doQueueTask(task{name: name, fn: fn})
 }
 
 func (p *ParallelManager) doQueueTask(t task) {
-	if t.barrier {
-		p.barrierSync.Lock()
-	} else {
-		p.barrierSync.RLock()
+	if t.name != "" {
+		p.locker.Lock(t.name)
 	}
 	p.queueCh <- t
 }
@@ -187,6 +175,7 @@ func newParallelManager(resultCh chan URLs) *ParallelManager {
 		stopMonitorCh: make(chan struct{}),
 		queueCh:       make(chan task),
 		resultCh:      resultCh,
+		locker:        NewNamedLocker(),
 	}
 
 	// Start with runtime.NumCPU().

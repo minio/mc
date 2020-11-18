@@ -530,11 +530,11 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
-					parallel.queueTask(func() URLs {
+					parallel.queueTask("", func() URLs {
 						return doCopyFake(ctx, cpURLs, pg, isMvCmd)
 					})
 				} else {
-					parallel.queueTask(func() URLs {
+					parallel.queueTask(cpURLs.SourceContent.URL.String(), func() URLs {
 						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
 					})
 				}
