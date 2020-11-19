@@ -46,8 +46,8 @@ const defaultMultipartThreadsNum = 4
 
 // GetOptions holds options of the GET operation
 type GetOptions struct {
-	sse       encrypt.ServerSide
-	versionID string
+	SSE       encrypt.ServerSide
+	VersionID string
 }
 
 // StatOptions holds options of the HEAD operation
