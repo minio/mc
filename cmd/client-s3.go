@@ -817,8 +817,8 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 	bucket, object := c.url2BucketAndObject()
 	reader, e := c.api.GetObject(ctx, bucket, object,
 		minio.GetObjectOptions{
-			ServerSideEncryption: opts.sse,
-			VersionID:            opts.versionID,
+			ServerSideEncryption: opts.SSE,
+			VersionID:            opts.VersionID,
 		})
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)

@@ -222,7 +222,7 @@ func getSourceStream(ctx context.Context, alias, urlStr, versionID string, fetch
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
-	reader, err = sourceClnt.Get(ctx, GetOptions{sse: sse, versionID: versionID})
+	reader, err = sourceClnt.Get(ctx, GetOptions{SSE: sse, VersionID: versionID})
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
