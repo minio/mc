@@ -69,10 +69,13 @@ func validateTranExpDate(rule lifecycle.Rule) error {
 		}
 	}
 	if transitionDateSet && rule.Transition.StorageClass == "" {
-		return errors.New("if storage class is set a valid transitionDate or transitionDay must be set")
+		return errors.New("if transitionDate or transitionDay is set, a valid storage class must be set")
 	}
 	if transitionDaySet && rule.Transition.StorageClass == "" {
-		return errors.New("if storage class is set a valid transitionDate or transitionDay must be set")
+		return errors.New("if transitionDate or transitionDay is set, a valid storage class must be set")
+	}
+	if rule.Transition.StorageClass != "" && (!transitionDateSet && !transitionDaySet) {
+		return errors.New("if storage class is set, transitionDate or transitionDay must be set")
 	}
 	return nil
 }
@@ -137,7 +140,6 @@ func validateILMRule(rule lifecycle.Rule) *probe.Error {
 
 // Returns valid lifecycleTransition to be included in lifecycleRule
 func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (transition lifecycle.Transition, err *probe.Error) {
-	storageClass = strings.ToUpper(storageClass) // Just-in-case the user has entered lower case characters.
 	if transitionDateStr != "" {
 		transitionDate, e := time.Parse(defaultILMDateFormat, transitionDateStr)
 		if e != nil {

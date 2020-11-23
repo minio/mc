@@ -26,7 +26,7 @@ var ilmSubcommands = []cli.Command{
 	ilmLsCmd,
 	ilmAddCmd,
 	ilmRmCmd,
-	ilmSetCmd,
+	ilmEditCmd,
 	ilmExportCmd,
 	ilmImportCmd,
 }

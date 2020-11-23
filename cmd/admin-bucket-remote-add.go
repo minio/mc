@@ -41,7 +41,7 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "service",
-		Usage: "type of service. Valid options are '[replication]'",
+		Usage: "type of service. Valid options are '[replication, ilm]'",
 	},
 	cli.StringFlag{
 		Name:  "region",
@@ -87,14 +87,23 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set a new remote replication target 'targetbucket' in region "us-west-1" on https://minio.siteb.example.com for bucket 'sourcebucket'.
+  1. Set a new remote replication target "targetbucket" in region "us-west-1" on https://minio.siteb.example.com for bucket 'sourcebucket'.
      {{.Prompt}} {{.HelpName}} sitea/sourcebucket \
                  https://foobar:foo12345@minio.siteb.example.com/targetbucket \
-                 --service "replication" --region "us-west-1" --label "hdd-tier"
+				 --service "replication" --region "us-west-1" --label "hdd-tier"
+
   2. Set a new remote replication target 'targetbucket' in region "us-west-1" on https://minio.siteb.example.com for bucket 'sourcebucket' with bandwidth set to 2 gigabits (2*10^9) per second.
      {{.Prompt}} {{.HelpName}} sitea/sourcebucket \
                  https://foobar:foo12345@minio.siteb.example.com/targetbucket \
                  --service "replication" --region "us-west-1 --bandwidth "2G"
+
+  3. Set a new remote transition target 'srcbucket' in region "us-west-1" on https://minio2:9000 for bucket 'srcbucket' on MinIO server.
+	{{.DisableHistory}}
+	{{.Prompt}} {{.HelpName}} myminio/srcbucket \
+				https://foobar:foo12345@minio2:9000/srcbucket \
+				--service "ilm" --region "us-west-1" --label "hdd-tier"
+	{{.EnableHistory}}
+
 `,
 }
 
@@ -247,6 +256,9 @@ func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	sourceBucket, bktTarget := fetchRemoteTarget(ctx)
+	if bktTarget.Type == madmin.ILMService && !ctx.IsSet("label") {
+		fatalIf(errInvalidArgument().Trace(args...), "--label flag is required for ilm target")
+	}
 	arn, e := client.SetRemoteTarget(globalContext, sourceBucket, bktTarget)
 	if e != nil {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to configure remote target")
