@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -196,15 +195,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	if cerr != nil {
 		fatalIf(probe.NewError(cerr), "Malformed Remote target URL")
 	}
-	secure := u.Scheme == "https"
-	host := u.Host
-	if u.Port() == "" {
-		port := 80
-		if secure {
-			port = 443
-		}
-		host = host + ":" + strconv.Itoa(port)
-	}
+
 	serviceType := cli.String("service")
 	if !madmin.ServiceType(serviceType).IsValid() {
 		fatalIf(errInvalidArgument().Trace(serviceType), "Invalid service type. Valid option is `[replication]`.")
@@ -218,9 +209,9 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	creds := &auth.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
 		TargetBucket:   TargetBucket,
-		Secure:         secure,
+		Secure:         u.Scheme == "https",
 		Credentials:    creds,
-		Endpoint:       host,
+		Endpoint:       u.Host,
 		Path:           path,
 		API:            "s3v4",
 		Type:           madmin.ServiceType(serviceType),
