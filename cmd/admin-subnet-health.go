@@ -79,7 +79,7 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 	}
 }
 
-//compress and tar obd output
+//compress and tar health report output
 func tarGZ(c HealthReportInfo, alias string) error {
 	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
@@ -152,7 +152,7 @@ func mainAdminHealth(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	healthInfo, e := fetchServerHealthInfo(ctx, client)
-	clusterHealthInfo := mapHealthInfoToV1(healthInfo, e)
+	clusterHealthInfo := MapHealthInfoToV1(healthInfo, e)
 
 	if globalJSON {
 		printMsg(clusterHealthInfo)

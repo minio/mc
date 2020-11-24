@@ -20,6 +20,7 @@ package cmd
 import (
 	"encoding/json"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
@@ -135,7 +136,8 @@ func (ch ClusterHealthV1) GetTimestamp() time.Time {
 	return ch.TimeStamp
 }
 
-func mapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo {
+// MapHealthInfoToV1 - maps the health info returned by minio server to V1 format
+func MapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo {
 	ch := ClusterHealthV1{}
 	ch.TimeStamp = healthInfo.TimeStamp
 	if err != nil {
@@ -148,11 +150,19 @@ func mapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo
 
 	serverAddrs := set.NewStringSet()
 
-	serverCPUs := mapServerCPUs(healthInfo)
-	serverDrives := mapServerDrives(healthInfo)
-	serverMems := mapServerMems(healthInfo)
-	serverNetPerfSerial, serverNetPerfParallel := mapServerNetPerf(healthInfo)
-	serverDrivePerf := mapServerDrivePerf(healthInfo)
+	var serverCPUs map[string][]HwCPUV1
+	var serverDrives map[string][]HwDriveV1
+	var serverMems map[string]HwMemV1
+	var serverNetPerfSerial, serverNetPerfParallel map[string][]madmin.NetPerfInfo
+	var serverDrivePerf map[string]HwDrivePerfV1
+
+	mapCPUs := func() { serverCPUs = mapServerCPUs(healthInfo) }
+	mapDrives := func() { serverDrives = mapServerDrives(healthInfo) }
+	mapMems := func() { serverMems = mapServerMems(healthInfo) }
+	mapNetPerf := func() { serverNetPerfSerial, serverNetPerfParallel = mapServerNetPerf(healthInfo) }
+	mapDrivePerf := func() { serverDrivePerf = mapServerDrivePerf(healthInfo) }
+
+	parallelize(mapCPUs, mapDrives, mapMems, mapNetPerf, mapDrivePerf)
 
 	addKeysToSet(reflect.ValueOf(serverCPUs).MapKeys(), &serverAddrs)
 	addKeysToSet(reflect.ValueOf(serverDrives).MapKeys(), &serverAddrs)
@@ -192,6 +202,20 @@ func mapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo
 		OsInfo: healthInfo.Sys.OsInfo,
 	}
 	return ch
+}
+
+func parallelize(functions ...func()) {
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(len(functions))
+
+	defer waitGroup.Wait()
+
+	for _, function := range functions {
+		go func(fn func()) {
+			defer waitGroup.Done()
+			fn()
+		}(function)
+	}
 }
 
 func addKeysToSet(input []reflect.Value, output *set.StringSet) {

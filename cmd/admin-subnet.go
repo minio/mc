@@ -21,22 +21,24 @@ import (
 	"github.com/minio/cli"
 )
 
+var subnetHealthSubcommands = []cli.Command{
+	adminSubnetHealthCmd,
+	// adminSubnetRegister to be added
+}
+
 var adminSubnetCmd = cli.Command{
-	Name:   "subnet",
-	Usage:  "Subnet related commands",
-	Action: mainAdminSubnet,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		adminSubnetHealthCmd,
-		// adminSubnetRegister to be added
-	},
+	Name:            "subnet",
+	Usage:           "Subnet related commands",
+	Action:          mainAdminSubnet,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     subnetHealthSubcommands,
 	HideHelpCommand: true,
 }
 
 // mainAdminSubnet is the handle for "mc admin subnet" command.
 func mainAdminSubnet(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, subnetHealthSubcommands)
 	return nil
 	// Sub-commands like "health", "register" have their own main.
 }
