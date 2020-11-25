@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -84,8 +85,8 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	aliasedURL = filepath.Clean(aliasedURL)
 	_, sourceBucket := url2Alias(aliasedURL)
-
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
