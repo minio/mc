@@ -100,7 +100,7 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 	maxURLLen := 10
 	maxTgtLen := 6
 	maxSrcLen := 6
-	maxLabelLen := 0
+	maxLabelLen := 5
 	if !globalJSON {
 		if len(targets) == 0 {
 			console.Print(console.Colorize("RemoteListEmpty", fmt.Sprintf("No remote targets found for `%s`. \n", urlStr)))
