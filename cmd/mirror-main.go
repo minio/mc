@@ -276,7 +276,7 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSSE encrypt.ServerSide, sURLs URLs) URLs {
 	shouldQueue := false
-	if !mj.opts.isOverwrite && !mj.opts.activeActive {
+	if !mj.opts.isOverwrite {
 		targetClient, err := newClient(targetPath)
 		if err != nil {
 			// cannot create targetclient
@@ -290,7 +290,7 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 		} // doesn't exist
 		shouldQueue = true
 	}
-	if shouldQueue || mj.opts.isOverwrite || mj.opts.activeActive {
+	if shouldQueue || mj.opts.isOverwrite {
 		// adjust total, because we want to show progress of
 		// the item still queued to be copied.
 		mj.status.Add(sURLs.SourceContent.Size)
@@ -483,7 +483,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
 			})
 		} else if event.Type == EventRemove {
-			if strings.Contains(event.UserAgent, uaMirrorAppName) {
+			if mj.opts.activeActive && strings.Contains(event.UserAgent, uaMirrorAppName) {
 				continue
 			}
 			mirrorURL := URLs{
@@ -497,7 +497,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
-			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
+			if mirrorURL.TargetContent != nil && mj.opts.isRemove {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL)
 				})
@@ -737,14 +737,17 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	dstClt, err := newClient(dstURL)
 	fatalIf(err, "Unable to initialize `"+dstURL+"`.")
 
-	// This is kept for backward compatibility, `--force` means
-	// --overwrite.
+	isActiveActive := cli.Bool("multi-master") || cli.Bool("active-active")
+
+	// This is kept for backward compatibility, `--force` means --overwrite.
 	isOverwrite := cli.Bool("force")
 	if !isOverwrite {
 		isOverwrite = cli.Bool("overwrite")
 	}
+	isOverwrite = isOverwrite || isActiveActive
 
-	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
+	isWatch := cli.Bool("watch") || isActiveActive
+	isRemove := cli.Bool("remove") || isActiveActive
 
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
@@ -752,7 +755,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 
 	mopts := mirrorOptions{
 		isFake:           cli.Bool("fake"),
-		isRemove:         cli.Bool("remove"),
+		isRemove:         isRemove,
 		isOverwrite:      isOverwrite,
 		isWatch:          isWatch,
 		isMetadata:       isMetadata,
@@ -764,7 +767,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		storageClass:     cli.String("storage-class"),
 		userMetadata:     userMetadata,
 		encKeyDB:         encKeyDB,
-		activeActive:     isWatch,
+		activeActive:     isActiveActive,
 	}
 
 	// Create a new mirror job and execute it

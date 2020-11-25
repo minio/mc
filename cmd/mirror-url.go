@@ -152,7 +152,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		case differInType:
 			URLsCh <- URLs{Error: errInvalidTarget(diffMsg.SecondURL)}
 		case differInSize, differInMetadata, differInAASourceMTime:
-			if !opts.isOverwrite && !opts.isFake && !opts.activeActive {
+			if !opts.isOverwrite && !opts.isFake {
 				// Size or time or etag differs but --overwrite not set.
 				URLsCh <- URLs{
 					Error:     errOverWriteNotAllowed(diffMsg.SecondURL),
