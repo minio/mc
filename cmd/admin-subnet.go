@@ -21,29 +21,31 @@ import (
 	"github.com/minio/cli"
 )
 
+var subnetHealthSubcommands = []cli.Command{
+	adminSubnetHealthCmd,
+	// adminSubnetRegister to be added
+}
+
 var adminSubnetCmd = cli.Command{
-	Name:   "subnet",
-	Usage:  "Subnet related commands",
-	Action: mainAdminSubnet,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
-	Subcommands: []cli.Command{
-		adminSubnetHealthCmd,
-		// adminSubnetRegister to be added
-	},
+	Name:            "subnet",
+	Usage:           "Subnet related commands",
+	Action:          mainAdminSubnet,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     subnetHealthSubcommands,
 	HideHelpCommand: true,
 }
 
 // mainAdminSubnet is the handle for "mc admin subnet" command.
 func mainAdminSubnet(ctx *cli.Context) error {
-	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	commandNotFound(ctx, subnetHealthSubcommands)
 	return nil
 	// Sub-commands like "health", "register" have their own main.
 }
 
 // Deprecated - to be removed in a future release
 // mainAdminSubnet is the handle for "mc admin subnet" command.
-func mainAdminHealth(ctx *cli.Context) error {
+func mainAdminOBD(ctx *cli.Context) error {
 	color.Yellow("Deprecated - please use 'mc admin subnet health'")
 	return nil
 }
@@ -52,7 +54,7 @@ var adminHealthCmd = cli.Command{
 	Name:               "health",
 	Aliases:            []string{"obd"},
 	Usage:              "Deprecated - please use 'mc admin subnet health'",
-	Action:             mainAdminHealth,
+	Action:             mainAdminOBD,
 	CustomHelpTemplate: `{{.Usage}}`,
 	Hidden:             true,
 }
