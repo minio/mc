@@ -344,6 +344,13 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 		} else {
 			sURLs.TargetContent.Metadata[activeActiveSourceModTimeKey] = sURLs.SourceContent.Time.Format(time.RFC3339Nano)
 		}
+
+		// Append the list of servers that mirrored this object
+		srcURLs := getSourceURLsKey(sURLs.SourceContent.Metadata)
+		if srcURLs != "" {
+			srcURLs += ", "
+		}
+		sURLs.TargetContent.Metadata[activeActiveSourceURLsKey] = srcURLs + sURLs.SourceContent.URL.String()
 	}
 
 	// Initialize additional target user metadata.
@@ -471,13 +478,14 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				DisableMultipart: mj.opts.disableMultipart,
 				encKeyDB:         mj.opts.encKeyDB,
 			}
-			if mj.opts.activeActive &&
-				(getSourceModTimeKey(mirrorURL.SourceContent.Metadata) != "" ||
-					getSourceModTimeKey(mirrorURL.SourceContent.UserMetadata) != "") {
-				// If source has active-active attributes, it means that the
-				// object was uploaded by "mc mirror", hence ignore the event
-				// to avoid copying it.
-				continue
+			if mj.opts.activeActive {
+				// Check if the target URL was also a source URL during the mirroring of this object,
+				// this means that this same object was previously mirrored by the target server, stop
+				// mirroring here to stop the infinite mirroring loop
+				mirroringSourceURLs := getSourceURLsKey(mirrorURL.SourceContent.Metadata)
+				if strings.Contains(mirroringSourceURLs, targetURL.String()) {
+					continue
+				}
 			}
 			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)

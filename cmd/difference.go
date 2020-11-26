@@ -63,6 +63,19 @@ func (d differType) String() string {
 	return "unknown"
 }
 
+const activeActiveSourceURLsKey = "X-Amz-Meta-Mm-Source-Urls"
+
+func getSourceURLsKey(metadata map[string]string) string {
+	if metadata[activeActiveSourceURLsKey] != "" {
+		return metadata[activeActiveSourceURLsKey]
+	}
+	loweredSourceURLsKey := strings.ToLower(activeActiveSourceURLsKey)
+	if metadata[loweredSourceURLsKey] != "" {
+		return metadata[loweredSourceURLsKey]
+	}
+	return ""
+}
+
 const activeActiveSourceModTimeKey = "X-Amz-Meta-Mm-Source-Mtime"
 
 func getSourceModTimeKey(metadata map[string]string) string {
