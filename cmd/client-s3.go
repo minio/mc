@@ -652,7 +652,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Size:         record.S3.Object.Size,
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
-					Type:         EventCreateCopy,
+					Type:         notification.ObjectCreatedCopy,
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
@@ -663,7 +663,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Size:         record.S3.Object.Size,
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
-					Type:         EventCreatePutRetention,
+					Type:         notification.EventType("s3:ObjectCreated:PutRetention"),
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
@@ -674,7 +674,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Size:         record.S3.Object.Size,
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
-					Type:         EventCreatePutLegalHold,
+					Type:         notification.EventType("s3:ObjectCreated:PutLegalHold"),
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
@@ -685,41 +685,19 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Size:         record.S3.Object.Size,
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
-					Type:         EventCreate,
+					Type:         notification.ObjectCreatedPut,
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
 				}
 			}
-		} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
+		} else {
 			eventsInfo[i] = EventInfo{
 				Time:         record.EventTime,
 				Size:         record.S3.Object.Size,
 				UserMetadata: record.S3.Object.UserMetadata,
 				Path:         u.String(),
-				Type:         EventRemove,
-				Host:         record.Source.Host,
-				Port:         record.Source.Port,
-				UserAgent:    record.Source.UserAgent,
-			}
-		} else if record.EventName == notification.ObjectAccessedGet {
-			eventsInfo[i] = EventInfo{
-				Time:         record.EventTime,
-				Size:         record.S3.Object.Size,
-				UserMetadata: record.S3.Object.UserMetadata,
-				Path:         u.String(),
-				Type:         EventAccessedRead,
-				Host:         record.Source.Host,
-				Port:         record.Source.Port,
-				UserAgent:    record.Source.UserAgent,
-			}
-		} else if record.EventName == notification.ObjectAccessedHead {
-			eventsInfo[i] = EventInfo{
-				Time:         record.EventTime,
-				Size:         record.S3.Object.Size,
-				UserMetadata: record.S3.Object.UserMetadata,
-				Path:         u.String(),
-				Type:         EventAccessedStat,
+				Type:         notification.EventType(record.EventName),
 				Host:         record.Source.Host,
 				Port:         record.Source.Port,
 				UserAgent:    record.Source.UserAgent,

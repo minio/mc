@@ -34,6 +34,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -451,16 +452,14 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		targetURL := newClientURL(expandedTargetPath)
 		tgtSSE := getSSE(targetPath, mj.opts.encKeyDB[targetAlias])
 
-		if (event.Type == EventCreate) ||
-			(event.Type == EventCreateCopy) ||
-			(event.Type == EventCreatePutRetention) {
+		if strings.HasPrefix(string(event.Type), "s3:ObjectCreated:") {
 			sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
 			mirrorURL := URLs{
 				SourceAlias: sourceAlias,
 				SourceContent: &ClientContent{
 					URL:              *sourceURL,
-					RetentionEnabled: event.Type == EventCreatePutRetention,
-					LegalHoldEnabled: event.Type == EventCreatePutLegalHold,
+					RetentionEnabled: event.Type == notification.EventType("s3:ObjectCreated:PutRetention"),
+					LegalHoldEnabled: event.Type == notification.EventType("s3:ObjectCreated:PutLegalHold"),
 					Size:             event.Size,
 					Time:             sourceModTime,
 					Metadata:         event.UserMetadata,
@@ -482,7 +481,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
 			})
-		} else if event.Type == EventRemove {
+		} else if event.Type == notification.ObjectRemovedDelete {
 			if strings.Contains(event.UserAgent, uaMirrorAppName) {
 				continue
 			}

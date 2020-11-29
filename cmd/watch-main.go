@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -99,10 +100,10 @@ func checkWatchSyntax(ctx *cli.Context) {
 type watchMessage struct {
 	Status string `json:"status"`
 	Event  struct {
-		Time string    `json:"time"`
-		Size int64     `json:"size"`
-		Path string    `json:"path"`
-		Type EventType `json:"type"`
+		Time string                 `json:"time"`
+		Size int64                  `json:"size"`
+		Path string                 `json:"path"`
+		Type notification.EventType `json:"type"`
 	} `json:"events"`
 	Source struct {
 		Host      string `json:"host,omitempty"`
@@ -120,7 +121,7 @@ func (u watchMessage) JSON() string {
 
 func (u watchMessage) String() string {
 	msg := console.Colorize("Time", fmt.Sprintf("[%s] ", u.Event.Time))
-	if u.Event.Type == EventCreate {
+	if strings.HasPrefix(string(u.Event.Type), "s3:ObjectCreated:") {
 		msg += console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(u.Event.Size))))
 	} else {
 		msg += fmt.Sprintf("%6s ", "")
