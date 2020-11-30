@@ -41,6 +41,7 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/minio/pkg/console"
 )
@@ -200,19 +201,19 @@ func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 					Time: UTCNow().Format(timeFormatFS),
 					Size: i.Size(),
 					Path: event.Path(),
-					Type: EventCreate,
+					Type: notification.ObjectCreatedPut,
 				}}
 			} else if IsDeleteEvent(event.Event()) {
 				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Path: event.Path(),
-					Type: EventRemove,
+					Type: notification.ObjectRemovedDelete,
 				}}
 			} else if IsGetEvent(event.Event()) {
 				eventChan <- []EventInfo{{
 					Time: UTCNow().Format(timeFormatFS),
 					Path: event.Path(),
-					Type: EventAccessed,
+					Type: notification.ObjectAccessedGet,
 				}}
 			}
 		}

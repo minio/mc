@@ -22,35 +22,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-)
-
-// EventType represents the type of the event occurred.
-type EventType string
-
-const (
-	// EventCreate notifies when a new object is created
-	EventCreate EventType = "ObjectCreated"
-
-	// EventCreateCopy notifies when there was a server side copy
-	EventCreateCopy EventType = "ObjectCreated:Copy"
-
-	// EventRemove notifies when a new object is deleted
-	EventRemove = "ObjectRemoved"
-
-	// Following are MinIO server specific events
-
-	// EventCreatePutRetention notifies when a retention configuration is added to an object
-	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
-
-	// EventCreatePutLegalHold notifies when a legal hold configuration is added to an object
-	EventCreatePutLegalHold EventType = "ObjectCreated:PutLegalHold"
-
-	// EventAccessed notifies when an object is accessed.
-	EventAccessed = "ObjectAccessed"
-	// EventAccessedRead notifies when an object is accessed (specifically read/get).
-	EventAccessedRead = "ObjectAccessed:Read"
-	// EventAccessedStat notifies when an object is accessed (specifically stat).
-	EventAccessedStat = "ObjectAccessed:Stat"
+	"github.com/minio/minio-go/v7/pkg/notification"
 )
 
 // EventInfo contains the information of the event that occurred and the source
@@ -60,10 +32,10 @@ type EventInfo struct {
 	Size         int64
 	UserMetadata map[string]string
 	Path         string
-	Type         EventType
 	Host         string
 	Port         string
 	UserAgent    string
+	Type         notification.EventType
 }
 
 // WatchOptions contains watch configuration options
