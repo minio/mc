@@ -1050,7 +1050,7 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --overwrite                        overwrite object(s) on target
+  --overwrite                        overwrite object(s) on target if it differs from source
   --fake                             perform a fake mirror operation
   --watch, -w                        watch and synchronize changes
   --remove                           remove extraneous object(s) on target
