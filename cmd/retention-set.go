@@ -90,7 +90,6 @@ EXAMPLES:
 
   5. Set default lock retention configuration for a bucket
      $ {{.HelpName}} --default governance 30d myminio/mybucket/
-
 `}
 
 func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions bool, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypass, bucketMode bool) {
