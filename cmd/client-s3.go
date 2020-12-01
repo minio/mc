@@ -1368,13 +1368,12 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	// Bucket name cannot be empty, stat on URL has no meaning.
 	if bucket == "" {
-		content := &ClientContent{}
 		url := c.targetURL.Clone()
 		url.Path = string(c.targetURL.Separator)
-		content.URL = url
-		content.Size = 0
-		content.Type = os.ModeDir
-		return content, nil
+		return &ClientContent{URL: url,
+			Size: 0,
+			Type: os.ModeDir,
+		}, nil
 	}
 
 	if object == "" {
@@ -1424,7 +1423,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return nil, probe.NewError(objectStat.Err)
 		}
 
-		if objectStat.Key == object || objectStat.Key == object+string(c.targetURL.Separator) {
+		if objectStat.Key == strings.TrimSuffix(object, string(c.targetURL.Separator)) {
 			return c.objectInfo2ClientContent(bucket, objectStat), nil
 		}
 		break
