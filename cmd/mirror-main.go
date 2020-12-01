@@ -48,7 +48,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "overwrite",
-			Usage: "overwrite object(s) on target",
+			Usage: "overwrite object(s) on target if it differs from source",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
