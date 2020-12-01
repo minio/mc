@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -194,6 +195,7 @@ type Config struct {
 	Debug        bool
 	Insecure     bool
 	Lookup       minio.BucketLookupType
+	Transport    *http.Transport
 }
 
 // SelectObjectOpts - opts entered for select API
