@@ -1,8 +1,14 @@
-FROM alpine:3.12
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.3
+
+LABEL maintainer="MinIO Inc <dev@min.io>"
 
 COPY mc /usr/bin/
-COPY CREDITS /
+COPY CREDITS /licenses/CREDITS 
+COPY LICENSE /licenses/LICENSE
 
-RUN apk add --no-cache ca-certificates
+RUN  \
+     microdnf update --nodocs && \
+     microdnf install ca-certificates --nodocs && \
+     microdnf clean all
 
 ENTRYPOINT ["mc"]
