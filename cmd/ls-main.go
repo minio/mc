@@ -93,7 +93,6 @@ EXAMPLES:
 
   8. List all contents versions if the bucket versioning is enabled.
      {{.Prompt}} {{.HelpName}} --versions s3/mybucket
-
 `,
 }
 

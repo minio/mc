@@ -59,9 +59,9 @@ EXAMPLES:
           --storage-class "GLACIER" s3/mybucket/doc
 
   4. Add expiry and transition days rules on a prefix in mybucket for a MinIO transition target specified by label "hdd_tier".
-     "hdd_tier" is the label specified when adding a remote target with "mc admin bucket remote add --service ilm --label hdd_tier"          
+     "hdd_tier" is the label specified when adding a remote target with "mc admin bucket remote add --service ilm --label hdd_tier"
      {{.Prompt}} {{.HelpName}} --expiry-days "300" --transition-days "200" \
-	  --storage-class "hdd_tier" myminio/mybucket/doc
+          --storage-class "hdd_tier" myminio/mybucket/doc
 `,
 }
 
