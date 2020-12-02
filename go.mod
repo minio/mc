@@ -8,14 +8,14 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.9.0
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
-	github.com/klauspost/compress v1.10.3
+	github.com/klauspost/compress v1.11.3
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20201122074850-39f3d5493bc9
-	github.com/minio/minio-go/v7 v7.0.6-0.20201118225257-f6869a5e2a6a
+	github.com/minio/minio v0.0.0-20201202000049-3ca046b40876
+	github.com/minio/minio-go/v7 v7.0.6
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -33,5 +33,3 @@ require (
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.2.8
 )
-
-replace go.etcd.io/etcd/v3 => go.etcd.io/etcd/v3 v3.3.0-rc.0.0.20200707003333-58bb8ae09f8e

@@ -253,7 +253,7 @@ func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
 
 	printMsg(RemoteMessage{
 		op:           ctx.Command.Name,
-		TargetURL:    bktTarget.URL(),
+		TargetURL:    bktTarget.URL().String(),
 		TargetBucket: bktTarget.TargetBucket,
 		AccessKey:    bktTarget.Credentials.AccessKey,
 		SourceBucket: sourceBucket,
