@@ -127,10 +127,10 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 		}
 	}
 	for _, target := range targets {
-		targetURL := target.URL()
+		targetURL := target.URL().String()
 		if !globalJSON {
 			if maxURLLen > 0 {
-				targetURL = fmt.Sprintf("%-*.*s", maxURLLen+8, maxURLLen+8, target.URL())
+				targetURL = fmt.Sprintf("%-*.*s", maxURLLen+8, maxURLLen+8, target.URL().String())
 			}
 			if maxTgtLen > 0 {
 				target.TargetBucket = fmt.Sprintf("%-*.*s", maxTgtLen, maxTgtLen, target.TargetBucket)
