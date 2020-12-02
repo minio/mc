@@ -159,30 +159,33 @@ EXAMPLES:
       new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
       {{.Prompt}} {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
-  08. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
+  08. Continuously mirror all buckets and objects from site 1 to site 2, removed buckets and objects will be reflected as well.
+      {{.Prompt}} {{.HelpName}} --remove --watch site1-alias/ site2-alias/
+
+  09. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
       Exclude all .* files and *.temp files when mirroring.
       {{.Prompt}} {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
 
-  09. Mirror objects newer than 10 days from bucket test to a local folder.
+  10. Mirror objects newer than 10 days from bucket test to a local folder.
       {{.Prompt}} {{.HelpName}} --newer-than 10d s3/test ~/localfolder
 
-  10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
+  11. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
       {{.Prompt}} {{.HelpName}} --older-than 30d s3/test ~/test
 
-  11. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
+  12. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
       {{.Prompt}} {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
 
-  12. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage. In case the encryption key contains
+  13. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage. In case the encryption key contains
       non-printable character like tab, pass the base64 encoded string as key.
       {{.Prompt}} {{.HelpName}} --encrypt-key "s3/photos/=32byteslongsecretkeymustbegiven1,play/archive/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE=" s3/photos/ play/archive/
 
-  13. Update 'Cache-Control' header on all existing objects recursively.
+  14. Update 'Cache-Control' header on all existing objects recursively.
       {{.Prompt}} {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000" myminio/video-files myminio/video-files
 
-  14. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
+  15. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
-  15. Cross mirror between sites in a active-active deployment.
+  16. Cross mirror between sites in a active-active deployment.
       Site-A: {{.Prompt}} {{.HelpName}} --active-active siteA siteB
       Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
 `,
