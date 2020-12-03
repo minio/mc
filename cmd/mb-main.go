@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
