@@ -283,7 +283,7 @@ func mainTree(cliCtx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(ctx, clnt, true, false, timeRef, false); e != nil {
+			if e := doList(ctx, clnt, true, false, false, timeRef, false); e != nil {
 				cErr = e
 			}
 		}

@@ -48,6 +48,10 @@ var (
 			Name:  "incomplete, I",
 			Usage: "list incomplete uploads",
 		},
+		cli.BoolFlag{
+			Name:  "summarize",
+			Usage: "display summary information (number of objects, total size)",
+		},
 	}
 )
 
@@ -93,6 +97,9 @@ EXAMPLES:
 
   8. List all contents versions if the bucket versioning is enabled.
      {{.Prompt}} {{.HelpName}} --versions s3/mybucket
+
+  9. List number of objects and total size.
+     {{.Prompt}} {{.HelpName}} --recursive --summarize s3/mybucket
 `,
 }
 
@@ -138,7 +145,7 @@ func parseRewindFlag(rewind string) (timeRef time.Time) {
 }
 
 // checkListSyntax - validate all the passed arguments
-func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, bool, time.Time, bool) {
+func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, bool, bool, time.Time, bool) {
 	args := cliCtx.Args()
 	if !cliCtx.Args().Present() {
 		args = []string{"."}
@@ -152,13 +159,14 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, 
 	isRecursive := cliCtx.Bool("recursive")
 	isIncomplete := cliCtx.Bool("incomplete")
 	withOlderVersions := cliCtx.Bool("versions")
+	isSummary := cliCtx.Bool("summarize")
 
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 	if timeRef.IsZero() && withOlderVersions {
 		timeRef = time.Now().UTC()
 	}
 
-	return args, isRecursive, isIncomplete, timeRef, withOlderVersions
+	return args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions
 }
 
 // mainList - is a handler for mc ls command
@@ -177,7 +185,7 @@ func mainList(cliCtx *cli.Context) error {
 	console.SetColor("Time", color.New(color.FgGreen))
 
 	// check 'ls' cliCtx arguments.
-	args, isRecursive, isIncomplete, timeRef, withOlderVersions := checkListSyntax(ctx, cliCtx)
+	args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions := checkListSyntax(ctx, cliCtx)
 
 	var cErr error
 	for _, targetURL := range args {
@@ -192,8 +200,7 @@ func mainList(cliCtx *cli.Context) error {
 				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 			}
 		}
-
-		if e := doList(ctx, clnt, isRecursive, isIncomplete, timeRef, withOlderVersions); e != nil {
+		if e := doList(ctx, clnt, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions); e != nil {
 			cErr = e
 		}
 	}
