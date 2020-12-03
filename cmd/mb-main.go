@@ -154,7 +154,6 @@ func mainMakeBucket(cli *cli.Context) error {
 			continue
 		}
 
-
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
 	}
