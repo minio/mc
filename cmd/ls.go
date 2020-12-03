@@ -252,7 +252,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 
 		perObjectVersions = append(perObjectVersions, content)
 		totalSize += content.Size
-		totalObjects += 1
+		totalObjects++
 	}
 
 	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
