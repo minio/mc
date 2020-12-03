@@ -608,23 +608,40 @@ USAGE:
   mc admin config COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  get     get config of a MinIO server/cluster.
-  set     set new config file to a MinIO server/cluster.
+  get      interactively retrieve a config key parameters
+  set      interactively set a config key parameters
+  reset    interactively reset a config key parameters
+  history  show all historic configuration changes
+  restore  rollback back changes to a specific config history
+  export   export all config keys to STDOUT
+  import   import multiple config keys from STDIN
 
 FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Get server configuration of a MinIO server/cluster.*
+*Example: Get specific settings on 'etcd' sub-system.*
 
 ```
-mc admin config get myminio > /tmp/my-serverconfig
+mc admin config get myminio etcd
+etcd endpoints= path_prefix= coredns_path=/skydns client_cert= client_cert_key=
 ```
 
-*Example: Set server configuration of a MinIO server/cluster.*
+*Example: Set specific settings on 'etcd' sub-system.*
+```
+mc admin config set myminio etcd endpoints=http://etcd.svc.cluster.local:2379
+```
+
+*Example: Get entire server configuration of a MinIO server/cluster.*
 
 ```
-mc admin config set myminio < /tmp/my-serverconfig
+mc admin config export myminio > /tmp/my-serverconfig
+```
+
+*Example: Set entire server configuration of a MinIO server/cluster.*
+
+```
+mc admin config import myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
