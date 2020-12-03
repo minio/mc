@@ -155,7 +155,6 @@ func mainMakeBucket(cli *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(clnt.GetURL())
 
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
