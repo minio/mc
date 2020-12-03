@@ -28,11 +28,12 @@ import (
 )
 
 var adminConfigImportCmd = cli.Command{
-	Name:   "import",
-	Usage:  "import multiple config keys from STDIN",
-	Before: setGlobalsFromContext,
-	Action: mainAdminConfigImport,
-	Flags:  globalFlags,
+	Name:         "import",
+	Usage:        "import multiple config keys from STDIN",
+	Before:       setGlobalsFromContext,
+	Action:       mainAdminConfigImport,
+	OnUsageError: onUsageError,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

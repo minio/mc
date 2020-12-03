@@ -28,11 +28,12 @@ import (
 )
 
 var replicateExportCmd = cli.Command{
-	Name:   "export",
-	Usage:  "export server side replication configuration",
-	Action: mainReplicateExport,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "export",
+	Usage:        "export server side replication configuration",
+	Action:       mainReplicateExport,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 	 

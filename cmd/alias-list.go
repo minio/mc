@@ -34,6 +34,7 @@ var aliasListCmd = cli.Command{
 	},
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
+	OnUsageError:    onUsageError,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

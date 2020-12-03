@@ -43,9 +43,11 @@ var tagSetFlags = []cli.Flag{
 }
 
 var tagSetCmd = cli.Command{
-	Name: "set", Usage: "set tags for a bucket and object(s)", Action: mainSetTag,
-	Before: setGlobalsFromContext,
-	Flags:  append(tagSetFlags, globalFlags...),
+	Name: "set", Usage: "set tags for a bucket and object(s)",
+	Action:       mainSetTag,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(tagSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

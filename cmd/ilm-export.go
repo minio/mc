@@ -27,11 +27,12 @@ import (
 )
 
 var ilmExportCmd = cli.Command{
-	Name:   "export",
-	Usage:  "export lifecycle configuration in JSON format",
-	Action: mainILMExport,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "export",
+	Usage:        "export lifecycle configuration in JSON format",
+	Action:       mainILMExport,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

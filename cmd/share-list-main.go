@@ -30,11 +30,12 @@ var (
 
 // Share documents via URL.
 var shareList = cli.Command{
-	Name:   "list",
-	Usage:  "list previously shared objects",
-	Action: mainShareList,
-	Before: setGlobalsFromContext,
-	Flags:  append(shareListFlags, globalFlags...),
+	Name:         "list",
+	Usage:        "list previously shared objects",
+	Action:       mainShareList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(shareListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} COMMAND - {{.Usage}}
 

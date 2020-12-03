@@ -50,11 +50,12 @@ var (
 	}
 )
 var legalHoldSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set legal hold for object(s)",
-	Action: mainLegalHoldSet,
-	Before: setGlobalsFromContext,
-	Flags:  append(lhSetFlags, globalFlags...),
+	Name:         "set",
+	Usage:        "set legal hold for object(s)",
+	Action:       mainLegalHoldSet,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(lhSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

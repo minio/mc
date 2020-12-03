@@ -58,11 +58,12 @@ var (
 )
 
 var retentionSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set retention for object(s)",
-	Action: mainRetentionSet,
-	Before: setGlobalsFromContext,
-	Flags:  append(retentionSetFlags, globalFlags...),
+	Name:         "set",
+	Usage:        "set retention for object(s)",
+	Action:       mainRetentionSet,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(retentionSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

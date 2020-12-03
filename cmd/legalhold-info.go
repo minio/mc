@@ -52,11 +52,12 @@ var (
 	}
 )
 var legalHoldInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "show legal hold info for object(s)",
-	Action: mainLegalHoldInfo,
-	Before: setGlobalsFromContext,
-	Flags:  append(lhInfoFlags, globalFlags...),
+	Name:         "info",
+	Usage:        "show legal hold info for object(s)",
+	Action:       mainLegalHoldInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(lhInfoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

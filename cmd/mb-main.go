@@ -46,11 +46,12 @@ var (
 
 // make a bucket.
 var mbCmd = cli.Command{
-	Name:   "mb",
-	Usage:  "make a bucket",
-	Action: mainMakeBucket,
-	Before: setGlobalsFromContext,
-	Flags:  append(mbFlags, globalFlags...),
+	Name:         "mb",
+	Usage:        "make a bucket",
+	Action:       mainMakeBucket,
+	Before:       setGlobalsFromContext,
+	OnUsageError: onUsageError,
+	Flags:        append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

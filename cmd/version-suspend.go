@@ -28,11 +28,12 @@ import (
 )
 
 var versionSuspendCmd = cli.Command{
-	Name:   "suspend",
-	Usage:  "suspend bucket versioning",
-	Action: mainVersionSuspend,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "suspend",
+	Usage:        "suspend bucket versioning",
+	Action:       mainVersionSuspend,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

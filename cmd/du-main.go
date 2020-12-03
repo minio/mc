@@ -54,11 +54,12 @@ var (
 
 // Summarize disk usage.
 var duCmd = cli.Command{
-	Name:   "du",
-	Usage:  "summarize disk usage recursively",
-	Action: mainDu,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(duFlags, ioFlags...), globalFlags...),
+	Name:         "du",
+	Usage:        "summarize disk usage recursively",
+	Action:       mainDu,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(duFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

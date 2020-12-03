@@ -28,11 +28,12 @@ import (
 )
 
 var encryptClearCmd = cli.Command{
-	Name:   "clear",
-	Usage:  "clear encryption config",
-	Action: mainEncryptClear,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "clear",
+	Usage:        "clear encryption config",
+	Action:       mainEncryptClear,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
    

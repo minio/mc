@@ -25,11 +25,12 @@ import (
 )
 
 var adminUserEnableCmd = cli.Command{
-	Name:   "enable",
-	Usage:  "enable user",
-	Action: mainAdminUserEnable,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "enable",
+	Usage:        "enable user",
+	Action:       mainAdminUserEnable,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

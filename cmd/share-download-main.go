@@ -41,11 +41,12 @@ var (
 
 // Share documents via URL.
 var shareDownload = cli.Command{
-	Name:   "download",
-	Usage:  "generate URLs for download access",
-	Action: mainShareDownload,
-	Before: setGlobalsFromContext,
-	Flags:  append(shareDownloadFlags, globalFlags...),
+	Name:         "download",
+	Usage:        "generate URLs for download access",
+	Action:       mainShareDownload,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

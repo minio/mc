@@ -35,11 +35,12 @@ var adminBucketRemoteListFlags = []cli.Flag{
 }
 
 var adminBucketRemoteListCmd = cli.Command{
-	Name:   "ls",
-	Usage:  "list remote target ARN(s)",
-	Action: mainAdminBucketRemoteList,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, adminBucketRemoteListFlags...),
+	Name:         "ls",
+	Usage:        "list remote target ARN(s)",
+	Action:       mainAdminBucketRemoteList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, adminBucketRemoteListFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

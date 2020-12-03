@@ -48,11 +48,12 @@ var (
 )
 
 var legalHoldClearCmd = cli.Command{
-	Name:   "clear",
-	Usage:  "clear legal hold for object(s)",
-	Action: mainLegalHoldClear,
-	Before: setGlobalsFromContext,
-	Flags:  append(lhClearFlags, globalFlags...),
+	Name:         "clear",
+	Usage:        "clear legal hold for object(s)",
+	Action:       mainLegalHoldClear,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(lhClearFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

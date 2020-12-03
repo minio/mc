@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2019 MinIO, Inc.
+ * MinIO Client (C) 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,32 @@
 package cmd
 
 import (
+	"testing"
+
 	"github.com/minio/cli"
 )
 
-var adminGroupDisableCmd = cli.Command{
-	Name:         "disable",
-	Usage:        "disable a group",
-	Action:       mainAdminGroupEnableDisable,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
+func TestCLIOnUsageError(t *testing.T) {
+	var checkOnUsageError func(cli.Command, string)
+	checkOnUsageError = func(cmd cli.Command, parentCmd string) {
+		if cmd.Subcommands != nil {
+			for _, subCmd := range cmd.Subcommands {
+				if cmd.Hidden {
+					continue
+				}
+				checkOnUsageError(subCmd, parentCmd+" "+cmd.Name)
+			}
+			return
+		}
+		if !cmd.Hidden && cmd.OnUsageError == nil {
+			t.Errorf("On usage error for `%s` not found", parentCmd+" "+cmd.Name)
+		}
+	}
 
-USAGE:
-  {{.HelpName}} TARGET GROUPNAME
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Disable group 'allcents'.
-     {{.Prompt}} {{.HelpName}} myminio allcents
-`,
+	for _, cmd := range appCmds {
+		if cmd.Hidden {
+			continue
+		}
+		checkOnUsageError(cmd, "")
+	}
 }

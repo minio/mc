@@ -52,11 +52,12 @@ var adminHealthFlags = []cli.Flag{
 }
 
 var adminSubnetHealthCmd = cli.Command{
-	Name:   "health",
-	Usage:  "run health check for Subnet",
-	Action: mainAdminHealth,
-	Before: setGlobalsFromContext,
-	Flags:  append(adminHealthFlags, globalFlags...),
+	Name:         "health",
+	Usage:        "run health check for Subnet",
+	OnUsageError: onUsageError,
+	Action:       mainAdminHealth,
+	Before:       setGlobalsFromContext,
+	Flags:        append(adminHealthFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

@@ -52,11 +52,12 @@ var (
 
 // Display contents of a file.
 var headCmd = cli.Command{
-	Name:   "head",
-	Usage:  "display first 'n' lines of an object",
-	Action: mainHead,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(headFlags, ioFlags...), globalFlags...),
+	Name:         "head",
+	Usage:        "display first 'n' lines of an object",
+	Action:       mainHead,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(headFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

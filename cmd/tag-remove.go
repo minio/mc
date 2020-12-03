@@ -43,11 +43,12 @@ var tagRemoveFlags = []cli.Flag{
 }
 
 var tagRemoveCmd = cli.Command{
-	Name:   "remove",
-	Usage:  "remove tags assigned to a bucket or an object",
-	Action: mainRemoveTag,
-	Before: setGlobalsFromContext,
-	Flags:  append(tagRemoveFlags, globalFlags...),
+	Name:         "remove",
+	Usage:        "remove tags assigned to a bucket or an object",
+	Action:       mainRemoveTag,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(tagRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

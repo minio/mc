@@ -42,11 +42,12 @@ var (
 
 // Manage anonymous access to buckets and objects.
 var policyCmd = cli.Command{
-	Name:   "policy",
-	Usage:  "manage anonymous access to buckets and objects",
-	Action: mainPolicy,
-	Before: setGlobalsFromContext,
-	Flags:  append(policyFlags, globalFlags...),
+	Name:         "policy",
+	Usage:        "manage anonymous access to buckets and objects",
+	Action:       mainPolicy,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(policyFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
   {{.HelpName}} - {{.Usage}}
 

@@ -48,11 +48,12 @@ var (
 
 // Display contents of a file.
 var catCmd = cli.Command{
-	Name:   "cat",
-	Usage:  "display object contents",
-	Action: mainCat,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(catFlags, ioFlags...), globalFlags...),
+	Name:         "cat",
+	Usage:        "display object contents",
+	Action:       mainCat,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(catFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

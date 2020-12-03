@@ -26,11 +26,12 @@ import (
 )
 
 var adminPolicyInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "show info on a policy",
-	Action: mainAdminPolicyInfo,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "info",
+	Usage:        "show info on a policy",
+	Action:       mainAdminPolicyInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

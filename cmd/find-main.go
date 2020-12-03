@@ -83,11 +83,12 @@ var (
 )
 
 var findCmd = cli.Command{
-	Name:   "find",
-	Usage:  "search for objects",
-	Action: mainFind,
-	Before: setGlobalsFromContext,
-	Flags:  append(findFlags, globalFlags...),
+	Name:         "find",
+	Usage:        "search for objects",
+	Action:       mainFind,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(findFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

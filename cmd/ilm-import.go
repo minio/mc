@@ -28,11 +28,12 @@ import (
 )
 
 var ilmImportCmd = cli.Command{
-	Name:   "import",
-	Usage:  "import lifecycle configuration in JSON format",
-	Action: mainILMImport,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "import",
+	Usage:        "import lifecycle configuration in JSON format",
+	Action:       mainILMImport,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

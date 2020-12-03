@@ -40,9 +40,10 @@ import (
 
 // Check for new software updates.
 var updateCmd = cli.Command{
-	Name:   "update",
-	Usage:  "update mc to latest release",
-	Action: mainUpdate,
+	Name:         "update",
+	Usage:        "update mc to latest release",
+	Action:       mainUpdate,
+	OnUsageError: onUsageError,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "json",

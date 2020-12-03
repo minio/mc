@@ -30,11 +30,12 @@ var adminBucketRemoteRmFlags = []cli.Flag{
 	},
 }
 var adminBucketRemoteRmCmd = cli.Command{
-	Name:   "rm",
-	Usage:  "remove configured remote target",
-	Action: mainAdminBucketRemoteRemove,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, adminBucketRemoteRmFlags...),
+	Name:         "rm",
+	Usage:        "remove configured remote target",
+	Action:       mainAdminBucketRemoteRemove,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, adminBucketRemoteRmFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

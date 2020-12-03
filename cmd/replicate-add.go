@@ -66,11 +66,12 @@ var replicateAddFlags = []cli.Flag{
 }
 
 var replicateAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add a server side replication configuration rule",
-	Action: mainReplicateAdd,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, replicateAddFlags...),
+	Name:         "add",
+	Usage:        "add a server side replication configuration rule",
+	Action:       mainReplicateAdd,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, replicateAddFlags...),
 	CustomHelpTemplate: `NAME:
  {{.HelpName}} - {{.Usage}}
 

@@ -45,11 +45,12 @@ var (
 
 // remove a bucket.
 var rbCmd = cli.Command{
-	Name:   "rb",
-	Usage:  "remove a bucket",
-	Action: mainRemoveBucket,
-	Before: setGlobalsFromContext,
-	Flags:  append(rbFlags, globalFlags...),
+	Name:         "rb",
+	Usage:        "remove a bucket",
+	Action:       mainRemoveBucket,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(rbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
