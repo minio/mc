@@ -620,7 +620,7 @@ FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Get specific settings on 'etcd' sub-system.*
+*Example: Get 'etcd' sub-system configuration.*
 
 ```
 mc admin config get myminio etcd
