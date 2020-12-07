@@ -265,6 +265,11 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 			nc.AddEvents(notification.ObjectRemovedAll)
 		case "get":
 			nc.AddEvents(notification.ObjectAccessedAll)
+		case "replica":
+			nc.AddEvents(notification.EventType("s3:Replication:*"))
+		case "ilm":
+			nc.AddEvents(notification.EventType("s3:ObjectRestore:*"))
+			nc.AddEvents(notification.EventType("s3:ObjectTransition:*"))
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -727,6 +732,10 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 			events = append(events, string(notification.ObjectRemovedAll))
 		case "get":
 			events = append(events, string(notification.ObjectAccessedAll))
+		case "replica":
+			events = append(events, "s3:Replication:*") // TODO: add it to minio-go as constant
+		case "ilm":
+			events = append(events, "s3:ObjectRestore:*", "s3:ObjectTransition:*") // TODO: add it to minio-go as constant
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
