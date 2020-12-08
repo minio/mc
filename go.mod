@@ -13,13 +13,14 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/cli v1.22.0
-	github.com/minio/minio v0.0.0-20201231050455-36fc2f98ed12
 	github.com/minio/minio-go/v7 v7.0.8-0.20210113181159-b8e436cfee9a
+	github.com/minio/minio v0.0.0-20210112064809-e2579b1f5a23
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.3
+	github.com/quasilyte/go-ruleguard/dsl/fluent v0.0.0-20201222093424-5d7e62a465d3 // indirect
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
 	github.com/shirou/gopsutil v3.20.11+incompatible

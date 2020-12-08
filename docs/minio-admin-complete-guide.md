@@ -897,10 +897,10 @@ mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9
 ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
 ```
 
-*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint. The max bandwidth is metric 2G (2*10^9)*
+*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint. The max bandwidth is metric 2G (2*10^9). Enable synchronous replication to this target, set healthcheck duration for checking target availability to 100 seconds*
 
 ```
-mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2G"
+mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2G" --sync --healthcheck-seconds 100
 ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
 ```
 
