@@ -99,7 +99,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --versions s3/mybucket
 
   9. List all objects on mybucket, summarize the number of objects and total size.
-     {{.Prompt}} {{.HelpName}} --recursive --summarize s3/mybucket
+     {{.Prompt}} {{.HelpName}} --summarize s3/mybucket/
 `,
 }
 
