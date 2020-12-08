@@ -4,7 +4,7 @@ ARG TARGETARCH
 
 LABEL maintainer="MinIO Inc <dev@min.io>"
 
-COPY CREDITS /licenses/CREDITS 
+COPY CREDITS /licenses/CREDITS
 COPY LICENSE /licenses/LICENSE
 
 RUN \
