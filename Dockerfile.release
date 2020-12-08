@@ -1,10 +1,17 @@
-FROM alpine:3.12
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.3
 
-MAINTAINER MinIO Inc <dev@min.io>
+ARG TARGETARCH
 
-RUN apk add --no-cache ca-certificates 'curl>7.61.0' && \
-    curl -s -q https://dl.minio.io/client/mc/release/linux-amd64/mc -o /usr/bin/mc && \
-    chmod +x /usr/bin/mc && \
-    curl -s -q -O https://raw.githubusercontent.com/minio/minio/master/CREDITS
+LABEL maintainer="MinIO Inc <dev@min.io>"
+
+COPY CREDITS /licenses/CREDITS 
+COPY LICENSE /licenses/LICENSE
+
+RUN \
+    microdnf update --nodocs && \
+    microdnf install curl ca-certificates shadow-utils --nodocs && \
+    microdnf clean all && \
+    curl -s -q https://dl.minio.io/client/mc/release/linux-${TARGETARCH}/mc -o /usr/bin/mc && \
+    chmod +x /usr/bin/mc
 
 ENTRYPOINT ["mc"]
