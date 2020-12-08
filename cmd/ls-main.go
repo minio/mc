@@ -98,7 +98,7 @@ EXAMPLES:
   8. List all contents versions if the bucket versioning is enabled.
      {{.Prompt}} {{.HelpName}} --versions s3/mybucket
 
-  9. List number of objects and total size.
+  9. List all objects on `mybucket`, summarize the number of objects and total size.
      {{.Prompt}} {{.HelpName}} --recursive --summarize s3/mybucket
 `,
 }
