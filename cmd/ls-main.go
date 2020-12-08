@@ -183,6 +183,7 @@ func mainList(cliCtx *cli.Context) error {
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
+	console.SetColor("Summarize", color.New(color.Bold))
 
 	// check 'ls' cliCtx arguments.
 	args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions := checkListSyntax(ctx, cliCtx)

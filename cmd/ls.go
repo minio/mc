@@ -179,8 +179,9 @@ type summaryMessage struct {
 
 // String colorized string message
 func (s summaryMessage) String() string {
-	message := console.Colorize("Total Objects", fmt.Sprintf("Total Objects: %d", s.TotalObjects)) + "\n" + console.Colorize("Total Size", fmt.Sprintf("%14s %s", "Total Size:", strings.Join(strings.Fields(humanize.IBytes(uint64(s.TotalSize))), "")))
-	return message
+	msg := console.Colorize("Summarize", fmt.Sprintf("\nTotal Size: %s", humanize.IBytes(uint64(s.TotalSize))))
+	msg += "\n" + console.Colorize("Summarize", fmt.Sprintf("Total Objects: %d", s.TotalObjects))
+	return msg
 }
 
 // JSON jsonified summary message
@@ -258,11 +259,10 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
 
 	if isSummary {
-		sm := summaryMessage{
+		printMsg(summaryMessage{
 			TotalObjects: totalObjects,
 			TotalSize:    totalSize,
-		}
-		printMsg(sm)
+		})
 	}
 
 	return cErr
