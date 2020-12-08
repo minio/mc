@@ -34,3 +34,4 @@ require (
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.2.8
 )
+replace github.com/minio/minio => ../minio

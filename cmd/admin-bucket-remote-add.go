@@ -54,6 +54,10 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 		Name:  "bandwidth",
 		Usage: "Set bandwidth limit in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
+	cli.BoolFlag{
+		Name:  "sync",
+		Usage: "enable synchronous replication for this target. Default is async",
+	},
 }
 var adminBucketRemoteAddCmd = cli.Command{
 	Name:         "add",
@@ -117,19 +121,20 @@ func checkAdminBucketRemoteAddSyntax(ctx *cli.Context) {
 
 // RemoteMessage container for content message structure
 type RemoteMessage struct {
-	op           string
-	Status       string `json:"status"`
-	AccessKey    string `json:"accessKey,omitempty"`
-	SecretKey    string `json:"secretKey,omitempty"`
-	SourceBucket string `json:"sourceBucket"`
-	TargetURL    string `json:"TargetURL,omitempty"`
-	TargetBucket string `json:"TargetBucket,omitempty"`
-	RemoteARN    string `json:"RemoteARN,omitempty"`
-	Path         string `json:"path,omitempty"`
-	Region       string `json:"region,omitempty"`
-	ServiceType  string `json:"service"`
-	TargetLabel  string `json:"TargetLabel"`
-	Bandwidth    int64  `json:"bandwidth"`
+	op              string
+	Status          string `json:"status"`
+	AccessKey       string `json:"accessKey,omitempty"`
+	SecretKey       string `json:"secretKey,omitempty"`
+	SourceBucket    string `json:"sourceBucket"`
+	TargetURL       string `json:"TargetURL,omitempty"`
+	TargetBucket    string `json:"TargetBucket,omitempty"`
+	RemoteARN       string `json:"RemoteARN,omitempty"`
+	Path            string `json:"path,omitempty"`
+	Region          string `json:"region,omitempty"`
+	ServiceType     string `json:"service"`
+	TargetLabel     string `json:"TargetLabel"`
+	Bandwidth       int64  `json:"bandwidth"`
+	ReplicationSync bool   `json:"replicationSync"`
 }
 
 func (r RemoteMessage) String() string {
@@ -145,6 +150,10 @@ func (r RemoteMessage) String() string {
 		message += console.Colorize("TargetBucket", r.TargetBucket)
 		message += " "
 		message += console.Colorize("ARN", r.RemoteARN)
+		if r.ReplicationSync && r.ServiceType == string(madmin.ReplicationService) {
+			message += " "
+			message += console.Colorize("SyncLabel", "sync")
+		}
 		return message
 	case "rm":
 		return console.Colorize("RemoteMessage", "Removed remote target for `"+r.SourceBucket+"` bucket successfully.")
@@ -197,6 +206,9 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	if !madmin.ServiceType(serviceType).IsValid() {
 		fatalIf(errInvalidArgument().Trace(serviceType), "Invalid service type. Valid option is `[replication]`.")
 	}
+	if cli.IsSet("sync") && serviceType != string(madmin.ReplicationService) {
+		fatalIf(errInvalidArgument(), "Invalid usage. --sync flag applies only to replication service")
+	}
 	bandwidthStr := cli.String("bandwidth")
 	bandwidth, err := getBandwidthInBytes(bandwidthStr)
 	if err != nil {
@@ -205,16 +217,17 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	creds := &auth.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
-		TargetBucket:   TargetBucket,
-		Secure:         u.Scheme == "https",
-		Credentials:    creds,
-		Endpoint:       u.Host,
-		Path:           path,
-		API:            "s3v4",
-		Type:           madmin.ServiceType(serviceType),
-		Region:         cli.String("region"),
-		BandwidthLimit: int64(bandwidth),
-		Label:          strings.ToUpper(cli.String("label")),
+		TargetBucket:    TargetBucket,
+		Secure:          u.Scheme == "https",
+		Credentials:     creds,
+		Endpoint:        u.Host,
+		Path:            path,
+		API:             "s3v4",
+		Type:            madmin.ServiceType(serviceType),
+		Region:          cli.String("region"),
+		BandwidthLimit:  int64(bandwidth),
+		Label:           strings.ToUpper(cli.String("label")),
+		ReplicationSync: cli.Bool("sync"),
 	}
 	return sourceBucket, bktTarget
 }
@@ -253,12 +266,13 @@ func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
 	}
 
 	printMsg(RemoteMessage{
-		op:           ctx.Command.Name,
-		TargetURL:    bktTarget.URL().String(),
-		TargetBucket: bktTarget.TargetBucket,
-		AccessKey:    bktTarget.Credentials.AccessKey,
-		SourceBucket: sourceBucket,
-		RemoteARN:    arn,
+		op:              ctx.Command.Name,
+		TargetURL:       bktTarget.URL().String(),
+		TargetBucket:    bktTarget.TargetBucket,
+		AccessKey:       bktTarget.Credentials.AccessKey,
+		SourceBucket:    sourceBucket,
+		RemoteARN:       arn,
+		ReplicationSync: bktTarget.ReplicationSync,
 	})
 
 	return nil
