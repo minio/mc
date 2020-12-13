@@ -53,7 +53,7 @@ func TestAutoCompletionCompletness(t *testing.T) {
 		}
 		err := checkCompletion(cmd, "/"+cmd.Name)
 		if err != nil {
-			t.Fatalf("Missing completion function: %v", err)
+			t.Errorf("Missing completion function: %v", err)
 		}
 
 	}

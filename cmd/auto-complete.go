@@ -195,6 +195,25 @@ func (s3 s3Complete) Predict(a complete.Args) (prediction []string) {
 	return
 }
 
+type snapshotComplete struct{}
+
+func (al snapshotComplete) Predict(a complete.Args) (prediction []string) {
+	snapshots, err := listSnapshots()
+	if err != nil {
+		return nil
+	}
+
+	arg := a.Last
+	for _, s := range snapshots {
+		name := strings.TrimSuffix(s.Name(), snapshotSuffix)
+		if strings.HasPrefix(name, arg) {
+			prediction = append(prediction, name)
+		}
+	}
+
+	return
+}
+
 // aliasComplete only completes aliases
 type aliasComplete struct{}
 
@@ -221,6 +240,7 @@ func (al aliasComplete) Predict(a complete.Args) (prediction []string) {
 
 var adminConfigCompleter = adminConfigComplete{}
 var s3Completer = s3Complete{}
+var snapshotCompleter = snapshotComplete{}
 var aliasCompleter = aliasComplete{}
 var fsCompleter = fsComplete{}
 
@@ -294,6 +314,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/ilm/rm":     s3Complete{deepLevel: 2},
 	"/ilm/export": s3Complete{deepLevel: 2},
 	"/ilm/import": s3Complete{deepLevel: 2},
+
+	"/snap/create": s3Complete{deepLevel: 2},
+	"/snap/export": snapshotCompleter,
+	"/snap/import": nil,
+	"/snap/list":   snapshotCompleter,
+	"/snap/remove": snapshotCompleter,
 
 	"/undo": s3Completer,
 
