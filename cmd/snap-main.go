@@ -30,6 +30,7 @@ var snapCmd = cli.Command{
 	Name:            "snap",
 	Usage:           "generate snapshots of S3 object metadata",
 	Action:          mainSnap,
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,

@@ -114,6 +114,37 @@ func (s *snapClient) Watch(ctx context.Context, options WatchOptions) (*WatchObj
 	})
 }
 
+// Gets bucket info
+func (s *snapClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
+	bucket, _ := s.url2BucketAndObject()
+	if bucket == "" {
+		return BucketInfo{}, probe.NewError(BucketNameEmpty{})
+	}
+
+	for {
+		b, err := s.dec.ReadBucket()
+		if err != nil {
+			return BucketInfo{}, err
+		}
+		if b == nil {
+			break
+		}
+
+		if b.Name == bucket {
+			url := s.PathURL.Clone()
+			url.Path = path.Join(s.snapName, b.Name)
+			return BucketInfo{URL: url, Key: b.Name, Size: 0, Type: os.ModeDir}, nil
+		}
+
+		err = s.dec.SkipBucketEntries()
+		if err != nil {
+			return BucketInfo{}, err
+		}
+	}
+
+	return BucketInfo{}, probe.NewError(BucketDoesNotExist{})
+}
+
 /// Object operations.
 
 func (s *snapClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (int64, *probe.Error) {
@@ -190,7 +221,7 @@ func (s *snapClient) url2BucketAndObject() (bucketName, objectName string) {
 
 func (s *snapClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent)
-	go s.list(ctx, contentCh, opts.isRecursive, false, false, opts.showDir)
+	go s.list(ctx, contentCh, opts.Recursive, false, false, opts.ShowDir)
 	return contentCh
 }
 

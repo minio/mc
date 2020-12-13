@@ -46,11 +46,12 @@ var (
 )
 
 var snapCreate = cli.Command{
-	Name:   "create",
-	Usage:  "Create a new snapshot from an S3 deployment",
-	Action: mainSnapCreate,
-	Before: setGlobalsFromContext,
-	Flags:  append(snapCreateFlags, globalFlags...),
+	Name:         "create",
+	Usage:        "Create a new snapshot from an S3 deployment",
+	Action:       mainSnapCreate,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(snapCreateFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -198,7 +199,7 @@ func createSnapshot(snapName string, s3Path string, at time.Time, overwrite bool
 
 	var entries chan<- SnapshotEntry
 	var currentBucket string
-	for s := range s3Client.List(context.Background(), ListOptions{timeRef: at, isRecursive: true}) {
+	for s := range s3Client.List(context.Background(), ListOptions{TimeRef: at, Recursive: true}) {
 		if s.Err != nil {
 			return s.Err
 		}

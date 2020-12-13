@@ -42,11 +42,12 @@ var (
 const snapshotSuffix = ".snap"
 
 var snapList = cli.Command{
-	Name:   "list",
-	Usage:  "List all snapshots descriptions stored locally",
-	Action: mainSnapList,
-	Before: setGlobalsFromContext,
-	Flags:  append(snapListFlags, globalFlags...),
+	Name:         "list",
+	Usage:        "List all snapshots descriptions stored locally",
+	Action:       mainSnapList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(snapListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -157,5 +158,5 @@ func mainSnapList(cmdCtx *cli.Context) error {
 
 	ctx, cancelList := context.WithCancel(globalContext)
 	defer cancelList()
-	return doList(ctx, clnt, true, false, time.Time{}, false, false, false)
+	return doList(ctx, clnt, true, false, false, time.Time{}, false, false, false)
 }

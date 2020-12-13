@@ -222,7 +222,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 	enableVersioning := withOlderVersions || !timeRef.IsZero()
 
 	for content := range clnt.List(ctx, ListOptions{
-		isRecursive:       isRecursive,
+		Recursive:         isRecursive,
 		Incomplete:        isIncomplete,
 		TimeRef:           timeRef,
 		WithOlderVersions: enableVersioning,

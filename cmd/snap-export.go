@@ -29,11 +29,12 @@ var (
 )
 
 var snapExport = cli.Command{
-	Name:   "export",
-	Usage:  "Export a snapshot to stdout",
-	Action: mainSnapExport,
-	Before: setGlobalsFromContext,
-	Flags:  append(snapExportFlags, globalFlags...),
+	Name:         "export",
+	Usage:        "Export a snapshot to stdout",
+	Action:       mainSnapExport,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(snapExportFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

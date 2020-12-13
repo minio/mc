@@ -39,11 +39,12 @@ var (
 )
 
 var snapImport = cli.Command{
-	Name:   "import",
-	Usage:  "Import a snapshot from stdin",
-	Action: mainSnapImport,
-	Before: setGlobalsFromContext,
-	Flags:  append(snapImportFlags, globalFlags...),
+	Name:         "import",
+	Usage:        "Import a snapshot from stdin",
+	Action:       mainSnapImport,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(snapImportFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} {{.Usage}}
 

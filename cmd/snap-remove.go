@@ -41,11 +41,12 @@ var (
 )
 
 var snapRemove = cli.Command{
-	Name:   "remove",
-	Usage:  "Remove a specific snapshot",
-	Action: mainSnapRemove,
-	Before: setGlobalsFromContext,
-	Flags:  append(snapRemoveFlags, globalFlags...),
+	Name:         "remove",
+	Usage:        "Remove a specific snapshot",
+	OnUsageError: onUsageError,
+	Action:       mainSnapRemove,
+	Before:       setGlobalsFromContext,
+	Flags:        append(snapRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
