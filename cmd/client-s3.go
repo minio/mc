@@ -722,6 +722,14 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 	// Extract bucket and object.
 	bucket, object := c.url2BucketAndObject()
 
+	// Validation
+	if bucket == "" && object != "" {
+		return nil, errInvalidArgument().Trace(bucket, object)
+	}
+	if object != "" && options.Prefix != "" {
+		return nil, errInvalidArgument().Trace(options.Prefix, object)
+	}
+
 	// Flag set to set the notification.
 	var events []string
 	for _, event := range options.Events {
@@ -736,29 +744,13 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 			events = append(events, "s3:Replication:*") // TODO: add it to minio-go as constant
 		case "ilm":
 			events = append(events, "s3:ObjectRestore:*", "s3:ObjectTransition:*") // TODO: add it to minio-go as constant
+		case "bucket-creation":
+			events = append(events, string(notification.BucketCreatedAll))
+		case "bucket-removal":
+			events = append(events, string(notification.BucketRemovedAll))
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
-	}
-	if object != "" && options.Prefix != "" {
-		return nil, errInvalidArgument().Trace(options.Prefix, object)
-	}
-	if object != "" && options.Prefix == "" {
-		options.Prefix = object
-	}
-
-	// The list of buckets to watch
-	var buckets []string
-	if bucket == "" {
-		bkts, err := c.api.ListBuckets(ctx)
-		if err != nil {
-			return nil, probe.NewError(err)
-		}
-		for _, b := range bkts {
-			buckets = append(buckets, b.Name)
-		}
-	} else {
-		buckets = append(buckets, bucket)
 	}
 
 	wo := &WatchObject{
@@ -767,36 +759,35 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 		DoneChan:      make(chan struct{}),
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(buckets))
-	for _, bucket := range buckets {
-		bucket := bucket
-		go func() {
-			defer wg.Done()
-			// Start listening on all bucket events.
-			eventsCh := c.api.ListenBucketNotification(ctx, bucket, options.Prefix, options.Suffix, events)
-			for notificationInfo := range eventsCh {
-				if notificationInfo.Err != nil {
-					var perr *probe.Error
-					if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
-						perr = probe.NewError(APINotImplemented{
-							API:     "Watch",
-							APIType: c.GetURL().String(),
-						})
-					} else {
-						perr = probe.NewError(notificationInfo.Err)
-					}
-					wo.Errors() <- perr
-				} else {
-					wo.Events() <- c.notificationToEventsInfo(notificationInfo)
-				}
-			}
-		}()
+	var eventsCh <-chan notification.Info
+	if bucket != "" {
+		if object != "" && options.Prefix == "" {
+			options.Prefix = object
+		}
+		eventsCh = c.api.ListenBucketNotification(ctx, bucket, options.Prefix, options.Suffix, events)
+	} else {
+		eventsCh = c.api.ListenNotification(ctx, "", "", events)
 	}
 
 	go func() {
-		wg.Wait() // this occurs when all watchers have returned
-		// we can safely close data and error channels
+		// Start listening on all bucket events.
+		for notificationInfo := range eventsCh {
+			if notificationInfo.Err != nil {
+				var perr *probe.Error
+				if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
+					perr = probe.NewError(APINotImplemented{
+						API:     "Watch",
+						APIType: c.GetURL().String(),
+					})
+				} else {
+					perr = probe.NewError(notificationInfo.Err)
+				}
+				wo.Errors() <- perr
+			} else {
+				wo.Events() <- c.notificationToEventsInfo(notificationInfo)
+			}
+		}
+
 		close(wo.EventInfoChan)
 		close(wo.ErrorChan)
 	}()
@@ -807,6 +798,7 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 // Get - get object with GET options.
 func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
+
 	reader, e := c.api.GetObject(ctx, bucket, object,
 		minio.GetObjectOptions{
 			ServerSideEncryption: opts.SSE,
@@ -1376,7 +1368,12 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	// Bucket name cannot be empty, stat on URL has no meaning.
 	if bucket == "" {
-		return nil, probe.NewError(BucketNameEmpty{})
+		url := c.targetURL.Clone()
+		url.Path = string(c.targetURL.Separator)
+		return &ClientContent{URL: url,
+			Size: 0,
+			Type: os.ModeDir,
+		}, nil
 	}
 
 	if object == "" {
@@ -1426,11 +1423,10 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return nil, probe.NewError(objectStat.Err)
 		}
 
-		if objectStat.Key != object {
-			break
+		if objectStat.Key == strings.TrimSuffix(object, string(c.targetURL.Separator)) {
+			return c.objectInfo2ClientContent(bucket, objectStat), nil
 		}
-
-		return c.objectInfo2ClientContent(bucket, objectStat), nil
+		break
 	}
 
 	return nil, probe.NewError(ObjectMissing{opts.timeRef})
@@ -2024,7 +2020,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 			return
 		}
 		for _, bucket := range buckets {
-			if opts.ShowDir != DirLast {
+			if opts.ShowDir == DirFirst {
 				contentCh <- c.bucketInfo2ClientContent(bucket)
 			}
 

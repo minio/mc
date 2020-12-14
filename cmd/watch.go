@@ -116,7 +116,7 @@ func (w *Watcher) Wait() {
 func (w *Watcher) Join(ctx context.Context, client Client, recursive bool) *probe.Error {
 	wo, err := client.Watch(ctx, WatchOptions{
 		Recursive: recursive,
-		Events:    []string{"put", "delete"},
+		Events:    []string{"put", "delete", "bucket-creation", "bucket-removal"},
 	})
 	if err != nil {
 		return err
