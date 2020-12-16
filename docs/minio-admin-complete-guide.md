@@ -917,6 +917,13 @@ mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9
 ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
 ```
 
+*Example: Change credentials for existing replication target `targetbucket` with arn `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. New credentials are `foobar1` and `foobarnew`
+
+```
+mc admin bucket remote edit myminio/srcbucket https://foobar1:foobarnew@minio2:9000/targetbucket --arn `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
+ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
+```
+
 *Example: Get remote target for replication on bucket 'srcbucket' in MinIO.*
 
 ```
