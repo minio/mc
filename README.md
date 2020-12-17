@@ -227,4 +227,4 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
 
 ## License
-Use of `mc` is governed by the Apache 2.0 License found at [LICENSE](./LICENSE).
+Use of `mc` is governed by the Apache 2.0 License found at [LICENSE](https://github.com/minio/mc/blob/master/LICENSE).
