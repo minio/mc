@@ -17,12 +17,11 @@
 package cmd
 
 import (
-	"crypto/x509"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/certs"
 )
 
 // getCertsDir - return the full path of certs dir
@@ -96,40 +95,12 @@ func createCAsDir() *probe.Error {
 	return nil
 }
 
-// mustGetCAFiles - get the list of the CA certificates stored in MinIO config dir
-func mustGetCAFiles() (caCerts []string) {
-	CAsDir := mustGetCAsDir()
-	caFiles, _ := ioutil.ReadDir(CAsDir)
-	for _, cert := range caFiles {
-		caCerts = append(caCerts, filepath.Join(CAsDir, cert.Name()))
-	}
-	return
-}
-
-// mustGetSystemCertPool - return system CAs or empty pool in case of error (or windows)
-func mustGetSystemCertPool() *x509.CertPool {
-	pool, err := x509.SystemCertPool()
-	if err != nil {
-		return x509.NewCertPool()
-	}
-	return pool
-}
-
 // loadRootCAs fetches CA files provided in MinIO config and adds them to globalRootCAs
 // Currently under Windows, there is no way to load system + user CAs at the same time
 func loadRootCAs() {
-	caFiles := mustGetCAFiles()
-	if len(caFiles) == 0 {
-		return
-	}
-	// Get system cert pool, and empty cert pool under Windows because it is not supported
-	globalRootCAs = mustGetSystemCertPool()
-	// Load custom root CAs for client requests
-	for _, caFile := range caFiles {
-		caCert, err := ioutil.ReadFile(caFile)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Unable to load a CA file.")
-		}
-		globalRootCAs.AppendCertsFromPEM(caCert)
+	var e error
+	globalRootCAs, e = certs.GetRootCAs(mustGetCAsDir())
+	if e != nil {
+		fatalIf(probe.NewError(e), "Unable to load certificates.")
 	}
 }
