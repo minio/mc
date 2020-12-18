@@ -1423,7 +1423,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return nil, probe.NewError(objectStat.Err)
 		}
 
-		if objectStat.Key == strings.TrimSuffix(object, string(c.targetURL.Separator)) {
+		if object == objectStat.Key || object == strings.TrimSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			return c.objectInfo2ClientContent(bucket, objectStat), nil
 		}
 		break
