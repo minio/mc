@@ -697,6 +697,35 @@ function test_cat_object_with_sse_error()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+# Test "mc cp -r" command of a directory with and without a leading slash
+function test_copy_directory()
+{
+    show "${FUNCNAME[0]}"
+
+    random_dir="dir-$RANDOM-$RANDOM"
+    tmpdir="$(mktemp -d)"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-name"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to upload an object"
+
+    # Copy a directory with a trailing slash
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp -r "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/" "${tmpdir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to copy a directory with a trailing slash"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/object-name"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm "${tmpdir}/object-name"
+
+    # Copy a directory without a trailing slash
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp -r "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}" "${tmpdir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to copy a directory without a trailing slash"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_dir}/object-name"
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm -r --force "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 # Test "mc cp -a" command to see if it preserves file system attributes
 function test_copy_object_preserve_filesystem_attr()
 {
@@ -873,6 +902,7 @@ function run_test()
     test_presigned_get_object
     test_cat_object
     test_cat_stdin
+    test_copy_directory
     test_mirror_list_objects
     test_mirror_list_objects_storage_class
     test_copy_object_preserve_filesystem_attr
