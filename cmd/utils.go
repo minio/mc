@@ -102,18 +102,20 @@ func randString(n int, src rand.Source, prefix string) string {
 	return prefix + string(b[0:30-len(prefix)])
 }
 
-// dumpTlsCertificates prints some fields of the certificates received from the server.
+// printTLSCertInfo prints some fields of the certificates received from the server.
 // Fields will be inspected by the user, so they must be conscise and useful
-func dumpTLSCertificates(t *tls.ConnectionState) {
-	for _, cert := range t.PeerCertificates {
-		console.Debugln("TLS Certificate found: ")
-		if len(cert.Issuer.Country) > 0 {
-			console.Debugln(" >> Country: " + cert.Issuer.Country[0])
+func printTLSCertInfo(t *tls.ConnectionState) {
+	if globalDebug {
+		for _, cert := range t.PeerCertificates {
+			console.Debugln("TLS Certificate found: ")
+			if len(cert.Issuer.Country) > 0 {
+				console.Debugln(" >> Country: " + cert.Issuer.Country[0])
+			}
+			if len(cert.Issuer.Organization) > 0 {
+				console.Debugln(" >> Organization: " + cert.Issuer.Organization[0])
+			}
+			console.Debugln(" >> Expires: " + cert.NotAfter.String())
 		}
-		if len(cert.Issuer.Organization) > 0 {
-			console.Debugln(" >> Organization: " + cert.Issuer.Organization[0])
-		}
-		console.Debugln(" >> Expires: " + cert.NotAfter.String())
 	}
 }
 
