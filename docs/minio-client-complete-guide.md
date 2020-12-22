@@ -228,6 +228,9 @@ alias tree='mc tree'
 
 ## 6. Global Options
 
+### Option [--autocompletion]
+Install auto-completion for your shell.
+
 ### Option [--debug]
 Debug option enables debug output to console.
 
@@ -309,6 +312,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
 | [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
+| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | |
 
 
 
@@ -320,6 +324,8 @@ USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
+  --rewind value                list all object versions no later than specified date
+  --versions                    list all versions
   --recursive, -r               list recursively
   --incomplete, -I              list incomplete uploads
   --help, -h                    show help
@@ -336,6 +342,19 @@ mc ls play
 [2016-04-08 20:58:18 IST]     0B mybucket/
 ```
 
+*Example: List all contents versions if the bucket versioning is enabled*
+```
+mc ls --versions s3/mybucket
+[2020-09-21 16:25:31 CET] 903KiB UiL4wSZS2OkST5aJ3AFAwtzZxHTW_9VC v1 PUT foo
+[2020-09-18 21:18:44 CET]     0B sK4pldVmOJqCJzX2aJvxX4eWMnuqazs9 v1 DEL bar
+```
+
+*Example: List contents created earlier than 3 days*
+```
+mc ls --rewind 3d s3/mybucket
+[2020-09-18 21:18:44 CET]     0B sK4pldVmOJqCJzX2aJvxX4eWMnuqazs9 v1 DEL bar
+```
+
 <a name="tree"></a>
 ### Command `tree`
 
@@ -349,9 +368,10 @@ FLAGS:
   --help, -h                    show help
   --files, -f                   include files in tree
   --depth, -d                   set the maximum depth of the tree
+  --rewind value                display tree no later than specified date
 ```
 
-_Example: List all buckets on play/test-bucket in a tree format._
+_Example: List all contents on play/test-bucket in a tree format._
 
 ```sh
 mc tree play/test-bucket
@@ -363,6 +383,13 @@ play/test-bucket/
    └─ dir_xx
 ```
 
+*Example: List all objects with the state of 3 days earlier*
+```sh
+mc tree --files --rewind 3d play/test-bucket
+play/test-bucket/
+├─ object1
+└─ object2
+```
 
 <a name="mb"></a>
 ### Command `mb`
@@ -420,6 +447,32 @@ FLAGS:
 ```
 mc rb play/mybucket --force
 Bucket removed successfully ‘play/mybucket’.
+```
+
+<a name="du"></a>
+### Command `du`
+`du` command summarizes disk usage recursively
+
+```
+USAGE:
+   mc du [FLAGS] TARGET
+FLAGS:
+  --depth value, -d value       print the total for a folder prefix only if it is N or fewer levels below the command line argument (default: 0)
+  --recursive, -r               recursively print the total for a folder prefix
+  --rewind value                include all object versions no later than specified date
+  --versions                    include all object versions
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
+```
+
+*Example: Summarize disk usage of 'jazz-songs' bucket recursively.*
+```
+mc du s3/jazz-songs
+```
+
+*Example:  Summarize disk usage of 'jazz-songs' bucket with all objects versions*
+```
+mc du --versions s3/jazz-songs/
 ```
 
 <a name="cat"></a>
@@ -592,7 +645,12 @@ mc head -n 1 --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play
 Hello!!
 ```
 
-<a name="lock"></a>
+*Example: Display the first line of the content of an object, 1 year earlier*
+```
+mc head -n 1 --rewind 365d play/mybucket/myencryptedobject.txt
+Hello!!
+```
+
 ### Command `lock`
 `lock` sets and gets object lock configuration
 
@@ -652,6 +710,15 @@ Removing `myminio/mybucket/data.csv
 mc: <ERROR> Failed to remove `myminio/mybucket/data.csv`. Object is WORM protected and cannot be overwritten
 ```
 
+*Example: Clear object retention for a specific version of a specific object*
+```
+mc retention clear myminio/mybucket/prefix/obj.csv --version-id "3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp"
+```
+
+*Example: Show object retention for recursively for all versions of all objects under prefix*
+```
+mc retention info myminio/mybucket/prefix --recursive --versions
+```
 
 <a name="legalhold"></a>
 ### Command `legalhold`
@@ -689,6 +756,16 @@ Removing `myminio/mybucket/prefix/test.csv`.
 mc: <ERROR> Failed to remove `myminio/mybucket/prefix/test.csv`. Object is WORM protected and cannot be overwritten
 ```
 
+*Example: Disable legal hold on a specific object version*
+```
+mc legalhold clear myminio/mybucket/prefix/obj.csv --version-id "HiMFUTOowG6ylfNi4LKxD3ieHbgfgrvC"
+```
+
+*Example: Show object legal hold recursively for all objects at a prefix*
+```
+mc legalhold info myminio/mybucket/prefix --recursive
+```
+
 <a name="pipe"></a>
 ### Command `pipe`
 `pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
@@ -723,6 +800,8 @@ USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
+  --rewind value                     roll back object(s) to current version at specified time
+  --version-id value, --vid value    select an object version to copy
   --recursive, -r                    copy recursively
   --older-than value                 copy object(s) older than N days (default: 0)
   --newer-than value                 copy object(s) newer than N days (default: 0)
@@ -792,6 +871,12 @@ myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 
 ```
 mc cp -a myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+*Example: Roll back to object version to 10 days earlier while copying.*
+```
+mc cp --rewind 10d play/mybucket/myobject.txt myobject.txt
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
@@ -990,9 +1075,10 @@ USAGE:
    mc share download [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --recursive, -r               share all objects recursively
-  --expire value, -E value      set expiry in NN[h|m|s] (default: "168h")
-  --help, -h                    show help
+  --version-id value, --vid value  share a particular object version
+  --recursive, -r                  share all objects recursively
+  --expire value, -E value         set expiry in NN[h|m|s] (default: "168h")
+  --help, -h                       show help
 ```
 
 *Example: Grant temporary access to an object with 4 hours expiry limit.*
@@ -1002,8 +1088,16 @@ FLAGS:
 mc share download --expire 4h play/mybucket/myobject.txt
 URL: https://play.min.io/mybucket/myobject.txt
 Expire: 0 days 4 hours 0 minutes 0 seconds
-Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
+Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=14400&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
 
+```
+
+*Example: Share a particular version of an object*
+```
+mc share download --version-id 3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp play/mybucket/myobject.txt
+URL: https://play.min.io/mybucket/myobject.txt
+Expire: 7 days 0 hours 0 minutes 0 seconds
+Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&versionId=3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
 ```
 
 #### Sub-command `share upload` - Share Upload
@@ -1404,6 +1498,11 @@ mc tag remove s3/testbucket/testobject
 Tags removed for s3/testbucket/testobject.
 ```
 
+*Example: Assign tags to a object versions older than one week*
+```
+mc tag set --versions --rewind 7d play/testbucket/testobject "status=old"
+```
+
 <a name="admin"></a>
 ### Command `admin`
 Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
@@ -1477,9 +1576,12 @@ USAGE:
    mc stat [FLAGS] TARGET
 
 FLAGS:
-  --recursive, -r               stat all objects recursively
-  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
-  --help, -h                    show help
+  --rewind value                    stat on older version(s)
+  --versions                        stat all versions
+  --version-id value, --vid value   stat a specific object version
+  --recursive, -r                   stat all objects recursively
+  --encrypt-key value               encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                        show help
 
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
@@ -1544,6 +1646,19 @@ Type      : file
 Metadata  :
   Content-Type: application/octet-stream
 ```
+
+*Example: Stat a specific object version*
+```
+mc stat --version-id "CL3sWgdSN2pNntSf6UnZAuh2kcu8E8si" s3/personal-docs/2018-account_report.docx
+Name      : s3/personal-docs/2018-account_report.docx
+Date      : 2018-02-06 18:16:14 PST
+Size      : 100B
+ETag      : d41d8cd98f00b204e9800998ecf8427e
+Type      : file
+Metadata  :
+  Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+```
+
 
 <a name="version"></a>
 ### Command `version`
