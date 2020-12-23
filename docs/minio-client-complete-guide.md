@@ -1377,12 +1377,6 @@ mc ilm ls myminio/testbucket
 
 For more details about the lifecycle configuration, refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html)
 
-
-*Example: Add rule for prefix "dev" in bucket "testbucket" on play and transition after 2 days to transition tier specified by storage class label "hdd_tier". "hdd_tier" is the label specified when setting up MinIO transition target via `mc admin bucket remote add` command*
-```
-mc ilm add --expiry-date "2020-09-17" play/testbucket/dev --transition-days 2 --storage-class "hdd_tier"
-Lifecycle configuration rule added with ID `btd6pdot8748n94elvl0` to play/testbucket/dev.
-```
 *Example: Edit the lifecycle management configuration rule given by ID "btd6pdot8748n94elvl0" to set tags*
 ```
 mc ilm edit --id "Documents" --tags "k1=v1&k2=v2" play/testbucket/dev
