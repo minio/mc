@@ -908,6 +908,7 @@ ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targ
 
 ```
 mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2Gi"
+```
 
 *Example: Get remote target for replication on bucket 'srcbucket' in MinIO.*
 
