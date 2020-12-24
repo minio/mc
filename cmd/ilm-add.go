@@ -58,11 +58,6 @@ EXAMPLES:
   3. Add expiry and transition days rules on a prefix in mybucket.
      {{.Prompt}} {{.HelpName}} --expiry-days "300" --transition-days "200" \
           --storage-class "GLACIER" s3/mybucket/doc
-
-  4. Add expiry and transition days rules on a prefix in mybucket for a MinIO transition target specified by label "hdd_tier".
-     "hdd_tier" is the label specified when adding a remote target with "mc admin bucket remote add --service ilm --label hdd_tier"
-     {{.Prompt}} {{.HelpName}} --expiry-days "300" --transition-days "200" \
-          --storage-class "hdd_tier" myminio/mybucket/doc
 `,
 }
 
@@ -89,7 +84,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "storage-class",
-		Usage: "storage class for transition (STANDARD_IA, ONEZONE_IA, GLACIER. Etc). For setting up transition to a MinIO target, use the label defined for the target",
+		Usage: "storage class for transition (STANDARD_IA, ONEZONE_IA, GLACIER. Etc).",
 	},
 	cli.BoolFlag{
 		Name:  "disable",
