@@ -39,14 +39,14 @@ type HwServersV1 struct {
 // HwServerV1 - server health Info
 type HwServerV1 struct {
 	Addr    string      `json:"addr"`
-	CPUs    []HwCPUV1   `json:"cpus,omitempty"`
+	CPUs    HwCPUsV1    `json:"cpus,omitempty"`
 	Drives  []HwDriveV1 `json:"drives,omitempty"`
 	MemInfo HwMemV1     `json:"meminfo,omitempty"`
 	Perf    HwPerfV1    `json:"perf,omitempty"`
 }
 
-// HwCPUV1 - CPU Info
-type HwCPUV1 struct {
+// HwCPUsV1 - CPU Info
+type HwCPUsV1 struct {
 	CPUStat   []cpu.InfoStat  `json:"cpu,omitempty"`
 	TimesStat []cpu.TimesStat `json:"time,omitempty"`
 	Error     string          `json:"error,omitempty"`
@@ -150,7 +150,7 @@ func MapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo
 
 	serverAddrs := set.NewStringSet()
 
-	var serverCPUs map[string][]HwCPUV1
+	var serverCPUs map[string]HwCPUsV1
 	var serverDrives map[string][]HwDriveV1
 	var serverMems map[string]HwMemV1
 	var serverNetPerfSerial, serverNetPerfParallel map[string][]madmin.NetPerfInfo
@@ -224,19 +224,14 @@ func addKeysToSet(input []reflect.Value, output *set.StringSet) {
 	}
 }
 
-func mapServerCPUs(healthInfo madmin.HealthInfo) map[string][]HwCPUV1 {
-	serverCPUs := map[string][]HwCPUV1{}
+func mapServerCPUs(healthInfo madmin.HealthInfo) map[string]HwCPUsV1 {
+	serverCPUs := map[string]HwCPUsV1{}
 	for _, ci := range healthInfo.Sys.CPUInfo {
-		cpus, ok := serverCPUs[ci.Addr]
-		if !ok {
-			cpus = []HwCPUV1{}
-		}
-		cpus = append(cpus, HwCPUV1{
+		serverCPUs[ci.Addr] = HwCPUsV1{
 			CPUStat:   ci.CPUStat,
 			TimesStat: ci.TimeStat,
 			Error:     ci.Error,
-		})
-		serverCPUs[ci.Addr] = cpus
+		}
 	}
 	return serverCPUs
 }
