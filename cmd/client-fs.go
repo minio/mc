@@ -149,7 +149,8 @@ func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 		case "get":
 			fsEvents = append(fsEvents, EventTypeGet...)
 		default:
-			return nil, errInvalidArgument().Trace(event)
+			// Event type not supported by FS client, such as
+			// bucket creation or deletion, ignore it.
 		}
 	}
 
