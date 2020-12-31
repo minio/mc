@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +44,18 @@ var adminTraceFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "all, a",
 		Usage: "trace all traffic (including internode traffic between MinIO servers)",
+	},
+	cli.StringFlag{
+		Name:  "status-codes",
+		Usage: "trace only a specific status codes",
+	},
+	cli.StringFlag{
+		Name:  "methods",
+		Usage: "trace only specific HTTP methods",
+	},
+	cli.StringFlag{
+		Name:  "path",
+		Usage: "trace only specific paths",
 	},
 	cli.BoolFlag{
 		Name:  "errors, e",
@@ -94,6 +108,32 @@ func mainAdminTrace(ctx *cli.Context) error {
 	verbose := ctx.Bool("verbose")
 	all := ctx.Bool("all")
 	errfltr := ctx.Bool("errors")
+
+	statusCodes := []int{}
+	for _, sc := range strings.Split(ctx.String("status-codes"), ",") {
+		if sc == "" {
+			continue
+		}
+		statusCode, e := strconv.Atoi(sc)
+		fatalIf(probe.NewError(e), "Invalid passed status code.")
+		statusCodes = append(statusCodes, statusCode)
+	}
+
+	methods := []string{}
+	for _, method := range strings.Split(ctx.String("methods"), ",") {
+		if method == "" {
+			continue
+		}
+		methods = append(methods, strings.ToUpper(method))
+	}
+
+	var re *regexp.Regexp
+	if path := ctx.String("path"); path != "" {
+		var e error
+		re, e = regexp.Compile(path)
+		fatalIf(probe.NewError(e), "Invalid path regular expression.")
+	}
+
 	aliasedURL := ctx.Args().Get(0)
 	console.SetColor("Stat", color.New(color.FgYellow))
 
@@ -129,6 +169,40 @@ func mainAdminTrace(ctx *cli.Context) error {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
+		// Filter response status codes if passed by the user
+		if len(statusCodes) > 0 {
+			var found bool
+			for _, code := range statusCodes {
+				if traceInfo.Trace.RespInfo.StatusCode == code {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		// Filter request method if passed by the user
+		if len(methods) > 0 {
+			var found bool
+			for _, method := range methods {
+				if traceInfo.Trace.ReqInfo.Method == method {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		// Filter request path if passed by the user
+		if re != nil {
+			found := re.MatchString(traceInfo.Trace.ReqInfo.Path)
+			if !found {
+				continue
+			}
+		}
+
 		if verbose {
 			printMsg(traceMessage{ServiceTraceInfo: traceInfo})
 			continue
