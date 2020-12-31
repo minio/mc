@@ -94,6 +94,7 @@ func (u clusterStruct) String() (msg string) {
 	// Color palette initialization
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
 	console.SetColor("InfoFail", color.New(color.FgRed, color.Bold))
+	console.SetColor("InfoWarning", color.New(color.FgYellow, color.Bold))
 
 	// MinIO server type default
 	backendType := "Unknown"
@@ -107,6 +108,11 @@ func (u clusterStruct) String() (msg string) {
 				backendType = t
 			}
 		}
+	}
+
+	coloredDot := console.Colorize("Info", dot)
+	if u.Info.Mode == madmin.ObjectLayerInitializing {
+		coloredDot = console.Colorize("InfoWarning", dot)
 	}
 
 	// Loop through each server and put together info for each one
@@ -149,7 +155,7 @@ func (u clusterStruct) String() (msg string) {
 		}
 
 		// Print server title
-		msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", srv.Endpoint))
+		msg += fmt.Sprintf("%s  %s\n", coloredDot, console.Colorize("PrintB", srv.Endpoint))
 
 		// Uptime
 		msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("Info",
