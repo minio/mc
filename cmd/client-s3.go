@@ -1315,6 +1315,19 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 	return nil
 }
 
+func (c *S3Client) listObjectWrapperSingleKey(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool) <-chan minio.ObjectInfo {
+	if !timeRef.IsZero() || withVersions {
+		return c.listVersions(ctx, bucket, object, isRecursive, timeRef, withVersions, withDeleteMarkers)
+	}
+
+	if isGoogle(c.targetURL.Host) {
+		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
+		// https://github.com/minio/mc/issues/3073
+		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, UseV1: true, MaxKeys: 1})
+	}
+	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata, MaxKeys: 1})
+}
+
 // listObjectWrapper - select ObjectList mode depending on arguments
 func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool) <-chan minio.ObjectInfo {
 	if !timeRef.IsZero() || withVersions {
@@ -1418,7 +1431,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false) {
+	for objectStat := range c.listObjectWrapperSingleKey(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
