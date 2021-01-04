@@ -193,7 +193,8 @@ func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encK
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID})
+	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr,
+		sse: sse, timeRef: timeRef, versionID: versionID})
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}

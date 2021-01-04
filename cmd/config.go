@@ -291,7 +291,9 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *alia
 	if envConfig, ok = os.LookupEnv(mcEnvHostPrefix + alias); !ok {
 		envConfig, ok = os.LookupEnv(mcEnvHostsDeprecatedPrefix + alias)
 		if ok {
-			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias), "`MC_HOSTS_<alias>` environment variable is deprecated. Please use `MC_HOST_<alias>` instead for the same functionality.")
+			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias),
+				"`MC_HOSTS_<alias>` environment variable is deprecated. Please"+
+					"`MC_HOST_<alias>` instead for the same functionality.")
 		}
 	}
 

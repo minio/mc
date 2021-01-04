@@ -479,6 +479,9 @@ func mainRm(cliCtx *cli.Context) error {
 	// Support multiple targets.
 	for _, url := range cliCtx.Args() {
 		if isRecursive || withVersions {
+			if isAliasURLDir(ctx, url, encKeyDB, time.Time{}) {
+				url = strings.TrimRight(url, string(os.PathSeparator))
+			}
 			e = listAndRemove(url, rewind, withVersions, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
 			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
