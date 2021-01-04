@@ -47,7 +47,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "status-codes",
-		Usage: "trace only a specific status codes",
+		Usage: "trace only specific status codes",
 	},
 	cli.StringFlag{
 		Name:  "methods",
