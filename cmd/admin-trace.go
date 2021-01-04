@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -86,6 +85,13 @@ EXAMPLES:
 
   2. Show trace only for failed requests for a MinIO server with alias 'myminio'
     {{.Prompt}} {{.HelpName}} -v -e myminio
+
+  3. Show the content of 503 failed requests
+    {{.Prompt}} {{.HelpName}} -v --status-codes 503 myminio
+
+  4. Show all requests for a specific prefix
+    {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/ myminio
+
 `,
 }
 
@@ -127,12 +133,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 		methods = append(methods, strings.ToUpper(method))
 	}
 
-	var re *regexp.Regexp
-	if path := ctx.String("path"); path != "" {
-		var e error
-		re, e = regexp.Compile(path)
-		fatalIf(probe.NewError(e), "Invalid path regular expression.")
-	}
+	path := ctx.String("path")
 
 	aliasedURL := ctx.Args().Get(0)
 	console.SetColor("Stat", color.New(color.FgYellow))
@@ -196,8 +197,8 @@ func mainAdminTrace(ctx *cli.Context) error {
 			}
 		}
 		// Filter request path if passed by the user
-		if re != nil {
-			found := re.MatchString(traceInfo.Trace.ReqInfo.Path)
+		if path != "" {
+			found := pathMatch("/"+path, traceInfo.Trace.ReqInfo.Path)
 			if !found {
 				continue
 			}
