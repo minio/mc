@@ -200,6 +200,19 @@ func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encK
 	return client, content, nil
 }
 
+// firstURL2Stat returns the stat info of the first object having the specified prefix
+func firstURL2Stat(ctx context.Context, prefix string, timeRef time.Time) (client Client, content *ClientContent, err *probe.Error) {
+	client, err = newClient(prefix)
+	if err != nil {
+		return nil, nil, err.Trace(prefix)
+	}
+	content = <-client.List(ctx, ListOptions{Recursive: true, TimeRef: timeRef, Count: 1})
+	if content.Err != nil {
+		return nil, nil, err.Trace(prefix)
+	}
+	return client, content, nil
+}
+
 // url2Alias separates alias and path from the URL. Aliased URL is of
 // the form alias/path/to/blah.
 func url2Alias(aliasedURL string) (alias, path string) {

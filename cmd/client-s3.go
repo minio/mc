@@ -1315,21 +1315,8 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 	return nil
 }
 
-func (c *S3Client) listObjectWrapperSingleKey(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool) <-chan minio.ObjectInfo {
-	if !timeRef.IsZero() || withVersions {
-		return c.listVersions(ctx, bucket, object, isRecursive, timeRef, withVersions, withDeleteMarkers)
-	}
-
-	if isGoogle(c.targetURL.Host) {
-		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
-		// https://github.com/minio/mc/issues/3073
-		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, UseV1: true, MaxKeys: 1})
-	}
-	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata, MaxKeys: 1})
-}
-
 // listObjectWrapper - select ObjectList mode depending on arguments
-func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool) <-chan minio.ObjectInfo {
+func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool, maxKeys int) <-chan minio.ObjectInfo {
 	if !timeRef.IsZero() || withVersions {
 		return c.listVersions(ctx, bucket, object, isRecursive, timeRef, withVersions, withDeleteMarkers)
 	}
@@ -1337,9 +1324,9 @@ func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string,
 	if isGoogle(c.targetURL.Host) {
 		// Google Cloud S3 layer doesn't implement ListObjectsV2 implementation
 		// https://github.com/minio/mc/issues/3073
-		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, UseV1: true})
+		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, UseV1: true, MaxKeys: maxKeys})
 	}
-	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata})
+	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata, MaxKeys: maxKeys})
 }
 
 func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object string) (*ClientContent, *probe.Error) {
@@ -1431,7 +1418,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectStat := range c.listObjectWrapperSingleKey(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false, 1) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
@@ -1989,7 +1976,7 @@ func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientCont
 		contentCh <- content
 	default:
 		isRecursive := false
-		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata) {
+		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
@@ -2038,7 +2025,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 			}
 
 			isRecursive := true
-			for object := range c.listObjectWrapper(ctx, bucket.Name, o, isRecursive, time.Time{}, false, false, opts.WithMetadata) {
+			for object := range c.listObjectWrapper(ctx, bucket.Name, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1) {
 				if object.Err != nil {
 					contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
@@ -2054,7 +2041,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 		}
 	default:
 		isRecursive := true
-		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata) {
+		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
