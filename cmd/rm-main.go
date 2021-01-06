@@ -202,10 +202,14 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	for _, url := range cliCtx.Args() {
 		// clean path for aliases like s3/.
 		// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
+		urlOrig := url
 		url = filepath.ToSlash(filepath.Clean(url))
 		// namespace removal applies only for non FS. So filter out if passed url represents a directory
 		dir := isAliasURLDir(ctx, url, encKeyDB, time.Time{})
 		if !dir {
+			if string(urlOrig[len(urlOrig)-1]) == string(os.PathSeparator) {
+				fatalIf(probe.NewError(ObjectMissing{}).Trace(urlOrig), "Failed to remove `"+urlOrig+"`")
+			}
 			_, path := url2Alias(url)
 			isNamespaceRemoval = (path == "")
 			break
