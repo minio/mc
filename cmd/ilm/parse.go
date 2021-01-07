@@ -93,8 +93,10 @@ func validateTranDays(rule lifecycle.Rule) error {
 func validateRuleAction(rule lifecycle.Rule) error {
 	expirySet := !rule.Expiration.IsNull()
 	transitionSet := !rule.Transition.IsNull()
-	if !expirySet && !transitionSet {
-		errMsg := "At least one action (Expiry or Transition) needs to be specified in a rule."
+	noncurrentExpirySet := !rule.NoncurrentVersionExpiration.IsDaysNull()
+	noncurrentTransitionSet := !rule.NoncurrentVersionTransition.IsDaysNull()
+	if !expirySet && !transitionSet && !noncurrentExpirySet && !noncurrentTransitionSet {
+		errMsg := "At least one action (Expiry, Transition, NoncurrentExpiry or NoncurrentTransition) needs to be specified in a rule."
 		return errors.New(errMsg)
 	}
 	return nil

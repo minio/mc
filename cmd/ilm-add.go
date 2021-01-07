@@ -90,6 +90,22 @@ var ilmAddFlags = []cli.Flag{
 		Name:  "disable",
 		Usage: "disable the rule",
 	},
+	cli.BoolFlag{
+		Name:  "expired-object-delete-marker",
+		Usage: "remove delete markers with no parallel versions",
+	},
+	cli.IntFlag{
+		Name:  "noncurrentversion-expiration-days",
+		Usage: "the number of days to remove noncurrent versions",
+	},
+	cli.IntFlag{
+		Name:  "noncurrentversion-transition-days",
+		Usage: "the number of days to transition noncurrent versions",
+	},
+	cli.StringFlag{
+		Name:  "noncurrentversion-transition-storage-class",
+		Usage: "the transition storage class for noncurrent versions",
+	},
 }
 
 type ilmAddMessage struct {

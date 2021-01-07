@@ -23,10 +23,10 @@ import (
 )
 
 var ilmSubcommands = []cli.Command{
-	ilmLsCmd,
 	ilmAddCmd,
-	ilmRmCmd,
 	ilmEditCmd,
+	ilmLsCmd,
+	ilmRmCmd,
 	ilmExportCmd,
 	ilmImportCmd,
 }
