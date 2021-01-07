@@ -296,6 +296,11 @@ func installAutoCompletion() {
 
 	err := completeinstall.Install(filepath.Base(os.Args[0]))
 	if err != nil {
+		if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
+			errStr := err.Error()
+			console.Infoln("autocompletion is already enabled in your '"+shellName+"' shell.\n", errStr[strings.Index(errStr, "\n")+1:])
+			return
+		}
 		fatalIf(probe.NewError(err), "Unable to install auto-completion.")
 	} else {
 		console.Infoln("enabled autocompletion in your '" + shellName + "' rc file. Please restart your shell.")
