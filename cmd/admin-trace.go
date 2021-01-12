@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2019 MinIO, Inc.
+ * MinIO Client (C) 2019, 2020, 2021 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
-	"strconv"
+	"path"
 	"strings"
 	"time"
 
@@ -42,23 +42,27 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "all, a",
-		Usage: "trace all traffic (including internode traffic between MinIO servers)",
+		Usage: "trace all traffic (includes internode traffic from MinIO cluster)",
 	},
-	cli.StringFlag{
-		Name:  "status-codes",
-		Usage: "trace only specific status codes",
+	cli.IntSliceFlag{
+		Name:  "status-code",
+		Usage: "trace only matching status code",
 	},
-	cli.StringFlag{
-		Name:  "methods",
-		Usage: "trace only specific HTTP methods",
+	cli.StringSliceFlag{
+		Name:  "method",
+		Usage: "trace only matching HTTP method",
 	},
-	cli.StringFlag{
+	cli.StringSliceFlag{
+		Name:  "funcname",
+		Usage: "trace only matching func name",
+	},
+	cli.StringSliceFlag{
 		Name:  "path",
-		Usage: "trace only specific paths",
+		Usage: "trace only matching path",
 	},
 	cli.BoolFlag{
 		Name:  "errors, e",
-		Usage: "trace failed requests only",
+		Usage: "trace only failed requests",
 	},
 }
 
@@ -80,18 +84,20 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show console trace for a MinIO server with alias 'play'
-     {{.Prompt}} {{.HelpName}} -v -a play
+  1. Show verbose console trace for MinIO server
+     {{.Prompt}} {{.HelpName}} -v -a myminio
 
-  2. Show trace only for failed requests for a MinIO server with alias 'myminio'
+  2. Show trace only for failed requests for MinIO server
     {{.Prompt}} {{.HelpName}} -v -e myminio
 
-  3. Show the content of 503 failed requests
-    {{.Prompt}} {{.HelpName}} -v --status-codes 503 myminio
+  3. Show verbose console trace for requests with '503' status code
+    {{.Prompt}} {{.HelpName}} -v --status-code 503 myminio
 
-  4. Show all requests for a specific prefix
+  4. Show console trace for a specific path
     {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/ myminio
 
+  5. Show console trace for requests with '404' and '503' status code
+    {{.Prompt}} {{.HelpName}} --status-code 404 --status-code 503 myminio
 `,
 }
 
@@ -107,6 +113,55 @@ func checkAdminTraceSyntax(ctx *cli.Context) {
 	}
 }
 
+func printTrace(verbose bool, traceInfo madmin.ServiceTraceInfo) {
+	if verbose {
+		printMsg(traceMessage{ServiceTraceInfo: traceInfo})
+	} else {
+		printMsg(shortTrace(traceInfo))
+	}
+}
+
+func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
+	statusCodes := ctx.IntSlice("status-code")
+	methods := ctx.StringSlice("method")
+	funcNames := ctx.StringSlice("funcname")
+	apiPaths := ctx.StringSlice("path")
+	if len(statusCodes) == 0 && len(methods) == 0 && len(funcNames) == 0 && len(apiPaths) == 0 {
+		// no specific filtering found trace all the requests
+		return true
+	}
+
+	// Filter request path if passed by the user
+	for _, apiPath := range apiPaths {
+		if pathMatch(path.Join("/", apiPath), traceInfo.Trace.ReqInfo.Path) {
+			return true
+		}
+	}
+
+	// Filter response status codes if passed by the user
+	for _, code := range statusCodes {
+		if traceInfo.Trace.RespInfo.StatusCode == code {
+			return true
+		}
+	}
+
+	// Filter request method if passed by the user
+	for _, method := range methods {
+		if traceInfo.Trace.ReqInfo.Method == method {
+			return true
+		}
+	}
+
+	// Filter request function handler names if passed by the user.
+	for _, funcName := range funcNames {
+		if nameMatch(funcName, traceInfo.Trace.FuncName) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // mainAdminTrace - the entry function of trace command
 func mainAdminTrace(ctx *cli.Context) error {
 	// Check for command syntax
@@ -114,27 +169,6 @@ func mainAdminTrace(ctx *cli.Context) error {
 	verbose := ctx.Bool("verbose")
 	all := ctx.Bool("all")
 	errfltr := ctx.Bool("errors")
-
-	statusCodes := []int{}
-	for _, sc := range strings.Split(ctx.String("status-codes"), ",") {
-		if sc == "" {
-			continue
-		}
-		statusCode, e := strconv.Atoi(sc)
-		fatalIf(probe.NewError(e), "Invalid passed status code.")
-		statusCodes = append(statusCodes, statusCode)
-	}
-
-	methods := []string{}
-	for _, method := range strings.Split(ctx.String("methods"), ",") {
-		if method == "" {
-			continue
-		}
-		methods = append(methods, strings.ToUpper(method))
-	}
-
-	path := ctx.String("path")
-
 	aliasedURL := ctx.Args().Get(0)
 	console.SetColor("Stat", color.New(color.FgYellow))
 
@@ -170,45 +204,9 @@ func mainAdminTrace(ctx *cli.Context) error {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
-		// Filter response status codes if passed by the user
-		if len(statusCodes) > 0 {
-			var found bool
-			for _, code := range statusCodes {
-				if traceInfo.Trace.RespInfo.StatusCode == code {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
+		if matchTrace(ctx, traceInfo) {
+			printTrace(verbose, traceInfo)
 		}
-		// Filter request method if passed by the user
-		if len(methods) > 0 {
-			var found bool
-			for _, method := range methods {
-				if traceInfo.Trace.ReqInfo.Method == method {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		// Filter request path if passed by the user
-		if path != "" {
-			found := pathMatch("/"+path, traceInfo.Trace.ReqInfo.Path)
-			if !found {
-				continue
-			}
-		}
-
-		if verbose {
-			printMsg(traceMessage{ServiceTraceInfo: traceInfo})
-			continue
-		}
-		printMsg(shortTrace(traceInfo))
 	}
 	return nil
 }
