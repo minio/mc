@@ -57,40 +57,16 @@ EXAMPLES:
 `,
 }
 
-var ilmEditFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "id",
-		Usage: "id of the rule to be modified",
+var ilmEditFlags = append(
+	// Start by showing --id in edit command
+	[]cli.Flag{
+		cli.StringFlag{
+			Name:  "id",
+			Usage: "id of the rule to be modified",
+		},
 	},
-	cli.StringFlag{
-		Name:  "tags",
-		Usage: "format '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>', multiple values allowed for multiple key/value pairs",
-	},
-	cli.StringFlag{
-		Name:  "expiry-date",
-		Usage: "format 'YYYY-MM-DD' the date of expiration",
-	},
-	cli.StringFlag{
-		Name:  "expiry-days",
-		Usage: "the number of days to expiration",
-	},
-	cli.StringFlag{
-		Name:  "transition-date",
-		Usage: "format 'YYYY-MM-DD' for the date to transition",
-	},
-	cli.StringFlag{
-		Name:  "transition-days",
-		Usage: "the number of days to transition",
-	},
-	cli.StringFlag{
-		Name:  "storage-class",
-		Usage: "storage class for transition (STANDARD_IA, ONEZONE_IA, GLACIER. Etc)",
-	},
-	cli.BoolFlag{
-		Name:  "disable",
-		Usage: "disable the rule",
-	},
-}
+	ilmAddFlags...,
+)
 
 type ilmEditMessage struct {
 	Status string `json:"status"`

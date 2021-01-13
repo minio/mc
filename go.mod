@@ -14,7 +14,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20201231050455-36fc2f98ed12
-	github.com/minio/minio-go/v7 v7.0.7-0.20201217170524-3baf9ea06f7c
+	github.com/minio/minio-go/v7 v7.0.7-0.20210107174959-40d41266f363
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
