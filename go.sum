@@ -368,8 +368,8 @@ github.com/minio/minio v0.0.0-20201231050455-36fc2f98ed12 h1:yTz1GCGRf70a+2HHNOG
 github.com/minio/minio v0.0.0-20201231050455-36fc2f98ed12/go.mod h1:Y2vPTyVMgM/hdmWY4z1FAh0tAiPVAMLz4eeQ5FNcJmk=
 github.com/minio/minio-go/v7 v7.0.7-0.20201217170524-3baf9ea06f7c h1:NgTbI1w/B+2Jcl+YKTULAAXqkwWqMZbkzmVdWNwzKnA=
 github.com/minio/minio-go/v7 v7.0.7-0.20201217170524-3baf9ea06f7c/go.mod h1:pEZBUa+L2m9oECoIA6IcSK8bv/qggtQVLovjeKK5jYc=
-github.com/minio/minio-go/v7 v7.0.7-0.20210107174959-40d41266f363 h1:dMvWRvc6iSuBjeMVOZ4NrebkoIIeG0RclfxpYCFhMso=
-github.com/minio/minio-go/v7 v7.0.7-0.20210107174959-40d41266f363/go.mod h1:pEZBUa+L2m9oECoIA6IcSK8bv/qggtQVLovjeKK5jYc=
+github.com/minio/minio-go/v7 v7.0.8-0.20210113181159-b8e436cfee9a h1:MKD7Hl+jCeG0Hu7QOzsQraanmAaHwS7S+aMrsEujT3A=
+github.com/minio/minio-go/v7 v7.0.8-0.20210113181159-b8e436cfee9a/go.mod h1:pEZBUa+L2m9oECoIA6IcSK8bv/qggtQVLovjeKK5jYc=
 github.com/minio/selfupdate v0.3.1 h1:BWEFSNnrZVMUWXbXIgLDNDjbejkmpAmZvy/nCz1HlEs=
 github.com/minio/selfupdate v0.3.1/go.mod h1:b8ThJzzH7u2MkF6PcIra7KaXO9Khf6alWPvMSyTDCFM=
 github.com/minio/sha256-simd v0.1.1 h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=
