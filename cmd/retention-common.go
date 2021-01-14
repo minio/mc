@@ -245,11 +245,13 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 			continue
 		}
 
-		if !isRecursive && alias+getKey(content) != getStandardizedURL(target) {
+		if !isRecursive && alias+getKey(content.URL.Path, content.URL.Type,
+			content.Type.IsDir()) != getStandardizedURL(target) {
 			break
 		}
 
-		err := setRetentionSingle(ctx, op, alias, content.URL.String(), content.VersionID, mode, until, bypassGovernance)
+		err := setRetentionSingle(ctx, op, alias, content.URL.String(),
+			content.VersionID, mode, until, bypassGovernance)
 		if err != nil {
 			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
 			continue

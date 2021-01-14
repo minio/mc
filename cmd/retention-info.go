@@ -332,7 +332,8 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 			continue
 		}
 
-		if !isRecursive && alias+getKey(content) != getStandardizedURL(target) {
+		if !isRecursive && alias+getKey(content.URL.Path, content.URL.Type,
+			content.Type.IsDir()) != getStandardizedURL(target) {
 			break
 		}
 
@@ -347,7 +348,8 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 	}
 
 	if !atLeastOneObjectOrVersionFound {
-		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to show its retention.")
+		errorIf(errDummy().Trace(clnt.GetURL().String()),
+			"Unable to find any object/version to show its retention.")
 		cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 	}
 

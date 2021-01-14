@@ -166,7 +166,7 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 
 			printMsg(undoMessage{
 				Status:         "success",
-				Key:            getOSDependantKey(keyName, objectVersion.Type.IsDir()),
+				Key:            getKey(keyName, objectVersion.URL.Type, objectVersion.Type.IsDir()),
 				URL:            objectVersion.URL.String(),
 				VersionID:      objectVersion.VersionID,
 				IsDeleteMarker: objectVersion.IsDeleteMarker,
@@ -213,7 +213,7 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 		}
 
 		if !recursive {
-			if alias+getKey(content) != getStandardizedURL(aliasedURL) {
+			if alias+getKey(content.URL.Path, content.URL.Type, content.Type.IsDir()) != getStandardizedURL(aliasedURL) {
 				break
 			}
 		}

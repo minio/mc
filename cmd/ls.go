@@ -19,8 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"runtime"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -86,44 +85,42 @@ func (c contentMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// Use OS separator and adds a trailing separator if it is a dir
-func getOSDependantKey(path string, isDir bool) string {
-	sep := "/"
-
-	// for windows make sure to print in 'windows' specific style.
-	if runtime.GOOS == "windows" {
-		path = strings.Replace(path, "/", "\\", -1)
-		sep = "\\"
+// get content key
+func getKey(path string, tyype ClientURLType, isDir bool) string {
+	sep := string(os.PathSeparator)
+	if tyype == objectStorage {
+		sep = "/"
 	}
-
-	if isDir && !strings.HasSuffix(path, sep) {
-		return fmt.Sprintf("%s%s", path, sep)
+	otherSep := strings.Replace("\\/", sep, "", 1)
+	if isDir && !strings.HasSuffix(path, sep) &&
+		!strings.HasSuffix(path, otherSep) {
+		path = fmt.Sprintf("%s%s", path, sep)
 	}
 	return path
-}
-
-// get content key
-func getKey(c *ClientContent) string {
-	return getOSDependantKey(c.URL.Path, c.Type.IsDir())
 }
 
 // Generate printable listing from a list of sorted client
 // contents, the latest created content comes first.
 func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAllVersions bool) (msgs []contentMessage) {
-	prefixPath := clntURL.Path
-	prefixPath = filepath.ToSlash(prefixPath)
-	if !strings.HasSuffix(prefixPath, "/") {
-		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
+	sep := string(os.PathSeparator)
+	if clntURL.Type == objectStorage {
+		sep = "/"
 	}
-	prefixPath = strings.TrimPrefix(prefixPath, "./")
+	otherSep := strings.Replace("\\/", sep, "", 1)
+
+	prefixPath := clntURL.Path
+	if clntURL.Type == fileSystem {
+		prefixPath = strings.ReplaceAll(prefixPath, otherSep, sep)
+	}
+
+	prefixPath = strings.TrimPrefix(prefixPath, "."+sep)
 
 	nrVersions := len(ctnts)
 
 	for i, c := range ctnts {
-		// Convert any os specific delimiters to "/".
-		contentURL := filepath.ToSlash(c.URL.Path)
 		// Trim prefix path from the content path.
-		c.URL.Path = strings.TrimPrefix(contentURL, prefixPath)
+		c.URL.Path = strings.TrimPrefix(c.URL.Path, "."+sep)
+		c.URL.Path = strings.TrimPrefix(c.URL.Path, prefixPath)
 
 		contentMsg := contentMessage{}
 		contentMsg.Time = c.Time.Local()
@@ -141,7 +138,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		md5sum = strings.TrimSuffix(md5sum, "\"")
 		contentMsg.ETag = md5sum
 		// Convert OS Type to match console file printing style.
-		contentMsg.Key = getKey(c)
+		contentMsg.Key = getKey(c.URL.Path, c.URL.Type, c.Type.IsDir())
 		contentMsg.VersionID = c.VersionID
 		contentMsg.IsDeleteMarker = c.IsDeleteMarker
 		contentMsg.VersionOrd = nrVersions - i

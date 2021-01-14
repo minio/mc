@@ -177,7 +177,8 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(urlStr) {
+		if !recursive && alias+getKey(content.URL.Path, content.URL.Type,
+			content.Type.IsDir()) != getStandardizedURL(urlStr) {
 			break
 		}
 

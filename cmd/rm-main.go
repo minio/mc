@@ -369,7 +369,8 @@ func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isI
 		urlString := content.URL.Path
 
 		if !isRecursive {
-			currentObjectURL := targetAlias + getKey(content)
+			currentObjectURL := targetAlias + getKey(content.URL.Path,
+				content.URL.Type, content.Type.IsDir())
 			standardizedURL := getStandardizedURL(currentObjectURL)
 			if !strings.HasPrefix(url, standardizedURL) {
 				break

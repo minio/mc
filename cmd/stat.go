@@ -140,7 +140,7 @@ func parseStat(c *ClientContent) statMessage {
 	}()
 	content.Size = c.Size
 	content.VersionID = c.VersionID
-	content.Key = getKey(c)
+	content.Key = getKey(c.URL.Path, c.URL.Type, c.Type.IsDir())
 	content.Metadata = c.Metadata
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
@@ -212,7 +212,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 			continue
 		}
 
-		url := targetAlias + getKey(content)
+		url := targetAlias + getKey(content.URL.Path, content.URL.Type, content.Type.IsDir())
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
@@ -336,7 +336,8 @@ func (v bucketInfoMessage) String() string {
 	var b strings.Builder
 	info := v.Metadata
 
-	keyStr := getKey(&ClientContent{URL: v.Metadata.URL, Type: v.Metadata.Type})
+	content := &ClientContent{URL: v.Metadata.URL, Type: v.Metadata.Type}
+	keyStr := getKey(content.URL.Path, content.URL.Type, content.Type.IsDir())
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
 	fmt.Fprintln(&b, console.Colorize("Name", key))
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Metadata.Size))))
