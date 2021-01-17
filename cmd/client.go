@@ -191,7 +191,6 @@ type Config struct {
 	HostURL      string
 	AppName      string
 	AppVersion   string
-	AppComments  []string
 	Debug        bool
 	Insecure     bool
 	Lookup       minio.BucketLookupType
