@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -46,8 +47,8 @@ const defaultMultipartThreadsNum = 4
 
 // GetOptions holds options of the GET operation
 type GetOptions struct {
-	sse       encrypt.ServerSide
-	versionID string
+	SSE       encrypt.ServerSide
+	VersionID string
 }
 
 // StatOptions holds options of the HEAD operation
@@ -61,9 +62,9 @@ type StatOptions struct {
 
 // ListOptions holds options for listing operation
 type ListOptions struct {
-	IsRecursive       bool
-	IsIncomplete      bool
-	IsFetchMeta       bool
+	Recursive         bool
+	Incomplete        bool
+	WithMetadata      bool
 	WithOlderVersions bool
 	WithDeleteMarkers bool
 	TimeRef           time.Time
@@ -194,6 +195,7 @@ type Config struct {
 	Debug        bool
 	Insecure     bool
 	Lookup       minio.BucketLookupType
+	Transport    *http.Transport
 }
 
 // SelectObjectOpts - opts entered for select API

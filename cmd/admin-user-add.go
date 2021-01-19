@@ -31,11 +31,12 @@ import (
 )
 
 var adminUserAddCmd = cli.Command{
-	Name:   "add",
-	Usage:  "add a new user",
-	Action: mainAdminUserAdd,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "add",
+	Usage:        "add a new user",
+	Action:       mainAdminUserAdd,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

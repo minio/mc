@@ -73,11 +73,12 @@ var (
 
 // Move command.
 var mvCmd = cli.Command{
-	Name:   "mv",
-	Usage:  "move objects",
-	Action: mainMove,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(mvFlags, ioFlags...), globalFlags...),
+	Name:         "mv",
+	Usage:        "move objects",
+	Action:       mainMove,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(mvFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

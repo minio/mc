@@ -24,12 +24,12 @@ retention   set retention for object(s)
 legalhold   set legal hold for object(s)
 diff        list differences in object name, size, and date between two buckets
 rm          remove objects
+encrypt    manage bucket encryption config
 event       manage object notifications
 watch       listen for object notification events
 undo        undo PUT/DELETE operations
 policy      manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
-lock        manage default bucket object lock configuration
 ilm         manage bucket lifecycle
 version     manage bucket versioning
 replicate   configure server side bucket replication
@@ -227,4 +227,4 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
 
 ## License
-Use of `mc` is governed by the Apache 2.0 License found at [LICENSE](./LICENSE).
+Use of `mc` is governed by the Apache 2.0 License found at [LICENSE](https://github.com/minio/mc/blob/master/LICENSE).

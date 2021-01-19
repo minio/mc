@@ -67,6 +67,7 @@ var adminHealCmd = cli.Command{
 	Name:            "heal",
 	Usage:           "[DEPRECATED] heal disks, buckets and objects on MinIO server",
 	Action:          mainAdminHeal,
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),
 	HideHelpCommand: true,
@@ -199,7 +200,8 @@ func mainAdminHeal(ctx *cli.Context) error {
 		fatalIf(err.Trace(clnt.GetURL().String()), "Unable to create client for URL ", aliasedURL)
 		return nil
 	}
-	for content := range clnt.List(globalContext, ListOptions{IsRecursive: false, ShowDir: DirNone}) {
+
+	for content := range clnt.List(globalContext, ListOptions{Recursive: false, ShowDir: DirNone}) {
 		if content.Err != nil {
 			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to heal bucket `"+bucket+"`.")
 			return nil

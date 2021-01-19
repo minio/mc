@@ -32,6 +32,7 @@ type URLs struct {
 	DisableMultipart bool
 	encKeyDB         map[string][]prefixSSEPair
 	Error            *probe.Error `json:"-"`
+	ErrorCond        differType   `json:"-"`
 }
 
 // WithError sets the error and returns object

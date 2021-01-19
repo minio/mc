@@ -171,8 +171,28 @@ func sortObjectVersions(ctntVersions []*ClientContent) {
 	})
 }
 
+// summaryMessage container for summary message structure
+type summaryMessage struct {
+	TotalObjects int64 `json:"totalObjects"`
+	TotalSize    int64 `json:"totalSize"`
+}
+
+// String colorized string message
+func (s summaryMessage) String() string {
+	msg := console.Colorize("Summarize", fmt.Sprintf("\nTotal Size: %s", humanize.IBytes(uint64(s.TotalSize))))
+	msg += "\n" + console.Colorize("Summarize", fmt.Sprintf("Total Objects: %d", s.TotalObjects))
+	return msg
+}
+
+// JSON jsonified summary message
+func (s summaryMessage) JSON() string {
+	jsonMessageBytes, e := json.MarshalIndent(s, "", "")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON")
+	return string(jsonMessageBytes)
+}
+
 // Pretty print the list of versions belonging to one object
-func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) {
+func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions, isSummary bool) {
 	sortObjectVersions(ctntVersions)
 	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
 	for _, msg := range msgs {
@@ -181,17 +201,19 @@ func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, print
 }
 
 // doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, timeRef time.Time, withOlderVersions bool) error {
+func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions bool) error {
 
 	var (
 		lastPath          string
 		perObjectVersions []*ClientContent
 		cErr              error
+		totalSize         int64
+		totalObjects      int64
 	)
 
 	for content := range clnt.List(ctx, ListOptions{
-		IsRecursive:       isRecursive,
-		IsIncomplete:      isIncomplete,
+		Recursive:         isRecursive,
+		Incomplete:        isIncomplete,
 		TimeRef:           timeRef,
 		WithOlderVersions: withOlderVersions || !timeRef.IsZero(),
 		WithDeleteMarkers: true,
@@ -224,14 +246,24 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete bool, ti
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions)
+			printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
 
 		perObjectVersions = append(perObjectVersions, content)
+		totalSize += content.Size
+		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions)
+	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
+
+	if isSummary {
+		printMsg(summaryMessage{
+			TotalObjects: totalObjects,
+			TotalSize:    totalSize,
+		})
+	}
+
 	return cErr
 }

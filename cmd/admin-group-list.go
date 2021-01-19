@@ -24,11 +24,12 @@ import (
 )
 
 var adminGroupListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "display list of groups",
-	Action: mainAdminGroupList,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "list",
+	Usage:        "display list of groups",
+	Action:       mainAdminGroupList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

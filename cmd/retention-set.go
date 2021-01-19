@@ -58,11 +58,12 @@ var (
 )
 
 var retentionSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set retention for object(s)",
-	Action: mainRetentionSet,
-	Before: setGlobalsFromContext,
-	Flags:  append(retentionSetFlags, globalFlags...),
+	Name:         "set",
+	Usage:        "set retention for object(s)",
+	Action:       mainRetentionSet,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(retentionSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -90,7 +91,6 @@ EXAMPLES:
 
   5. Set default lock retention configuration for a bucket
      $ {{.HelpName}} --default governance 30d myminio/mybucket/
-
 `}
 
 func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions bool, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypass, bucketMode bool) {

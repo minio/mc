@@ -40,6 +40,7 @@ var adminPrometheusGenerateCmd = cli.Command{
 	Name:            "generate",
 	Usage:           "generates prometheus config",
 	Action:          mainAdminPrometheusGenerate,
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,

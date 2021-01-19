@@ -158,7 +158,13 @@ func errorIf(err *probe.Error, msg string, data ...interface{}) {
 	}
 	msg = fmt.Sprintf(msg, data...)
 	if !globalDebug {
-		console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
+		e := err.ToGoError()
+		if errors.Is(e, context.Canceled) {
+			// This will replace context canceled error message
+			// that the user is seeing to a better one.
+			e = errors.New("Canceling upon user request")
+		}
+		console.Errorln(fmt.Sprintf("%s %s", msg, e))
 		return
 	}
 	console.Errorln(fmt.Sprintf("%s %s", msg, err))

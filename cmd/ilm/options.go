@@ -111,6 +111,11 @@ type LifecycleOptions struct {
 	TransitionDate    string
 	TransitionDays    string
 	StorageClass      string
+
+	ExpiredObjectDeleteMarker               bool
+	NoncurrentVersionExpirationDays         int
+	NoncurrentVersionTransitionDays         int
+	NoncurrentVersionTransitionStorageClass string
 }
 
 // ToConfig create lifecycle.Configuration based on LifecycleOptions
@@ -124,7 +129,6 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 	if err != nil {
 		return nil, err.Trace(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
 	}
-
 	andVal := lifecycle.And{
 		Tags: extractILMTags(opts.Tags),
 	}
@@ -147,6 +151,13 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 		}(),
 		Expiration: expiry,
 		Transition: transition,
+		NoncurrentVersionExpiration: lifecycle.NoncurrentVersionExpiration{
+			NoncurrentDays: lifecycle.ExpirationDays(opts.NoncurrentVersionExpirationDays),
+		},
+		NoncurrentVersionTransition: lifecycle.NoncurrentVersionTransition{
+			NoncurrentDays: lifecycle.ExpirationDays(opts.NoncurrentVersionTransitionDays),
+			StorageClass:   opts.NoncurrentVersionTransitionStorageClass,
+		},
 	}
 
 	ruleFound := false
@@ -163,9 +174,11 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 	}
 
 	if !ruleFound {
+		if err := validateILMRule(newRule); err != nil {
+			return nil, err.Trace(opts.ID)
+		}
 		config.Rules = append(config.Rules, newRule)
 	}
-
 	return config, nil
 }
 
@@ -182,18 +195,27 @@ func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
 	if len(result) > 2 {
 		prefix = result[len(result)-1]
 	}
+	scSet := ctx.IsSet("storage-class")
+	sc := strings.ToUpper(ctx.String("storage-class"))
+	noncurrentSC := strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class"))
+	// for MinIO transition storage-class is same as label defined on
+	// `mc admin bucket remote add --service ilm --label` command
 	return LifecycleOptions{
-		ID:                id,
-		Prefix:            prefix,
-		Status:            !ctx.Bool("disable"),
-		IsTagsSet:         ctx.IsSet("tags"),
-		IsStorageClassSet: ctx.IsSet("storage-class"),
-		Tags:              ctx.String("tags"),
-		ExpiryDate:        ctx.String("expiry-date"),
-		ExpiryDays:        ctx.String("expiry-days"),
-		TransitionDate:    ctx.String("transition-date"),
-		TransitionDays:    ctx.String("transition-days"),
-		StorageClass:      ctx.String("storage-class"),
+		ID:                                      id,
+		Prefix:                                  prefix,
+		Status:                                  !ctx.Bool("disable"),
+		IsTagsSet:                               ctx.IsSet("tags"),
+		IsStorageClassSet:                       scSet,
+		Tags:                                    ctx.String("tags"),
+		ExpiryDate:                              ctx.String("expiry-date"),
+		ExpiryDays:                              ctx.String("expiry-days"),
+		TransitionDate:                          ctx.String("transition-date"),
+		TransitionDays:                          ctx.String("transition-days"),
+		StorageClass:                            sc,
+		ExpiredObjectDeleteMarker:               ctx.Bool("expired-object-delete-marker"),
+		NoncurrentVersionExpirationDays:         ctx.Int("noncurrentversion-expiration-days"),
+		NoncurrentVersionTransitionDays:         ctx.Int("noncurrentversion-transition-days"),
+		NoncurrentVersionTransitionStorageClass: noncurrentSC,
 	}
 }
 

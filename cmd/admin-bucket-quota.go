@@ -74,11 +74,12 @@ func (q quotaMessage) JSON() string {
 }
 
 var adminBucketQuotaCmd = cli.Command{
-	Name:   "quota",
-	Usage:  "manage bucket quota",
-	Action: mainAdminBucketQuota,
-	Before: setGlobalsFromContext,
-	Flags:  append(adminQuotaFlags, globalFlags...),
+	Name:         "quota",
+	Usage:        "manage bucket quota",
+	Action:       mainAdminBucketQuota,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(adminQuotaFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

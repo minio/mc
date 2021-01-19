@@ -19,12 +19,11 @@ stat        show object metadata
 mv          move objects
 tree        list buckets and objects in a tree format
 du          summarize disk usage recursively
-retention   set retention for object(s)
+retention   set retention for object(s) and bucket(s)
 legalhold   set legal hold for object(s)
 diff        list differences in object name, size, and date between two buckets
 rm          remove objects
 version     manage bucket versioning
-lock        manage default bucket object lock configuration
 ilm         manage bucket lifecycle
 encrypt     manage bucket encryption config
 event       manage object notifications
@@ -229,6 +228,9 @@ alias tree='mc tree'
 
 ## 6. Global Options
 
+### Option [--autocompletion]
+Install auto-completion for your shell.
+
 ### Option [--debug]
 Debug option enables debug output to console.
 
@@ -292,7 +294,7 @@ Skip SSL certificate verification.
 ### Option [--version]
 Display the current version of `mc` installed
 
- *Example: Print version of mc.*
+*Example: Print version of mc.*
 
 ```
 mc --version
@@ -308,9 +310,10 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 | [**undo** - undo PUT/DELETE operations](#undo)     |
 | [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         | [**replicate** - manage bucket server side replication](#replicate) |
 | [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
-| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**stat** - stat contents of objects and folders](#stat)   |                                                    |
-| [**head** - display first 'n' lines of an object](#head)                                | [**lock** - manage default bucket object lock configuration](#lock) | [**retention** - set retention for object(s)](#retention)  |                                                    |
-| [**mv** - move objects](#mv)                                                            | [**sql** - run sql queries on objects](#sql)                        | [**legalhold** - set legal hold for object(s)](#legalhold) |                                                    |
+| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
+| [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
+| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | |
+
 
 
 ###  Command `ls`
@@ -321,6 +324,8 @@ USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
+  --rewind value                list all object versions no later than specified date
+  --versions                    list all versions
   --recursive, -r               list recursively
   --incomplete, -I              list incomplete uploads
   --help, -h                    show help
@@ -337,6 +342,19 @@ mc ls play
 [2016-04-08 20:58:18 IST]     0B mybucket/
 ```
 
+*Example: List all contents versions if the bucket versioning is enabled*
+```
+mc ls --versions s3/mybucket
+[2020-09-21 16:25:31 CET] 903KiB UiL4wSZS2OkST5aJ3AFAwtzZxHTW_9VC v1 PUT foo
+[2020-09-18 21:18:44 CET]     0B sK4pldVmOJqCJzX2aJvxX4eWMnuqazs9 v1 DEL bar
+```
+
+*Example: List contents created earlier than 3 days*
+```
+mc ls --rewind 3d s3/mybucket
+[2020-09-18 21:18:44 CET]     0B sK4pldVmOJqCJzX2aJvxX4eWMnuqazs9 v1 DEL bar
+```
+
 <a name="tree"></a>
 ### Command `tree`
 
@@ -350,9 +368,10 @@ FLAGS:
   --help, -h                    show help
   --files, -f                   include files in tree
   --depth, -d                   set the maximum depth of the tree
+  --rewind value                display tree no later than specified date
 ```
 
-_Example: List all buckets on play/test-bucket in a tree format._
+_Example: List all contents on play/test-bucket in a tree format._
 
 ```sh
 mc tree play/test-bucket
@@ -364,6 +383,13 @@ play/test-bucket/
    └─ dir_xx
 ```
 
+*Example: List all objects with the state of 3 days earlier*
+```sh
+mc tree --files --rewind 3d play/test-bucket
+play/test-bucket/
+├─ object1
+└─ object2
+```
 
 <a name="mb"></a>
 ### Command `mb`
@@ -423,6 +449,32 @@ mc rb play/mybucket --force
 Bucket removed successfully ‘play/mybucket’.
 ```
 
+<a name="du"></a>
+### Command `du`
+`du` command summarizes disk usage recursively
+
+```
+USAGE:
+   mc du [FLAGS] TARGET
+FLAGS:
+  --depth value, -d value       print the total for a folder prefix only if it is N or fewer levels below the command line argument (default: 0)
+  --recursive, -r               recursively print the total for a folder prefix
+  --rewind value                include all object versions no later than specified date
+  --versions                    include all object versions
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
+```
+
+*Example: Summarize disk usage of 'jazz-songs' bucket recursively.*
+```
+mc du s3/jazz-songs
+```
+
+*Example:  Summarize disk usage of 'jazz-songs' bucket with all objects versions*
+```
+mc du --versions s3/jazz-songs/
+```
+
 <a name="cat"></a>
 ### Command `cat`
 `cat` command concatenates contents of a file or object to another. You may also use it to simply display the contents to stdout
@@ -462,14 +514,14 @@ mc cat --encrypt-key "play/mybucket=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=
 Hello MinIO!!
 ```
 
-*Example: Display the content of an object 10 days earlier *
+*Example: Display the content of an object 10 days earlier*
 
 ```
 mc cat --rewind "10d" play/mybucket/myobject
 Hello MinIO ten days earlier!
 ```
 
-*Example: Display the content of an object at a specific date/time in the past *
+*Example: Display the content of an object at a specific date/time in the past*
 
 ```
 mc cat --rewind "2020.03.24T10:00" play/mybucket/myobject
@@ -593,45 +645,32 @@ mc head -n 1 --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play
 Hello!!
 ```
 
-<a name="lock"></a>
+*Example: Display the first line of the content of an object, 1 year earlier*
+```
+mc head -n 1 --rewind 365d play/mybucket/myencryptedobject.txt
+Hello!!
+```
+
 ### Command `lock`
 `lock` sets and gets object lock configuration
 
-```
-USAGE:
-   mc lock TARGET [info | clear ] | [[governance | compliance] [VALIDITY]]
-
-FLAGS:
-  --json                        enable JSON formatted output
-  --help, -h                    show help
-```
-
-*Example: Set object lock configuration of 30 day compliance on bucket `mybucket`*
-
-```
-mc lock myminio/mybucket compliance 30d
-```
-
-*Example: Display the object lock configuration for bucket `mybucket`*
-
-```
-mc lock myminio/mybucket info
-COMPLIANCE mode is enabled for 30d
-```
-*Example: Clear object lock configuration for bucket `mybucket`*
-
-```
-mc lock myminio/mybucket clear
-Object lock configuration cleared successfully
-```
+> `RELEASE.2020-09-18T00-13-21Z` deprecates and removes the `lock` command.
+The [retention](#retention) command fully replaces `lock` functionality.
 
 <a name="retention"></a>
 ### Command `retention`
-`retention` sets object retention for objects with a given prefix
+`retention` sets object retention for objects with a given prefix *or* the default
+retention settings for a bucket.
 
 ```
 USAGE:
-   mc retention [FLAGS] TARGET [governance | compliance] [VALIDITY]
+   mc retention COMMAND [FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  set           Sets retention for object(s) or bucket
+  clear         Clears retention for object(s) or bucket
+  info          Returns retention for object(s) or bucket
+  help, h       Shows a list of commands or help for one command
 
 FLAGS:
   --bypass                      bypass governance
@@ -643,7 +682,7 @@ FLAGS:
 *Example: Set governance for 30 days for object `prefix` on bucket `mybucket`*
 
 ```
-mc retention myminio/mybucket/prefix governance 30d -r
+mc retention set governance 30d myminio/mybucket/prefix -r
 Object retention successfully set for objects with prefix `myminio/mybucket/prefix`.
 
 ```
@@ -656,13 +695,44 @@ Removing `myminio/mybucket/prefix/comp.csv`.
 mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM protected and cannot be overwritten
 ```
 
+*Example: Set compliance for 30 days as default retention setting on bucket `mybucket`*
+
+```
+mc retention set --default compliance 30d myminio/mybucket
+```
+
+*Objects created in the above bucket `mybucket` cannot be deleted until the compliance period is over*
+
+```
+mc cp ~/comp.csv myminio/mybucket/data.csv
+mc rm myminio/mybucket/data.csv
+Removing `myminio/mybucket/data.csv
+mc: <ERROR> Failed to remove `myminio/mybucket/data.csv`. Object is WORM protected and cannot be overwritten
+```
+
+*Example: Clear object retention for a specific version of a specific object*
+```
+mc retention clear myminio/mybucket/prefix/obj.csv --version-id "3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp"
+```
+
+*Example: Show object retention for recursively for all versions of all objects under prefix*
+```
+mc retention info myminio/mybucket/prefix --recursive --versions
+```
+
 <a name="legalhold"></a>
 ### Command `legalhold`
 `legalhold` sets object legal hold for objects
 
 ```
 USAGE:
-   mc legalhold [FLAGS] TARGET [ON | OFF]
+   mc legalhold COMMAND [FLAGS | -h] TARGET
+
+COMMANDS:
+  set      set legal hold for object(s)
+  clear    clear legal hold for object(s)
+  info     show legal hold info for object(s)
+  help, h  Shows a list of commands or help for one command
 
 FLAGS:
   --recursive, -r               apply legal hold recursively
@@ -673,7 +743,7 @@ FLAGS:
 *Example: Enable legal hold for objects with prefix `prefix` on bucket `mybucket`*
 
 ```
-mc legalhold myminio/mybucket/prefix ON -r
+mc legalhold set myminio/mybucket/prefix -r
 Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
 
 ```
@@ -681,10 +751,19 @@ Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
 
 ```
 mc cp ~/test.csv myminio/mybucket/prefix/
-mc legalhold myminio/mybucket/prefix/test.csv ON
 mc rm myminio/mybucket/prefix/test.csv
 Removing `myminio/mybucket/prefix/test.csv`.
 mc: <ERROR> Failed to remove `myminio/mybucket/prefix/test.csv`. Object is WORM protected and cannot be overwritten
+```
+
+*Example: Disable legal hold on a specific object version*
+```
+mc legalhold clear myminio/mybucket/prefix/obj.csv --version-id "HiMFUTOowG6ylfNi4LKxD3ieHbgfgrvC"
+```
+
+*Example: Show object legal hold recursively for all objects at a prefix*
+```
+mc legalhold info myminio/mybucket/prefix --recursive
 ```
 
 <a name="pipe"></a>
@@ -721,6 +800,8 @@ USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
+  --rewind value                     roll back object(s) to current version at specified time
+  --version-id value, --vid value    select an object version to copy
   --recursive, -r                    copy recursively
   --older-than value                 copy object(s) older than N days (default: 0)
   --newer-than value                 copy object(s) newer than N days (default: 0)
@@ -790,6 +871,12 @@ myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 
 ```
 mc cp -a myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+*Example: Roll back to object version to 10 days earlier while copying.*
+```
+mc cp --rewind 10d play/mybucket/myobject.txt myobject.txt
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
@@ -988,9 +1075,10 @@ USAGE:
    mc share download [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --recursive, -r               share all objects recursively
-  --expire value, -E value      set expiry in NN[h|m|s] (default: "168h")
-  --help, -h                    show help
+  --version-id value, --vid value  share a particular object version
+  --recursive, -r                  share all objects recursively
+  --expire value, -E value         set expiry in NN[h|m|s] (default: "168h")
+  --help, -h                       show help
 ```
 
 *Example: Grant temporary access to an object with 4 hours expiry limit.*
@@ -1000,8 +1088,16 @@ FLAGS:
 mc share download --expire 4h play/mybucket/myobject.txt
 URL: https://play.min.io/mybucket/myobject.txt
 Expire: 0 days 4 hours 0 minutes 0 seconds
-Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
+Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=14400&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
 
+```
+
+*Example: Share a particular version of an object*
+```
+mc share download --version-id 3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp play/mybucket/myobject.txt
+URL: https://play.min.io/mybucket/myobject.txt
+Expire: 7 days 0 hours 0 minutes 0 seconds
+Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&versionId=3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
 ```
 
 #### Sub-command `share upload` - Share Upload
@@ -1041,14 +1137,14 @@ COMMAND:
 
 <a name="mirror"></a>
 ### Command `mirror`
-`mirror` command is similar to `rsync`, except it synchronizes contents between filesystems and object storage.
+`mirror` command synchornizes data between filesystems and object storages, similarly to `rsync`.
 
 ```
 USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --overwrite                        overwrite object(s) on target
+  --overwrite                        overwrite object(s) on target if it differs from source
   --fake                             perform a fake mirror operation
   --watch, -w                        watch and synchronize changes
   --remove                           remove extraneous object(s) on target
@@ -1257,9 +1353,10 @@ USAGE:
   mc ilm COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  list    pretty print bucket lifecycle configuration
+  ls      list lifecycle configuration rules set on a bucket
   add     add a lifecycle configuration rule to existing (if any) rule(s) on a bucket
-  remove  remove (if any) existing lifecycle configuration rule with the id
+  rm      remove (if any) existing lifecycle configuration rule
+  edit    modify a lifecycle configuration rule with given id
   export  export lifecycle configuration in JSON format
   import  import lifecycle configuration in JSON format
 
@@ -1271,7 +1368,7 @@ FLAGS:
 *Example: List the lifecycle management rules*
 
 ```
-mc ilm list myminio/testbucket
+mc ilm ls myminio/testbucket
    ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
  Devices |  dev/  |    ✓    |   ✓   | 17 Sep 2020  |     ✗      |           |               |
@@ -1280,17 +1377,16 @@ mc ilm list myminio/testbucket
 
 For more details about the lifecycle configuration, refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html)
 
-
-*Example: Add rule for testbucket on play*
+*Example: Edit the lifecycle management configuration rule given by ID "btd6pdot8748n94elvl0" to set tags*
 ```
-mc ilm add --id "Devices" --prefix "dev/" --expiry-date "2020-09-17" play/testbucket
-Lifecycle configuration rule added with ID `Devices` to play/testbucket.
+mc ilm edit --id "Documents" --tags "k1=v1&k2=v2" play/testbucket/dev
+Lifecycle configurtaion rule with ID `btd6pdot8748n94elvl0` modified to play/testbucket/dev.
 ```
 
 *Example: Remove the lifecycle management configuration rule given by ID "Documents"*
 ```
-mc ilm remove --id "Documents" play/testbucket
-Rule ID `Documents` from target play/testbucket removed.
+mc ilm rm --id "Documents" play/testbucket/dev
+Rule ID `Documents` from target play/testbucket/dev removed.
 ```
 
 <a name="policy"></a>
@@ -1396,6 +1492,11 @@ mc tag remove s3/testbucket/testobject
 Tags removed for s3/testbucket/testobject.
 ```
 
+*Example: Assign tags to a object versions older than one week*
+```
+mc tag set --versions --rewind 7d play/testbucket/testobject "status=old"
+```
+
 <a name="admin"></a>
 ### Command `admin`
 Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
@@ -1469,9 +1570,12 @@ USAGE:
    mc stat [FLAGS] TARGET
 
 FLAGS:
-  --recursive, -r               stat all objects recursively
-  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
-  --help, -h                    show help
+  --rewind value                    stat on older version(s)
+  --versions                        stat all versions
+  --version-id value, --vid value   stat a specific object version
+  --recursive, -r                   stat all objects recursively
+  --encrypt-key value               encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                        show help
 
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
@@ -1498,6 +1602,7 @@ Metadata  :
   Location: us-east-1
   Tagging: key1:value1, key2:value2
   ILM: Not Set
+```
 
 *Example: Display information on an encrypted object "myobject" in "mybucket" on https://play.min.io.*
 
@@ -1535,6 +1640,19 @@ Type      : file
 Metadata  :
   Content-Type: application/octet-stream
 ```
+
+*Example: Stat a specific object version*
+```
+mc stat --version-id "CL3sWgdSN2pNntSf6UnZAuh2kcu8E8si" s3/personal-docs/2018-account_report.docx
+Name      : s3/personal-docs/2018-account_report.docx
+Date      : 2018-02-06 18:16:14 PST
+Size      : 100B
+ETag      : d41d8cd98f00b204e9800998ecf8427e
+Type      : file
+Metadata  :
+  Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+```
+
 
 <a name="version"></a>
 ### Command `version`
@@ -1593,6 +1711,7 @@ FLAGS:
 ```
 
 *Example:  Undo the last 3 uploads and/or removals of a particular object*
+
 ```
 mc undo s3/backups/file.zip --last 3
 ✓ Last delete of `CREDITS` is reverted.
@@ -1633,6 +1752,7 @@ Algorithm: AES256
 mc encrypt set sse-s3 myminio/mybucket
 Auto encryption has been set successfully for myminio/source
 ```
+
 *Example: Set SSE-KMS auto encryption for bucket `mybucket` on alias `myminio` with KMS Key Id "arn:aws:kms:us-east-1:xxx:key/xxx"*
 
 ```
@@ -1660,7 +1780,7 @@ USAGE:
 
 COMMANDS:
   add     add a server side replication configuration rule
-  set     modify an existing server side replication cofiguration rule
+  edit    modify an existing server side replication cofiguration rule
   ls      list server side replication configuration rules
   export  export server side replication configuration
   import  import server side replication configuration in JSON format
@@ -1670,33 +1790,46 @@ FLAGS:
   --help, -h                    show help
 ```
 
-*Example: Add replication configuration rule on `mybucket` on alias `myminio`*
+*Example: Add replication configuration rule on `mybucket` on alias `myminio`.Enable delete marker replication and replication of versioned deletes for the configuration*
 
 ```
-mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --remote-bucket destbucket
+mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --remote-bucket destbucket --replicate "delete-marker,delete"
 Replication configuration rule applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Disable replication configuration rule with rule Id "bsibgh8t874dnjst8hkg" on bucket "mybucket" with prefix "prefix" for alias `myminio`*
 
 ```
-mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
+
 *Example:  Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias `myminio`.*
 
 ```
-mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
-*Example: Clear tags on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
+*Example: Clear tags on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"*
 
 ```
-mc replicate set myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 
+*Example: Enable delete marker replication and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
+
+```
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate "delete,delete-marker"
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
+```
+*Example: Disable delete marker and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
+
+```
+mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate ""
+Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
+```
 *Example: List replication configuration rules set on `mybucket` on alias `myminio`*
 
 ```

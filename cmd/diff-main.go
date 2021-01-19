@@ -36,11 +36,12 @@ var (
 
 // Compute differences in object name, size, and date between two buckets.
 var diffCmd = cli.Command{
-	Name:   "diff",
-	Usage:  "list differences in object name, size, and date between two buckets",
-	Action: mainDiff,
-	Before: setGlobalsFromContext,
-	Flags:  append(diffFlags, globalFlags...),
+	Name:         "diff",
+	Usage:        "list differences in object name, size, and date between two buckets",
+	Action:       mainDiff,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -94,6 +95,8 @@ func (d diffMessage) String() string {
 		msg = console.Colorize("DiffMetadata", "! "+d.SecondURL)
 	case differInAASourceMTime:
 		msg = console.Colorize("DiffMMSourceMTime", "! "+d.SecondURL)
+	case differInNone:
+		msg = console.Colorize("DiffInNone", "= "+d.FirstURL)
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
@@ -140,11 +143,14 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	// Verify if secondURL is accessible.
 	_, secondContent, err := url2Stat(ctx, secondURL, "", false, encKeyDB, time.Time{})
 	if err != nil {
-		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
+		// Destination doesn't exist is okay.
+		if _, ok := err.ToGoError().(ObjectMissing); !ok {
+			fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
+		}
 	}
 
 	// Verify if its a directory.
-	if !secondContent.Type.IsDir() {
+	if err == nil && !secondContent.Type.IsDir() {
 		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("`%s` is not a folder.", secondURL))
 	}
 }

@@ -39,11 +39,12 @@ var (
 
 // Display contents of a file.
 var pipeCmd = cli.Command{
-	Name:   "pipe",
-	Usage:  "stream STDIN to an object",
-	Action: mainPipe,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(pipeFlags, ioFlags...), globalFlags...),
+	Name:         "pipe",
+	Usage:        "stream STDIN to an object",
+	Action:       mainPipe,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(pipeFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

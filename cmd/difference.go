@@ -33,13 +33,14 @@ import (
 type differType int
 
 const (
-	differInNone          differType = iota // does not differ
-	differInSize                            // differs in size
-	differInMetadata                        // differs in metadata
-	differInType                            // differs in type, exfile/directory
-	differInFirst                           // only in source (FIRST)
-	differInSecond                          // only in target (SECOND)
-	differInAASourceMTime                   // differs in active-active source modtime
+	differInUnknown       differType = iota
+	differInNone                     // does not differ
+	differInSize                     // differs in size
+	differInMetadata                 // differs in metadata
+	differInType                     // differs in type, exfile/directory
+	differInFirst                    // only in source (FIRST)
+	differInSecond                   // only in target (SECOND)
+	differInAASourceMTime            // differs in active-active source modtime
 )
 
 func (d differType) String() string {
@@ -169,8 +170,8 @@ func dirDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL
 
 func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
 	// Set default values for listing.
-	srcCh := sourceClnt.List(ctx, ListOptions{IsRecursive: isRecursive, IsFetchMeta: isMetadata, ShowDir: dirOpt})
-	tgtCh := targetClnt.List(ctx, ListOptions{IsRecursive: isRecursive, IsFetchMeta: isMetadata, ShowDir: dirOpt})
+	srcCh := sourceClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
+	tgtCh := targetClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
 
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh

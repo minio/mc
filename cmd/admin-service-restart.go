@@ -27,11 +27,12 @@ import (
 )
 
 var adminServiceRestartCmd = cli.Command{
-	Name:   "restart",
-	Usage:  "restart all MinIO servers",
-	Action: mainAdminServiceRestart,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "restart",
+	Usage:        "restart all MinIO servers",
+	Action:       mainAdminServiceRestart,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

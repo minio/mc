@@ -44,11 +44,12 @@ var replicateRemoveFlags = []cli.Flag{
 }
 
 var replicateRemoveCmd = cli.Command{
-	Name:   "rm",
-	Usage:  "remove a server side replication configuration rule",
-	Action: mainReplicateRemove,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, replicateRemoveFlags...),
+	Name:         "rm",
+	Usage:        "remove a server side replication configuration rule",
+	Action:       mainReplicateRemove,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, replicateRemoveFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
    

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,6 +44,18 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "all, a",
 		Usage: "trace all traffic (including internode traffic between MinIO servers)",
 	},
+	cli.StringFlag{
+		Name:  "status-codes",
+		Usage: "trace only specific status codes",
+	},
+	cli.StringFlag{
+		Name:  "methods",
+		Usage: "trace only specific HTTP methods",
+	},
+	cli.StringFlag{
+		Name:  "path",
+		Usage: "trace only specific paths",
+	},
 	cli.BoolFlag{
 		Name:  "errors, e",
 		Usage: "trace failed requests only",
@@ -53,6 +66,7 @@ var adminTraceCmd = cli.Command{
 	Name:            "trace",
 	Usage:           "show http trace for MinIO server",
 	Action:          mainAdminTrace,
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminTraceFlags, globalFlags...),
 	HideHelpCommand: true,
@@ -71,6 +85,13 @@ EXAMPLES:
 
   2. Show trace only for failed requests for a MinIO server with alias 'myminio'
     {{.Prompt}} {{.HelpName}} -v -e myminio
+
+  3. Show the content of 503 failed requests
+    {{.Prompt}} {{.HelpName}} -v --status-codes 503 myminio
+
+  4. Show all requests for a specific prefix
+    {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/ myminio
+
 `,
 }
 
@@ -93,6 +114,27 @@ func mainAdminTrace(ctx *cli.Context) error {
 	verbose := ctx.Bool("verbose")
 	all := ctx.Bool("all")
 	errfltr := ctx.Bool("errors")
+
+	statusCodes := []int{}
+	for _, sc := range strings.Split(ctx.String("status-codes"), ",") {
+		if sc == "" {
+			continue
+		}
+		statusCode, e := strconv.Atoi(sc)
+		fatalIf(probe.NewError(e), "Invalid passed status code.")
+		statusCodes = append(statusCodes, statusCode)
+	}
+
+	methods := []string{}
+	for _, method := range strings.Split(ctx.String("methods"), ",") {
+		if method == "" {
+			continue
+		}
+		methods = append(methods, strings.ToUpper(method))
+	}
+
+	path := ctx.String("path")
+
 	aliasedURL := ctx.Args().Get(0)
 	console.SetColor("Stat", color.New(color.FgYellow))
 
@@ -128,6 +170,40 @@ func mainAdminTrace(ctx *cli.Context) error {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
+		// Filter response status codes if passed by the user
+		if len(statusCodes) > 0 {
+			var found bool
+			for _, code := range statusCodes {
+				if traceInfo.Trace.RespInfo.StatusCode == code {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		// Filter request method if passed by the user
+		if len(methods) > 0 {
+			var found bool
+			for _, method := range methods {
+				if traceInfo.Trace.ReqInfo.Method == method {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		// Filter request path if passed by the user
+		if path != "" {
+			found := pathMatch("/"+path, traceInfo.Trace.ReqInfo.Path)
+			if !found {
+				continue
+			}
+		}
+
 		if verbose {
 			printMsg(traceMessage{ServiceTraceInfo: traceInfo})
 			continue

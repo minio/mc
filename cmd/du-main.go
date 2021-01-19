@@ -54,11 +54,12 @@ var (
 
 // Summarize disk usage.
 var duCmd = cli.Command{
-	Name:   "du",
-	Usage:  "summarize disk usage recursively",
-	Action: mainDu,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(duFlags, ioFlags...), globalFlags...),
+	Name:         "du",
+	Usage:        "summarize disk usage recursively",
+	Action:       mainDu,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(duFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -69,20 +70,20 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
+  MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Summarize disk usage of 'jazz-songs' bucket recursively.
-      {{.Prompt}} {{.HelpName}} s3/jazz-songs
+  1. Summarize disk usage of 'jazz-songs' bucket recursively.
+     {{.Prompt}} {{.HelpName}} s3/jazz-songs
 
-   2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
-      {{.Prompt}} {{.HelpName}} --depth=2 s3/jazz-songs/louis/
+  2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
+     {{.Prompt}} {{.HelpName}} --depth=2 s3/jazz-songs/louis/
 
-   3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time
-      {{.Prompt}} {{.HelpName}} --rewind "2020.01.01" s3/jazz-songs/
+  3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time
+     {{.Prompt}} {{.HelpName}} --rewind "2020.01.01" s3/jazz-songs/
 
-   4. Summarize disk usage of 'jazz-songs' bucket with all objects versions
-      {{.Prompt}} {{.HelpName}} --versions s3/jazz-songs/
+  4. Summarize disk usage of 'jazz-songs' bucket with all objects versions
+     {{.Prompt}} {{.HelpName}} --versions s3/jazz-songs/
 `,
 }
 
@@ -123,7 +124,7 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 	contentCh := clnt.List(globalContext, ListOptions{
 		TimeRef:           timeRef,
 		WithOlderVersions: withVersions,
-		IsRecursive:       false,
+		Recursive:         false,
 		ShowDir:           DirFirst,
 	})
 	size := int64(0)

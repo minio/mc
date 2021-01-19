@@ -223,7 +223,7 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 		return nil
 	}
 
-	lstOptions := ListOptions{IsRecursive: isRecursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: isRecursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.WithDeleteMarkers = true

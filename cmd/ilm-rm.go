@@ -42,11 +42,12 @@ var ilmRemoveFlags = []cli.Flag{
 }
 
 var ilmRmCmd = cli.Command{
-	Name:   "rm",
-	Usage:  "remove (if any) existing lifecycle configuration rule",
-	Action: mainILMRemove,
-	Before: setGlobalsFromContext,
-	Flags:  append(ilmRemoveFlags, globalFlags...),
+	Name:         "rm",
+	Usage:        "remove (if any) existing lifecycle configuration rule",
+	Action:       mainILMRemove,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(ilmRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

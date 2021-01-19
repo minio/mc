@@ -33,14 +33,21 @@ var topLocksFlag = []cli.Flag{
 		Name:  "stale",
 		Usage: "list stale locks",
 	},
+	cli.IntFlag{
+		Name:   "count",
+		Usage:  "number of top locks",
+		Hidden: true,
+		Value:  10,
+	},
 }
 
 var adminTopLocksCmd = cli.Command{
-	Name:   "locks",
-	Usage:  "get a list of the 10 oldest locks on a MinIO cluster.",
-	Before: setGlobalsFromContext,
-	Action: mainAdminTopLocks,
-	Flags:  append(globalFlags, topLocksFlag...),
+	Name:         "locks",
+	Usage:        "get a list of the 10 oldest locks on a MinIO cluster.",
+	Before:       setGlobalsFromContext,
+	Action:       mainAdminTopLocks,
+	OnUsageError: onUsageError,
+	Flags:        append(globalFlags, topLocksFlag...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -122,7 +129,7 @@ func mainAdminTopLocks(ctx *cli.Context) error {
 
 	// Call top locks API
 	entries, e := client.TopLocksWithOpts(globalContext, madmin.TopLockOpts{
-		Count: 10,
+		Count: ctx.Int("count"),
 		Stale: ctx.Bool("stale"),
 	})
 	fatalIf(probe.NewError(e), "Unable to get server locks list.")

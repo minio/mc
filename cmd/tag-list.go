@@ -48,11 +48,12 @@ var tagListFlags = []cli.Flag{
 }
 
 var tagListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "list tags of a bucket or an object",
-	Action: mainListTag,
-	Before: setGlobalsFromContext,
-	Flags:  append(tagListFlags, globalFlags...),
+	Name:         "list",
+	Usage:        "list tags of a bucket or an object",
+	Action:       mainListTag,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(tagListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

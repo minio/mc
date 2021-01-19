@@ -24,11 +24,12 @@ import (
 )
 
 var adminUserRemoveCmd = cli.Command{
-	Name:   "remove",
-	Usage:  "remove user",
-	Action: mainAdminUserRemove,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:         "remove",
+	Usage:        "remove user",
+	Action:       mainAdminUserRemove,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

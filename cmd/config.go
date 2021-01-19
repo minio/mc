@@ -209,8 +209,8 @@ func mustGetHostConfig(alias string) *aliasConfigV10 {
 }
 
 var (
-	hostKeys      = regexp.MustCompile("^(https?://)(.*?):(.*?)@(.*?)$")
-	hostKeyTokens = regexp.MustCompile("^(https?://)(.*?):(.*?):(.*?)@(.*?)$")
+	hostKeys      = regexp.MustCompile("^(https?://)(.*?):(.*)@(.*?)$")
+	hostKeyTokens = regexp.MustCompile("^(https?://)(.*?):(.*?):(.*)@(.*?)$")
 )
 
 // parse url usually obtained from env.

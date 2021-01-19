@@ -45,11 +45,12 @@ var (
 
 // remove a bucket.
 var rbCmd = cli.Command{
-	Name:   "rb",
-	Usage:  "remove a bucket",
-	Action: mainRemoveBucket,
-	Before: setGlobalsFromContext,
-	Flags:  append(rbFlags, globalFlags...),
+	Name:         "rb",
+	Usage:        "remove a bucket",
+	Action:       mainRemoveBucket,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(rbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -129,7 +130,7 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 	go func() {
 		defer close(contentCh)
 		opts := ListOptions{
-			IsRecursive:       true,
+			Recursive:         true,
 			WithOlderVersions: true,
 			WithDeleteMarkers: true,
 			ShowDir:           DirLast,
@@ -222,7 +223,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		// Check if the bucket contains any object, version or delete marker.
 		isEmpty := true
 		opts := ListOptions{
-			IsRecursive:       true,
+			Recursive:         true,
 			ShowDir:           DirNone,
 			WithOlderVersions: true,
 			WithDeleteMarkers: true,

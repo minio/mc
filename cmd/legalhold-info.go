@@ -52,11 +52,12 @@ var (
 	}
 )
 var legalHoldInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "show legal hold info for object(s)",
-	Action: mainLegalHoldInfo,
-	Before: setGlobalsFromContext,
-	Flags:  append(lhInfoFlags, globalFlags...),
+	Name:         "info",
+	Usage:        "show legal hold info for object(s)",
+	Action:       mainLegalHoldInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(lhInfoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -164,7 +165,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	var cErr error
 	errorsFound := false
 	objectsFound := false
-	lstOptions := ListOptions{IsRecursive: recursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.TimeRef = timeRef

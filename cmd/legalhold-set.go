@@ -50,11 +50,12 @@ var (
 	}
 )
 var legalHoldSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set legal hold for object(s)",
-	Action: mainLegalHoldSet,
-	Before: setGlobalsFromContext,
-	Flags:  append(lhSetFlags, globalFlags...),
+	Name:         "set",
+	Usage:        "set legal hold for object(s)",
+	Action:       mainLegalHoldSet,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(lhSetFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -117,7 +118,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	alias, _, _ := mustExpandAlias(urlStr)
 	var cErr error
 	objectsFound := false
-	lstOptions := ListOptions{IsRecursive: recursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.TimeRef = timeRef

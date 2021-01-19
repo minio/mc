@@ -41,11 +41,12 @@ var (
 
 // Share documents via URL.
 var shareDownload = cli.Command{
-	Name:   "download",
-	Usage:  "generate URLs for download access",
-	Action: mainShareDownload,
-	Before: setGlobalsFromContext,
-	Flags:  append(shareDownloadFlags, globalFlags...),
+	Name:         "download",
+	Usage:        "generate URLs for download access",
+	Action:       mainShareDownload,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -155,7 +156,7 @@ func doShareDownloadURL(ctx context.Context, targetURL, versionID string, isRecu
 		// Recursive mode: Share list of objects
 		go func() {
 			defer close(objectsCh)
-			for content := range clnt.List(ctx, ListOptions{IsRecursive: isRecursive, ShowDir: DirNone}) {
+			for content := range clnt.List(ctx, ListOptions{Recursive: isRecursive, ShowDir: DirNone}) {
 				objectsCh <- content
 			}
 		}()

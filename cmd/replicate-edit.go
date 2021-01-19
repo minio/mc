@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -29,7 +30,7 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-var replicateSetFlags = []cli.Flag{
+var replicateEditFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "id",
 		Usage: "id for the rule, should be a unique value",
@@ -54,14 +55,19 @@ var replicateSetFlags = []cli.Flag{
 		Name:  "remote-bucket",
 		Usage: "destination bucket, should be a unique value for the configuration",
 	},
+	cli.StringFlag{
+		Name:  "replicate",
+		Usage: "comma separated list to enable replication of delete markers, and/or deletion of versioned objects.Valid options are \"delete-marker\", \"delete\" and \"\"",
+	},
 }
 
-var replicateSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "modify an existing server side replication configuration rule",
-	Action: mainReplicateSet,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, replicateSetFlags...),
+var replicateEditCmd = cli.Command{
+	Name:         "edit",
+	Usage:        "modify an existing server side replication configuration rule",
+	Action:       mainReplicateEdit,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, replicateEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
    
@@ -83,44 +89,51 @@ EXAMPLES:
 								  --storage-class "STANDARD" --priority 2
   4. Clear tags for replication configuration rule with ID "kMYD.491" on a target myminio/bucket.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags ""
+
+  5. Enable delete marker replication on a replication configuration rule with ID "kxYD.491" on a target myminio/bucket.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate "delete-marker"
+
+  6. Disable delete marker and versioned delete replication on a replication configuration rule with ID "kxYD.491" on a target myminio/bucket.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate ""
+
 `,
 }
 
-// checkReplicateSetSyntax - validate all the passed arguments
-func checkReplicateSetSyntax(ctx *cli.Context) {
+// checkReplicateEditSyntax - validate all the passed arguments
+func checkReplicateEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "edit", 1) // last argument is exit code
 	}
 }
 
-type replicateSetMessage struct {
+type replicateEditMessage struct {
 	Op     string `json:"op"`
 	Status string `json:"status"`
 	URL    string `json:"url"`
 	ID     string `json:"id"`
 }
 
-func (l replicateSetMessage) JSON() string {
+func (l replicateEditMessage) JSON() string {
 	l.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(l, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (l replicateSetMessage) String() string {
+func (l replicateEditMessage) String() string {
 	if l.ID != "" {
-		return console.Colorize("replicateSetMessage", "Replication configuration rule with ID `"+l.ID+"` applied to "+l.URL+".")
+		return console.Colorize("replicateEditMessage", "Replication configuration rule with ID `"+l.ID+"` applied to "+l.URL+".")
 	}
-	return console.Colorize("replicateSetMessage", "Replication configuration rule applied to "+l.URL+" successfully.")
+	return console.Colorize("replicateEditMessage", "Replication configuration rule applied to "+l.URL+" successfully.")
 }
 
-func mainReplicateSet(cliCtx *cli.Context) error {
-	ctx, cancelReplicateSet := context.WithCancel(globalContext)
-	defer cancelReplicateSet()
+func mainReplicateEdit(cliCtx *cli.Context) error {
+	ctx, cancelReplicateEdit := context.WithCancel(globalContext)
+	defer cancelReplicateEdit()
 
-	console.SetColor("replicateSetMessage", color.New(color.FgGreen))
+	console.SetColor("replicateEditMessage", color.New(color.FgGreen))
 
-	checkReplicateSetSyntax(cliCtx)
+	checkReplicateEditSyntax(cliCtx)
 
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
@@ -141,6 +154,24 @@ func mainReplicateSet(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(args...), "--state can be either `enable` or `disable`")
 		}
 	}
+	var vDeleteReplicate, dmReplicate string
+	if cliCtx.IsSet("replicate") {
+		replSlice := strings.Split(cliCtx.String("replicate"), ",")
+		vDeleteReplicate = disableStatus
+		dmReplicate = disableStatus
+		for _, opt := range replSlice {
+			switch strings.TrimSpace(strings.ToLower(opt)) {
+			case "delete-marker":
+				dmReplicate = enableStatus
+			case "delete":
+				vDeleteReplicate = enableStatus
+			default:
+				if opt != "" {
+					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker\"")
+				}
+			}
+		}
+	}
 	opts := replication.Options{
 		TagString:    cliCtx.String("tags"),
 		RoleArn:      cliCtx.String("arn"),
@@ -155,9 +186,12 @@ func mainReplicateSet(cliCtx *cli.Context) error {
 	if cliCtx.IsSet("priority") {
 		opts.Priority = strconv.Itoa(cliCtx.Int("priority"))
 	}
-
+	if cliCtx.IsSet("replicate") {
+		opts.ReplicateDeletes = vDeleteReplicate
+		opts.ReplicateDeleteMarkers = dmReplicate
+	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
-	printMsg(replicateSetMessage{
+	printMsg(replicateEditMessage{
 		Op:  "set",
 		URL: aliasedURL,
 		ID:  opts.ID,

@@ -56,11 +56,12 @@ var (
 )
 
 var retentionInfoCmd = cli.Command{
-	Name:   "info",
-	Usage:  "show retention for object(s)",
-	Action: mainRetentionInfo,
-	Before: setGlobalsFromContext,
-	Flags:  append(retentionInfoFlags, globalFlags...),
+	Name:         "info",
+	Usage:        "show retention for object(s)",
+	Action:       mainRetentionInfo,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(retentionInfoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -310,7 +311,7 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 		return nil
 	}
 
-	lstOptions := ListOptions{IsRecursive: isRecursive, ShowDir: DirNone}
+	lstOptions := ListOptions{Recursive: isRecursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
 		lstOptions.WithOlderVersions = withOlderVersions
 		lstOptions.WithDeleteMarkers = true

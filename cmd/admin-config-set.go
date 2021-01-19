@@ -29,11 +29,12 @@ import (
 )
 
 var adminConfigSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "interactively set a config key parameters",
-	Before: setGlobalsFromContext,
-	Action: mainAdminConfigSet,
-	Flags:  append(adminConfigEnvFlags, globalFlags...),
+	Name:         "set",
+	Usage:        "interactively set a config key parameters",
+	Before:       setGlobalsFromContext,
+	Action:       mainAdminConfigSet,
+	OnUsageError: onUsageError,
+	Flags:        append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -49,6 +50,9 @@ EXAMPLES:
 
   2. Change region name for the MinIO server to 'us-west-1'.
      {{.Prompt}} {{.HelpName}} myminio/ region name=us-west-1
+
+  3. Change healing settings on a distributed MinIO server setup.
+     {{.Prompt}} {{.HelpName}} mydist/ heal max_delay=300ms max_io=50
 `,
 }
 
@@ -56,15 +60,18 @@ EXAMPLES:
 type configSetMessage struct {
 	Status      string `json:"status"`
 	targetAlias string
+	restart     bool
 }
 
 // String colorized service status message.
 func (u configSetMessage) String() (msg string) {
 	msg += console.Colorize("SetConfigSuccess",
-		"Setting new key has been successful.\n")
-	suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
-	msg += console.Colorize("SetConfigSuccess",
-		fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
+		"Successfully applied new settings.")
+	if u.restart {
+		suggestion := fmt.Sprintf("\nmc admin service restart %s", u.targetAlias)
+		msg += console.Colorize("SetConfigSuccess",
+			fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
+	}
 	return
 }
 
@@ -119,12 +126,13 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	}
 
 	// Call set config API
-	fatalIf(probe.NewError(client.SetConfigKV(globalContext, input)),
-		"Unable to set '%s' to server", input)
+	restart, e := client.SetConfigKV(globalContext, input)
+	fatalIf(probe.NewError(e), "Unable to set '%s' to server", input)
 
 	// Print set config result
 	printMsg(configSetMessage{
 		targetAlias: aliasedURL,
+		restart:     restart,
 	})
 
 	return nil

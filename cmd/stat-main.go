@@ -50,11 +50,12 @@ var (
 
 // show object metadata
 var statCmd = cli.Command{
-	Name:   "stat",
-	Usage:  "show object metadata",
-	Action: mainStat,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(statFlags, ioFlags...), globalFlags...),
+	Name:         "stat",
+	Usage:        "show object metadata",
+	Action:       mainStat,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(statFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -155,10 +156,6 @@ func mainStat(cliCtx *cli.Context) error {
 
 	// check 'stat' cli arguments.
 	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx, encKeyDB)
-	if withVersions && rewind.IsZero() {
-		rewind = time.Now().UTC()
-	}
-
 	// mimic operating system tool behavior.
 	if len(args) == 0 {
 		args = []string{"."}

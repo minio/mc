@@ -78,11 +78,12 @@ var treeFlags = []cli.Flag{
 
 // trees files and folders.
 var treeCmd = cli.Command{
-	Name:   "tree",
-	Usage:  "list buckets and objects in a tree format",
-	Action: mainTree,
-	Before: setGlobalsFromContext,
-	Flags:  append(treeFlags, globalFlags...),
+	Name:         "tree",
+	Usage:        "list buckets and objects in a tree format",
+	Action:       mainTree,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(treeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -226,7 +227,7 @@ func doTree(ctx context.Context, url string, timeRef time.Time, level int, leaf 
 		return nil
 	}
 
-	for content := range clnt.List(ctx, ListOptions{IsRecursive: false, TimeRef: timeRef, ShowDir: DirNone}) {
+	for content := range clnt.List(ctx, ListOptions{Recursive: false, TimeRef: timeRef, ShowDir: DirFirst}) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to tree.")
 			continue
@@ -283,7 +284,7 @@ func mainTree(cliCtx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(ctx, clnt, true, false, timeRef, false); e != nil {
+			if e := doList(ctx, clnt, true, false, false, timeRef, false); e != nil {
 				cErr = e
 			}
 		}

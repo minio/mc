@@ -77,11 +77,12 @@ var (
 
 // Display contents of a file.
 var sqlCmd = cli.Command{
-	Name:   "sql",
-	Usage:  "run sql queries on objects",
-	Action: mainSQL,
-	Before: setGlobalsFromContext,
-	Flags:  append(append(sqlFlags, ioFlags...), globalFlags...),
+	Name:         "sql",
+	Usage:        "run sql queries on objects",
+	Action:       mainSQL,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(append(sqlFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -472,7 +473,7 @@ func mainSQL(cliCtx *cli.Context) error {
 			continue
 		}
 
-		for content := range clnt.List(ctx, ListOptions{IsRecursive: cliCtx.Bool("recursive"), ShowDir: DirNone}) {
+		for content := range clnt.List(ctx, ListOptions{Recursive: cliCtx.Bool("recursive"), ShowDir: DirNone}) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue

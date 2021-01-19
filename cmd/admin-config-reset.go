@@ -35,11 +35,12 @@ var adminConfigEnvFlags = []cli.Flag{
 }
 
 var adminConfigResetCmd = cli.Command{
-	Name:   "reset",
-	Usage:  "interactively reset a config key parameters",
-	Before: setGlobalsFromContext,
-	Action: mainAdminConfigReset,
-	Flags:  append(adminConfigEnvFlags, globalFlags...),
+	Name:         "reset",
+	Usage:        "interactively reset a config key parameters",
+	Before:       setGlobalsFromContext,
+	Action:       mainAdminConfigReset,
+	OnUsageError: onUsageError,
+	Flags:        append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

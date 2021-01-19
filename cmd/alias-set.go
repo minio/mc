@@ -54,6 +54,7 @@ var aliasSetCmd = cli.Command{
 	Action: func(cli *cli.Context) error {
 		return mainAliasSet(cli, false)
 	},
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           append(aliasSetFlags, globalFlags...),
 	HideHelpCommand: true,

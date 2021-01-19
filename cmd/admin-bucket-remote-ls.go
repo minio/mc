@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -34,11 +35,12 @@ var adminBucketRemoteListFlags = []cli.Flag{
 }
 
 var adminBucketRemoteListCmd = cli.Command{
-	Name:   "ls",
-	Usage:  "list remote target ARN(s)",
-	Action: mainAdminBucketRemoteList,
-	Before: setGlobalsFromContext,
-	Flags:  append(globalFlags, adminBucketRemoteListFlags...),
+	Name:         "ls",
+	Usage:        "list remote target ARN(s)",
+	Action:       mainAdminBucketRemoteList,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(globalFlags, adminBucketRemoteListFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -77,14 +79,15 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 	console.SetColor("SourceBucket", color.New(color.FgYellow))
 	console.SetColor("TargetBucket", color.New(color.FgYellow))
 	console.SetColor("TargetURL", color.New(color.FgHiWhite))
+	console.SetColor("TargetLabel", color.New(color.FgHiCyan))
 	console.SetColor("ARN", color.New(color.FgCyan))
 	console.SetColor("Arrow", color.New(color.FgHiWhite))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	aliasedURL = filepath.Clean(aliasedURL)
 	_, sourceBucket := url2Alias(aliasedURL)
-
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
@@ -99,7 +102,7 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 	maxURLLen := 10
 	maxTgtLen := 6
 	maxSrcLen := 6
-
+	maxLabelLen := 5
 	if !globalJSON {
 		if len(targets) == 0 {
 			console.Print(console.Colorize("RemoteListEmpty", fmt.Sprintf("No remote targets found for `%s`. \n", urlStr)))
@@ -116,17 +119,19 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			if len(t.SourceBucket) > maxSrcLen {
 				maxSrcLen = len(t.SourceBucket)
 			}
+			if len(t.Label) > maxLabelLen {
+				maxLabelLen = len(t.Label)
+			}
 		}
 		if maxURLLen > 0 {
-			console.Println(console.Colorize("RemoteListMessage", fmt.Sprintf("%-*.*s %-*.*s->%-*.*s %s", maxURLLen+8, maxURLLen+8, "Remote URL", maxSrcLen, maxSrcLen, "Source", maxTgtLen, maxTgtLen, "Target", "ARN")))
+			console.Println(console.Colorize("RemoteListMessage", fmt.Sprintf("%-*.*s %-*.*s %-*.*s->%-*.*s %s", maxURLLen+8, maxURLLen+8, "Remote URL", maxLabelLen, maxLabelLen, "Label", maxSrcLen, maxSrcLen, "Source", maxTgtLen, maxTgtLen, "Target", "ARN")))
 		}
-
 	}
 	for _, target := range targets {
-		targetURL := target.URL()
+		targetURL := target.URL().String()
 		if !globalJSON {
 			if maxURLLen > 0 {
-				targetURL = fmt.Sprintf("%-*.*s", maxURLLen+8, maxURLLen+8, target.URL())
+				targetURL = fmt.Sprintf("%-*.*s", maxURLLen+8, maxURLLen+8, target.URL().String())
 			}
 			if maxTgtLen > 0 {
 				target.TargetBucket = fmt.Sprintf("%-*.*s", maxTgtLen, maxTgtLen, target.TargetBucket)
@@ -135,8 +140,10 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			if maxSrcLen > 0 {
 				target.SourceBucket = fmt.Sprintf("%-*.*s", maxSrcLen, maxSrcLen, target.SourceBucket)
 			}
+			if maxLabelLen > 0 {
+				target.Label = fmt.Sprintf("%-*.*s", maxLabelLen, maxLabelLen, target.Label)
+			}
 		}
-
 		printMsg(RemoteMessage{
 			op:           ctx.Command.Name,
 			AccessKey:    target.Credentials.AccessKey,
@@ -145,6 +152,7 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			SourceBucket: target.SourceBucket,
 			RemoteARN:    target.Arn,
 			ServiceType:  string(target.Type),
+			TargetLabel:  target.Label,
 		})
 	}
 }

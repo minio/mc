@@ -608,23 +608,40 @@ USAGE:
   mc admin config COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  get     get config of a MinIO server/cluster.
-  set     set new config file to a MinIO server/cluster.
+  get      interactively retrieve a config key parameters
+  set      interactively set a config key parameters
+  reset    interactively reset a config key parameters
+  history  show all historic configuration changes
+  restore  rollback back changes to a specific config history
+  export   export all config keys to STDOUT
+  import   import multiple config keys from STDIN
 
 FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Get server configuration of a MinIO server/cluster.*
+*Example: Get 'etcd' sub-system configuration.*
 
 ```
-mc admin config get myminio > /tmp/my-serverconfig
+mc admin config get myminio etcd
+etcd endpoints= path_prefix= coredns_path=/skydns client_cert= client_cert_key=
 ```
 
-*Example: Set server configuration of a MinIO server/cluster.*
+*Example: Set specific settings on 'etcd' sub-system.*
+```
+mc admin config set myminio etcd endpoints=http://etcd.svc.cluster.local:2379
+```
+
+*Example: Get entire server configuration of a MinIO server/cluster.*
 
 ```
-mc admin config set myminio < /tmp/my-serverconfig
+mc admin config export myminio > /tmp/my-serverconfig
+```
+
+*Example: Set entire server configuration of a MinIO server/cluster.*
+
+```
+mc admin config import myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
@@ -872,12 +889,25 @@ COMMANDS:
   rm   remove configured remote target
 
 ```
-*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint.
-*
+
+*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint.*
 
 ```
 mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1"
 ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
+```
+
+*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint. The max bandwidth is metric 2G (2*10^9)*
+
+```
+mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2G"
+ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
+```
+
+*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint. The max bandwidth is IEC 2Gi (2*2^30)*
+
+```
+mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2Gi"
 ```
 
 *Example: Get remote target for replication on bucket 'srcbucket' in MinIO.*
