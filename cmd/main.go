@@ -18,9 +18,12 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -289,34 +292,52 @@ func installAutoCompletion() {
 
 	shellName := os.Getenv("SHELL")
 	if shellName == "" {
-		shellName = "$SHELL"
+		ppid := os.Getppid()
+		cmd := exec.Command("ps", "-p", strconv.Itoa(ppid), "-o", "comm=")
+		ppName, err := cmd.Output()
+		if err != nil {
+			fatalIf(probe.NewError(err), "Failed to enable autocompletion. Cannot determine shell type and"+
+				"no SHELL environment variable found")
+		}
+		shellName = strings.TrimSpace(string(ppName))
+		console.Infoln("No 'SHELL' env var. Your shell is auto determined as '" + shellName + "'.")
 	} else {
-		shellName = filepath.Base(shellName)
+		console.Infoln("Your shell is set to '" + shellName + "', by env var 'SHELL'.")
 	}
+	shellName = strings.ToLower(filepath.Base(shellName))
+
 	supportedShells := map[string]bool{
 		"bash": true,
 		"zsh":  true,
 		"fish": true,
 	}
 
+	if !supportedShells[shellName] {
+		fatalIf(probe.NewError(errors.New("")),
+			"'"+shellName+"' is not a supported shell. "+
+				"Supported shells are: bash, zsh, fish")
+	}
+
 	err := completeinstall.Install(filepath.Base(os.Args[0]))
-	if err != nil {
-		if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
-			errStr := err.Error()
-			if supportedShells[shellName] {
-				console.Infoln("autocompletion is already enabled in your '"+shellName+"' shell.\n", errStr[strings.Index(errStr, "\n")+1:])
-			} else {
-				console.Infoln("autocompletion is already enabled\n", errStr[strings.Index(errStr, "\n")+1:])
-			}
-			return
-		}
-		fatalIf(probe.NewError(err), "Unable to install auto-completion.")
-	} else {
-		if supportedShells[shellName] {
-			console.Infoln("enabled autocompletion in your '" + shellName + "' rc file. Please restart your shell.")
+	var printMsg string
+	if err != nil && strings.Contains(err.Error(), "* already installed") {
+		errStr := err.Error()[strings.Index(err.Error(), "\n")+1:]
+		re := regexp.MustCompile(`[::space::]*\*.*` + shellName + `.*`)
+		relatedMsg := re.FindStringSubmatch(errStr)
+		if len(relatedMsg) > 0 {
+			printMsg = "\n" + relatedMsg[0]
 		} else {
-			console.Infoln("enabled autocompletion in bash, zsh and fish where possible.")
+			printMsg = ""
 		}
+	}
+	if printMsg != "" {
+		if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
+			console.Infoln("autocompletion is enabled.", printMsg)
+		} else {
+			fatalIf(probe.NewError(err), "Unable to install auto-completion.")
+		}
+	} else {
+		console.Infoln("enabled autocompletion in your '" + shellName + "' rc file. Please restart your shell.")
 	}
 }
 
