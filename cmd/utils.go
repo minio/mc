@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -138,8 +137,7 @@ func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 	s3Config := new(Config)
 
 	s3Config.AppName = filepath.Base(os.Args[0])
-	s3Config.AppVersion = Version
-	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
+	s3Config.AppVersion = ReleaseTag
 	s3Config.Debug = globalDebug
 	s3Config.Insecure = globalInsecure
 
