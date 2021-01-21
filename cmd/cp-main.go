@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -325,7 +326,8 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 				break
 			}
 
-			jsonData, e := json.Marshal(cpURLs)
+			var jsoniter = jsoniter.ConfigCompatibleWithStandardLibrary
+			jsonData, e := jsoniter.Marshal(cpURLs)
 			if e != nil {
 				session.Delete()
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
@@ -397,6 +399,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		pg.SetTotal(totalBytes)
 
 		go func() {
+			var jsoniter = jsoniter.ConfigCompatibleWithStandardLibrary
 			// Prepare URL scanner from session data file.
 			urlScanner := bufio.NewScanner(session.NewDataReader())
 			for {
@@ -406,7 +409,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				}
 
 				var cpURLs URLs
-				if e := json.Unmarshal([]byte(urlScanner.Text()), &cpURLs); e != nil {
+				if e := jsoniter.Unmarshal([]byte(urlScanner.Text()), &cpURLs); e != nil {
 					errorIf(probe.NewError(e), "Unable to unmarshal %s", urlScanner.Text())
 					continue
 				}
