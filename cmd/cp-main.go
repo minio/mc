@@ -533,11 +533,11 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					parallel.queueTask(func() URLs {
 						return doCopyFake(ctx, cpURLs, pg, isMvCmd)
-					})
+					}, false)
 				} else {
 					parallel.queueTask(func() URLs {
 						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
-					})
+					}, cpURLs.SourceContent.Size > 128*1024*1024)
 				}
 			}
 		}

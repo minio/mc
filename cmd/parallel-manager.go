@@ -58,8 +58,8 @@ type ParallelManager struct {
 	// Current threads number
 	workersNum uint32
 
-	// Channel to receive tasks to run
-	queueCh chan task
+	// Channels to receive tasks to run
+	queueChannels []chan task
 
 	// Channel to send back results
 	resultCh chan URLs
@@ -68,7 +68,7 @@ type ParallelManager struct {
 }
 
 // addWorker creates a new worker to process tasks
-func (p *ParallelManager) addWorker() {
+func (p *ParallelManager) addWorker(channelNum int) {
 	if atomic.LoadUint32(&p.workersNum) >= maxParallelWorkers {
 		// Number of maximum workers is reached, no need to
 		// to create a new one.
@@ -83,7 +83,7 @@ func (p *ParallelManager) addWorker() {
 	go func() {
 		for {
 			// Wait for jobs
-			t, ok := <-p.queueCh
+			t, ok := <-p.queueChannels[channelNum]
 			if !ok {
 				// No more tasks, quit
 				p.wg.Done()
@@ -144,7 +144,7 @@ func (p *ParallelManager) monitorProgress() {
 				}
 
 				for i := 0; i < defaultWorkerFactor; i++ {
-					p.addWorker()
+					p.addWorker(1)
 				}
 			}
 		}
@@ -152,46 +152,59 @@ func (p *ParallelManager) monitorProgress() {
 }
 
 // Queue task in parallel
-func (p *ParallelManager) queueTask(fn func() URLs) {
-	p.doQueueTask(task{fn: fn})
+func (p *ParallelManager) queueTask(fn func() URLs, longOp bool) {
+	p.doQueueTask(task{fn: fn}, longOp)
 }
 
 // Queue task but ensures that no tasks is running at parallel,
 // which also means wait until all concurrent tasks finish before
 // queueing this and execute it solely.
-func (p *ParallelManager) queueTaskWithBarrier(fn func() URLs) {
-	p.doQueueTask(task{fn: fn, barrier: true})
+func (p *ParallelManager) queueTaskWithBarrier(fn func() URLs, longOp bool) {
+	p.doQueueTask(task{fn: fn, barrier: true}, longOp)
 }
 
-func (p *ParallelManager) doQueueTask(t task) {
+func (p *ParallelManager) doQueueTask(t task, longOp bool) {
 	if t.barrier {
 		p.barrierSync.Lock()
 	} else {
 		p.barrierSync.RLock()
 	}
-	p.queueCh <- t
+	if longOp {
+		p.queueChannels[0] <- t
+	} else {
+		p.queueChannels[1] <- t
+	}
 }
 
 // Wait for all workers to finish tasks before shutting down Parallel
 func (p *ParallelManager) stopAndWait() {
-	close(p.queueCh)
+	for _, q := range p.queueChannels {
+		close(q)
+	}
 	p.wg.Wait()
 	close(p.stopMonitorCh)
 }
 
 // newParallelManager starts new workers waiting for executing tasks
 func newParallelManager(resultCh chan URLs) *ParallelManager {
+	queueChannels := make([]chan task, 2)
+	for i := range queueChannels {
+		queueChannels[i] = make(chan task)
+	}
 	p := &ParallelManager{
 		wg:            &sync.WaitGroup{},
 		workersNum:    0,
 		stopMonitorCh: make(chan struct{}),
-		queueCh:       make(chan task),
+		queueChannels: queueChannels,
 		resultCh:      resultCh,
 	}
 
-	// Start with runtime.NumCPU().
+	// Start one worker which uploads big files
+	p.addWorker(0)
+
+	// Start workers for small files with runtime.NumCPU().
 	for i := 0; i < runtime.NumCPU(); i++ {
-		p.addWorker()
+		p.addWorker(1)
 	}
 
 	// Start monitoring tasks progress
