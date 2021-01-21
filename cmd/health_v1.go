@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -201,6 +202,13 @@ func MapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo
 		},
 		OsInfo: healthInfo.Sys.OsInfo,
 	}
+
+	for i := range ch.Software.Minio.Info.Servers {
+		if ch.Software.Minio.Info.Servers[i].PoolID == "" {
+			ch.Software.Minio.Info.Servers[i].PoolID = fmt.Sprintf("%d", i)
+		}
+	}
+
 	return ch
 }
 
