@@ -280,9 +280,8 @@ func mainMove(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// Parse metadata.
-	userMetaMap := make(map[string]string)
 	if cliCtx.String("attr") != "" {
-		userMetaMap, err = getMetaDataEntry(cliCtx.String("attr"))
+		_, err = getMetaDataEntry(cliCtx.String("attr"))
 		fatalIf(err, "Unable to parse attribute %v", cliCtx.String("attr"))
 	}
 
@@ -319,60 +318,17 @@ func mainMove(cliCtx *cli.Context) error {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	recursive := cliCtx.Bool("recursive")
-	olderThan := cliCtx.String("older-than")
-	newerThan := cliCtx.String("newer-than")
-	storageClass := cliCtx.String("storage-class")
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := cliCtx.String("encrypt-key"); key != "" {
 		sseKeys = key
 	}
 
 	if sseKeys != "" {
-		sseKeys, err = getDecodedKey(sseKeys)
+		_, err = getDecodedKey(sseKeys)
 		fatalIf(err, "Unable to parse encryption keys.")
 	}
-	sse := cliCtx.String("encrypt")
 
-	var session *sessionV8
-
-	if cliCtx.Bool("continue") {
-		sessionID := getHash("mv", cliCtx.Args())
-		if isSessionExists(sessionID) {
-			session, err = loadSessionV8(sessionID)
-			fatalIf(err.Trace(sessionID), "Unable to load session.")
-		} else {
-			session = newSessionV8(sessionID)
-			session.Header.CommandType = "mv"
-			session.Header.CommandBoolFlags["recursive"] = recursive
-			session.Header.CommandStringFlags["older-than"] = olderThan
-			session.Header.CommandStringFlags["newer-than"] = newerThan
-			session.Header.CommandStringFlags["storage-class"] = storageClass
-			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
-			session.Header.CommandStringFlags["encrypt"] = sse
-			session.Header.CommandBoolFlags["session"] = cliCtx.Bool("continue")
-
-			if cliCtx.Bool("preserve") {
-				session.Header.CommandBoolFlags["preserve"] = cliCtx.Bool("preserve")
-			}
-			session.Header.UserMetaData = userMetaMap
-			session.Header.CommandBoolFlags["disable-multipart"] = cliCtx.Bool("disable-multipart")
-
-			var e error
-			if session.Header.RootPath, e = os.Getwd(); e != nil {
-				session.Delete()
-				fatalIf(probe.NewError(e), "Unable to get current working folder.")
-			}
-
-			// extract URLs.
-			session.Header.CommandArgs = cliCtx.Args()
-		}
-	}
-
-	e := doCopySession(ctx, cancelMove, cliCtx, session, encKeyDB, true)
-	if session != nil {
-		session.Delete()
-	}
+	e := doCopySession(ctx, cancelMove, cliCtx, nil, encKeyDB, true)
 
 	console.Colorize("Copy", "Waiting for move operations to complete")
 	rmManager.close()
