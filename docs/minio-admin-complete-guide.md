@@ -228,9 +228,7 @@ mc admin --json info play
         "backend": {
             "backendType": "Erasure",
             "onlineDisks": 4,
-            "rrSCData": 2,
             "rrSCParity": 2,
-            "standardSCData": 2,
             "standardSCParity": 2
         },
         "servers": [
