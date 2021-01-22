@@ -58,6 +58,21 @@ docker run -it --entrypoint=/bin/sh minio/mc
 
 then use the [`mc config` command](#add-a-cloud-storage-service).
 
+### GitLab CI
+When using the Docker container in GitLab CI, you must [set the entrypoint to an empty string](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#overriding-the-entrypoint-of-an-image).
+
+```
+deploy:
+  image:
+    name: minio/mc
+    entrypoint: ['']
+  stage: deploy
+  before_script:
+    - mc alias set minio $MINIO_HOST $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+  script:
+    - mc cp <source> <destination>
+```
+
 ## macOS
 ### Homebrew
 Install mc packages using [Homebrew](http://brew.sh/)
