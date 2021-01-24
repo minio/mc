@@ -69,6 +69,7 @@ type ListOptions struct {
 	WithDeleteMarkers bool
 	TimeRef           time.Time
 	ShowDir           DirOpt
+	Count             int
 }
 
 // CopyOptions holds options for copying operation

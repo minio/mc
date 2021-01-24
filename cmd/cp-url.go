@@ -54,8 +54,14 @@ const (
 // functions to accurately report failure causes.
 func guessCopyURLType(ctx context.Context, sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair, timeRef time.Time, versionID string) (copyURLsType, string, *probe.Error) {
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
+		var err *probe.Error
+		var sourceContent *ClientContent
 		sourceURL := sourceURLs[0]
-		_, sourceContent, err := url2Stat(ctx, sourceURL, versionID, false, keys, timeRef)
+		if !isRecursive {
+			_, sourceContent, err = url2Stat(ctx, sourceURL, versionID, false, keys, timeRef)
+		} else {
+			_, sourceContent, err = firstURL2Stat(ctx, sourceURL, timeRef)
+		}
 		if err != nil {
 			return copyURLsTypeInvalid, "", err
 		}

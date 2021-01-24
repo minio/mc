@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -52,7 +53,12 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
-		_, _, err := url2Stat(ctx, srcURL, versionID, false, encKeyDB, timeRef)
+		var err *probe.Error
+		if !isRecursive {
+			_, _, err = url2Stat(ctx, srcURL, versionID, false, encKeyDB, timeRef)
+		} else {
+			_, _, err = firstURL2Stat(ctx, srcURL, timeRef)
+		}
 		if err != nil {
 			msg := "Unable to validate source `" + srcURL + "`"
 			if versionID != "" {
