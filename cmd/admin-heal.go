@@ -38,34 +38,74 @@ const (
 var adminHealFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "scan",
-		Usage: "[DEPRECATED] select the healing scan mode (normal/deep)",
+		Usage: "select the healing scan mode (normal/deep)",
 		Value: scanNormalMode,
 	},
 	cli.BoolFlag{
 		Name:  "recursive, r",
-		Usage: "[DEPRECATED] heal recursively",
+		Usage: "heal recursively",
 	},
 	cli.BoolFlag{
 		Name:  "dry-run, n",
-		Usage: "[DEPRECATED] only inspect data, but do not mutate",
+		Usage: "only inspect data, but do not mutate",
 	},
 	cli.BoolFlag{
 		Name:  "force-start, f",
-		Usage: "[DEPRECATED] force start a new heal sequence",
+		Usage: "force start a new heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "force-stop, s",
-		Usage: "[DEPRECATED] force stop a running heal sequence",
+		Usage: "force stop a running heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "remove",
-		Usage: "[DEPRECATED] remove dangling objects in heal sequence",
+		Usage: "remove dangling objects in heal sequence",
 	},
+}
+
+var adminHealSetsFlags = []cli.Flag{
+	cli.StringSliceFlag{
+		Name:  "set",
+		Usage: "set to be healed",
+	},
+	cli.StringFlag{
+		Name:  "max-io",
+		Usage: "maximum IO requests allowed between objects to slow down heal operation",
+		Value: "100",
+	},
+	cli.StringFlag{
+		Name:  "max-sleep",
+		Usage: "maximum sleep duration between objects to slow down heal operation",
+		Value: "1s",
+	},
+	cli.StringFlag{
+		Name:  "cancel-task",
+		Usage: "cancel the background task id",
+	},
+}
+
+var adminHealSetsCmd = cli.Command{
+	Name:            "heal-sets",
+	Usage:           "heal specific erasure set groups on MinIO server",
+	Action:          mainAdminHealSets,
+	Before:          setGlobalsFromContext,
+	Flags:           append(adminHealSetsFlags, globalFlags...),
+	HideHelpCommand: true,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+`,
 }
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "[DEPRECATED] heal disks, buckets and objects on MinIO server",
+	Usage:           "heal disks, buckets and objects on MinIO server",
 	Action:          mainAdminHeal,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),
@@ -82,9 +122,6 @@ FLAGS:
 SCAN MODES:
   normal (default): Heal objects which are missing on one or more disks.
   deep            : Heal objects which are missing or with silent data corruption on one or more disks.
-
-DEPRECATED:
-  MinIO server now supports auto-heal, this command will be removed in future.
 `,
 }
 
@@ -163,6 +200,46 @@ func transformScanArg(scanArg string) madmin.HealScanMode {
 		return madmin.HealDeepScan
 	}
 	return madmin.HealNormalScan
+}
+
+func checkAdminHealSetsSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelpAndExit(ctx, "heal-sets", 1) // last argument is exit code
+	}
+}
+
+// mainAdminHealSets - the entry function of heal command
+func mainAdminHealSets(ctx *cli.Context) error {
+	checkAdminHealSetsSyntax(ctx)
+
+	// Get the alias parameter from cli
+	args := ctx.Args()
+	aliasedURL := args.Get(0)
+
+	// Create a new MinIO Admin Client
+	client, err := newAdminClient(aliasedURL)
+	if err != nil {
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
+		return nil
+	}
+
+	if taskID := ctx.String("cancel-task"); taskID != "" {
+		e := client.CancelHealSets(globalContext, madmin.HealSetsOpts{
+			TaskID: taskID,
+		})
+		fatalIf(probe.NewError(e), "Failed to cancel heal sequence.")
+		return nil
+	}
+
+	taskID, e := client.HealSets(globalContext, madmin.HealSetsOpts{
+		Sets:       strings.Join(ctx.StringSlice("set"), ","),
+		SleepMaxIO: ctx.String("max-io"),
+		SleepMax:   ctx.String("max-sleep"),
+	})
+	fatalIf(probe.NewError(e), "Failed to start heal sequence.")
+
+	fmt.Println("Running task ID in background", taskID)
+	return nil
 }
 
 // mainAdminHeal - the entry function of heal command
