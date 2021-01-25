@@ -1408,8 +1408,9 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if err == nil {
 			return ctnt, nil
 		}
+
 		// Ignore object missing error but return for other errors
-		if !errors.As(err.ToGoError(), &ObjectMissing{}) {
+		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
 	}
