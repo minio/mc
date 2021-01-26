@@ -33,7 +33,7 @@ import (
 
 const (
 	defaultJobName     = "minio-job"
-	defaultMetricsPath = "/minio/prometheus/metrics"
+	defaultMetricsPath = "/minio/v2/metrics/cluster"
 )
 
 var adminPrometheusGenerateCmd = cli.Command{

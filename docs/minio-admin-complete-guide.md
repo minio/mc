@@ -777,7 +777,7 @@ _Example: Generates prometheus config for an <alias>._
 mc admin prometheus generate <alias>
 - job_name: minio-job
   bearer_token: <token>
-  metrics_path: /minio/prometheus/metrics
+  metrics_path: /minio/v2/metrics/cluster
   scheme: http
   static_configs:
   - targets: ['localhost:9000']
