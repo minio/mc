@@ -111,6 +111,10 @@ var (
 			Name:  "attr",
 			Usage: "add custom metadata for all objects",
 		},
+		cli.BoolFlag{
+			Name:  "replicate",
+			Usage: "Replicate all data and attributes",
+		},
 	}
 )
 
@@ -188,6 +192,10 @@ EXAMPLES:
   16. Cross mirror between sites in a active-active deployment.
       Site-A: {{.Prompt}} {{.HelpName}} --active-active siteA siteB
       Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
+
+  17. Replicate objects between two versioned buckets.
+      {{.Prompt}} {{.HelpName}} --replicate siteA/bucket/ siteB/bucket/
+
 `,
 }
 
@@ -281,14 +289,15 @@ func (mj *mirrorJob) doDeleteBucket(ctx context.Context, sURLs URLs) URLs {
 	contentCh <- &ClientContent{URL: clnt.GetURL()}
 	close(contentCh)
 
-	for err := range clnt.Remove(ctx, false, true, false, contentCh) {
+	for err := range clnt.Remove(ctx, RemoveOptions{isIncomplete: false, isRemoveBucket: true, isBypass: false}, contentCh) {
 		return sURLs.WithError(err)
 	}
 
 	return sURLs.WithError(nil)
 }
 
-// doRemove - removes files on target.
+// doRemove - removes files on target - the function is also able
+// to replicate delete marker when SourceContent is not nil
 func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	if mj.opts.isFake {
 		return sURLs.WithError(nil)
@@ -301,11 +310,20 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 		return sURLs.WithError(pErr)
 	}
 	clnt.AddUserAgent(uaMirrorAppName, ReleaseTag)
+
+	ctnt := &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
+
+	replicateDeleteMarker := mj.opts.replicate && sURLs.SourceContent != nil && sURLs.SourceContent.IsDeleteMarker
+	if replicateDeleteMarker {
+		ctnt.VersionID = sURLs.SourceContent.VersionID
+		ctnt.Time = sURLs.SourceContent.Time
+		ctnt.IsDeleteMarker = sURLs.SourceContent.IsDeleteMarker
+	}
+
 	contentCh := make(chan *ClientContent, 1)
-	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
+	contentCh <- ctnt
 	close(contentCh)
-	isRemoveBucket := false
-	errorCh := clnt.Remove(ctx, false, isRemoveBucket, false, contentCh)
+	errorCh := clnt.Remove(ctx, RemoveOptions{replicateDeleteMarker: replicateDeleteMarker}, contentCh)
 	for pErr := range errorCh {
 		if pErr != nil {
 			switch pErr.ToGoError().(type) {
@@ -320,8 +338,136 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	return sURLs.WithError(nil)
 }
 
+// doMirrorLegalhold
+func (mj *mirrorJob) doMirrorLegalHold(ctx context.Context, sURLs URLs) URLs {
+	if mj.opts.isFake {
+		return sURLs.WithError(nil)
+	}
+
+	sourcePath := filepath.ToSlash(filepath.Join(sURLs.SourceAlias, sURLs.SourceContent.URL.Path))
+	targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
+
+	shouldMirror := false
+	targetClient, err := newClient(targetPath)
+	if err != nil {
+		// cannot create targetclient
+		return sURLs.WithError(err)
+	}
+	if !mj.opts.isOverwrite && !mj.opts.activeActive {
+		_, err = targetClient.GetObjectLegalHold(ctx, sURLs.TargetContent.VersionID)
+		if err == nil {
+			return sURLs.WithError(probe.NewError(LegalholdAlreadyExists{}))
+		} // doesn't exist
+		shouldMirror = true
+	}
+	if shouldMirror || mj.opts.isOverwrite || mj.opts.activeActive {
+		sourceClient, err := newClient(sourcePath)
+		if err != nil {
+			// cannot create targetclient
+			return sURLs.WithError(err)
+		}
+		legalhold, err := sourceClient.GetObjectLegalHold(ctx, sURLs.SourceContent.VersionID)
+		if err != nil {
+			return sURLs.WithError(err)
+		}
+		return sURLs.WithError(targetClient.PutObjectLegalHold(ctx, sURLs.TargetContent.VersionID, legalhold))
+	}
+	return sURLs.WithError(probe.NewError(LegalholdAlreadyExists{}))
+}
+
+// doMirrorRetention
+func (mj *mirrorJob) doMirrorRetention(ctx context.Context, sURLs URLs) URLs {
+	if mj.opts.isFake {
+		return sURLs.WithError(nil)
+	}
+
+	sourcePath := filepath.ToSlash(filepath.Join(sURLs.SourceAlias, sURLs.SourceContent.URL.Path))
+	targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
+
+	shouldMirror := false
+	targetClient, err := newClient(targetPath)
+	if err != nil {
+		// cannot create targetclient
+		return sURLs.WithError(err)
+	}
+	if !mj.opts.isOverwrite && !mj.opts.activeActive {
+		_, _, err = targetClient.GetObjectRetention(ctx, sURLs.TargetContent.VersionID)
+		if err == nil {
+			return sURLs.WithError(probe.NewError(RetentionAlreadyExists{}))
+		} // doesn't exist
+		shouldMirror = true
+	}
+	if shouldMirror || mj.opts.isOverwrite || mj.opts.activeActive {
+		sourceClient, err := newClient(sourcePath)
+		if err != nil {
+			// cannot create targetclient
+			return sURLs.WithError(err)
+		}
+		retentionMode, retentionTime, err := sourceClient.GetObjectRetention(ctx, sURLs.SourceContent.VersionID)
+		if err != nil {
+			return sURLs.WithError(err)
+		}
+		return sURLs.WithError(targetClient.PutObjectRetention(ctx, sURLs.TargetContent.VersionID, retentionMode, retentionTime, false))
+	}
+	return sURLs.WithError(probe.NewError(RetentionAlreadyExists{}))
+}
+
+// doMirrorTagging
+func (mj *mirrorJob) doMirrorTagging(ctx context.Context, sURLs URLs, deleteTags bool) URLs {
+	if mj.opts.isFake {
+		return sURLs.WithError(nil)
+	}
+
+	sourcePath := filepath.ToSlash(filepath.Join(sURLs.SourceAlias, sURLs.SourceContent.URL.Path))
+	targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
+
+	shouldMirror := false
+	targetClient, err := newClient(targetPath)
+	if err != nil {
+		// cannot create targetclient
+		return sURLs.WithError(err)
+	}
+	if !mj.opts.isOverwrite && !mj.opts.activeActive {
+		_, err = targetClient.GetTags(ctx, sURLs.TargetContent.VersionID)
+		if err == nil {
+			return sURLs.WithError(probe.NewError(TagsAlreadyExists{}))
+		} // doesn't exist
+		shouldMirror = true
+	}
+	if shouldMirror || mj.opts.isOverwrite || mj.opts.activeActive {
+		if deleteTags {
+			return sURLs.WithError(targetClient.DeleteTags(ctx, sURLs.TargetContent.VersionID))
+		}
+		sourceClient, err := newClient(sourcePath)
+		if err != nil {
+			return sURLs.WithError(err)
+		}
+		tags, err := sourceClient.GetTags(ctx, sURLs.SourceContent.VersionID)
+		if err != nil {
+			return sURLs.WithError(err)
+		}
+		var tagsStr string
+		for k, v := range tags {
+			tagsStr += fmt.Sprintf("%s=%s&", k, v)
+		}
+		if len(tagsStr) > 0 {
+			tagsStr = tagsStr[:len(tagsStr)-1]
+		}
+		return sURLs.WithError(targetClient.SetTags(ctx, sURLs.TargetContent.VersionID, tagsStr))
+	}
+	return sURLs.WithError(probe.NewError(TagsAlreadyExists{}))
+}
+
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSSE encrypt.ServerSide, sURLs URLs) URLs {
+	if mj.opts.isFake {
+		if sURLs.SourceContent != nil {
+			mj.status.Add(sURLs.SourceContent.Size)
+		}
+		mj.status.Update()
+		return sURLs.WithError(nil)
+	}
+
 	shouldQueue := false
 	if !mj.opts.isOverwrite && !mj.opts.activeActive {
 		targetClient, err := newClient(targetPath)
@@ -331,9 +477,7 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 		}
 		_, err = targetClient.Stat(ctx, StatOptions{sse: tgtSSE})
 		if err == nil {
-			if !sURLs.SourceContent.RetentionEnabled && !sURLs.SourceContent.LegalHoldEnabled {
-				return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
-			}
+			return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
 		} // doesn't exist
 		shouldQueue = true
 	}
@@ -352,7 +496,6 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
-
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
@@ -407,7 +550,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	})
 	sURLs.MD5 = mj.opts.md5
 	sURLs.DisableMultipart = mj.opts.disableMultipart
-	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata)
+	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.replicate, mj.opts.isMetadata)
 }
 
 // Update progress status
@@ -498,17 +641,57 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		targetURL := newClientURL(expandedTargetPath)
 		tgtSSE := getSSE(targetPath, mj.opts.encKeyDB[targetAlias])
 
-		if strings.HasPrefix(string(event.Type), "s3:ObjectCreated:") {
+		if string(event.Type) == "s3:ObjectCreated:PutRetention" {
+			mirrorURL := URLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: &ClientContent{URL: *sourceURL},
+				TargetAlias:   targetAlias,
+				TargetContent: &ClientContent{URL: *targetURL},
+			}
+			mj.parallel.queueTask(func() URLs {
+				return mj.doMirrorRetention(ctx, mirrorURL)
+			})
+		} else if string(event.Type) == "s3:ObjectCreated:PutLegalHold" {
+			mirrorURL := URLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: &ClientContent{URL: *sourceURL},
+				TargetAlias:   targetAlias,
+				TargetContent: &ClientContent{URL: *targetURL},
+			}
+			mj.parallel.queueTask(func() URLs {
+				return mj.doMirrorLegalHold(ctx, mirrorURL)
+			})
+		} else if string(event.Type) == "s3:ObjectCreated:PutTagging" {
+			mirrorURL := URLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: &ClientContent{URL: *sourceURL},
+				TargetAlias:   targetAlias,
+				TargetContent: &ClientContent{URL: *targetURL},
+			}
+			mj.parallel.queueTask(func() URLs {
+				return mj.doMirrorTagging(ctx, mirrorURL, false)
+			})
+		} else if string(event.Type) == "s3:ObjectCreated:DeleteTagging" {
+			mirrorURL := URLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: &ClientContent{URL: *sourceURL},
+				TargetAlias:   targetAlias,
+				TargetContent: &ClientContent{URL: *targetURL},
+			}
+			mj.parallel.queueTask(func() URLs {
+				return mj.doMirrorTagging(ctx, mirrorURL, true)
+			})
+		} else if strings.HasPrefix(string(event.Type), "s3:ObjectCreated:") {
 			sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
 			mirrorURL := URLs{
 				SourceAlias: sourceAlias,
 				SourceContent: &ClientContent{
-					URL:              *sourceURL,
-					RetentionEnabled: event.Type == notification.EventType("s3:ObjectCreated:PutRetention"),
-					LegalHoldEnabled: event.Type == notification.EventType("s3:ObjectCreated:PutLegalHold"),
-					Size:             event.Size,
-					Time:             sourceModTime,
-					Metadata:         event.UserMetadata,
+					URL:       *sourceURL,
+					Size:      event.Size,
+					Time:      sourceModTime,
+					Metadata:  event.UserMetadata,
+					VersionID: event.VersionID,
+					ETag:      event.ETag,
 				},
 				TargetAlias:      targetAlias,
 				TargetContent:    &ClientContent{URL: *targetURL},
@@ -543,6 +726,34 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
 			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
+				mj.parallel.queueTask(func() URLs {
+					return mj.doRemove(ctx, mirrorURL)
+				})
+			}
+		} else if event.Type == notification.ObjectRemovedDeleteMarkerCreated {
+			if strings.Contains(event.UserAgent, uaMirrorAppName) {
+				continue
+			}
+			sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
+			sourceContent := &ClientContent{
+				URL:            *sourceURL,
+				Time:           sourceModTime,
+				VersionID:      event.VersionID,
+				ETag:           event.ETag,
+				IsDeleteMarker: true,
+			}
+			mirrorURL := URLs{
+				SourceAlias:      sourceAlias,
+				SourceContent:    sourceContent,
+				TargetAlias:      targetAlias,
+				TargetContent:    &ClientContent{URL: *targetURL},
+				MD5:              mj.opts.md5,
+				DisableMultipart: mj.opts.disableMultipart,
+				encKeyDB:         mj.opts.encKeyDB,
+			}
+			mirrorURL.TotalCount = mj.status.GetCounts()
+			mirrorURL.TotalSize = mj.status.Get()
+			if mirrorURL.TargetContent != nil && (mj.opts.replicate || mj.opts.isRemove || mj.opts.activeActive) {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL)
 				})
@@ -649,9 +860,17 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			sURLs.TotalSize = mj.status.Get()
 
 			if sURLs.SourceContent != nil {
-				mj.parallel.queueTask(func() URLs {
-					return mj.doMirror(ctx, sURLs)
-				})
+				if sURLs.SourceContent.IsDeleteMarker && mj.opts.replicate {
+					// This will create a delete marker in the remote server
+					mj.parallel.queueTask(func() URLs {
+						return mj.doRemove(ctx, sURLs)
+					})
+				} else {
+					// Mirror object
+					mj.parallel.queueTask(func() URLs {
+						return mj.doMirror(ctx, sURLs)
+					})
+				}
 			} else if sURLs.TargetContent != nil && mj.opts.isRemove {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, sURLs)
@@ -807,7 +1026,8 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		isOverwrite = cli.Bool("overwrite")
 	}
 
-	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
+	isActiveActive := cli.Bool("multi-master") || cli.Bool("active-active")
+	isWatch := cli.Bool("watch") || (isActiveActive && !cli.Bool("replicate"))
 	isRemove := cli.Bool("remove")
 
 	// preserve is also expected to be overwritten if necessary
@@ -815,6 +1035,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	isOverwrite = isOverwrite || isMetadata
 
 	mopts := mirrorOptions{
+		replicate:        cli.Bool("replicate"),
 		isFake:           cli.Bool("fake"),
 		isRemove:         isRemove,
 		isOverwrite:      isOverwrite,
@@ -828,7 +1049,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		storageClass:     cli.String("storage-class"),
 		userMetadata:     userMetadata,
 		encKeyDB:         encKeyDB,
-		activeActive:     isWatch,
+		activeActive:     isActiveActive,
 	}
 
 	// Create a new mirror job and execute it

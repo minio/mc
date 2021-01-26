@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -276,50 +277,82 @@ func getSourceStream(ctx context.Context, alias, urlStr, versionID string, fetch
 	return reader, metadata, nil
 }
 
-// putTargetRetention sets retention headers if any
-func putTargetRetention(ctx context.Context, alias string, urlStr string, metadata map[string]string) *probe.Error {
-	targetClnt, err := newClientFromAlias(alias, urlStr)
+// getTagging gets tagging of the source
+func getTagging(ctx context.Context, alias, urlStr, versionID string) (string, *probe.Error) {
+	clnt, err := newClientFromAlias(alias, urlStr)
+	if err != nil {
+		return "", err.Trace(alias, urlStr)
+	}
+	tagsMaps, err := clnt.GetTags(ctx, versionID)
+	if err != nil {
+		return "", err.Trace(alias, urlStr)
+	}
+	var tags string
+	for k, v := range tagsMaps {
+		tags += fmt.Sprintf("%s=%s&", k, v)
+	}
+	// Remove the last '&' character
+	if len(tags) > 0 {
+		tags = tags[:len(tags)-1]
+	}
+	return tags, nil
+}
+
+// setTagging gets tagging of the source
+func setTagging(ctx context.Context, alias string, urlStr, versionID, tags string) *probe.Error {
+	clnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
-	lockModeStr, ok := metadata[AmzObjectLockMode]
-	lockMode := minio.RetentionMode("")
-	if ok {
-		lockMode = minio.RetentionMode(lockModeStr)
-		delete(metadata, AmzObjectLockMode)
-	}
 
-	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
-	retainUntilDate := timeSentinel
-	if ok {
-		delete(metadata, AmzObjectLockRetainUntilDate)
-		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
-			retainUntilDate = t.UTC()
-		}
-	}
-	if err := targetClnt.PutObjectRetention(ctx, "", lockMode, retainUntilDate, false); err != nil {
+	err = clnt.SetTags(ctx, versionID, tags)
+	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil
 }
 
+type putTargetOpts struct {
+	mode, until, legalHold string
+	metadata               map[string]string
+	preserve               bool
+	md5, disableMultipart  bool
+	sse                    encrypt.ServerSide
+	modTime                time.Time
+	versionID, etag        string
+	isDeleteMarker         bool
+}
+
 // putTargetStream writes to URL from Reader.
-func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
+func putTargetStream(ctx context.Context, alias, urlStr string, reader io.Reader, size int64, opts putTargetOpts, progress io.Reader) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
 
-	if mode != "" {
-		metadata[AmzObjectLockMode] = mode
+	if opts.mode != "" {
+		opts.metadata[AmzObjectLockMode] = opts.mode
 	}
-	if until != "" {
-		metadata[AmzObjectLockRetainUntilDate] = until
+	if opts.until != "" {
+		opts.metadata[AmzObjectLockRetainUntilDate] = opts.until
 	}
-	if legalHold != "" {
-		metadata[AmzObjectLockLegalHold] = legalHold
+	if opts.legalHold != "" {
+		opts.metadata[AmzObjectLockLegalHold] = opts.legalHold
 	}
-	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, md5, disableMultipart, preserve)
+
+	lowlevelOpts := PutOptions{
+		metadata:         opts.metadata,
+		sse:              opts.sse,
+		md5:              opts.md5,
+		disableMultipart: opts.disableMultipart,
+		isPreserve:       opts.preserve,
+		modTime:          opts.modTime,
+		versionID:        opts.versionID,
+		etag:             opts.etag,
+		isDeleteMarker:   opts.isDeleteMarker,
+	}
+
+	n, err := targetClnt.Put(ctx, reader, size, lowlevelOpts, progress)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -337,7 +370,15 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 		metadata = map[string]string{}
 	}
 	metadata["Content-Type"] = contentType
-	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, metadata, nil, sse, md5, disableMultipart, preserve)
+
+	opts := putTargetOpts{
+		metadata:         metadata,
+		sse:              sse,
+		md5:              md5,
+		disableMultipart: disableMultipart,
+		preserve:         preserve,
+	}
+	return putTargetStream(context.Background(), alias, urlStrFull, reader, size, opts, nil)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
@@ -374,9 +415,13 @@ func filterMetadata(metadata map[string]string) map[string]string {
 			newMetadata[k] = v
 		}
 	}
-	for k := range metadata {
-		if strings.HasPrefix(http.CanonicalHeaderKey(k), http.CanonicalHeaderKey(serverEncryptionKeyPrefix)) {
-			delete(newMetadata, k)
+	for key := range metadata {
+		k := strings.ToLower(key)
+		switch {
+		case k == taggingCountKey:
+			delete(newMetadata, key)
+		case strings.HasPrefix(k, serverEncryptionKeyPrefix):
+			delete(newMetadata, key)
 		}
 	}
 	return newMetadata
@@ -410,10 +455,14 @@ func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSS
 // uploadSourceToTargetURL - uploads to targetURL from source.
 // optionally optimizes copy for object sizes <= 5GiB by using
 // server side copy operation.
-func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair, preserve bool) URLs {
+func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair, replicate, preserve bool) URLs {
 	sourceAlias := urls.SourceAlias
 	sourceURL := urls.SourceContent.URL
 	sourceVersion := urls.SourceContent.VersionID
+	sourceModTime := urls.SourceContent.Time
+	sourceETag := urls.SourceContent.ETag
+	sourceIsDeleteMarker := urls.SourceContent.IsDeleteMarker
+
 	targetAlias := urls.TargetAlias
 	targetURL := urls.TargetContent.URL
 	length := urls.SourceContent.Size
@@ -430,7 +479,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	// add object retention fields in metadata for target, if target wants
 	// to override defaults from source, usually happens in `cp` command.
 	// for the most part source metadata is copied over.
-	if urls.TargetContent.RetentionEnabled {
+	if urls.TargetContent.RetentionMode != "" {
 		m := minio.RetentionMode(strings.ToUpper(urls.TargetContent.RetentionMode))
 		if !m.IsValid() {
 			return urls.WithError(probe.NewError(errors.New("invalid retention mode")).Trace(targetURL.String()))
@@ -454,7 +503,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	// add object legal hold fields in metadata for target, if target wants
 	// to override defaults from source, usually happens in `cp` command.
 	// for the most part source metadata is copied over.
-	if urls.TargetContent.LegalHoldEnabled {
+	if urls.TargetContent.LegalHold != "" {
 		switch minio.LegalHoldStatus(urls.TargetContent.LegalHold) {
 		case minio.LegalHoldDisabled:
 		case minio.LegalHoldEnabled:
@@ -472,7 +521,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	}
 
 	// Optimize for server side copy if the host is same.
-	if sourceAlias == targetAlias {
+	if sourceAlias == targetAlias && !replicate {
 		// preserve new metadata and save existing ones.
 		if preserve {
 			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls)
@@ -495,47 +544,20 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		if urls.SourceContent.RetentionEnabled {
-			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
-			return urls.WithError(err.Trace(sourceURL.String()))
-		}
-
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, sourceVersion, mode, until,
 			legalHold, length, progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart, preserve)
 	} else {
-		if urls.SourceContent.RetentionEnabled {
-			// preserve new metadata and save existing ones.
-			if preserve {
-				currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls)
-				if err != nil {
-					return urls.WithError(err.Trace(sourceURL.String()))
-				}
-				for k, v := range currentMetadata {
-					metadata[k] = v
-				}
-			}
-
-			// Get metadata from target content as well
-			for k, v := range urls.TargetContent.Metadata {
-				metadata[http.CanonicalHeaderKey(k)] = v
-			}
-
-			// Get userMetadata from target content as well
-			for k, v := range urls.TargetContent.UserMetadata {
-				metadata[http.CanonicalHeaderKey(k)] = v
-			}
-
-			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
-			return urls.WithError(err.Trace(sourceURL.String()))
-		}
-
 		var reader io.ReadCloser
-		// Proceed with regular stream copy.
-		reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), sourceVersion, true, srcSSE, preserve)
-		if err != nil {
-			return urls.WithError(err.Trace(sourceURL.String()))
+
+		// Only read when it is not a delete marker
+		if !sourceIsDeleteMarker {
+			// Proceed with regular stream copy.
+			reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), sourceVersion, true, srcSSE, preserve)
+			if err != nil {
+				return urls.WithError(err.Trace(sourceURL.String()))
+			}
+			defer reader.Close()
 		}
-		defer reader.Close()
 
 		// Get metadata from target content as well
 		for k, v := range urls.TargetContent.Metadata {
@@ -547,19 +569,44 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
-		if isReadAt(reader) {
-			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
-				legalHold, reader, length, filterMetadata(metadata),
-				progress, tgtSSE, urls.MD5, urls.DisableMultipart, preserve)
-		} else {
-			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
-				legalHold, io.LimitReader(reader, length),
-				length, filterMetadata(metadata), progress, tgtSSE, urls.MD5,
-				urls.DisableMultipart, preserve)
+		opts := putTargetOpts{
+			mode:             mode,
+			until:            until,
+			legalHold:        legalHold,
+			metadata:         filterMetadata(metadata),
+			sse:              tgtSSE,
+			md5:              urls.MD5,
+			disableMultipart: urls.DisableMultipart,
+			preserve:         preserve,
 		}
-	}
-	if err != nil {
-		return urls.WithError(err.Trace(sourceURL.String()))
+
+		if replicate {
+			opts.versionID = sourceVersion
+			opts.modTime = sourceModTime
+			opts.etag = sourceETag
+			opts.isDeleteMarker = sourceIsDeleteMarker
+		}
+
+		if isReadAt(reader) {
+			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, opts, progress)
+		} else {
+			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), io.LimitReader(reader, length), length, opts, progress)
+		}
+
+		if err != nil {
+			return urls.WithError(err.Trace(sourceURL.String()))
+		}
+
+		if replicate {
+			tags, err := getTagging(ctx, sourceAlias, sourceURL.String(), sourceVersion)
+			if err != nil {
+				return urls.WithError(err.Trace(sourceURL.String()))
+			}
+			err = setTagging(ctx, targetAlias, targetURL.String(), sourceVersion, tags)
+			if err != nil {
+				return urls.WithError(err.Trace(targetURL.String()))
+			}
+		}
 	}
 
 	return urls.WithError(nil)

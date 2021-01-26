@@ -219,11 +219,10 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	s3c, err := S3New(conf)
 	c.Assert(err, IsNil)
 
+	putOpts := PutOptions{metadata: map[string]string{"Content-Type": "application/octet-stream"}}
 	var reader io.Reader
 	reader = bytes.NewReader(object.data)
-	n, err := s3c.Put(context.Background(), reader, int64(len(object.data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err := s3c.Put(context.Background(), reader, int64(len(object.data)), putOpts, nil)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 

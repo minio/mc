@@ -374,8 +374,8 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, meta m
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
-	return f.put(ctx, reader, size, metadata, progress, preserve)
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, opts PutOptions, progress io.Reader) (int64, *probe.Error) {
+	return f.put(ctx, reader, size, opts.metadata, progress, opts.isPreserve)
 }
 
 // ShareDownload - share download not implemented for filesystem.
@@ -465,7 +465,7 @@ func deleteFile(deletePath string) error {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
+func (f *fsClient) Remove(ctx context.Context, opts RemoveOptions, contentCh <-chan *ClientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	// Goroutine reads from contentCh and removes the entry in content.
@@ -479,14 +479,14 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 			name := content.URL.Path
 			// Add partSuffix for incomplete uploads.
-			if isIncomplete {
+			if opts.isIncomplete {
 				name += partSuffix
 			}
 			e := deleteFile(name)
 			if e == nil {
 				continue
 			}
-			if os.IsNotExist(e) && isRemoveBucket {
+			if os.IsNotExist(e) && opts.isRemoveBucket {
 				// ignore PathNotFound for dir removal.
 				return
 			}

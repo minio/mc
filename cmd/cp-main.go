@@ -255,7 +255,7 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
+	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, false, preserve)
 	if isMvCmd && urls.Error == nil {
 		bgRemove(ctx, sourcePath)
 	}
@@ -495,25 +495,17 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				// update Object retention related fields
 				if session != nil {
 					cpURLs.TargetContent.RetentionMode = session.Header.CommandStringFlags[rmFlag]
-					if cpURLs.TargetContent.RetentionMode != "" {
-						cpURLs.TargetContent.RetentionEnabled = true
-					}
 					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
 					cpURLs.TargetContent.LegalHold = strings.ToUpper(session.Header.CommandStringFlags[lhFlag])
-					if cpURLs.TargetContent.LegalHold != "" {
-						cpURLs.TargetContent.LegalHoldEnabled = true
-					}
 				} else {
 					if rm := cli.String(rmFlag); rm != "" {
 						cpURLs.TargetContent.RetentionMode = rm
-						cpURLs.TargetContent.RetentionEnabled = true
 					}
 					if rd := cli.String(rdFlag); rd != "" {
 						cpURLs.TargetContent.RetentionDuration = rd
 					}
 					if lh := cli.String(lhFlag); lh != "" {
 						cpURLs.TargetContent.LegalHold = strings.ToUpper(lh)
-						cpURLs.TargetContent.LegalHoldEnabled = true
 					}
 				}
 

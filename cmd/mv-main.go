@@ -199,7 +199,7 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 		}
 
 		contentCh := make(chan *ClientContent)
-		errorCh := client.Remove(ctx, false, false, false, contentCh)
+		errorCh := client.Remove(ctx, RemoveOptions{}, contentCh)
 		rm.readErrors(errorCh, targetURL)
 
 		clientInfo = &removeClientInfo{
@@ -247,7 +247,7 @@ func bgRemove(ctx context.Context, url string) {
 		contentCh := make(chan *ClientContent, 1)
 		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
-		errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+		errorCh := clnt.Remove(ctx, RemoveOptions{}, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")

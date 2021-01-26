@@ -309,8 +309,7 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		contentCh := make(chan *ClientContent, 1)
 		contentCh <- &ClientContent{URL: *newClientURL(targetURL), VersionID: versionID}
 		close(contentCh)
-		isRemoveBucket := false
-		errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
+		errorCh := clnt.Remove(ctx, RemoveOptions{isIncomplete: isIncomplete, isBypass: isBypass}, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
@@ -341,9 +340,8 @@ func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isI
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 	contentCh := make(chan *ClientContent)
-	isRemoveBucket := false
 
-	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
+	errorCh := clnt.Remove(ctx, RemoveOptions{isIncomplete: isIncomplete, isBypass: isBypass}, contentCh)
 
 	listOpts := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirLast}
 	if !timeRef.IsZero() {

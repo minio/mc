@@ -29,6 +29,8 @@ import (
 // IP:PORT of the client which triggerred the event.
 type EventInfo struct {
 	Time         string
+	VersionID    string
+	ETag         string
 	Size         int64
 	UserMetadata map[string]string
 	Path         string

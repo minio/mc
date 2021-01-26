@@ -144,7 +144,7 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 	}
 
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+	errorCh := clnt.Remove(ctx, RemoveOptions{}, contentCh)
 
 	prefixPath := clnt.GetURL().Path
 	prefixPath = filepath.ToSlash(prefixPath)

@@ -50,15 +50,15 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead for the same functionality.")
 	}
 
-	_, expandedSourcePath, _ := mustExpandAlias(srcURL)
-	srcClient := newClientURL(expandedSourcePath)
-	_, expandedTargetPath, _ := mustExpandAlias(tgtURL)
-	destClient := newClientURL(expandedTargetPath)
+	srcClient, err := newClient(srcURL)
+	fatalIf(err.Trace(srcURL), "Unable to initialize `%s`.", srcURL)
+	destClient, err := newClient(tgtURL)
+	fatalIf(err.Trace(tgtURL), "Unable to initialize `%s`.", tgtURL)
 
 	// Mirror with preserve option on windows
 	// only works for object storage to object storage
 	if runtime.GOOS == "windows" && cliCtx.Bool("a") {
-		if srcClient.Type == fileSystem || destClient.Type == fileSystem {
+		if srcClient.GetURL().Type == fileSystem || destClient.GetURL().Type == fileSystem {
 			errorIf(errInvalidArgument(), "Preserve functionality on windows support object storage to object storage transfer only.")
 		}
 	}
@@ -74,7 +74,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
 		}
 
-		if srcClient.Type == fileSystem && !filepath.IsAbs(srcURL) {
+		if srcClient.GetURL().Type == fileSystem && !filepath.IsAbs(srcURL) {
 			var origSrcURL = srcURL
 			var e error
 			// Changing relative path to absolute path, if it is a local directory.
@@ -86,6 +86,30 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 
 		if !strings.HasSuffix(srcURL, string(srcContent.URL.Separator)) {
 			srcURL += string(srcContent.URL.Separator)
+		}
+	}
+
+	if cliCtx.Bool("replicate") && (cliCtx.Bool("active-active") || cliCtx.Bool("multi-master")) {
+		fatalIf(errInvalidArgument(), "You cannot combine replication with active-active feature.")
+	}
+
+	if cliCtx.Bool("replicate") {
+		if srcClient.GetURL().Type != objectStorage || destClient.GetURL().Type != objectStorage {
+			fatalIf(errInvalidArgument(), "Replication does only work with S3 object storages")
+		}
+
+		versioning, err := srcClient.GetVersion(ctx)
+		fatalIf(err.Trace(srcURL), "Unable to get bucket versioning configuration from `%s`", srcURL)
+		if versioning.Status != "Enabled" {
+			fatalIf(errDummy().Trace(srcURL), "`%s` needs to belong to a versioned bucket", srcURL)
+
+		}
+
+		versioning, err = destClient.GetVersion(ctx)
+		fatalIf(err.Trace(tgtURL), "Unable to get bucket versioning configuration from `%s`", tgtURL)
+		if versioning.Status != "Enabled" {
+			fatalIf(errDummy().Trace(tgtURL), "`%s` needs to belong to a versioned bucket", tgtURL)
+
 		}
 	}
 
@@ -131,7 +155,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, opts.isMetadata) {
+	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, opts.replicate, opts.isMetadata) {
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
 			URLsCh <- URLs{Error: diffMsg.Error, ErrorCond: differInUnknown}
@@ -208,6 +232,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 type mirrorOptions struct {
 	isFake, isOverwrite, activeActive bool
 	isWatch, isRemove, isMetadata     bool
+	replicate                         bool
 	excludeOptions                    []string
 	encKeyDB                          map[string][]prefixSSEPair
 	md5, disableMultipart             bool

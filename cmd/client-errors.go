@@ -214,3 +214,27 @@ type SameFile struct {
 func (e SameFile) Error() string {
 	return fmt.Sprintf("'%s' and '%s' are the same file", e.Source, e.Destination)
 }
+
+// RetentionAlreadyExists - is thrown when we don't want to overwrite existing retention config
+type RetentionAlreadyExists struct {
+}
+
+func (e RetentionAlreadyExists) Error() string {
+	return "Retention already exists in the target location."
+}
+
+// LegalholdAlreadyExists is thrown when we don't want to overwrite existing legalhold config
+type LegalholdAlreadyExists struct {
+}
+
+func (e LegalholdAlreadyExists) Error() string {
+	return "Legalhold already exists in the target location."
+}
+
+// TagsAlreadyExists is thrown when we don't want to overwrite existing tags
+type TagsAlreadyExists struct {
+}
+
+func (e TagsAlreadyExists) Error() string {
+	return "Tags already exists in the target location."
+}

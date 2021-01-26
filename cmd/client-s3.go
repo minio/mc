@@ -64,6 +64,7 @@ const (
 	amazonHostNameAccelerated = "s3-accelerate.amazonaws.com"
 	googleHostName            = "storage.googleapis.com"
 	serverEncryptionKeyPrefix = "x-amz-server-side-encryption"
+	taggingCountKey           = "x-amz-tagging-count"
 
 	defaultRecordDelimiter = "\n"
 	defaultFieldDelimiter  = ","
@@ -656,9 +657,24 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 		u := c.targetURL.Clone()
 		u.Path = path.Join(string(u.Separator), bucketName, key)
 		if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-			if strings.HasPrefix(record.EventName, "s3:ObjectCreated:Copy") {
+			if record.EventName == "s3:ObjectCreated:PutTagging" || record.EventName == "s3:ObjectCreated:DeleteTagging" {
 				eventsInfo[i] = EventInfo{
 					Time:         record.EventTime,
+					VersionID:    record.S3.Object.VersionID,
+					ETag:         record.S3.Object.ETag,
+					Size:         record.S3.Object.Size,
+					UserMetadata: record.S3.Object.UserMetadata,
+					Path:         u.String(),
+					Type:         notification.EventType(record.EventName),
+					Host:         record.Source.Host,
+					Port:         record.Source.Port,
+					UserAgent:    record.Source.UserAgent,
+				}
+			} else if strings.HasPrefix(record.EventName, "s3:ObjectCreated:Copy") {
+				eventsInfo[i] = EventInfo{
+					Time:         record.EventTime,
+					VersionID:    record.S3.Object.VersionID,
+					ETag:         record.S3.Object.ETag,
 					Size:         record.S3.Object.Size,
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
@@ -692,6 +708,8 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 			} else {
 				eventsInfo[i] = EventInfo{
 					Time:         record.EventTime,
+					VersionID:    record.S3.Object.VersionID,
+					ETag:         record.S3.Object.ETag,
 					Size:         record.S3.Object.Size,
 					UserMetadata: record.S3.Object.UserMetadata,
 					Path:         u.String(),
@@ -704,6 +722,8 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 		} else {
 			eventsInfo[i] = EventInfo{
 				Time:         record.EventTime,
+				VersionID:    record.S3.Object.VersionID,
+				ETag:         record.S3.Object.ETag,
 				Size:         record.S3.Object.Size,
 				UserMetadata: record.S3.Object.UserMetadata,
 				Path:         u.String(),
@@ -905,62 +925,63 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 }
 
 // Put - upload an object with custom metadata.
-func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (int64, *probe.Error) {
+func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, opts PutOptions, progress io.Reader) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
 
-	contentType, ok := metadata["Content-Type"]
+	contentType, ok := opts.metadata["Content-Type"]
 	if ok {
-		delete(metadata, "Content-Type")
+		delete(opts.metadata, "Content-Type")
 	} else {
 		// Set content-type if not specified.
 		contentType = "application/octet-stream"
 	}
 
-	cacheControl, ok := metadata["Cache-Control"]
+	cacheControl, ok := opts.metadata["Cache-Control"]
 	if ok {
-		delete(metadata, "Cache-Control")
+		delete(opts.metadata, "Cache-Control")
 	}
 
-	contentEncoding, ok := metadata["Content-Encoding"]
+	contentEncoding, ok := opts.metadata["Content-Encoding"]
 	if ok {
-		delete(metadata, "Content-Encoding")
+		delete(opts.metadata, "Content-Encoding")
 	}
 
-	contentDisposition, ok := metadata["Content-Disposition"]
+	contentDisposition, ok := opts.metadata["Content-Disposition"]
 	if ok {
-		delete(metadata, "Content-Disposition")
+		delete(opts.metadata, "Content-Disposition")
 	}
 
-	contentLanguage, ok := metadata["Content-Language"]
+	contentLanguage, ok := opts.metadata["Content-Language"]
 	if ok {
-		delete(metadata, "Content-Language")
+		delete(opts.metadata, "Content-Language")
 	}
 
-	storageClass, ok := metadata["X-Amz-Storage-Class"]
+	storageClass, ok := opts.metadata["X-Amz-Storage-Class"]
 	if ok {
-		delete(metadata, "X-Amz-Storage-Class")
+		delete(opts.metadata, "X-Amz-Storage-Class")
 	}
 
-	lockModeStr, ok := metadata[AmzObjectLockMode]
+	lockModeStr, ok := opts.metadata[AmzObjectLockMode]
 	lockMode := minio.RetentionMode("")
 	if ok {
 		lockMode = minio.RetentionMode(strings.ToUpper(lockModeStr))
-		delete(metadata, AmzObjectLockMode)
+		delete(opts.metadata, AmzObjectLockMode)
 	}
 
 	retainUntilDate := timeSentinel
-	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
+	retainUntilDateStr, ok := opts.metadata[AmzObjectLockRetainUntilDate]
 	if ok {
-		delete(metadata, AmzObjectLockRetainUntilDate)
+		delete(opts.metadata, AmzObjectLockRetainUntilDate)
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
 			retainUntilDate = t.UTC()
 		}
 	}
-	opts := minio.PutObjectOptions{
-		UserMetadata:         metadata,
+
+	lowlevelOpts := minio.PutObjectOptions{
+		UserMetadata:         opts.metadata,
 		Progress:             progress,
 		NumThreads:           defaultMultipartThreadsNum,
 		ContentType:          contentType,
@@ -969,27 +990,33 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentEncoding:      contentEncoding,
 		ContentLanguage:      contentLanguage,
 		StorageClass:         strings.ToUpper(storageClass),
-		ServerSideEncryption: sse,
-		SendContentMd5:       md5,
-		DisableMultipart:     disableMultipart,
+		ServerSideEncryption: opts.sse,
+		SendContentMd5:       opts.md5,
+		DisableMultipart:     opts.disableMultipart,
+		Internal: minio.AdvancedPutOptions{
+			// Fields are only filled when replication is activated.
+			SourceMTime:     opts.modTime,
+			SourceVersionID: opts.versionID,
+			SourceETag:      opts.etag,
+		},
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
-		opts.RetainUntilDate = retainUntilDate
+		lowlevelOpts.RetainUntilDate = retainUntilDate
 	}
 
 	if lockModeStr != "" {
-		opts.Mode = lockMode
-		opts.SendContentMd5 = true
+		lowlevelOpts.Mode = lockMode
+		lowlevelOpts.SendContentMd5 = true
 	}
 
-	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
-		delete(metadata, AmzObjectLockLegalHold)
-		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
-		opts.SendContentMd5 = true
+	if lh, ok := opts.metadata[AmzObjectLockLegalHold]; ok {
+		delete(opts.metadata, AmzObjectLockLegalHold)
+		lowlevelOpts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
+		lowlevelOpts.SendContentMd5 = true
 	}
 
-	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
+	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, lowlevelOpts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
@@ -1049,26 +1076,61 @@ func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, o
 	return removeObjectErrorCh
 }
 
+func (c *S3Client) replicateDeleteMarkers(ctx context.Context, bucket string, objectsCh chan minio.ObjectInfo) <-chan minio.RemoveObjectError {
+	removeObjectErrorCh := make(chan minio.RemoveObjectError)
+
+	// Goroutine reads from objectsCh and sends error to removeObjectErrorCh if any.
+	go func() {
+		defer close(removeObjectErrorCh)
+
+		for info := range objectsCh {
+			opts := minio.RemoveObjectOptions{
+				VersionID: info.VersionID,
+				// AdvancedRemoveOptions intended for internal use by replication
+				Internal: minio.AdvancedRemoveOptions{
+					ReplicationDeleteMarker: true,
+					ReplicationMTime:        info.LastModified,
+				},
+			}
+			if err := c.api.RemoveObject(ctx, bucket, info.Key, opts); err != nil {
+				removeObjectErrorCh <- minio.RemoveObjectError{ObjectName: info.Key, Err: err}
+			}
+		}
+	}()
+
+	return removeObjectErrorCh
+}
+
 // AddUserAgent - add custom user agent.
 func (c *S3Client) AddUserAgent(app string, version string) {
 	c.api.SetAppInfo(app, version)
 }
 
 // Remove - remove object or bucket(s).
-func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
+func (c *S3Client) Remove(ctx context.Context, opts RemoveOptions, contentCh <-chan *ClientContent) <-chan *probe.Error {
+
 	errorCh := make(chan *probe.Error)
 
 	prevBucket := ""
 	// Maintain objectsCh, statusCh for each bucket
 	var objectsCh chan minio.ObjectInfo
 	var statusCh <-chan minio.RemoveObjectError
-	opts := minio.RemoveObjectsOptions{
-		GovernanceBypass: isBypass,
+
+	lowLevelRemove := func(ctx context.Context, bucket string, objectsCh chan minio.ObjectInfo) <-chan minio.RemoveObjectError {
+		switch {
+		case opts.isIncomplete:
+			return c.removeIncompleteObjects(ctx, bucket, objectsCh)
+		case opts.replicateDeleteMarker:
+			return c.replicateDeleteMarkers(ctx, bucket, objectsCh)
+		default:
+			lowlevelOpts := minio.RemoveObjectsOptions{GovernanceBypass: opts.isBypass}
+			return c.api.RemoveObjects(ctx, bucket, objectsCh, lowlevelOpts)
+		}
 	}
 
 	go func() {
 		defer close(errorCh)
-		if isRemoveBucket {
+		if opts.isRemoveBucket {
 			if _, object := c.url2BucketAndObject(); object != "" {
 				errorCh <- probe.NewError(errors.New("cannot delete prefixes with `mc rb` command - Use `mc rm` instead"))
 				return
@@ -1098,11 +1160,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				if prevBucket == "" {
 					objectsCh = make(chan minio.ObjectInfo)
 					prevBucket = bucket
-					if isIncomplete {
-						statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
-					} else {
-						statusCh = c.api.RemoveObjects(ctx, bucket, objectsCh, opts)
-					}
+					statusCh = lowLevelRemove(ctx, bucket, objectsCh)
 				}
 
 				if prevBucket != bucket {
@@ -1113,18 +1171,14 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 						errorCh <- probe.NewError(removeStatus.Err)
 					}
 					// Remove bucket if it qualifies.
-					if isRemoveBucket && !isIncomplete {
+					if opts.isRemoveBucket && !opts.isIncomplete {
 						if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
 							errorCh <- probe.NewError(err)
 						}
 					}
 					// Re-init objectsCh for next bucket
 					objectsCh = make(chan minio.ObjectInfo)
-					if isIncomplete {
-						statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
-					} else {
-						statusCh = c.api.RemoveObjects(ctx, bucket, objectsCh, opts)
-					}
+					statusCh = lowLevelRemove(ctx, bucket, objectsCh)
 					prevBucket = bucket
 				}
 
@@ -1163,7 +1217,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 		}
 		// Remove last bucket if it qualifies.
-		if isRemoveBucket && prevBucket != "" && !isIncomplete {
+		if opts.isRemoveBucket && prevBucket != "" && !opts.isIncomplete {
 			if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
 				errorCh <- probe.NewError(err)
 			}

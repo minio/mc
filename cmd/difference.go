@@ -160,18 +160,49 @@ func metadataEqual(m1, m2 map[string]string) bool {
 	return true
 }
 
-func objectDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool) (diffCh chan diffMessage) {
-	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, isMetadata, true, false, DirNone)
+func objectDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, versioning, isMetadata bool) (diffCh chan diffMessage) {
+	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, versioning, isMetadata, true, false, DirNone)
 }
 
 func dirDifference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, false, false, true, DirFirst)
+	return difference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, false, false, false, true, DirFirst)
 }
 
-func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
+type diffEntry struct {
+	path    string
+	modTime time.Time
+}
+
+func cmpDiffEntry(e1, e2 diffEntry) int {
+	switch {
+	case e1.path > e2.path:
+		return 1
+	case e1.path < e2.path:
+		return -1
+	}
+	switch {
+	case e1.modTime.After(e2.modTime):
+		return 1
+	case e1.modTime.Before(e2.modTime):
+		return -1
+	}
+
+	return 0
+}
+
+func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, versioning, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
 	// Set default values for listing.
-	srcCh := sourceClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
-	tgtCh := targetClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
+
+	lstOptions := ListOptions{
+		Recursive:         isRecursive,
+		WithMetadata:      isMetadata,
+		ShowDir:           dirOpt,
+		WithOlderVersions: versioning,
+		WithDeleteMarkers: versioning,
+	}
+
+	srcCh := sourceClnt.List(ctx, lstOptions)
+	tgtCh := targetClnt.List(ctx, lstOptions)
 
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh
@@ -219,32 +250,38 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 			continue
 		}
 
-		srcSuffix := strings.TrimPrefix(srcCtnt.URL.String(), sourceURL)
-		tgtSuffix := strings.TrimPrefix(tgtCtnt.URL.String(), targetURL)
+		sourcePath := strings.TrimPrefix(srcCtnt.URL.String(), sourceURL)
+		targetPath := strings.TrimPrefix(tgtCtnt.URL.String(), targetURL)
 
-		current := urlJoinPath(targetURL, srcSuffix)
-		expected := urlJoinPath(targetURL, tgtSuffix)
-
-		if !utf8.ValidString(srcSuffix) {
+		if !utf8.ValidString(sourcePath) {
 			// Error. Keys must be valid UTF-8.
-			diffCh <- diffMessage{Error: errInvalidSource(current).Trace()}
+			diffCh <- diffMessage{Error: errInvalidSource(srcCtnt.URL.String()).Trace()}
 			srcCtnt, srcOk = <-srcCh
 			continue
 		}
-		if !utf8.ValidString(tgtSuffix) {
+		if !utf8.ValidString(targetPath) {
 			// Error. Keys must be valid UTF-8.
-			diffCh <- diffMessage{Error: errInvalidTarget(expected).Trace()}
+			diffCh <- diffMessage{Error: errInvalidTarget(tgtCtnt.URL.String()).Trace()}
 			tgtCtnt, tgtOk = <-tgtCh
 			continue
 		}
 
-		// Normalize to avoid situations where multiple byte representations are possible.
-		// e.g. 'ä' can be represented as precomposed U+00E4 (UTF-8 0xc3a4) or decomposed
-		// U+0061 U+0308 (UTF-8 0x61cc88).
-		normalizedCurrent := norm.NFC.String(current)
-		normalizedExpected := norm.NFC.String(expected)
+		// Create two entries from source and target to companre and normalize names
+		// to avoid situations where multiple byte representations are possible:
+		//   e.g. 'ä' can be represented as precomposed U+00E4 (UTF-8 0xc3a4) or decomposed
+		//   U+0061 U+0308 (UTF-8 0x61cc88).
+		srcEntry := diffEntry{path: norm.NFC.String(sourcePath)}
+		tgtEntry := diffEntry{path: norm.NFC.String(targetPath)}
 
-		if normalizedExpected > normalizedCurrent {
+		// Compare modtime only if we are comparing objects versions
+		if versioning {
+			srcEntry.modTime = srcCtnt.Time
+			tgtEntry.modTime = tgtCtnt.Time
+		}
+
+		entryCmp := cmpDiffEntry(srcEntry, tgtEntry)
+
+		if entryCmp < 0 {
 			diffCh <- diffMessage{
 				FirstURL:     srcCtnt.URL.String(),
 				Diff:         differInFirst,
@@ -253,7 +290,8 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 			srcCtnt, srcOk = <-srcCh
 			continue
 		}
-		if normalizedExpected == normalizedCurrent {
+
+		if entryCmp == 0 {
 			srcType, tgtType := srcCtnt.Type, tgtCtnt.Type
 			srcSize, tgtSize := srcCtnt.Size, tgtCtnt.Size
 			if srcType.IsRegular() && !tgtType.IsRegular() ||
@@ -328,7 +366,7 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
+func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, targetURL string, versioning, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
 	diffCh = make(chan diffMessage, 10000)
 
 	go func() {
@@ -339,7 +377,7 @@ func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, t
 
 		for range newRetryTimerContinous(retryCtx, time.Second, time.Second*30, minio.MaxJitter) {
 			err := differenceInternal(retryCtx, sourceClnt, targetClnt, sourceURL, targetURL,
-				isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
+				versioning, isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
 			if err != nil {
 				// handle this specifically for filesystem related errors.
 				switch err.ToGoError().(type) {

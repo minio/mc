@@ -82,6 +82,22 @@ type CopyOptions struct {
 	isPreserve       bool
 }
 
+// PutOptions holds options for object putting operation
+type PutOptions struct {
+	metadata                          map[string]string
+	sse                               encrypt.ServerSide
+	md5, disableMultipart, isPreserve bool
+	versionID, etag                   string
+	modTime                           time.Time
+	isDeleteMarker                    bool
+}
+
+// RemoveOptions holds options for removing object operation
+type RemoveOptions struct {
+	isIncomplete, isRemoveBucket, isBypass bool
+	replicateDeleteMarker                  bool
+}
+
 // Client - client interface
 type Client interface {
 	// Common operations
@@ -109,7 +125,7 @@ type Client interface {
 	// I/O operations with metadata.
 	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, err *probe.Error)
 
-	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (n int64, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, opts PutOptions, progress io.Reader) (n int64, err *probe.Error)
 
 	// Object Locking related API
 	PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
@@ -125,7 +141,8 @@ type Client interface {
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+	Remove(ctx context.Context, opts RemoveOptions, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
@@ -170,11 +187,9 @@ type ClientContent struct {
 	Expiration       time.Time
 	ExpirationRuleID string
 
-	RetentionEnabled  bool
 	RetentionMode     string
 	RetentionDuration string
 	BypassGovernance  bool
-	LegalHoldEnabled  bool
 	LegalHold         string
 	VersionID         string
 	IsDeleteMarker    bool
