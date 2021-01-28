@@ -68,9 +68,9 @@ func (u configSetMessage) String() (msg string) {
 	msg += console.Colorize("SetConfigSuccess",
 		"Successfully applied new settings.")
 	if u.restart {
-		suggestion := fmt.Sprintf("\nmc admin service restart %s", u.targetAlias)
+		suggestion := color.RedString("mc admin service restart %s", u.targetAlias)
 		msg += console.Colorize("SetConfigSuccess",
-			fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
+			fmt.Sprintf("\nPlease restart your server '%s'.", suggestion))
 	}
 	return
 }
