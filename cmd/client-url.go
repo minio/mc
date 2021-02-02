@@ -207,8 +207,11 @@ func firstURL2Stat(ctx context.Context, prefix string, timeRef time.Time) (clien
 		return nil, nil, err.Trace(prefix)
 	}
 	content = <-client.List(ctx, ListOptions{Recursive: true, TimeRef: timeRef, Count: 1})
+	if content == nil {
+		return nil, nil, probe.NewError(ObjectMissing{timeRef: timeRef}).Trace(prefix)
+	}
 	if content.Err != nil {
-		return nil, nil, err.Trace(prefix)
+		return nil, nil, content.Err.Trace(prefix)
 	}
 	return client, content, nil
 }
