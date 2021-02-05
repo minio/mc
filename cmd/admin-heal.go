@@ -69,6 +69,10 @@ var adminHealSetsFlags = []cli.Flag{
 		Usage: "set to be healed",
 	},
 	cli.StringFlag{
+		Name:  "prefix",
+		Usage: "prefix to be healed across sets",
+	},
+	cli.StringFlag{
 		Name:  "max-io",
 		Usage: "maximum IO requests allowed between objects to slow down heal operation",
 		Value: "100",
@@ -233,6 +237,7 @@ func mainAdminHealSets(ctx *cli.Context) error {
 
 	taskID, e := client.HealSets(globalContext, madmin.HealSetsOpts{
 		Sets:       strings.Join(ctx.StringSlice("set"), ","),
+		Prefix:     ctx.String("prefix"),
 		SleepMaxIO: ctx.String("max-io"),
 		SleepMax:   ctx.String("max-sleep"),
 	})
