@@ -82,6 +82,7 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 	console.SetColor("TargetLabel", color.New(color.FgHiCyan))
 	console.SetColor("ARN", color.New(color.FgCyan))
 	console.SetColor("Arrow", color.New(color.FgHiWhite))
+	console.SetColor("SyncLabel", color.New(color.FgHiYellow))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -145,14 +146,15 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			}
 		}
 		printMsg(RemoteMessage{
-			op:           ctx.Command.Name,
-			AccessKey:    target.Credentials.AccessKey,
-			TargetBucket: target.TargetBucket,
-			TargetURL:    targetURL,
-			SourceBucket: target.SourceBucket,
-			RemoteARN:    target.Arn,
-			ServiceType:  string(target.Type),
-			TargetLabel:  target.Label,
+			op:              ctx.Command.Name,
+			AccessKey:       target.Credentials.AccessKey,
+			TargetBucket:    target.TargetBucket,
+			TargetURL:       targetURL,
+			SourceBucket:    target.SourceBucket,
+			RemoteARN:       target.Arn,
+			ServiceType:     string(target.Type),
+			TargetLabel:     target.Label,
+			ReplicationSync: target.ReplicationSync,
 		})
 	}
 }
