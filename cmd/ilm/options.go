@@ -120,7 +120,7 @@ type LifecycleOptions struct {
 
 // ToConfig create lifecycle.Configuration based on LifecycleOptions
 func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
-	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays)
+	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays, opts.ExpiredObjectDeleteMarker)
 	if err != nil {
 		return nil, err.Trace(opts.ExpiryDate, opts.ExpiryDays)
 	}
