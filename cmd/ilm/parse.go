@@ -160,7 +160,7 @@ func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (
 }
 
 // Returns lifecycleExpiration to be included in lifecycleRule
-func parseExpiry(expiryDateStr, expiryDayStr string) (lfcExp lifecycle.Expiration, err *probe.Error) {
+func parseExpiry(expiryDateStr, expiryDayStr string, expiredDeleteMarker bool) (lfcExp lifecycle.Expiration, err *probe.Error) {
 	if expiryDateStr != "" {
 		date, e := time.Parse(defaultILMDateFormat, expiryDateStr)
 		if e != nil {
@@ -181,6 +181,10 @@ func parseExpiry(expiryDateStr, expiryDayStr string) (lfcExp lifecycle.Expiratio
 			return lifecycle.Expiration{}, probe.NewError(errors.New("expiration days cannot be set to zero"))
 		}
 		lfcExp.Days = lifecycle.ExpirationDays(days)
+	}
+
+	if expiredDeleteMarker {
+		lfcExp.DeleteMarker = true
 	}
 
 	return lfcExp, nil
