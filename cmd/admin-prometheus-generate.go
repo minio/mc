@@ -33,6 +33,7 @@ import (
 
 const (
 	defaultJobName     = "minio-job"
+	legacyMetricsPath  = "/minio/prometheus/metrics"
 	defaultMetricsPath = "/minio/v2/metrics/cluster"
 )
 
@@ -128,6 +129,19 @@ var defaultConfig = PrometheusConfig{
 		},
 	},
 }
+var legacyConfig = PrometheusConfig{
+	ScrapeConfigs: []ScrapeConfig{
+		{
+			JobName:     defaultJobName,
+			MetricsPath: legacyMetricsPath,
+			StaticConfigs: []StatConfig{
+				{
+					Targets: []string{""},
+				},
+			},
+		},
+	},
+}
 
 // checkAdminPrometheusSyntax - validate all the passed arguments
 func checkAdminPrometheusSyntax(ctx *cli.Context) {
@@ -165,6 +179,20 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 	token, err := jwt.SignedString([]byte(hostConfig.SecretKey))
 	if err != nil {
 		return err
+	}
+	client, cerr := newAdminClient(alias)
+	fatalIf(cerr, "Unable to initialize admin connection.")
+
+	info, e := client.ServerInfo(globalContext)
+	if e != nil {
+		fatalIf(probe.NewError(e), "Failed to get server info.")
+	}
+	if info.Servers[0].Version < "2021-01-30T00-20-58Z" {
+		legacyConfig.ScrapeConfigs[0].BearerToken = token
+		legacyConfig.ScrapeConfigs[0].Scheme = u.Scheme
+		legacyConfig.ScrapeConfigs[0].StaticConfigs[0].Targets[0] = u.Host
+		printMsg(legacyConfig)
+		return nil
 	}
 
 	// Setting the values
