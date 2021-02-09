@@ -65,10 +65,8 @@ func checkAdminPolicySetSyntax(ctx *cli.Context) {
 }
 
 func parseEntityArg(arg string) (userOrGroup string, isGroup bool, err error) {
-	parts := strings.Split(arg, "=")
+	parts := strings.SplitN(arg, "=", 2)
 	switch {
-	case len(parts) != 2:
-		fallthrough
 	case parts[1] == "":
 		err = errBadUserGroupArg
 	case strings.ToLower(parts[0]) == "user":
