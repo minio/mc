@@ -130,7 +130,7 @@ EXAMPLES:
   07. Remove all objects recursively from Amazon S3 cloud storage.
       {{.Prompt}} {{.HelpName}} --recursive --force --dangerous s3
 
-  08. Remove all buckets and objects older than '90' days recursively from host
+  08. Remove all objects older than '90' days recursively under all buckets.
       {{.Prompt}} {{.HelpName}} --recursive --dangerous --force --older-than 90d s3
 
   09. Drop all incomplete uploads on the bucket 'jazz-songs'.
@@ -368,6 +368,11 @@ func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isI
 
 		urlString := content.URL.Path
 
+		// rm command is not supposed to remove buckets, ignore if this is a bucket name
+		if content.URL.Type == objectStorage && strings.LastIndex(urlString, string(content.URL.Separator)) == 0 {
+			continue
+		}
+
 		if !isRecursive {
 			currentObjectURL := targetAlias + getKey(content)
 			standardizedURL := getStandardizedURL(currentObjectURL)
@@ -435,7 +440,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isI
 	}
 
 	if !atLeastOneObjectFound {
-		errorIf(probe.NewError(ObjectMissing{}).Trace(url), "Failed to remove `"+url+"`.")
+		errorIf(errDummy().Trace(url), "No object/version found to be removed in `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
 
