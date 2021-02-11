@@ -168,7 +168,9 @@ func MapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo
 	addKeysToSet(reflect.ValueOf(serverDrives).MapKeys(), &serverAddrs)
 	addKeysToSet(reflect.ValueOf(serverMems).MapKeys(), &serverAddrs)
 	addKeysToSet(reflect.ValueOf(serverNetPerfSerial).MapKeys(), &serverAddrs)
-	serverAddrs.Add(healthInfo.Perf.NetParallel.Addr)
+	if len(healthInfo.Perf.NetParallel.Addr) > 0 {
+		serverAddrs.Add(healthInfo.Perf.NetParallel.Addr)
+	}
 	addKeysToSet(reflect.ValueOf(serverDrivePerf).MapKeys(), &serverAddrs)
 
 	// Merge hardware info
