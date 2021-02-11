@@ -359,7 +359,7 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 	return
 }
 
-func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
+func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, args cli.Args, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
 
@@ -375,8 +375,8 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		pg = newAccounter(totalBytes)
 	}
 
-	sourceURLs := cli.Args()[:len(cli.Args())-1]
-	targetURL := cli.Args()[len(cli.Args())-1] // Last one is target
+	sourceURLs := args[:len(args)-1]
+	targetURL := args[len(args)-1] // Last one is target
 
 	tgtClnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize `"+targetURL+"`.")
@@ -745,7 +745,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB, false)
+	args := checkCopySyntax(ctx, cliCtx, encKeyDB, false)
 
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
@@ -809,11 +809,13 @@ func mainCopy(cliCtx *cli.Context) error {
 			}
 
 			// extract URLs.
-			session.Header.CommandArgs = cliCtx.Args()
+			session.Header.CommandArgs = args
 		}
 	}
 
-	e := doCopySession(ctx, cancelCopy, cliCtx, session, encKeyDB, false)
+	// Will pass args together with cliCtx as source URLs list might have changed
+	// in case wildcard "*" is used for defining multiple source files, like "test*"
+	e := doCopySession(ctx, cancelCopy, cliCtx, args, session, encKeyDB, false)
 	if session != nil {
 		session.Delete()
 	}

@@ -595,7 +595,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *ClientContent) 
 			continue
 		}
 
-		file := filepath.Join(dirName, fi.Name())
+		file := filepath.ToSlash(filepath.Join(dirName, fi.Name()))
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			st, e := os.Stat(file)
 			if e != nil {
