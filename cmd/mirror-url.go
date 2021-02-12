@@ -83,10 +83,6 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 				srcURL = origSrcURL
 			}
 		}
-
-		if !strings.HasSuffix(srcURL, string(srcContent.URL.Separator)) {
-			srcURL += string(srcContent.URL.Separator)
-		}
 	}
 
 	return
