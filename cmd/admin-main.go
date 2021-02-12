@@ -47,7 +47,6 @@ var adminCmdSubcommands = []cli.Command{
 	adminHealthCmd,
 	adminSubnetCmd,
 	adminBucketCmd,
-	adminBwInfoCmd,
 }
 
 var adminCmd = cli.Command{

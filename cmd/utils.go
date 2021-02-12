@@ -32,8 +32,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio/pkg/madmin"
 
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
@@ -432,4 +434,17 @@ func centerText(s string, w int) string {
 	fmt.Fprintf(&sb, "%s", s)
 	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Floor(padding))))
 	return sb.String()
+}
+
+func getAliasAndBucket(ctx *cli.Context) (string, string) {
+	args := ctx.Args()
+	aliasedURL := args.Get(0)
+	aliasedURL = filepath.Clean(aliasedURL)
+	return url2Alias(aliasedURL)
+}
+
+func getClient(aliasURL string) *madmin.AdminClient {
+	client, err := newAdminClient(aliasURL)
+	fatalIf(err, "Unable to initialize admin connection.")
+	return client
 }
