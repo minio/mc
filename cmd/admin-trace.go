@@ -395,7 +395,7 @@ func (t traceMessage) String() string {
 	ri := trc.ReqInfo
 	rs := trc.RespInfo
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
-	fmt.Fprintf(b, "%s\n", ri.Time.Format(timeFormat))
+	fmt.Fprintf(b, "[%s] %s\n", ri.Time.Format(timeFormat), console.Colorize("Host", fmt.Sprintf("[Client IP: %s]", ri.Client)))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
 	if ri.RawQuery != "" {
 		fmt.Fprintf(b, "?%s", ri.RawQuery)
