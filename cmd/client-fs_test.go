@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2021 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -32,6 +32,7 @@ import (
 func (s *TestSuite) TestList(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
+	root = root + string(filepath.Separator)
 	defer os.RemoveAll(root)
 
 	// Create multiple files.
@@ -63,20 +64,25 @@ func (s *TestSuite) TestList(c *C) {
 	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
-	// Verify previously create files and list them.
+	// List top level files and directories non recursively and verify.
+	// "{ShowDir: DirNone}" option is not implemented for non recursive listing
 	var contents []*ClientContent
-	for content := range fsClient.List(globalContext, ListOptions{ShowDir: DirNone}) {
+	var regularDirs int
+	for content := range fsClient.List(globalContext, ListOptions{}) {
 		if content.Err != nil {
 			err = content.Err
 			break
 		}
+		if content.Type.IsDir() {
+			regularDirs++
+		}
 		contents = append(contents, content)
 	}
 	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 1)
-	c.Assert(contents[0].Type.IsDir(), Equals, true)
+	c.Assert(len(contents), Equals, 2)
+	c.Assert(regularDirs, Equals, 0)
 
-	// Create another file.
+	// Create another dir and a file in it.
 	objectPath = filepath.Join(root, "test1/newObject1")
 	fsClient, err = fsNew(objectPath)
 	c.Assert(err, IsNil)
@@ -91,24 +97,28 @@ func (s *TestSuite) TestList(c *C) {
 	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
+	// List top level files and directories non recursively and verify.
 	contents = nil
-	// List non recursive to list only top level files.
-	for content := range fsClient.List(globalContext, ListOptions{ShowDir: DirNone}) {
+	regularDirs = 0
+	for content := range fsClient.List(globalContext, ListOptions{}) {
 		if content.Err != nil {
 			err = content.Err
 			break
 		}
+		if content.Type.IsDir() {
+			regularDirs++
+		}
 		contents = append(contents, content)
 	}
 	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 1)
-	c.Assert(contents[0].Type.IsDir(), Equals, true)
+	c.Assert(len(contents), Equals, 3)
+	c.Assert(regularDirs, Equals, 1)
 
 	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
+	// List only files, no directory listing, recursively and verify.
 	contents = nil
-	// List recursively all files and verify.
 	for content := range fsClient.List(globalContext, ListOptions{Recursive: true, ShowDir: DirNone}) {
 		if content.Err != nil {
 			err = content.Err
@@ -120,9 +130,9 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(len(contents), Equals, 3)
 
-	var regularFiles int
-	var regularDirs int
 	// Test number of expected files and directories.
+	var regularFiles int
+	regularDirs = 0
 	for _, content := range contents {
 		if content.Type.IsRegular() {
 			regularFiles++
@@ -151,9 +161,9 @@ func (s *TestSuite) TestList(c *C) {
 	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
-	contents = nil
 	// List recursively all files and verify.
-	for content := range fsClient.List(globalContext, ListOptions{Recursive: true, ShowDir: DirNone}) {
+	contents = nil
+	for content := range fsClient.List(globalContext, ListOptions{Recursive: true}) {
 		if content.Err != nil {
 			err = content.Err
 			break

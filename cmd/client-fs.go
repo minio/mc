@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015-2020 MinIO, Inc.
+ * MinIO Client (C) 2015-2021 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -595,7 +595,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *ClientContent) 
 			continue
 		}
 
-		file := filepath.ToSlash(filepath.Join(dirName, fi.Name()))
+		file := filepath.Join(dirName, fi.Name())
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			st, e := os.Stat(file)
 			if e != nil {
