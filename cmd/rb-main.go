@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -167,8 +168,13 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 		}
 	}()
 
+	foundErr := false
 	for perr := range errorCh {
 		errorIf(perr.Trace(url), "Failed to remove `"+url+"`, continuing..")
+		foundErr = true
+	}
+	if foundErr {
+		return probe.NewError(errors.New("Bucket not removed"))
 	}
 	return nil
 }

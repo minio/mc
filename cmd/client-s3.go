@@ -1070,7 +1070,9 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		defer close(errorCh)
 		if isRemoveBucket {
 			if _, object := c.url2BucketAndObject(); object != "" {
-				errorCh <- probe.NewError(errors.New("cannot delete prefixes with `mc rb` command - Use `mc rm` instead"))
+				errorCh <- probe.NewError(errors.New(
+					"use `mc rm` command to delete prefixes, or point your" +
+						"bucket directly, `mc rb <alias>/<bucket-name>/`"))
 				return
 			}
 		}
