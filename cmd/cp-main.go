@@ -522,7 +522,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 				preserve := cli.Bool("preserve")
 				if cli.String("attr") != "" {
-					preserve = true
 					userMetaMap, _ := getMetaDataEntry(cli.String("attr"))
 					for metadataKey, metaDataVal := range userMetaMap {
 						cpURLs.TargetContent.UserMetadata[metadataKey] = metaDataVal
