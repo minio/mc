@@ -256,9 +256,14 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOpti
 		dest.Expiration.Date = src.Expiration.Date
 		// reset everything else
 		dest.Expiration.Days = 0
+		dest.Expiration.DeleteMarker = false
 	} else if !src.Expiration.IsDaysNull() {
 		dest.Expiration.Days = src.Expiration.Days
 		// reset everything else
+		dest.Expiration.Date = lifecycle.ExpirationDate{}
+	} else if src.Expiration.IsDeleteMarkerExpirationEnabled() {
+		dest.Expiration.DeleteMarker = true
+		dest.Expiration.Days = 0
 		dest.Expiration.Date = lifecycle.ExpirationDate{}
 	}
 
@@ -270,6 +275,18 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOpti
 		dest.Transition.Days = src.Transition.Days
 		// reset everything else
 		dest.Transition.Date = lifecycle.ExpirationDate{}
+	}
+
+	if !src.NoncurrentVersionExpiration.IsDaysNull() {
+		dest.NoncurrentVersionExpiration.NoncurrentDays = src.NoncurrentVersionExpiration.NoncurrentDays
+	}
+
+	if !src.NoncurrentVersionTransition.IsDaysNull() {
+		dest.NoncurrentVersionTransition.NoncurrentDays = src.NoncurrentVersionTransition.NoncurrentDays
+	}
+
+	if src.NoncurrentVersionTransition.StorageClass != "" {
+		dest.NoncurrentVersionTransition.StorageClass = src.NoncurrentVersionTransition.StorageClass
 	}
 
 	if opts.IsStorageClassSet {

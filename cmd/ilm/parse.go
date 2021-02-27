@@ -102,6 +102,43 @@ func validateRuleAction(rule lifecycle.Rule) error {
 	return nil
 }
 
+func validateExpiration(rule lifecycle.Rule) error {
+	var i int
+	if !rule.Expiration.IsDaysNull() {
+		i++
+	}
+	if !rule.Expiration.IsDateNull() {
+		i++
+	}
+	if rule.Expiration.IsDeleteMarkerExpirationEnabled() {
+		i++
+	}
+	if i > 1 {
+		return errors.New("Only one parameter under Expiration can be specified")
+	}
+	return nil
+}
+
+func validateNoncurrentExpiration(rule lifecycle.Rule) error {
+	days := rule.NoncurrentVersionExpiration.NoncurrentDays
+	if days < 0 {
+		return errors.New("NoncurrentVersionExpiration.NoncurrentDays is not a positive integer")
+	}
+	return nil
+}
+
+func validateNoncurrentTransition(rule lifecycle.Rule) error {
+	days := rule.NoncurrentVersionTransition.NoncurrentDays
+	storageClass := rule.NoncurrentVersionTransition.StorageClass
+	if days < 0 {
+		return errors.New("NoncurrentVersionTransition.NoncurrentDays is not a positive integer")
+	}
+	if days > 0 && storageClass == "" || days == 0 && storageClass != "" {
+		return errors.New("Both NoncurrentVersionTransition NoncurrentDays and StorageClass need to be specified")
+	}
+	return nil
+}
+
 // Check if any date is before than cur date
 func validateTranExpCurdate(rule lifecycle.Rule) error {
 	var e error
@@ -128,6 +165,9 @@ func validateILMRule(rule lifecycle.Rule) *probe.Error {
 	if e := validateRuleAction(rule); e != nil {
 		return probe.NewError(e)
 	}
+	if e := validateExpiration(rule); e != nil {
+		return probe.NewError(e)
+	}
 	if e := validateTranExpCurdate(rule); e != nil {
 		return probe.NewError(e)
 	}
@@ -137,6 +177,13 @@ func validateILMRule(rule lifecycle.Rule) *probe.Error {
 	if e := validateTranDays(rule); e != nil {
 		return probe.NewError(e)
 	}
+	if e := validateNoncurrentExpiration(rule); e != nil {
+		return probe.NewError(e)
+	}
+	if e := validateNoncurrentTransition(rule); e != nil {
+		return probe.NewError(e)
+	}
+
 	return nil
 }
 
