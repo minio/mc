@@ -22,6 +22,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	mem "github.com/shirou/gopsutil/v3/mem"
 )
 
 const (
@@ -42,6 +44,8 @@ type task struct {
 	// If set to true, ensure no tasks are
 	// executed in parallel to this one.
 	barrier bool
+	// The total size of the information that we need to upload
+	uploadSize int64
 }
 
 // ParallelManager - helps manage parallel workers to run tasks
@@ -66,6 +70,9 @@ type ParallelManager struct {
 	resultCh chan URLs
 
 	stopMonitorCh chan struct{}
+
+	// The maximum memory to use
+	maxMem uint64
 }
 
 // addWorker creates a new worker to process tasks
@@ -153,18 +160,48 @@ func (p *ParallelManager) monitorProgress() {
 }
 
 // Queue task in parallel
-func (p *ParallelManager) queueTask(fn func() URLs) {
-	p.doQueueTask(task{fn: fn})
+func (p *ParallelManager) queueTask(fn func() URLs, uploadSize int64) {
+	p.doQueueTask(task{fn: fn, uploadSize: uploadSize})
 }
 
 // Queue task but ensures that no tasks is running at parallel,
 // which also means wait until all concurrent tasks finish before
 // queueing this and execute it solely.
-func (p *ParallelManager) queueTaskWithBarrier(fn func() URLs) {
-	p.doQueueTask(task{fn: fn, barrier: true})
+func (p *ParallelManager) queueTaskWithBarrier(fn func() URLs, uploadSize int64) {
+	p.doQueueTask(task{fn: fn, barrier: true, uploadSize: uploadSize})
+}
+
+func (p *ParallelManager) enoughMemForUpload(uploadSize uint64) bool {
+	if uploadSize < 0 {
+		panic("unexpected size")
+	}
+
+	if uploadSize == 0 || p.maxMem == 0 {
+		return true
+	}
+
+	estimateNeededMemoryForUpload := func(size uint64) uint64 {
+		// TODO: default part size should be exported in minio-go
+		const partSize = 16 * 1024 * 1024
+		parallel := size / partSize
+		if parallel >= 3 {
+			return 3 * partSize
+		}
+		return uint64(size)
+	}
+
+	smem := runtime.MemStats{}
+	runtime.ReadMemStats(&smem)
+
+	return estimateNeededMemoryForUpload(uploadSize)+smem.Alloc < p.maxMem
 }
 
 func (p *ParallelManager) doQueueTask(t task) {
+	// Check if we have enough memory to perform next task,
+	// if not, wait to finish all currents tasks to continue
+	if !p.enoughMemForUpload(uint64(t.uploadSize)) {
+		t.barrier = true
+	}
 	if t.barrier {
 		p.barrierSync.Lock()
 	} else {
@@ -182,12 +219,20 @@ func (p *ParallelManager) stopAndWait() {
 
 // newParallelManager starts new workers waiting for executing tasks
 func newParallelManager(resultCh chan URLs) *ParallelManager {
+
+	var maxMem float64
+	memStats, err := mem.VirtualMemory()
+	if err == nil {
+		maxMem = float64(memStats.Available) * 0.8
+	}
+
 	p := &ParallelManager{
 		wg:            &sync.WaitGroup{},
 		workersNum:    0,
 		stopMonitorCh: make(chan struct{}),
 		queueCh:       make(chan task),
 		resultCh:      resultCh,
+		maxMem:        uint64(maxMem),
 	}
 
 	// Start with runtime.NumCPU().
