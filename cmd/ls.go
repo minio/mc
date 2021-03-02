@@ -115,7 +115,6 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 	if !strings.HasSuffix(prefixPath, "/") {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, "/")+1]
 	}
-	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
 	nrVersions := len(ctnts)
 

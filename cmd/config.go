@@ -307,6 +307,16 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *alia
 	if aliasCfg = mustGetHostConfig(alias); aliasCfg != nil {
 		return alias, urlJoinPath(aliasCfg.URL, path), aliasCfg, nil
 	}
+
+	// Fallback to fs mode now
+	if absURL, err := filepath.Abs(aliasedURL); err == nil {
+		sep := string(filepath.Separator)
+		if strings.HasSuffix(aliasedURL, sep) {
+			absURL += sep
+		}
+		aliasedURL = absURL
+	}
+
 	return "", aliasedURL, nil, nil // No matching entry found. Return original URL as is.
 }
 

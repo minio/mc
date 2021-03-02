@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -111,9 +110,6 @@ func (r duMessage) JSON() string {
 
 func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
-	if !strings.HasSuffix(targetURL, "/") {
-		targetURL += "/"
-	}
 
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -153,7 +149,7 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 
 			subDirAlias := content.URL.Path
 			if targetAlias != "" {
-				subDirAlias = targetAlias + "/" + content.URL.Path
+				subDirAlias = targetAlias + content.URL.Path
 			}
 			used, err := du(subDirAlias, timeRef, withVersions, depth, encKeyDB)
 			if err != nil {
@@ -166,13 +162,8 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 	}
 
 	if depth != 0 {
-		u, err := url.Parse(targetURL)
-		if err != nil {
-			panic(err)
-		}
-
 		printMsg(duMessage{
-			Prefix: strings.Trim(u.Path, "/"),
+			Prefix: urlStr,
 			Size:   size,
 			Status: "success",
 		})

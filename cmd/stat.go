@@ -159,22 +159,23 @@ func getStandardizedURL(targetURL string) string {
 // statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
 // HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
 // from GET listing.
-func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, []*BucketInfo, *probe.Error) {
+func statURL(ctx context.Context, aliasedTargetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, []*BucketInfo, *probe.Error) {
 	var stats []*ClientContent
 	var bucketStats []*BucketInfo
 	var clnt Client
-	clnt, err := newClient(targetURL)
+	clnt, err := newClient(aliasedTargetURL)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	targetAlias, _, _ := mustExpandAlias(targetURL)
+	targetAlias, targetURL, _ := mustExpandAlias(aliasedTargetURL)
 
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+
 	lstOptions := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirNone}
 	switch {
 	case versionID != "":

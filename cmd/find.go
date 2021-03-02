@@ -205,20 +205,14 @@ func trimSuffixAtMaxDepth(startPrefix, path, separator string, maxDepth uint) st
 // maxDepth.
 func getAliasedPath(ctx *findContext, path string) string {
 	separator := string(ctx.clnt.GetURL().Separator)
-	prefixPath := ctx.clnt.GetURL().String()
 	var aliasedPath string
 	if ctx.targetAlias != "" {
 		aliasedPath = ctx.targetAlias + strings.TrimPrefix(path, strings.TrimSuffix(ctx.targetFullURL, separator))
 	} else {
-		aliasedPath = path
-		// look for prefix path, if found filter at that, Watch calls
-		// for example always provide absolute path. So for relative
-		// prefixes we need to employ this kind of code.
-		if i := strings.Index(path, prefixPath); i > 0 {
-			aliasedPath = path[i:]
-		}
+		aliasedPath = strings.TrimSuffix(ctx.targetAliasedURL, separator)
+		aliasedPath += strings.TrimPrefix(path, strings.TrimSuffix(ctx.targetFullURL, separator))
 	}
-	return trimSuffixAtMaxDepth(ctx.targetURL, aliasedPath, separator, ctx.maxDepth)
+	return trimSuffixAtMaxDepth(ctx.targetAliasedURL, aliasedPath, separator, ctx.maxDepth)
 }
 
 func find(ctxCtx context.Context, ctx *findContext, fileContent contentMessage) {
@@ -375,10 +369,10 @@ func stringsReplace(ctx context.Context, args string, fileContent contentMessage
 // "pattern matching" flags requested by the user, such as "name", "path", "regex" ..etc.
 func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 	match = true
-	prefixPath := ctx.targetURL
+	prefixPath := ctx.targetAliasedURL
 	// Add separator only if targetURL doesn't already have separator.
 	if !strings.HasPrefix(prefixPath, string(ctx.clnt.GetURL().Separator)) {
-		prefixPath = ctx.targetURL + string(ctx.clnt.GetURL().Separator)
+		prefixPath = ctx.targetAliasedURL + string(ctx.clnt.GetURL().Separator)
 	}
 	// Trim the prefix such that we will apply file path matching techniques
 	// on path excluding the starting prefix.

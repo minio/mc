@@ -203,10 +203,10 @@ type findContext struct {
 	watch         bool
 
 	// Internal values
-	targetAlias   string
-	targetURL     string
-	targetFullURL string
-	clnt          Client
+	targetAlias      string
+	targetAliasedURL string
+	targetFullURL    string
+	clnt             Client
 }
 
 // mainFind - handler for mc find commands
@@ -258,31 +258,33 @@ func mainFind(cliCtx *cli.Context) error {
 		fatalIf(probe.NewError(e).Trace(cliCtx.String("smaller")), "Unable to parse input bytes.")
 	}
 
-	targetAlias, _, hostCfg, err := expandAlias(args[0])
+	targetAlias, targetURL, hostCfg, err := expandAlias(args[0])
 	fatalIf(err.Trace(args[0]), "Unable to expand alias.")
 
 	var targetFullURL string
 	if hostCfg != nil {
 		targetFullURL = hostCfg.URL
+	} else {
+		targetFullURL = targetURL
 	}
 
 	return doFind(ctx, &findContext{
-		Context:       cliCtx,
-		maxDepth:      cliCtx.Uint("maxdepth"),
-		execCmd:       cliCtx.String("exec"),
-		printFmt:      cliCtx.String("print"),
-		namePattern:   cliCtx.String("name"),
-		pathPattern:   cliCtx.String("path"),
-		regexPattern:  cliCtx.String("regex"),
-		ignorePattern: cliCtx.String("ignore"),
-		olderThan:     olderThan,
-		newerThan:     newerThan,
-		largerSize:    largerSize,
-		smallerSize:   smallerSize,
-		watch:         cliCtx.Bool("watch"),
-		targetAlias:   targetAlias,
-		targetURL:     args[0],
-		targetFullURL: targetFullURL,
-		clnt:          clnt,
+		Context:          cliCtx,
+		maxDepth:         cliCtx.Uint("maxdepth"),
+		execCmd:          cliCtx.String("exec"),
+		printFmt:         cliCtx.String("print"),
+		namePattern:      cliCtx.String("name"),
+		pathPattern:      cliCtx.String("path"),
+		regexPattern:     cliCtx.String("regex"),
+		ignorePattern:    cliCtx.String("ignore"),
+		olderThan:        olderThan,
+		newerThan:        newerThan,
+		largerSize:       largerSize,
+		smallerSize:      smallerSize,
+		watch:            cliCtx.Bool("watch"),
+		targetAlias:      targetAlias,
+		targetAliasedURL: args[0],
+		targetFullURL:    targetFullURL,
+		clnt:             clnt,
 	})
 }

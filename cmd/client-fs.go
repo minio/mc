@@ -646,13 +646,6 @@ func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent, isMetadata boo
 		return
 	}
 
-	// Now if the file exists and doesn't end with a separator ('/') do not traverse it.
-	// If the directory doesn't end with a separator, do not traverse it.
-	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() && fpath != "." {
-		f.listPrefixes(fpath, contentCh)
-		return
-	}
-
 	// If we really see the directory.
 	switch fst.Mode().IsDir() {
 	case true:
