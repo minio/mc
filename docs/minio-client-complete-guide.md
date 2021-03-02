@@ -1137,7 +1137,7 @@ COMMAND:
 
 <a name="mirror"></a>
 ### Command `mirror`
-`mirror` command synchornizes data between filesystems and object storages, similarly to `rsync`.
+`mirror` command synchronizes data between filesystems and object storages, similarly to `rsync`.
 
 ```
 USAGE:
