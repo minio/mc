@@ -21,6 +21,7 @@ require (
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.3
+	github.com/prometheus/client_golang v1.8.0
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
 	github.com/shirou/gopsutil/v3 v3.21.1

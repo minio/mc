@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -35,6 +36,9 @@ import (
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio/pkg/console"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // mirror specific flags.
@@ -110,6 +114,10 @@ var (
 		cli.StringFlag{
 			Name:  "attr",
 			Usage: "add custom metadata for all objects",
+		},
+		cli.StringFlag{
+			Name:  "monitoring-port",
+			Usage: "if specified, a new prometheus endpoint will be created to report mirroring activity",
 		},
 	}
 )
@@ -190,6 +198,21 @@ EXAMPLES:
       Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
 `,
 }
+
+var (
+	s3mirrorTotalOps = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "mc_mirror_total_s3ops",
+		Help: "The total number of failed mirror events",
+	})
+	s3mirrorFailedOps = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "mc_mirror_failed_s3ops",
+		Help: "The total number of failed mirror events",
+	})
+	s3mirrorRestarts = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "mc_mirror_total_restarts",
+		Help: "The number of mirroring restart",
+	})
+)
 
 const uaMirrorAppName = "mc-mirror"
 
@@ -417,7 +440,11 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 	defer mj.status.Finish()
 
 	for sURLs := range mj.statusCh {
+		// Update prometheus fields
+		s3mirrorTotalOps.Inc()
+
 		if sURLs.Error != nil {
+			s3mirrorFailedOps.Inc()
 			switch {
 			case sURLs.SourceContent != nil:
 				if !isErrIgnored(sURLs.Error) {
@@ -937,6 +964,16 @@ func mainMirror(cliCtx *cli.Context) error {
 	// check 'mirror' cli arguments.
 	srcURL, tgtURL := checkMirrorSyntax(ctx, cliCtx, encKeyDB)
 
+	if prometheusPort := cliCtx.String("monitoring-port"); prometheusPort != "" {
+		http.Handle("/metrics", promhttp.Handler())
+		go func() {
+			if e := http.ListenAndServe(prometheusPort, nil); e != nil {
+				fatalIf(probe.NewError(e), "Unable to setup monitoring endpoint.")
+			}
+
+		}()
+	}
+
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
@@ -945,6 +982,7 @@ func mainMirror(cliCtx *cli.Context) error {
 		default:
 			errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB)
 			if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
+				s3mirrorRestarts.Inc()
 				time.Sleep(time.Duration(r.Float64() * float64(2*time.Second)))
 				continue
 			}
