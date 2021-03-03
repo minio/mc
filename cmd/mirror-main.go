@@ -981,7 +981,7 @@ func mainMirror(cliCtx *cli.Context) error {
 			return exitStatus(globalErrorExitStatus)
 		default:
 			errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB)
-			if cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
+			if cliCtx.Bool("watch") || cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
 				s3mirrorRestarts.Inc()
 				time.Sleep(time.Duration(r.Float64() * float64(2*time.Second)))
 				continue
