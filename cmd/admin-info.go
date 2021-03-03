@@ -111,7 +111,7 @@ func (u clusterStruct) String() (msg string) {
 	}
 
 	coloredDot := console.Colorize("Info", dot)
-	if u.Info.Mode == madmin.ObjectLayerInitializing {
+	if madmin.ItemState(u.Info.Mode) == madmin.ItemInitializing {
 		coloredDot = console.Colorize("InfoWarning", dot)
 	}
 
