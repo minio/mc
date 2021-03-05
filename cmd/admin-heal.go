@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -134,18 +133,6 @@ func (s backgroundHealStatusMessage) String() string {
 	healPrettyMsg := console.Colorize("HealBackgroundTitle", "Background healing status:\n")
 	healPrettyMsg += dot + fmt.Sprintf("%s item(s) scanned in total\n",
 		console.Colorize("HealBackground", s.HealInfo.ScannedItemsCount))
-
-	lastHealingTime := dot + "Never executed"
-	if !s.HealInfo.LastHealActivity.IsZero() {
-		lastHealingTime = dot + "Completed " + timeDurationToHumanizedDuration(time.Since(s.HealInfo.LastHealActivity)).StringShort() + " ago"
-	}
-	healPrettyMsg += console.Colorize("HealBackground", lastHealingTime) + "\n"
-
-	now := time.Now()
-	if !s.HealInfo.NextHealRound.IsZero() && s.HealInfo.NextHealRound.After(now) {
-		nextHealingRound := timeDurationToHumanizedDuration(s.HealInfo.NextHealRound.Sub(now)).StringShort()
-		healPrettyMsg += dot + fmt.Sprintf("Next scheduled in %s\n", console.Colorize("HealBackground", nextHealingRound))
-	}
 
 	return healPrettyMsg
 }
