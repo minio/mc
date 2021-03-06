@@ -29,7 +29,7 @@ import (
 
 var adminPolicyUpdateCmd = cli.Command{
 	Name:         "update",
-	Usage:        "Attach new IAM policy from a user or group",
+	Usage:        "Attach new IAM policy to a user or group",
 	Action:       mainAdminPolicyUpdate,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
