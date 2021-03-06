@@ -29,7 +29,7 @@ import (
 
 var adminPolicyUnsetCmd = cli.Command{
 	Name:         "unset",
-	Usage:        "unset IAM policy from a user or group",
+	Usage:        "unset an IAM policy for a user or group",
 	Action:       mainAdminPolicyUnset,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
