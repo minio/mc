@@ -325,6 +325,8 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
+	"/admin/policy/unset":  aliasCompleter,
+	"/admin/policy/update": aliasCompleter,
 	"/admin/policy/add":    aliasCompleter,
 	"/admin/policy/list":   aliasCompleter,
 	"/admin/policy/remove": aliasCompleter,

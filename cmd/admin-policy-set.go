@@ -92,7 +92,7 @@ func mainAdminPolicySet(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	policyName := args.Get(1)
+	policyName := strings.TrimSpace(args.Get(1))
 	entityArg := args.Get(2)
 
 	userOrGroup, isGroup, e1 := parseEntityArg(entityArg)
@@ -103,7 +103,6 @@ func mainAdminPolicySet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	e := client.SetPolicy(globalContext, policyName, userOrGroup, isGroup)
-
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "set",
