@@ -74,6 +74,17 @@ type userPolicyMessage struct {
 	IsGroup     bool              `json:"isGroup"`
 }
 
+func (u userPolicyMessage) accountType() string {
+	switch u.op {
+	case "set", "unset", "update":
+		if u.IsGroup {
+			return "group"
+		}
+		return "user"
+	}
+	return ""
+}
+
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
@@ -90,14 +101,14 @@ func (u userPolicyMessage) String() string {
 		return console.Colorize("PolicyMessage", "Removed policy `"+u.Policy+"` successfully.")
 	case "add":
 		return console.Colorize("PolicyMessage", "Added policy `"+u.Policy+"` successfully.")
-	case "set":
-		fragment := "user"
-		if u.IsGroup {
-			fragment = "group"
-		}
+	case "set", "unset":
 		return console.Colorize("PolicyMessage",
-			fmt.Sprintf("Policy %s is set on %s `%s`", u.Policy, fragment, u.UserOrGroup))
+			fmt.Sprintf("Policy `%s` is %s on %s `%s`", u.Policy, u.op, u.accountType(), u.UserOrGroup))
+	case "update":
+		return console.Colorize("PolicyMessage",
+			fmt.Sprintf("Policy `%s` is added to %s `%s`", u.Policy, u.accountType(), u.UserOrGroup))
 	}
+
 	return ""
 }
 
