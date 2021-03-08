@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"sync/atomic"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -153,8 +152,6 @@ type removeClientInfo struct {
 type removeManager struct {
 	removeMap      map[string]*removeClientInfo
 	removeMapMutex sync.RWMutex
-	doneCh         chan struct{}
-	isClosed       int32
 	wg             sync.WaitGroup
 }
 
@@ -162,35 +159,17 @@ func (rm *removeManager) readErrors(errorCh <-chan *probe.Error, targetURL strin
 	rm.wg.Add(1)
 	go func() {
 		defer rm.wg.Done()
-		var stop bool
-		for !stop {
-			select {
-			case pErr, ok := <-errorCh:
-				if ok {
-					errorIf(pErr.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
-				}
-			case <-rm.doneCh:
-				stop = true
-			}
-		}
-
 		for pErr := range errorCh {
-			if pErr != nil {
-				errorIf(pErr.Trace(targetURL), "Failed to remove in `"+targetURL+"`.")
-			}
+			errorIf(pErr.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
 		}
 	}()
 }
 
+// This function should be parallel-safe because it is executed by ParallelManager
+// If targetAlias is empty, it means we will target local FS contents
 func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string) {
-	if atomic.LoadInt32(&rm.isClosed) != 0 {
-		return
-	}
-
-	rm.removeMapMutex.RLock()
+	rm.removeMapMutex.Lock()
 	clientInfo := rm.removeMap[targetAlias]
-	rm.removeMapMutex.RUnlock()
-
 	if clientInfo == nil {
 		client, pErr := newClientFromAlias(targetAlias, targetURL)
 		if pErr != nil {
@@ -198,7 +177,7 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 			return
 		}
 
-		contentCh := make(chan *ClientContent)
+		contentCh := make(chan *ClientContent, 10000)
 		errorCh := client.Remove(ctx, false, false, false, contentCh)
 		rm.readErrors(errorCh, targetURL)
 
@@ -208,66 +187,24 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 			errorCh:   errorCh,
 		}
 
-		rm.removeMapMutex.Lock()
 		rm.removeMap[targetAlias] = clientInfo
-		rm.removeMapMutex.Unlock()
 	}
+	rm.removeMapMutex.Unlock()
 
-	go func() {
-		clientInfo.contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
-	}()
+	clientInfo.contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
 }
 
 func (rm *removeManager) close() {
-	atomic.StoreInt32(&rm.isClosed, 1)
-	rm.removeMapMutex.Lock()
-	defer rm.removeMapMutex.Unlock()
-
 	for _, clientInfo := range rm.removeMap {
 		close(clientInfo.contentCh)
 	}
 
-	close(rm.doneCh)
-
+	// Wait until all on-going client.Remove() operations to finish
 	rm.wg.Wait()
 }
 
 var rmManager = &removeManager{
 	removeMap: make(map[string]*removeClientInfo),
-	doneCh:    make(chan struct{}),
-}
-
-func bgRemove(ctx context.Context, url string) {
-	remove := func(targetAlias, targetURL string) {
-		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
-		if pErr != nil {
-			errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
-		}
-
-		contentCh := make(chan *ClientContent, 1)
-		contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
-		close(contentCh)
-		errorCh := clnt.Remove(ctx, false, false, false, contentCh)
-		for pErr := range errorCh {
-			if pErr != nil {
-				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
-				switch pErr.ToGoError().(type) {
-				case PathInsufficientPermission:
-					// Ignore Permission error.
-					continue
-				}
-			}
-		}
-	}
-
-	targetAlias, targetURL, _ := mustExpandAlias(url)
-	if targetAlias == "" {
-		// File system does not support batch deletion hence use individual deletion.
-		go remove(targetAlias, targetURL)
-		return
-	}
-
-	rmManager.add(ctx, targetAlias, targetURL)
 }
 
 // mainMove is the entry point for mv command.

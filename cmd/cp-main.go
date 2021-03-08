@@ -258,21 +258,16 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 
 	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
 	if isMvCmd && urls.Error == nil {
-		bgRemove(ctx, sourcePath)
+		rmManager.add(ctx, sourceAlias, sourceURL.String())
 	}
 
 	return urls
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(ctx context.Context, cpURLs URLs, pg Progress, isMvCmd bool) URLs {
+func doCopyFake(ctx context.Context, cpURLs URLs, pg Progress) URLs {
 	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
-	}
-
-	if isMvCmd {
-		sourcePath := filepath.ToSlash(filepath.Join(cpURLs.SourceAlias, cpURLs.SourceContent.URL.Path))
-		bgRemove(ctx, sourcePath)
 	}
 
 	return cpURLs
@@ -534,7 +529,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				// Verify if previously copied, notify progress bar.
 				if isCopied != nil && isCopied(cpURLs.SourceContent.URL.String()) {
 					parallel.queueTask(func() URLs {
-						return doCopyFake(ctx, cpURLs, pg, isMvCmd)
+						return doCopyFake(ctx, cpURLs, pg)
 					})
 				} else {
 					parallel.queueTask(func() URLs {
