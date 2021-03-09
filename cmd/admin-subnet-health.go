@@ -17,11 +17,16 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	gojson "encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +54,15 @@ var adminHealthFlags = []cli.Flag{
 		Value:  3600 * time.Second,
 		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
+	cli.StringFlag{
+		Name:  "license",
+		Usage: "Subnet license key",
+	},
+	cli.BoolFlag{
+		Name:   "dev",
+		Usage:  "Development mode",
+		Hidden: true,
+	},
 }
 
 var adminSubnetHealthCmd = cli.Command{
@@ -73,7 +87,7 @@ EXAMPLES:
 `,
 }
 
-// checkAdminInfoSyntax - validate arguments passed by a user
+// checkAdminHealthSyntax - validate arguments passed by a user
 func checkAdminHealthSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		cli.ShowCommandHelpAndExit(ctx, "health", 1) // last argument is exit code
@@ -81,8 +95,7 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 }
 
 //compress and tar health report output
-func tarGZ(c HealthReportInfo, alias string) error {
-	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
+func tarGZ(c HealthReportInfo, filename string) error {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
@@ -161,11 +174,85 @@ func mainAdminHealth(ctx *cli.Context) error {
 	}
 
 	if clusterHealthInfo.GetError() != "" {
-		console.Println(warnText("unable to obtain health information:"), clusterHealthInfo.GetError())
+		console.Println(warnText("Unable to obtain health information: "), clusterHealthInfo.GetError())
 		return nil
 	}
 
-	return tarGZ(clusterHealthInfo, aliasedURL)
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), time.Now().Format("20060102150405"))
+	error := tarGZ(clusterHealthInfo, filename)
+	if error != nil {
+		console.Println(warnText("Unable to create health report file: "), error.Error())
+		return nil
+	}
+
+	license := ctx.String("license")
+	if len(license) > 0 {
+		error = uploadHealthReport(filename, license, ctx.Bool("dev"))
+		if error != nil {
+			console.Println(warnText("Unable to upload health report to Subnet: "), error.Error())
+		}
+	}
+	return nil
+}
+
+func uploadHealthReport(filename string, license string, dev bool) error {
+	url := subnetUploadURL(filename, license, dev)
+	req, err := subnetUploadReq(url, filename)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{}
+	resp, herr := client.Do(req)
+	if herr != nil {
+		return herr
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		console.Infoln("Health data uploaded to Subnet")
+		return nil
+	}
+
+	respBody, berr := ioutil.ReadAll(resp.Body)
+	if berr != nil {
+		return berr
+	}
+
+	return fmt.Errorf("Upload to subnet failed with status code %d: %s", resp.StatusCode, respBody)
+}
+
+func subnetUploadURL(filename string, license string, dev bool) string {
+	const apiPath = "/api/auth/health_reports"
+	baseURL := "https://subnet.min.io"
+	if dev {
+		baseURL = "http://localhost:9000"
+	}
+	return fmt.Sprintf("%s%s?license=%s&filename=%s", baseURL, apiPath, license, filename)
+}
+
+func subnetUploadReq(url string, filename string) (*http.Request, error) {
+	console.Println(infoText("Uploading health report to subnet"))
+
+	file, _ := os.Open(filename)
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return nil, err
+	}
+	writer.Close()
+
+	r, _ := http.NewRequest("POST", url, body)
+	r.Header.Add("Content-Type", writer.FormDataContentType())
+
+	return r, nil
 }
 
 func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin.HealthInfo, error) {
