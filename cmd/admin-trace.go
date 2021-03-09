@@ -126,40 +126,71 @@ func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
 	methods := ctx.StringSlice("method")
 	funcNames := ctx.StringSlice("funcname")
 	apiPaths := ctx.StringSlice("path")
+
 	if len(statusCodes) == 0 && len(methods) == 0 && len(funcNames) == 0 && len(apiPaths) == 0 {
 		// no specific filtering found trace all the requests
 		return true
 	}
 
 	// Filter request path if passed by the user
-	for _, apiPath := range apiPaths {
-		if pathMatch(path.Join("/", apiPath), traceInfo.Trace.ReqInfo.Path) {
-			return true
+	if len(apiPaths) > 0 {
+		matched := false
+		for _, apiPath := range apiPaths {
+			if pathMatch(path.Join("/", apiPath), traceInfo.Trace.ReqInfo.Path) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
 		}
 	}
 
 	// Filter response status codes if passed by the user
-	for _, code := range statusCodes {
-		if traceInfo.Trace.RespInfo.StatusCode == code {
-			return true
+	if len(statusCodes) > 0 {
+		matched := false
+		for _, code := range statusCodes {
+			if traceInfo.Trace.RespInfo.StatusCode == code {
+				matched = true
+				break
+			}
 		}
+		if !matched {
+			return false
+		}
+
 	}
 
 	// Filter request method if passed by the user
-	for _, method := range methods {
-		if traceInfo.Trace.ReqInfo.Method == method {
-			return true
+	if len(methods) > 0 {
+		matched := false
+		for _, method := range methods {
+			if traceInfo.Trace.ReqInfo.Method == method {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+
+	}
+
+	if len(funcNames) > 0 {
+		matched := false
+		// Filter request function handler names if passed by the user.
+		for _, funcName := range funcNames {
+			if nameMatch(funcName, traceInfo.Trace.FuncName) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
 		}
 	}
 
-	// Filter request function handler names if passed by the user.
-	for _, funcName := range funcNames {
-		if nameMatch(funcName, traceInfo.Trace.FuncName) {
-			return true
-		}
-	}
-
-	return false
+	return true
 }
 
 // mainAdminTrace - the entry function of trace command
