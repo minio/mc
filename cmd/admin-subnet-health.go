@@ -36,6 +36,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/klauspost/compress/gzip"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
 )
@@ -174,43 +175,38 @@ func mainAdminHealth(ctx *cli.Context) error {
 	}
 
 	if clusterHealthInfo.GetError() != "" {
-		console.Println(warnText("Unable to obtain health information: "), clusterHealthInfo.GetError())
-		return nil
+		e = errors.New(clusterHealthInfo.GetError())
+		fatalIf(probe.NewError(e), "Unable to obtain health information")
 	}
 
 	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), time.Now().Format("20060102150405"))
-	error := tarGZ(clusterHealthInfo, filename)
-	if error != nil {
-		console.Println(warnText("Unable to create health report file: "), error.Error())
-		return nil
-	}
+	e = tarGZ(clusterHealthInfo, filename)
+	fatalIf(probe.NewError(e), "Unable to create health report file")
 
 	license := ctx.String("license")
 	if len(license) > 0 {
-		error = uploadHealthReport(filename, license, ctx.Bool("dev"))
-		if error != nil {
-			console.Println(warnText("Unable to upload health report to Subnet: "), error.Error())
-		}
+		e = uploadHealthReport(filename, license, ctx.Bool("dev"))
+		fatalIf(probe.NewError(e), "Unable to upload health report to Subnet portal")
 	}
+
 	return nil
 }
 
 func uploadHealthReport(filename string, license string, dev bool) error {
 	url := subnetUploadURL(filename, license, dev)
-	req, err := subnetUploadReq(url, filename)
-	if err != nil {
-		return err
+	req, e := subnetUploadReq(url, filename)
+	if e != nil {
+		return e
 	}
 
-	client := &http.Client{}
-	resp, herr := client.Do(req)
+	resp, herr := httpClient(10 * time.Second).Do(req)
 	if herr != nil {
 		return herr
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		console.Infoln("Health data uploaded to Subnet")
+		console.Infoln("MinIO Health data was successfully uploaded to Subnet")
 		return nil
 	}
 
