@@ -167,8 +167,9 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 		}
 	}()
 
+	// Give up on the first error.
 	for perr := range errorCh {
-		errorIf(perr.Trace(url), "Failed to remove `"+url+"`, continuing..")
+		return perr
 	}
 	return nil
 }

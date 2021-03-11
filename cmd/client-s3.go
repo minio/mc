@@ -1070,7 +1070,9 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		defer close(errorCh)
 		if isRemoveBucket {
 			if _, object := c.url2BucketAndObject(); object != "" {
-				errorCh <- probe.NewError(errors.New("cannot delete prefixes with `mc rb` command - Use `mc rm` instead"))
+				errorCh <- probe.NewError(errors.New(
+					"use `mc rm` command to delete prefixes, or point your" +
+						" bucket directly, `mc rb <alias>/<bucket-name>/`"))
 				return
 			}
 		}
@@ -1159,6 +1161,14 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		// Write remove objects status to errorCh
 		if statusCh != nil {
 			for removeStatus := range statusCh {
+				// If the removeStatus error message is:
+				// "Object is WORM protected and cannot be overwritten",
+				// it is too generic. We have the object's name and vid.
+				// Adding the object's name and version id into the error msg
+				removeStatus.Err = errors.New(strings.Replace(
+					removeStatus.Err.Error(), "Object is WORM protected",
+					"Object, '"+removeStatus.ObjectName+" (Version ID="+
+						removeStatus.VersionID+")' is WORM protected", 1))
 				errorCh <- probe.NewError(removeStatus.Err)
 			}
 		}
