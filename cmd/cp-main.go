@@ -87,6 +87,10 @@ var (
 			Usage: "force all upload(s) to calculate md5sum checksum",
 		},
 		cli.StringFlag{
+			Name:  "tags",
+			Usage: "apply tags to the uploaded objects",
+		},
+		cli.StringFlag{
 			Name:  rmFlag,
 			Usage: "retention mode to be applied on the object (governance, compliance)",
 		},
@@ -187,6 +191,9 @@ EXAMPLES:
 
   19. Roll back 10 days in the past to copy the content of 'mybucket'
       {{.Prompt}} {{.HelpName}} --rewind 10d -r play/mybucket/ /tmp/dest/
+
+  20. Set tags to the uploaded objects
+      {{.Prompt}} {{.HelpName}} -r --tags "category=prod" ./data/ play/another-bucket/
 
 `,
 }
@@ -411,7 +418,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 				cpURLsCh <- cpURLs
 			}
-
 		}()
 	} else {
 		// Access recursive flag inside the session header.
@@ -490,29 +496,20 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = storageClass
 				}
 
-				// update Object retention related fields
-				if session != nil {
-					cpURLs.TargetContent.RetentionMode = session.Header.CommandStringFlags[rmFlag]
-					if cpURLs.TargetContent.RetentionMode != "" {
-						cpURLs.TargetContent.RetentionEnabled = true
-					}
-					cpURLs.TargetContent.RetentionDuration = session.Header.CommandStringFlags[rdFlag]
-					cpURLs.TargetContent.LegalHold = strings.ToUpper(session.Header.CommandStringFlags[lhFlag])
-					if cpURLs.TargetContent.LegalHold != "" {
-						cpURLs.TargetContent.LegalHoldEnabled = true
-					}
-				} else {
-					if rm := cli.String(rmFlag); rm != "" {
-						cpURLs.TargetContent.RetentionMode = rm
-						cpURLs.TargetContent.RetentionEnabled = true
-					}
-					if rd := cli.String(rdFlag); rd != "" {
-						cpURLs.TargetContent.RetentionDuration = rd
-					}
-					if lh := cli.String(lhFlag); lh != "" {
-						cpURLs.TargetContent.LegalHold = strings.ToUpper(lh)
-						cpURLs.TargetContent.LegalHoldEnabled = true
-					}
+				if rm := cli.String(rmFlag); rm != "" {
+					cpURLs.TargetContent.RetentionMode = rm
+					cpURLs.TargetContent.RetentionEnabled = true
+				}
+				if rd := cli.String(rdFlag); rd != "" {
+					cpURLs.TargetContent.RetentionDuration = rd
+				}
+				if lh := cli.String(lhFlag); lh != "" {
+					cpURLs.TargetContent.LegalHold = strings.ToUpper(lh)
+					cpURLs.TargetContent.LegalHoldEnabled = true
+				}
+
+				if tags := cli.String("tags"); tags != "" {
+					cpURLs.TargetContent.Metadata["X-Amz-Tagging"] = tags
 				}
 
 				preserve := cli.Bool("preserve")
@@ -762,6 +759,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	retentionMode := cliCtx.String(rmFlag)
 	retentionDuration := cliCtx.String(rdFlag)
 	legalHold := strings.ToUpper(cliCtx.String(lhFlag))
+	tags := cliCtx.String("tags")
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := cliCtx.String("encrypt-key"); key != "" {
 		sseKeys = key
@@ -776,7 +774,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	var session *sessionV8
 
 	if cliCtx.Bool("continue") {
-		sessionID := getHash("cp", cliCtx.Args())
+		sessionID := getHash("cp", os.Args[1:])
 		if isSessionExists(sessionID) {
 			session, err = loadSessionV8(sessionID)
 			fatalIf(err.Trace(sessionID), "Unable to load session.")
@@ -789,6 +787,7 @@ func mainCopy(cliCtx *cli.Context) error {
 			session.Header.CommandStringFlags["older-than"] = olderThan
 			session.Header.CommandStringFlags["newer-than"] = newerThan
 			session.Header.CommandStringFlags["storage-class"] = storageClass
+			session.Header.CommandStringFlags["tags"] = tags
 			session.Header.CommandStringFlags[rmFlag] = retentionMode
 			session.Header.CommandStringFlags[rdFlag] = retentionDuration
 			session.Header.CommandStringFlags[lhFlag] = legalHold
