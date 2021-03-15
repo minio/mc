@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,6 +40,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/tidwall/gjson"
 )
 
 var adminHealthFlags = []cli.Flag{
@@ -193,8 +195,8 @@ func mainAdminHealth(ctx *cli.Context) error {
 }
 
 func uploadHealthReport(filename string, license string, dev bool) error {
-	url := subnetUploadURL(filename, license, dev)
-	req, e := subnetUploadReq(url, filename)
+	uploadUrl := subnetUploadURL(filename, license, dev)
+	req, e := subnetUploadReq(uploadUrl, filename)
 	if e != nil {
 		return e
 	}
@@ -205,14 +207,20 @@ func uploadHealthReport(filename string, license string, dev bool) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		console.Infoln("MinIO Health data was successfully uploaded to Subnet")
-		return nil
+	var respBody []byte
+	respBody, e = ioutil.ReadAll(resp.Body)
+	if e != nil {
+		return e
 	}
 
-	respBody, berr := ioutil.ReadAll(resp.Body)
-	if berr != nil {
-		return berr
+	if resp.StatusCode == http.StatusOK {
+		msg := "MinIO Health data was successfully uploaded to Subnet."
+		clusterUrl, _ := url.PathUnescape(gjson.Get(string(respBody), "cluster_url").String())
+		if len(clusterUrl) > 0 {
+			msg += fmt.Sprintf(" Can be viewed at: %s", clusterUrl)
+		}
+		console.Infoln(msg)
+		return nil
 	}
 
 	return fmt.Errorf("Upload to subnet failed with status code %d: %s", resp.StatusCode, respBody)
