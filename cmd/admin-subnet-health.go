@@ -187,16 +187,16 @@ func mainAdminHealth(ctx *cli.Context) error {
 
 	license := ctx.String("license")
 	if len(license) > 0 {
-		e = uploadHealthReport(filename, license, ctx.Bool("dev"))
+		e = uploadHealthReport(aliasedURL, filename, license, ctx.Bool("dev"))
 		fatalIf(probe.NewError(e), "Unable to upload health report to Subnet portal")
 	}
 
 	return nil
 }
 
-func uploadHealthReport(filename string, license string, dev bool) error {
-	uploadUrl := subnetUploadURL(filename, license, dev)
-	req, e := subnetUploadReq(uploadUrl, filename)
+func uploadHealthReport(alias string, filename string, license string, dev bool) error {
+	uploadURL := subnetUploadURL(alias, filename, license, dev)
+	req, e := subnetUploadReq(uploadURL, filename)
 	if e != nil {
 		return e
 	}
@@ -215,9 +215,9 @@ func uploadHealthReport(filename string, license string, dev bool) error {
 
 	if resp.StatusCode == http.StatusOK {
 		msg := "MinIO Health data was successfully uploaded to Subnet."
-		clusterUrl, _ := url.PathUnescape(gjson.Get(string(respBody), "cluster_url").String())
-		if len(clusterUrl) > 0 {
-			msg += fmt.Sprintf(" Can be viewed at: %s", clusterUrl)
+		clusterURL, _ := url.PathUnescape(gjson.Get(string(respBody), "cluster_url").String())
+		if len(clusterURL) > 0 {
+			msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)
 		}
 		console.Infoln(msg)
 		return nil
@@ -226,13 +226,13 @@ func uploadHealthReport(filename string, license string, dev bool) error {
 	return fmt.Errorf("Upload to subnet failed with status code %d: %s", resp.StatusCode, respBody)
 }
 
-func subnetUploadURL(filename string, license string, dev bool) string {
+func subnetUploadURL(alias string, filename string, license string, dev bool) string {
 	const apiPath = "/api/auth/health_reports"
 	baseURL := "https://subnet.min.io"
 	if dev {
 		baseURL = "http://localhost:9000"
 	}
-	return fmt.Sprintf("%s%s?license=%s&filename=%s", baseURL, apiPath, license, filename)
+	return fmt.Sprintf("%s%s?license=%s&clustername=%s&filename=%s", baseURL, apiPath, license, alias, filename)
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
