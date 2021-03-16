@@ -944,6 +944,17 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		delete(metadata, "X-Amz-Storage-Class")
 	}
 
+	var tagsMap map[string]string
+	tagsHdr, ok := metadata["X-Amz-Tagging"]
+	if ok {
+		tagsSet, e := tags.Parse(tagsHdr, true)
+		if e != nil {
+			return 0, probe.NewError(e)
+		}
+		tagsMap = tagsSet.ToMap()
+		delete(metadata, "X-Amz-Tagging")
+	}
+
 	lockModeStr, ok := metadata[AmzObjectLockMode]
 	lockMode := minio.RetentionMode("")
 	if ok {
@@ -959,8 +970,10 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 			retainUntilDate = t.UTC()
 		}
 	}
+
 	opts := minio.PutObjectOptions{
 		UserMetadata:         metadata,
+		UserTags:             tagsMap,
 		Progress:             progress,
 		NumThreads:           defaultMultipartThreadsNum,
 		ContentType:          contentType,
