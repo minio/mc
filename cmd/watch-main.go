@@ -152,7 +152,7 @@ func mainWatch(cliCtx *cli.Context) error {
 	if pErr != nil {
 		fatalIf(pErr.Trace(), "Unable to parse the provided url.")
 	}
-
+	//ymfix
 	watchURLFull := s3Client.GetURL().String()
 
 	options := WatchOptions{
@@ -191,6 +191,7 @@ func mainWatch(cliCtx *cli.Context) error {
 					return
 				}
 				for _, event := range events {
+					//ymfix
 					eventPathSuffix := strings.TrimPrefix(event.Path, watchURLFull)
 					if eventPathSuffix == event.Path {
 						continue

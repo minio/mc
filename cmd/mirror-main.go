@@ -513,7 +513,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// build target path, it is the relative of the eventPath with the sourceUrl
 		// joined to the targetURL.
 		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
-		//Skip the object,event http://10.0.0.1:9000/test2/1.png sourceURLFull http://10.0.0.1:9000/test1
+		//ymfix Skip the object,event http://10.0.0.1:9000/test2/1.png sourceURLFull http://10.0.0.1:9000/test1
 		if sourceSuffix == eventPath {
 			continue
 		}
