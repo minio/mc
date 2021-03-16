@@ -811,7 +811,7 @@ FLAGS:
   --continue, -c                     create or resume copy session
   --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
-  --tags value                       apply tags to the uploaded objects
+  --tags value                       apply tags to the uploaded objects (eg. key=value&key2=value2, etc)
   --help, -h                         show help
 
 ENVIRONMENT VARIABLES:
