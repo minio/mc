@@ -153,6 +153,8 @@ func mainWatch(cliCtx *cli.Context) error {
 		fatalIf(pErr.Trace(), "Unable to parse the provided url.")
 	}
 
+	watchURLFull := s3Client.GetURL().String()
+
 	options := WatchOptions{
 		Recursive: recursive,
 		Events:    events,
@@ -189,6 +191,10 @@ func mainWatch(cliCtx *cli.Context) error {
 					return
 				}
 				for _, event := range events {
+					eventPathSuffix := strings.TrimPrefix(event.Path, watchURLFull)
+					if eventPathSuffix == event.Path {
+						continue
+					}
 					msg := watchMessage{}
 					msg.Event.Path = event.Path
 					msg.Event.Size = event.Size
