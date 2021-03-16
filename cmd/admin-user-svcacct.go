@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2018 MinIO, Inc.
+ * MinIO Client (C) 2021 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,30 +18,28 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminUserSubcommands = []cli.Command{
-	adminUserAddCmd,
-	adminUserDisableCmd,
-	adminUserEnableCmd,
-	adminUserRemoveCmd,
-	adminUserListCmd,
-	adminUserInfoCmd,
-	adminUserPolicyCmd,
-	adminUserSvcAcctCmd,
+var adminUserSvcAcctSubcommands = []cli.Command{
+	adminUserSvcAcctAddCmd,
+	adminUserSvcAcctListCmd,
+	adminUserSvcAcctRemoveCmd,
+	adminUserSvcAcctInfoCmd,
+	adminUserSvcAcctSetCmd,
+	adminUserSvcAcctEnableCmd,
+	adminUserSvcAcctDisableCmd,
 }
 
-var adminUserCmd = cli.Command{
-	Name:            "user",
-	Usage:           "manage users",
-	Action:          mainAdminUser,
+var adminUserSvcAcctCmd = cli.Command{
+	Name:            "svcacct",
+	Usage:           "manage service accounts",
+	Action:          mainAdminUserSvcAcct,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminUserSubcommands,
+	Subcommands:     adminUserSvcAcctSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainAdminUser is the handle for "mc admin config" command.
-func mainAdminUser(ctx *cli.Context) error {
-	commandNotFound(ctx, adminUserSubcommands)
+// mainAdminUserSvcAcct is the handle for "mc admin user svcacct" command.
+func mainAdminUserSvcAcct(ctx *cli.Context) error {
+	commandNotFound(ctx, adminUserSvcAcctSubcommands)
 	return nil
-	// Sub-commands like "get", "set" have their own main.
 }
