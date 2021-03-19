@@ -26,7 +26,6 @@ require (
 	github.com/rs/xid v1.2.1
 	github.com/shirou/gopsutil/v3 v3.21.1
 	github.com/tidwall/gjson v1.6.8
-	github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31 // indirect
 	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
 	golang.org/x/net v0.0.0-20201216054612-986b41b23924
