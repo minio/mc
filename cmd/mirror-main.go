@@ -204,6 +204,10 @@ var (
 		Name: "mc_mirror_total_s3ops",
 		Help: "The total number of failed mirror events",
 	})
+	s3mirrorTotalUploadedBytes = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "mc_mirror_total_s3uploaded_bytes",
+		Help: "The total number of bytes uploaded by mirror",
+	})
 	s3mirrorFailedOps = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_failed_s3ops",
 		Help: "The total number of failed mirror events",
@@ -473,6 +477,7 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 		}
 
 		if sURLs.SourceContent != nil {
+			s3mirrorTotalUploadedBytes.Add(float64(sURLs.SourceContent.Size))
 		} else if sURLs.TargetContent != nil {
 			// Construct user facing message and path.
 			targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
