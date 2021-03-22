@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattn/go-ieproxy"
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
@@ -447,4 +449,15 @@ func getClient(aliasURL string) *madmin.AdminClient {
 	client, err := newAdminClient(aliasURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 	return client
+}
+
+func httpClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			Proxy: ieproxy.GetProxyFunc(),
+			// need to close connection after usage.
+			DisableKeepAlives: true,
+		},
+	}
 }

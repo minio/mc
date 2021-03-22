@@ -17,11 +17,17 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	gojson "encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,8 +37,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/klauspost/compress/gzip"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/tidwall/gjson"
 )
 
 var adminHealthFlags = []cli.Flag{
@@ -48,6 +56,15 @@ var adminHealthFlags = []cli.Flag{
 		Usage:  "maximum duration that health tests should be allowed to run",
 		Value:  3600 * time.Second,
 		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
+	},
+	cli.StringFlag{
+		Name:  "license",
+		Usage: "Subnet license key",
+	},
+	cli.BoolFlag{
+		Name:   "dev",
+		Usage:  "Development mode",
+		Hidden: true,
 	},
 }
 
@@ -73,7 +90,7 @@ EXAMPLES:
 `,
 }
 
-// checkAdminInfoSyntax - validate arguments passed by a user
+// checkAdminHealthSyntax - validate arguments passed by a user
 func checkAdminHealthSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		cli.ShowCommandHelpAndExit(ctx, "health", 1) // last argument is exit code
@@ -81,8 +98,7 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 }
 
 //compress and tar health report output
-func tarGZ(c HealthReportInfo, alias string) error {
-	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), time.Now().Format("20060102150405"))
+func tarGZ(c HealthReportInfo, filename string) error {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
@@ -161,11 +177,86 @@ func mainAdminHealth(ctx *cli.Context) error {
 	}
 
 	if clusterHealthInfo.GetError() != "" {
-		console.Println(warnText("unable to obtain health information:"), clusterHealthInfo.GetError())
+		e = errors.New(clusterHealthInfo.GetError())
+		fatalIf(probe.NewError(e), "Unable to obtain health information")
+	}
+
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), time.Now().Format("20060102150405"))
+	e = tarGZ(clusterHealthInfo, filename)
+	fatalIf(probe.NewError(e), "Unable to create health report file")
+
+	license := ctx.String("license")
+	if len(license) > 0 {
+		e = uploadHealthReport(aliasedURL, filename, license, ctx.Bool("dev"))
+		fatalIf(probe.NewError(e), "Unable to upload health report to Subnet portal")
+	}
+
+	return nil
+}
+
+func uploadHealthReport(alias string, filename string, license string, dev bool) error {
+	uploadURL := subnetUploadURL(alias, filename, license, dev)
+	req, e := subnetUploadReq(uploadURL, filename)
+	if e != nil {
+		return e
+	}
+
+	resp, herr := httpClient(10 * time.Second).Do(req)
+	if herr != nil {
+		return herr
+	}
+	defer resp.Body.Close()
+
+	var respBody []byte
+	respBody, e = ioutil.ReadAll(resp.Body)
+	if e != nil {
+		return e
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		msg := "MinIO Health data was successfully uploaded to Subnet."
+		clusterURL, _ := url.PathUnescape(gjson.Get(string(respBody), "cluster_url").String())
+		if len(clusterURL) > 0 {
+			msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)
+		}
+		console.Infoln(msg)
 		return nil
 	}
 
-	return tarGZ(clusterHealthInfo, aliasedURL)
+	return fmt.Errorf("Upload to subnet failed with status code %d: %s", resp.StatusCode, respBody)
+}
+
+func subnetUploadURL(alias string, filename string, license string, dev bool) string {
+	const apiPath = "/api/auth/health_reports"
+	baseURL := "https://subnet.min.io"
+	if dev {
+		baseURL = "http://localhost:9000"
+	}
+	return fmt.Sprintf("%s%s?license=%s&clustername=%s&filename=%s", baseURL, apiPath, license, alias, filename)
+}
+
+func subnetUploadReq(url string, filename string) (*http.Request, error) {
+	console.Println(infoText("Uploading health report to subnet"))
+
+	file, _ := os.Open(filename)
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return nil, err
+	}
+	writer.Close()
+
+	r, _ := http.NewRequest("POST", url, body)
+	r.Header.Add("Content-Type", writer.FormDataContentType())
+
+	return r, nil
 }
 
 func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin.HealthInfo, error) {
