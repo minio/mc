@@ -32,13 +32,24 @@ func trapSignals(sig ...os.Signal) {
 	signal.Notify(sigCh, sig...)
 
 	// Wait for the signal.
-	<-sigCh
+	s := <-sigCh
 
 	// Once signal has been received stop signal Notify handler.
-
 	signal.Stop(sigCh)
 
 	// Cancel the global context
 	globalCancel()
 
+	var exitCode int
+	switch s.String() {
+	case "interrupt":
+		exitCode = globalCancelExitStatus
+	case "killed":
+		exitCode = globalKillExitStatus
+	case "terminated":
+		exitCode = globalTerminatExitStatus
+	default:
+		exitCode = globalErrorExitStatus
+	}
+	os.Exit(exitCode)
 }
