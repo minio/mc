@@ -274,8 +274,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.FuncName = t.FuncName
 	s.StatusCode = t.RespInfo.StatusCode
 	s.StatusMsg = http.StatusText(t.RespInfo.StatusCode)
-	cSlice := strings.Split(t.ReqInfo.Client, ":")
-	s.Client = cSlice[0]
+	s.Client = t.ReqInfo.Client
 	s.CallStats.Duration = t.CallStats.Latency
 	s.CallStats.Rx = t.CallStats.InputBytes
 	s.CallStats.Tx = t.CallStats.OutputBytes
