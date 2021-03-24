@@ -33,6 +33,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/trace"
 )
 
 var adminTraceFlags = []cli.Flag{
@@ -42,8 +43,17 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "all, a",
-		Usage: "trace all traffic (includes internode traffic from MinIO cluster)",
+		Usage: "trace all traffics and POSIX calls",
 	},
+	cli.StringSliceFlag{
+		Name:  "api",
+		Usage: "trace only matching API type (values: `s3`, `internal`, `storage`, `os`)",
+	},
+	cli.StringFlag{
+		Name:  "response-threshold",
+		Usage: "trace only API which execution duration greater than the threshold (e.g. `5ms`)",
+	},
+
 	cli.IntSliceFlag{
 		Name:  "status-code",
 		Usage: "trace only matching status code",
@@ -162,14 +172,50 @@ func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
 	return false
 }
 
+func tracingOpts(ctx *cli.Context) (traceS3, traceInternal, traceStorage, traceOS bool) {
+	if ctx.Bool("all") {
+		return true, true, true, true
+	}
+
+	apis := ctx.StringSlice("api")
+	if len(apis) == 0 {
+		// If api flag is not specified, then we will
+		// trace S3 requests by default.
+		return true, false, false, false
+	}
+
+	for _, api := range apis {
+		switch api {
+		case "storage":
+			traceStorage = true
+		case "internal":
+			traceInternal = true
+		case "s3":
+			traceS3 = true
+		case "os":
+			traceOS = true
+		}
+	}
+
+	return
+}
+
 // mainAdminTrace - the entry function of trace command
 func mainAdminTrace(ctx *cli.Context) error {
 	// Check for command syntax
 	checkAdminTraceSyntax(ctx)
+
 	verbose := ctx.Bool("verbose")
-	all := ctx.Bool("all")
 	errfltr := ctx.Bool("errors")
 	aliasedURL := ctx.Args().Get(0)
+
+	var threshold time.Duration
+	if t := ctx.String("response-threshold"); t != "" {
+		d, e := time.ParseDuration(t)
+		fatalIf(probe.NewError(e).Trace(t), "Unable to parse threshold argument.")
+		threshold = d
+	}
+
 	console.SetColor("Stat", color.New(color.FgYellow))
 
 	console.SetColor("Request", color.New(color.FgCyan))
@@ -198,8 +244,19 @@ func mainAdminTrace(ctx *cli.Context) error {
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
+	traceS3, traceInternal, traceStorage, traceOS := tracingOpts(ctx)
+
+	opts := madmin.ServiceTraceOpts{
+		Internal:   traceInternal,
+		Storage:    traceStorage,
+		OS:         traceOS,
+		S3:         traceS3,
+		OnlyErrors: errfltr,
+		Threshold:  threshold,
+	}
+
 	// Start listening on all trace activity.
-	traceCh := client.ServiceTrace(ctxt, all, errfltr)
+	traceCh := client.ServiceTrace(ctxt, opts)
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
@@ -223,6 +280,10 @@ type shortTraceMsg struct {
 	Query      string    `json:"query"`
 	StatusCode int       `json:"statusCode"`
 	StatusMsg  string    `json:"statusMsg"`
+
+	StorageStats storageStats `json:"storageStats"`
+	OSStats      osStats      `json:"osStats"`
+	Type         trace.Type   `json:"type"`
 }
 
 type traceMessage struct {
@@ -246,6 +307,7 @@ type responseInfo struct {
 	Body       string            `json:"body,omitempty"`
 	StatusCode int               `json:"statusCode,omitempty"`
 }
+
 type callStats struct {
 	Rx       int           `json:"rx"`
 	Tx       int           `json:"tx"`
@@ -253,31 +315,60 @@ type callStats struct {
 	Ttfb     time.Duration `json:"timeToFirstByte"`
 }
 
-type trace struct {
-	NodeName     string       `json:"host"`
-	FuncName     string       `json:"api"`
+type osStats struct {
+	Duration time.Duration `json:"duration"`
+	Path     string        `json:"path"`
+}
+
+type storageStats struct {
+	Duration time.Duration `json:"duration"`
+	Path     string        `json:"path"`
+}
+
+type verboseTrace struct {
+	Type trace.Type `json:"type"`
+
+	NodeName string    `json:"host"`
+	FuncName string    `json:"api"`
+	Time     time.Time `json:"time"`
+
 	RequestInfo  requestInfo  `json:"request"`
 	ResponseInfo responseInfo `json:"response"`
 	CallStats    callStats    `json:"callStats"`
+
+	StorageStats storageStats `json:"storageStats"`
+	OSStats      osStats      `json:"osStats"`
 }
 
 // return a struct with minimal trace info.
 func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s := shortTraceMsg{}
 	t := ti.Trace
-	s.Time = t.ReqInfo.Time
-	if host, ok := t.ReqInfo.Headers["Host"]; ok {
-		s.Host = strings.Join(host, "")
-	}
-	s.Path = t.ReqInfo.Path
-	s.Query = t.ReqInfo.RawQuery
+
+	s.Type = t.TraceType
 	s.FuncName = t.FuncName
-	s.StatusCode = t.RespInfo.StatusCode
-	s.StatusMsg = http.StatusText(t.RespInfo.StatusCode)
-	s.Client = t.ReqInfo.Client
-	s.CallStats.Duration = t.CallStats.Latency
-	s.CallStats.Rx = t.CallStats.InputBytes
-	s.CallStats.Tx = t.CallStats.OutputBytes
+	s.Time = t.Time
+
+	switch t.TraceType {
+	case trace.Storage:
+		s.Path = t.StorageStats.Path
+		s.StorageStats.Duration = t.StorageStats.Duration
+	case trace.OS:
+		s.Path = t.OSStats.Path
+		s.OSStats.Duration = t.OSStats.Duration
+	case trace.HTTP:
+		if host, ok := t.ReqInfo.Headers["Host"]; ok {
+			s.Host = strings.Join(host, "")
+		}
+		s.Path = t.ReqInfo.Path
+		s.Query = t.ReqInfo.RawQuery
+		s.StatusCode = t.RespInfo.StatusCode
+		s.StatusMsg = http.StatusText(t.RespInfo.StatusCode)
+		s.Client = t.ReqInfo.Client
+		s.CallStats.Duration = t.CallStats.Latency
+		s.CallStats.Rx = t.CallStats.InputBytes
+		s.CallStats.Tx = t.CallStats.OutputBytes
+	}
 	return s
 }
 
@@ -297,14 +388,33 @@ func (s shortTraceMsg) String() string {
 	var hostStr string
 	var b = &strings.Builder{}
 
+	switch s.Type {
+	case trace.Storage:
+		fmt.Fprintf(b, "[%s] %s %s %2s", console.Colorize("RespStatus", "STORAGE"), console.Colorize("FuncName", s.FuncName),
+			s.Path,
+			console.Colorize("HeaderValue", s.StorageStats.Duration))
+		return b.String()
+	case trace.OS:
+		fmt.Fprintf(b, "[%s] %s %s %2s", console.Colorize("RespStatus", "OS"), console.Colorize("FuncName", s.FuncName),
+			s.Path,
+			console.Colorize("HeaderValue", s.OSStats.Duration))
+		return b.String()
+	}
+
+	// HTTP trace
+
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
 	fmt.Fprintf(b, "%s ", s.Time.Format(timeFormat))
-	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", s.StatusCode, s.StatusMsg))
+
+	statusStr := fmt.Sprintf("%d %s", s.StatusCode, s.StatusMsg)
 	if s.StatusCode >= http.StatusBadRequest {
-		statusStr = console.Colorize("ErrStatus", fmt.Sprintf("%d %s", s.StatusCode, s.StatusMsg))
+		statusStr = console.Colorize("ErrStatus", statusStr)
+	} else {
+		statusStr = console.Colorize("RespStatus", statusStr)
 	}
+
 	fmt.Fprintf(b, "[%s] %s ", statusStr, console.Colorize("FuncName", s.FuncName))
 	fmt.Fprintf(b, "%s%s", hostStr, s.Path)
 
@@ -312,6 +422,7 @@ func (s shortTraceMsg) String() string {
 		fmt.Fprintf(b, "?%s ", s.Query)
 	}
 	fmt.Fprintf(b, " %s ", s.Client)
+
 	spaces := 15 - len(s.Client)
 	fmt.Fprintf(b, "%*s", spaces, " ")
 	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
@@ -346,9 +457,11 @@ func (t traceMessage) JSON() string {
 	for k, v := range rs.Headers {
 		rspHdrs[k] = strings.Join(v, " ")
 	}
-	trc := trace{
+	trc := verboseTrace{
+		Type:     t.Trace.TraceType,
 		NodeName: t.Trace.NodeName,
 		FuncName: t.Trace.FuncName,
+		Time:     t.Trace.Time,
 		RequestInfo: requestInfo{
 			Time:     rq.Time,
 			Proto:    rq.Proto,
@@ -370,6 +483,14 @@ func (t traceMessage) JSON() string {
 			Tx:       t.Trace.CallStats.OutputBytes,
 			Ttfb:     t.Trace.CallStats.TimeToFirstByte,
 		},
+		OSStats: osStats{
+			Duration: t.Trace.OSStats.Duration,
+			Path:     t.Trace.OSStats.Path,
+		},
+		StorageStats: storageStats{
+			Duration: t.Trace.StorageStats.Duration,
+			Path:     t.Trace.StorageStats.Path,
+		},
 	}
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
@@ -389,6 +510,15 @@ func (t traceMessage) String() string {
 	trc := t.Trace
 	if trc.NodeName != "" {
 		nodeNameStr = fmt.Sprintf("%s ", colorizedNodeName(trc.NodeName))
+	}
+
+	switch trc.TraceType {
+	case trace.Storage:
+		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[STORAGE %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.StorageStats.Path, trc.StorageStats.Duration)
+		return b.String()
+	case trace.OS:
+		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[POSIX %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
+		return b.String()
 	}
 
 	ri := trc.ReqInfo
