@@ -43,15 +43,15 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "all, a",
-		Usage: "trace all traffics and POSIX calls",
+		Usage: "trace all call types",
 	},
 	cli.StringSliceFlag{
-		Name:  "api",
-		Usage: "trace only matching API type (values: `s3`, `internal`, `storage`, `os`)",
+		Name:  "call",
+		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`)",
 	},
 	cli.StringFlag{
 		Name:  "response-threshold",
-		Usage: "trace only API which execution duration greater than the threshold (e.g. `5ms`)",
+		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
 
 	cli.IntSliceFlag{
@@ -180,7 +180,7 @@ func tracingOpts(ctx *cli.Context) (traceS3, traceInternal, traceStorage, traceO
 	apis := ctx.StringSlice("api")
 	if len(apis) == 0 {
 		// If api flag is not specified, then we will
-		// trace S3 requests by default.
+		// trace only S3 requests by default.
 		return true, false, false, false
 	}
 
