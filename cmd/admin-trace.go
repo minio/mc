@@ -172,28 +172,45 @@ func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
 	return false
 }
 
-func tracingOpts(ctx *cli.Context) (traceS3, traceInternal, traceStorage, traceOS bool) {
-	if ctx.Bool("all") {
-		return true, true, true, true
+// Calculate tracing options for command line flags
+func tracingOpts(ctx *cli.Context) (opts madmin.ServiceTraceOpts, e error) {
+
+	if t := ctx.String("response-threshold"); t != "" {
+		d, e := time.ParseDuration(t)
+		if e != nil {
+			return opts, fmt.Errorf("Unable to parse threshold argument: %w", e)
+		}
+		opts.Threshold = d
 	}
 
-	apis := ctx.StringSlice("api")
+	opts.OnlyErrors = ctx.Bool("errors")
+
+	if ctx.Bool("all") {
+		opts.S3 = true
+		opts.Internal = true
+		opts.Storage = true
+		opts.OS = true
+		return
+	}
+
+	apis := ctx.StringSlice("call")
 	if len(apis) == 0 {
 		// If api flag is not specified, then we will
 		// trace only S3 requests by default.
-		return true, false, false, false
+		opts.S3 = true
+		return
 	}
 
 	for _, api := range apis {
 		switch api {
 		case "storage":
-			traceStorage = true
+			opts.Storage = true
 		case "internal":
-			traceInternal = true
+			opts.Internal = true
 		case "s3":
-			traceS3 = true
+			opts.S3 = true
 		case "os":
-			traceOS = true
+			opts.OS = true
 		}
 	}
 
@@ -206,15 +223,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	checkAdminTraceSyntax(ctx)
 
 	verbose := ctx.Bool("verbose")
-	errfltr := ctx.Bool("errors")
 	aliasedURL := ctx.Args().Get(0)
-
-	var threshold time.Duration
-	if t := ctx.String("response-threshold"); t != "" {
-		d, e := time.ParseDuration(t)
-		fatalIf(probe.NewError(e).Trace(t), "Unable to parse threshold argument.")
-		threshold = d
-	}
 
 	console.SetColor("Stat", color.New(color.FgYellow))
 
@@ -244,16 +253,8 @@ func mainAdminTrace(ctx *cli.Context) error {
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
-	traceS3, traceInternal, traceStorage, traceOS := tracingOpts(ctx)
-
-	opts := madmin.ServiceTraceOpts{
-		Internal:   traceInternal,
-		Storage:    traceStorage,
-		OS:         traceOS,
-		S3:         traceS3,
-		OnlyErrors: errfltr,
-		Threshold:  threshold,
-	}
+	opts, e := tracingOpts(ctx)
+	fatalIf(probe.NewError(e), "Unable to start tracing")
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
