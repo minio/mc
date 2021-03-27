@@ -391,12 +391,16 @@ func (s shortTraceMsg) String() string {
 
 	switch s.Type {
 	case trace.Storage:
-		fmt.Fprintf(b, "[%s] %s %s %2s", console.Colorize("RespStatus", "STORAGE"), console.Colorize("FuncName", s.FuncName),
+		fmt.Fprintf(b, "%s %s %s  %2s",
+			s.Time.Format(timeFormat),
+			console.Colorize("FuncName", s.FuncName),
 			s.Path,
 			console.Colorize("HeaderValue", s.StorageStats.Duration))
 		return b.String()
 	case trace.OS:
-		fmt.Fprintf(b, "[%s] %s %s %2s", console.Colorize("RespStatus", "OS"), console.Colorize("FuncName", s.FuncName),
+		fmt.Fprintf(b, "%s %s %s  %2s",
+			s.Time.Format(timeFormat),
+			console.Colorize("FuncName", s.FuncName),
 			s.Path,
 			console.Colorize("HeaderValue", s.OSStats.Duration))
 		return b.String()
@@ -515,10 +519,14 @@ func (t traceMessage) String() string {
 
 	switch trc.TraceType {
 	case trace.Storage:
-		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[STORAGE %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.StorageStats.Path, trc.StorageStats.Duration)
+		fmt.Fprintf(b, "%s %s %s %s  %s", nodeNameStr, trc.Time.Format(timeFormat),
+			console.Colorize("Request", trc.FuncName),
+			trc.StorageStats.Path, console.Colorize("Stat", trc.StorageStats.Duration))
 		return b.String()
 	case trace.OS:
-		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[POSIX %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
+		fmt.Fprintf(b, "%s %s %s %s  %s", nodeNameStr, trc.Time.Format(timeFormat),
+			console.Colorize("Request", trc.FuncName),
+			trc.OSStats.Path, console.Colorize("Stat", trc.OSStats.Duration))
 		return b.String()
 	}
 
