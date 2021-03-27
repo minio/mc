@@ -332,8 +332,8 @@ github.com/minio/highwayhash v1.0.2/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLT
 github.com/minio/md5-simd v1.1.0/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77ZrKZ0Gw=
 github.com/minio/md5-simd v1.1.1 h1:9ojcLbuZ4gXbB2sX53MKn8JUZ0sB/2wfwsEcRw+I08U=
 github.com/minio/md5-simd v1.1.1/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77ZrKZ0Gw=
-github.com/minio/minio v0.0.0-20210327062407-d8b5adfd1013 h1:5949AasP1UUih05Gsgm8lOTSIFnPHmTniiOI/Dh4XXY=
-github.com/minio/minio v0.0.0-20210327062407-d8b5adfd1013/go.mod h1:UZQwUr4doAT+EfExXJDdOBGhnnas1/97/WPdUGQpG7g=
+github.com/minio/minio v0.0.0-20210327170707-07ab4d1250b7 h1:7MyfU27pOxETXjVeNFlg3ucs583jTu772LVjBifFSNw=
+github.com/minio/minio v0.0.0-20210327170707-07ab4d1250b7/go.mod h1:UZQwUr4doAT+EfExXJDdOBGhnnas1/97/WPdUGQpG7g=
 github.com/minio/minio-go/v7 v7.0.11-0.20210302210017-6ae69c73ce78/go.mod h1:mTh2uJuAbEqdhMVl6CMIIZLUeiMiWtJR4JB8/5g2skw=
 github.com/minio/minio-go/v7 v7.0.11-0.20210319012211-5a0d16291a2e h1:IH4CNckd+Z+h5W9ee4QEoRD/fyw9o330PVy9l5Ogd4U=
 github.com/minio/minio-go/v7 v7.0.11-0.20210319012211-5a0d16291a2e/go.mod h1:mTh2uJuAbEqdhMVl6CMIIZLUeiMiWtJR4JB8/5g2skw=

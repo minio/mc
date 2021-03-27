@@ -353,14 +353,14 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	switch t.TraceType {
 	case trace.Storage:
 		s.Path = t.StorageStats.Path
+		s.Host = t.NodeName
 		s.StorageStats.Duration = t.StorageStats.Duration
 	case trace.OS:
 		s.Path = t.OSStats.Path
+		s.Host = t.NodeName
 		s.OSStats.Duration = t.OSStats.Duration
 	case trace.HTTP:
-		if host, ok := t.ReqInfo.Headers["Host"]; ok {
-			s.Host = strings.Join(host, "")
-		}
+		s.Host = t.NodeName
 		s.Path = t.ReqInfo.Path
 		s.Query = t.ReqInfo.RawQuery
 		s.StatusCode = t.RespInfo.StatusCode
@@ -389,25 +389,25 @@ func (s shortTraceMsg) String() string {
 	var hostStr string
 	var b = &strings.Builder{}
 
-	switch s.Type {
-	case trace.Storage:
-		fmt.Fprintf(b, "[%s] %s %s %2s", console.Colorize("RespStatus", "STORAGE"), console.Colorize("FuncName", s.FuncName),
-			s.Path,
-			console.Colorize("HeaderValue", s.StorageStats.Duration))
-		return b.String()
-	case trace.OS:
-		fmt.Fprintf(b, "[%s] %s %s %2s", console.Colorize("RespStatus", "OS"), console.Colorize("FuncName", s.FuncName),
-			s.Path,
-			console.Colorize("HeaderValue", s.OSStats.Duration))
-		return b.String()
-	}
-
-	// HTTP trace
-
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
 	fmt.Fprintf(b, "%s ", s.Time.Format(timeFormat))
+
+	switch s.Type {
+	case trace.Storage:
+		fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", "STORAGE"), console.Colorize("FuncName", s.FuncName),
+			hostStr,
+			s.Path,
+			console.Colorize("HeaderValue", s.StorageStats.Duration))
+		return b.String()
+	case trace.OS:
+		fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", "OS"), console.Colorize("FuncName", s.FuncName),
+			hostStr,
+			s.Path,
+			console.Colorize("HeaderValue", s.OSStats.Duration))
+		return b.String()
+	}
 
 	statusStr := fmt.Sprintf("%d %s", s.StatusCode, s.StatusMsg)
 	if s.StatusCode >= http.StatusBadRequest {
@@ -518,7 +518,7 @@ func (t traceMessage) String() string {
 		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[STORAGE %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.StorageStats.Path, trc.StorageStats.Duration)
 		return b.String()
 	case trace.OS:
-		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[POSIX %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
+		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[OS %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
 		return b.String()
 	}
 
