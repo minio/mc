@@ -380,6 +380,12 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin
 		progress(adminHealthInfo)
 	}
 
+	// In case any of the spinners have not stopped yet (can happen in some
+	// cases e.g. net perf data is empty in case of single server deployment)
+	// explicitly stop them
+	_ = admin(true) && cpu(true) && diskHw(true) && osInfo(true) &&
+		mem(true) && process(true) && config(true) && drive(true) && net(true)
+
 	// cancel the context if obdChan has returned.
 	cancel()
 	return healthInfo, err
