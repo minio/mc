@@ -242,7 +242,7 @@ func mainLegalHoldInfo(cliCtx *cli.Context) error {
 		fatalIf(err, "Unable to get legalhold info of `%s`", targetURL)
 	}
 	if !enabled {
-		fatalIf(errDummy().Trace(), "Bucket lock needs to be enabled in order to use this feature.")
+		fatalIf(errDummy().Trace(), "Bucket is not created with '--with-lock' flag.")
 	}
 
 	return showLegalHoldInfo(ctx, targetURL, versionID, timeRef, withVersions, recursive)
