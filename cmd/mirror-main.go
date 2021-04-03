@@ -201,22 +201,30 @@ EXAMPLES:
 }
 
 var (
-	s3mirrorTotalOps = promauto.NewCounter(prometheus.CounterOpts{
+	mirrorTotalOps = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_total_s3ops",
 		Help: "The total number of mirror operations",
 	})
-	s3mirrorTotalUploadedBytes = promauto.NewCounter(prometheus.CounterOpts{
+	mirrorTotalUploadedBytes = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_total_s3uploaded_bytes",
 		Help: "The total number of bytes uploaded",
 	})
-	s3mirrorFailedOps = promauto.NewCounter(prometheus.CounterOpts{
+	mirrorFailedOps = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_failed_s3ops",
 		Help: "The total number of failed mirror operations",
 	})
-	s3mirrorRestarts = promauto.NewCounter(prometheus.CounterOpts{
+	mirrorRestarts = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_total_restarts",
 		Help: "The number of mirror restarts",
 	})
+	mirrorReplicationDurations = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "mc_mirror_replication_duration",
+			Help:    "Histogram of replication time in ms per object sizes",
+			Buckets: prometheus.ExponentialBuckets(1, 20, 5),
+		},
+		[]string{"object_size"},
+	)
 )
 
 const uaMirrorAppName = "mc-mirror"
@@ -378,6 +386,23 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 	return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
 }
 
+func convertSizeToTag(size int64) string {
+	switch {
+	case size < 1024:
+		return "LESS_THAN_1_KiB"
+	case size < 1024*1024:
+		return "LESS_THAN_1_MiB"
+	case size < 10*1024*1024:
+		return "LESS_THAN_10_MiB"
+	case size < 100*1024*1024:
+		return "LESS_THAN_100_MiB"
+	case size < 1024*1024*1024:
+		return "LESS_THAN_1_GiB"
+	default:
+		return "GREATER_THAN_1_GiB"
+	}
+}
+
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
@@ -435,7 +460,14 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	})
 	sURLs.MD5 = mj.opts.md5
 	sURLs.DisableMultipart = mj.opts.disableMultipart
-	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata)
+
+	now := time.Now()
+	ret := uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata)
+	if ret.Error == nil {
+		durationMs := time.Since(now) / time.Millisecond
+		mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
+	}
+	return ret
 }
 
 // Update progress status
@@ -446,10 +478,10 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 
 	for sURLs := range mj.statusCh {
 		// Update prometheus fields
-		s3mirrorTotalOps.Inc()
+		mirrorTotalOps.Inc()
 
 		if sURLs.Error != nil {
-			s3mirrorFailedOps.Inc()
+			mirrorFailedOps.Inc()
 			switch {
 			case sURLs.SourceContent != nil:
 				if !isErrIgnored(sURLs.Error) {
@@ -478,7 +510,7 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 		}
 
 		if sURLs.SourceContent != nil {
-			s3mirrorTotalUploadedBytes.Add(float64(sURLs.SourceContent.Size))
+			mirrorTotalUploadedBytes.Add(float64(sURLs.SourceContent.Size))
 		} else if sURLs.TargetContent != nil {
 			// Construct user facing message and path.
 			targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
@@ -988,7 +1020,7 @@ func mainMirror(cliCtx *cli.Context) error {
 		default:
 			errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB)
 			if cliCtx.Bool("watch") || cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
-				s3mirrorRestarts.Inc()
+				mirrorRestarts.Inc()
 				time.Sleep(time.Duration(r.Float64() * float64(2*time.Second)))
 				continue
 			}
