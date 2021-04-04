@@ -20,14 +20,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -246,16 +244,10 @@ func mainMove(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(), "Unable to parse the provided url.")
 		}
 		if _, ok := client.(*S3Client); ok {
-			var lifeCycleConfig *lifecycle.Configuration
 			var legalHoldStatus minio.LegalHoldStatus
 			var retentionMode minio.RetentionMode
 			var err *probe.Error
 			ignoreErr := "The specified object does not have a ObjectLock configuration"
-			if lifeCycleConfig, err = client.GetLifecycle(ctx); err != nil && strings.Contains(err.Cause.Error(), ignoreErr) {
-				fatalIf(err.Trace(), "Unable to get ilm lock configuration for `%s`", urlStr)
-			} else if lifeCycleConfig != nil {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked with lifeCycle(ilm). `%s` cannot be moved.", urlStr))
-			}
 
 			if legalHoldStatus, err = client.GetObjectLegalHold(ctx, ""); err != nil && err.Cause.Error() != ignoreErr {
 				fatalIf(err.Trace(), "Unable to get legalhold lock configuration for `%s`", urlStr)
