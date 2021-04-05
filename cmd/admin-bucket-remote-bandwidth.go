@@ -82,17 +82,14 @@ func printTable(report madmin.Report, bits bool, iec bool) {
 	for _, c := range dspOrder {
 		printColors = append(printColors, getPrintCol(c))
 	}
-	unit := "BitsPerSecond"
-	if !bits {
-		unit = "BytesPerSecond"
-	}
+
 	cellText := make([][]string, len(report.Report.BucketStats)+1) // 1 for the header
-	tbl := console.NewTable(printColors, []bool{false, false, false}, 5)
+	tbl := console.NewTable(printColors, []bool{false, false, false}, 0)
 	bucketTitle := fmt.Sprintf("%-16v", "Bucket")
 	cellText[0] = []string{
 		bucketTitle,
-		"Max Bandwidth " + unit,
-		"Current Bandwidth " + unit,
+		"Configured Max Bandwidth",
+		"Current Bandwidth",
 	}
 	tbl.HeaderRowSeparator = true
 	index := 1
@@ -110,12 +107,15 @@ func printTable(report madmin.Report, bits bool, iec bool) {
 		limit := humanize.Bytes(uint64(values.LimitInBytesPerSecond) * mul)
 		current := humanize.Bytes(uint64(values.CurrentBandwidthInBytesPerSecond) * mul)
 		if iec {
-			limit = humanize.IBytes(uint64(values.LimitInBytesPerSecond) * mul)
-			current = humanize.IBytes(uint64(values.CurrentBandwidthInBytesPerSecond) * mul)
+			limit = humanize.IBytes(uint64(values.LimitInBytesPerSecond)*mul) + "/sec"
+			current = humanize.IBytes(uint64(values.CurrentBandwidthInBytesPerSecond)*mul) + "/sec"
 		}
 		if bits {
-			limit = strings.ToLower(limit)
-			current = strings.ToLower(current)
+			limit = strings.ToLower(limit) + "/sec"
+			current = strings.ToLower(current) + "/sec"
+		}
+		if values.LimitInBytesPerSecond == 0 {
+			limit = "N/A" // N/A means cluster bandwidth is not configured
 		}
 		cellText[index] = []string{
 			bucket,
