@@ -2463,6 +2463,20 @@ func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config, 
 	return nil
 }
 
+// GetReplicationMetrics - Get replication metrics for a given bucket.
+func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return replication.Metrics{}, probe.NewError(BucketNameEmpty{})
+	}
+
+	metrics, e := c.api.GetBucketReplicationMetrics(ctx, bucket)
+	if e != nil {
+		return replication.Metrics{}, probe.NewError(e)
+	}
+	return metrics, nil
+}
+
 // GetEncryption - gets bucket encryption info.
 func (c *S3Client) GetEncryption(ctx context.Context) (algorithm, keyID string, err *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()

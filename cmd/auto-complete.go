@@ -270,6 +270,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/replicate/rm":     s3Complete{deepLevel: 2},
 	"/replicate/export": s3Complete{deepLevel: 2},
 	"/replicate/import": s3Complete{deepLevel: 2},
+	"/replicate/status": s3Complete{deepLevel: 2},
 
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,

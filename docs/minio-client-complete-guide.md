@@ -1863,3 +1863,8 @@ Replication configuration successfully set on `myminio/mybucket`.
 ```
 mc replicate export myminio/mybucket > /data/replicate/config
 ```
+*Example: Show replication status of `mybucket` on alias `myminio`*
+
+```
+mc replicate status myminio/mybucket
+```
