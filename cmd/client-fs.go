@@ -264,7 +264,7 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 
 /// Object operations.
 
-func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, meta map[string]string, progress io.Reader, preserve bool) (int64, *probe.Error) {
+func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -300,8 +300,8 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, meta m
 	}
 
 	attr := make(map[string]string)
-	if _, ok := meta[metadataKey]; ok && preserve {
-		attr, e = parseAttribute(meta)
+	if _, ok := opts.metadata[metadataKey]; ok && opts.isPreserve {
+		attr, e = parseAttribute(opts.metadata)
 		if e != nil {
 			tmpFile.Close()
 			return 0, probe.NewError(e)
@@ -358,7 +358,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, meta m
 		return totalWritten, err.Trace(objectPartPath, objectPath)
 	}
 
-	if len(attr) != 0 && preserve {
+	if len(attr) != 0 && opts.isPreserve {
 		atime, mtime, err := parseAtimeMtime(attr)
 		if err != nil {
 			return totalWritten, err.Trace()
@@ -374,8 +374,8 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, meta m
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
-	return f.put(ctx, reader, size, metadata, progress, preserve)
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+	return f.put(ctx, reader, size, progress, opts)
 }
 
 // ShareDownload - share download not implemented for filesystem.
@@ -403,8 +403,13 @@ func (f *fsClient) Copy(ctx context.Context, source string, opts CopyOptions, pr
 	}
 	defer rc.Close()
 
+	putOpts := PutOptions{
+		metadata:   opts.metadata,
+		isPreserve: opts.isPreserve,
+	}
+
 	destination := f.PathURL.Path
-	if _, err := f.put(ctx, rc, opts.size, opts.metadata, progress, opts.isPreserve); err != nil {
+	if _, err := f.put(ctx, rc, opts.size, progress, putOpts); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil

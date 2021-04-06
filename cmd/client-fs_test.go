@@ -43,9 +43,12 @@ func (s *TestSuite) TestList(c *C) {
 
 	reader := bytes.NewReader([]byte(data))
 	var n int64
-	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	},
+	)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -54,9 +57,11 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
-	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -82,9 +87,11 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
-	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -142,9 +149,11 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
-	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -249,9 +258,13 @@ func (s *TestSuite) TestPut(c *C) {
 	data := "hello"
 	reader := bytes.NewReader([]byte(data))
 	var n int64
-	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	},
+	)
+
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 }
@@ -269,9 +282,10 @@ func (s *TestSuite) TestGet(c *C) {
 	data := "hello"
 	var reader io.Reader
 	reader = bytes.NewReader([]byte(data))
-	n, err := fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err := fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		}})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -297,9 +311,11 @@ func (s *TestSuite) TestGetRange(c *C) {
 	data := "hello world"
 	var reader io.Reader
 	reader = bytes.NewReader([]byte(data))
-	n, err := fsClient.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err := fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -328,9 +344,12 @@ func (s *TestSuite) TestStatObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 	reader := bytes.NewReader([]byte(data))
-	n, err := fsClient.Put(context.Background(), reader, int64(dataLen), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err := fsClient.Put(context.Background(), reader, int64(dataLen), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	},
+	)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -353,9 +372,11 @@ func (s *TestSuite) TestCopy(c *C) {
 
 	data := "hello world"
 	reader := bytes.NewReader([]byte(data))
-	n, err := fsClientSource.Put(context.Background(), reader, int64(len(data)), map[string]string{
-		"Content-Type": "application/octet-stream",
-	}, nil, nil, false, false, false)
+	n, err := fsClientSource.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
+		metadata: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+	})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 	err = fsClientTarget.Copy(context.Background(), sourcePath, CopyOptions{size: int64(len(data))}, nil)

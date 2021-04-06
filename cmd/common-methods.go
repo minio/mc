@@ -304,22 +304,23 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 }
 
 // putTargetStream writes to URL from Reader.
-func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, preserve bool) (int64, *probe.Error) {
+func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold string, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
 
 	if mode != "" {
-		metadata[AmzObjectLockMode] = mode
+		opts.metadata[AmzObjectLockMode] = mode
 	}
 	if until != "" {
-		metadata[AmzObjectLockRetainUntilDate] = until
+		opts.metadata[AmzObjectLockRetainUntilDate] = until
 	}
 	if legalHold != "" {
-		metadata[AmzObjectLockLegalHold] = legalHold
+		opts.metadata[AmzObjectLockLegalHold] = legalHold
 	}
-	n, err := targetClnt.Put(ctx, reader, size, metadata, progress, sse, md5, disableMultipart, preserve)
+
+	n, err := targetClnt.Put(ctx, reader, size, progress, opts)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -327,38 +328,32 @@ func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold 
 }
 
 // putTargetStreamWithURL writes to URL from reader. If length=-1, read until EOF.
-func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse encrypt.ServerSide, md5, disableMultipart, preserve bool, metadata map[string]string) (int64, *probe.Error) {
+func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, opts PutOptions) (int64, *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
 	contentType := guessURLContentType(urlStr)
-	if metadata == nil {
-		metadata = map[string]string{}
+	if opts.metadata == nil {
+		opts.metadata = map[string]string{}
 	}
-	metadata["Content-Type"] = contentType
-	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, metadata, nil, sse, md5, disableMultipart, preserve)
+	opts.metadata["Content-Type"] = contentType
+	return putTargetStream(context.Background(), alias, urlStrFull, "", "", "", reader, size, nil, opts)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
-func copySourceToTargetURL(ctx context.Context, alias, urlStr, source, sourceVersionID, mode, until, legalHold string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string, disableMultipart, preserve bool) *probe.Error {
+func copySourceToTargetURL(ctx context.Context, alias, urlStr, source, sourceVersionID, mode, until, legalHold string, size int64, progress io.Reader, opts CopyOptions) *probe.Error {
 
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
 
-	metadata[AmzObjectLockMode] = mode
-	metadata[AmzObjectLockRetainUntilDate] = until
-	metadata[AmzObjectLockLegalHold] = legalHold
-
-	opts := CopyOptions{
-		versionID: sourceVersionID,
-		size:      size,
-		srcSSE:    srcSSE, tgtSSE: tgtSSE,
-		metadata:         metadata,
-		disableMultipart: disableMultipart,
-		isPreserve:       preserve}
+	opts.versionID = sourceVersionID
+	opts.size = size
+	opts.metadata[AmzObjectLockMode] = mode
+	opts.metadata[AmzObjectLockRetainUntilDate] = until
+	opts.metadata[AmzObjectLockLegalHold] = legalHold
 
 	err = targetClnt.Copy(ctx, source, opts, progress)
 	if err != nil {
@@ -500,8 +495,17 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 
+		opts := CopyOptions{
+			srcSSE:           srcSSE,
+			tgtSSE:           tgtSSE,
+			metadata:         filterMetadata(metadata),
+			disableMultipart: urls.DisableMultipart,
+			isPreserve:       preserve,
+			storageClass:     urls.TargetContent.StorageClass,
+		}
+
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, sourceVersion, mode, until,
-			legalHold, length, progress, srcSSE, tgtSSE, filterMetadata(metadata), urls.DisableMultipart, preserve)
+			legalHold, length, progress, opts)
 	} else {
 		if urls.SourceContent.RetentionEnabled {
 			// preserve new metadata and save existing ones.
@@ -547,15 +551,21 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
+		putOpts := PutOptions{
+			metadata:         filterMetadata(metadata),
+			sse:              tgtSSE,
+			storageClass:     urls.TargetContent.StorageClass,
+			md5:              urls.MD5,
+			disableMultipart: urls.DisableMultipart,
+			isPreserve:       preserve,
+		}
+
 		if isReadAt(reader) {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
-				legalHold, reader, length, filterMetadata(metadata),
-				progress, tgtSSE, urls.MD5, urls.DisableMultipart, preserve)
+				legalHold, reader, length, progress, putOpts)
 		} else {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
-				legalHold, io.LimitReader(reader, length),
-				length, filterMetadata(metadata), progress, tgtSSE, urls.MD5,
-				urls.DisableMultipart, preserve)
+				legalHold, io.LimitReader(reader, length), length, progress, putOpts)
 		}
 	}
 	if err != nil {
