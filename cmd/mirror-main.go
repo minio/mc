@@ -406,7 +406,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	sURLs.TargetContent.Metadata = make(map[string]string)
 
 	if mj.opts.storageClass != "" {
-		sURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = mj.opts.storageClass
+		sURLs.TargetContent.StorageClass = mj.opts.storageClass
 	}
 
 	if mj.opts.activeActive {

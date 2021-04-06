@@ -87,11 +87,11 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass st
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
-	var metadata map[string]string
-	if storageClass != "" {
-		metadata = map[string]string{"X-Amz-Storage-Class": storageClass}
+	opts := PutOptions{
+		sse:          sseKey,
+		storageClass: storageClass,
 	}
-	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey, false, false, false, metadata)
+	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, opts)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:

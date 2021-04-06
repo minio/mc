@@ -833,6 +833,16 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 		return probe.NewError(BucketNameEmpty{})
 	}
 
+	metadata := make(map[string]string, len(opts.metadata))
+	for k, v := range opts.metadata {
+		metadata[k] = v
+	}
+
+	delete(metadata, "X-Amz-Storage-Class")
+	if opts.storageClass != "" {
+		metadata["X-Amz-Storage-Class"] = opts.storageClass
+	}
+
 	tokens := splitStr(source, string(c.targetURL.Separator), 3)
 
 	// Source object
@@ -851,26 +861,26 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 		Size:       opts.size,
 	}
 
-	if lockModeStr, ok := opts.metadata[AmzObjectLockMode]; ok {
+	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
 		destOpts.Mode = minio.RetentionMode(strings.ToUpper(lockModeStr))
-		delete(opts.metadata, AmzObjectLockMode)
+		delete(metadata, AmzObjectLockMode)
 	}
 
-	if retainUntilDateStr, ok := opts.metadata[AmzObjectLockRetainUntilDate]; ok {
-		delete(opts.metadata, AmzObjectLockRetainUntilDate)
+	if retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]; ok {
+		delete(metadata, AmzObjectLockRetainUntilDate)
 		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
 			destOpts.RetainUntilDate = t.UTC()
 		}
 	}
 
-	if lh, ok := opts.metadata[AmzObjectLockLegalHold]; ok {
+	if lh, ok := metadata[AmzObjectLockLegalHold]; ok {
 		destOpts.LegalHold = minio.LegalHoldStatus(lh)
-		delete(opts.metadata, AmzObjectLockLegalHold)
+		delete(metadata, AmzObjectLockLegalHold)
 	}
 
 	// Assign metadata after irrelevant parts are delete above
-	destOpts.UserMetadata = opts.metadata
-	destOpts.ReplaceMetadata = len(opts.metadata) > 0
+	destOpts.UserMetadata = metadata
+	destOpts.ReplaceMetadata = len(metadata) > 0
 
 	var e error
 	if opts.disableMultipart || opts.size < 64*1024*1024 {
@@ -905,11 +915,19 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 }
 
 // Put - upload an object with custom metadata.
-func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (int64, *probe.Error) {
+func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, putOpts PutOptions) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
+
+	metadata := make(map[string]string, len(putOpts.metadata))
+	for k, v := range putOpts.metadata {
+		metadata[k] = v
+	}
+
+	// Do not copy storage class, it needs to be specified in putOpts
+	delete(metadata, "X-Amz-Storage-Class")
 
 	contentType, ok := metadata["Content-Type"]
 	if ok {
@@ -937,11 +955,6 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	contentLanguage, ok := metadata["Content-Language"]
 	if ok {
 		delete(metadata, "Content-Language")
-	}
-
-	storageClass, ok := metadata["X-Amz-Storage-Class"]
-	if ok {
-		delete(metadata, "X-Amz-Storage-Class")
 	}
 
 	var tagsMap map[string]string
@@ -981,10 +994,10 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentDisposition:   contentDisposition,
 		ContentEncoding:      contentEncoding,
 		ContentLanguage:      contentLanguage,
-		StorageClass:         strings.ToUpper(storageClass),
-		ServerSideEncryption: sse,
-		SendContentMd5:       md5,
-		DisableMultipart:     disableMultipart,
+		StorageClass:         strings.ToUpper(putOpts.storageClass),
+		ServerSideEncryption: putOpts.sse,
+		SendContentMd5:       putOpts.md5,
+		DisableMultipart:     putOpts.disableMultipart,
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {

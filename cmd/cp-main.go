@@ -493,7 +493,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 				// Check and handle storage class if passed in command line args
 				if storageClass := cli.String("storage-class"); storageClass != "" {
-					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = storageClass
+					cpURLs.TargetContent.StorageClass = storageClass
 				}
 
 				if rm := cli.String(rmFlag); rm != "" {

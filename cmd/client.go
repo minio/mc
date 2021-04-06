@@ -51,6 +51,15 @@ type GetOptions struct {
 	VersionID string
 }
 
+// PutOptions holds options for PUT operation
+type PutOptions struct {
+	metadata              map[string]string
+	sse                   encrypt.ServerSide
+	md5, disableMultipart bool
+	isPreserve            bool
+	storageClass          string
+}
+
 // StatOptions holds options of the HEAD operation
 type StatOptions struct {
 	incomplete bool
@@ -80,6 +89,7 @@ type CopyOptions struct {
 	metadata         map[string]string
 	disableMultipart bool
 	isPreserve       bool
+	storageClass     string
 }
 
 // Client - client interface
@@ -109,7 +119,7 @@ type Client interface {
 	// I/O operations with metadata.
 	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, err *probe.Error)
 
-	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide, md5, disableMultipart, isPreserve bool) (n int64, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
 
 	// Object Locking related API
 	PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error
