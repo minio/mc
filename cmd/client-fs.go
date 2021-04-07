@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -440,9 +439,9 @@ func isSysErrNotEmpty(err error) bool {
 	return false
 }
 
-// deleteFile does not delete the file path of the object if the file path becomes empty
-// after the object's removal, as the removal of empty paths is the usual object storage
-// behavior.
+// deleteFile does not delete the file path of the object in a file system,
+// if the file path becomes empty after the object's removal. Normally, the
+// removal of empty paths is the usual object storage behavior.
 func deleteFile(deletePath string) error {
 	// Attempt to remove path.
 	if e := os.Remove(deletePath); e != nil {
@@ -451,11 +450,6 @@ func deleteFile(deletePath string) error {
 		}
 		return e
 	}
-
-	// Trailing slash is removed when found to ensure
-	// slashpath.Dir() to work as intended.
-	parentPath := strings.TrimSuffix(deletePath, slashSeperator)
-	parentPath = path.Dir(parentPath)
 
 	return nil
 }
