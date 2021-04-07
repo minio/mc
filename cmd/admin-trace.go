@@ -186,6 +186,8 @@ func tracingOpts(ctx *cli.Context) (opts madmin.ServiceTraceOpts, e error) {
 	opts.OnlyErrors = ctx.Bool("errors")
 
 	if ctx.Bool("all") {
+		opts.All = true // Deprecated
+
 		opts.S3 = true
 		opts.Internal = true
 		opts.Storage = true
@@ -369,6 +371,9 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 		s.CallStats.Duration = t.CallStats.Latency
 		s.CallStats.Rx = t.CallStats.InputBytes
 		s.CallStats.Tx = t.CallStats.OutputBytes
+
+		// Support older versions of MinIO server
+		s.Time = t.ReqInfo.Time
 	}
 	return s
 }
