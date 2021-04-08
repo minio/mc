@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -26,7 +25,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -245,21 +243,16 @@ func mainMove(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(), "Unable to parse the provided url.")
 		}
 		if _, ok := client.(*S3Client); ok {
-			var legalHoldStatus minio.LegalHoldStatus
-			var retentionMode minio.RetentionMode
-			var err *probe.Error
-			var ErrInvalidBucketObjectLockConfiguration = probe.NewError(errors.New("The specified object does not have a ObjectLock configuration"))
-
-			if legalHoldStatus, err = client.GetObjectLegalHold(ctx, ""); err != nil && err != ErrInvalidBucketObjectLockConfiguration {
-				fatalIf(err.Trace(), "Unable to get legalhold lock configuration for `%s`", urlStr)
-			} else if legalHoldStatus == "ON" {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked with legalhold. `%s` cannot be moved.", urlStr))
+			content, err := client.Stat(ctx, StatOptions{})
+			if err != nil {
+				fatalIf(err.Trace(), "Unable to get stat info for `%s`", urlStr)
 			}
-
-			if retentionMode, _, err = client.GetObjectRetention(ctx, ""); err != nil && err != ErrInvalidBucketObjectLockConfiguration {
-				fatalIf(err.Trace(), "Unable to get retention lock configuration for `%s`", urlStr)
-			} else if retentionMode != "" {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked with retention mode %s. `%s` cannot be moved.", retentionMode, urlStr))
+			if retentionMode, isRetention := content.Metadata["X-Amz-Object-Lock-Mode"]; isRetention {
+				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked in "+
+					"retention mode %s. `%s` cannot be moved.", retentionMode, urlStr))
+			} else if _, isLegalhold := content.Metadata["X-Amz-Object-Lock-Legal-Hold"]; isLegalhold {
+				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked with "+
+					"legalhold. `%s` cannot be moved.", urlStr))
 			}
 		}
 	}
