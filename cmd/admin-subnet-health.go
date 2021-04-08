@@ -65,6 +65,11 @@ var adminHealthFlags = []cli.Flag{
 		Name:  "subnet-proxy",
 		Usage: "HTTP(S) proxy URL to be used along with license flag",
 	},
+	cli.IntFlag{
+		Name:  "schedule",
+		Usage: "Schedule of uploading to subnet in no of days",
+		Value: 0,
+	},
 	cli.BoolFlag{
 		Name:   "dev",
 		Usage:  "Development mode",
@@ -102,16 +107,12 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 }
 
 //compress and tar health report output
-func tarGZ(c HealthReportInfo, filename string) error {
+func tarGZ(c HealthReportInfo, filename string, showMessages bool) error {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-
-	defer func() {
-		console.Infoln("Health data saved at", filename)
-	}()
 
 	gzWriter := gzip.NewWriter(f)
 	defer gzWriter.Close()
@@ -134,14 +135,17 @@ func tarGZ(c HealthReportInfo, filename string) error {
 		return err
 	}
 
-	warningMsgBoundary := "*********************************************************************************"
-	warning := warnText("                                   WARNING!!")
-	warningContents := infoText(`     ** THIS FILE MAY CONTAIN SENSITIVE INFORMATION ABOUT YOUR ENVIRONMENT ** 
+	if showMessages {
+		warningMsgBoundary := "*********************************************************************************"
+		warning := warnText("                                   WARNING!!")
+		warningContents := infoText(`     ** THIS FILE MAY CONTAIN SENSITIVE INFORMATION ABOUT YOUR ENVIRONMENT ** 
      ** PLEASE INSPECT CONTENTS BEFORE SHARING IT ON ANY PUBLIC FORUM **`)
 
-	warningMsgHeader := infoText(warningMsgBoundary)
-	warningMsgTrailer := infoText(warningMsgBoundary)
-	console.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
+		warningMsgHeader := infoText(warningMsgBoundary)
+		warningMsgTrailer := infoText(warningMsgBoundary)
+		console.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
+		console.Infoln("Health data saved at", filename)
+	}
 
 	return nil
 }
@@ -168,16 +172,74 @@ func mainAdminHealth(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
+	license, freq, dev := fetchSubnetUploadFlags(ctx)
+	uploadToSubnet := len(license) > 0
+	uploadPeriodically := freq != 0
+
+	e := validateFlags(uploadToSubnet, uploadPeriodically, dev)
+	fatalIf(probe.NewError(e), "Invalid flags.")
+
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	// Main execution
+	execAdminHealth(ctx, client, aliasedURL, license, dev)
+
+	if uploadToSubnet && uploadPeriodically {
+		// Periodic upload to subnet
+		for {
+			sleepDuration := time.Hour * 24 * time.Duration(freq)
+			console.Infoln("Waiting for", sleepDuration, "before running health diagnostics again.")
+			time.Sleep(sleepDuration)
+			execAdminHealth(ctx, client, aliasedURL, license, dev)
+		}
+	}
+	return nil
+}
+
+func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, bool) {
+	// license flag is passed when the health data
+	// is to be uploadeD to Subnet
+	license := ctx.String("license")
+
+	// non-zero schedule means that health diagnostics
+	// are to be run periodically and uploaded to subnet
+	freq := ctx.Int("schedule")
+
+	// If set (along with --license), the health data will
+	// be uploaded to a local (devenv) subnet server
+	dev := ctx.Bool("dev")
+
+	return license, freq, dev
+}
+
+func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool) error {
+	if uploadToSubnet {
+		if globalJSON {
+			return errors.New("--json and --license should not be passed together")
+		}
+		return nil
+	}
+
+	if dev {
+		return errors.New("--dev is applicable only when --license is also passed")
+	}
+
+	if uploadPeriodically {
+		return errors.New("--schedule is applicable only when --license is also passed")
+	}
+
+	return nil
+}
+
+func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, dev bool) {
 	healthInfo, e := fetchServerHealthInfo(ctx, client)
 	clusterHealthInfo := MapHealthInfoToV1(healthInfo, e)
 
 	if globalJSON {
 		printMsg(clusterHealthInfo)
-		return nil
+		return
 	}
 
 	if clusterHealthInfo.GetError() != "" {
@@ -186,22 +248,25 @@ func mainAdminHealth(ctx *cli.Context) error {
 	}
 
 	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), time.Now().Format("20060102150405"))
-	e = tarGZ(clusterHealthInfo, filename)
+
+	uploadToSubnet := len(license) > 0
+	e = tarGZ(clusterHealthInfo, filename, !uploadToSubnet)
 	fatalIf(probe.NewError(e), "Unable to create health report file")
 
-	license := ctx.String("license")
-	if len(license) > 0 {
+	if uploadToSubnet {
 		var proxyURL *url.URL
 		if value := ctx.String("subnet-proxy"); value != "" {
 			proxyURL, e = url.Parse(value)
 			fatalIf(probe.NewError(e), "Unable to parse subnet-proxy flag")
 		}
 
-		e = uploadHealthReport(aliasedURL, filename, license, ctx.Bool("dev"), proxyURL)
+		e = uploadHealthReport(aliasedURL, filename, license, dev, proxyURL)
+		if e == nil {
+			// Delete the report after successful upload
+			deleteFile(filename)
+		}
 		fatalIf(probe.NewError(e), "Unable to upload health report to Subnet portal")
 	}
-
-	return nil
 }
 
 func uploadHealthReport(alias string, filename string, license string, dev bool, proxyURL *url.URL) error {
