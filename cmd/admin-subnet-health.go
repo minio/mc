@@ -38,6 +38,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/klauspost/compress/gzip"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
@@ -55,7 +56,7 @@ var adminHealthFlags = []cli.Flag{
 	cli.DurationFlag{
 		Name:   "deadline",
 		Usage:  "maximum duration that health tests should be allowed to run",
-		Value:  3600 * time.Second,
+		Value:  1 * time.Hour,
 		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
 	cli.StringFlag{
@@ -112,7 +113,7 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 }
 
 //compress and tar health report output
-func tarGZ(c HealthReportInfo, filename string, showMessages bool) error {
+func tarGZ(healthInfo interface{}, version string, filename string, showMessages bool) error {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return err
@@ -124,19 +125,15 @@ func tarGZ(c HealthReportInfo, filename string, showMessages bool) error {
 
 	enc := gojson.NewEncoder(gzWriter)
 
-	header := HealthReportHeader{
-		Subnet: Health{
-			Health: SchemaVersion{
-				Version: "v1",
-			},
-		},
-	}
+	header := struct {
+		Version string `json:"version"`
+	}{Version: version}
 
 	if err := enc.Encode(header); err != nil {
 		return err
 	}
 
-	if err := enc.Encode(c); err != nil {
+	if err := enc.Encode(healthInfo); err != nil {
 		return err
 	}
 
@@ -174,8 +171,7 @@ func mainAdminHealth(ctx *cli.Context) error {
 	checkAdminHealthSyntax(ctx)
 
 	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
+	aliasedURL := ctx.Args().Get(0)
 
 	license, schedule, dev, name := fetchSubnetUploadFlags(ctx)
 
@@ -251,23 +247,22 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool, name 
 }
 
 func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, clusterName string, dev bool) {
-	healthInfo, e := fetchServerHealthInfo(ctx, client)
-	clusterHealthInfo := MapHealthInfoToV1(healthInfo, e)
+	healthInfo, version, e := fetchServerHealthInfo(ctx, client)
+	fatalIf(probe.NewError(e), "Unable to fetch health information.")
 
 	if globalJSON {
-		printMsg(clusterHealthInfo)
+		switch version {
+		case madmin.HealthInfoVersion0:
+			printMsg(healthInfo.(madmin.HealthInfoV0))
+		case madmin.HealthInfoVersion:
+			printMsg(healthInfo.(madmin.HealthInfo))
+		}
 		return
 	}
 
-	if clusterHealthInfo.GetError() != "" {
-		e = errors.New(clusterHealthInfo.GetError())
-		fatalIf(probe.NewError(e), "Unable to obtain health information")
-	}
-
-	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), time.Now().Format("20060102150405"))
-
 	uploadToSubnet := len(license) > 0
-	e = tarGZ(clusterHealthInfo, filename, !uploadToSubnet)
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), UTCNow().Format("20060102150405"))
+	e = tarGZ(healthInfo, version, filename, !uploadToSubnet)
 	fatalIf(probe.NewError(e), "Unable to create health report file")
 
 	if uploadToSubnet {
@@ -359,7 +354,7 @@ func subnetUploadReq(url string, filename string) (*http.Request, error) {
 	return r, nil
 }
 
-func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin.HealthInfo, error) {
+func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interface{}, string, error) {
 	opts := GetHealthDataTypeSlice(ctx, "test")
 	if len(*opts) == 0 {
 		opts = &options
@@ -417,6 +412,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin
 			}
 		}
 	}
+
 	spinner := func(resource string, opt madmin.HealthDataType) func(bool) bool {
 		var spinStopper func()
 		done := false
@@ -445,7 +441,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin
 
 	admin := spinner("Admin Info", madmin.HealthDataTypeMinioInfo)
 	cpu := spinner("CPU Info", madmin.HealthDataTypeSysCPU)
-	diskHw := spinner("Disk Info", madmin.HealthDataTypeSysDiskHw)
+	diskHw := spinner("Disk Info", madmin.HealthDataTypeSysDriveHw)
 	osInfo := spinner("OS Info", madmin.HealthDataTypeSysOsInfo)
 	mem := spinner("Mem Info", madmin.HealthDataTypeSysMem)
 	process := spinner("Process Info", madmin.HealthDataTypeSysLoad)
@@ -453,7 +449,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin
 	drive := spinner("Drive Test", madmin.HealthDataTypePerfDrive)
 	net := spinner("Network Test", madmin.HealthDataTypePerfNet)
 
-	progress := func(info madmin.HealthInfo) {
+	progressV0 := func(info madmin.HealthInfoV0) {
 		_ = admin(len(info.Minio.Info.Servers) > 0) &&
 			cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.DiskHwInfo) > 0) &&
@@ -465,19 +461,58 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin
 			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)
 	}
 
+	progress := func(info madmin.HealthInfo) {
+		_ = admin(len(info.Minio.Info.Servers) > 0) &&
+			cpu(len(info.Sys.CPUInfo) > 0) &&
+			diskHw(len(info.Sys.Partitions) > 0) &&
+			osInfo(len(info.Sys.OSInfo) > 0) &&
+			mem(len(info.Sys.MemInfo) > 0) &&
+			process(len(info.Sys.ProcInfo) > 0) &&
+			config(info.Minio.Config.Config != nil) &&
+			drive(len(info.Perf.Drives) > 0) &&
+			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)
+	}
+
 	var err error
-	var healthInfo madmin.HealthInfo
-
 	// Fetch info of all servers (cluster or single server)
-	obdChan := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"))
-	for adminHealthInfo := range obdChan {
-		if adminHealthInfo.Error != "" {
-			err = errors.New(adminHealthInfo.Error)
-			break
-		}
+	resp, version, err := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"))
+	if err != nil {
+		cancel()
+		return nil, "", err
+	}
 
-		healthInfo = adminHealthInfo
-		progress(adminHealthInfo)
+	var healthInfo interface{}
+
+	decoder := json.NewDecoder(resp.Body)
+	switch version {
+	case madmin.HealthInfoVersion0:
+		for {
+			var info madmin.HealthInfoV0
+			if err = decoder.Decode(&info); err != nil {
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+
+				break
+			}
+
+			progressV0(info)
+			healthInfo = MapHealthInfoToV1(info, nil)
+		}
+	case madmin.HealthInfoVersion:
+		for {
+			var info madmin.HealthInfo
+			if err = decoder.Decode(&info); err != nil {
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+
+				break
+			}
+
+			progress(info)
+			healthInfo = info
+		}
 	}
 
 	// In case any of the spinners have not stopped yet (can happen in some
@@ -488,7 +523,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (madmin
 
 	// cancel the context if obdChan has returned.
 	cancel()
-	return healthInfo, err
+	return healthInfo, version, err
 }
 
 // HealthDataTypeSlice is a typed list of health tests
