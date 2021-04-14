@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -247,12 +248,38 @@ func mainMove(cliCtx *cli.Context) error {
 			if err != nil {
 				fatalIf(err.Trace(), "Unable to get stat info for `%s`", urlStr)
 			}
-			if retentionMode, isRetention := content.Metadata["X-Amz-Object-Lock-Mode"]; isRetention {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked in "+
-					"retention mode %s. `%s` cannot be moved.", retentionMode, urlStr))
-			} else if _, isLegalhold := content.Metadata["X-Amz-Object-Lock-Legal-Hold"]; isLegalhold {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked with "+
-					"legalhold. `%s` cannot be moved.", urlStr))
+			if retentionMode, isRetention :=
+				content.Metadata["X-Amz-Object-Lock-Mode"]; isRetention {
+				// The object has a retention lock.
+				// Check if it has expired.
+				expiryDate, ok := content.Metadata["X-Amz-Object-Lock-Retain-Until-Date"]
+				if !ok {
+					fatalIf(errDummy().Trace(), fmt.Sprintf(
+						"Error: Retention mode is set to '%s', but metadata"+
+							" does not have an expiry date defined for '%s'",
+						retentionMode, urlStr))
+				}
+				// Create the layout to convert 'expiryDate', of type 'string',
+				// to 'expiryParsed', of type 'time.Time'
+				layout := "2006-01-02T03:04:05.999Z"
+				expiryParsed, err := time.Parse(layout, expiryDate)
+				if err != nil {
+					fatalIf(errDummy().Trace(), fmt.Sprintf(
+						"Error parsing expiry date for '%s' mode lock. %s",
+						retentionMode, err))
+				}
+
+				// Check if expiry date has passed
+				if !time.Now().After(expiryParsed) {
+					fatalIf(errDummy().Trace(), fmt.Sprintf(
+						"Object is locked (retention mode %s). `%s` cannot be moved.",
+						retentionMode, urlStr))
+				}
+			}
+
+			if _, isLegalhold := content.Metadata["X-Amz-Object-Lock-Legal-Hold"]; isLegalhold {
+				fatalIf(errDummy().Trace(), fmt.Sprintf("Object is locked "+
+					"(legalhold). `%s` cannot be moved.", urlStr))
 			}
 		}
 	}
