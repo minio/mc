@@ -42,6 +42,15 @@ const (
 
 	// Global error exit status.
 	globalErrorExitStatus = 1
+
+	// Global CTRL-C (SIGINT, #2) exit status.
+	globalCancelExitStatus = 130
+
+	// Global SIGKILL (#9) exit status.
+	globalKillExitStatus = 137
+
+	// Global SIGTERM (#15) exit status
+	globalTerminatExitStatus = 143
 )
 
 var (
