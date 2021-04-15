@@ -72,7 +72,7 @@ var adminBucketRemoteAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@DEST_URL/DEST_BUCKET [--path | --region | --label| --bandwidth] --service
+  {{.HelpName}} TARGET http(s)://ACCESSKEY:SECRETKEY@DEST_URL/DEST_BUCKET [--path | --region | --bandwidth] --service
 
 TARGET:
   Also called as alias/sourcebucketname
@@ -130,7 +130,6 @@ type RemoteMessage struct {
 	Path                string        `json:"path,omitempty"`
 	Region              string        `json:"region,omitempty"`
 	ServiceType         string        `json:"service"`
-	TargetLabel         string        `json:"TargetLabel"`
 	Bandwidth           int64         `json:"bandwidth"`
 	ReplicationSync     bool          `json:"replicationSync"`
 	HealthCheckDuration time.Duration `json:"healthcheckDuration"`
@@ -140,10 +139,6 @@ func (r RemoteMessage) String() string {
 	switch r.op {
 	case "ls":
 		message := console.Colorize("TargetURL", fmt.Sprintf("%s ", r.TargetURL))
-		if r.TargetLabel != "" {
-			message += console.Colorize("TargetLabel", fmt.Sprintf("%s ", r.TargetLabel))
-		}
-
 		message += console.Colorize("SourceBucket", r.SourceBucket)
 		message += console.Colorize("Arrow", "->")
 		message += console.Colorize("TargetBucket", r.TargetBucket)
@@ -227,7 +222,6 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		Type:                madmin.ServiceType(serviceType),
 		Region:              cli.String("region"),
 		BandwidthLimit:      int64(bandwidth),
-		Label:               strings.ToUpper(cli.String("label")),
 		ReplicationSync:     cli.Bool("sync"),
 		HealthCheckDuration: time.Duration(cli.Uint("healthcheck-seconds")) * time.Second,
 	}

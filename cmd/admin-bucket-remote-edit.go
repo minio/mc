@@ -121,7 +121,6 @@ func fetchRemoteEditTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 		Endpoint:     host,
 		API:          "s3v4",
 		Region:       cli.String("region"),
-		Label:        strings.ToUpper(cli.String("label")),
 		Arn:          cli.String("arn"),
 	}
 	return bktTarget
