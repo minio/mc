@@ -61,6 +61,10 @@ var adminHealthFlags = []cli.Flag{
 		Name:  "license",
 		Usage: "Subnet license key",
 	},
+	cli.StringFlag{
+		Name:  "subnet-proxy",
+		Usage: "HTTP(S) proxy URL to be used along with license flag",
+	},
 	cli.BoolFlag{
 		Name:   "dev",
 		Usage:  "Development mode",
@@ -187,21 +191,31 @@ func mainAdminHealth(ctx *cli.Context) error {
 
 	license := ctx.String("license")
 	if len(license) > 0 {
-		e = uploadHealthReport(aliasedURL, filename, license, ctx.Bool("dev"))
+		var proxyURL *url.URL
+		if value := ctx.String("subnet-proxy"); value != "" {
+			proxyURL, e = url.Parse(value)
+			fatalIf(probe.NewError(e), "Unable to parse subnet-proxy flag")
+		}
+
+		e = uploadHealthReport(aliasedURL, filename, license, ctx.Bool("dev"), proxyURL)
 		fatalIf(probe.NewError(e), "Unable to upload health report to Subnet portal")
 	}
 
 	return nil
 }
 
-func uploadHealthReport(alias string, filename string, license string, dev bool) error {
+func uploadHealthReport(alias string, filename string, license string, dev bool, proxyURL *url.URL) error {
 	uploadURL := subnetUploadURL(alias, filename, license, dev)
 	req, e := subnetUploadReq(uploadURL, filename)
 	if e != nil {
 		return e
 	}
 
-	resp, herr := httpClient(10 * time.Second).Do(req)
+	client := httpClient(10 * time.Second)
+	if proxyURL != nil {
+		client.Transport.(*http.Transport).Proxy = http.ProxyURL(proxyURL)
+	}
+	resp, herr := client.Do(req)
 	if herr != nil {
 		return herr
 	}
