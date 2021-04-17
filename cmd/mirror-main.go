@@ -116,8 +116,8 @@ var (
 			Usage: "add custom metadata for all objects",
 		},
 		cli.StringFlag{
-			Name:  "monitoring-port",
-			Usage: "if specified, a new prometheus endpoint will be created to report mirroring activity",
+			Name:  "monitoring-address",
+			Usage: "if specified, a new prometheus endpoint will be created to report mirroring activity. (eg: localhost:8081)",
 		},
 	}
 )
@@ -202,19 +202,19 @@ EXAMPLES:
 var (
 	s3mirrorTotalOps = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_total_s3ops",
-		Help: "The total number of failed mirror events",
+		Help: "The total number of mirror operations",
 	})
 	s3mirrorTotalUploadedBytes = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_total_s3uploaded_bytes",
-		Help: "The total number of bytes uploaded by mirror",
+		Help: "The total number of bytes uploaded",
 	})
 	s3mirrorFailedOps = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_failed_s3ops",
-		Help: "The total number of failed mirror events",
+		Help: "The total number of failed mirror operations",
 	})
 	s3mirrorRestarts = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "mc_mirror_total_restarts",
-		Help: "The number of mirroring restart",
+		Help: "The number of mirror restarts",
 	})
 )
 
@@ -969,10 +969,10 @@ func mainMirror(cliCtx *cli.Context) error {
 	// check 'mirror' cli arguments.
 	srcURL, tgtURL := checkMirrorSyntax(ctx, cliCtx, encKeyDB)
 
-	if prometheusPort := cliCtx.String("monitoring-port"); prometheusPort != "" {
+	if prometheusAddress := cliCtx.String("monitoring-address"); prometheusAddress != "" {
 		http.Handle("/metrics", promhttp.Handler())
 		go func() {
-			if e := http.ListenAndServe(prometheusPort, nil); e != nil {
+			if e := http.ListenAndServe(prometheusAddress, nil); e != nil {
 				fatalIf(probe.NewError(e), "Unable to setup monitoring endpoint.")
 			}
 
