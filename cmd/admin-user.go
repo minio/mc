@@ -25,6 +25,7 @@ var adminUserSubcommands = []cli.Command{
 	adminUserRemoveCmd,
 	adminUserListCmd,
 	adminUserInfoCmd,
+	adminUserPolicyCmd,
 }
 
 var adminUserCmd = cli.Command{
