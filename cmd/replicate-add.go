@@ -62,7 +62,7 @@ var replicateAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "replicate",
-		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and replica metadata sync(in the case of active-active replication).Valid options are \"delete-marker\", \"delete\" ,\"replica-metadata-sync\" and \"\"",
+		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and replica metadata sync(in the case of active-active replication).Valid options are \"delete-marker\", \"delete\" ,\"replica-metadata-sync\", \"existing-objects\" and \"\"",
 	},
 }
 
@@ -97,7 +97,16 @@ EXAMPLES:
         --storage-class "STANDARD" --disable \
         --arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
         --priority 1 \
-        --remote-bucket "destbucket"
+		--remote-bucket "destbucket"
+
+ 3. Add replication configuration rule with existing object replication, delete marker replication and versioned deletes 
+    enabled on bucket "mybucket" for alias "myminio".
+	{{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \
+	 --storage-class "STANDARD" --disable \
+	 --arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
+	 --priority 1 \
+	 --remote-bucket "destbucket" \
+	 --replicate "existing-objects,delete,delete-marker"
 `,
 }
 
@@ -163,6 +172,7 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	dmReplicateStatus := disableStatus
 	deleteReplicationStatus := disableStatus
 	replicaSync := enableStatus
+	existingReplicationStatus := disableStatus
 	if cliCtx.IsSet("replicate") {
 		replSlice := strings.Split(cliCtx.String("replicate"), ",")
 		for _, opt := range replSlice {
@@ -173,23 +183,28 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 				deleteReplicationStatus = enableStatus
 			case "replica-metadata-sync":
 				replicaSync = enableStatus
+			case "existing-objects":
+				existingReplicationStatus = enableStatus
+
 			default:
-				fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\" or \"\" to disable these settings")
+				fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\",\"existing-objects\" or \"\" to disable these settings")
 			}
 		}
 	}
+
 	opts := replication.Options{
-		TagString:              cliCtx.String("tags"),
-		RoleArn:                cliCtx.String("arn"),
-		StorageClass:           cliCtx.String("storage-class"),
-		Priority:               strconv.Itoa(cliCtx.Int("priority")),
-		RuleStatus:             ruleStatus,
-		ID:                     cliCtx.String("id"),
-		DestBucket:             cliCtx.String("remote-bucket"),
-		Op:                     replication.AddOption,
-		ReplicateDeleteMarkers: dmReplicateStatus,
-		ReplicateDeletes:       deleteReplicationStatus,
-		ReplicaSync:            replicaSync,
+		TagString:               cliCtx.String("tags"),
+		RoleArn:                 cliCtx.String("arn"),
+		StorageClass:            cliCtx.String("storage-class"),
+		Priority:                strconv.Itoa(cliCtx.Int("priority")),
+		RuleStatus:              ruleStatus,
+		ID:                      cliCtx.String("id"),
+		DestBucket:              cliCtx.String("remote-bucket"),
+		Op:                      replication.AddOption,
+		ReplicateDeleteMarkers:  dmReplicateStatus,
+		ReplicateDeletes:        deleteReplicationStatus,
+		ReplicaSync:             replicaSync,
+		ExistingObjectReplicate: existingReplicationStatus,
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not add replication rule")
 	printMsg(replicateAddMessage{

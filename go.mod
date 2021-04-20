@@ -41,3 +41,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	maze.io/x/duration v0.0.0-20160924141736-faac084b6075
 )
+replace github.com/minio/minio-go/v7 => ../minio-go

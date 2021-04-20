@@ -58,7 +58,7 @@ var replicateEditFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "replicate",
-		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and syncing replica metadata modifications.Valid options are \"delete-marker\", \"delete\",\"replica-metadata-sync\" and \"\"",
+		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and syncing replica metadata modifications.Valid options are \"delete-marker\", \"delete\",\"replica-metadata-sync\", \"existing-objects\" and \"\"",
 	},
 }
 
@@ -97,8 +97,8 @@ EXAMPLES:
   6. Disable delete marker and versioned delete replication on a replication configuration rule with ID "kxYD.491" on a target myminio/bucket.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate ""
 
-  7. Enable replica metadata sync ,delete marker and versioned delete replication on a replication configuration rule with ID "kxYD.491" on a target myminio/bucket.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate "delete,delete-marker,replica-metadata-sync"
+  7. Enable existing object replication on a configuration rule with ID "kxYD.491" on a target myminio/bucket. Rule previously had enabled delete marker and versioned delete replication.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate "existing-objects,delete-marker,delete"
 `,
 }
 
@@ -157,12 +157,14 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(args...), "--state can be either `enable` or `disable`")
 		}
 	}
-	var vDeleteReplicate, dmReplicate, replicasync string
+	var vDeleteReplicate, dmReplicate, replicasync, existingReplState string
 	if cliCtx.IsSet("replicate") {
 		replSlice := strings.Split(cliCtx.String("replicate"), ",")
 		vDeleteReplicate = disableStatus
 		dmReplicate = disableStatus
 		replicasync = disableStatus
+		existingReplState = disableStatus
+
 		for _, opt := range replSlice {
 			switch strings.TrimSpace(strings.ToLower(opt)) {
 			case "delete-marker":
@@ -171,6 +173,7 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 				vDeleteReplicate = enableStatus
 			case "replica-metadata-sync":
 				replicasync = enableStatus
+			case "existing-objects":
 
 			default:
 				if opt != "" {
@@ -199,7 +202,9 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 		opts.ReplicateDeletes = vDeleteReplicate
 		opts.ReplicateDeleteMarkers = dmReplicate
 		opts.ReplicaSync = replicasync
+		opts.ExistingObjectReplicate = existingReplState
 	}
+
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
 	printMsg(replicateEditMessage{
 		Op:  "set",
