@@ -143,10 +143,10 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 			info, e := client.ServerInfo(ctx)
 			cancel()
 			switch {
-			case e == nil && info.Mode == madmin.ObjectLayerOnline:
+			case e == nil && info.Mode == string(madmin.ItemOnline):
 				printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
 				return nil
-			case err == nil && info.Mode == madmin.ObjectLayerInitializing:
+			case err == nil && info.Mode == string(madmin.ItemInitializing):
 				coloring = color.New(color.FgYellow)
 				mark = "!"
 				fallthrough
