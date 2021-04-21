@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"time"
 
 	"github.com/fatih/color"
@@ -24,6 +25,7 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminServiceRestartCmd = cli.Command{
@@ -56,7 +58,7 @@ type serviceRestartCommand struct {
 
 // String colorized service restart command message.
 func (s serviceRestartCommand) String() string {
-	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`.")
+	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`. Type Ctrl-C or wait to see the status of the restart.")
 }
 
 // JSON jsonified service restart command message.
@@ -77,7 +79,7 @@ type serviceRestartMessage struct {
 // String colorized service restart message.
 func (s serviceRestartMessage) String() string {
 	if s.Err == nil {
-		return console.Colorize("ServiceRestart", "Restarted `"+s.ServerURL+"` successfully.")
+		return console.Colorize("ServiceRestart", "\nRestarted `"+s.ServerURL+"` successfully.")
 	}
 	return console.Colorize("FailedServiceRestart", "Failed to restart `"+s.ServerURL+"`. error: "+s.Err.Error())
 }
@@ -103,6 +105,8 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	checkAdminServiceRestartSyntax(ctx)
 
 	// Set color.
+	console.SetColor("ServiceOffline", color.New(color.FgRed, color.Bold))
+	console.SetColor("ServiceInitializing", color.New(color.FgYellow, color.Bold))
 	console.SetColor("ServiceRestart", color.New(color.FgGreen, color.Bold))
 	console.SetColor("FailedServiceRestart", color.New(color.FgRed, color.Bold))
 
@@ -119,20 +123,36 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	// Success..
 	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
 
-	// Max. time taken by the server to shutdown is 5 seconds.
-	// This can happen when there are lot of s3 requests pending when the server
-	// receives a restart command.
-	// Sleep for 6 seconds and then check if the server is online.
-	time.Sleep(6 * time.Second)
+	coloring := color.New(color.FgRed)
+	mark := "."
 
-	// Fetch the service status of the specified MinIO server
-	_, e := client.ServerInfo(globalContext)
-
-	if e != nil {
-		printMsg(serviceRestartMessage{Status: "failure", Err: e, ServerURL: aliasedURL})
-	} else {
-		printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+	// Print restart progress
+	printProgress := func() {
+		if !globalQuiet && !globalJSON {
+			coloring.Printf(mark)
+		}
 	}
 
-	return nil
+	for {
+		select {
+		case <-globalContext.Done():
+			return globalContext.Err()
+		case <-time.NewTimer(3 * time.Second).C:
+			ctx, cancel := context.WithTimeout(globalContext, 1*time.Second)
+			// Fetch the service status of the specified MinIO server
+			info, e := client.ServerInfo(ctx)
+			cancel()
+			switch {
+			case e == nil && info.Mode == madmin.ObjectLayerOnline:
+				printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+				return nil
+			case err == nil && info.Mode == madmin.ObjectLayerInitializing:
+				coloring = color.New(color.FgYellow)
+				mark = "!"
+				fallthrough
+			default:
+				printProgress()
+			}
+		}
+	}
 }
