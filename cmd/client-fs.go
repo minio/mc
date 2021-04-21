@@ -1162,6 +1162,14 @@ func (f *fsClient) RemoveReplication(ctx context.Context) *probe.Error {
 
 }
 
+// GetReplicationMetrics - Get replication metrics for a given bucket, not implemented.
+func (f *fsClient) GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error) {
+	return replication.Metrics{}, probe.NewError(APINotImplemented{
+		API:     "GetReplicationMetrics",
+		APIType: "filesystem",
+	})
+}
+
 // Get encryption info for a bucket, not implemented.
 func (f *fsClient) GetEncryption(ctx context.Context) (string, string, *probe.Error) {
 	return "", "", probe.NewError(APINotImplemented{
