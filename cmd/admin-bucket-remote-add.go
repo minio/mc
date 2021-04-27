@@ -60,6 +60,10 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 		Usage: "health check duration in seconds",
 		Value: 60,
 	},
+	cli.BoolFlag{
+		Name:  "disable-proxy",
+		Usage: "disable proxying in active-active replication. If unset, default behavior is to proxy",
+	},
 }
 var adminBucketRemoteAddCmd = cli.Command{
 	Name:         "add",
@@ -132,6 +136,7 @@ type RemoteMessage struct {
 	ServiceType         string        `json:"service"`
 	Bandwidth           int64         `json:"bandwidth"`
 	ReplicationSync     bool          `json:"replicationSync"`
+	Proxy               bool          `json:"proxy"`
 	HealthCheckDuration time.Duration `json:"healthcheckDuration"`
 }
 
@@ -144,17 +149,24 @@ func (r RemoteMessage) String() string {
 		message += console.Colorize("TargetBucket", r.TargetBucket)
 		message += " "
 		message += console.Colorize("ARN", r.RemoteARN)
+		syncStr := "    "
 		if r.ReplicationSync && r.ServiceType == string(madmin.ReplicationService) {
-			message += " "
-			message += console.Colorize("SyncLabel", "sync")
+			syncStr = "sync"
 		}
+		message += " " + console.Colorize("SyncLabel", syncStr)
+		proxyStr := "     "
+		if r.Proxy && r.ServiceType == string(madmin.ReplicationService) {
+			proxyStr = "proxy"
+		}
+		message += " "
+		message += console.Colorize("ProxyLabel", proxyStr)
 		return message
 	case "rm":
 		return console.Colorize("RemoteMessage", "Removed remote target for `"+r.SourceBucket+"` bucket successfully.")
 	case "add":
 		return console.Colorize("RemoteMessage", "Remote ARN = `"+r.RemoteARN+"`.")
 	case "edit":
-		return console.Colorize("RemoteMessage", "Credentials updated successfully for target with ARN:`"+r.RemoteARN+"`.")
+		return console.Colorize("RemoteMessage", "Remote target updated successfully for target with ARN:`"+r.RemoteARN+"`.")
 	}
 	return ""
 }
@@ -232,6 +244,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	}
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
+	proxy := cli.Bool("proxy")
 	bktTarget = &madmin.BucketTarget{
 		TargetBucket:        tgtBucket,
 		Secure:              u.Scheme == "https",
@@ -243,6 +256,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		Region:              cli.String("region"),
 		BandwidthLimit:      int64(bandwidth),
 		ReplicationSync:     cli.Bool("sync"),
+		DisableProxy:        !proxy,
 		HealthCheckDuration: time.Duration(cli.Uint("healthcheck-seconds")) * time.Second,
 	}
 	return sourceBucket, bktTarget
@@ -262,7 +276,6 @@ func getBandwidthInBytes(bandwidthStr string) (bandwidth uint64, err error) {
 // mainAdminBucketRemoteAdd is the handle for "mc admin bucket remote set" command.
 func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
 	checkAdminBucketRemoteAddSyntax(ctx)
-
 	console.SetColor("RemoteMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
@@ -286,6 +299,7 @@ func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
 		SourceBucket:    sourceBucket,
 		RemoteARN:       arn,
 		ReplicationSync: bktTarget.ReplicationSync,
+		Proxy:           !bktTarget.DisableProxy,
 	})
 
 	return nil

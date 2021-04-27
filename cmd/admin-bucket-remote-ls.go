@@ -83,6 +83,7 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 	console.SetColor("ARN", color.New(color.FgCyan))
 	console.SetColor("Arrow", color.New(color.FgHiWhite))
 	console.SetColor("SyncLabel", color.New(color.FgHiYellow))
+	console.SetColor("ProxyLabel", color.New(color.FgHiYellow))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -103,6 +104,8 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 	maxURLLen := 10
 	maxTgtLen := 6
 	maxSrcLen := 6
+	maxArnLen := 3
+
 	if !globalJSON {
 		if len(targets) == 0 {
 			console.Print(console.Colorize("RemoteListEmpty", fmt.Sprintf("No remote targets found for `%s`. \n", urlStr)))
@@ -119,9 +122,12 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			if len(t.SourceBucket) > maxSrcLen {
 				maxSrcLen = len(t.SourceBucket)
 			}
+			if len(t.Arn) > maxArnLen {
+				maxArnLen = len(t.Arn)
+			}
 		}
 		if maxURLLen > 0 {
-			console.Println(console.Colorize("RemoteListMessage", fmt.Sprintf("%-*.*s %-*.*s->%-*.*s %s", maxURLLen+8, maxURLLen+8, "Remote URL", maxSrcLen, maxSrcLen, "Source", maxTgtLen, maxTgtLen, "Target", "ARN")))
+			console.Println(console.Colorize("RemoteListMessage", fmt.Sprintf("%-*.*s %-*.*s->%-*.*s %-*.*s %s %s", maxURLLen+8, maxURLLen+8, "Remote URL", maxSrcLen, maxSrcLen, "Source", maxTgtLen, maxTgtLen, "Target", maxArnLen, maxArnLen, "ARN", "SYNC", "PROXY")))
 		}
 	}
 	for _, target := range targets {
@@ -137,6 +143,9 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			if maxSrcLen > 0 {
 				target.SourceBucket = fmt.Sprintf("%-*.*s", maxSrcLen, maxSrcLen, target.SourceBucket)
 			}
+			if maxArnLen > 0 {
+				target.Arn = fmt.Sprintf("%-*.*s", maxArnLen, maxArnLen, target.Arn)
+			}
 		}
 		printMsg(RemoteMessage{
 			op:              ctx.Command.Name,
@@ -148,6 +157,7 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			ServiceType:     string(target.Type),
 			ReplicationSync: target.ReplicationSync,
 			Bandwidth:       target.BandwidthLimit,
+			Proxy:           !target.DisableProxy,
 		})
 	}
 }
