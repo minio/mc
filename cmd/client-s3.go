@@ -2099,6 +2099,10 @@ func (c *S3Client) ShareDownload(ctx context.Context, versionID string, expires 
 	if versionID != "" {
 		reqParams.Set("versionId", versionID)
 	}
+
+	// Make sure files are downloaded with their original name
+	reqParams.Set("Response-Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", path.Base(object)))
+
 	presignedURL, e := c.api.PresignedGetObject(ctx, bucket, object, expires, reqParams)
 	if e != nil {
 		return "", probe.NewError(e)
