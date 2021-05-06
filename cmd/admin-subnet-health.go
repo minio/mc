@@ -62,13 +62,17 @@ var adminHealthFlags = []cli.Flag{
 		Usage: "Subnet license key",
 	},
 	cli.StringFlag{
-		Name:  "subnet-proxy",
-		Usage: "HTTP(S) proxy URL to be used along with license flag",
+		Name:  "name",
+		Usage: "Cluster name to be saved in subnet on 1st upload",
 	},
 	cli.IntFlag{
 		Name:  "schedule",
 		Usage: "Schedule of uploading to subnet in no of days",
 		Value: 0,
+	},
+	cli.StringFlag{
+		Name:  "subnet-proxy",
+		Usage: "HTTP(S) proxy URL to be used along with license flag",
 	},
 	cli.BoolFlag{
 		Name:   "dev",
@@ -172,11 +176,15 @@ func mainAdminHealth(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	license, freq, dev := fetchSubnetUploadFlags(ctx)
-	uploadToSubnet := len(license) > 0
-	uploadPeriodically := freq != 0
+	license, schedule, dev, name := fetchSubnetUploadFlags(ctx)
+	if len(name) == 0 {
+		name = aliasedURL
+	}
 
-	e := validateFlags(uploadToSubnet, uploadPeriodically, dev)
+	uploadToSubnet := len(license) > 0
+	uploadPeriodically := schedule != 0
+
+	e := validateFlags(uploadToSubnet, uploadPeriodically, dev, name)
 	fatalIf(probe.NewError(e), "Invalid flags.")
 
 	// Create a new MinIO Admin Client
@@ -184,37 +192,41 @@ func mainAdminHealth(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Main execution
-	execAdminHealth(ctx, client, aliasedURL, license, dev)
+	execAdminHealth(ctx, client, aliasedURL, license, name, dev)
 
 	if uploadToSubnet && uploadPeriodically {
 		// Periodic upload to subnet
 		for {
-			sleepDuration := time.Hour * 24 * time.Duration(freq)
+			sleepDuration := time.Hour * 24 * time.Duration(schedule)
 			console.Infoln("Waiting for", sleepDuration, "before running health diagnostics again.")
 			time.Sleep(sleepDuration)
-			execAdminHealth(ctx, client, aliasedURL, license, dev)
+			execAdminHealth(ctx, client, aliasedURL, license, name, dev)
 		}
 	}
 	return nil
 }
 
-func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, bool) {
+func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, bool, string) {
 	// license flag is passed when the health data
 	// is to be uploadeD to Subnet
 	license := ctx.String("license")
 
 	// non-zero schedule means that health diagnostics
 	// are to be run periodically and uploaded to subnet
-	freq := ctx.Int("schedule")
+	schedule := ctx.Int("schedule")
 
 	// If set (along with --license), the health data will
 	// be uploaded to a local (devenv) subnet server
 	dev := ctx.Bool("dev")
 
-	return license, freq, dev
+	// If set (along with --license), this will be passed to
+	// subnet as the name of the cluster
+	name := ctx.String("name")
+
+	return license, schedule, dev, name
 }
 
-func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool) error {
+func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool, name string) error {
 	if uploadToSubnet {
 		if globalJSON {
 			return errors.New("--json and --license should not be passed together")
@@ -230,10 +242,14 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool) error
 		return errors.New("--schedule is applicable only when --license is also passed")
 	}
 
+	if len(name) > 0 {
+		return errors.New("--name is applicable only when --license is also passed")
+	}
+
 	return nil
 }
 
-func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, dev bool) {
+func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, clusterName string, dev bool) {
 	healthInfo, e := fetchServerHealthInfo(ctx, client)
 	clusterHealthInfo := MapHealthInfoToV1(healthInfo, e)
 
@@ -260,7 +276,7 @@ func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL st
 			fatalIf(probe.NewError(e), "Unable to parse subnet-proxy flag")
 		}
 
-		e = uploadHealthReport(aliasedURL, filename, license, dev, proxyURL)
+		e = uploadHealthReport(aliasedURL, clusterName, filename, license, dev, proxyURL)
 		if e == nil {
 			// Delete the report after successful upload
 			deleteFile(filename)
@@ -269,8 +285,11 @@ func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL st
 	}
 }
 
-func uploadHealthReport(alias string, filename string, license string, dev bool, proxyURL *url.URL) error {
-	uploadURL := subnetUploadURL(alias, filename, license, dev)
+func uploadHealthReport(alias string, clusterName string, filename string, license string, dev bool, proxyURL *url.URL) error {
+	if len(clusterName) == 0 {
+		clusterName = alias
+	}
+	uploadURL := subnetUploadURL(clusterName, filename, license, dev)
 	req, e := subnetUploadReq(uploadURL, filename)
 	if e != nil {
 		return e
@@ -305,13 +324,14 @@ func uploadHealthReport(alias string, filename string, license string, dev bool,
 	return fmt.Errorf("Upload to subnet failed with status code %d: %s", resp.StatusCode, respBody)
 }
 
-func subnetUploadURL(alias string, filename string, license string, dev bool) string {
+func subnetUploadURL(clusterName string, filename string, license string, dev bool) string {
 	const apiPath = "/api/auth/health_reports"
 	baseURL := "https://subnet.min.io"
 	if dev {
 		baseURL = "http://localhost:9000"
 	}
-	return fmt.Sprintf("%s%s?license=%s&clustername=%s&filename=%s", baseURL, apiPath, license, alias, filename)
+	url := fmt.Sprintf("%s%s?license=%s&clustername=%s&filename=%s", baseURL, apiPath, license, clusterName, filename)
+	return url
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
