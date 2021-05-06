@@ -67,11 +67,11 @@ func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 // userPolicyMessage container for content message structure
 type userPolicyMessage struct {
 	op          string
-	Status      string            `json:"status"`
-	Policy      string            `json:"policy,omitempty"`
-	PolicyJSON  *iampolicy.Policy `json:"policyJSON,omitempty"`
-	UserOrGroup string            `json:"userOrGroup,omitempty"`
-	IsGroup     bool              `json:"isGroup"`
+	Status      string `json:"status"`
+	Policy      string `json:"policy,omitempty"`
+	PolicyJSON  []byte `json:"policyJSON,omitempty"`
+	UserOrGroup string `json:"userOrGroup,omitempty"`
+	IsGroup     bool   `json:"isGroup"`
 }
 
 func (u userPolicyMessage) accountType() string {
@@ -88,7 +88,9 @@ func (u userPolicyMessage) accountType() string {
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
-		buf, e := json.MarshalIndent(u.PolicyJSON, "", " ")
+		policy, e := iampolicy.ParseConfig(bytes.NewReader(u.PolicyJSON))
+		fatalIf(probe.NewError(e), "Unable to parse policy")
+		buf, e := json.MarshalIndent(policy, "", " ")
 		fatalIf(probe.NewError(e), "Unable to parse policy")
 		return string(buf)
 	case "list":
@@ -137,10 +139,10 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	iamp, e := iampolicy.ParseConfig(bytes.NewReader(policy))
+	_, e = iampolicy.ParseConfig(bytes.NewReader(policy))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse the input policy")
 
-	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), iamp)).Trace(args...), "Unable to add new policy")
+	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), []byte(policy))).Trace(args...), "Unable to add new policy")
 
 	printMsg(userPolicyMessage{
 		op:     "add",

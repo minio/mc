@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -80,14 +81,16 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	policies := strings.Split(user.PolicyName, ",")
 
 	for _, p := range policies {
-		policy, e := client.InfoCannedPolicy(globalContext, p)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to get user's policy document")
+		buf, e := client.InfoCannedPolicy(globalContext, p)
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
+		policy, e := iampolicy.ParseConfig(bytes.NewReader(buf))
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to parse user policy document")
 		combinedPolicy = combinedPolicy.Merge(*policy)
 	}
 
 	var jsoniter = jsoniter.ConfigCompatibleWithStandardLibrary
 	policyJSON, e := jsoniter.MarshalIndent(combinedPolicy, "", "   ")
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse user's policy document")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse user policy document")
 
 	fmt.Println(string(policyJSON))
 

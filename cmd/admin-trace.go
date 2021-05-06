@@ -29,11 +29,10 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/trace"
 )
 
 var adminTraceFlags = []cli.Flag{
@@ -315,9 +314,9 @@ type shortTraceMsg struct {
 	StatusCode int       `json:"statusCode"`
 	StatusMsg  string    `json:"statusMsg"`
 
-	StorageStats storageStats `json:"storageStats"`
-	OSStats      osStats      `json:"osStats"`
-	Type         trace.Type   `json:"type"`
+	StorageStats storageStats     `json:"storageStats"`
+	OSStats      osStats          `json:"osStats"`
+	Type         madmin.TraceType `json:"type"`
 }
 
 type traceMessage struct {
@@ -360,7 +359,7 @@ type storageStats struct {
 }
 
 type verboseTrace struct {
-	Type trace.Type `json:"type"`
+	Type madmin.TraceType `json:"type"`
 
 	NodeName string    `json:"host"`
 	FuncName string    `json:"api"`
@@ -384,15 +383,15 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.Time = t.Time
 
 	switch t.TraceType {
-	case trace.Storage:
+	case madmin.TraceStorage:
 		s.Path = t.StorageStats.Path
 		s.Host = t.NodeName
 		s.StorageStats.Duration = t.StorageStats.Duration
-	case trace.OS:
+	case madmin.TraceOS:
 		s.Path = t.OSStats.Path
 		s.Host = t.NodeName
 		s.OSStats.Duration = t.OSStats.Duration
-	case trace.HTTP:
+	case madmin.TraceHTTP:
 		s.Host = t.NodeName
 		s.Path = t.ReqInfo.Path
 		s.Query = t.ReqInfo.RawQuery
@@ -431,13 +430,13 @@ func (s shortTraceMsg) String() string {
 	fmt.Fprintf(b, "%s ", s.Time.Format(timeFormat))
 
 	switch s.Type {
-	case trace.Storage:
+	case madmin.TraceStorage:
 		fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", "STORAGE"), console.Colorize("FuncName", s.FuncName),
 			hostStr,
 			s.Path,
 			console.Colorize("HeaderValue", s.StorageStats.Duration))
 		return b.String()
-	case trace.OS:
+	case madmin.TraceOS:
 		fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", "OS"), console.Colorize("FuncName", s.FuncName),
 			hostStr,
 			s.Path,
@@ -550,10 +549,10 @@ func (t traceMessage) String() string {
 	}
 
 	switch trc.TraceType {
-	case trace.Storage:
+	case madmin.TraceStorage:
 		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[STORAGE %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.StorageStats.Path, trc.StorageStats.Duration)
 		return b.String()
-	case trace.OS:
+	case madmin.TraceOS:
 		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[OS %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
 		return b.String()
 	}

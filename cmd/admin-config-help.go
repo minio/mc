@@ -22,9 +22,9 @@ import (
 	"text/template"
 
 	"github.com/fatih/color"
+	"github.com/minio/madmin-go"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 // HelpTmpl template used by all sub-systems

@@ -24,10 +24,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/auth"
 	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminBucketRemoteEditFlags = []cli.Flag{
@@ -112,7 +111,7 @@ func fetchRemoteEditTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 		host = host + ":" + strconv.Itoa(port)
 	}
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
-	creds := &auth.Credentials{AccessKey: accessKey, SecretKey: secretKey}
+	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
 		SourceBucket: sourceBucket,
 		TargetBucket: TargetBucket,

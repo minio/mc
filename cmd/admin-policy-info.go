@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -73,18 +71,14 @@ func mainAdminPolicyInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection")
 
-	policies, e := client.ListCannedPolicies(globalContext)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to list policy")
+	buf, e := client.InfoCannedPolicy(globalContext, policyName)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch policy")
 
-	iamp, ok := policies[policyName]
-	if ok {
-		printMsg(userPolicyMessage{
-			op:         "info",
-			Policy:     policyName,
-			PolicyJSON: iamp,
-		})
-	} else {
-		fatalIf(probe.NewError(fmt.Errorf("%s is not found", policyName)), "Unable to display policy")
-	}
+	printMsg(userPolicyMessage{
+		op:         "info",
+		Policy:     policyName,
+		PolicyJSON: buf,
+	})
+
 	return nil
 }

@@ -22,10 +22,10 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminQuotaFlags = []cli.Flag{

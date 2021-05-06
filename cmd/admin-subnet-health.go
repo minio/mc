@@ -37,9 +37,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/klauspost/compress/gzip"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/madmin"
 	"github.com/tidwall/gjson"
 )
 

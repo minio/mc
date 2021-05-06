@@ -18,8 +18,8 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminUserSvcAcctDisableCmd = cli.Command{
