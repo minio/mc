@@ -26,11 +26,10 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/auth"
 	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminBucketRemoteAddFlags = []cli.Flag{
@@ -211,7 +210,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		fatalIf(errInvalidArgument().Trace(bandwidthStr), "Invalid bandwidth number")
 	}
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
-	creds := &auth.Credentials{AccessKey: accessKey, SecretKey: secretKey}
+	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
 		TargetBucket:        TargetBucket,
 		Secure:              u.Scheme == "https",
