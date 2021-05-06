@@ -90,15 +90,13 @@ type svcAcctMessage struct {
 	MemberOf      []string `json:"memberOf,omitempty"`
 }
 
+const (
+	accessFieldMaxLen = 20
+)
+
 func (u svcAcctMessage) String() string {
 	switch u.op {
 	case "ls":
-		accessFieldMaxLen := 20
-		/*
-			userFieldMaxLen := 9
-			policyFieldMaxLen := 20
-		*/
-
 		// Create a new pretty table with cols configuration
 		return newPrettyTable("  ",
 			Field{"AccessKey", accessFieldMaxLen},
@@ -116,7 +114,6 @@ func (u svcAcctMessage) String() string {
 				fmt.Sprintf("ParentUser: %s", u.ParentUser),
 				fmt.Sprintf("Status: %s", u.AccountStatus),
 				fmt.Sprintf("Policy: %s", policyField),
-				// fmt.Sprintf("MemberOf: %s", strings.Join(u.MemberOf, ",")),
 			}, "\n"))
 	case "rm":
 		return console.Colorize("UserMessage", "Removed service account `"+u.AccessKey+"` successfully.")
@@ -125,7 +122,8 @@ func (u svcAcctMessage) String() string {
 	case "enable":
 		return console.Colorize("UserMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
 	case "add":
-		return console.Colorize("UserMessage", "Added service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("UserMessage",
+			fmt.Sprintf("Access Key: %s\nSecret Key: %s", u.AccessKey, u.SecretKey))
 	case "set":
 		return console.Colorize("UserMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
