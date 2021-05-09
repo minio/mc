@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015-2020 MinIO, Inc.
+ * MinIO Client (C) 2015-2021 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.

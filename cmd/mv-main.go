@@ -224,10 +224,9 @@ func mainMove(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB, true)
+	args := checkCopySyntax(ctx, cliCtx, encKeyDB, true)
 
-	if cliCtx.NArg() == 2 {
-		args := cliCtx.Args()
+	if len(args) == 2 {
 		srcURL := args.Get(0)
 		dstURL := args.Get(1)
 		if srcURL == dstURL {
@@ -237,7 +236,7 @@ func mainMove(cliCtx *cli.Context) error {
 
 	// Check if source URLs does not have object locking enabled
 	// since we cannot move them (remove them from the source)
-	for _, urlStr := range cliCtx.Args()[:cliCtx.NArg()-1] {
+	for _, urlStr := range args[:len(args)-1] {
 		client, err := newClient(urlStr)
 		if err != nil {
 			fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -274,7 +273,7 @@ func mainMove(cliCtx *cli.Context) error {
 	var session *sessionV8
 
 	if cliCtx.Bool("continue") {
-		sessionID := getHash("mv", cliCtx.Args())
+		sessionID := getHash("mv", args)
 		if isSessionExists(sessionID) {
 			session, err = loadSessionV8(sessionID)
 			fatalIf(err.Trace(sessionID), "Unable to load session.")
@@ -302,11 +301,11 @@ func mainMove(cliCtx *cli.Context) error {
 			}
 
 			// extract URLs.
-			session.Header.CommandArgs = cliCtx.Args()
+			session.Header.CommandArgs = args
 		}
 	}
 
-	e := doCopySession(ctx, cancelMove, cliCtx, session, encKeyDB, true)
+	e := doCopySession(ctx, cancelMove, cliCtx, args, session, encKeyDB, true)
 	if session != nil {
 		session.Delete()
 	}

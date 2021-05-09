@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -27,7 +28,7 @@ import (
 	"github.com/minio/minio/pkg/console"
 )
 
-func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) {
+func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) cli.Args {
 	if len(cliCtx.Args()) < 2 {
 		if isMvCmd {
 			cli.ShowCommandHelpAndExit(cliCtx, "mv", 1) // last argument is exit code.
@@ -38,21 +39,48 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	// extract URLs.
 	URLs := cliCtx.Args()
 	if len(URLs) < 2 {
-		fatalIf(errDummy().Trace(cliCtx.Args()...), "Unable to parse source and target arguments.")
+		fatalIf(errDummy().Trace(URLs...), "Unable to parse source and target arguments.")
 	}
 
-	srcURLs := URLs[:len(URLs)-1]
-	tgtURL := URLs[len(URLs)-1]
+	lenURLs := len(URLs)
+	srcURLs := URLs[:lenURLs-1]
+	tgtURL := URLs[lenURLs-1]
 	isRecursive := cliCtx.Bool("recursive")
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 	versionID := cliCtx.String("version-id")
 
+	args := cli.Args{}
+	for _, sURL := range srcURLs {
+		if strings.HasSuffix(sURL, "*") {
+			sURLPrefix := sURL[:len(sURL)-1]
+			clnt, err := newClient(sURLPrefix)
+			fatalIf(err.Trace(sURL), "Unable to initialize target `"+sURL+"`.")
+			var content *ClientContent
+			for content = range clnt.List(ctx, ListOptions{
+				Recursive:         isRecursive,
+				Incomplete:        false,
+				TimeRef:           timeRef,
+				WithOlderVersions: false,
+				WithDeleteMarkers: true,
+				ShowDir:           DirNone,
+			}) {
+				args = append(args, content.URL.Path)
+			}
+		} else {
+			args = append(args, sURL)
+		}
+	}
+	srcURLs = args
+	// Add target URL
+	args = append(args, tgtURL)
+
 	if versionID != "" && len(srcURLs) > 1 {
-		fatalIf(errDummy().Trace(cliCtx.Args()...), "Unable to pass --version flag with multiple copy sources arguments.")
+		fatalIf(errDummy().Trace(args...), "Unable to pass --version flag with multiple copy sources arguments.")
 	}
 
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
+
 		var err *probe.Error
 		if !isRecursive {
 			_, _, err = url2Stat(ctx, srcURL, versionID, false, encKeyDB, timeRef)
@@ -119,8 +147,9 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	// Preserve functionality not supported for windows
 	if cliCtx.Bool("preserve") && runtime.GOOS == "windows" {
-		fatalIf(errInvalidArgument().Trace(), "Permissions are not preserved on windows platform.")
+		fatalIf(errInvalidArgument().Trace(), "Permissions are not preserved on Windows platform.")
 	}
+	return args
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.

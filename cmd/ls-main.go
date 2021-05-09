@@ -189,6 +189,17 @@ func mainList(cliCtx *cli.Context) error {
 	// check 'ls' cliCtx arguments.
 	args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions := checkListSyntax(ctx, cliCtx)
 
+	tempTrgURLs := cli.Args{}
+	for _, tgtURL := range args {
+		if strings.HasSuffix(tgtURL, "*") {
+			tempTrgURLs = append(tempTrgURLs, tgtURL[:len(tgtURL)-1])
+		} else {
+			tempTrgURLs = append(tempTrgURLs, tgtURL)
+		}
+	}
+	args = tempTrgURLs
+	copy(cliCtx.Args(), tempTrgURLs)
+
 	var cErr error
 	for _, targetURL := range args {
 		clnt, err := newClient(targetURL)
