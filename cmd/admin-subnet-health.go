@@ -177,9 +177,6 @@ func mainAdminHealth(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	license, schedule, dev, name := fetchSubnetUploadFlags(ctx)
-	if len(name) == 0 {
-		name = aliasedURL
-	}
 
 	uploadToSubnet := len(license) > 0
 	uploadPeriodically := schedule != 0
@@ -191,6 +188,9 @@ func mainAdminHealth(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	if len(name) == 0 {
+		name = aliasedURL
+	}
 	// Main execution
 	execAdminHealth(ctx, client, aliasedURL, license, name, dev)
 
