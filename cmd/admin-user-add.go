@@ -17,7 +17,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -25,6 +27,7 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var adminUserAddCmd = cli.Command{
@@ -124,6 +127,43 @@ func (u userMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)
+}
+
+// fetchUserKeys - returns the access and secret key
+func fetchUserKeys(args cli.Args) (string, string) {
+	accessKey := ""
+	secretKey := ""
+	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+	isTerminal := terminal.IsTerminal(int(os.Stdin.Fd()))
+	reader := bufio.NewReader(os.Stdin)
+
+	argCount := len(args)
+
+	if argCount == 1 {
+		if isTerminal {
+			fmt.Printf("%s", console.Colorize(cred, "Enter Access Key: "))
+		}
+		value, _, _ := reader.ReadLine()
+		accessKey = string(value)
+	} else {
+		accessKey = args.Get(1)
+	}
+
+	if argCount == 1 || argCount == 2 {
+		if isTerminal {
+			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
+			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+			fmt.Printf("\n")
+			secretKey = string(bytePassword)
+		} else {
+			value, _, _ := reader.ReadLine()
+			secretKey = string(value)
+		}
+	} else {
+		secretKey = args.Get(2)
+	}
+
+	return accessKey, secretKey
 }
 
 // mainAdminUserAdd is the handle for "mc admin user add" command.
