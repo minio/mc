@@ -35,6 +35,14 @@ var (
 			Name:  "storage-class, sc",
 			Usage: "set storage class for new object(s) on target",
 		},
+		cli.StringFlag{
+			Name:  "attr",
+			Usage: "add custom metadata for the object",
+		},
+		cli.StringFlag{
+			Name:  "tags",
+			Usage: "apply tags to the uploaded objects",
+		},
 	}
 )
 
@@ -74,10 +82,16 @@ EXAMPLES:
 
   5. Write contents of stdin to an object on Amazon S3 cloud storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
      {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY s3/personalbuck/meeting-notes.txt
+
+  6. Copy to MinIO cloud storage with specified metadata, separated by ";"
+      {{.Prompt}} cat music.mp3 | {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000;Artist=Unknown" play/mybucket/music.mp3
+
+  7. Set tags to the uploaded objects
+      {{.Prompt}} tar cvf - . | {{.HelpName}} --tags "category=backup" play/mybucket/backup.tar
 `,
 }
 
-func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass string) *probe.Error {
+func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass string, meta map[string]string) *probe.Error {
 	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin, -1).Trace()
@@ -91,6 +105,7 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass st
 	opts := PutOptions{
 		sse:          sseKey,
 		storageClass: storageClass,
+		metadata:     meta,
 	}
 	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, opts)
 	// TODO: See if this check is necessary.
@@ -120,13 +135,18 @@ func mainPipe(ctx *cli.Context) error {
 	// validate pipe input arguments.
 	checkPipeSyntax(ctx)
 
+	meta, err := getMetaDataEntry(ctx.String("attr"))
+	fatalIf(err.Trace(""), "Unable to parse --attr value")
+	if tags := ctx.String("tags"); tags != "" {
+		meta["X-Amz-Tagging"] = tags
+	}
 	if len(ctx.Args()) == 0 {
-		err = pipe("", nil, ctx.String("storage-class"))
+		err = pipe("", nil, ctx.String("storage-class"), meta)
 		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
 	} else {
 		// extract URLs.
 		URLs := ctx.Args()
-		err = pipe(URLs[0], encKeyDB, ctx.String("storage-class"))
+		err = pipe(URLs[0], encKeyDB, ctx.String("storage-class"), meta)
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
 
