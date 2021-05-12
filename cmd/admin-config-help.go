@@ -23,8 +23,8 @@ import (
 	"text/template"
 
 	"github.com/fatih/color"
-	"github.com/minio/madmin-go"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
 

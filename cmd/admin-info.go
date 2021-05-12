@@ -29,8 +29,8 @@ import (
 	"github.com/dustin/go-humanize/english"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 )

@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/console"
 	iampolicy "github.com/minio/minio/pkg/iam/policy"
