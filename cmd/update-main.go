@@ -77,17 +77,8 @@ const (
 )
 
 var (
-	// Newer official download info URLs appear earlier below.
-	mcReleaseInfoURLs = []string{
-		mcReleaseURL + "mc.sha256sum",
-		mcReleaseURL + "mc.shasum",
-	}
-
 	// For windows our files have .exe additionally.
-	mcReleaseWindowsInfoURLs = []string{
-		mcReleaseURL + "mc.exe.sha256sum",
-		mcReleaseURL + "mc.exe.shasum",
-	}
+	mcReleaseWindowsInfoURL = mcReleaseURL + "mc.exe.sha256sum"
 )
 
 // mcVersionToReleaseTime - parses a standard official release
@@ -264,18 +255,16 @@ func downloadReleaseURL(releaseChecksumURL string, timeout time.Duration) (conte
 
 // DownloadReleaseData - downloads release data from mc official server.
 func DownloadReleaseData(timeout time.Duration) (data string, err *probe.Error) {
-	releaseURLs := mcReleaseInfoURLs
+	releaseURL := mcReleaseInfoURL
 	if runtime.GOOS == "windows" {
-		releaseURLs = mcReleaseWindowsInfoURLs
+		releaseURL = mcReleaseWindowsInfoURL
 	}
 	return func() (data string, err *probe.Error) {
-		for _, url := range releaseURLs {
-			data, err = downloadReleaseURL(url, timeout)
-			if err == nil {
-				return data, nil
-			}
+		data, err = downloadReleaseURL(releaseURL, timeout)
+		if err == nil {
+			return data, nil
 		}
-		return data, err.Trace(releaseURLs...)
+		return data, err.Trace(releaseURL)
 	}()
 }
 
