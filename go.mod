@@ -12,7 +12,6 @@ require (
 	github.com/klauspost/compress v1.12.2
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.12
-	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.0
 	github.com/minio/filepath v1.0.0 // indirect
