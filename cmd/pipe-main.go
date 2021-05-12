@@ -135,8 +135,11 @@ func mainPipe(ctx *cli.Context) error {
 	// validate pipe input arguments.
 	checkPipeSyntax(ctx)
 
-	meta, err := getMetaDataEntry(ctx.String("attr"))
-	fatalIf(err.Trace(""), "Unable to parse --attr value")
+	var meta = map[string]string{}
+	if attr := ctx.String("attr"); attr != "" {
+		meta, err = getMetaDataEntry(attr)
+		fatalIf(err.Trace(attr), "Unable to parse --attr value")
+	}
 	if tags := ctx.String("tags"); tags != "" {
 		meta["X-Amz-Tagging"] = tags
 	}
