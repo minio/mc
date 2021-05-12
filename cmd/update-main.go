@@ -103,12 +103,15 @@ func releaseTimeToReleaseTag(releaseTime time.Time) string {
 
 // releaseTagToReleaseTime - reverse of `releaseTimeToReleaseTag()`
 func releaseTagToReleaseTime(releaseTag string) (releaseTime time.Time, err *probe.Error) {
-	tagTimePart := strings.TrimPrefix(releaseTag, "RELEASE.")
-	if tagTimePart == releaseTag {
+	fields := strings.Split(releaseTag, ".")
+	if len(fields) < 2 || len(fields) > 3 {
+		return releaseTime, probe.NewError(fmt.Errorf("%s is not a valid release tag", releaseTag))
+	}
+	if fields[0] != "RELEASE" {
 		return releaseTime, probe.NewError(fmt.Errorf("%s is not a valid release tag", releaseTag))
 	}
 	var e error
-	releaseTime, e = time.Parse(mcReleaseTagTimeLayout, tagTimePart)
+	releaseTime, e = time.Parse(mcReleaseTagTimeLayout, fields[1])
 	return releaseTime, probe.NewError(e)
 }
 
