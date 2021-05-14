@@ -58,7 +58,7 @@ var replicateEditFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "replicate",
-		Usage: "comma separated list to enable replication of delete markers, and/or deletion of versioned objects.Valid options are \"delete-marker\", \"delete\" and \"\"",
+		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and syncing replica metadata modifications.Valid options are \"delete-marker\", \"delete\",\"replica-metadata-sync\" and \"\"",
 	},
 }
 
@@ -97,6 +97,8 @@ EXAMPLES:
   6. Disable delete marker and versioned delete replication on a replication configuration rule with ID "kxYD.491" on a target myminio/bucket.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate ""
 
+  7. Enable replica metadata sync ,delete marker and versioned delete replication on a replication configuration rule with ID "kxYD.491" on a target myminio/bucket.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate "delete,delete-marker,replica-metadata-sync"
 `,
 }
 
@@ -155,24 +157,29 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(args...), "--state can be either `enable` or `disable`")
 		}
 	}
-	var vDeleteReplicate, dmReplicate string
+	var vDeleteReplicate, dmReplicate, replicasync string
 	if cliCtx.IsSet("replicate") {
 		replSlice := strings.Split(cliCtx.String("replicate"), ",")
 		vDeleteReplicate = disableStatus
 		dmReplicate = disableStatus
+		replicasync = disableStatus
 		for _, opt := range replSlice {
 			switch strings.TrimSpace(strings.ToLower(opt)) {
 			case "delete-marker":
 				dmReplicate = enableStatus
 			case "delete":
 				vDeleteReplicate = enableStatus
+			case "replica-metadata-sync":
+				replicasync = enableStatus
+
 			default:
 				if opt != "" {
-					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker\"")
+					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\" or \"\"")
 				}
 			}
 		}
 	}
+
 	opts := replication.Options{
 		TagString:    cliCtx.String("tags"),
 		RoleArn:      cliCtx.String("arn"),
@@ -184,12 +191,14 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 		IsSCSet:      cliCtx.IsSet("storage-class"),
 		IsTagSet:     cliCtx.IsSet("tags"),
 	}
+
 	if cliCtx.IsSet("priority") {
 		opts.Priority = strconv.Itoa(cliCtx.Int("priority"))
 	}
 	if cliCtx.IsSet("replicate") {
 		opts.ReplicateDeletes = vDeleteReplicate
 		opts.ReplicateDeleteMarkers = dmReplicate
+		opts.ReplicaSync = replicasync
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
 	printMsg(replicateEditMessage{

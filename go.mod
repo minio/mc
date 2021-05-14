@@ -17,7 +17,7 @@ require (
 	github.com/minio/filepath v1.0.0 // indirect
 	github.com/minio/madmin-go v1.0.2
 	github.com/minio/minio v0.0.0-20210422165109-3455f786faf0
-	github.com/minio/minio-go/v7 v7.0.11-0.20210511181606-0263c8eee163
+	github.com/minio/minio-go/v7 v7.0.11-0.20210517200026-f0518ca447d6
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0

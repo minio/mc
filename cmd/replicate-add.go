@@ -62,7 +62,7 @@ var replicateAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "replicate",
-		Usage: "comma separated list to enable replication of delete markers, and/or deletion of versioned objects.Valid options are \"delete-marker\", \"delete\" and \"\"",
+		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and replica metadata sync(in the case of active-active replication).Valid options are \"delete-marker\", \"delete\" ,\"replica-metadata-sync\" and \"\"",
 	},
 }
 
@@ -162,6 +162,7 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	}
 	dmReplicateStatus := disableStatus
 	deleteReplicationStatus := disableStatus
+	replicaSync := enableStatus
 	if cliCtx.IsSet("replicate") {
 		replSlice := strings.Split(cliCtx.String("replicate"), ",")
 		for _, opt := range replSlice {
@@ -170,12 +171,13 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 				dmReplicateStatus = enableStatus
 			case "delete":
 				deleteReplicationStatus = enableStatus
+			case "replica-metadata-sync":
+				replicaSync = enableStatus
 			default:
-				fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker\" or \"\" to disable delete marker replication")
+				fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\" or \"\" to disable these settings")
 			}
 		}
 	}
-
 	opts := replication.Options{
 		TagString:              cliCtx.String("tags"),
 		RoleArn:                cliCtx.String("arn"),
@@ -187,6 +189,7 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 		Op:                     replication.AddOption,
 		ReplicateDeleteMarkers: dmReplicateStatus,
 		ReplicateDeletes:       deleteReplicationStatus,
+		ReplicaSync:            replicaSync,
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not add replication rule")
 	printMsg(replicateAddMessage{
