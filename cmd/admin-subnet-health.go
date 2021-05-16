@@ -326,7 +326,7 @@ func uploadHealthReport(alias string, clusterName string, filename string, licen
 }
 
 func subnetUploadURL(clusterName string, filename string, license string, dev bool) string {
-	const apiPath = "/api/auth/health_reports"
+	const apiPath = "/api/health/upload"
 	baseURL := "https://subnet.min.io"
 	if dev {
 		baseURL = "http://localhost:9000"
