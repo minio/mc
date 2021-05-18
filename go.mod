@@ -14,7 +14,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.0
-	github.com/minio/filepath v1.0.0 // indirect
+	github.com/minio/filepath v1.0.0
 	github.com/minio/madmin-go v1.0.2
 	github.com/minio/minio v0.0.0-20210422165109-3455f786faf0
 	github.com/minio/minio-go/v7 v7.0.11-0.20210517200026-f0518ca447d6

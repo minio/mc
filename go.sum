@@ -331,10 +331,6 @@ github.com/minio/md5-simd v1.1.1/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77Z
 github.com/minio/minio v0.0.0-20210422165109-3455f786faf0 h1:zKmm7kp4HfzMT7ImqFuNwBBo4Ne5ExntL92cggACA5M=
 github.com/minio/minio v0.0.0-20210422165109-3455f786faf0/go.mod h1:nFVEfjWoCj2KxWymJnQuVPolrE3/gvFCYm0wZkCIdXw=
 github.com/minio/minio-go/v7 v7.0.11-0.20210302210017-6ae69c73ce78/go.mod h1:mTh2uJuAbEqdhMVl6CMIIZLUeiMiWtJR4JB8/5g2skw=
-github.com/minio/minio-go/v7 v7.0.11-0.20210407221404-ba867dba7ee1 h1:x0jnjGGnb0PaewBIH9dbTaLJUNVKYoQOjjdqwz9PwdQ=
-github.com/minio/minio-go/v7 v7.0.11-0.20210407221404-ba867dba7ee1/go.mod h1:mTh2uJuAbEqdhMVl6CMIIZLUeiMiWtJR4JB8/5g2skw=
-github.com/minio/minio-go/v7 v7.0.11-0.20210511181606-0263c8eee163 h1:kRHruZzRnERrnkv6EQvrQMIPdwW5rU77ekqlb7wZTjw=
-github.com/minio/minio-go/v7 v7.0.11-0.20210511181606-0263c8eee163/go.mod h1:td4gW1ldOsj1PbSNS+WYK43j+P1XVhX/8W8awaYlBFo=
 github.com/minio/minio-go/v7 v7.0.11-0.20210517200026-f0518ca447d6 h1:GVR+UTvfe2r2YTYHWrA/yRF5nouMjJh3kwxNTZ8npso=
 github.com/minio/minio-go/v7 v7.0.11-0.20210517200026-f0518ca447d6/go.mod h1:td4gW1ldOsj1PbSNS+WYK43j+P1XVhX/8W8awaYlBFo=
 github.com/minio/selfupdate v0.3.1/go.mod h1:b8ThJzzH7u2MkF6PcIra7KaXO9Khf6alWPvMSyTDCFM=
@@ -777,6 +773,7 @@ honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+honnef.co/go/tools v0.0.1-2019.2.3 h1:3JgtbtFHMiCmsznwGVTUWbgGov+pVqnlf1dEJTNAXeM=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 maze.io/x/duration v0.0.0-20160924141736-faac084b6075 h1:4zVed9rL46683x3koxOYLzh8FlLFjnRrzTo2uvgA5D4=
 maze.io/x/duration v0.0.0-20160924141736-faac084b6075/go.mod h1:1kfR2ph3CIvtfIQ8D8JhmAgePmnAUnR+AWYWUBo+l08=
