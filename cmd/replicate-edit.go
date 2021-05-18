@@ -174,7 +174,7 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 			case "replica-metadata-sync":
 				replicasync = enableStatus
 			case "existing-objects":
-
+				existingReplState = enableStatus
 			default:
 				if opt != "" {
 					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\" or \"\"")

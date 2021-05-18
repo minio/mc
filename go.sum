@@ -249,14 +249,14 @@ github.com/minio/colorjson v1.0.1 h1:+hvfP8C1iMB95AT+ZFDRE+Knn9QPd9lg0CRJY9DRpos
 github.com/minio/colorjson v1.0.1/go.mod h1:oPM3zQQY8Gz9NGtgvuBEjQ+gPZLKAGc7T+kjMlwtOgs=
 github.com/minio/filepath v1.0.0 h1:fvkJu1+6X+ECRA6G3+JJETj4QeAYO9sV43I79H8ubDY=
 github.com/minio/filepath v1.0.0/go.mod h1:/nRZA2ldl5z6jT9/KQuvZcQlxZIMQoFFQPvEXx9T/Bw=
-github.com/minio/madmin-go v1.0.10-0.20210602195449-b1bf23ec13e4 h1:AxtnO3AODg0t2IPXbrqmDBhGZTcrUhlT/ixdLQQ3164=
-github.com/minio/madmin-go v1.0.10-0.20210602195449-b1bf23ec13e4/go.mod h1:BK+z4XRx7Y1v8SFWXsuLNqQqnq5BO/axJ8IDJfgyvfs=
+github.com/minio/madmin-go v1.0.11 h1:oyTsINMIgyF1OrjtAgef+gfbwH0i6Kxk3waY1mAcN58=
+github.com/minio/madmin-go v1.0.11/go.mod h1:BK+z4XRx7Y1v8SFWXsuLNqQqnq5BO/axJ8IDJfgyvfs=
 github.com/minio/md5-simd v1.1.0/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77ZrKZ0Gw=
 github.com/minio/md5-simd v1.1.1 h1:9ojcLbuZ4gXbB2sX53MKn8JUZ0sB/2wfwsEcRw+I08U=
 github.com/minio/md5-simd v1.1.1/go.mod h1:XpBqgZULrMYD3R+M28PcmP0CkI7PEMzB3U77ZrKZ0Gw=
 github.com/minio/minio-go/v7 v7.0.11-0.20210302210017-6ae69c73ce78/go.mod h1:mTh2uJuAbEqdhMVl6CMIIZLUeiMiWtJR4JB8/5g2skw=
-github.com/minio/minio-go/v7 v7.0.11-0.20210517200026-f0518ca447d6 h1:GVR+UTvfe2r2YTYHWrA/yRF5nouMjJh3kwxNTZ8npso=
-github.com/minio/minio-go/v7 v7.0.11-0.20210517200026-f0518ca447d6/go.mod h1:td4gW1ldOsj1PbSNS+WYK43j+P1XVhX/8W8awaYlBFo=
+github.com/minio/minio-go/v7 v7.0.11-0.20210607181445-e162fdb8e584 h1:GgOqN/DE44zZh3+sg5elR6diWq+Qv4dN7U2KvPVfe1I=
+github.com/minio/minio-go/v7 v7.0.11-0.20210607181445-e162fdb8e584/go.mod h1:WoyW+ySKAKjY98B9+7ZbI8z8S3jaxaisdcvj9TGlazA=
 github.com/minio/pkg v1.0.3 h1:tUhM6lG/BdNB0+5f2RbE4ifCAYwMs6cRJnZ/AY0WIeQ=
 github.com/minio/pkg v1.0.3/go.mod h1:obU54TZ9QlMv0TRaDgQ/JTzf11ZSXxnSfLrm4tMtBP8=
 github.com/minio/sha256-simd v0.1.1/go.mod h1:B5e1o+1/KgNmWrSQK08Y6Z1Vb5pwIktudl0J58iy0KM=
@@ -377,6 +377,8 @@ github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPx
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/sirupsen/logrus v1.6.0/go.mod h1:7uNnSEd1DgxDLC74fIahvMZmmYsHGZGEOFrfsX/uA88=
 github.com/sirupsen/logrus v1.8.0/go.mod h1:4GuYW9TZmE769R5STWrRakJc4UqQ3+QQ95fyz7ENv1A=
+github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=
+github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=
 github.com/smartystreets/assertions v1.1.1 h1:T/YLemO5Yp7KPzS+lVtu+WsHn8yoSwTfItdAd1r3cck=
 github.com/smartystreets/assertions v1.1.1/go.mod h1:tcbTF8ujkAEcZ8TElKY+i30BzYlVhC/LOxJk7iOWnoo=
