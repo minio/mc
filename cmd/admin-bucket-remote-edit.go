@@ -18,15 +18,14 @@
 package cmd
 
 import (
-	"fmt"
-	"net/url"
+	"path"
 	"strconv"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -88,20 +87,17 @@ func checkAdminBucketRemoteEditSyntax(ctx *cli.Context) {
 func fetchRemoteEditTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 	args := cli.Args()
 	_, sourceBucket := url2Alias(args[0])
-	TargetURL := args[1]
-	parts := targetKeys.FindStringSubmatch(TargetURL)
-	if len(parts) != 6 {
-		fatalIf(probe.NewError(fmt.Errorf("invalid url format")), "Malformed Remote target URL")
+
+	tgtURL := args[1]
+	accessKey, secretKey, u := extractCredentialURL(tgtURL)
+	var tgtBucket string
+	if u.Path != "" {
+		tgtBucket = path.Clean(u.Path[1:])
 	}
-	accessKey := parts[2]
-	secretKey := parts[3]
-	parsedURL := fmt.Sprintf("%s%s", parts[1], parts[4])
-	TargetBucket := strings.TrimSuffix(parts[5], slashSeperator)
-	TargetBucket = strings.TrimPrefix(TargetBucket, slashSeperator)
-	u, cerr := url.Parse(parsedURL)
-	if cerr != nil {
-		fatalIf(probe.NewError(cerr), "Malformed Remote target URL")
+	if e := s3utils.CheckValidBucketName(tgtBucket); e != nil {
+		fatalIf(probe.NewError(e).Trace(tgtURL), "Invalid target bucket specified")
 	}
+
 	secure := u.Scheme == "https"
 	host := u.Host
 	if u.Port() == "" {
@@ -115,7 +111,7 @@ func fetchRemoteEditTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
 		SourceBucket: sourceBucket,
-		TargetBucket: TargetBucket,
+		TargetBucket: tgtBucket,
 		Secure:       secure,
 		Credentials:  creds,
 		Endpoint:     host,

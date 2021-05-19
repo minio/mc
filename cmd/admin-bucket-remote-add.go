@@ -20,8 +20,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
-	"regexp"
-	"strings"
+	"path"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -30,6 +29,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio/pkg/console"
 )
 
@@ -168,7 +168,31 @@ func (r RemoteMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-var targetKeys = regexp.MustCompile("^(https?://)(.*?):(.*?)@(.*?)/(.*?)$")
+func extractCredentialURL(argURL string) (accessKey, secretKey string, u *url.URL) {
+	var parsedURL string
+	if hostKeyTokens.MatchString(argURL) {
+		fatalIf(errInvalidArgument().Trace(argURL), "temporary tokens are not allowed for remote targets")
+	}
+	if hostKeys.MatchString(argURL) {
+		parts := hostKeys.FindStringSubmatch(argURL)
+		if len(parts) != 5 {
+			fatalIf(errInvalidArgument().Trace(argURL), "Unsupported remote target format, please check --help")
+		}
+		accessKey = parts[2]
+		secretKey = parts[3]
+		parsedURL = fmt.Sprintf("%s%s", parts[1], parts[4])
+	}
+	var e error
+	if parsedURL == "" {
+		fatalIf(errInvalidArgument().Trace(argURL), "No valid credentials were detected")
+	}
+	u, e = url.Parse(parsedURL)
+	if e != nil {
+		fatalIf(errInvalidArgument().Trace(parsedURL), "Unsupported URL format %v", e)
+	}
+
+	return accessKey, secretKey, u
+}
 
 // fetchRemoteTarget - returns the dest bucket, dest endpoint, access and secret key
 func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin.BucketTarget) {
@@ -178,24 +202,20 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		fatalIf(probe.NewError(fmt.Errorf("Missing Remote target configuration")), "Unable to parse remote target")
 	}
 	_, sourceBucket = url2Alias(args[0])
-	TargetURL := args[1]
-	path := cli.String("path")
-	if !isValidPath(path) {
-		fatalIf(errInvalidArgument().Trace(path),
+	p := cli.String("path")
+	if !isValidPath(p) {
+		fatalIf(errInvalidArgument().Trace(p),
 			"Unrecognized bucket path style. Valid options are `[on,off, auto]`.")
 	}
-	parts := targetKeys.FindStringSubmatch(TargetURL)
-	if len(parts) != 6 {
-		fatalIf(probe.NewError(fmt.Errorf("invalid url format")), "Malformed Remote target URL")
+
+	tgtURL := args[1]
+	accessKey, secretKey, u := extractCredentialURL(tgtURL)
+	var tgtBucket string
+	if u.Path != "" {
+		tgtBucket = path.Clean(u.Path[1:])
 	}
-	accessKey := parts[2]
-	secretKey := parts[3]
-	parsedURL := fmt.Sprintf("%s%s", parts[1], parts[4])
-	TargetBucket := strings.TrimSuffix(parts[5], slashSeperator)
-	TargetBucket = strings.TrimPrefix(TargetBucket, slashSeperator)
-	u, cerr := url.Parse(parsedURL)
-	if cerr != nil {
-		fatalIf(probe.NewError(cerr), "Malformed Remote target URL")
+	if e := s3utils.CheckValidBucketName(tgtBucket); e != nil {
+		fatalIf(probe.NewError(e).Trace(tgtURL), "Invalid target bucket specified")
 	}
 
 	serviceType := cli.String("service")
@@ -213,11 +233,11 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
 	bktTarget = &madmin.BucketTarget{
-		TargetBucket:        TargetBucket,
+		TargetBucket:        tgtBucket,
 		Secure:              u.Scheme == "https",
 		Credentials:         creds,
 		Endpoint:            u.Host,
-		Path:                path,
+		Path:                p,
 		API:                 "s3v4",
 		Type:                madmin.ServiceType(serviceType),
 		Region:              cli.String("region"),
