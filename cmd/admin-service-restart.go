@@ -59,7 +59,7 @@ type serviceRestartCommand struct {
 
 // String colorized service restart command message.
 func (s serviceRestartCommand) String() string {
-	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`. Type Ctrl-C or wait to see the status of the restart.")
+	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`. Type Ctrl-C to quit or wait to follow the status of the restart process.")
 }
 
 // JSON jsonified service restart command message.
@@ -125,7 +125,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
 
 	coloring := color.New(color.FgRed)
-	mark := "."
+	mark := "..."
 
 	// Print restart progress
 	printProgress := func() {
@@ -133,6 +133,9 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 			coloring.Printf(mark)
 		}
 	}
+
+	printProgress()
+	mark = "."
 
 	for {
 		select {
