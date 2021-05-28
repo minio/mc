@@ -30,7 +30,7 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 var adminBucketRemoteAddFlags = []cli.Flag{

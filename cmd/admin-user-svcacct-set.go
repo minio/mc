@@ -18,13 +18,11 @@
 package cmd
 
 import (
-	"bytes"
+	"io/ioutil"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/ioutil"
 )
 
 var adminUserSvcAcctSetFlags = []cli.Flag{
@@ -89,8 +87,6 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 		var e error
 		buf, e = ioutil.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
-		_, e = iampolicy.ParseConfig(bytes.NewReader(buf))
-		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
 	}
 
 	opts := madmin.UpdateServiceAccountReq{

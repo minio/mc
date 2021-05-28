@@ -24,7 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

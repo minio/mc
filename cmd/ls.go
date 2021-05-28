@@ -29,7 +29,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 // printDate - human friendly formatted date.

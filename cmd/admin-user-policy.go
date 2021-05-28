@@ -18,16 +18,12 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserPolicyCmd = cli.Command{
@@ -77,23 +73,10 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	user, e := client.GetUserInfo(globalContext, args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
-	var combinedPolicy iampolicy.Policy
+	buf, e := client.InfoCannedPolicy(globalContext, user.PolicyName)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 
-	policies := strings.Split(user.PolicyName, ",")
-
-	for _, p := range policies {
-		buf, e := client.InfoCannedPolicy(globalContext, p)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
-		policy, e := iampolicy.ParseConfig(bytes.NewReader(buf))
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to parse user policy document")
-		combinedPolicy = combinedPolicy.Merge(*policy)
-	}
-
-	var jsoniter = jsoniter.ConfigCompatibleWithStandardLibrary
-	policyJSON, e := jsoniter.MarshalIndent(combinedPolicy, "", "   ")
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse user policy document")
-
-	fmt.Println(string(policyJSON))
+	fmt.Println(string(buf))
 
 	return nil
 }

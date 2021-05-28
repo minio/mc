@@ -22,8 +22,8 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/quick"
 )
 
 // migrate config files from the any older version to the latest.

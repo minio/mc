@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 
@@ -26,8 +25,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/pkg/console"
 )
 
 var adminPolicyAddCmd = cli.Command{
@@ -68,11 +66,11 @@ func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 // userPolicyMessage container for content message structure
 type userPolicyMessage struct {
 	op          string
-	Status      string `json:"status"`
-	Policy      string `json:"policy,omitempty"`
-	PolicyJSON  []byte `json:"policyJSON,omitempty"`
-	UserOrGroup string `json:"userOrGroup,omitempty"`
-	IsGroup     bool   `json:"isGroup"`
+	Status      string          `json:"status"`
+	Policy      string          `json:"policy,omitempty"`
+	PolicyJSON  json.RawMessage `json:"policyJSON,omitempty"`
+	UserOrGroup string          `json:"userOrGroup,omitempty"`
+	IsGroup     bool            `json:"isGroup"`
 }
 
 func (u userPolicyMessage) accountType() string {
@@ -89,11 +87,7 @@ func (u userPolicyMessage) accountType() string {
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
-		policy, e := iampolicy.ParseConfig(bytes.NewReader(u.PolicyJSON))
-		fatalIf(probe.NewError(e), "Unable to parse policy")
-		buf, e := json.MarshalIndent(policy, "", " ")
-		fatalIf(probe.NewError(e), "Unable to parse policy")
-		return string(buf)
+		return string(u.PolicyJSON)
 	case "list":
 		policyFieldMaxLen := 20
 		// Create a new pretty table with cols configuration
@@ -139,9 +133,6 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
-
-	_, e = iampolicy.ParseConfig(bytes.NewReader(policy))
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse the input policy")
 
 	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), []byte(policy))).Trace(args...), "Unable to add new policy")
 
