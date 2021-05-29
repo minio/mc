@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 // message interface for all structured messages implementing JSON(), String() methods.

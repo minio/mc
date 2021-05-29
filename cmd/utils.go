@@ -42,7 +42,7 @@ import (
 	"maze.io/x/duration"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 func isErrIgnored(err *probe.Error) (ignored bool) {

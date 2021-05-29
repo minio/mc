@@ -22,8 +22,8 @@ import (
 	"strconv"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/quick"
 )
 
 // Migrates session header version '7' to '8'. The only

@@ -28,7 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 const logTimeFormat string = "15:04:05 MST 01/02/2006"

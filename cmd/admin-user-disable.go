@@ -22,7 +22,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserDisableCmd = cli.Command{

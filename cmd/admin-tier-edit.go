@@ -24,7 +24,7 @@ import (
 	"github.com/minio/cli"
 	madmin "github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 var adminTierEditFlags = []cli.Flag{

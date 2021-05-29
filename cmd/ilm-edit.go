@@ -26,7 +26,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
-	"github.com/minio/minio/pkg/console"
+	"github.com/minio/pkg/console"
 )
 
 var ilmEditCmd = cli.Command{

@@ -18,17 +18,15 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/console"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/ioutil"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{
@@ -162,8 +160,6 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		var e error
 		buf, e = ioutil.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
-		_, e = iampolicy.ParseConfig(bytes.NewReader(buf))
-		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
 	}
 
 	opts := madmin.AddServiceAccountReq{
