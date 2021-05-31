@@ -20,6 +20,7 @@ require (
 	github.com/minio/pkg v1.0.3
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.3
