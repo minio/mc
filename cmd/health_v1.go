@@ -75,15 +75,15 @@ type HwPerfV1 struct {
 
 // HwNetPerfV1 - Network performance info
 type HwNetPerfV1 struct {
-	Serial   []madmin.NetPerfInfo `json:"serial,omitempty"`
-	Parallel []madmin.NetPerfInfo `json:"parallel,omitempty"`
+	Serial   []madmin.NetPerfInfoV0 `json:"serial,omitempty"`
+	Parallel []madmin.NetPerfInfoV0 `json:"parallel,omitempty"`
 }
 
 // HwDrivePerfV1 - Network performance info
 type HwDrivePerfV1 struct {
-	Serial   []madmin.DrivePerfInfo `json:"serial,omitempty"`
-	Parallel []madmin.DrivePerfInfo `json:"parallel,omitempty"`
-	Error    string                 `json:"error,omitempty"`
+	Serial   []madmin.DrivePerfInfoV0 `json:"serial,omitempty"`
+	Parallel []madmin.DrivePerfInfoV0 `json:"parallel,omitempty"`
+	Error    string                   `json:"error,omitempty"`
 }
 
 // SwInfoV1 - software health Info
@@ -137,7 +137,7 @@ func (ch ClusterHealthV1) GetTimestamp() time.Time {
 }
 
 // MapHealthInfoToV1 - maps the health info returned by minio server to V1 format
-func MapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo {
+func MapHealthInfoToV1(healthInfo madmin.HealthInfoV0, err error) HealthReportInfo {
 	ch := ClusterHealthV1{}
 	ch.TimeStamp = healthInfo.TimeStamp
 	if err != nil {
@@ -153,7 +153,7 @@ func MapHealthInfoToV1(healthInfo madmin.HealthInfo, err error) HealthReportInfo
 	var serverCPUs map[string][]HwCPUV1
 	var serverDrives map[string][]HwDriveV1
 	var serverMems map[string]HwMemV1
-	var serverNetPerfSerial, serverNetPerfParallel map[string][]madmin.NetPerfInfo
+	var serverNetPerfSerial, serverNetPerfParallel map[string][]madmin.NetPerfInfoV0
 	var serverDrivePerf map[string]HwDrivePerfV1
 
 	mapCPUs := func() { serverCPUs = mapServerCPUs(healthInfo) }
@@ -226,7 +226,7 @@ func addKeysToSet(input []reflect.Value, output *set.StringSet) {
 	}
 }
 
-func mapServerCPUs(healthInfo madmin.HealthInfo) map[string][]HwCPUV1 {
+func mapServerCPUs(healthInfo madmin.HealthInfoV0) map[string][]HwCPUV1 {
 	serverCPUs := map[string][]HwCPUV1{}
 	for _, ci := range healthInfo.Sys.CPUInfo {
 		cpus, ok := serverCPUs[ci.Addr]
@@ -243,7 +243,7 @@ func mapServerCPUs(healthInfo madmin.HealthInfo) map[string][]HwCPUV1 {
 	return serverCPUs
 }
 
-func mapServerDrives(healthInfo madmin.HealthInfo) map[string][]HwDriveV1 {
+func mapServerDrives(healthInfo madmin.HealthInfoV0) map[string][]HwDriveV1 {
 	serverDrives := map[string][]HwDriveV1{}
 	for _, di := range healthInfo.Sys.DiskHwInfo {
 		drives, ok := serverDrives[di.Addr]
@@ -261,7 +261,7 @@ func mapServerDrives(healthInfo madmin.HealthInfo) map[string][]HwDriveV1 {
 	return serverDrives
 }
 
-func mapServerMems(healthInfo madmin.HealthInfo) map[string]HwMemV1 {
+func mapServerMems(healthInfo madmin.HealthInfoV0) map[string]HwMemV1 {
 	serverMems := map[string]HwMemV1{}
 	for _, mi := range healthInfo.Sys.MemInfo {
 		serverMems[mi.Addr] = HwMemV1{
@@ -273,19 +273,19 @@ func mapServerMems(healthInfo madmin.HealthInfo) map[string]HwMemV1 {
 	return serverMems
 }
 
-func mapServerNetPerf(healthInfo madmin.HealthInfo) (map[string][]madmin.NetPerfInfo, map[string][]madmin.NetPerfInfo) {
-	snpSerial := map[string][]madmin.NetPerfInfo{}
+func mapServerNetPerf(healthInfo madmin.HealthInfoV0) (map[string][]madmin.NetPerfInfoV0, map[string][]madmin.NetPerfInfoV0) {
+	snpSerial := map[string][]madmin.NetPerfInfoV0{}
 	for _, serverPerf := range healthInfo.Perf.Net {
 		snpSerial[serverPerf.Addr] = serverPerf.Net
 	}
 
-	snpParallel := map[string][]madmin.NetPerfInfo{}
+	snpParallel := map[string][]madmin.NetPerfInfoV0{}
 	snpParallel[healthInfo.Perf.NetParallel.Addr] = healthInfo.Perf.NetParallel.Net
 
 	return snpSerial, snpParallel
 }
 
-func mapServerDrivePerf(healthInfo madmin.HealthInfo) map[string]HwDrivePerfV1 {
+func mapServerDrivePerf(healthInfo madmin.HealthInfoV0) map[string]HwDrivePerfV1 {
 	sdp := map[string]HwDrivePerfV1{}
 	for _, drivePerf := range healthInfo.Perf.DriveInfo {
 		sdp[drivePerf.Addr] = HwDrivePerfV1{
