@@ -43,12 +43,12 @@ var adminTierAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "access-key",
 		Value: "",
-		Usage: "AWS s3 or compatible object storage access-key",
+		Usage: "AWS S3 or compatible object storage access-key",
 	},
 	cli.StringFlag{
 		Name:  "secret-key",
 		Value: "",
-		Usage: "AWS s3 or compatible object storage secret-key",
+		Usage: "AWS S3 or compatible object storage secret-key",
 	},
 	cli.StringFlag{
 		Name:  "account-name",
@@ -63,7 +63,7 @@ var adminTierAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "credentials-file",
 		Value: "",
-		Usage: "Google Cloud Storage credentials file used to access/transition objects to GCS",
+		Usage: "path to Google Cloud Storage credentials file",
 	},
 	cli.StringFlag{
 		Name:  "bucket",
@@ -113,10 +113,11 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name foobar --account-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/
 
   2. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class.
-     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --access-key foobar --secret-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
+     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --access-key foobar \
+        --secret-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
 
   3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage.
-     {{.Prompt}} {{.HelpName}} s3 myminio GCSTIER --credentials-file --region us-east-1 --bucket testbucket --prefix testprefix/
+     {{.Prompt}} {{.HelpName}} s3 myminio GCSTIER --credentials-file /path/to/credentials.json --region us-east-1 --bucket testbucket --prefix testprefix/
 
 `,
 }
