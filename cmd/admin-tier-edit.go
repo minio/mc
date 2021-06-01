@@ -31,12 +31,12 @@ var adminTierEditFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "access-key",
 		Value: "",
-		Usage: "AWS s3 or compatible object storage access-key",
+		Usage: "AWS S3 or compatible object storage access-key",
 	},
 	cli.StringFlag{
 		Name:  "secret-key",
 		Value: "",
-		Usage: "AWS s3 or compatible object storage secret-key",
+		Usage: "AWS S3 or compatible object storage secret-key",
 	},
 	cli.StringFlag{
 		Name:  "account-name",
@@ -51,7 +51,7 @@ var adminTierEditFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "credentials-file",
 		Value: "",
-		Usage: "gcs credentials file used to access/transition objects to GCS",
+		Usage: "path to Google Cloud Storage credentials file",
 	},
 }
 
@@ -83,7 +83,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio S3TIER --access-key foobar-new --secret-key foobar-new123
 
   3. Update credentials for an existing Google Cloud Storage remote tier.
-     {{.Prompt}} {{.HelpName}} myminio GCSTIER --credentials-file /path/to/updated-creds.json
+     {{.Prompt}} {{.HelpName}} myminio GCSTIER --credentials-file /path/to/credentials.json
 `,
 }
 
