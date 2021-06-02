@@ -38,6 +38,10 @@ var adminTierEditFlags = []cli.Flag{
 		Value: "",
 		Usage: "AWS S3 or compatible object storage secret-key",
 	},
+	cli.BoolFlag{
+		Name:  "use-aws-role",
+		Usage: "use AWS S3 role",
+	},
 	cli.StringFlag{
 		Name:  "account-name",
 		Value: "",
@@ -118,11 +122,14 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	accountName := ctx.String("account-name")
 	accountKey := ctx.String("account-key")
 	credsPath := ctx.String("credentials-file")
+	useAwsRole := ctx.IsSet("use-aws-role")
 
 	switch {
-	case accessKey != "" && secretKey != "": // S3 tier
+	case accessKey != "" && secretKey != "" && !useAwsRole: // S3 tier
 		creds.AccessKey = accessKey
 		creds.SecretKey = secretKey
+	case useAwsRole:
+		creds.AWSRole = true
 	case accountName != "" && accountKey != "": // Azure tier
 		creds.AccessKey = accountName
 		creds.SecretKey = accountKey

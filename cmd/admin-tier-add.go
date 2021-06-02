@@ -50,6 +50,10 @@ var adminTierAddFlags = []cli.Flag{
 		Value: "",
 		Usage: "AWS S3 or compatible object storage secret-key",
 	},
+	cli.BoolFlag{
+		Name:  "use-aws-role",
+		Usage: "use AWS S3 role",
+	},
 	cli.StringFlag{
 		Name:  "account-name",
 		Value: "",
@@ -119,6 +123,9 @@ EXAMPLES:
   3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage.
      {{.Prompt}} {{.HelpName}} s3 myminio GCSTIER --credentials-file /path/to/credentials.json --region us-east-1 --bucket testbucket --prefix testprefix/
 
+  4. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class using aws role.
+	 {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --use-aws-role \
+	 	--region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
 `,
 }
 
@@ -147,7 +154,11 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 	case madmin.S3:
 		accessKey := ctx.String("access-key")
 		secretKey := ctx.String("secret-key")
-		if accessKey == "" || secretKey == "" {
+		useAwsRole := ctx.IsSet("use-aws-role")
+		if accessKey == "" && secretKey == "" && !useAwsRole {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials or AWS role", tierType))
+		}
+		if (accessKey != "" || secretKey != "") && useAwsRole {
 			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials", tierType))
 		}
 
@@ -179,7 +190,9 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 			}
 			s3Opts = append(s3Opts, madmin.S3StorageClass(s3SC))
 		}
-
+		if ctx.IsSet("use-aws-role") {
+			s3Opts = append(s3Opts, madmin.S3AWSRole())
+		}
 		s3Cfg, err := madmin.NewTierS3(tierName, accessKey, secretKey, bucket, s3Opts...)
 		if err != nil {
 			fatalIf(probe.NewError(err), "Invalid configuration for AWS S3 compatible remote tier")
