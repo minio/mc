@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -110,7 +111,7 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
+func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
@@ -122,10 +123,17 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 		return 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
-	contentCh := clnt.List(globalContext, ListOptions{
+	recursive := false
+	if depth == 1 {
+		// No disk usage details below this level,
+		// just do a recursive listing
+		recursive = true
+	}
+
+	contentCh := clnt.List(ctx, ListOptions{
 		TimeRef:           timeRef,
 		WithOlderVersions: withVersions,
-		Recursive:         false,
+		Recursive:         recursive,
 		ShowDir:           DirFirst,
 	})
 	size := int64(0)
@@ -156,7 +164,7 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			used, err := du(subDirAlias, timeRef, withVersions, depth, encKeyDB)
+			used, err := du(ctx, subDirAlias, timeRef, withVersions, depth, encKeyDB)
 			if err != nil {
 				return 0, err
 			}
@@ -183,9 +191,9 @@ func du(urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB
 }
 
 // main for du command.
-func mainDu(ctx *cli.Context) error {
-	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "du", 1)
+func mainDu(cliCtx *cli.Context) error {
+	if !cliCtx.Args().Present() {
+		cli.ShowCommandHelpAndExit(cliCtx, "du", 1)
 	}
 
 	// Set colors.
@@ -193,15 +201,18 @@ func mainDu(ctx *cli.Context) error {
 	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 
+	ctx, cancelRm := context.WithCancel(globalContext)
+	defer cancelRm()
+
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// du specific flags.
-	depth := ctx.Int("depth")
+	depth := cliCtx.Int("depth")
 	if depth == 0 {
-		if ctx.Bool("recursive") {
-			if !ctx.IsSet("depth") {
+		if cliCtx.Bool("recursive") {
+			if !cliCtx.IsSet("depth") {
 				depth = -1
 			}
 		} else {
@@ -209,12 +220,16 @@ func mainDu(ctx *cli.Context) error {
 		}
 	}
 
-	withVersions := ctx.Bool("versions")
-	timeRef := parseRewindFlag(ctx.String("rewind"))
+	withVersions := cliCtx.Bool("versions")
+	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 
 	var duErr error
-	for _, urlStr := range ctx.Args() {
-		if _, err := du(urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
+	for _, urlStr := range cliCtx.Args() {
+		if !isAliasURLDir(ctx, urlStr, nil, time.Time{}) {
+			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", urlStr))
+		}
+
+		if _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
 			duErr = err
 		}
 	}
