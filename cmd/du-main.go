@@ -123,12 +123,9 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		return 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
-	recursive := false
-	if depth == 1 {
-		// No disk usage details below this level,
-		// just do a recursive listing
-		recursive = true
-	}
+	// No disk usage details below this level,
+	// just do a recursive listing
+	recursive := depth == 1
 
 	contentCh := clnt.List(ctx, ListOptions{
 		TimeRef:           timeRef,
