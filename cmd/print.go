@@ -38,7 +38,7 @@ func printMsg(msg message) {
 	} else {
 		msgStr = msg.JSON()
 		if globalJSONLine {
-			// Reformat
+			// Reformat.
 			var dst bytes.Buffer
 			if err := json.Compact(&dst, []byte(msgStr)); err == nil {
 				msgStr = dst.String()
