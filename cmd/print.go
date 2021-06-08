@@ -18,6 +18,9 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
+
 	"github.com/minio/pkg/console"
 )
 
@@ -34,6 +37,13 @@ func printMsg(msg message) {
 		msgStr = msg.String()
 	} else {
 		msgStr = msg.JSON()
+		if globalJSONLine {
+			// Reformat
+			var dst bytes.Buffer
+			if err := json.Compact(&dst, []byte(msgStr)); err == nil {
+				msgStr = dst.String()
+			}
+		}
 	}
 	console.Println(msgStr)
 }

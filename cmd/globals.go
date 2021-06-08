@@ -57,6 +57,7 @@ const (
 var (
 	globalQuiet    = false // Quiet flag set via command line
 	globalJSON     = false // Json flag set via command line
+	globalJSONLine = false // Jsonl flag set via command line
 	globalDebug    = false // Debug flag set via command line
 	globalNoColor  = false // No Color flag set via command line
 	globalInsecure = false // Insecure flag set via command line
@@ -73,11 +74,12 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure bool) {
+func setGlobals(quiet, debug, json, jsonl, noColor, insecure bool) {
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
-	globalJSON = globalJSON || json
-	globalNoColor = globalNoColor || noColor
+	globalJSONLine = globalJSONLine || jsonl
+	globalJSON = globalJSON || globalJSONLine || json
+	globalNoColor = globalNoColor || noColor || globalJSONLine
 	globalInsecure = globalInsecure || insecure
 
 	// Disable colorified messages if requested.
@@ -91,8 +93,9 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	quiet := ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet")
 	debug := ctx.IsSet("debug") || ctx.GlobalIsSet("debug")
 	json := ctx.IsSet("json") || ctx.GlobalIsSet("json")
+	jsonl := ctx.IsSet("jsonl") || ctx.GlobalIsSet("jsonl")
 	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
 	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
-	setGlobals(quiet, debug, json, noColor, insecure)
+	setGlobals(quiet, debug, json, jsonl, noColor, insecure)
 	return nil
 }
