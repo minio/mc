@@ -692,7 +692,12 @@ Object retention successfully set for objects with prefix `myminio/mybucket/pref
 mc cp ~/comp.csv myminio/mybucket/prefix/
 mc rm myminio/mybucket/prefix/comp.csv
 Removing `myminio/mybucket/prefix/comp.csv`.
-mc: <ERROR> Failed to remove `myminio/mybucket/prefix/comp.csv`. Object is WORM protected and cannot be overwritten
+```
+
+This creates delete marker (soft delete) you will be able to check if your objects still exist with
+
+```
+mc ls --versions myminio/mybucket/prefix/comp.csv
 ```
 
 *Example: Set compliance for 30 days as default retention setting on bucket `mybucket`*
@@ -707,7 +712,12 @@ mc retention set --default compliance 30d myminio/mybucket
 mc cp ~/comp.csv myminio/mybucket/data.csv
 mc rm myminio/mybucket/data.csv
 Removing `myminio/mybucket/data.csv
-mc: <ERROR> Failed to remove `myminio/mybucket/data.csv`. Object is WORM protected and cannot be overwritten
+```
+
+This creates delete marker (soft delete) you will be able to check if your objects still exist with
+
+```
+mc ls --versions myminio/mybucket/prefix/data.csv
 ```
 
 *Example: Clear object retention for a specific version of a specific object*
@@ -753,7 +763,12 @@ Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
 mc cp ~/test.csv myminio/mybucket/prefix/
 mc rm myminio/mybucket/prefix/test.csv
 Removing `myminio/mybucket/prefix/test.csv`.
-mc: <ERROR> Failed to remove `myminio/mybucket/prefix/test.csv`. Object is WORM protected and cannot be overwritten
+```
+
+This creates delete marker (soft delete) you will be able to check if your objects still exist with
+
+```
+mc ls --versions myminio/mybucket/prefix/comp.csv
 ```
 
 *Example: Disable legal hold on a specific object version*
@@ -1791,7 +1806,7 @@ FLAGS:
   --help, -h                    show help
 ```
 
-*Example: Add replication configuration rule on `mybucket` on alias `myminio`.Enable delete marker replication and replication of versioned deletes for the configuration*
+*Example: Add replication configuration rule on `mybucket` on alias `myminio`. Enable delete marker replication and replication of versioned deletes for the configuration*
 
 ```
 mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --arn 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --remote-bucket destbucket --replicate "delete-marker,delete"
