@@ -223,7 +223,7 @@ func mainDu(cliCtx *cli.Context) error {
 	var duErr error
 	for _, urlStr := range cliCtx.Args() {
 		if !isAliasURLDir(ctx, urlStr, nil, time.Time{}) {
-			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", urlStr))
+			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}
 
 		if _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
