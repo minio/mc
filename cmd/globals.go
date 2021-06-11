@@ -57,6 +57,7 @@ const (
 var (
 	globalQuiet    = false // Quiet flag set via command line
 	globalJSON     = false // Json flag set via command line
+	globalJSONLine = false // Print json as single line.
 	globalDebug    = false // Debug flag set via command line
 	globalNoColor  = false // No Color flag set via command line
 	globalInsecure = false // Insecure flag set via command line
@@ -76,8 +77,9 @@ var (
 func setGlobals(quiet, debug, json, noColor, insecure bool) {
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
+	globalJSONLine = !isTerminal() && json
 	globalJSON = globalJSON || json
-	globalNoColor = globalNoColor || noColor
+	globalNoColor = globalNoColor || noColor || globalJSONLine
 	globalInsecure = globalInsecure || insecure
 
 	// Disable colorified messages if requested.
