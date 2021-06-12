@@ -34,9 +34,15 @@ import (
 
 const (
 	defaultJobName     = "minio-job"
-	legacyMetricsPath  = "/minio/prometheus/metrics"
 	defaultMetricsPath = "/minio/v2/metrics/cluster"
 )
+
+var prometheusFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "public",
+		Usage: "disable bearer token generation for scrape_configs",
+	},
+}
 
 var adminPrometheusGenerateCmd = cli.Command{
 	Name:            "generate",
@@ -44,7 +50,7 @@ var adminPrometheusGenerateCmd = cli.Command{
 	Action:          mainAdminPrometheusGenerate,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
+	Flags:           append(prometheusFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -107,7 +113,7 @@ func (t StatConfig) JSON() string {
 // ScrapeConfig configures a scraping unit for Prometheus.
 type ScrapeConfig struct {
 	JobName       string       `yaml:"job_name" json:"jobName"`
-	BearerToken   string       `yaml:"bearer_token" json:"bearerToken"`
+	BearerToken   string       `yaml:"bearer_token,omitempty" json:"bearerToken,omitempty"`
 	MetricsPath   string       `yaml:"metrics_path,omitempty" json:"metricsPath"`
 	Scheme        string       `yaml:"scheme,omitempty" json:"scheme"`
 	StaticConfigs []StatConfig `yaml:"static_configs,omitempty" json:"staticConfigs"`
@@ -122,19 +128,6 @@ var defaultConfig = PrometheusConfig{
 		{
 			JobName:     defaultJobName,
 			MetricsPath: defaultMetricsPath,
-			StaticConfigs: []StatConfig{
-				{
-					Targets: []string{""},
-				},
-			},
-		},
-	},
-}
-var legacyConfig = PrometheusConfig{
-	ScrapeConfigs: []ScrapeConfig{
-		{
-			JobName:     defaultJobName,
-			MetricsPath: legacyMetricsPath,
 			StaticConfigs: []StatConfig{
 				{
 					Targets: []string{""},
@@ -166,38 +159,26 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 		return nil
 	}
 
-	u, err := url.Parse(hostConfig.URL)
-	if err != nil {
-		return err
-	}
-
-	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
-		ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
-		Subject:   hostConfig.AccessKey,
-		Issuer:    "prometheus",
-	})
-
-	token, err := jwt.SignedString([]byte(hostConfig.SecretKey))
-	if err != nil {
-		return err
-	}
-	client, cerr := newAdminClient(alias)
-	fatalIf(cerr, "Unable to initialize admin connection.")
-
-	info, e := client.ServerInfo(globalContext)
+	u, e := url.Parse(hostConfig.URL)
 	if e != nil {
-		fatalIf(probe.NewError(e), "Failed to get server info.")
-	}
-	if info.Servers[0].Version < "2021-01-30T00-20-58Z" {
-		legacyConfig.ScrapeConfigs[0].BearerToken = token
-		legacyConfig.ScrapeConfigs[0].Scheme = u.Scheme
-		legacyConfig.ScrapeConfigs[0].StaticConfigs[0].Targets[0] = u.Host
-		printMsg(legacyConfig)
-		return nil
+		return e
 	}
 
-	// Setting the values
-	defaultConfig.ScrapeConfigs[0].BearerToken = token
+	if !ctx.Bool("public") {
+		jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
+			ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
+			Subject:   hostConfig.AccessKey,
+			Issuer:    "prometheus",
+		})
+
+		token, e := jwt.SignedString([]byte(hostConfig.SecretKey))
+		if e != nil {
+			return e
+		}
+
+		// Setting the values
+		defaultConfig.ScrapeConfigs[0].BearerToken = token
+	}
 	defaultConfig.ScrapeConfigs[0].Scheme = u.Scheme
 	defaultConfig.ScrapeConfigs[0].StaticConfigs[0].Targets[0] = u.Host
 
