@@ -158,6 +158,8 @@ func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget
 			ReplicationSync: target.ReplicationSync,
 			Bandwidth:       target.BandwidthLimit,
 			Proxy:           !target.DisableProxy,
+			ResetID:         target.ResetID,
+			ResetBefore:     target.ResetBeforeDate,
 		})
 	}
 }

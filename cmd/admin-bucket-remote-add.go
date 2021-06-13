@@ -138,6 +138,8 @@ type RemoteMessage struct {
 	ReplicationSync     bool          `json:"replicationSync"`
 	Proxy               bool          `json:"proxy"`
 	HealthCheckDuration time.Duration `json:"healthcheckDuration"`
+	ResetID             string        `json:"resetID"`
+	ResetBefore         time.Time     `json:"resetBeforeDate"`
 }
 
 func (r RemoteMessage) String() string {

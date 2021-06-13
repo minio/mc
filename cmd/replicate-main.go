@@ -24,6 +24,7 @@ var replicateSubcommands = []cli.Command{
 	replicateEditCmd,
 	replicateListCmd,
 	replicateStatusCmd,
+	replicateResetCmd,
 	replicateExportCmd,
 	replicateImportCmd,
 	replicateRemoveCmd,
