@@ -88,6 +88,14 @@ var (
 			Name:  "active-active",
 			Usage: "enable active-active multi-site setup",
 		},
+		cli.StringFlag{
+			Name:  "part-size",
+			Usage: "set the size of a part in a multipart upload",
+		},
+		cli.IntFlag{
+			Name:  "part-threads",
+			Usage: "set the number of parallel multipart uploads",
+		},
 		cli.BoolFlag{
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
@@ -460,6 +468,8 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	})
 	sURLs.MD5 = mj.opts.md5
 	sURLs.DisableMultipart = mj.opts.disableMultipart
+	sURLs.MultipartSize = mj.opts.partSize
+	sURLs.MultipartThreads = mj.opts.partThreads
 
 	now := time.Now()
 	ret := uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata)
@@ -879,6 +889,9 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
 	isOverwrite = isOverwrite || isMetadata
 
+	partSize, _ := parseMultipartSize(cli.String("part-size"))
+	partThreads := uint(cli.Int("part-threads"))
+
 	mopts := mirrorOptions{
 		isFake:           cli.Bool("fake"),
 		isRemove:         isRemove,
@@ -894,6 +907,8 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		userMetadata:     userMetadata,
 		encKeyDB:         encKeyDB,
 		activeActive:     isWatch,
+		partSize:         partSize,
+		partThreads:      partThreads,
 	}
 
 	// Create a new mirror job and execute it

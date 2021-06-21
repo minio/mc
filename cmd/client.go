@@ -57,6 +57,8 @@ type PutOptions struct {
 	metadata              map[string]string
 	sse                   encrypt.ServerSide
 	md5, disableMultipart bool
+	partSize              uint64
+	numThreads            uint
 	isPreserve            bool
 	storageClass          string
 }

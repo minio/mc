@@ -68,6 +68,14 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
+		cli.StringFlag{
+			Name:  "part-size",
+			Usage: "set the size of a part in a multipart upload",
+		},
+		cli.IntFlag{
+			Name:  "part-threads",
+			Usage: "set the number of parallel parts uploads",
+		},
 	}
 )
 
@@ -295,6 +303,8 @@ func mainMove(cliCtx *cli.Context) error {
 			}
 			session.Header.UserMetaData = userMetaMap
 			session.Header.CommandBoolFlags["disable-multipart"] = cliCtx.Bool("disable-multipart")
+			session.Header.CommandStringFlags["part-size"] = cliCtx.String("part-size")
+			session.Header.CommandIntFlags["part-threads"] = cliCtx.Int("part-threads")
 
 			var e error
 			if session.Header.RootPath, e = os.Getwd(); e != nil {

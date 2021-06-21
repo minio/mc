@@ -558,6 +558,8 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			storageClass:     urls.TargetContent.StorageClass,
 			md5:              urls.MD5,
 			disableMultipart: urls.DisableMultipart,
+			partSize:         uint64(urls.MultipartSize),
+			numThreads:       uint(urls.MultipartThreads),
 			isPreserve:       preserve,
 		}
 
