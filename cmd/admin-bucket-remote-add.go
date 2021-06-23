@@ -239,10 +239,17 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	if cli.IsSet("sync") && serviceType != string(madmin.ReplicationService) {
 		fatalIf(errInvalidArgument(), "Invalid usage. --sync flag applies only to replication service")
 	}
-	bandwidthStr := cli.String("bandwidth")
-	bandwidth, err := getBandwidthInBytes(bandwidthStr)
-	if err != nil {
-		fatalIf(errInvalidArgument().Trace(bandwidthStr), "Invalid bandwidth number")
+	var bandwidth uint64
+	if cli.IsSet("bandwidth") {
+		var e error
+		bandwidthStr := cli.String("bandwidth")
+		bandwidth, e = getBandwidthInBytes(bandwidthStr)
+		if e != nil {
+			fatalIf(errInvalidArgument().Trace(bandwidthStr), "Invalid bandwidth number")
+		}
+		if bandwidth < 100*1000*1000 {
+			fatalIf(errInvalidArgument().Trace(bandwidthStr), "Bandwidth limit cannot be less than 100MBps")
+		}
 	}
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
