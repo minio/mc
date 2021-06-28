@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -428,7 +428,7 @@ func (s shortTraceMsg) String() string {
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
-	fmt.Fprintf(b, "%s ", s.Time.Format(timeFormat))
+	fmt.Fprintf(b, "%s ", s.Time.Local().Format(timeFormat))
 
 	switch s.Type {
 	case madmin.TraceStorage:
@@ -551,17 +551,17 @@ func (t traceMessage) String() string {
 
 	switch trc.TraceType {
 	case madmin.TraceStorage:
-		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[STORAGE %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.StorageStats.Path, trc.StorageStats.Duration)
+		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[STORAGE %s]", trc.FuncName)), trc.Time.Local().Format(timeFormat), trc.StorageStats.Path, trc.StorageStats.Duration)
 		return b.String()
 	case madmin.TraceOS:
-		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[OS %s]", trc.FuncName)), trc.Time.Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
+		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[OS %s]", trc.FuncName)), trc.Time.Local().Format(timeFormat), trc.OSStats.Path, trc.OSStats.Duration)
 		return b.String()
 	}
 
 	ri := trc.ReqInfo
 	rs := trc.RespInfo
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
-	fmt.Fprintf(b, "[%s] %s\n", ri.Time.Format(timeFormat), console.Colorize("Host", fmt.Sprintf("[Client IP: %s]", ri.Client)))
+	fmt.Fprintf(b, "[%s] %s\n", ri.Time.Local().Format(timeFormat), console.Colorize("Host", fmt.Sprintf("[Client IP: %s]", ri.Client)))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
 	if ri.RawQuery != "" {
 		fmt.Fprintf(b, "?%s", ri.RawQuery)
@@ -581,7 +581,7 @@ func (t traceMessage) String() string {
 
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", "[RESPONSE] "))
-	fmt.Fprintf(b, "[%s] ", rs.Time.Format(timeFormat))
+	fmt.Fprintf(b, "[%s] ", rs.Time.Local().Format(timeFormat))
 	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.CallStats.Latency.Round(time.Microsecond), humanize.IBytes(uint64(trc.CallStats.InputBytes)), humanize.IBytes(uint64(trc.CallStats.OutputBytes)))))
 
 	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
