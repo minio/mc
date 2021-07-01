@@ -36,6 +36,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "event",
+			Value: "put,delete,get",
 			Usage: "filter specific type of event. Defaults to all event",
 		},
 		cli.StringFlag{
