@@ -137,7 +137,7 @@ func (ch ClusterHealthV1) GetTimestamp() time.Time {
 }
 
 // MapHealthInfoToV1 - maps the health info returned by minio server to V1 format
-func MapHealthInfoToV1(healthInfo madmin.HealthInfoV0, err error) HealthReportInfo {
+func MapHealthInfoToV1(healthInfo madmin.HealthInfoV0, err error) ClusterHealthV1 {
 	ch := ClusterHealthV1{}
 	ch.TimeStamp = healthInfo.TimeStamp
 	if err != nil {

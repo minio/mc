@@ -486,8 +486,8 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 	decoder := json.NewDecoder(resp.Body)
 	switch version {
 	case madmin.HealthInfoVersion0:
+		info := madmin.HealthInfoV0{}
 		for {
-			var info madmin.HealthInfoV0
 			if err = decoder.Decode(&info); err != nil {
 				if errors.Is(err, io.EOF) {
 					err = nil
@@ -497,11 +497,23 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 			}
 
 			progressV0(info)
-			healthInfo = MapHealthInfoToV1(info, nil)
 		}
+
+		// Old minio versions don't return the MinIO info in
+		// response of the healthinfo api. So fetch it separately
+		minioInfo, err := client.ServerInfo(globalContext)
+		if err != nil {
+			info.Minio.Error = err.Error()
+		} else {
+			info.Minio.Info = minioInfo
+		}
+
+		healthInfo = MapHealthInfoToV1(info, nil)
+		version = madmin.HealthInfoVersion1
+
 	case madmin.HealthInfoVersion:
+		info := madmin.HealthInfo{}
 		for {
-			var info madmin.HealthInfo
 			if err = decoder.Decode(&info); err != nil {
 				if errors.Is(err, io.EOF) {
 					err = nil
@@ -511,8 +523,8 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 			}
 
 			progress(info)
-			healthInfo = info
 		}
+		healthInfo = info
 	}
 
 	// In case any of the spinners have not stopped yet (can happen in some
