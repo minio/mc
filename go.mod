@@ -16,7 +16,7 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.0.12
+	github.com/minio/madmin-go v1.0.13
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v7 v7.0.11-0.20210607181445-e162fdb8e584
 	github.com/minio/pkg v1.0.8
@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
-	github.com/shirou/gopsutil/v3 v3.21.4
+	github.com/shirou/gopsutil/v3 v3.21.6
 	github.com/tidwall/gjson v1.7.5
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 	golang.org/x/net v0.0.0-20210421230115-4e50805a0758
