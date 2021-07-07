@@ -2498,17 +2498,17 @@ func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.Metri
 
 // ResetReplication - kicks off replication again on previously replicated objects if existing object
 // replication is enabled in the replication config.Optional to provide a timestamp
-func (c *S3Client) ResetReplication(ctx context.Context, before time.Duration) (string, *probe.Error) {
+func (c *S3Client) ResetReplication(ctx context.Context, before time.Duration, tgtArn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
-		return "", probe.NewError(BucketNameEmpty{})
+		return rinfo, probe.NewError(BucketNameEmpty{})
 	}
 
-	rID, e := c.api.ResetBucketReplication(ctx, bucket, before)
+	rinfo, e := c.api.ResetBucketReplicationOnTarget(ctx, bucket, before, tgtArn)
 	if e != nil {
-		return "", probe.NewError(e)
+		return rinfo, probe.NewError(e)
 	}
-	return rID, nil
+	return rinfo, nil
 }
 
 // GetEncryption - gets bucket encryption info.

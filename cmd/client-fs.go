@@ -1187,8 +1187,8 @@ func (f *fsClient) GetReplicationMetrics(ctx context.Context) (replication.Metri
 
 // ResetReplication - kicks off replication again on previously replicated objects if existing object
 // replication is enabled in the replication config, not implemented
-func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration) (string, *probe.Error) {
-	return "", probe.NewError(APINotImplemented{
+func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
+	return rinfo, probe.NewError(APINotImplemented{
 		API:     "ResetReplication",
 		APIType: "filesystem",
 	})

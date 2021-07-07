@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/pkg/console"
 	"maze.io/x/duration"
 )
@@ -59,8 +60,8 @@ EXAMPLES:
   1. Re-replicate previously replicated objects in bucket "mybucket" for alias "myminio".
    {{.Prompt}} {{.HelpName}} myminio/mybucket
 
-  2. Re-replicate all objects older than 60 days in bucket "mybucket".
-   {{.Prompt}} {{.HelpName}} myminio/mybucket --older-than 60d
+  2. Re-replicate all objects older than 60 days in bucket "mybucket" for target with arn "arn".
+   {{.Prompt}} {{.HelpName}} myminio/mybucket --older-than 60d --arn "arn"
 `,
 }
 
@@ -72,10 +73,11 @@ func checkReplicateResetSyntax(ctx *cli.Context) {
 }
 
 type replicateResetMessage struct {
-	Op      string `json:"op"`
-	URL     string `json:"url"`
-	ResetID string `json:"resetID"`
-	Status  string `json:"status"`
+	Op                string                        `json:"op"`
+	URL               string                        `json:"url"`
+	ResyncTargetsInfo replication.ResyncTargetsInfo `json:"resyncInfo"`
+	Status            string                        `json:"status"`
+	TargetArn         string                        `json:"targetArn"`
 }
 
 func (r replicateResetMessage) JSON() string {
@@ -86,7 +88,11 @@ func (r replicateResetMessage) JSON() string {
 }
 
 func (r replicateResetMessage) String() string {
-	return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResetID))
+	if len(r.ResyncTargetsInfo.Targets) == 1 {
+		return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResyncTargetsInfo.Targets[0].ResetID))
+	}
+	return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s", r.URL))
+
 }
 
 func mainReplicateReset(cliCtx *cli.Context) error {
@@ -119,12 +125,12 @@ func mainReplicateReset(cliCtx *cli.Context) error {
 		}
 	}
 
-	replicateReset, err := client.ResetReplication(ctx, olderThan)
+	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("arn"))
 	fatalIf(err.Trace(args...), "Unable to reset replication")
 	printMsg(replicateResetMessage{
-		Op:      "status",
-		URL:     aliasedURL,
-		ResetID: replicateReset,
+		Op:                "status",
+		URL:               aliasedURL,
+		ResyncTargetsInfo: rinfo,
 	})
 	return nil
 }
