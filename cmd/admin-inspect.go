@@ -19,8 +19,10 @@ package cmd
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"io/ioutil"
 	"os"
@@ -104,8 +106,12 @@ func mainAdminInspect(ctx *cli.Context) error {
 	r.Close()
 	tmpFile.Close()
 
+	// Create an id that is also crc.
+	var id [4]byte
+	binary.LittleEndian.PutUint32(id[:], crc32.ChecksumIEEE(key[:]))
+
 	// We use 4 bytes of the 32 bytes to identify they file.
-	downloadPath := fmt.Sprintf("inspect.%s.enc", hex.EncodeToString(key[:4]))
+	downloadPath := fmt.Sprintf("inspect.%s.enc", hex.EncodeToString(id[:]))
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
@@ -116,9 +122,10 @@ func mainAdminInspect(ctx *cli.Context) error {
 		}
 	}
 	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to download file data.")
+	hexKey := hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
 	if !globalJSON {
 		console.Infof("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", downloadPath))
-		console.Infof("Decryption key: %s\n\n", console.Colorize("Key", hex.EncodeToString(key[:])))
+		console.Infof("Decryption key: %s\n\n", console.Colorize("Key", hexKey))
 
 		console.Info("The decryption key will ONLY be shown here. It cannot be recovered.\n")
 		console.Info("The encrypted file can safely be shared without the decryption key.\n")
@@ -131,7 +138,7 @@ func mainAdminInspect(ctx *cli.Context) error {
 		Key  string `json:"key"`
 	}{
 		File: downloadPath,
-		Key:  hex.EncodeToString(key[:]),
+		Key:  hexKey,
 	}
 	b, e := json.Marshal(v)
 	fatalIf(probe.NewError(e), "Unable to serialize data")
