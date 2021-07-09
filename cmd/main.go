@@ -429,6 +429,7 @@ var appCmds = []cli.Command{
 	eventCmd,
 	watchCmd,
 	undoCmd,
+	anonymousCmd,
 	policyCmd,
 	tagCmd,
 	replicateCmd,
