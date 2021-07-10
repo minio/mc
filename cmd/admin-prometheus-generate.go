@@ -27,7 +27,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 
-	jwtgo "github.com/dgrijalva/jwt-go"
+	jwtgo "github.com/golang-jwt/jwt"
 	json "github.com/minio/colorjson"
 	yaml "gopkg.in/yaml.v2"
 )
