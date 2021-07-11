@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -446,9 +445,9 @@ func isSysErrNotEmpty(err error) bool {
 	return false
 }
 
-// deleteFile deletes a file path if its empty. If it's successfully deleted,
-// it will recursively delete empty parent directories
-// until it finds one with files in it. Returns nil for a non-empty directory.
+// deleteFile does not delete the file path of the object in a file system,
+// if the file path becomes empty after the object's removal. Normally, the
+// removal of empty paths is the usual object storage behavior.
 func deleteFile(deletePath string) error {
 	// Attempt to remove path.
 	if e := os.Remove(deletePath); e != nil {
@@ -456,15 +455,6 @@ func deleteFile(deletePath string) error {
 			return nil
 		}
 		return e
-	}
-
-	// Trailing slash is removed when found to ensure
-	// slashpath.Dir() to work as intended.
-	parentPath := strings.TrimSuffix(deletePath, slashSeperator)
-	parentPath = path.Dir(parentPath)
-
-	if parentPath != "." {
-		return deleteFile(parentPath)
 	}
 
 	return nil
