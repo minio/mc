@@ -45,6 +45,8 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	srcURL = URLs[0]
 	tgtURL = URLs[1]
 
+	checkMultipartFlags(cliCtx)
+
 	if cliCtx.Bool("force") && cliCtx.Bool("remove") {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead with `--remove` for the same functionality.")
 	} else if cliCtx.Bool("force") {
@@ -208,6 +210,8 @@ type mirrorOptions struct {
 	excludeOptions                    []string
 	encKeyDB                          map[string][]prefixSSEPair
 	md5, disableMultipart             bool
+	partSize                          uint64
+	partThreads                       uint
 	olderThan, newerThan              string
 	storageClass                      string
 	userMetadata                      map[string]string

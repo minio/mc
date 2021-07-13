@@ -1001,6 +1001,14 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		DisableMultipart:     putOpts.disableMultipart,
 	}
 
+	if putOpts.numThreads > 0 {
+		opts.NumThreads = putOpts.numThreads
+	}
+
+	if putOpts.partSize > 0 {
+		opts.PartSize = putOpts.partSize
+	}
+
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
 		opts.RetainUntilDate = retainUntilDate
 	}

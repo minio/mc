@@ -28,6 +28,17 @@ import (
 	"github.com/minio/pkg/console"
 )
 
+func checkMultipartFlags(cliCtx *cli.Context) {
+	partSize, e := parseMultipartSize(cliCtx.String("part-size"))
+	fatalIf(probe.NewError(e), "Unable to parse `--part-size` flag.")
+	partThreads := cliCtx.Int("part-threads")
+	disableMultipart := cliCtx.Bool("disable-multipart")
+
+	if (partSize > 0 || partThreads > 0) && disableMultipart {
+		fatalIf(errDummy(), "`--disable-mulipart` cannot be specified with `--part-size` or `--part-threads` flag.")
+	}
+}
+
 func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) {
 	if len(cliCtx.Args()) < 2 {
 		if isMvCmd {
@@ -51,6 +62,8 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	if versionID != "" && len(srcURLs) > 1 {
 		fatalIf(errDummy().Trace(cliCtx.Args()...), "Unable to pass --version flag with multiple copy sources arguments.")
 	}
+
+	checkMultipartFlags(cliCtx)
 
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
