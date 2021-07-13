@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -129,11 +131,97 @@ type backgroundHealStatusMessage struct {
 
 // String colorized to show background heal status message.
 func (s backgroundHealStatusMessage) String() string {
-	dot := console.Colorize("Dot", " ●  ")
+	healPrettyMsg := ""
+	var (
+		totalItems  uint64
+		totalBytes  uint64
+		itemsHealed uint64
+		bytesHealed uint64
+		startedAt   time.Time
 
-	healPrettyMsg := console.Colorize("HealBackgroundTitle", "Background healing status:\n")
-	healPrettyMsg += dot + fmt.Sprintf("%s item(s) scanned in total\n",
-		console.Colorize("HealBackground", s.HealInfo.ScannedItemsCount))
+		// The addition of Elapsed time of each parallel healing operation
+		accumulatedElapsedTime time.Duration
+	)
+
+	type setInfo struct {
+		pool, set int
+	}
+
+	dedup := make(map[setInfo]struct{})
+
+	for _, set := range s.HealInfo.Sets {
+		for _, disk := range set.Disks {
+			if disk.HealInfo != nil {
+				// Avoid counting two disks beloning to the same pool/set
+				diskLocation := setInfo{pool: disk.PoolIndex, set: disk.SetIndex}
+				_, found := dedup[diskLocation]
+				if found {
+					continue
+				}
+				dedup[diskLocation] = struct{}{}
+
+				// Approximate values
+				totalItems += disk.HealInfo.ObjectsTotalCount
+				totalBytes += disk.HealInfo.ObjectsTotalSize
+				itemsHealed += disk.HealInfo.ItemsHealed
+				bytesHealed += disk.HealInfo.BytesDone
+
+				if !disk.HealInfo.Started.IsZero() && !disk.HealInfo.Started.Before(startedAt) {
+					startedAt = disk.HealInfo.Started
+				}
+
+				if !disk.HealInfo.Started.IsZero() && !disk.HealInfo.LastUpdate.IsZero() {
+					accumulatedElapsedTime += disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started)
+				}
+			}
+		}
+	}
+
+	now := time.Now()
+
+	for _, mrf := range s.HealInfo.MRF {
+		totalItems += mrf.TotalItems
+		totalBytes += mrf.TotalBytes
+		bytesHealed += mrf.BytesHealed
+		itemsHealed += mrf.ItemsHealed
+
+		if !mrf.Started.IsZero() {
+			if startedAt.IsZero() || mrf.Started.Before(startedAt) {
+				startedAt = mrf.Started
+			}
+
+			accumulatedElapsedTime += now.Sub(mrf.Started)
+		}
+	}
+
+	if startedAt.IsZero() {
+		healPrettyMsg += "No ongoing active healing."
+		return healPrettyMsg
+	}
+
+	if totalItems > 0 && totalBytes > 0 {
+		// Objects healed information
+		itemsPct := 100 * float64(itemsHealed) / float64(totalItems)
+		bytesPct := 100 * float64(bytesHealed) / float64(totalBytes)
+
+		healPrettyMsg += fmt.Sprintf("Objects Healed: %s/%s (%s%%), %s/%s (%s%%)\n",
+			humanize.Comma(int64(itemsHealed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1),
+			humanize.Bytes(bytesHealed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1))
+	} else {
+		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.Bytes(bytesHealed))
+	}
+
+	bytesHealedPerSec := float64(uint64(time.Second)*bytesHealed) / float64(accumulatedElapsedTime)
+	itemsHealedPerSec := float64(uint64(time.Second)*itemsHealed) / float64(accumulatedElapsedTime)
+	healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))
+
+	if totalItems > 0 && totalBytes > 0 {
+		// Estimation completion
+		avgTimePerObject := float64(accumulatedElapsedTime) / float64(itemsHealed)
+		estimatedDuration := time.Duration(avgTimePerObject * float64(totalItems))
+		estimatedFinishTime := startedAt.Add(estimatedDuration)
+		healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, estimatedFinishTime, "", ""))
+	}
 
 	return healPrettyMsg
 }
@@ -172,7 +260,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	console.SetColor("HealStopped", color.New(color.FgGreen, color.Bold))
 
 	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
+	adminClnt, err := newAdminClient(aliasedURL)
 	if err != nil {
 		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 		return nil
@@ -189,20 +277,20 @@ func mainAdminHeal(ctx *cli.Context) error {
 		return nil
 	}
 
+	// Return the background heal status when the user
+	// doesn't pass a bucket or --recursive flag.
+	if bucket == "" && !ctx.Bool("recursive") {
+		bgHealStatus, berr := adminClnt.BackgroundHealStatus(globalContext)
+		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
+		printMsg(backgroundHealStatusMessage{Status: "success", HealInfo: bgHealStatus})
+		return nil
+	}
+
 	for content := range clnt.List(globalContext, ListOptions{Recursive: false, ShowDir: DirNone}) {
 		if content.Err != nil {
 			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to heal bucket `"+bucket+"`.")
 			return nil
 		}
-	}
-
-	// Return the background heal status when the user
-	// doesn't pass a bucket or --recursive flag.
-	if bucket == "" && !ctx.Bool("recursive") {
-		bgHealStatus, berr := client.BackgroundHealStatus(globalContext)
-		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
-		printMsg(backgroundHealStatusMessage{Status: "success", HealInfo: bgHealStatus})
-		return nil
 	}
 
 	opts := madmin.HealOpts{
@@ -215,19 +303,19 @@ func mainAdminHeal(ctx *cli.Context) error {
 	forceStart := ctx.Bool("force-start")
 	forceStop := ctx.Bool("force-stop")
 	if forceStop {
-		_, _, herr := client.Heal(globalContext, bucket, prefix, opts, "", forceStart, forceStop)
+		_, _, herr := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, forceStop)
 		fatalIf(probe.NewError(herr), "Failed to stop heal sequence.")
 		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
 		return nil
 	}
 
-	healStart, _, herr := client.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
+	healStart, _, herr := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
 	fatalIf(probe.NewError(herr), "Failed to start heal sequence.")
 
 	ui := uiData{
 		Bucket:                bucket,
 		Prefix:                prefix,
-		Client:                client,
+		Client:                adminClnt,
 		ClientToken:           healStart.ClientToken,
 		ForceStart:            forceStart,
 		HealOpts:              &opts,
