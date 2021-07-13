@@ -197,6 +197,9 @@ func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget) (*madmi
 		if err != nil {
 			fatalIf(errInvalidArgument().Trace(bandwidthStr), "Invalid bandwidth number")
 		}
+		if bandwidth < 100*1000*1000 {
+			fatalIf(errInvalidArgument().Trace(bandwidthStr), "Bandwidth limit cannot be less than 100MBps")
+		}
 		bktTarget.BandwidthLimit = int64(bandwidth)
 		ops = append(ops, madmin.BandwidthLimitUpdateType)
 
