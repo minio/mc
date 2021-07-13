@@ -18,8 +18,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -30,7 +33,7 @@ import (
 )
 
 var (
-	policyFlags = []cli.Flag{
+	anonymousFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "list recursively",
@@ -39,14 +42,13 @@ var (
 )
 
 // Manage anonymous access to buckets and objects.
-var policyCmd = cli.Command{
-	Name:         "policy",
+var anonymousCmd = cli.Command{
+	Name:         "anonymous",
 	Usage:        "manage anonymous access to buckets and objects",
-	Action:       mainPolicy,
-	Hidden:       true,
+	Action:       mainAnonymous,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(policyFlags, globalFlags...),
+	Flags:        append(anonymousFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
   {{.HelpName}} - {{.Usage}}
 
@@ -64,7 +66,7 @@ PERMISSION:
   Allowed policies are: [none, download, upload, public].
 
 FILE:
-  A valid S3 policy JSON filepath.
+  A valid S3 anonymous JSON filepath.
 
 EXAMPLES:
   1. Set bucket to "download" on Amazon S3 cloud storage.
@@ -76,11 +78,11 @@ EXAMPLES:
   3. Set bucket to "upload" on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} set upload s3/incoming
 
-  4. Set policy to "public" for bucket with prefix on Amazon S3 cloud storage.
+  4. Set anonymous to "public" for bucket with prefix on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} set public s3/public-commons/images
 
-  5. Set a custom prefix based bucket policy on Amazon S3 cloud storage using a JSON file.
-     {{.Prompt}} {{.HelpName}} set-json /path/to/policy.json s3/public-commons/images
+  5. Set a custom prefix based bucket anonymous on Amazon S3 cloud storage using a JSON file.
+     {{.Prompt}} {{.HelpName}} set-json /path/to/anonymous.json s3/public-commons/images
 
   6. Get bucket permissions.
      {{.Prompt}} {{.HelpName}} get s3/shared
@@ -96,93 +98,93 @@ EXAMPLES:
 `,
 }
 
-// policyRules contains policy rule
-type policyRules struct {
+// anonymousRules contains anonymous rule
+type anonymousRules struct {
 	Resource string `json:"resource"`
 	Allow    string `json:"allow"`
 }
 
 // String colorized access message.
-func (s policyRules) String() string {
-	return console.Colorize("Policy", s.Resource+" => "+s.Allow+"")
+func (s anonymousRules) String() string {
+	return console.Colorize("Anonymous", s.Resource+" => "+s.Allow+"")
 }
 
-// JSON jsonified policy message.
-func (s policyRules) JSON() string {
-	policyJSONBytes, e := json.MarshalIndent(s, "", " ")
+// JSON jsonified anonymous message.
+func (s anonymousRules) JSON() string {
+	anonymousJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(policyJSONBytes)
+	return string(anonymousJSONBytes)
 }
 
-// policyMessage is container for policy command on bucket success and failure messages.
-type policyMessage struct {
+// anonymousMessage is container for anonymous command on bucket success and failure messages.
+type anonymousMessage struct {
 	Operation string                 `json:"operation"`
 	Status    string                 `json:"status"`
 	Bucket    string                 `json:"bucket"`
 	Perms     accessPerms            `json:"permission"`
-	Policy    map[string]interface{} `json:"policy,omitempty"`
+	Anonymous map[string]interface{} `json:"anonymous,omitempty"`
 }
 
 // String colorized access message.
-func (s policyMessage) String() string {
+func (s anonymousMessage) String() string {
 	if s.Operation == "set" {
-		return console.Colorize("Policy",
+		return console.Colorize("Anonymous",
 			"Access permission for `"+s.Bucket+"` is set to `"+string(s.Perms)+"`")
 	}
 	if s.Operation == "get" {
-		return console.Colorize("Policy",
+		return console.Colorize("Anonymous",
 			"Access permission for `"+s.Bucket+"`"+" is `"+string(s.Perms)+"`")
 	}
 	if s.Operation == "set-json" {
-		return console.Colorize("Policy",
+		return console.Colorize("Anonymous",
 			"Access permission for `"+s.Bucket+"`"+" is set from `"+string(s.Perms)+"`")
 	}
 	if s.Operation == "get-json" {
-		policy, e := json.MarshalIndent(s.Policy, "", " ")
+		anonymous, e := json.MarshalIndent(s.Anonymous, "", " ")
 		fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-		return string(policy)
+		return string(anonymous)
 	}
 	// nothing to print
 	return ""
 }
 
-// JSON jsonified policy message.
-func (s policyMessage) JSON() string {
-	policyJSONBytes, e := json.MarshalIndent(s, "", " ")
+// JSON jsonified anonymous message.
+func (s anonymousMessage) JSON() string {
+	anonymousJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
-	return string(policyJSONBytes)
+	return string(anonymousJSONBytes)
 }
 
-// policyLinksMessage is container for policy links command
-type policyLinksMessage struct {
+// anonymousLinksMessage is container for anonymous links command
+type anonymousLinksMessage struct {
 	Status string `json:"status"`
 	URL    string `json:"url"`
 }
 
 // String colorized access message.
-func (s policyLinksMessage) String() string {
-	return console.Colorize("Policy", string(s.URL))
+func (s anonymousLinksMessage) String() string {
+	return console.Colorize("Anonymous", string(s.URL))
 }
 
-// JSON jsonified policy message.
-func (s policyLinksMessage) JSON() string {
-	policyJSONBytes, e := json.MarshalIndent(s, "", " ")
+// JSON jsonified anonymous message.
+func (s anonymousLinksMessage) JSON() string {
+	anonymousJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
-	return string(policyJSONBytes)
+	return string(anonymousJSONBytes)
 }
 
-// checkPolicySyntax check for incoming syntax.
-func checkPolicySyntax(ctx *cli.Context) {
+// checkAnonymousSyntax check for incoming syntax.
+func checkAnonymousSyntax(ctx *cli.Context) {
 	argsLength := len(ctx.Args())
 	// Always print a help message when we have extra arguments
 	if argsLength > 3 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
+		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1) // last argument is exit code.
 	}
 	// Always print a help message when no arguments specified
 	if argsLength < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 	}
 
 	firstArg := ctx.Args().Get(0)
@@ -191,9 +193,9 @@ func checkPolicySyntax(ctx *cli.Context) {
 	// More syntax checking
 	switch accessPerms(firstArg) {
 	case "set":
-		// Always expect three arguments when setting a policy permission.
+		// Always expect three arguments when setting a anonymous permission.
 		if argsLength != 3 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 		if accessPerms(secondArg) != accessNone &&
 			accessPerms(secondArg) != accessDownload &&
@@ -204,34 +206,135 @@ func checkPolicySyntax(ctx *cli.Context) {
 		}
 
 	case "set-json":
-		// Always expect three arguments when setting a policy permission.
+		// Always expect three arguments when setting a anonymous permission.
 		if argsLength != 3 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	case "get", "get-json":
 		// get or get-json always expects two arguments
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	case "list":
 		// Always expect an argument after list cmd
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	case "links":
 		// Always expect an argument after links cmd
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	default:
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 	}
 }
 
-// Run policy list command
-func runPolicyListCmd(args cli.Args) {
-	ctx, cancelPolicyList := context.WithCancel(globalContext)
-	defer cancelPolicyList()
+// Convert an accessPerms to a string recognizable by minio-go
+func accessPermToString(perm accessPerms) string {
+	anonymous := ""
+	switch perm {
+	case accessNone:
+		anonymous = "none"
+	case accessDownload:
+		anonymous = "readonly"
+	case accessUpload:
+		anonymous = "writeonly"
+	case accessPublic:
+		anonymous = "readwrite"
+	case accessCustom:
+		anonymous = "custom"
+	}
+	return anonymous
+}
+
+// doSetAccess do set access.
+func doSetAccess(ctx context.Context, targetURL string, targetPERMS accessPerms) *probe.Error {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
+	}
+	anonymous := accessPermToString(targetPERMS)
+	if err = clnt.SetAccess(ctx, anonymous, false); err != nil {
+		return err.Trace(targetURL, string(targetPERMS))
+	}
+	return nil
+}
+
+// doSetAccessJSON do set access JSON.
+func doSetAccessJSON(ctx context.Context, targetURL string, targetPERMS accessPerms) *probe.Error {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
+	}
+	fileReader, e := os.Open(string(targetPERMS))
+	if e != nil {
+		fatalIf(probe.NewError(e).Trace(), "Unable to set anonymous for `"+targetURL+"`.")
+	}
+	defer fileReader.Close()
+
+	const maxJSONSize = 120 * 1024 // 120KiB
+	configBuf := make([]byte, maxJSONSize+1)
+
+	n, e := io.ReadFull(fileReader, configBuf)
+	if e == nil {
+		return probe.NewError(bytes.ErrTooLarge).Trace(targetURL)
+	}
+	if e != io.ErrUnexpectedEOF {
+		return probe.NewError(e).Trace(targetURL)
+	}
+
+	configBytes := configBuf[:n]
+	if err = clnt.SetAccess(ctx, string(configBytes), true); err != nil {
+		return err.Trace(targetURL, string(targetPERMS))
+	}
+	return nil
+}
+
+// Convert a minio-go permission to accessPerms type
+func stringToAccessPerm(perm string) accessPerms {
+	var anonymous accessPerms
+	switch perm {
+	case "none":
+		anonymous = accessNone
+	case "readonly":
+		anonymous = accessDownload
+	case "writeonly":
+		anonymous = accessUpload
+	case "readwrite":
+		anonymous = accessPublic
+	case "custom":
+		anonymous = accessCustom
+	}
+	return anonymous
+}
+
+// doGetAccess do get access.
+func doGetAccess(ctx context.Context, targetURL string) (perms accessPerms, anonymousStr string, err *probe.Error) {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return "", "", err.Trace(targetURL)
+	}
+	perm, anonymousJSON, err := clnt.GetAccess(ctx)
+	if err != nil {
+		return "", "", err.Trace(targetURL)
+	}
+	return stringToAccessPerm(perm), anonymousJSON, nil
+}
+
+// doGetAccessRules do get access rules.
+func doGetAccessRules(ctx context.Context, targetURL string) (r map[string]string, err *probe.Error) {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return map[string]string{}, err.Trace(targetURL)
+	}
+	return clnt.GetAccessRules(ctx)
+}
+
+// Run anonymous list command
+func runAnonymousListCmd(args cli.Args) {
+	ctx, cancelAnonymousList := context.WithCancel(globalContext)
+	defer cancelAnonymousList()
 
 	targetURL := args.First()
 	policies, err := doGetAccessRules(ctx, targetURL)
@@ -244,14 +347,14 @@ func runPolicyListCmd(args cli.Args) {
 		}
 	}
 	for k, v := range policies {
-		printMsg(policyRules{Resource: k, Allow: v})
+		printMsg(anonymousRules{Resource: k, Allow: v})
 	}
 }
 
-// Run policy links command
-func runPolicyLinksCmd(args cli.Args, recursive bool) {
-	ctx, cancelPolicyLinks := context.WithCancel(globalContext)
-	defer cancelPolicyLinks()
+// Run anonymous links command
+func runAnonymousLinksCmd(args cli.Args, recursive bool) {
+	ctx, cancelAnonymousLinks := context.WithCancel(globalContext)
+	defer cancelAnonymousLinks()
 
 	// Get alias/bucket/prefix argument
 	targetURL := args.First()
@@ -271,22 +374,22 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 	// construct new pathes to list public objects
 	alias, path := url2Alias(targetURL)
 
-	// Iterate over policy rules to fetch public urls, then search
+	// Iterate over anonymous rules to fetch public urls, then search
 	// for objects under those urls
 	for k, v := range policies {
-		// Trim the asterisk in policy rules
-		policyPath := strings.TrimSuffix(k, "*")
-		// Check if current policy prefix is related to the url passed by the user
-		if !strings.HasPrefix(policyPath, path) {
+		// Trim the asterisk in anonymous rules
+		anonymousPath := strings.TrimSuffix(k, "*")
+		// Check if current anonymous prefix is related to the url passed by the user
+		if !strings.HasPrefix(anonymousPath, path) {
 			continue
 		}
-		// Check if the found policy has read permission
+		// Check if the found anonymous has read permission
 		perm := stringToAccessPerm(v)
 		if perm != accessDownload && perm != accessPublic {
 			continue
 		}
 		// Construct the new path to search for public objects
-		newURL := alias + "/" + policyPath
+		newURL := alias + "/" + anonymousPath
 		clnt, err := newClient(newURL)
 		fatalIf(err.Trace(newURL), "Unable to initialize target `"+targetURL+"`.")
 		// Search for public objects
@@ -306,7 +409,7 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 			publicURL := u.String()
 
 			// Construct the message to be displayed to the user
-			msg := policyLinksMessage{
+			msg := anonymousLinksMessage{
 				Status: "success",
 				URL:    publicURL,
 			}
@@ -316,12 +419,12 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 	}
 }
 
-// Run policy cmd to fetch set permission
-func runPolicyCmd(args cli.Args) {
-	ctx, cancelPolicy := context.WithCancel(globalContext)
-	defer cancelPolicy()
+// Run anonymous cmd to fetch set permission
+func runAnonymousCmd(args cli.Args) {
+	ctx, cancelAnonymous := context.WithCancel(globalContext)
+	defer cancelAnonymous()
 
-	var operation, policyStr string
+	var operation, anonymousStr string
 	var probeErr *probe.Error
 	perms := accessPerms(args.Get(1))
 	targetURL := args.Get(2)
@@ -340,56 +443,56 @@ func runPolicyCmd(args cli.Args) {
 		if args.First() == "get-json" {
 			operation = "get-json"
 		}
-		perms, policyStr, probeErr = doGetAccess(ctx, targetURL)
+		perms, anonymousStr, probeErr = doGetAccess(ctx, targetURL)
 
 	}
 	// Upon error exit.
 	if probeErr != nil {
 		switch probeErr.ToGoError().(type) {
 		case APINotImplemented:
-			fatalIf(probeErr.Trace(), "Unable to "+operation+" policy of a non S3 url `"+targetURL+"`.")
+			fatalIf(probeErr.Trace(), "Unable to "+operation+" anonymous of a non S3 url `"+targetURL+"`.")
 		default:
 			fatalIf(probeErr.Trace(targetURL, string(perms)),
-				"Unable to "+operation+" policy `"+string(perms)+"` for `"+targetURL+"`.")
+				"Unable to "+operation+" anonymous `"+string(perms)+"` for `"+targetURL+"`.")
 		}
 	}
-	policyJSON := map[string]interface{}{}
-	if policyStr != "" {
-		e := json.Unmarshal([]byte(policyStr), &policyJSON)
-		fatalIf(probe.NewError(e), "Unable to unmarshal custom policy file.")
+	anonymousJSON := map[string]interface{}{}
+	if anonymousStr != "" {
+		e := json.Unmarshal([]byte(anonymousStr), &anonymousJSON)
+		fatalIf(probe.NewError(e), "Unable to unmarshal custom anonymous file.")
 	}
-	printMsg(policyMessage{
+	printMsg(anonymousMessage{
 		Status:    "success",
 		Operation: operation,
 		Bucket:    targetURL,
 		Perms:     perms,
-		Policy:    policyJSON,
+		Anonymous: anonymousJSON,
 	})
 }
 
-func mainPolicy(ctx *cli.Context) error {
-	// check 'policy' cli arguments.
-	checkPolicySyntax(ctx)
+func mainAnonymous(ctx *cli.Context) error {
+	// check 'anonymous' cli arguments.
+	checkAnonymousSyntax(ctx)
 
 	// Additional command speific theme customization.
-	console.SetColor("Policy", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Anonymous", color.New(color.FgGreen, color.Bold))
 
 	switch ctx.Args().First() {
 	case "set", "set-json", "get", "get-json":
-		// policy set [download|upload|public|none] alias/bucket/prefix
-		// policy set-json path-to-policy-json-file alias/bucket/prefix
-		// policy get alias/bucket/prefix
-		// policy get-json alias/bucket/prefix
-		runPolicyCmd(ctx.Args())
+		// anonymous set [download|upload|public|none] alias/bucket/prefix
+		// anonymous set-json path-to-anonymous-json-file alias/bucket/prefix
+		// anonymous get alias/bucket/prefix
+		// anonymous get-json alias/bucket/prefix
+		runAnonymousCmd(ctx.Args())
 	case "list":
-		// policy list alias/bucket/prefix
-		runPolicyListCmd(ctx.Args().Tail())
+		// anonymous list alias/bucket/prefix
+		runAnonymousListCmd(ctx.Args().Tail())
 	case "links":
-		// policy links alias/bucket/prefix
-		runPolicyLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
+		// anonymous links alias/bucket/prefix
+		runAnonymousLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
 	default:
 		// Shows command example and exit
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
 	}
 	return nil
 }
