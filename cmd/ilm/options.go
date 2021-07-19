@@ -185,7 +185,7 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 
 // GetLifecycleOptions create LifeCycleOptions based on cli inputs
 func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
-	var id string = ctx.String("id")
+	id := ctx.String("id")
 	if id == "" {
 		id = xid.New().String()
 	}

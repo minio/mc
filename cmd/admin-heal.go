@@ -40,34 +40,34 @@ const (
 var adminHealFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "scan",
-		Usage: "[DEPRECATED] select the healing scan mode (normal/deep)",
+		Usage: "select the healing scan mode (normal/deep)",
 		Value: scanNormalMode,
 	},
 	cli.BoolFlag{
 		Name:  "recursive, r",
-		Usage: "[DEPRECATED] heal recursively",
+		Usage: "heal recursively",
 	},
 	cli.BoolFlag{
 		Name:  "dry-run, n",
-		Usage: "[DEPRECATED] only inspect data, but do not mutate",
+		Usage: "only inspect data, but do not mutate",
 	},
 	cli.BoolFlag{
 		Name:  "force-start, f",
-		Usage: "[DEPRECATED] force start a new heal sequence",
+		Usage: "force start a new heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "force-stop, s",
-		Usage: "[DEPRECATED] force stop a running heal sequence",
+		Usage: "force stop a running heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "remove",
-		Usage: "[DEPRECATED] remove dangling objects in heal sequence",
+		Usage: "remove dangling objects in heal sequence",
 	},
 }
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "[DEPRECATED] heal disks, buckets and objects on MinIO server",
+	Usage:           "heal disks, buckets and objects on MinIO server",
 	Action:          mainAdminHeal,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -82,12 +82,12 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-SCAN MODES:
-  normal (default): Heal objects which are missing on one or more disks.
-  deep            : Heal objects which are missing or with silent data corruption on one or more disks.
-
-DEPRECATED:
-  MinIO server now supports auto-heal, this command will be removed in future.
+EXAMPLES:
+  1. Monitor healing status on a running server at alias 'myminio':
+     {{.Prompt}} {{.HelpName}} myminio/
+     Objects Healed: 7/27 (25.9%), 31 MB/110 MB (0%)
+     Heal rate: 3 obj/s, 10 MB/s
+     Estimated Completion: 11 seconds
 `,
 }
 
