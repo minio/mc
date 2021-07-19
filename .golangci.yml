@@ -8,11 +8,11 @@ linters-settings:
 linters:
   disable-all: true
   enable:
+    - revive
     - typecheck
     - goimports
     - misspell
     - govet
-    - golint
     - ineffassign
     - gosimple
     - deadcode

@@ -18,8 +18,8 @@ checks:
 
 getdeps:
 	@mkdir -p ${GOPATH}/bin
-	@which golangci-lint 1>/dev/null || (echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.27.0)
-	@which stringer 1>/dev/null || (echo "Installing stringer" && go get golang.org/x/tools/cmd/stringer)
+	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.40.1
+	@which stringer 1>/dev/null || (echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@v0.1.5)
 
 crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)
