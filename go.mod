@@ -19,7 +19,7 @@ require (
 	github.com/minio/madmin-go v1.0.15
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v7 v7.0.11-0.20210607181445-e162fdb8e584
-	github.com/minio/pkg v1.0.8
+	github.com/minio/pkg v1.0.10
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
