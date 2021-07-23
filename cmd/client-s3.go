@@ -989,7 +989,6 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		UserMetadata:         metadata,
 		UserTags:             tagsMap,
 		Progress:             progress,
-		NumThreads:           defaultMultipartThreadsNum,
 		ContentType:          contentType,
 		CacheControl:         cacheControl,
 		ContentDisposition:   contentDisposition,
@@ -999,6 +998,8 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		ServerSideEncryption: putOpts.sse,
 		SendContentMd5:       putOpts.md5,
 		DisableMultipart:     putOpts.disableMultipart,
+		PartSize:             putOpts.multipartSize,
+		NumThreads:           putOpts.multipartThreads,
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
