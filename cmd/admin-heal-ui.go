@@ -260,11 +260,12 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 		} `json:"after"`
 		Size int64 `json:"size"`
 	}
-	makeHR := func(h *hri) (r healRec, err error) {
+	makeHR := func(h *hri) (r healRec) {
 		r.Status = "success"
 		r.Type, r.Name = h.getHRTypeAndName()
 
 		var b, a col
+		var err error
 		switch h.Type {
 		case madmin.HealItemMetadata, madmin.HealItemBucket:
 			b, a, err = h.getReplicatedFileHCCChange()
@@ -275,7 +276,7 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 			b, a, err = h.getObjectHCCChange()
 		}
 		if err != nil {
-			return r, err
+			r.Error = err.Error()
 		}
 		r.Before.Color = strings.ToLower(string(b))
 		r.After.Color = strings.ToLower(string(a))
@@ -285,16 +286,12 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 		r.Before.Offline, r.After.Offline = h.GetOfflineCounts()
 		r.Before.Drives = h.Before.Drives
 		r.After.Drives = h.After.Drives
-		return r, nil
+		return r
 	}
 
 	for _, item := range s.Items {
 		h := newHRI(&item)
-		r, err := makeHR(h)
-		if err != nil {
-			return err
-		}
-		jsonBytes, err := json.MarshalIndent(r, "", " ")
+		jsonBytes, err := json.MarshalIndent(makeHR(h), "", " ")
 		fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
 		console.Println(string(jsonBytes))
 	}
