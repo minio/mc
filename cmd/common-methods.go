@@ -555,9 +555,13 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
-		multipartSize, e := humanize.ParseBytes(env.Get("MC_UPLOAD_MULTIPART_SIZE", "16MiB"))
-		if e != nil {
-			return urls.WithError(probe.NewError(e))
+		var e error
+		var multipartSize uint64
+		if v := env.Get("MC_UPLOAD_MULTIPART_SIZE", ""); v != "" {
+			multipartSize, e = humanize.ParseBytes(v)
+			if e != nil {
+				return urls.WithError(probe.NewError(e))
+			}
 		}
 
 		multipartThreads, e := strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
