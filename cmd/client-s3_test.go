@@ -223,7 +223,7 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	var reader io.Reader
 	reader = bytes.NewReader(object.data)
 	n, err := s3c.Put(context.Background(), reader, int64(len(object.data)), nil, PutOptions{
-		metadata: map[string]string{
+		Metadata: map[string]string{
 			"Content-Type": "application/octet-stream",
 		},
 	})

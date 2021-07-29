@@ -835,14 +835,14 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 		return probe.NewError(BucketNameEmpty{})
 	}
 
-	metadata := make(map[string]string, len(opts.metadata))
-	for k, v := range opts.metadata {
+	metadata := make(map[string]string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
 		metadata[k] = v
 	}
 
 	delete(metadata, "X-Amz-Storage-Class")
-	if opts.storageClass != "" {
-		metadata["X-Amz-Storage-Class"] = opts.storageClass
+	if opts.StorageClass != "" {
+		metadata["X-Amz-Storage-Class"] = opts.StorageClass
 	}
 
 	tokens := splitStr(source, string(c.targetURL.Separator), 3)
@@ -851,16 +851,16 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 	srcOpts := minio.CopySrcOptions{
 		Bucket:     tokens[1],
 		Object:     tokens[2],
-		Encryption: opts.srcSSE,
-		VersionID:  opts.versionID,
+		Encryption: opts.SrcSSE,
+		VersionID:  opts.VersionID,
 	}
 
 	destOpts := minio.CopyDestOptions{
 		Bucket:     dstBucket,
 		Object:     dstObject,
-		Encryption: opts.tgtSSE,
+		Encryption: opts.TgtSSE,
 		Progress:   progress,
-		Size:       opts.size,
+		Size:       opts.Size,
 	}
 
 	if lockModeStr, ok := metadata[AmzObjectLockMode]; ok {
@@ -885,7 +885,7 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 	destOpts.ReplaceMetadata = len(metadata) > 0
 
 	var e error
-	if opts.disableMultipart || opts.size < 64*1024*1024 {
+	if opts.DisableMultipart || opts.Size < 64*1024*1024 {
 		_, e = c.api.CopyObject(ctx, destOpts, srcOpts)
 	} else {
 		_, e = c.api.ComposeObject(ctx, destOpts, srcOpts)
@@ -923,8 +923,8 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
 
-	metadata := make(map[string]string, len(putOpts.metadata))
-	for k, v := range putOpts.metadata {
+	metadata := make(map[string]string, len(putOpts.Metadata))
+	for k, v := range putOpts.Metadata {
 		metadata[k] = v
 	}
 
@@ -995,12 +995,12 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		ContentDisposition:   contentDisposition,
 		ContentEncoding:      contentEncoding,
 		ContentLanguage:      contentLanguage,
-		StorageClass:         strings.ToUpper(putOpts.storageClass),
-		ServerSideEncryption: putOpts.sse,
-		SendContentMd5:       putOpts.md5,
-		DisableMultipart:     putOpts.disableMultipart,
-		PartSize:             putOpts.multipartSize,
-		NumThreads:           putOpts.multipartThreads,
+		StorageClass:         strings.ToUpper(putOpts.StorageClass),
+		ServerSideEncryption: putOpts.SSE,
+		SendContentMd5:       putOpts.MD5,
+		DisableMultipart:     putOpts.DisableMultipart,
+		PartSize:             putOpts.MultipartSize,
+		NumThreads:           putOpts.MultipartThreads,
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
@@ -1441,7 +1441,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	}
 
 	// If the request is for incomplete upload stat, handle it here.
-	if opts.incomplete {
+	if opts.Incomplete {
 		return c.statIncompleteUpload(ctx, bucket, object)
 	}
 
@@ -1457,10 +1457,10 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	// because the list could be very large. At the same time, the HEAD call is avoided if the
 	// object already contains a trailing prefix or we passed rewind flag to know the object version
 	// created just before the rewind parameter.
-	if !strings.HasSuffix(object, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
+	if !strings.HasSuffix(object, string(c.targetURL.Separator)) && opts.TimeRef.IsZero() {
 		// Issue HEAD request first but ignore no such key error
 		// so we can check if there is such prefix which exists
-		ctnt, err := c.getObjectStat(ctx, bucket, object, minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID})
+		ctnt, err := c.getObjectStat(ctx, bucket, object, minio.StatObjectOptions{ServerSideEncryption: opts.SSE, VersionID: opts.VersionID})
 		if err == nil {
 			return ctnt, nil
 		}
@@ -1475,7 +1475,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false, 1) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.TimeRef, false, false, false, 1) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
@@ -1486,7 +1486,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		break
 	}
 
-	return nil, probe.NewError(ObjectMissing{opts.timeRef})
+	return nil, probe.NewError(ObjectMissing{opts.TimeRef})
 }
 
 // getObjectStat returns the metadata of an object from a HEAD call.

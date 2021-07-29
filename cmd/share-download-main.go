@@ -136,7 +136,7 @@ func doShareDownloadURL(ctx context.Context, targetURL, versionID string, isRecu
 	// Channel which will receive objects whose URLs need to be shared
 	objectsCh := make(chan *ClientContent)
 
-	content, err := clnt.Stat(ctx, StatOptions{versionID: versionID})
+	content, err := clnt.Stat(ctx, StatOptions{VersionID: versionID})
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}

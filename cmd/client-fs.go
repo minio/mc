@@ -301,8 +301,8 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, progre
 	}
 
 	attr := make(map[string]string)
-	if _, ok := opts.metadata[metadataKey]; ok && opts.isPreserve {
-		attr, e = parseAttribute(opts.metadata)
+	if _, ok := opts.Metadata[metadataKey]; ok && opts.IsPreserve {
+		attr, e = parseAttribute(opts.Metadata)
 		if e != nil {
 			tmpFile.Close()
 			return 0, probe.NewError(e)
@@ -359,7 +359,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, progre
 		return totalWritten, err.Trace(objectPartPath, objectPath)
 	}
 
-	if len(attr) != 0 && opts.isPreserve {
+	if len(attr) != 0 && opts.IsPreserve {
 		atime, mtime, err := parseAtimeMtime(attr)
 		if err != nil {
 			return totalWritten, err.Trace()
@@ -405,12 +405,12 @@ func (f *fsClient) Copy(ctx context.Context, source string, opts CopyOptions, pr
 	defer rc.Close()
 
 	putOpts := PutOptions{
-		metadata:   opts.metadata,
-		isPreserve: opts.isPreserve,
+		Metadata:   opts.Metadata,
+		IsPreserve: opts.IsPreserve,
 	}
 
 	destination := f.PathURL.Path
-	if _, err := f.put(ctx, rc, opts.size, progress, putOpts); err != nil {
+	if _, err := f.put(ctx, rc, opts.Size, progress, putOpts); err != nil {
 		return err.Trace(destination, source)
 	}
 	return nil
@@ -1026,7 +1026,7 @@ func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *p
 
 // Stat - get metadata from path.
 func (f *fsClient) Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error) {
-	st, err := f.fsStat(opts.incomplete)
+	st, err := f.fsStat(opts.Incomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
 	}
@@ -1043,7 +1043,7 @@ func (f *fsClient) Stat(ctx context.Context, opts StatOptions) (content *ClientC
 	path := f.PathURL.String()
 	// Populates meta data with file system attribute only in case of
 	// when preserve flag is passed.
-	if opts.preserve {
+	if opts.Preserve {
 		fileAttr, err := disk.GetFileSystemAttrs(path)
 		if err != nil {
 			return content, nil

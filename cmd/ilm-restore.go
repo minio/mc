@@ -156,7 +156,7 @@ func waitRestoreObject(ctx context.Context, targetAlias, targetURL, versionID st
 	}
 
 	for {
-		opts := StatOptions{versionID: versionID}
+		opts := StatOptions{VersionID: versionID}
 		st, err := clnt.Stat(ctx, opts)
 		if err != nil {
 			return err

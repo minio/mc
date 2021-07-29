@@ -103,9 +103,9 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass st
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
 	opts := PutOptions{
-		sse:          sseKey,
-		storageClass: storageClass,
-		metadata:     meta,
+		SSE:          sseKey,
+		StorageClass: storageClass,
+		Metadata:     meta,
 	}
 	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, opts)
 	// TODO: See if this check is necessary.

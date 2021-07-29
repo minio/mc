@@ -50,22 +50,22 @@ type GetOptions struct {
 
 // PutOptions holds options for PUT operation
 type PutOptions struct {
-	metadata              map[string]string
-	sse                   encrypt.ServerSide
-	md5, disableMultipart bool
-	isPreserve            bool
-	storageClass          string
-	multipartSize         uint64
-	multipartThreads      uint
+	Metadata              map[string]string
+	SSE                   encrypt.ServerSide
+	MD5, DisableMultipart bool
+	IsPreserve            bool
+	StorageClass          string
+	MultipartSize         uint64
+	MultipartThreads      uint
 }
 
 // StatOptions holds options of the HEAD operation
 type StatOptions struct {
-	incomplete bool
-	preserve   bool
-	sse        encrypt.ServerSide
-	timeRef    time.Time
-	versionID  string
+	Incomplete bool
+	Preserve   bool
+	SSE        encrypt.ServerSide
+	TimeRef    time.Time
+	VersionID  string
 }
 
 // ListOptions holds options for listing operation
@@ -82,13 +82,13 @@ type ListOptions struct {
 
 // CopyOptions holds options for copying operation
 type CopyOptions struct {
-	versionID        string
-	size             int64
-	srcSSE, tgtSSE   encrypt.ServerSide
-	metadata         map[string]string
-	disableMultipart bool
-	isPreserve       bool
-	storageClass     string
+	VersionID        string
+	Size             int64
+	SrcSSE, TgtSSE   encrypt.ServerSide
+	Metadata         map[string]string
+	DisableMultipart bool
+	IsPreserve       bool
+	StorageClass     string
 }
 
 // Client - client interface

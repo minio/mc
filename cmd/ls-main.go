@@ -196,7 +196,7 @@ func mainList(cliCtx *cli.Context) error {
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 			var st *ClientContent
-			st, err = clnt.Stat(ctx, StatOptions{incomplete: isIncomplete})
+			st, err = clnt.Stat(ctx, StatOptions{Incomplete: isIncomplete})
 			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)

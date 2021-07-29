@@ -365,7 +365,7 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 			// cannot create targetclient
 			return sURLs.WithError(err)
 		}
-		_, err = targetClient.Stat(ctx, StatOptions{sse: tgtSSE})
+		_, err = targetClient.Stat(ctx, StatOptions{SSE: tgtSSE})
 		if err == nil {
 			if !sURLs.SourceContent.RetentionEnabled && !sURLs.SourceContent.LegalHoldEnabled {
 				return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
