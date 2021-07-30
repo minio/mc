@@ -314,6 +314,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/config/restore": aliasCompleter,
 
 	"/admin/trace":     aliasCompleter,
+	"/admin/speedtest": aliasCompleter,
 	"/admin/console":   aliasCompleter,
 	"/admin/update":    aliasCompleter,
 	"/admin/top/locks": aliasCompleter,
