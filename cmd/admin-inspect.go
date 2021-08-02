@@ -68,7 +68,6 @@ func checkAdminInspectSyntax(ctx *cli.Context) {
 
 // mainAdminHeal - the entry function of heal command
 func mainAdminInspect(ctx *cli.Context) error {
-
 	// Check for command syntax
 	checkAdminInspectSyntax(ctx)
 
