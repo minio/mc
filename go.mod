@@ -4,9 +4,9 @@ go 1.14
 
 require (
 	github.com/cheggaaa/pb v1.0.29
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.12.0
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/json-iterator/go v1.1.11
 	github.com/klauspost/compress v1.12.2
@@ -16,10 +16,10 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.0.13
+	github.com/minio/madmin-go v1.0.20
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v7 v7.0.11-0.20210607181445-e162fdb8e584
-	github.com/minio/pkg v1.0.8
+	github.com/minio/pkg v1.0.10
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

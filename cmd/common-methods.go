@@ -26,16 +26,19 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/net/http/httpguts"
 	"gopkg.in/h2non/filetype.v1"
 
+	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/pkg/env"
 )
 
 // decode if the key is encoded key and returns the key
@@ -552,6 +555,20 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
+		var e error
+		var multipartSize uint64
+		if v := env.Get("MC_UPLOAD_MULTIPART_SIZE", ""); v != "" {
+			multipartSize, e = humanize.ParseBytes(v)
+			if e != nil {
+				return urls.WithError(probe.NewError(e))
+			}
+		}
+
+		multipartThreads, e := strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
+		if e != nil {
+			return urls.WithError(probe.NewError(e))
+		}
+
 		putOpts := PutOptions{
 			metadata:         filterMetadata(metadata),
 			sse:              tgtSSE,
@@ -559,6 +576,8 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			md5:              urls.MD5,
 			disableMultipart: urls.DisableMultipart,
 			isPreserve:       preserve,
+			multipartSize:    uint64(multipartSize),
+			multipartThreads: uint(multipartThreads),
 		}
 
 		if isReadAt(reader) {

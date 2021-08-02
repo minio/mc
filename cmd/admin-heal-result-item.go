@@ -43,9 +43,15 @@ func (h hri) getObjectHCCChange() (b, a col, err error) {
 
 	b, err = getHColCode(surplusShardsBeforeHeal, parityShards)
 	if err != nil {
+		err = fmt.Errorf("%w: surplusShardsBeforeHeal: %d, parityShards: %d",
+			err, surplusShardsBeforeHeal, parityShards)
 		return
 	}
 	a, err = getHColCode(surplusShardsAfterHeal, parityShards)
+	if err != nil {
+		err = fmt.Errorf("%w: surplusShardsBeforeHeal: %d, parityShards: %d",
+			err, surplusShardsAfterHeal, parityShards)
+	}
 	return
 
 }

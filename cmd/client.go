@@ -43,9 +43,6 @@ const (
 	DirLast
 )
 
-// Default number of multipart workers for a Put operation.
-const defaultMultipartThreadsNum = 4
-
 // GetOptions holds options of the GET operation
 type GetOptions struct {
 	SSE       encrypt.ServerSide
@@ -59,6 +56,8 @@ type PutOptions struct {
 	md5, disableMultipart bool
 	isPreserve            bool
 	storageClass          string
+	multipartSize         uint64
+	multipartThreads      uint
 }
 
 // StatOptions holds options of the HEAD operation

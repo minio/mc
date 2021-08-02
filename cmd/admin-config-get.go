@@ -22,6 +22,7 @@ import (
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -58,13 +59,14 @@ EXAMPLES:
 
 // configGetMessage container to hold locks information.
 type configGetMessage struct {
-	Status string `json:"status"`
-	Value  []byte `json:"value"`
+	Status string         `json:"status"`
+	Value  *madmin.Target `json:"value"`
+	value  []byte
 }
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	return string(u.Value)
+	return string(u.value)
 }
 
 // JSON jsonified service status Message message.
@@ -109,14 +111,29 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 		return nil
 	}
 
+	subSys := strings.Join(args.Tail(), " ")
+
 	// Call get config API
-	buf, e := client.GetConfigKV(globalContext, strings.Join(args.Tail(), " "))
+	buf, e := client.GetConfigKV(globalContext, subSys)
 	fatalIf(probe.NewError(e), "Unable to get server '%s' config", args.Tail())
 
-	// Print
-	printMsg(configGetMessage{
-		Value: buf,
-	})
+	if globalJSON {
+		hr, e := client.HelpConfigKV(globalContext, subSys, "", false)
+		fatalIf(probe.NewError(e), "Unable to get help for "+subSys+" the sub-system")
+
+		tgt, e := madmin.ParseSubSysTarget(buf, hr)
+		fatalIf(probe.NewError(e), "Unable to parse sub-system target "+subSys)
+
+		printMsg(configGetMessage{
+			Value: tgt,
+			value: buf,
+		})
+	} else {
+		// Print
+		printMsg(configGetMessage{
+			value: buf,
+		})
+	}
 
 	return nil
 }

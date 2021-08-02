@@ -50,6 +50,7 @@ var adminCmdSubcommands = []cli.Command{
 	adminSubnetCmd,
 	adminBucketCmd,
 	adminTierCmd,
+	adminSpeedtestCmd,
 }
 
 var adminCmd = cli.Command{
