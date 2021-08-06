@@ -448,6 +448,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 	config := spinner("Server Config", madmin.HealthDataTypeMinioConfig)
 	drive := spinner("Drive Test", madmin.HealthDataTypePerfDrive)
 	net := spinner("Network Test", madmin.HealthDataTypePerfNet)
+	syserr := spinner("System Errors", madmin.HealthDataTypeSysErrors)
 
 	progressV0 := func(info madmin.HealthInfoV0) {
 		_ = admin(len(info.Minio.Info.Servers) > 0) &&
@@ -467,6 +468,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 			diskHw(len(info.Sys.Partitions) > 0) &&
 			osInfo(len(info.Sys.OSInfo) > 0) &&
 			mem(len(info.Sys.MemInfo) > 0) &&
+			syserr(len(info.Sys.SysErrs) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config.Config != nil) &&
 			drive(len(info.Perf.Drives) > 0) &&
@@ -531,7 +533,8 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 	// cases e.g. net perf data is empty in case of single server deployment)
 	// explicitly stop them
 	_ = admin(true) && cpu(true) && diskHw(true) && osInfo(true) &&
-		mem(true) && process(true) && config(true) && drive(true) && net(true)
+		mem(true) && process(true) && config(true) && drive(true) && net(true) &&
+		syserr(true)
 
 	// cancel the context if obdChan has returned.
 	cancel()
