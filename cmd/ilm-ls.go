@@ -116,8 +116,10 @@ func (i ilmListMessage) String() string {
 	tbl = newPrettyTable(tableSeperator, fields...)
 	tblContents = getILMHeader(&tbl, alignedHdrLabels...)
 
-	// Reuse the fields
-	fields = nil
+	// If no data to show at all, quit here
+	if len(cellDataNoTags) == 0 && len(cellDataWithTags) == 0 {
+		return tblContents
+	}
 
 	// The data table
 	var tblRowField *[]string
@@ -126,6 +128,9 @@ func (i ilmListMessage) String() string {
 	} else {
 		tblRowField = &cellDataNoTags[0]
 	}
+
+	// Reuse the fields
+	fields = nil
 
 	for _, hdr := range *tblRowField {
 		fields = append(fields, Field{ilmThemeRow, len(hdr)})
