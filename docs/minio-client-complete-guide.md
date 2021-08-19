@@ -1270,14 +1270,16 @@ mc diff minio1/diffbucket minio2/diffbucket --json
 ```
 
 #### Diff values in json output
-| Constant         | Value      | Meaning                          |
-| ----------       | ---------- | --------                         |
-| differInNone     | 0          | Does not differ                  |
-| differInSize     | 1          | Differs in size                  |
-| differInMetadata | 2          | Differs in metadata              |
-| differInType     | 3          | Differs in type exfile/directory |
-| differInFirst    | 4          | Only in source (FIRST)           |
-| differInSecond   | 5          | Only in target (SECOND)          |
+| Constant         | Value      | Meaning                                 |
+| ----------       | ---------- | --------                                |
+| differInNone     | 0          | Could not perform diff due to error     |
+| differInNone     | 1          | Does not differ                         |
+| differInSize     | 2          | Differs in size                         |
+| differInMetadata | 3          | Differs in metadata                     |
+| differInType     | 4          | Differs in type exfile/directory        |
+| differInFirst    | 5          | Only in source (FIRST)                  |
+| differInSecond   | 6          | Only in target (SECOND)                 |
+| differInAASourceMTime | 7     | Differs in active-active source modtime |
 
 <a name="watch"></a>
 ### Command `watch`
