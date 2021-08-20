@@ -896,11 +896,13 @@ func (f *fsClient) MakeBucket(ctx context.Context, region string, ignoreExisting
 
 // RemoveBucket - remove a bucket
 func (f *fsClient) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error {
-	e := os.Remove(f.PathURL.Path)
-	if e != nil {
-		return probe.NewError(e)
+	var e error
+	if forceRemove {
+		e = os.RemoveAll(f.PathURL.Path)
+	} else {
+		e = os.Remove(f.PathURL.Path)
 	}
-	return nil
+	return probe.NewError(e)
 }
 
 // Set object lock configuration of bucket.
