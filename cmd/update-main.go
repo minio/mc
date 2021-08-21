@@ -19,22 +19,29 @@ package cmd
 
 import (
 	"crypto"
+	"crypto/tls"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/inconshreveable/go-update"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/env"
+	"github.com/minio/selfupdate"
 	_ "github.com/minio/sha256-simd" // Needed for sha256 hash verifier.
 )
 
@@ -74,6 +81,8 @@ const (
 	mcReleaseTagTimeLayout = "2006-01-02T15-04-05Z"
 	mcOSARCH               = runtime.GOOS + "-" + runtime.GOARCH
 	mcReleaseURL           = "https://dl.min.io/client/mc/release/" + mcOSARCH + "/"
+
+	envMinisignPubKey = "MC_UPDATE_MINISIGN_PUBKEY"
 )
 
 var (
@@ -320,12 +329,7 @@ func getDownloadURL(releaseTag string) (downloadURL string) {
 		return fmt.Sprintf("docker pull minio/mc:%s", releaseTag)
 	}
 
-	// For binary only installations, we return link to the latest binary.
-	if runtime.GOOS == "windows" {
-		return mcReleaseURL + "mc.exe"
-	}
-
-	return mcReleaseURL + "mc"
+	return mcReleaseURL + "archive/" + "mc." + releaseTag
 }
 
 func getUpdateInfo(timeout time.Duration) (updateMsg string, sha256Hex string, currentReleaseTime, latestReleaseTime time.Time, err *probe.Error) {
@@ -378,33 +382,93 @@ var (
 	}()
 )
 
+func getUpdateTransport(timeout time.Duration) http.RoundTripper {
+	var updateTransport http.RoundTripper = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: timeout,
+			DualStack: true,
+		}).DialContext,
+		IdleConnTimeout:       timeout,
+		TLSHandshakeTimeout:   timeout,
+		ExpectContinueTimeout: timeout,
+		TLSClientConfig: &tls.Config{
+			RootCAs: globalRootCAs,
+		},
+		DisableCompression: true,
+	}
+	return updateTransport
+}
+
+func getUpdateReaderFromURL(u *url.URL, transport http.RoundTripper) (io.ReadCloser, error) {
+	clnt := &http.Client{
+		Transport: transport,
+	}
+	req, e := http.NewRequest(http.MethodGet, u.String(), nil)
+	if e != nil {
+		return nil, e
+	}
+	req.Header.Set("User-Agent", getUserAgent())
+
+	resp, e := clnt.Do(req)
+	if e != nil {
+		return nil, e
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(resp.Status)
+	}
+
+	return newProgressReader(resp.Body, "mc", resp.ContentLength), nil
+}
+
 func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateStatusMsg string, err *probe.Error) {
 	if !ok {
 		updateStatusMsg = colorGreenBold("mc update to version RELEASE.%s canceled.",
 			latestReleaseTime.Format(mcReleaseTagTimeLayout))
 		return updateStatusMsg, nil
 	}
-	var sha256Sum []byte
-	var e error
-	sha256Sum, e = hex.DecodeString(sha256Hex)
+
+	sha256Sum, e := hex.DecodeString(sha256Hex)
 	if e != nil {
 		return updateStatusMsg, probe.NewError(e)
 	}
 
-	resp, e := http.Get(getDownloadURL(releaseTimeToReleaseTag(latestReleaseTime)))
+	releaseTag := releaseTimeToReleaseTag(latestReleaseTime)
+
+	u, e := url.Parse(getDownloadURL(releaseTag))
+	if err != nil {
+		return updateStatusMsg, probe.NewError(e)
+	}
+
+	transport := getUpdateTransport(30 * time.Second)
+
+	rc, e := getUpdateReaderFromURL(u, transport)
 	if e != nil {
 		return updateStatusMsg, probe.NewError(e)
 	}
-	defer resp.Body.Close()
+	defer rc.Close()
 
-	// FIXME: add support for gpg verification as well.
-	if e = update.Apply(resp.Body,
-		update.Options{
-			Hash:     crypto.SHA256,
-			Checksum: sha256Sum,
-		},
-	); e != nil {
-		return updateStatusMsg, probe.NewError(e)
+	opts := selfupdate.Options{
+		Hash:     crypto.SHA256,
+		Checksum: sha256Sum,
+	}
+
+	minisignPubkey := env.Get(envMinisignPubKey, "")
+	if minisignPubkey != "" {
+		v := selfupdate.NewVerifier()
+		u.Path = path.Dir(u.Path) + "/mc." + releaseTag + ".minisig"
+		if e = v.LoadFromURL(u.String(), minisignPubkey, transport); e != nil {
+			return updateStatusMsg, probe.NewError(e)
+		}
+		opts.Verifier = v
+	}
+
+	if e = selfupdate.Apply(rc, opts); e != nil {
+		if re := selfupdate.RollbackError(e); re != nil {
+			return updateStatusMsg, probe.NewError(e)
+		}
 	}
 
 	return colorGreenBold("mc updated to version RELEASE.%s successfully.",

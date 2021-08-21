@@ -455,6 +455,9 @@ func deleteFile(deletePath string) error {
 		if isSysErrNotEmpty(e) {
 			return nil
 		}
+		if os.IsNotExist(e) {
+			return nil
+		}
 		return e
 	}
 
