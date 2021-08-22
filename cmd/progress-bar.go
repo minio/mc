@@ -35,7 +35,7 @@ type progressBar struct {
 }
 
 func newProgressReader(r io.Reader, caption string, total int64) *pb.Reader {
-	// Progress bar speific theme customization.
+	// Progress bar specific theme customization.
 	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
 
 	// get the new original progress bar.
