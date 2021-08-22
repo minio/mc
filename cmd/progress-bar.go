@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"io"
 	"runtime"
 	"strings"
 	"time"
@@ -31,6 +32,53 @@ import (
 // progress extender.
 type progressBar struct {
 	*pb.ProgressBar
+}
+
+func newProgressReader(r io.Reader, caption string, total int64) *pb.Reader {
+	// Progress bar specific theme customization.
+	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
+
+	// get the new original progress bar.
+	bar := pb.New64(total)
+
+	// Set new human friendly print units.
+	bar.SetUnits(pb.U_BYTES)
+
+	// Refresh rate for progress bar is set to 125 milliseconds.
+	bar.SetRefreshRate(time.Millisecond * 125)
+
+	// Do not print a newline by default handled, it is handled manually.
+	bar.NotPrint = true
+
+	// Show current speed is true.
+	bar.ShowSpeed = true
+
+	// Custom callback with colorized bar.
+	bar.Callback = func(s string) {
+		console.Print(console.Colorize("Bar", "\r"+s))
+	}
+
+	// Use different unicodes for Linux, OS X and Windows.
+	switch runtime.GOOS {
+	case "linux":
+		// Need to add '\x00' as delimiter for unicode characters.
+		bar.Format("┃\x00▓\x00█\x00░\x00┃")
+	case "darwin":
+		// Need to add '\x00' as delimiter for unicode characters.
+		bar.Format(" \x00▓\x00 \x00░\x00 ")
+	default:
+		// Default to non unicode characters.
+		bar.Format("[=> ]")
+	}
+
+	// Start the progress bar.
+	bar.Start()
+
+	if caption != "" {
+		bar.Prefix(caption)
+	}
+
+	return bar.NewProxyReader(r)
 }
 
 // newProgressBar - instantiate a progress bar.
