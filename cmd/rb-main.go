@@ -28,6 +28,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/pkg/console"
 )
 
@@ -117,16 +118,14 @@ func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 }
 
 // Delete a bucket and all its objects and versions will be removed as well.
-func deleteBucket(ctx context.Context, url string) *probe.Error {
+func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
 		return pErr
 	}
-	var isIncomplete bool
-	isRemoveBucket := true
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, false, contentCh)
+	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
 
 	go func() {
 		defer close(contentCh)
@@ -160,19 +159,24 @@ func deleteBucket(ctx context.Context, url string) *probe.Error {
 				})
 			}
 		}
-
-		// Remove the given url since the user will always want to remove it.
-		alias, _ := url2Alias(targetURL)
-		if alias != "" {
-			contentCh <- &ClientContent{URL: *newClientURL(targetURL)}
-		}
 	}()
 
 	// Give up on the first error.
 	for perr := range errorCh {
 		return perr
 	}
-	return nil
+
+	// Remove a bucket without force flag first because force
+	// won't work if a bucket has some locking rules, that's
+	// why we start with regular bucket removal first.
+	err := clnt.RemoveBucket(ctx, false)
+	if err != nil {
+		if isForce && minio.ToErrorResponse(err.ToGoError()).Code == "BucketNotEmpty" {
+			return clnt.RemoveBucket(ctx, true)
+		}
+	}
+
+	return err
 }
 
 // isNamespaceRemoval returns true if alias
@@ -246,7 +250,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 
-		e := deleteBucket(ctx, targetURL)
+		e := deleteBucket(ctx, targetURL, isForce)
 		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
 
 		if !isNamespaceRemoval(ctx, targetURL) {

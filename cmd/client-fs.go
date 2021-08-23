@@ -897,6 +897,17 @@ func (f *fsClient) MakeBucket(ctx context.Context, region string, ignoreExisting
 	return nil
 }
 
+// RemoveBucket - remove a bucket
+func (f *fsClient) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error {
+	var e error
+	if forceRemove {
+		e = os.RemoveAll(f.PathURL.Path)
+	} else {
+		e = os.Remove(f.PathURL.Path)
+	}
+	return probe.NewError(e)
+}
+
 // Set object lock configuration of bucket.
 func (f *fsClient) SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
 	return probe.NewError(APINotImplemented{

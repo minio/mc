@@ -1264,6 +1264,23 @@ func (c *S3Client) MakeBucket(ctx context.Context, region string, ignoreExisting
 	return nil
 }
 
+// RemoveBucket removes a bucket, forcibly if asked
+func (c *S3Client) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	if object != "" {
+		return errInvalidArgument()
+	}
+
+	opts := minio.BucketOptions{ForceDelete: forceRemove}
+	if e := c.api.RemoveBucketWithOptions(ctx, bucket, opts); e != nil {
+		return probe.NewError(e)
+	}
+	return nil
+}
+
 // GetAccessRules - get configured policies from the server
 func (c *S3Client) GetAccessRules(ctx context.Context) (map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()

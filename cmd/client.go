@@ -101,6 +101,8 @@ type Client interface {
 
 	// Bucket operations
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
+	RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error
+
 	// Object lock config
 	SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
 	GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
