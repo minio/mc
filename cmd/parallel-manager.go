@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/minio/minio-go/v7"
 	mem "github.com/shirou/gopsutil/v3/mem"
 )
 
@@ -171,7 +172,7 @@ func (p *ParallelManager) queueTaskWithBarrier(fn func() URLs, uploadSize int64)
 	p.doQueueTask(task{fn: fn, barrier: true, uploadSize: uploadSize})
 }
 
-func (p *ParallelManager) enoughMemForUpload(uploadSize uint64) bool {
+func (p *ParallelManager) enoughMemForUpload(uploadSize int64) bool {
 	if uploadSize < 0 {
 		panic("unexpected size")
 	}
@@ -180,12 +181,13 @@ func (p *ParallelManager) enoughMemForUpload(uploadSize uint64) bool {
 		return true
 	}
 
-	estimateNeededMemoryForUpload := func(size uint64) uint64 {
-		// TODO: default part size should be exported in minio-go
-		const partSize = 16 * 1024 * 1024
-		parallel := size / partSize
-		if parallel >= 3 {
-			return 3 * partSize
+	estimateNeededMemoryForUpload := func(size int64) uint64 {
+		partsCount, partSize, _, e := minio.OptimalPartInfo(size, 0)
+		if e != nil {
+			panic(e)
+		}
+		if partsCount >= 4 {
+			return 4 * uint64(partSize)
 		}
 		return uint64(size)
 	}
@@ -199,7 +201,7 @@ func (p *ParallelManager) enoughMemForUpload(uploadSize uint64) bool {
 func (p *ParallelManager) doQueueTask(t task) {
 	// Check if we have enough memory to perform next task,
 	// if not, wait to finish all currents tasks to continue
-	if !p.enoughMemForUpload(uint64(t.uploadSize)) {
+	if !p.enoughMemForUpload(t.uploadSize) {
 		t.barrier = true
 	}
 	if t.barrier {
@@ -223,7 +225,7 @@ func newParallelManager(resultCh chan URLs) *ParallelManager {
 	var maxMem float64
 	memStats, err := mem.VirtualMemory()
 	if err == nil {
-		maxMem = float64(memStats.Available) * 0.8
+		maxMem = float64(memStats.Available) * 0.8 // use upto 80% of available memory.
 	}
 
 	p := &ParallelManager{
