@@ -607,7 +607,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
-			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
+			if mirrorURL.TargetContent != nil && mj.opts.isRemove && mj.opts.activeActive {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL)
 				})
