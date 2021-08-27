@@ -462,7 +462,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	sURLs.DisableMultipart = mj.opts.disableMultipart
 
 	now := time.Now()
-	ret := uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata)
+	ret := mirrorSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isOverwrite)
 	if ret.Error == nil {
 		durationMs := time.Since(now) / time.Millisecond
 		mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
@@ -876,8 +876,8 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	isRemove := cli.Bool("remove")
 
 	// preserve is also expected to be overwritten if necessary
-	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
-	isOverwrite = isOverwrite || isMetadata
+	isMetadata := cli.Bool("a") || len(userMetadata) > 0
+	
 
 	mopts := mirrorOptions{
 		isFake:           cli.Bool("fake"),
