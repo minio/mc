@@ -405,9 +405,25 @@ func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSS
 
 	return filterMetadata(metadata), nil
 }
+//mirror Source
 func mirrorSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair, overwrite bool) URLs {
 	
+	sourceAlias := urls.SourceAlias
+	targetAlias := urls.TargetAlias
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, urls.SourceContent.URL.Path))
+	targetPath := filepath.ToSlash(filepath.Join(targetAlias, urls.TargetContent.URL.Path))
+	srcClt, _ := newClient(sourcePath)
+	dstClt, _ := newClient(targetPath)
+	if overwrite {
+		return uploadSourceToTargetURL(ctx, urls, progress, encKeyDB, overwrite)
+	}
+	for diff := range dirDifference(ctx, srcClt, dstClt, sourcePath, targetPath) {
+		if diff.Diff == differInSecond {
+			return urls.WithError(nil)
+		}
+	}
 	return uploadSourceToTargetURL(ctx, urls, progress, encKeyDB, overwrite)
+	
 }
 // uploadSourceToTargetURL - uploads to targetURL from source.
 // optionally optimizes copy for object sizes <= 5GiB by using
