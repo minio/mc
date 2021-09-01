@@ -591,7 +591,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
-			})
+			}, mirrorURL.SourceContent.Size)
 		} else if event.Type == notification.ObjectRemovedDelete {
 			if strings.Contains(event.UserAgent, uaMirrorAppName) {
 				continue
@@ -610,7 +610,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL)
-				})
+				}, 0)
 			}
 		} else if event.Type == notification.BucketCreatedAll {
 			mirrorURL := URLs{
@@ -621,7 +621,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mj.parallel.queueTaskWithBarrier(func() URLs {
 				return mj.doCreateBucket(ctx, mirrorURL)
-			})
+			}, 0)
 		} else if event.Type == notification.BucketRemovedAll && mj.opts.isRemove {
 			mirrorURL := URLs{
 				TargetAlias:   targetAlias,
@@ -629,7 +629,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mj.parallel.queueTaskWithBarrier(func() URLs {
 				return mj.doDeleteBucket(ctx, mirrorURL)
-			})
+			}, 0)
 		}
 
 	}
@@ -659,7 +659,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 			if err != nil {
 				mj.parallel.queueTask(func() URLs {
 					return URLs{Error: err}
-				})
+				}, 0)
 			}
 		case <-globalContext.Done():
 			stopParallel()
@@ -716,11 +716,11 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			if sURLs.SourceContent != nil {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doMirror(ctx, sURLs)
-				})
+				}, sURLs.SourceContent.Size)
 			} else if sURLs.TargetContent != nil && mj.opts.isRemove {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, sURLs)
-				})
+				}, 0)
 			}
 		case <-globalContext.Done():
 			stopParallel()
