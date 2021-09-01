@@ -1272,7 +1272,7 @@ mc diff minio1/diffbucket minio2/diffbucket --json
 #### Diff values in json output
 | Constant         | Value      | Meaning                                 |
 | ----------       | ---------- | --------                                |
-| differInNone     | 0          | Could not perform diff due to error     |
+| differInUnknown  | 0          | Could not perform diff due to error     |
 | differInNone     | 1          | Does not differ                         |
 | differInSize     | 2          | Differs in size                         |
 | differInMetadata | 3          | Differs in metadata                     |
