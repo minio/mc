@@ -193,6 +193,7 @@ func (p *ParallelManager) enoughMemForUpload(uploadSize int64) bool {
 	}
 
 	smem := runtime.MemStats{}
+	runtime.GC()
 	runtime.ReadMemStats(&smem)
 
 	return estimateNeededMemoryForUpload(uploadSize)+smem.Alloc < p.maxMem
@@ -225,7 +226,7 @@ func newParallelManager(resultCh chan URLs) *ParallelManager {
 	var maxMem float64
 	memStats, err := mem.VirtualMemory()
 	if err == nil {
-		maxMem = float64(memStats.Available) * 0.8 // use upto 80% of available memory.
+		maxMem = float64(memStats.Available) / 2 // use upto 50% of available memory.
 	}
 
 	p := &ParallelManager{
