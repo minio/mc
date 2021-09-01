@@ -25,7 +25,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -45,7 +44,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var adminHealthFlags = []cli.Flag{
+var adminHealthFlags = append([]cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
 		Usage:  "choose health tests to run [" + fullOptions.String() + "]",
@@ -63,30 +62,17 @@ var adminHealthFlags = []cli.Flag{
 		Name:  "license",
 		Usage: "Subnet license key",
 	},
-	cli.StringFlag{
-		Name:  "name",
-		Usage: "Cluster name to be saved in subnet on 1st upload",
-	},
 	cli.IntFlag{
 		Name:  "schedule",
 		Usage: "Schedule of uploading to subnet in no of days",
 		Value: 0,
-	},
-	cli.StringFlag{
-		Name:  "subnet-proxy",
-		Usage: "HTTP(S) proxy URL to be used along with license flag",
-	},
-	cli.BoolFlag{
-		Name:   "dev",
-		Usage:  "Development mode",
-		Hidden: true,
 	},
 	cli.BoolFlag{
 		Name:   "full",
 		Usage:  "Include long running tests (takes longer to generate the report)",
 		Hidden: false,
 	},
-}
+}, subnetCommonFlags...)
 
 var adminSubnetHealthCmd = cli.Command{
 	Name:         "health",
@@ -105,8 +91,14 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get server information of the 'play' MinIO server.
-     {{.Prompt}} {{.HelpName}} play/
+  1. Upload health diagnostics of the cluster at 'play' MinIO server to subnet
+     {{.Prompt}} {{.HelpName}} play
+  2. Upload health diagnostics of the cluster at 'play' MinIO server to subnet using the proxy 192.168.1.3:3128
+     {{.Prompt}} {{.HelpName}} play --subnet-proxy 192.168.1.3:3128
+  3. Periodically upload health diagnostics of the cluster at 'play' MinIO server to subnet every 2 days
+     {{.Prompt}} {{.HelpName}} play --schedule 2
+  4. Generate health diagnostics report for the cluster at 'play' MinIO server in the current directory
+     {{.Prompt}} {{.HelpName}} play --offline
 `,
 }
 
@@ -178,23 +170,26 @@ func mainAdminHealth(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
 
-	license, schedule, dev, name := fetchSubnetUploadFlags(ctx)
+	license, schedule, name, offline := fetchSubnetUploadFlags(ctx)
 
-	uploadToSubnet := len(license) > 0
+	uploadToSubnet := !offline
+	if uploadToSubnet && !subnetReachable() {
+		console.Fatalln("Subnet not reachable.")
+	}
+
 	uploadPeriodically := schedule != 0
 
-	e := validateFlags(uploadToSubnet, uploadPeriodically, dev, name)
+	e := validateFlags(uploadToSubnet, uploadPeriodically, name)
 	fatalIf(probe.NewError(e), "Invalid flags.")
 
 	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
+	client := getClient(aliasedURL)
 
 	if len(name) == 0 {
 		name = aliasedURL
 	}
 	// Main execution
-	execAdminHealth(ctx, client, aliasedURL, license, name, dev)
+	execAdminHealth(ctx, client, aliasedURL, license, name, uploadToSubnet)
 
 	if uploadToSubnet && uploadPeriodically {
 		// Periodic upload to subnet
@@ -202,13 +197,13 @@ func mainAdminHealth(ctx *cli.Context) error {
 			sleepDuration := time.Hour * 24 * time.Duration(schedule)
 			console.Infoln("Waiting for", sleepDuration, "before running health diagnostics again.")
 			time.Sleep(sleepDuration)
-			execAdminHealth(ctx, client, aliasedURL, license, name, dev)
+			execAdminHealth(ctx, client, aliasedURL, license, name, uploadToSubnet)
 		}
 	}
 	return nil
 }
 
-func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, bool, string) {
+func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
 	// license flag is passed when the health data
 	// is to be uploadeD to Subnet
 	license := ctx.String("license")
@@ -217,18 +212,18 @@ func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, bool, string) {
 	// are to be run periodically and uploaded to subnet
 	schedule := ctx.Int("schedule")
 
-	// If set (along with --license), the health data will
-	// be uploaded to a local (devenv) subnet server
-	dev := ctx.Bool("dev")
-
 	// If set (along with --license), this will be passed to
 	// subnet as the name of the cluster
 	name := ctx.String("name")
 
-	return license, schedule, dev, name
+	// If set, the health report file will not be uploaded
+	// to subnet and will only be saved locally.
+	offline := ctx.Bool("offline")
+
+	return license, schedule, name, offline
 }
 
-func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool, name string) error {
+func validateFlags(uploadToSubnet bool, uploadPeriodically bool, name string) error {
 	if uploadToSubnet {
 		if globalJSON {
 			return errors.New("--json and --license should not be passed together")
@@ -236,8 +231,8 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool, name 
 		return nil
 	}
 
-	if dev {
-		return errors.New("--dev is applicable only when --license is also passed")
+	if globalDevMode {
+		return errors.New("--dev is not applicable in offline mode")
 	}
 
 	if uploadPeriodically {
@@ -251,7 +246,17 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, dev bool, name 
 	return nil
 }
 
-func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, clusterName string, dev bool) {
+func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, clusterName string, uploadToSubnet bool) {
+	var reqURL string
+	var headers map[string]string
+
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), UTCNow().Format("20060102150405"))
+	if uploadToSubnet {
+		// Retrieve subnet credentials (login/license) beforehand as
+		// it can take a long time to fetch the health information
+		reqURL, headers = prepareHealthUploadURL(aliasedURL, clusterName, filename, license)
+	}
+
 	healthInfo, version, e := fetchServerHealthInfo(ctx, client)
 	fatalIf(probe.NewError(e), "Unable to fetch health information.")
 
@@ -265,19 +270,12 @@ func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL st
 		return
 	}
 
-	uploadToSubnet := len(license) > 0
-	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), UTCNow().Format("20060102150405"))
 	e = tarGZ(healthInfo, version, filename, !uploadToSubnet)
 	fatalIf(probe.NewError(e), "Unable to create health report file")
 
 	if uploadToSubnet {
-		var proxyURL *url.URL
-		if value := ctx.String("subnet-proxy"); value != "" {
-			proxyURL, e = url.Parse(value)
-			fatalIf(probe.NewError(e), "Unable to parse subnet-proxy flag")
-		}
 
-		e = uploadHealthReport(aliasedURL, clusterName, filename, license, dev, proxyURL)
+		e = uploadHealthReport(aliasedURL, filename, reqURL, headers)
 		if e == nil {
 			// Delete the report after successful upload
 			deleteFile(filename)
@@ -286,58 +284,51 @@ func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL st
 	}
 }
 
-func uploadHealthReport(alias string, clusterName string, filename string, license string, dev bool, proxyURL *url.URL) error {
+func prepareHealthUploadURL(alias string, clusterName string, filename string, license string) (string, map[string]string) {
 	if len(clusterName) == 0 {
 		clusterName = alias
 	}
-	uploadURL := subnetUploadURL(clusterName, filename, license, dev)
-	req, e := subnetUploadReq(uploadURL, filename)
+
+	uploadURL := subnetHealthUploadURL(clusterName, filename)
+
+	if len(license) == 0 {
+		license = getSubnetLicenseFromConfig(alias)
+	}
+
+	reqURL, headers, e := subnetURLWithAuth(uploadURL, license)
+	fatalIf(probe.NewError(e), "Unable to get subnet auth")
+
+	reqURL = fmt.Sprintf("%s&clustername=%s&filename=%s", reqURL, clusterName, filename)
+	return reqURL, headers
+}
+
+func uploadHealthReport(alias string, filename string, reqURL string, headers map[string]string) error {
+	req, e := subnetUploadReq(reqURL, filename)
 	if e != nil {
 		return e
 	}
 
-	client := httpClient(10 * time.Second)
-	if proxyURL != nil {
-		client.Transport.(*http.Transport).Proxy = http.ProxyURL(proxyURL)
-	}
-	resp, herr := client.Do(req)
+	resp, herr := subnetExecReq(req, headers)
 	if herr != nil {
 		return herr
 	}
-	defer resp.Body.Close()
 
-	var respBody []byte
-	respBody, e = ioutil.ReadAll(resp.Body)
-	if e != nil {
-		return e
+	// extract license from response and set it in minio config
+	subnetLic := gjson.Parse(resp).Get("license").String()
+	if len(subnetLic) > 0 {
+		setSubnetLicenseConfig(alias, subnetLic)
 	}
 
-	if resp.StatusCode == http.StatusOK {
-		msg := "MinIO Health data was successfully uploaded to Subnet."
-		clusterURL, _ := url.PathUnescape(gjson.Get(string(respBody), "cluster_url").String())
-		if len(clusterURL) > 0 {
-			msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)
-		}
-		console.Infoln(msg)
-		return nil
+	msg := "MinIO Health data was successfully uploaded to Subnet."
+	clusterURL, _ := url.PathUnescape(gjson.Get(string(resp), "cluster_url").String())
+	if len(clusterURL) > 0 {
+		msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)
 	}
-
-	return fmt.Errorf("Upload to subnet failed with status code %d: %s", resp.StatusCode, respBody)
-}
-
-func subnetUploadURL(clusterName string, filename string, license string, dev bool) string {
-	const apiPath = "/api/health/upload"
-	baseURL := "https://subnet.min.io"
-	if dev {
-		baseURL = "http://localhost:9000"
-	}
-	url := fmt.Sprintf("%s%s?license=%s&clustername=%s&filename=%s", baseURL, apiPath, license, clusterName, filename)
-	return url
+	console.Infoln(msg)
+	return nil
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
-	console.Println(infoText("Uploading health report to subnet"))
-
 	file, _ := os.Open(filename)
 	defer file.Close()
 

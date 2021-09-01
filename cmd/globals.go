@@ -21,6 +21,7 @@ package cmd
 import (
 	"context"
 	"crypto/x509"
+	"net/url"
 
 	"github.com/minio/cli"
 	"github.com/minio/pkg/console"
@@ -55,12 +56,14 @@ const (
 )
 
 var (
-	globalQuiet    = false // Quiet flag set via command line
-	globalJSON     = false // Json flag set via command line
-	globalJSONLine = false // Print json as single line.
-	globalDebug    = false // Debug flag set via command line
-	globalNoColor  = false // No Color flag set via command line
-	globalInsecure = false // Insecure flag set via command line
+	globalQuiet          = false  // Quiet flag set via command line
+	globalJSON           = false  // Json flag set via command line
+	globalJSONLine       = false  // Print json as single line.
+	globalDebug          = false  // Debug flag set via command line
+	globalNoColor        = false  // No Color flag set via command line
+	globalInsecure       = false  // Insecure flag set via command line
+	globalDevMode        = false  // dev flag set via command line
+	globalSubnetProxyURL *url.URL // Proxy to be used for communication with subnet
 
 	globalContext, globalCancel = context.WithCancel(context.Background())
 )
@@ -74,13 +77,15 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure bool) {
+func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxyURL *url.URL) {
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
 	globalJSONLine = !isTerminal() && json
 	globalJSON = globalJSON || json
 	globalNoColor = globalNoColor || noColor || globalJSONLine
 	globalInsecure = globalInsecure || insecure
+	globalDevMode = globalDevMode || devMode
+	globalSubnetProxyURL = subnetProxyURL
 
 	// Disable colorified messages if requested.
 	if globalNoColor || globalQuiet {
@@ -95,6 +100,19 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	json := ctx.IsSet("json") || ctx.GlobalIsSet("json")
 	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
 	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
-	setGlobals(quiet, debug, json, noColor, insecure)
+	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
+
+	subnetProxy := ctx.String("subnet-proxy")
+
+	var proxyURL *url.URL
+	var e error
+	if value := ctx.String("subnet-proxy"); value != "" {
+		proxyURL, e = url.Parse(subnetProxy)
+		if e != nil {
+			return e
+		}
+	}
+
+	setGlobals(quiet, debug, json, noColor, insecure, devMode, proxyURL)
 	return nil
 }
