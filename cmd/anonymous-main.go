@@ -63,7 +63,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 PERMISSION:
-  Allowed policies are: [none, download, upload, public].
+  Allowed policies are: [private, public, download, upload].
 
 FILE:
   A valid S3 anonymous JSON filepath.
@@ -200,9 +200,10 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 		if accessPerms(secondArg) != accessNone &&
 			accessPerms(secondArg) != accessDownload &&
 			accessPerms(secondArg) != accessUpload &&
+			accessPerms(secondArg) != accessPrivate &&
 			accessPerms(secondArg) != accessPublic {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission `"+string(secondArg)+"`. Allowed values are [none, download, upload, public].")
+				"Unrecognized permission `"+string(secondArg)+"`. Allowed values are [private, public, download, upload].")
 		}
 
 	case "set-json":
@@ -234,7 +235,7 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 func accessPermToString(perm accessPerms) string {
 	anonymous := ""
 	switch perm {
-	case accessNone:
+	case accessNone, accessPrivate:
 		anonymous = "none"
 	case accessDownload:
 		anonymous = "readonly"
@@ -303,6 +304,8 @@ func stringToAccessPerm(perm string) accessPerms {
 		anonymous = accessUpload
 	case "readwrite":
 		anonymous = accessPublic
+	case "private":
+		anonymous = accessPrivate
 	case "custom":
 		anonymous = accessCustom
 	}
@@ -479,7 +482,7 @@ func mainAnonymous(ctx *cli.Context) error {
 
 	switch ctx.Args().First() {
 	case "set", "set-json", "get", "get-json":
-		// anonymous set [download|upload|public|none] alias/bucket/prefix
+		// anonymous set [private|public|download|upload] alias/bucket/prefix
 		// anonymous set-json path-to-anonymous-json-file alias/bucket/prefix
 		// anonymous get alias/bucket/prefix
 		// anonymous get-json alias/bucket/prefix

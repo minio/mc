@@ -1418,7 +1418,7 @@ USAGE:
   mc policy [FLAGS] list TARGET
 
 PERMISSION:
-  Allowed policies are: [none, download, upload, public].
+  Allowed policies are: [private, public, download, upload].
 
 FILE:
   A valid S3 policy JSON filepath.

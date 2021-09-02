@@ -22,7 +22,7 @@ import "path/filepath"
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
 	switch b {
-	case accessNone, accessDownload, accessUpload, accessPublic:
+	case accessNone, accessDownload, accessUpload, accessPrivate, accessPublic:
 		return true
 	}
 	return false
@@ -40,6 +40,7 @@ const (
 	accessNone     = accessPerms("none")
 	accessDownload = accessPerms("download")
 	accessUpload   = accessPerms("upload")
+	accessPrivate  = accessPerms("private")
 	accessPublic   = accessPerms("public")
 	accessCustom   = accessPerms("custom")
 )
