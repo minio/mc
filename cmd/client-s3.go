@@ -1960,6 +1960,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.StorageClass = entry.StorageClass
 	content.IsDeleteMarker = entry.IsDeleteMarker
 	content.IsLatest = entry.IsLatest
+	content.Restore = entry.Restore
 	content.Metadata = map[string]string{}
 	content.UserMetadata = map[string]string{}
 	content.ReplicationStatus = entry.ReplicationStatus
@@ -2624,4 +2625,23 @@ func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 		b.Notification.Config = nfc
 	}
 	return b, nil
+}
+
+// Restore gets a copy of an archived object
+func (c *S3Client) Restore(ctx context.Context, versionID string, days int) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	if object == "" {
+		return probe.NewError(ObjectNameEmpty{})
+	}
+
+	req := minio.RestoreRequest{}
+	req.SetDays(days)
+	req.SetGlacierJobParameters(minio.GlacierJobParameters{Tier: minio.TierExpedited})
+	if err := c.api.RestoreObject(ctx, bucket, object, versionID, req); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
 }

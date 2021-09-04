@@ -30,6 +30,7 @@ var ilmSubcommands = []cli.Command{
 	ilmRmCmd,
 	ilmExportCmd,
 	ilmImportCmd,
+	ilmRestoreCmd,
 }
 
 var ilmCmd = cli.Command{

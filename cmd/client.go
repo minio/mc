@@ -167,6 +167,9 @@ type Client interface {
 	DeleteEncryption(ctx context.Context) *probe.Error
 	// Bucket info operation
 	GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
+
+	// Restore an object
+	Restore(ctx context.Context, versionID string, days int) *probe.Error
 }
 
 // ClientContent - Content container for content metadata
@@ -194,7 +197,10 @@ type ClientContent struct {
 	IsDeleteMarker    bool
 	IsLatest          bool
 	ReplicationStatus string
-	Err               *probe.Error
+
+	Restore *minio.RestoreInfo
+
+	Err *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

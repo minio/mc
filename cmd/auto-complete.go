@@ -291,12 +291,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
-	"/ilm/ls":     s3Complete{deepLevel: 2},
-	"/ilm/add":    s3Complete{deepLevel: 2},
-	"/ilm/edit":   s3Complete{deepLevel: 2},
-	"/ilm/rm":     s3Complete{deepLevel: 2},
-	"/ilm/export": s3Complete{deepLevel: 2},
-	"/ilm/import": s3Complete{deepLevel: 2},
+	"/ilm/ls":      s3Complete{deepLevel: 2},
+	"/ilm/add":     s3Complete{deepLevel: 2},
+	"/ilm/edit":    s3Complete{deepLevel: 2},
+	"/ilm/rm":      s3Complete{deepLevel: 2},
+	"/ilm/export":  s3Complete{deepLevel: 2},
+	"/ilm/import":  s3Complete{deepLevel: 2},
+	"/ilm/restore": s3Completer,
 
 	"/undo": s3Completer,
 
