@@ -1454,13 +1454,13 @@ mc policy set-json /tmp/policy.json play/mybucket
 Access permission for `play/mybucket` is set from `/tmp/policy.json`
 ```
 
-*Example : Remove current anonymous bucket policy*
+*Example : Set current anonymous bucket policy to private*
 
-Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
+Set anonymous bucket policy for *mybucket/myphotos/2020/* sub-directory to ``private``. This is equivalent to removing any bucket policies.
 
 ```sh
-mc policy set none play/mybucket/myphotos/2020/
-Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
+mc policy set private play/mybucket/myphotos/2020/
+Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'private'
 ```
 
 <a name="tag"></a>
