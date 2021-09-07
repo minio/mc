@@ -297,7 +297,7 @@ func stringToAccessPerm(perm string) accessPerms {
 	var anonymous accessPerms
 	switch perm {
 	case "none":
-		anonymous = accessNone
+		anonymous = accessPrivate
 	case "readonly":
 		anonymous = accessDownload
 	case "writeonly":
