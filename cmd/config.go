@@ -48,13 +48,24 @@ func getMcConfigDir() (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	configDir := filepath.Join(homeDir, defaultMCConfigDir())
-	return configDir, nil
+	if runtime.GOOS == "windows" {
+		return filepath.Join(homeDir, mcDirName()), nil
+	}
+	// Check if ~/.mc already exists, deprecated Sep 2021
+	oldMcConfigDir := filepath.Join(homeDir, "."+mcDirName())
+	if st, err := os.Stat(oldMcConfigDir); err == nil && st.IsDir() {
+		return oldMcConfigDir, nil
+	}
+	// Construct mc config dir path according to https://specifications.freedesktop.org/basedir-spec/basedir-spec-0.6.html
+	xdgPath := os.Getenv("XDG_CONFIG_HOME")
+	if xdgPath == "" {
+		xdgPath = filepath.Join(homeDir, ".config")
+	}
+	return filepath.Join(xdgPath, mcDirName()), nil
 }
 
-// Return default default mc config directory.
-// Generally you want to use getMcConfigDir which returns custom overrides.
-func defaultMCConfigDir() string {
+// Return mc directory name for config/data
+func mcDirName() string {
 	if runtime.GOOS == "windows" {
 		// For windows the path is slightly different
 		cmd := filepath.Base(os.Args[0])
@@ -63,7 +74,7 @@ func defaultMCConfigDir() string {
 		}
 		return fmt.Sprintf("%s\\", cmd)
 	}
-	return fmt.Sprintf(".%s/", filepath.Base(os.Args[0]))
+	return fmt.Sprintf("%s/", filepath.Base(os.Args[0]))
 }
 
 // mustGetMcConfigDir - construct MinIO Client config folder or fail

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	"github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -105,13 +107,30 @@ func shareSetColor() {
 
 // Get share dir name.
 func getShareDir() (string, *probe.Error) {
-	configDir, err := getMcConfigDir()
-	if err != nil {
-		return "", err.Trace()
+	if mcCustomConfigDir != "" {
+		return filepath.Join(mcCustomConfigDir, globalSharedURLsDataDir), nil
 	}
 
-	sharedURLsDataDir := filepath.Join(configDir, globalSharedURLsDataDir)
-	return sharedURLsDataDir, nil
+	homeDir, e := homedir.Dir()
+	if e != nil {
+		return "", probe.NewError(e)
+	}
+	if runtime.GOOS == "windows" {
+		return filepath.Join(homeDir, mcDirName(), globalSharedURLsDataDir), nil
+	}
+
+	// Check if ~/.mc already exists, deprecated Sep 2021
+	oldMcConfigDir := filepath.Join(homeDir, "."+mcDirName())
+	if st, err := os.Stat(oldMcConfigDir); err == nil && st.IsDir() {
+		return filepath.Join(oldMcConfigDir, globalSharedURLsDataDir), nil
+	}
+
+	// Construct mc config dir path according to https://specifications.freedesktop.org/basedir-spec/basedir-spec-0.6.html
+	xdgPath := os.Getenv("XDG_DATA_HOME")
+	if xdgPath == "" {
+		xdgPath = filepath.Join(homeDir, ".local/share")
+	}
+	return filepath.Join(xdgPath, mcDirName(), globalSharedURLsDataDir), nil
 }
 
 // Get share dir name or die. (NOTE: This `Die` approach is only OK for mc like tools.).
