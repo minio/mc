@@ -537,8 +537,8 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 	// cases e.g. net perf data is empty in case of single server deployment)
 	// explicitly stop them
 	_ = admin(true) && cpu(true) && diskHw(true) && osInfo(true) &&
-		mem(true) && process(true) && config(true) && drive(true) && net(true) &&
-		syserr(true) && syssrv(true) && sysconfig(true)
+		mem(true) && syserr(true) && syssrv(true) && sysconfig(true) &&
+		process(true) && config(true) && drive(true) && net(true)
 
 	// cancel the context if obdChan has returned.
 	cancel()
