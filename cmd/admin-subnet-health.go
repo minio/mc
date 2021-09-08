@@ -465,18 +465,18 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 	}
 
 	progress := func(info madmin.HealthInfo) {
-		_ = admin(len(info.Minio.Info.Servers) > 0) &&
-			cpu(len(info.Sys.CPUInfo) > 0) &&
+		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.Partitions) > 0) &&
 			osInfo(len(info.Sys.OSInfo) > 0) &&
 			mem(len(info.Sys.MemInfo) > 0) &&
-			syserr(len(info.Sys.SysErrs) > 0) &&
-			syssrv(len(info.Sys.SysServices) > 0) &&
-			sysconfig(len(info.Sys.SysConfig) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config.Config != nil) &&
 			drive(len(info.Perf.Drives) > 0) &&
-			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)
+			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0) &&
+			syserr(len(info.Sys.SysErrs) > 0) &&
+			syssrv(len(info.Sys.SysServices) > 0) &&
+			sysconfig(len(info.Sys.SysConfig) > 0) &&
+			admin(len(info.Minio.Info.Servers) > 0)
 	}
 
 	var err error
