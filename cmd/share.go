@@ -115,7 +115,7 @@ func getShareDir() (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		return filepath.Join(homeDir, mcDirName(), globalSharedURLsDataDir), nil
 	}
 

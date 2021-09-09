@@ -48,7 +48,7 @@ func getMcConfigDir() (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		return filepath.Join(homeDir, mcDirName()), nil
 	}
 	// Check if ~/.mc already exists, deprecated Sep 2021
