@@ -37,6 +37,10 @@ var replicateResetFlags = []cli.Flag{
 		Name:  "older-than",
 		Usage: "re-replicate objects older than n days",
 	},
+	cli.StringFlag{
+		Name:  "remote-bucket",
+		Usage: "remote bucket ARN",
+	},
 }
 
 var replicateResetCmd = cli.Command{
@@ -57,11 +61,11 @@ FLAGS:
    {{range .VisibleFlags}}{{.}}
    {{end}}
 EXAMPLES:
-  1. Re-replicate previously replicated objects in bucket "mybucket" for alias "myminio".
-   {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Re-replicate previously replicated objects in bucket "mybucket" for alias "myminio" for remote target.
+   {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
 
-  2. Re-replicate all objects older than 60 days in bucket "mybucket" for target with arn "arn".
-   {{.Prompt}} {{.HelpName}} myminio/mybucket --older-than 60d --arn "arn"
+  2. Re-replicate all objects older than 60 days in bucket "mybucket" for remote bucket target.
+   {{.Prompt}} {{.HelpName}} myminio/mybucket --older-than 60d --remote-bucket "arn:minio:replication::xxx:mybucket"
 `,
 }
 
