@@ -150,7 +150,7 @@ func (s replicateStatusMessage) String() string {
 			}
 			th = arntheme[0]
 			r := console.Colorize(th, newPrettyTable(" | ",
-				Field{"ARN", 95},
+				Field{"ARN", 120},
 			).buildRow(fmt.Sprintf("%s %s", coloredDot, arns[hIdx])))
 			rows += r
 			rows += "\n"

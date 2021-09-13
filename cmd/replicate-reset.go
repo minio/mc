@@ -74,6 +74,9 @@ func checkReplicateResetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "reset", 1) // last argument is exit code
 	}
+	if ctx.String("remote-bucket") == "" {
+		fatal(errDummy().Trace(), "--remote-bucket flag needs to be specified.")
+	}
 }
 
 type replicateResetMessage struct {
@@ -129,7 +132,7 @@ func mainReplicateReset(cliCtx *cli.Context) error {
 		}
 	}
 
-	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("arn"))
+	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to reset replication")
 	printMsg(replicateResetMessage{
 		Op:                "status",
