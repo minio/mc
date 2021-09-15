@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/briandowns/spinner"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -172,14 +173,47 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 		autotune = true
 	}
 
-	result, _ := client.Speedtest(ctxt, madmin.SpeedtestOpts{
+	resultCh, err := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
 		Duration:    duration,
 		Concurrency: concurrent,
 		Autotune:    autotune,
 	})
+	fatalIf(probe.NewError(err), "Failed to execute speedtest")
 
-	printMsg(speedTestResult(result))
+	spinnerCh, s := startSpinner()
+
+	for result := range resultCh {
+		select {
+		case spinnerCh <- struct{}{}:
+		default:
+		}
+		if result.Version == "" {
+			continue
+		}
+		if !globalJSON {
+			s.Stop()
+			fmt.Printf("\n\n")
+		}
+		printMsg(speedTestResult(result))
+	}
 
 	return nil
+}
+
+func startSpinner() (chan struct{}, *spinner.Spinner) {
+	ch := make(chan struct{}, 1)
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " Performing speedtest"
+	go func() {
+		for {
+			if !globalJSON {
+				s.Start()
+				time.Sleep(500 * time.Millisecond)
+				s.Stop()
+				<-ch
+			}
+		}
+	}()
+	return ch, s
 }
