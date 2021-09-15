@@ -210,7 +210,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 		url = filepath.ToSlash(filepath.Clean(url))
 		// namespace removal applies only for non FS. So filter out if passed url represents a directory
 		dir := isAliasURLDir(ctx, url, encKeyDB, time.Time{})
-		if !dir {
+		if dir {
 			_, path := url2Alias(url)
 			isNamespaceRemoval = (path == "")
 			break
@@ -231,17 +231,15 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 
 	// For all recursive or versions bulk deletion operations make sure to check for 'force' flag.
 	if (isVersions || isRecursive || isStdin) && !isForce {
-		if isNamespaceRemoval {
-			fatalIf(errDummy().Trace(),
-				"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
-		}
 		fatalIf(errDummy().Trace(),
 			"Removal requires --force flag. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}
-	if (isRecursive || isStdin) && isNamespaceRemoval && !isDangerous {
+
+	if isNamespaceRemoval && !(isDangerous && isForce) {
 		fatalIf(errDummy().Trace(),
 			"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 	}
+
 }
 
 // Remove a single object or a single version in a versioned bucket
