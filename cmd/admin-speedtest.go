@@ -19,12 +19,12 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -44,6 +44,10 @@ var adminSpeedtestFlags = []cli.Flag{
 		Name:  "concurrent",
 		Usage: "number of concurrent requests per server",
 		Value: 32,
+	},
+	cli.BoolFlag{
+		Name:  "verbose, v",
+		Usage: "Show per-server stats",
 	},
 }
 
@@ -65,13 +69,55 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Run speedtest with default values, check '--help' for default values:
+  1. Run speedtest with autotuning the concurrency to figure out the maximum throughput and iops values:
      {{.Prompt}} {{.HelpName}} myminio/
 
-  2. Run speedtest for 20seconds with object size of 128MiB, 32 concurrent requests per server:
-     {{.Prompt}} {{.HelpName}} --duration 20s --size 128MiB --concurrent 32 myminio/
+  2. Run speedtest for 20 seconds with object size of 128MiB, 32 concurrent requests per server:
+     {{.Prompt}} {{.HelpName}} myminio/ --duration 20s --size 128MiB --concurrent 32
 `,
 }
+
+type speedTestResult madmin.SpeedTestResult
+
+func (s speedTestResult) String() (msg string) {
+	msg += fmt.Sprintf("MinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
+	if globalSpeedTestVerbose {
+		msg += "\n"
+	}
+	msg += fmt.Sprintf("PUT: %s/s, %d objs/s\n", humanize.IBytes(uint64(s.PUTStats.ThroughputPerSec)), s.PUTStats.ObjectsPerSec)
+	if globalSpeedTestVerbose {
+		for _, node := range s.PUTStats.Servers {
+			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), node.ObjectsPerSec)
+			if node.Err != "" {
+				msg += " error: " + node.Err
+			}
+			msg += "\n"
+
+		}
+	}
+	if globalSpeedTestVerbose {
+		msg += "\n"
+	}
+	msg += fmt.Sprintf("GET: %s/s, %d objs/s\n", humanize.IBytes(uint64(s.GETStats.ThroughputPerSec)), s.GETStats.ObjectsPerSec)
+	if globalSpeedTestVerbose {
+		for _, node := range s.GETStats.Servers {
+			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), node.ObjectsPerSec)
+			if node.Err != "" {
+				msg += " error: " + node.Err
+			}
+			msg += "\n"
+		}
+	}
+	return msg
+}
+
+func (s speedTestResult) JSON() string {
+	JSONBytes, e := json.MarshalIndent(s, "", "    ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(JSONBytes)
+}
+
+var globalSpeedTestVerbose bool
 
 func mainAdminSpeedtest(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
@@ -114,58 +160,26 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument(), "concurrency cannot be '0' or negative")
 		return nil
 	}
-	results, e := client.Speedtest(ctxt, madmin.SpeedtestOpts{
+	globalSpeedTestVerbose = ctx.Bool("verbose")
+
+	autotune := false
+
+	if ctx.NumFlags() == 0 {
+		autotune = true
+	}
+
+	if ctx.NumFlags() == 2 && globalSpeedTestVerbose {
+		autotune = true
+	}
+
+	result, _ := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
 		Duration:    duration,
 		Concurrency: concurrent,
+		Autotune:    autotune,
 	})
-	if e != nil {
-		fatalIf(probe.NewError(e), "Unable to run speedtest")
-		return nil
-	}
 
-	if globalJSON {
-		buf, e := json.Marshal(results)
-		fatalIf(probe.NewError(e), "Unable to marshal into JSON results")
-		fmt.Println(string(buf))
-		return nil
-	}
-
-	uploads := uint64(0)
-	downloads := uint64(0)
-	for _, result := range results {
-		uploads += result.Uploads
-		downloads += result.Downloads
-	}
-
-	durationSecs := duration.Seconds()
-	uploadSpeed := humanize.IBytes(uploads * uint64(size) / uint64(durationSecs))
-	downloadSpeed := humanize.IBytes(downloads * uint64(size) / uint64(durationSecs))
-
-	fmt.Printf("Operation: PUT\n* Average: %s/s, %d objs/s\n\n",
-		uploadSpeed, uploads/uint64(durationSecs))
-
-	fmt.Printf("Throughput by host:\n")
-	for _, result := range results {
-		fmt.Printf(" * %s: Avg: %s/s, %d objs/s\n",
-			result.Endpoint,
-			humanize.IBytes(result.Uploads*uint64(size)/uint64(durationSecs)),
-			result.Uploads/uint64(durationSecs),
-		)
-	}
-
-	fmt.Printf("\nOperation: GET\n* Average: %s/s, %d objs/s\n\n",
-		downloadSpeed, downloads/uint64(durationSecs))
-
-	fmt.Printf("Throughput by host:\n")
-	for _, result := range results {
-		fmt.Printf(" * %s: Avg: %s/s, %d objs/s\n",
-			result.Endpoint,
-			humanize.IBytes(result.Downloads*uint64(size)/uint64(durationSecs)),
-			result.Downloads/uint64(durationSecs),
-		)
-	}
-	fmt.Println()
+	printMsg(speedTestResult(result))
 
 	return nil
 }
