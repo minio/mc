@@ -160,7 +160,7 @@ type Client interface {
 	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error
 	RemoveReplication(ctx context.Context) *probe.Error
 	GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error)
-	ResetReplication(ctx context.Context, before time.Duration) (string, *probe.Error)
+	ResetReplication(ctx context.Context, before time.Duration, arn string) (replication.ResyncTargetsInfo, *probe.Error)
 	// Encryption operations
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)
 	SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error

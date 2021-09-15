@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/pkg/console"
 	"maze.io/x/duration"
 )
@@ -35,6 +36,10 @@ var replicateResetFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "older-than",
 		Usage: "re-replicate objects older than n days",
+	},
+	cli.StringFlag{
+		Name:  "remote-bucket",
+		Usage: "remote bucket ARN",
 	},
 }
 
@@ -56,11 +61,11 @@ FLAGS:
    {{range .VisibleFlags}}{{.}}
    {{end}}
 EXAMPLES:
-  1. Re-replicate previously replicated objects in bucket "mybucket" for alias "myminio".
-   {{.Prompt}} {{.HelpName}} myminio/mybucket
+  1. Re-replicate previously replicated objects in bucket "mybucket" for alias "myminio" for remote target.
+   {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
 
-  2. Re-replicate all objects older than 60 days in bucket "mybucket".
-   {{.Prompt}} {{.HelpName}} myminio/mybucket --older-than 60d
+  2. Re-replicate all objects older than 60 days in bucket "mybucket" for remote bucket target.
+   {{.Prompt}} {{.HelpName}} myminio/mybucket --older-than 60d --remote-bucket "arn:minio:replication::xxx:mybucket"
 `,
 }
 
@@ -69,13 +74,17 @@ func checkReplicateResetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "reset", 1) // last argument is exit code
 	}
+	if ctx.String("remote-bucket") == "" {
+		fatal(errDummy().Trace(), "--remote-bucket flag needs to be specified.")
+	}
 }
 
 type replicateResetMessage struct {
-	Op      string `json:"op"`
-	URL     string `json:"url"`
-	ResetID string `json:"resetID"`
-	Status  string `json:"status"`
+	Op                string                        `json:"op"`
+	URL               string                        `json:"url"`
+	ResyncTargetsInfo replication.ResyncTargetsInfo `json:"resyncInfo"`
+	Status            string                        `json:"status"`
+	TargetArn         string                        `json:"targetArn"`
 }
 
 func (r replicateResetMessage) JSON() string {
@@ -86,7 +95,11 @@ func (r replicateResetMessage) JSON() string {
 }
 
 func (r replicateResetMessage) String() string {
-	return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResetID))
+	if len(r.ResyncTargetsInfo.Targets) == 1 {
+		return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResyncTargetsInfo.Targets[0].ResetID))
+	}
+	return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s", r.URL))
+
 }
 
 func mainReplicateReset(cliCtx *cli.Context) error {
@@ -119,12 +132,12 @@ func mainReplicateReset(cliCtx *cli.Context) error {
 		}
 	}
 
-	replicateReset, err := client.ResetReplication(ctx, olderThan)
+	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to reset replication")
 	printMsg(replicateResetMessage{
-		Op:      "status",
-		URL:     aliasedURL,
-		ResetID: replicateReset,
+		Op:                "status",
+		URL:               aliasedURL,
+		ResyncTargetsInfo: rinfo,
 	})
 	return nil
 }
