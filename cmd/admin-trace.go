@@ -592,7 +592,7 @@ func (t traceMessage) String() string {
 
 	for k, v := range rs.Headers {
 		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey",
-			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
+			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ","))))
 	}
 	fmt.Fprintf(b, "%s%s\n", nodeNameStr, console.Colorize("Body", string(rs.Body)))
 	fmt.Fprint(b, nodeNameStr)
