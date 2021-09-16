@@ -3,6 +3,7 @@ module github.com/minio/mc
 go 1.14
 
 require (
+	github.com/briandowns/spinner v1.16.0 // indirect
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.12.0
@@ -16,7 +17,7 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.1.5
+	github.com/minio/madmin-go v1.1.6-0.20210916025735-2c79afe4a49d
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v7 v7.0.15-0.20210915163107-397b33010d5f
 	github.com/minio/pkg v1.0.10
