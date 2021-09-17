@@ -65,7 +65,7 @@ var adminTierEditCmd = cli.Command{
 	Action:       mainAdminTierEdit,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        adminTierEditFlags,
+	Flags:        append(globalFlags, adminTierEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
