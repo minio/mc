@@ -28,6 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminSpeedtestFlags = []cli.Flag{
@@ -193,7 +194,8 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 		}
 		if !globalJSON {
 			s.Stop()
-			fmt.Printf("\n\n")
+			console.RewindLines(1)
+			console.Println()
 		}
 		printMsg(speedTestResult(result))
 	}
