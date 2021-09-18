@@ -35,6 +35,11 @@ jobs:
         env:
           GO111MODULE: on
         run: |
+          wget https://dl.min.io/server/minio/release/linux-amd64/minio && chmod +x minio
+          mkdir -p ~/.minio/certs/ && cp testdata/localhost.crt ~/.minio/certs/public.crt && cp testdata/localhost.key ~/.minio/certs/private.key
+          sudo cp testdata/localhost.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+          ./minio server /tmp/test-xl/{1...4}/ & sleep 10
+          export SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1
           make
           diff -au <(gofmt -d *.go) <(printf "")
           diff -au <(gofmt -s -d cmd) <(printf "")
