@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -115,6 +116,10 @@ func (u clusterStruct) String() (msg string) {
 	if madmin.ItemState(u.Info.Mode) == madmin.ItemInitializing {
 		coloredDot = console.Colorize("InfoWarning", dot)
 	}
+
+	sort.Slice(u.Info.Servers, func(i, j int) bool {
+		return u.Info.Servers[i].Endpoint < u.Info.Servers[j].Endpoint
+	})
 
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
