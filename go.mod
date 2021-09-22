@@ -9,7 +9,7 @@ require (
 	github.com/fatih/color v1.12.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/json-iterator/go v1.1.11
-	github.com/klauspost/compress v1.12.2
+	github.com/klauspost/compress v1.13.5
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.13
@@ -17,9 +17,9 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.1.6-0.20210916025735-2c79afe4a49d
+	github.com/minio/madmin-go v1.1.6
 	github.com/minio/md5-simd v1.1.1 // indirect
-	github.com/minio/minio-go/v7 v7.0.15-0.20210915163107-397b33010d5f
+	github.com/minio/minio-go/v7 v7.0.15-0.20210921183434-174b4c070788
 	github.com/minio/pkg v1.0.10
 	github.com/minio/selfupdate v0.3.1
 	github.com/minio/sha256-simd v1.0.0
@@ -29,7 +29,6 @@ require (
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.3
 	github.com/prometheus/client_golang v1.8.0
-	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
