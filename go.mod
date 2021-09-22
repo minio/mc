@@ -3,7 +3,7 @@ module github.com/minio/mc
 go 1.14
 
 require (
-	github.com/briandowns/spinner v1.16.0 // indirect
+	github.com/briandowns/spinner v1.16.0
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.12.0
