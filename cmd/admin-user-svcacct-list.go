@@ -18,12 +18,15 @@
 package cmd
 
 import (
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserSvcAcctListCmd = cli.Command{
-	Name:         "ls",
+	Name:         "list",
+	Aliases:      []string{"ls"},
 	Usage:        "List services accounts",
 	Action:       mainAdminUserSvcAcctList,
 	OnUsageError: onUsageError,
@@ -59,6 +62,9 @@ func checkAdminUserSvcAcctListSyntax(ctx *cli.Context) {
 func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 	checkAdminUserSvcAcctListSyntax(ctx)
 
+	console.SetColor("SVCMessage", color.New(color.FgGreen))
+	console.SetColor("AccessKey", color.New(color.FgBlue))
+
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
@@ -73,7 +79,7 @@ func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 
 	for _, svc := range svcList.Accounts {
 		printMsg(svcAcctMessage{
-			op:        "ls",
+			op:        "list",
 			AccessKey: svc,
 		})
 	}

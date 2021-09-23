@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
@@ -96,7 +97,7 @@ const (
 
 func (u svcAcctMessage) String() string {
 	switch u.op {
-	case "ls":
+	case "list":
 		// Create a new pretty table with cols configuration
 		return newPrettyTable("  ",
 			Field{"AccessKey", accessFieldMaxLen},
@@ -108,7 +109,7 @@ func (u svcAcctMessage) String() string {
 		} else {
 			policyField = "embedded"
 		}
-		return console.Colorize("UserMessage", strings.Join(
+		return console.Colorize("SVCMessage", strings.Join(
 			[]string{
 				fmt.Sprintf("AccessKey: %s", u.AccessKey),
 				fmt.Sprintf("ParentUser: %s", u.ParentUser),
@@ -116,16 +117,16 @@ func (u svcAcctMessage) String() string {
 				fmt.Sprintf("Policy: %s", policyField),
 			}, "\n"))
 	case "rm":
-		return console.Colorize("UserMessage", "Removed service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Removed service account `"+u.AccessKey+"` successfully.")
 	case "disable":
-		return console.Colorize("UserMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
 	case "enable":
-		return console.Colorize("UserMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
 	case "add":
-		return console.Colorize("UserMessage",
+		return console.Colorize("SVCMessage",
 			fmt.Sprintf("Access Key: %s\nSecret Key: %s", u.AccessKey, u.SecretKey))
 	case "set":
-		return console.Colorize("UserMessage", "Edited service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
 	return ""
 }
@@ -141,6 +142,8 @@ func (u svcAcctMessage) JSON() string {
 // mainAdminUserSvcAcctAdd is the handle for "mc admin user svcacct add" command.
 func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	checkAdminUserSvcAcctAddSyntax(ctx)
+
+	console.SetColor("SVCMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

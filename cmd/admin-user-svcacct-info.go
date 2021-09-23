@@ -20,8 +20,10 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserSvcAcctInfoFlags = []cli.Flag{
@@ -64,6 +66,8 @@ func checkAdminUserSvcAcctInfoSyntax(ctx *cli.Context) {
 // mainAdminUserSvcAcctInfo is the handle for "mc admin user svcacct info" command.
 func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 	checkAdminUserSvcAcctInfoSyntax(ctx)
+
+	console.SetColor("SVCMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
