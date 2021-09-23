@@ -18,9 +18,11 @@
 package cmd
 
 import (
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserSvcAcctDisableCmd = cli.Command{
@@ -56,6 +58,8 @@ func checkAdminUserSvcAcctDisableSyntax(ctx *cli.Context) {
 // mainAdminUserSvcAcctDisable is the handle for "mc admin user svcacct disable" command.
 func mainAdminUserSvcAcctDisable(ctx *cli.Context) error {
 	checkAdminUserSvcAcctDisableSyntax(ctx)
+
+	console.SetColor("SVCMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

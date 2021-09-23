@@ -345,7 +345,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/user/policy":  aliasCompleter,
 
 	"/admin/user/svcacct/add":     aliasCompleter,
-	"/admin/user/svcacct/ls":      aliasCompleter,
+	"/admin/user/svcacct/list":    aliasCompleter,
 	"/admin/user/svcacct/rm":      aliasCompleter,
 	"/admin/user/svcacct/info":    aliasCompleter,
 	"/admin/user/svcacct/set":     aliasCompleter,
