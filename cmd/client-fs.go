@@ -1229,3 +1229,11 @@ func (f *fsClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 		APIType: "filesystem",
 	})
 }
+
+// Restore object - not implemented
+func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "Restore",
+		APIType: "filesystem",
+	})
+}
