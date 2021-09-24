@@ -1,4 +1,4 @@
-// +build darwin
+//go:build darwin
 
 // Copyright (c) 2015-2021 MinIO, Inc.
 //

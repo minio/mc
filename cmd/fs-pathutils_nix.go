@@ -1,4 +1,4 @@
-// +build !windows
+//go:build !windows
 
 // Copyright (c) 2015-2021 MinIO, Inc.
 //
