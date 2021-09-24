@@ -167,6 +167,8 @@ func waitRestoreObject(ctx context.Context, targetAlias, targetURL, versionID st
 		if st.Restore != nil && !st.Restore.OngoingRestore {
 			return nil
 		}
+		// Restore still going on, wait for 5 seconds before checking again
+		time.Sleep(5 * time.Second)
 	}
 }
 
