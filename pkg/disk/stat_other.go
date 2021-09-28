@@ -1,3 +1,4 @@
+//go:build openbsd || solaris
 // +build openbsd solaris
 
 // Copyright (c) 2015-2021 MinIO, Inc.

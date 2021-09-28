@@ -1,6 +1,6 @@
 module github.com/minio/mc
 
-go 1.14
+go 1.16
 
 require (
 	github.com/briandowns/spinner v1.16.0
