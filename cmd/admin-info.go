@@ -175,16 +175,20 @@ func (u clusterStruct) String() (msg string) {
 		msg += fmt.Sprintf("   Version: %s\n", version)
 
 		// Network info, only available for non-FS types
-		var connectionAlive int
-		totalNodes := strconv.Itoa(len(srv.Network))
+		connectionAlive := 0
+		totalNodes := len(srv.Network)
 		if srv.Network != nil {
 			for _, v := range srv.Network {
 				if v == "online" {
 					connectionAlive++
 				}
 			}
-			displayNwInfo := strconv.Itoa(connectionAlive) + "/" + totalNodes
-			msg += fmt.Sprintf("   Network: %s %s\n", displayNwInfo, console.Colorize("Info", "OK "))
+			clr := "Info"
+			if connectionAlive != totalNodes {
+				clr = "InfoWarning"
+			}
+			displayNwInfo := strconv.Itoa(connectionAlive) + "/" + strconv.Itoa(totalNodes)
+			msg += fmt.Sprintf("   Network: %s %s\n", displayNwInfo, console.Colorize(clr, "OK "))
 		}
 
 		if backendType != "FS" {
@@ -192,6 +196,7 @@ func (u clusterStruct) String() (msg string) {
 			var OffDisks int
 			var OnDisks int
 			var dispNoOfDisks string
+			fmt.Println(len(srv.Disks))
 			for _, disk := range srv.Disks {
 				switch disk.State {
 				case madmin.DriveStateOk:
@@ -206,9 +211,12 @@ func (u clusterStruct) String() (msg string) {
 			totalDisksPerServer := OnDisks + OffDisks
 			totalOnlineDisksCluster += OnDisks
 			totalOfflineDisksCluster += OffDisks
-
+			clr := "Info"
+			if OnDisks != totalDisksPerServer {
+				clr = "InfoWarning"
+			}
 			dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
-			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize("Info", "OK "))
+			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize(clr, "OK "))
 
 		}
 
