@@ -18,6 +18,7 @@
 package ilm
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -184,7 +185,7 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 }
 
 // GetLifecycleOptions create LifeCycleOptions based on cli inputs
-func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
+func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	id := ctx.String("id")
 	if id == "" {
 		id = xid.New().String()
@@ -199,6 +200,12 @@ func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
 	scSet := ctx.IsSet("storage-class")
 	sc := strings.ToUpper(ctx.String("storage-class"))
 	noncurrentSC := strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class"))
+	if sc != "" && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
+		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
+	}
+	if noncurrentSC != "" && !ctx.IsSet("noncurrentversion-transition-days") {
+		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
+	}
 	// for MinIO transition storage-class is same as label defined on
 	// `mc admin bucket remote add --service ilm --label` command
 	return LifecycleOptions{
@@ -217,7 +224,7 @@ func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
 		NoncurrentVersionExpirationDays:         ctx.Int("noncurrentversion-expiration-days"),
 		NoncurrentVersionTransitionDays:         ctx.Int("noncurrentversion-transition-days"),
 		NoncurrentVersionTransitionStorageClass: noncurrentSC,
-	}
+	}, nil
 }
 
 // Applies non empty fields from src to dest Rule and return the dest Rule

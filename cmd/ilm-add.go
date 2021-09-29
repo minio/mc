@@ -155,7 +155,9 @@ func mainILMAdd(cliCtx *cli.Context) error {
 		}
 	}
 
-	opts := ilm.GetLifecycleOptions(cliCtx)
+	opts, err := ilm.GetLifecycleOptions(cliCtx)
+	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
+
 	lfcCfg, err = opts.ToConfig(lfcCfg)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
