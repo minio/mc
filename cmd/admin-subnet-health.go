@@ -453,6 +453,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 	sysconfig := spinner("System Config", madmin.HealthDataTypeSysConfig)
 
 	progressV0 := func(info madmin.HealthInfoV0) {
+		noOfServers := len(info.Sys.CPUInfo)
 		_ = admin(len(info.Minio.Info.Servers) > 0) &&
 			cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.DiskHwInfo) > 0) &&
@@ -461,10 +462,11 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config != nil) &&
 			drive(len(info.Perf.DriveInfo) > 0) &&
-			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)
+			net(noOfServers == 1 || (len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0))
 	}
 
 	progress := func(info madmin.HealthInfo) {
+		noOfServers := len(info.Sys.CPUInfo)
 		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.Partitions) > 0) &&
 			osInfo(len(info.Sys.OSInfo) > 0) &&
@@ -472,7 +474,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config.Config != nil) &&
 			drive(len(info.Perf.Drives) > 0) &&
-			net(len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0) &&
+			net(noOfServers == 1 || (len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)) &&
 			syserr(len(info.Sys.SysErrs) > 0) &&
 			syssrv(len(info.Sys.SysServices) > 0) &&
 			sysconfig(len(info.Sys.SysConfig) > 0) &&
@@ -532,13 +534,6 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 		}
 		healthInfo = info
 	}
-
-	// In case any of the spinners have not stopped yet (can happen in some
-	// cases e.g. net perf data is empty in case of single server deployment)
-	// explicitly stop them
-	_ = admin(true) && cpu(true) && diskHw(true) && osInfo(true) &&
-		mem(true) && process(true) && config(true) && drive(true) && net(true) &&
-		syserr(true) && syssrv(true) && sysconfig(true)
 
 	// cancel the context if obdChan has returned.
 	cancel()
