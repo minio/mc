@@ -31,7 +31,7 @@ import (
 
 var adminSubnetRegisterCmd = cli.Command{
 	Name:         "register",
-	Usage:        "register cluster with subnet",
+	Usage:        "Register the MinIO Cluster with SUBNET",
 	OnUsageError: onUsageError,
 	Action:       mainAdminRegister,
 	Before:       setGlobalsFromContext,
@@ -105,7 +105,7 @@ func mainAdminRegister(ctx *cli.Context) error {
 
 	offlineMode := ctx.Bool(("offline"))
 	if !offlineMode && !subnetReachable() {
-		console.Fatalln("Subnet not reachable.")
+		console.Fatalln("Could not connect to MinIO SUBNET.")
 	}
 
 	// Get the alias parameter from cli
@@ -131,7 +131,7 @@ func mainAdminRegister(ctx *cli.Context) error {
 		registerOnline(regInfo, aliasedURL, clusterName)
 	}
 
-	msg := fmt.Sprintln("Cluster", aliasedURL, "has been successfully registered.")
+	msg := fmt.Sprintln("Cluster", aliasedURL, "successfully registered on SUBNET.")
 	console.Infoln(msg)
 
 	return nil
@@ -162,16 +162,16 @@ Please follow these steps to complete the registration:
 
 	if len(lic) > 0 {
 		e := verifySubnetLicense(lic)
-		fatalIf(probe.NewError(e), "License could not be verified")
+		fatalIf(probe.NewError(e), "Invalid license specified:")
 		setSubnetLicenseConfig(alias, lic)
 	} else {
-		console.Fatalln("Registration failed as license was not provided. Please run the command again to complete registration.")
+		console.Fatalln("Invalid license specified. Please run the command again with a valid SUBNET license to complete registration.")
 	}
 }
 
 func registerOnline(clusterRegInfo ClusterRegistrationInfo, aliasedURL string, clusterName string) {
 	resp, e := registerClusterOnSubnet(aliasedURL, clusterRegInfo)
-	fatalIf(probe.NewError(e), "Cluster registration on subnet failed")
+	fatalIf(probe.NewError(e), "Could not register cluster with SUBNET:")
 
 	// extract license from response and set it in minio config
 	subnetLic := gjson.Parse(resp).Get("license").String()

@@ -46,15 +46,15 @@ const minioSubscriptionURL = "https://min.io/subscription"
 var subnetCommonFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "name",
-		Usage: "Cluster name to be saved in subnet - used only on first upload/registration",
+		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},
 	cli.StringFlag{
 		Name:  "subnet-proxy",
-		Usage: "HTTP(S) proxy URL to be used for communicating with subnet",
+		Usage: "Specify the HTTP(S) proxy URL to use for connecting to SUBNET",
 	},
 	cli.BoolFlag{
 		Name:   "offline",
-		Usage:  "Offline mode - use when subnet is not reachable",
+		Usage:  "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		Hidden: false,
 	},
 	cli.BoolFlag{
