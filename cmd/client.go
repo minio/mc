@@ -20,12 +20,11 @@ package cmd
 import (
 	"context"
 	"io"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/replication"
@@ -215,7 +214,6 @@ type Config struct {
 	Debug        bool
 	Insecure     bool
 	Lookup       minio.BucketLookupType
-	Transport    *http.Transport
 }
 
 // SelectObjectOpts - opts entered for select API
