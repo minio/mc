@@ -269,10 +269,16 @@ func getStorageClassName(rule lifecycle.Rule) string {
 
 // Array of Tag strings, each in key:value format
 func getTagArr(rule lifecycle.Rule) []string {
-	if rule.RuleFilter.And.IsEmpty() {
+	var tagArr []lifecycle.Tag
+	switch {
+	case !rule.RuleFilter.Tag.IsEmpty():
+		tagArr = []lifecycle.Tag{rule.RuleFilter.Tag}
+	case !rule.RuleFilter.And.IsEmpty():
+		tagArr = rule.RuleFilter.And.Tags
+	default:
 		return []string{}
 	}
-	tagArr := rule.RuleFilter.And.Tags
+
 	tagLth := len(tagArr)
 	tagCellArr := make([]string, len(tagArr))
 	for tagIdx := 0; tagIdx < tagLth; tagIdx++ {
@@ -308,16 +314,18 @@ func getILMShowDataWithoutTags(cellInfo *[][]string, rowCheck map[string]int, in
 	for index := 0; index < len(info.Rules); index++ {
 		rule := info.Rules[index]
 
+		// Ignore this rule if it has tag filter in it
+		if len(getTagArr(rule)) > 0 {
+			continue
+		}
+
 		showExpiry := !rule.Expiration.IsNull()
 		transitionSet := !rule.Transition.IsNull()
 		skipExpTran := (showOpts.expiry && !showExpiry) || (showOpts.transition && !transitionSet)
 		if skipExpTran {
 			continue
 		}
-		tagPresent := !rule.RuleFilter.And.IsEmpty()
-		if tagPresent {
-			continue
-		}
+
 		*cellInfo = append(*cellInfo, make([]string, 0))
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: rule.ID, labelKey: idLabel, columnWidth: idColumnWidth, align: leftAlign})
@@ -348,15 +356,18 @@ func getILMShowDataWithTags(cellInfo *[][]string, newRows map[string][]string, r
 	for index := 0; index < len(info.Rules); index++ {
 		rule := info.Rules[index]
 
+		// Ignore printing this rule if it doesn't have any tag filter in it
+		if len(getTagArr(rule)) == 0 {
+			continue
+		}
+
 		showExpiry := !rule.Expiration.IsNull()
 		transitionSet := !rule.Transition.IsNull()
 		skipExpTran := (showOpts.expiry && !showExpiry) || (showOpts.transition && !transitionSet)
 		if skipExpTran {
 			continue
 		}
-		if len(getTagArr(rule)) == 0 {
-			continue
-		}
+
 		*cellInfo = append(*cellInfo, make([]string, 0))
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: rule.ID, labelKey: idLabel, columnWidth: idColumnWidth, align: leftAlign})
