@@ -39,7 +39,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
@@ -140,52 +140,48 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 
 			var transport http.RoundTripper
 
-			if config.Transport != nil {
-				transport = config.Transport
-			} else {
-				tr := &http.Transport{
-					Proxy: http.ProxyFromEnvironment,
-					DialContext: (&net.Dialer{
-						Timeout:   10 * time.Second,
-						KeepAlive: 15 * time.Second,
-					}).DialContext,
-					MaxIdleConnsPerHost:   256,
-					IdleConnTimeout:       90 * time.Second,
-					TLSHandshakeTimeout:   10 * time.Second,
-					ExpectContinueTimeout: 10 * time.Second,
-					// Set this value so that the underlying transport round-tripper
-					// doesn't try to auto decode the body of objects with
-					// content-encoding set to `gzip`.
-					//
-					// Refer:
-					//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
-					DisableCompression: true,
-				}
-				if useTLS {
-					// Keep TLS config.
-					tlsConfig := &tls.Config{
-						RootCAs: globalRootCAs,
-						// Can't use SSLv3 because of POODLE and BEAST
-						// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
-						// Can't use TLSv1.1 because of RC4 cipher usage
-						MinVersion: tls.VersionTLS12,
-					}
-					if config.Insecure {
-						tlsConfig.InsecureSkipVerify = true
-					}
-					tr.TLSClientConfig = tlsConfig
-
-					// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
-					// See https://github.com/golang/go/issues/14275
-					//
-					// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
-					//
-					// if e = http2.ConfigureTransport(tr); e != nil {
-					// 	return nil, probe.NewError(e)
-					// }
-				}
-				transport = tr
+			tr := &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   10 * time.Second,
+					KeepAlive: 15 * time.Second,
+				}).DialContext,
+				MaxIdleConnsPerHost:   256,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 10 * time.Second,
+				// Set this value so that the underlying transport round-tripper
+				// doesn't try to auto decode the body of objects with
+				// content-encoding set to `gzip`.
+				//
+				// Refer:
+				//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
+				DisableCompression: true,
 			}
+			if useTLS {
+				// Keep TLS config.
+				tlsConfig := &tls.Config{
+					RootCAs: globalRootCAs,
+					// Can't use SSLv3 because of POODLE and BEAST
+					// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+					// Can't use TLSv1.1 because of RC4 cipher usage
+					MinVersion: tls.VersionTLS12,
+				}
+				if config.Insecure {
+					tlsConfig.InsecureSkipVerify = true
+				}
+				tr.TLSClientConfig = tlsConfig
+
+				// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
+				// See https://github.com/golang/go/issues/14275
+				//
+				// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
+				//
+				// if e = http2.ConfigureTransport(tr); e != nil {
+				// 	return nil, probe.NewError(e)
+				// }
+			}
+			transport = tr
 
 			if config.Debug {
 				if strings.EqualFold(config.Signature, "S3v4") {
