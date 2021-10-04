@@ -48,7 +48,7 @@ import (
 var adminHealthFlags = []cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
-		Usage:  "choose health tests to run [" + options.String() + "]",
+		Usage:  "choose health tests to run [" + fullOptions.String() + "]",
 		Value:  nil,
 		EnvVar: "MC_HEALTH_TEST,MC_OBD_TEST",
 		Hidden: true,
@@ -80,6 +80,11 @@ var adminHealthFlags = []cli.Flag{
 		Name:   "dev",
 		Usage:  "Development mode",
 		Hidden: true,
+	},
+	cli.BoolFlag{
+		Name:   "full",
+		Usage:  "Include long running tests (takes longer to generate the report)",
+		Hidden: false,
 	},
 }
 
@@ -357,7 +362,12 @@ func subnetUploadReq(url string, filename string) (*http.Request, error) {
 func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interface{}, string, error) {
 	opts := GetHealthDataTypeSlice(ctx, "test")
 	if len(*opts) == 0 {
-		opts = &options
+		full := ctx.Bool("full")
+		if full {
+			opts = &fullOptions
+		} else {
+			opts = &liteOptions
+		}
 	}
 
 	optsMap := make(map[madmin.HealthDataType]struct{})
@@ -554,7 +564,7 @@ func (d *HealthDataTypeSlice) Set(value string) error {
 		if obdData, ok := madmin.HealthDataTypesMap[strings.Trim(v, " ")]; ok {
 			*d = append(*d, obdData)
 		} else {
-			return fmt.Errorf("valid options include %s", options.String())
+			return fmt.Errorf("valid options include %s", fullOptions.String())
 		}
 	}
 	return nil
@@ -656,4 +666,5 @@ func (f HealthDataTypeFlag) ApplyWithError(set *flag.FlagSet) error {
 	return nil
 }
 
-var options = HealthDataTypeSlice(madmin.HealthDataTypesList)
+var liteOptions = HealthDataTypeSlice(madmin.HealthDataTypesLite)
+var fullOptions = HealthDataTypeSlice(madmin.HealthDataTypesList)
