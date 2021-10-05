@@ -196,7 +196,6 @@ func (u clusterStruct) String() (msg string) {
 			var OffDisks int
 			var OnDisks int
 			var dispNoOfDisks string
-			fmt.Println(len(srv.Disks))
 			for _, disk := range srv.Disks {
 				switch disk.State {
 				case madmin.DriveStateOk:
