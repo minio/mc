@@ -27,7 +27,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"encoding/base64"
@@ -38,7 +37,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/licverifier"
 	"github.com/tidwall/gjson"
-	"golang.org/x/term"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const minioSubscriptionURL = "https://min.io/subscription"
@@ -53,9 +52,8 @@ var subnetCommonFlags = []cli.Flag{
 		Usage: "Specify the HTTP(S) proxy URL to use for connecting to SUBNET",
 	},
 	cli.BoolFlag{
-		Name:   "offline",
-		Usage:  "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
-		Hidden: false,
+		Name:  "offline",
+		Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 	},
 	cli.BoolFlag{
 		Name:   "dev",
@@ -281,7 +279,7 @@ func subnetLogin() (string, error) {
 	}
 
 	fmt.Print("Password: ")
-	bytepw, _ := term.ReadPassword(int(syscall.Stdin))
+	bytepw, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Println()
 
 	loginReq := map[string]string{
@@ -297,7 +295,7 @@ func subnetLogin() (string, error) {
 	if mfaRequired {
 		mfaToken := gjson.Get(respStr, "mfa_token").String()
 		fmt.Print("OTP received in email: ")
-		byteotp, _ := term.ReadPassword(int(syscall.Stdin))
+		byteotp, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
 
 		mfaLoginReq := SubnetMFAReq{Username: username, OTP: string(byteotp), Token: mfaToken}
