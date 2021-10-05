@@ -381,8 +381,5 @@ JkO2PfyyAYEO/5dBlPh1Undu9WQl6J7B
 		return e
 	}
 	_, e = lv.Verify(lic)
-	if e != nil {
-		return e
-	}
-	return nil
+	return e
 }

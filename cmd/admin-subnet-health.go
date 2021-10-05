@@ -174,7 +174,7 @@ func mainAdminHealth(ctx *cli.Context) error {
 
 	uploadToSubnet := !offline
 	if uploadToSubnet && !subnetReachable() {
-		console.Fatalln("Subnet not reachable.")
+		console.Fatalln("https://subnet.min.io is not reachable.")
 	}
 
 	uploadPeriodically := schedule != 0
