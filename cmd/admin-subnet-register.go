@@ -85,6 +85,8 @@ type ClusterInfo struct {
 	NoOfDrives      int    `json:"no_of_drives"`
 	NoOfBuckets     uint64 `json:"no_of_buckets"`
 	NoOfObjects     uint64 `json:"no_of_objects"`
+	TotalDriveSpace uint64 `json:"total_drive_space"`
+	UsedDriveSpace  uint64 `json:"used_drive_space"`
 }
 
 // SubnetLoginReq - JSON payload of the subnet login api

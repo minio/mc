@@ -244,6 +244,8 @@ func getClusterRegInfo(admInfo madmin.InfoMessage, clusterName string) ClusterRe
 		noOfDrives += len(srvr.Disks)
 	}
 
+	totalSpace, usedSpace := getDriveSpaceInfo(admInfo)
+
 	return ClusterRegistrationInfo{
 		DeploymentID: admInfo.DeploymentID,
 		ClusterName:  clusterName,
@@ -253,10 +255,24 @@ func getClusterRegInfo(admInfo madmin.InfoMessage, clusterName string) ClusterRe
 			NoOfServerPools: noOfPools,
 			NoOfServers:     len(admInfo.Servers),
 			NoOfDrives:      noOfDrives,
+			TotalDriveSpace: totalSpace,
+			UsedDriveSpace:  usedSpace,
 			NoOfBuckets:     admInfo.Buckets.Count,
 			NoOfObjects:     admInfo.Objects.Count,
 		},
 	}
+}
+
+func getDriveSpaceInfo(admInfo madmin.InfoMessage) (uint64, uint64) {
+	total := uint64(0)
+	used := uint64(0)
+	for _, srvr := range admInfo.Servers {
+		for _, d := range srvr.Disks {
+			total += d.TotalSpace
+			used += d.UsedSpace
+		}
+	}
+	return total, used
 }
 
 func generateRegToken(clusterRegInfo ClusterRegistrationInfo) (string, error) {
