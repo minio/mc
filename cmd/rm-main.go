@@ -64,7 +64,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "dangerous",
-			Usage: "allow site-wide removal of objects",
+			Usage: "allow **site-wide** removal of objects",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
@@ -237,7 +237,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 
 	if isNamespaceRemoval && !(isDangerous && isForce) {
 		fatalIf(errDummy().Trace(),
-			"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
+			"This operation results in **site-wide** removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 	}
 
 }

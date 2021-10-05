@@ -20,9 +20,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -40,7 +37,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "dangerous",
-			Usage: "allow site-wide removal of objects",
+			Usage: "allow **site-wide** removal of objects",
 		},
 	}
 )
@@ -120,9 +117,9 @@ func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 // Delete a bucket and all its objects and versions will be removed as well.
 func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
-	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
-	if pErr != nil {
-		return pErr
+	clnt, err := newClientFromAlias(targetAlias, targetURL)
+	if err != nil {
+		return err.Trace(targetAlias, targetURL)
 	}
 	contentCh := make(chan *ClientContent)
 	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
@@ -142,21 +139,10 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 				continue
 			}
 
-			urlString := content.URL.Path
-
 			select {
 			case contentCh <- content:
 			case <-ctx.Done():
 				return
-			}
-
-			// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
-			// The rmMessage needs to be printed only for actual buckets being deleted and not objects.
-			tgt := strings.TrimPrefix(urlString, string(filepath.Separator))
-			if !strings.Contains(tgt, string(filepath.Separator)) && tgt != targetAlias {
-				printMsg(removeBucketMessage{
-					Bucket: targetAlias + urlString, Status: "success",
-				})
 			}
 		}
 	}()
@@ -169,28 +155,22 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	// Remove a bucket without force flag first because force
 	// won't work if a bucket has some locking rules, that's
 	// why we start with regular bucket removal first.
-	err := clnt.RemoveBucket(ctx, false)
-	if err != nil {
+	if err = clnt.RemoveBucket(ctx, false); err != nil {
 		if isForce && minio.ToErrorResponse(err.ToGoError()).Code == "BucketNotEmpty" {
 			return clnt.RemoveBucket(ctx, true)
 		}
 	}
-
 	return err
 }
 
 // isNamespaceRemoval returns true if alias
 // is not qualified by bucket
-func isNamespaceRemoval(ctx context.Context, url string) bool {
-	// clean path for aliases like s3/.
-	//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
-	url = filepath.ToSlash(filepath.Clean(url))
-	// namespace removal applies only for non FS. So filter out if passed url represents a directory
-	if !isAliasURLDir(ctx, url, nil, time.Time{}) {
-		_, path := url2Alias(url)
-		return (path == "")
+func isNamespaceRemoval(ctx context.Context, alias string) bool {
+	clnt, err := newClient(alias)
+	if err != nil {
+		fatalIf(err.Trace(alias), "Unable to initialize")
 	}
-	return false
+	return (clnt.GetURL().Path == "/" || clnt.GetURL().Path == "") && clnt.GetURL().Type == objectStorage
 }
 
 // mainRemoveBucket is entry point for rb command.
@@ -214,6 +194,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
+
 		_, err = clnt.Stat(ctx, StatOptions{})
 		if err != nil {
 			switch err.ToGoError().(type) {
@@ -233,6 +214,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 			ShowDir:           DirNone,
 			WithOlderVersions: true,
 			WithDeleteMarkers: true,
+			Count:             1,
 		}
 
 		listCtx, listCancel := context.WithCancel(ctx)
@@ -250,10 +232,27 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 
-		e := deleteBucket(ctx, targetURL, isForce)
-		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
+		if isNamespaceRemoval(ctx, targetURL) {
+			listCtx, listCancel = context.WithCancel(ctx)
+			for obj := range clnt.List(listCtx, ListOptions{
+				Recursive: false,
+				ShowDir:   DirLast,
+			}) {
+				if obj.Err != nil {
+					continue
+				}
+				ntargetURL := urlJoinPath(targetURL, obj.URL.String())
+				fatalIf(deleteBucket(ctx, ntargetURL, isForce).Trace(ntargetURL), "Failed to remove `"+ntargetURL+"`.")
 
-		if !isNamespaceRemoval(ctx, targetURL) {
+				printMsg(removeBucketMessage{
+					Bucket: ntargetURL, Status: "success",
+				})
+
+			}
+			listCancel()
+		} else {
+			fatalIf(deleteBucket(ctx, targetURL, isForce).Trace(targetURL), "Failed to remove `"+targetURL+"`.")
+
 			printMsg(removeBucketMessage{
 				Bucket: targetURL, Status: "success",
 			})
