@@ -255,6 +255,36 @@ function test_make_bucket_error() {
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_rb()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket1="mc-test-bucket-$RANDOM-1"
+    bucket2="mc-test-bucket-$RANDOM-2"
+    object_name="mc-test-object-$RANDOM"
+
+    # Tets rb when the bucket is empty
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb "${SERVER_ALIAS}/${bucket1}"
+
+    # Test rb with --force flag when the bucket is not empty
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket1}"
+
+    # Test rb with --force and --dangerous to remove a site content
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket2}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket2}/${object_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force --dangerous "${SERVER_ALIAS}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function setup()
 {
     start_time=$(get_time)
@@ -889,6 +919,7 @@ function run_test()
 {
     test_make_bucket
     test_make_bucket_error
+    test_rb
 
     setup
     test_put_object
