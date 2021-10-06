@@ -60,11 +60,11 @@ var adminHealthFlags = append([]cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "license",
-		Usage: "Subnet license key",
+		Usage: "SUBNET license key",
 	},
 	cli.IntFlag{
 		Name:  "schedule",
-		Usage: "Schedule of uploading to subnet in no of days",
+		Usage: "Schedule automatic generation and upload of health reports to SUBNET based on the specified number of days (e.g. --schedule 2 is every 2 days)",
 		Value: 0,
 	},
 	cli.BoolFlag{
@@ -76,7 +76,7 @@ var adminHealthFlags = append([]cli.Flag{
 
 var adminSubnetHealthCmd = cli.Command{
 	Name:         "health",
-	Usage:        "run health check for Subnet",
+	Usage:        "run health check for SUBNET",
 	OnUsageError: onUsageError,
 	Action:       mainAdminHealth,
 	Before:       setGlobalsFromContext,
@@ -91,13 +91,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Upload health diagnostics of the cluster at 'play' MinIO server to subnet
+  1. Upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET
      {{.Prompt}} {{.HelpName}} play
-  2. Upload health diagnostics of the cluster at 'play' MinIO server to subnet using the proxy 192.168.1.3:3128
-     {{.Prompt}} {{.HelpName}} play --subnet-proxy 192.168.1.3:3128
-  3. Periodically upload health diagnostics of the cluster at 'play' MinIO server to subnet every 2 days
+  2. Upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET using the proxy https://192.168.1.3:3128
+     {{.Prompt}} {{.HelpName}} play --subnet-proxy https://192.168.1.3:3128
+  3. Periodically upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET every 2 days
      {{.Prompt}} {{.HelpName}} play --schedule 2
-  4. Generate health diagnostics report for the cluster at 'play' MinIO server in the current directory
+  4. Generate health diagnostics report for the MinIO cluster with alias 'play' (https://play.min.io by default) to and output them to the current working directory
      {{.Prompt}} {{.HelpName}} play --offline
 `,
 }
@@ -169,12 +169,13 @@ func mainAdminHealth(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
+	alias, _ := url2Alias(aliasedURL)
 
 	license, schedule, name, offline := fetchSubnetUploadFlags(ctx)
 
 	uploadToSubnet := !offline
 	if uploadToSubnet && !subnetReachable() {
-		console.Fatalln("https://subnet.min.io is not reachable.")
+		console.Fatalln(subnetNotReachableMsg())
 	}
 
 	uploadPeriodically := schedule != 0
@@ -186,10 +187,10 @@ func mainAdminHealth(ctx *cli.Context) error {
 	client := getClient(aliasedURL)
 
 	if len(name) == 0 {
-		name = aliasedURL
+		name = alias
 	}
 	// Main execution
-	execAdminHealth(ctx, client, aliasedURL, license, name, uploadToSubnet)
+	execAdminHealth(ctx, client, alias, license, name, uploadToSubnet)
 
 	if uploadToSubnet && uploadPeriodically {
 		// Periodic upload to subnet
@@ -197,7 +198,7 @@ func mainAdminHealth(ctx *cli.Context) error {
 			sleepDuration := time.Hour * 24 * time.Duration(schedule)
 			console.Infoln("Waiting for", sleepDuration, "before running health diagnostics again.")
 			time.Sleep(sleepDuration)
-			execAdminHealth(ctx, client, aliasedURL, license, name, uploadToSubnet)
+			execAdminHealth(ctx, client, alias, license, name, uploadToSubnet)
 		}
 	}
 	return nil
@@ -205,7 +206,7 @@ func mainAdminHealth(ctx *cli.Context) error {
 
 func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
 	// license flag is passed when the health data
-	// is to be uploadeD to Subnet
+	// is to be uploadeD to SUBNET
 	license := ctx.String("license")
 
 	// non-zero schedule means that health diagnostics
@@ -246,15 +247,15 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, name string) er
 	return nil
 }
 
-func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL string, license string, clusterName string, uploadToSubnet bool) {
+func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, alias string, license string, clusterName string, uploadToSubnet bool) {
 	var reqURL string
 	var headers map[string]string
 
-	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(aliasedURL), UTCNow().Format("20060102150405"))
+	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), UTCNow().Format("20060102150405"))
 	if uploadToSubnet {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the health information
-		reqURL, headers = prepareHealthUploadURL(aliasedURL, clusterName, filename, license)
+		reqURL, headers = prepareHealthUploadURL(alias, clusterName, filename, license)
 	}
 
 	healthInfo, version, e := fetchServerHealthInfo(ctx, client)
@@ -275,12 +276,12 @@ func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, aliasedURL st
 
 	if uploadToSubnet {
 
-		e = uploadHealthReport(aliasedURL, filename, reqURL, headers)
+		e = uploadHealthReport(alias, filename, reqURL, headers)
 		if e == nil {
 			// Delete the report after successful upload
 			deleteFile(filename)
 		}
-		fatalIf(probe.NewError(e), "Unable to upload health report to Subnet portal")
+		fatalIf(probe.NewError(e), "Unable to upload health report to SUBNET portal")
 	}
 }
 
@@ -289,14 +290,14 @@ func prepareHealthUploadURL(alias string, clusterName string, filename string, l
 		clusterName = alias
 	}
 
-	uploadURL := subnetHealthUploadURL(clusterName, filename)
+	uploadURL := subnetHealthUploadURL()
 
 	if len(license) == 0 {
 		license = getSubnetLicenseFromConfig(alias)
 	}
 
 	reqURL, headers, e := subnetURLWithAuth(uploadURL, license)
-	fatalIf(probe.NewError(e), "Unable to get subnet auth")
+	fatalIf(probe.NewError(e), "Unable to get SUBNET auth")
 
 	reqURL = fmt.Sprintf("%s&clustername=%s&filename=%s", reqURL, clusterName, filename)
 	return reqURL, headers
@@ -319,7 +320,7 @@ func uploadHealthReport(alias string, filename string, reqURL string, headers ma
 		setSubnetLicenseConfig(alias, subnetLic)
 	}
 
-	msg := "MinIO Health data was successfully uploaded to Subnet."
+	msg := "MinIO Health data was successfully uploaded to SUBNET."
 	clusterURL, _ := url.PathUnescape(gjson.Get(string(resp), "cluster_url").String())
 	if len(clusterURL) > 0 {
 		msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)

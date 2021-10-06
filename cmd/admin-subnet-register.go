@@ -46,12 +46,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Register the cluster at 'play' MinIO server.
+  1. Register the MinIO cluster with alias 'play' to SUBNET, using the alias as the cluster name.
      {{.Prompt}} {{.HelpName}} play
-  2. Register the cluster at 'play' MinIO server, naming it as 'play-cluster' on subnet
+  2. Register the MinIO cluster with alias 'play' to SUBNET using the name "play-cluster".
      {{.Prompt}} {{.HelpName}} play --name play-cluster
-  3. Register the cluster at 'play' MinIO server, using the proxy 192.168.1.3:3128
-     {{.Prompt}} {{.HelpName}} play --subnet-proxy 192.168.1.3:3128
+  3. Register the MinIO cluster with alias 'play' to SUBNET, using the proxy https://192.168.1.3:3128
+     {{.Prompt}} {{.HelpName}} play --subnet-proxy https://192.168.1.3:3128
 `,
 }
 
@@ -89,13 +89,13 @@ type ClusterInfo struct {
 	UsedDriveSpace  uint64 `json:"used_drive_space"`
 }
 
-// SubnetLoginReq - JSON payload of the subnet login api
+// SubnetLoginReq - JSON payload of the SUBNET login api
 type SubnetLoginReq struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-// SubnetMFAReq - JSON payload of the subnet mfa api
+// SubnetMFAReq - JSON payload of the SUBNET mfa api
 type SubnetMFAReq struct {
 	Username string `json:"username"`
 	OTP      string `json:"otp"`
@@ -107,11 +107,12 @@ func mainAdminRegister(ctx *cli.Context) error {
 
 	offlineMode := ctx.Bool(("offline"))
 	if !offlineMode && !subnetReachable() {
-		console.Fatalln("Could not connect to MinIO SUBNET.")
+		console.Fatalln(subnetNotReachableMsg())
 	}
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
+	alias, _ := url2Alias(aliasedURL)
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
@@ -122,18 +123,18 @@ func mainAdminRegister(ctx *cli.Context) error {
 
 	clusterName := ctx.String("name")
 	if len(clusterName) == 0 {
-		clusterName = aliasedURL
+		clusterName = alias
 	}
 
 	regInfo := getClusterRegInfo(admInfo, clusterName)
 
 	if offlineMode {
-		registerOffline(regInfo, aliasedURL)
+		registerOffline(regInfo, alias)
 	} else {
-		registerOnline(regInfo, aliasedURL, clusterName)
+		registerOnline(regInfo, alias, clusterName)
 	}
 
-	msg := fmt.Sprintln("Cluster", aliasedURL, "successfully registered on SUBNET.")
+	msg := fmt.Sprintln("Cluster", alias, "successfully registered on SUBNET.")
 	console.Infoln(msg)
 
 	return nil
@@ -171,13 +172,13 @@ Please follow these steps to complete the registration:
 	}
 }
 
-func registerOnline(clusterRegInfo ClusterRegistrationInfo, aliasedURL string, clusterName string) {
-	resp, e := registerClusterOnSubnet(aliasedURL, clusterRegInfo)
+func registerOnline(clusterRegInfo ClusterRegistrationInfo, alias string, clusterName string) {
+	resp, e := registerClusterOnSubnet(alias, clusterRegInfo)
 	fatalIf(probe.NewError(e), "Could not register cluster with SUBNET:")
 
 	// extract license from response and set it in minio config
 	subnetLic := gjson.Parse(resp).Get("license").String()
 	if len(subnetLic) > 0 {
-		setSubnetLicenseConfig(aliasedURL, subnetLic)
+		setSubnetLicenseConfig(alias, subnetLic)
 	}
 }
