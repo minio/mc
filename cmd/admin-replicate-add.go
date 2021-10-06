@@ -92,13 +92,13 @@ func mainAdminReplicateAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	pc := make([]madmin.PeerCluster, 0, len(ctx.Args()))
+	ps := make([]madmin.PeerSite, 0, len(ctx.Args()))
 	for _, clusterName := range ctx.Args() {
 		admClient, err := newAdminClient(clusterName)
 		fatalIf(err, "unable to initialize admin connection")
 
 		ak, sk := admClient.GetAccessAndSecretKey()
-		pc = append(pc, madmin.PeerCluster{
+		ps = append(ps, madmin.PeerSite{
 			Name:      clusterName,
 			Endpoint:  admClient.GetEndpointURL().String(),
 			AccessKey: ak,
@@ -106,8 +106,8 @@ func mainAdminReplicateAdd(ctx *cli.Context) error {
 		})
 	}
 
-	res, e := client.ClusterReplicateAdd(globalContext, madmin.CRAdd{Clusters: pc})
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to add clusters for replication")
+	res, e := client.SiteReplicationAdd(globalContext, ps)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to add sites for replication")
 
 	printMsg(successMessage(res))
 

@@ -52,28 +52,28 @@ EXAMPLES:
 `,
 }
 
-type crInfo madmin.ClusterReplicateInfo
+type srInfo madmin.SiteReplicationInfo
 
-func (i crInfo) JSON() string {
-	bs, e := json.MarshalIndent(madmin.ClusterReplicateInfo(i), "", " ")
+func (i srInfo) JSON() string {
+	bs, e := json.MarshalIndent(madmin.SiteReplicationInfo(i), "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(bs)
 }
 
-func (i crInfo) String() string {
+func (i srInfo) String() string {
 	var messages []string
-	info := madmin.ClusterReplicateInfo(i)
+	info := madmin.SiteReplicationInfo(i)
 	if info.Enabled {
 		messages = []string{
-			"ClusterReplication: on",
+			"SiteReplication: on",
 			fmt.Sprintf("ServiceAccountAccessKey: %s", info.ServiceAccountAccessKey),
-			"ClusterMembers:",
+			"SiteReplicationMembers:",
 		}
-		for _, peer := range info.Clusters {
+		for _, peer := range info.Sites {
 			messages = append(messages, fmt.Sprintf("  Name: %s, Endpoint: %s, DeploymentID: %s", peer.Name, peer.Endpoint, peer.DeploymentID))
 		}
 	} else {
-		messages = []string{"ClusterReplication: off"}
+		messages = []string{"SiteReplication: off"}
 	}
 
 	return console.Colorize("UserMessage", strings.Join(messages, "\n"))
@@ -99,10 +99,10 @@ func mainAdminReplicationInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	info, e := client.ClusterReplicateInfo(globalContext)
+	info, e := client.SiteReplicationInfo(globalContext)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get cluster replication information")
 
-	printMsg(crInfo(info))
+	printMsg(srInfo(info))
 
 	return nil
 }
