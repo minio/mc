@@ -341,6 +341,11 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 				eventsTyped = append(eventsTyped, notification.ObjectRemovedAll)
 			case "get":
 				eventsTyped = append(eventsTyped, notification.ObjectAccessedAll)
+			case "replica":
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Replication:*"))
+			case "ilm":
+				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectRestore:*"))
+				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectTransition:*"))
 			default:
 				return errInvalidArgument().Trace(events...)
 			}
