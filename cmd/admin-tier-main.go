@@ -23,11 +23,12 @@ var adminTierSubCommands = []cli.Command{
 	adminTierAddCmd,
 	adminTierListCmd,
 	adminTierEditCmd,
+	adminTierInfoCmd,
 }
 
 var adminTierCmd = cli.Command{
 	Name:            "tier",
-	Usage:           "configure remote tier targets for ILM transition",
+	Usage:           "manage remote tier targets for ILM transition",
 	Action:          mainAdminTier,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

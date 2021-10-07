@@ -376,6 +376,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/tier/add":  nil,
 	"/admin/tier/edit": nil,
 	"/admin/tier/ls":   nil,
+	"/admin/tier/info": nil,
 
 	"/admin/replicate/add":  aliasCompleter,
 	"/admin/replicate/info": aliasCompleter,
