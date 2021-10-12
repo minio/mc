@@ -35,9 +35,15 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	"github.com/secure-io/sio-go"
 )
 
-var adminInspectFlags = []cli.Flag{}
+var adminInspectFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "encrypt",
+		Usage: "Encrypt content with one time key for confidential data",
+	},
+}
 
 var adminInspectCmd = cli.Command{
 	Name:            "inspect",
@@ -74,6 +80,7 @@ func mainAdminInspect(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	encrypt := ctx.Bool("encrypt")
 
 	console.SetColor("File", color.New(color.FgWhite, color.Bold))
 	console.SetColor("Key", color.New(color.FgHiRed, color.Bold))
@@ -97,6 +104,12 @@ func mainAdminInspect(ctx *cli.Context) error {
 	tmpFile, e := ioutil.TempFile("", "mc-inspect-")
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 
+	ext := "enc"
+	if !encrypt {
+		ext = "zip"
+		r = decryptInspect(key, r)
+	}
+
 	// Copy zip content to target download file
 	_, e = io.Copy(tmpFile, r)
 	fatalIf(probe.NewError(e), "Unable to download file data.")
@@ -110,7 +123,7 @@ func mainAdminInspect(ctx *cli.Context) error {
 	binary.LittleEndian.PutUint32(id[:], crc32.ChecksumIEEE(key[:]))
 
 	// We use 4 bytes of the 32 bytes to identify they file.
-	downloadPath := fmt.Sprintf("inspect.%s.enc", hex.EncodeToString(id[:]))
+	downloadPath := fmt.Sprintf("inspect.%s.%s", hex.EncodeToString(id[:]), ext)
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
@@ -123,6 +136,10 @@ func mainAdminInspect(ctx *cli.Context) error {
 	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to download file data.")
 	hexKey := hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
 	if !globalJSON {
+		if !encrypt {
+			console.Infof("File data successfully downloaded as %s\n", console.Colorize("File", downloadPath))
+			return nil
+		}
 		console.Infof("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", downloadPath))
 		console.Infof("Decryption key: %s\n\n", console.Colorize("Key", hexKey))
 
@@ -134,13 +151,25 @@ func mainAdminInspect(ctx *cli.Context) error {
 
 	v := struct {
 		File string `json:"file"`
-		Key  string `json:"key"`
+		Key  string `json:"key,omitempty"`
 	}{
 		File: downloadPath,
 		Key:  hexKey,
+	}
+	if !encrypt {
+		v.Key = ""
 	}
 	b, e := json.Marshal(v)
 	fatalIf(probe.NewError(e), "Unable to serialize data")
 	console.Println(string(b))
 	return nil
+}
+
+func decryptInspect(key [32]byte, r io.Reader) io.ReadCloser {
+	stream, err := sio.AES_256_GCM.Stream(key[:])
+	fatalIf(probe.NewError(err), "Unable to initiate decryption")
+
+	// Zero nonce, we only use each key once, and 32 bytes is plenty.
+	nonce := make([]byte, stream.NonceSize())
+	return ioutil.NopCloser(stream.DecryptReader(r, nonce, nil))
 }
