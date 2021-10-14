@@ -164,7 +164,7 @@ type anonymousLinksMessage struct {
 
 // String colorized access message.
 func (s anonymousLinksMessage) String() string {
-	return console.Colorize("Anonymous", string(s.URL))
+	return console.Colorize("Anonymous", s.URL)
 }
 
 // JSON jsonified anonymous message.
@@ -203,7 +203,7 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 			accessPerms(secondArg) != accessPrivate &&
 			accessPerms(secondArg) != accessPublic {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission `"+string(secondArg)+"`. Allowed values are [private, public, download, upload].")
+				"Unrecognized permission `"+secondArg+"`. Allowed values are [private, public, download, upload].")
 		}
 
 	case "set-json":

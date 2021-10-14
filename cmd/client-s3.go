@@ -1900,26 +1900,6 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 	}
 }
 
-// Convert objectMultipartInfo to ClientContent
-func (c *S3Client) objectMultipartInfo2ClientContent(bucket string, entry minio.ObjectMultipartInfo) ClientContent {
-
-	content := ClientContent{}
-	url := c.targetURL.Clone()
-	// Join bucket and incoming object key.
-	url.Path = c.joinPath(bucket, entry.Key)
-	content.URL = url
-	content.Size = entry.Size
-	content.Time = entry.Initiated
-
-	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) {
-		content.Type = os.ModeDir
-	} else {
-		content.Type = os.ModeTemporary
-	}
-
-	return content
-}
-
 // Returns new path by joining path segments with URL path separator.
 func (c *S3Client) joinPath(bucket string, objects ...string) string {
 	p := string(c.targetURL.Separator) + bucket

@@ -576,7 +576,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			md5:              urls.MD5,
 			disableMultipart: urls.DisableMultipart,
 			isPreserve:       preserve,
-			multipartSize:    uint64(multipartSize),
+			multipartSize:    multipartSize,
 			multipartThreads: uint(multipartThreads),
 		}
 

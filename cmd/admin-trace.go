@@ -478,7 +478,7 @@ func colorizedNodeName(nodeName string) string {
 	nodeHash := fnv.New32a()
 	nodeHash.Write([]byte(nodeName))
 	nHashSum := nodeHash.Sum32()
-	idx := uint32(nHashSum) % uint32(len(colors))
+	idx := nHashSum % uint32(len(colors))
 	return console.Colorize(fmt.Sprintf("Node%d", colors[idx]), nodeName)
 }
 

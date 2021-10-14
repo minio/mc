@@ -86,10 +86,10 @@ func (s speedTestResult) String() (msg string) {
 	if globalSpeedTestVerbose {
 		msg += "\n"
 	}
-	msg += fmt.Sprintf("PUT: %s/s, %d objs/s\n", humanize.IBytes(uint64(s.PUTStats.ThroughputPerSec)), s.PUTStats.ObjectsPerSec)
+	msg += fmt.Sprintf("PUT: %s/s, %d objs/s\n", humanize.IBytes(s.PUTStats.ThroughputPerSec), s.PUTStats.ObjectsPerSec)
 	if globalSpeedTestVerbose {
 		for _, node := range s.PUTStats.Servers {
-			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), node.ObjectsPerSec)
+			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), node.ObjectsPerSec)
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
@@ -100,10 +100,10 @@ func (s speedTestResult) String() (msg string) {
 	if globalSpeedTestVerbose {
 		msg += "\n"
 	}
-	msg += fmt.Sprintf("GET: %s/s, %d objs/s\n", humanize.IBytes(uint64(s.GETStats.ThroughputPerSec)), s.GETStats.ObjectsPerSec)
+	msg += fmt.Sprintf("GET: %s/s, %d objs/s\n", humanize.IBytes(s.GETStats.ThroughputPerSec), s.GETStats.ObjectsPerSec)
 	if globalSpeedTestVerbose {
 		for _, node := range s.GETStats.Servers {
-			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), node.ObjectsPerSec)
+			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), node.ObjectsPerSec)
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}

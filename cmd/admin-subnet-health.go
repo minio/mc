@@ -321,7 +321,7 @@ func uploadHealthReport(alias string, filename string, reqURL string, headers ma
 	}
 
 	msg := "MinIO Health data was successfully uploaded to SUBNET."
-	clusterURL, _ := url.PathUnescape(gjson.Get(string(resp), "cluster_url").String())
+	clusterURL, _ := url.PathUnescape(gjson.Get(resp, "cluster_url").String())
 	if len(clusterURL) > 0 {
 		msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)
 	}
