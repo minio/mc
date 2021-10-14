@@ -8,21 +8,27 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - revive
     - typecheck
     - goimports
     - misspell
     - govet
+    - revive
     - ineffassign
     - gosimple
     - deadcode
     - structcheck
+    - gomodguard
+    - gofmt
+    - unused
+    - structcheck
+    - varcheck
 
 issues:
   exclude-use-default: false
   exclude:
-      - instead of using struct literal
-      - should have a package comment
-      - error strings should not be capitalized or end with punctuation or a newline
+    - instead of using struct literal
+    - should have a package comment
+    - error strings should not be capitalized or end with punctuation or a newline
+      
 service:
   golangci-lint-version: 1.20.0 # use the fixed version to not introduce new linters unexpectedly

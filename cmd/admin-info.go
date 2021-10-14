@@ -224,7 +224,7 @@ func (u clusterStruct) String() (msg string) {
 
 	// Summary on used space, total no of buckets and
 	// total no of objects at the Cluster level
-	usedTotal := humanize.IBytes(uint64(u.Info.Usage.Size))
+	usedTotal := humanize.IBytes(u.Info.Usage.Size)
 	if u.Info.Buckets.Count > 0 {
 		msg += fmt.Sprintf("%s Used, %s, %s\n", usedTotal,
 			english.Plural(int(u.Info.Buckets.Count), "Bucket", ""),
@@ -281,7 +281,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 		clusterInfo.Error = ""
 	}
 	clusterInfo.Info = admInfo
-	printMsg(clusterStruct(clusterInfo))
+	printMsg(clusterInfo)
 
 	return nil
 }

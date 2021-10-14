@@ -86,7 +86,7 @@ func isNotSupported(e error) bool {
 	}
 
 	// check if filesystem supports extended attributes
-	return errno.Err == syscall.Errno(syscall.ENOTSUP) || errno.Err == syscall.Errno(syscall.EOPNOTSUPP)
+	return errno.Err == syscall.ENOTSUP || errno.Err == syscall.EOPNOTSUPP
 }
 
 // isIgnoredFile returns true if 'filename' is on the exclude list.
