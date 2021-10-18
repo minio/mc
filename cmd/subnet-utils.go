@@ -53,12 +53,18 @@ var subnetCommonFlags = []cli.Flag{
 		Usage: "Specify the HTTP(S) proxy URL to use for connecting to SUBNET",
 	},
 	cli.BoolFlag{
-		Name:  "offline",
+		Name:  "airgap",
 		Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 	},
 	cli.BoolFlag{
 		Name:   "dev",
 		Usage:  "Development mode - talks to local SUBNET",
+		Hidden: true,
+	},
+	cli.BoolFlag{
+		// Deprecated. Same as airgap, retaining as hidden for backward compatibility
+		Name:   "offline",
+		Usage:  "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		Hidden: true,
 	},
 }

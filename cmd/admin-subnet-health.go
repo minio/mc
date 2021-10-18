@@ -98,7 +98,7 @@ EXAMPLES:
   3. Periodically upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET every 2 days
      {{.Prompt}} {{.HelpName}} play --schedule 2
   4. Generate health diagnostics report for the MinIO cluster with alias 'play' (https://play.min.io by default) to and output them to the current working directory
-     {{.Prompt}} {{.HelpName}} play --offline
+     {{.Prompt}} {{.HelpName}} play --airgap
 `,
 }
 
@@ -219,7 +219,7 @@ func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
 
 	// If set, the health report file will not be uploaded
 	// to subnet and will only be saved locally.
-	offline := ctx.Bool("offline")
+	offline := ctx.Bool("airgap") || ctx.Bool("offline")
 
 	return license, schedule, name, offline
 }
@@ -233,7 +233,7 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, name string) er
 	}
 
 	if globalDevMode {
-		return errors.New("--dev is not applicable in offline mode")
+		return errors.New("--dev is not applicable in airgap mode")
 	}
 
 	if uploadPeriodically {
