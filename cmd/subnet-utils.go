@@ -62,7 +62,7 @@ var subnetCommonFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.BoolFlag{
-		// Deprecated. Same as airgap, retaining as hidden for backward compatibility
+		// Deprecated Oct 2021. Same as airgap, retaining as hidden for backward compatibility
 		Name:   "offline",
 		Usage:  "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		Hidden: true,

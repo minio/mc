@@ -105,7 +105,7 @@ type SubnetMFAReq struct {
 func mainAdminRegister(ctx *cli.Context) error {
 	checkAdminRegisterSyntax(ctx)
 
-	offlineMode := ctx.Bool(("airgap")) || ctx.Bool(("offline"))
+	offlineMode := ctx.Bool("airgap") || ctx.Bool("offline")
 	if !offlineMode && !subnetReachable() {
 		console.Fatalln(subnetNotReachableMsg())
 	}
