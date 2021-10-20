@@ -41,7 +41,10 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-const minioSubscriptionURL = "https://min.io/subscription"
+const (
+	subnetRespBodyLimit  = 1 << 20 // 1 MiB
+	minioSubscriptionURL = "https://min.io/subscription"
+)
 
 var subnetCommonFlags = []cli.Flag{
 	cli.StringFlag{
@@ -158,7 +161,7 @@ func subnetExecReq(r *http.Request, headers map[string]string) (string, error) {
 	}
 
 	defer resp.Body.Close()
-	respBytes, e := ioutil.ReadAll(io.LimitReader(resp.Body, resp.ContentLength))
+	respBytes, e := ioutil.ReadAll(io.LimitReader(resp.Body, subnetRespBodyLimit))
 	if e != nil {
 		return "", e
 	}
