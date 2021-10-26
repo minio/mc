@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -341,7 +342,7 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
-	tCfg := fetchTierConfig(ctx, tierName, tierType)
+	tCfg := fetchTierConfig(ctx, strings.ToUpper(tierName), tierType)
 	if err = client.AddTier(globalContext, tCfg); err != nil {
 		fatalIf(probe.NewError(err).Trace(args...), "Unable to configure remote tier target")
 	}
