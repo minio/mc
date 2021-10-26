@@ -43,7 +43,7 @@ require (
 	github.com/rs/xid v1.3.0
 	github.com/secure-io/sio-go v0.3.1
 	github.com/shirou/gopsutil/v3 v3.21.8
-	github.com/tidwall/gjson v1.9.1
+	github.com/tidwall/gjson v1.10.2
 	github.com/tinylib/msgp v1.1.6 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
