@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -385,11 +384,8 @@ var (
 func getUpdateTransport(timeout time.Duration) http.RoundTripper {
 	var updateTransport http.RoundTripper = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   timeout,
-			KeepAlive: timeout,
-			DualStack: true,
-		}).DialContext,
+		// Peza: Use dial context that uses ipv4 if set.
+		DialContext: newDialContext(10, 15, true),
 		IdleConnTimeout:       timeout,
 		TLSHandshakeTimeout:   timeout,
 		ExpectContinueTimeout: timeout,

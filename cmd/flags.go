@@ -48,6 +48,10 @@ var globalFlags = []cli.Flag{
 		Name:  "insecure",
 		Usage: "disable SSL certificate verification",
 	},
+	cli.BoolFlag{
+		Name:  "ipv4",
+		Usage: "force ipv4",
+	},
 }
 
 // Flags common across all I/O commands such as cp, mirror, stat, pipe etc.

@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"hash/fnv"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -93,10 +92,8 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 
 			var transport http.RoundTripper = &http.Transport{
 				Proxy: ieproxy.GetProxyFunc(),
-				DialContext: (&net.Dialer{
-					Timeout:   10 * time.Second,
-					KeepAlive: 15 * time.Second,
-				}).DialContext,
+				// Peza: Use dial context that uses ipv4 if set.
+				DialContext: newDialContext(10, 15, false),
 				MaxIdleConnsPerHost:   256,
 				IdleConnTimeout:       90 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,

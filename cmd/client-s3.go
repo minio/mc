@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -145,10 +144,8 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			} else {
 				tr := &http.Transport{
 					Proxy: http.ProxyFromEnvironment,
-					DialContext: (&net.Dialer{
-						Timeout:   10 * time.Second,
-						KeepAlive: 15 * time.Second,
-					}).DialContext,
+					// Peza: Use dial context that uses ipv4 if set.
+					DialContext:           newDialContext(10, 15, false),
 					MaxIdleConnsPerHost:   256,
 					IdleConnTimeout:       90 * time.Second,
 					TLSHandshakeTimeout:   10 * time.Second,

@@ -216,6 +216,7 @@ type Config struct {
 	Insecure     bool
 	Lookup       minio.BucketLookupType
 	Transport    *http.Transport
+	IPv4     bool
 }
 
 // SelectObjectOpts - opts entered for select API

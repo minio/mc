@@ -65,6 +65,8 @@ var (
 	globalDevMode        = false  // dev flag set via command line
 	globalSubnetProxyURL *url.URL // Proxy to be used for communication with subnet
 
+	globalIPv4Only = false
+
 	globalContext, globalCancel = context.WithCancel(context.Background())
 )
 
@@ -77,7 +79,7 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxyURL *url.URL) {
+func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxyURL *url.URL, ipv4Only bool) {
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
 	globalJSONLine = !isTerminal() && json
@@ -86,6 +88,8 @@ func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxy
 	globalInsecure = globalInsecure || insecure
 	globalDevMode = globalDevMode || devMode
 	globalSubnetProxyURL = subnetProxyURL
+
+	globalIPv4Only = ipv4Only
 
 	// Disable colorified messages if requested.
 	if globalNoColor || globalQuiet {
@@ -102,6 +106,8 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
 	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
 
+	ipv4Only := ctx.IsSet("ipv4") || ctx.GlobalIsSet("ipv4")
+
 	subnetProxy := ctx.String("subnet-proxy")
 
 	var proxyURL *url.URL
@@ -113,6 +119,6 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 		}
 	}
 
-	setGlobals(quiet, debug, json, noColor, insecure, devMode, proxyURL)
+	setGlobals(quiet, debug, json, noColor, insecure, devMode, proxyURL, ipv4Only)
 	return nil
 }
