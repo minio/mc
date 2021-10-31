@@ -92,7 +92,7 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 
 			var transport http.RoundTripper = &http.Transport{
 				Proxy: ieproxy.GetProxyFunc(),
-				// Peza: Use dial context that uses ipv4 if set.
+				// Use dial context that uses ipv4 if set.
 				DialContext: newDialContext(10, 15, false),
 				MaxIdleConnsPerHost:   256,
 				IdleConnTimeout:       90 * time.Second,

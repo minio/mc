@@ -384,7 +384,7 @@ var (
 func getUpdateTransport(timeout time.Duration) http.RoundTripper {
 	var updateTransport http.RoundTripper = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		// Peza: Use dial context that uses ipv4 if set.
+		// Use dial context that uses ipv4 if set.
 		DialContext: newDialContext(10, 15, true),
 		IdleConnTimeout:       timeout,
 		TLSHandshakeTimeout:   timeout,
