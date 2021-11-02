@@ -28,7 +28,6 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 var adminSpeedtestFlags = []cli.Flag{
@@ -82,14 +81,27 @@ EXAMPLES:
 type speedTestResult madmin.SpeedTestResult
 
 func (s speedTestResult) String() (msg string) {
-	msg += fmt.Sprintf("MinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
+	for _, node := range s.PUTStats.Servers {
+		if node.Err != "" {
+			globalSpeedTestVerbose = true
+			break
+		}
+	}
+	for _, node := range s.GETStats.Servers {
+		if node.Err != "" {
+			globalSpeedTestVerbose = true
+			break
+		}
+	}
+
+	msg += fmt.Sprintf("\nMinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
 	if globalSpeedTestVerbose {
 		msg += "\n"
 	}
-	msg += fmt.Sprintf("PUT: %s/s, %d objs/s\n", humanize.IBytes(s.PUTStats.ThroughputPerSec), s.PUTStats.ObjectsPerSec)
+	msg += fmt.Sprintf("PUT: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.PUTStats.ThroughputPerSec)), humanize.Comma(int64(s.PUTStats.ObjectsPerSec)))
 	if globalSpeedTestVerbose {
 		for _, node := range s.PUTStats.Servers {
-			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), node.ObjectsPerSec)
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
@@ -100,10 +112,10 @@ func (s speedTestResult) String() (msg string) {
 	if globalSpeedTestVerbose {
 		msg += "\n"
 	}
-	msg += fmt.Sprintf("GET: %s/s, %d objs/s\n", humanize.IBytes(s.GETStats.ThroughputPerSec), s.GETStats.ObjectsPerSec)
+	msg += fmt.Sprintf("GET: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.GETStats.ThroughputPerSec)), humanize.Comma(int64(s.GETStats.ObjectsPerSec)))
 	if globalSpeedTestVerbose {
 		for _, node := range s.GETStats.Servers {
-			msg += fmt.Sprintf("   * %s:, %s/s, %d objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), node.ObjectsPerSec)
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
@@ -184,7 +196,8 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 
 	spinnerCh, s := startSpinner()
 
-	for result := range resultCh {
+	var result madmin.SpeedTestResult
+	for result = range resultCh {
 		select {
 		case spinnerCh <- struct{}{}:
 		default:
@@ -194,9 +207,14 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 		}
 		if !globalJSON {
 			s.Stop()
-			console.RewindLines(1)
-			console.Println()
+			close(spinnerCh)
+			fmt.Printf("(With %s object size, %d concurrency) PUT: %s/s GET: %s/s\n", humanize.IBytes(uint64(result.Size)), result.Concurrent, humanize.IBytes(uint64(result.PUTStats.ThroughputPerSec)), humanize.IBytes(uint64(result.GETStats.ThroughputPerSec)))
+			spinnerCh, s = startSpinner()
 		}
+	}
+	if result.Version != "" {
+		s.Stop()
+		close(spinnerCh)
 		printMsg(speedTestResult(result))
 	}
 
@@ -206,14 +224,25 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 func startSpinner() (chan struct{}, *spinner.Spinner) {
 	ch := make(chan struct{}, 1)
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = " Performing speedtest"
+	firstTimeDelay := true
 	go func() {
 		for {
 			if !globalJSON {
+				s.Suffix = " Running speedtest"
+				if firstTimeDelay {
+					// First time delay is a work around for the case where after the last server response
+					// we don't endup printing a redundant "Running speedtest" line. Because of the sleep here
+					// the program would have printed results and exited.
+					time.Sleep(100 * time.Millisecond)
+					firstTimeDelay = false
+				}
+				_, ok := <-ch
+				if !ok {
+					return
+				}
 				s.Start()
 				time.Sleep(500 * time.Millisecond)
 				s.Stop()
-				<-ch
 			}
 		}
 	}()
