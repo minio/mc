@@ -104,7 +104,7 @@ EXAMPLES:
     {{.Prompt}} {{.HelpName}} -v --status-code 503 myminio
 
   4. Show console trace for a specific path
-    {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/ myminio
+    {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/* myminio
 
   5. Show console trace for requests with '404' and '503' status code
     {{.Prompt}} {{.HelpName}} --status-code 404 --status-code 503 myminio
