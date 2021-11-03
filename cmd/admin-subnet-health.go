@@ -593,7 +593,7 @@ type HealthDataTypeFlag struct {
 
 // String - returns the string to be shown in the help message
 func (f HealthDataTypeFlag) String() string {
-	return fmt.Sprintf("--%s                       %s", f.Name, f.Usage)
+	return cli.FlagStringer(f)
 }
 
 // GetName - returns the name of the flag
