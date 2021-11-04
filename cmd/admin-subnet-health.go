@@ -78,7 +78,7 @@ var adminSubnetHealthCmd = cli.Command{
 	Name:         "health",
 	Usage:        "run health check for SUBNET",
 	OnUsageError: onUsageError,
-	Action:       mainAdminHealth,
+	Action:       mainSubnetHealth,
 	Before:       setGlobalsFromContext,
 	Flags:        append(adminHealthFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
@@ -164,7 +164,7 @@ func warnText(s string) string {
 	return console.Colorize("WARN", s)
 }
 
-func mainAdminHealth(ctx *cli.Context) error {
+func mainSubnetHealth(ctx *cli.Context) error {
 	checkAdminHealthSyntax(ctx)
 
 	// Get the alias parameter from cli
