@@ -87,7 +87,7 @@ EXAMPLES:
      $ {{.HelpName}} myminio/mybucket/prefix --recursive --versions
 
   5. Show default lock retention configuration for a bucket
-     $ {{.HelpName}} --default myminio/mybucket/
+     $ {{.HelpName}} myminio/mybucket/ --default
 `}
 
 func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions, defaultMode bool) {
@@ -273,9 +273,11 @@ func infoRetentionSingle(ctx context.Context, alias, url, versionID string, list
 	if err != nil {
 		errResp := minio.ToErrorResponse(err.ToGoError())
 		if errResp.Code != "NoSuchObjectLockConfiguration" {
-			msg.SetErr(err.ToGoError())
-			msg.SetStatus("failure")
-			printMsg(msg)
+			if _, ok := err.ToGoError().(ObjectNameEmpty); !ok {
+				msg.SetErr(err.ToGoError())
+				msg.SetStatus("failure")
+				printMsg(msg)
+			}
 			return err
 		}
 		err = nil
@@ -307,6 +309,10 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 	if versionID != "" || !isRecursive && !withOlderVersions {
 		err := infoRetentionSingle(ctx, alias, urlStr, versionID, false)
 		if err != nil {
+			if _, ok := err.ToGoError().(ObjectNameEmpty); ok {
+				console.Infoln("no object name specified, showing bucket default retention mode instead")
+				return showBucketLock(target)
+			}
 			return exitStatus(globalErrorExitStatus)
 		}
 		return nil
