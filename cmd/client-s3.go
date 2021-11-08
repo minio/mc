@@ -2197,6 +2197,9 @@ func (c *S3Client) PutObjectRetention(ctx context.Context, versionID string, mod
 // GetObjectRetention - Get object retention for a given object.
 func (c *S3Client) GetObjectRetention(ctx context.Context, versionID string) (minio.RetentionMode, time.Time, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
+	if object == "" {
+		return "", time.Time{}, probe.NewError(ObjectNameEmpty{}).Trace(c.GetURL().String())
+	}
 	modePtr, untilPtr, e := c.api.GetObjectRetention(ctx, bucket, object, versionID)
 	if e != nil {
 		return "", time.Time{}, probe.NewError(e).Trace(c.GetURL().String())
