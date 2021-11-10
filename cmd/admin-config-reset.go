@@ -61,6 +61,7 @@ EXAMPLES:
 type configResetMessage struct {
 	Status      string `json:"status"`
 	targetAlias string
+	restart     bool
 }
 
 // String colorized service status message.
@@ -68,8 +69,11 @@ func (u configResetMessage) String() (msg string) {
 	msg += console.Colorize("ResetConfigSuccess",
 		"Key is successfully reset.\n")
 	suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
-	msg += console.Colorize("ResetConfigSuccess",
-		fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
+	if u.restart {
+		msg += console.Colorize("ResetConfigSuccess",
+			fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
+
+	}
 	return
 }
 
@@ -123,12 +127,13 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 
 	// Call reset config API
 	input := strings.Join(args.Tail(), " ")
-	fatalIf(probe.NewError(client.DelConfigKV(globalContext, input)),
-		"Unable to reset '%s' on the server", input)
+	restart, e := client.DelConfigKV(globalContext, input)
+	fatalIf(probe.NewError(e), "Unable to reset '%s' on the server", input)
 
 	// Print set config result
 	printMsg(configResetMessage{
 		targetAlias: aliasedURL,
+		restart:     restart,
 	})
 
 	return nil
