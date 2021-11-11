@@ -47,15 +47,16 @@ import (
 var adminHealthFlags = append([]cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
-		Usage:  "choose health tests to run [" + fullOptions.String() + "]",
+		Usage:  "choose specific health report(s) to run [" + fullOptions.String() + "]",
 		Value:  nil,
 		EnvVar: "MC_HEALTH_TEST,MC_OBD_TEST",
 		Hidden: true,
 	},
 	cli.DurationFlag{
 		Name:   "deadline",
-		Usage:  "maximum duration that health tests should be allowed to run",
+		Usage:  "maximum duration MinIO health report should be allowed to run",
 		Value:  1 * time.Hour,
+		Hidden: true,
 		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
 	cli.StringFlag{
@@ -64,19 +65,19 @@ var adminHealthFlags = append([]cli.Flag{
 	},
 	cli.IntFlag{
 		Name:  "schedule",
-		Usage: "Schedule automatic generation and upload of health reports to SUBNET based on the specified number of days (e.g. --schedule 2 is every 2 days)",
+		Usage: "schedule automatic upload of MinIO health report(s) to SUBNET based on number of days (e.g. --schedule 2 is every 2 days)",
 		Value: 0,
 	},
 	cli.BoolFlag{
 		Name:   "full",
-		Usage:  "Include long running tests (takes longer to generate the report)",
+		Usage:  "include long running health report(s) (takes longer to generate the report)",
 		Hidden: false,
 	},
 }, subnetCommonFlags...)
 
 var adminSubnetHealthCmd = cli.Command{
 	Name:         "health",
-	Usage:        "run health check for SUBNET",
+	Usage:        "generate MinIO health report for SUBNET",
 	OnUsageError: onUsageError,
 	Action:       mainSubnetHealth,
 	Before:       setGlobalsFromContext,
@@ -91,13 +92,16 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET
+  1. Upload MinIO health report for 'play' (https://play.min.io by default) to SUBNET
      {{.Prompt}} {{.HelpName}} play
-  2. Upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET using the proxy https://192.168.1.3:3128
+
+  2. Upload MinIO health report for alias 'play' (https://play.min.io by default) to SUBNET proxying via https://192.168.1.3:3128
      {{.Prompt}} {{.HelpName}} play --subnet-proxy https://192.168.1.3:3128
-  3. Periodically upload health diagnostics for the MinIO cluster with alias 'play' (https://play.min.io by default) to SUBNET every 2 days
+
+  3. Schedule periodic upload of MinIO health report for alias 'play' (https://play.min.io by default) to SUBNET every 2 days
      {{.Prompt}} {{.HelpName}} play --schedule 2
-  4. Generate health diagnostics report for the MinIO cluster with alias 'play' (https://play.min.io by default) to and output them to the current working directory
+
+  4. Generate MinIO health report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
      {{.Prompt}} {{.HelpName}} play --airgap
 `,
 }
@@ -109,7 +113,7 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 	}
 }
 
-//compress and tar health report output
+//compress and tar MinIO health output
 func tarGZ(healthInfo interface{}, version string, filename string, showMessages bool) error {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
@@ -137,13 +141,13 @@ func tarGZ(healthInfo interface{}, version string, filename string, showMessages
 	if showMessages {
 		warningMsgBoundary := "*********************************************************************************"
 		warning := warnText("                                   WARNING!!")
-		warningContents := infoText(`     ** THIS FILE MAY CONTAIN SENSITIVE INFORMATION ABOUT YOUR ENVIRONMENT ** 
+		warningContents := infoText(`     ** THIS FILE MAY CONTAIN SENSITIVE INFORMATION ABOUT YOUR ENVIRONMENT **
      ** PLEASE INSPECT CONTENTS BEFORE SHARING IT ON ANY PUBLIC FORUM **`)
 
 		warningMsgHeader := infoText(warningMsgBoundary)
 		warningMsgTrailer := infoText(warningMsgBoundary)
 		console.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
-		console.Infoln("Health data saved at", filename)
+		console.Infoln("MinIO health report saved at", filename)
 	}
 
 	return nil
@@ -173,15 +177,17 @@ func mainSubnetHealth(ctx *cli.Context) error {
 
 	license, schedule, name, offline := fetchSubnetUploadFlags(ctx)
 
+	// license should be provided for us to reach subnet
+	// if `--offline` is provided do not need to reach out.
 	uploadToSubnet := !offline
-	if uploadToSubnet && !subnetReachable() {
-		console.Fatalln(subnetNotReachableMsg())
+	if uploadToSubnet {
+		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s to upload MinIO health report, please use --airgap to upload manually", subnetBaseURL())
 	}
 
 	uploadPeriodically := schedule != 0
 
 	e := validateFlags(uploadToSubnet, uploadPeriodically, name)
-	fatalIf(probe.NewError(e), "Invalid flags.")
+	fatalIf(probe.NewError(e), "unable to parse input values")
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
@@ -189,6 +195,7 @@ func mainSubnetHealth(ctx *cli.Context) error {
 	if len(name) == 0 {
 		name = alias
 	}
+
 	// Main execution
 	execAdminHealth(ctx, client, alias, license, name, uploadToSubnet)
 
@@ -198,6 +205,7 @@ func mainSubnetHealth(ctx *cli.Context) error {
 			sleepDuration := time.Hour * 24 * time.Duration(schedule)
 			console.Infoln("Waiting for", sleepDuration, "before running health diagnostics again.")
 			time.Sleep(sleepDuration)
+
 			execAdminHealth(ctx, client, alias, license, name, uploadToSubnet)
 		}
 	}
@@ -205,8 +213,7 @@ func mainSubnetHealth(ctx *cli.Context) error {
 }
 
 func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
-	// license flag is passed when the health data
-	// is to be uploadeD to SUBNET
+	// license info to upload to subnet.
 	license := ctx.String("license")
 
 	// non-zero schedule means that health diagnostics
@@ -217,7 +224,7 @@ func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
 	// subnet as the name of the cluster
 	name := ctx.String("name")
 
-	// If set, the health report file will not be uploaded
+	// If set, the MinIO health file will not be uploaded
 	// to subnet and will only be saved locally.
 	offline := ctx.Bool("airgap") || ctx.Bool("offline")
 
@@ -272,16 +279,11 @@ func execAdminHealth(ctx *cli.Context, client *madmin.AdminClient, alias string,
 	}
 
 	e = tarGZ(healthInfo, version, filename, !uploadToSubnet)
-	fatalIf(probe.NewError(e), "Unable to create health report file")
+	fatalIf(probe.NewError(e), "Unable to save MinIO health report")
 
 	if uploadToSubnet {
-
 		e = uploadHealthReport(alias, filename, reqURL, headers)
-		if e == nil {
-			// Delete the report after successful upload
-			deleteFile(filename)
-		}
-		fatalIf(probe.NewError(e), "Unable to upload health report to SUBNET portal")
+		fatalIf(probe.NewError(e), "Unable to upload MinIO health report to SUBNET portal")
 	}
 }
 
@@ -290,14 +292,14 @@ func prepareHealthUploadURL(alias string, clusterName string, filename string, l
 		clusterName = alias
 	}
 
-	uploadURL := subnetHealthUploadURL()
-
 	if len(license) == 0 {
 		license = getSubnetLicenseFromConfig(alias)
 	}
 
+	uploadURL := subnetHealthUploadURL()
+
 	reqURL, headers, e := subnetURLWithAuth(uploadURL, license)
-	fatalIf(probe.NewError(e), "Unable to get SUBNET auth")
+	fatalIf(probe.NewError(e).Trace(uploadURL), "Unable to fetch SUBNET authentication")
 
 	reqURL = fmt.Sprintf("%s&clustername=%s&filename=%s", reqURL, clusterName, filename)
 	return reqURL, headers
@@ -309,43 +311,51 @@ func uploadHealthReport(alias string, filename string, reqURL string, headers ma
 		return e
 	}
 
-	resp, herr := subnetExecReq(req, headers)
-	if herr != nil {
-		return herr
+	resp, e := subnetReqDo(req, headers)
+	if e != nil {
+		return e
 	}
 
 	// extract license from response and set it in minio config
-	subnetLic := gjson.Parse(resp).Get("license").String()
+	subnetLic := gjson.Get(resp, "license").String()
 	if len(subnetLic) > 0 {
 		setSubnetLicenseConfig(alias, subnetLic)
 	}
 
-	msg := "MinIO Health data was successfully uploaded to SUBNET."
+	// Delete the report after successful upload
+	deleteFile(filename)
+
+	msg := "MinIO health report was successfully uploaded to SUBNET."
 	clusterURL, _ := url.PathUnescape(gjson.Get(resp, "cluster_url").String())
 	if len(clusterURL) > 0 {
-		msg += fmt.Sprintf(" Can be viewed at: %s", clusterURL)
+		msg += fmt.Sprintf(" Please click here to view our analysis: %s", clusterURL)
 	}
 	console.Infoln(msg)
 	return nil
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
-	file, _ := os.Open(filename)
+	file, e := os.Open(filename)
+	if e != nil {
+		return nil, e
+	}
 	defer file.Close()
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	if err != nil {
-		return nil, err
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, e := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if e != nil {
+		return nil, e
 	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		return nil, err
+	defer writer.Close()
+	if _, e = io.Copy(part, file); e != nil {
+		return nil, e
 	}
-	writer.Close()
 
-	r, _ := http.NewRequest("POST", url, body)
+	r, e := http.NewRequest(http.MethodPost, url, &body)
+	if e != nil {
+		return nil, e
+	}
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 
 	return r, nil

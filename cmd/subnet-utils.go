@@ -100,13 +100,21 @@ func subnetMFAURL() string {
 	return subnetBaseURL() + "/api/auth/mfa-login"
 }
 
-func urlReachable(url string) bool {
-	r, e := http.Head(url)
-	return e == nil && r.StatusCode == http.StatusOK
-}
-
-func subnetReachable() bool {
-	return urlReachable(subnetBaseURL())
+func checkURLReachable(url string) *probe.Error {
+	clnt := httpClient(10 * time.Second)
+	req, e := http.NewRequest(http.MethodHead, url, nil)
+	if e != nil {
+		return probe.NewError(e).Trace(url)
+	}
+	resp, e := clnt.Do(req)
+	if e != nil {
+		return probe.NewError(e).Trace(url)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return probe.NewError(errors.New(resp.Status)).Trace(url)
+	}
+	return nil
 }
 
 func subnetURLWithAuth(reqURL string, license string) (string, map[string]string, error) {
@@ -137,7 +145,7 @@ func subnetAuthHeaders(authToken string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + authToken}
 }
 
-func execReq(req *http.Request) (*http.Response, error) {
+func httpDo(req *http.Request) (*http.Response, error) {
 	client := httpClient(10 * time.Second)
 	if globalSubnetProxyURL != nil {
 		client.Transport.(*http.Transport).Proxy = http.ProxyURL(globalSubnetProxyURL)
@@ -145,7 +153,7 @@ func execReq(req *http.Request) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func subnetExecReq(r *http.Request, headers map[string]string) (string, error) {
+func subnetReqDo(r *http.Request, headers map[string]string) (string, error) {
 	for k, v := range headers {
 		r.Header.Add(k, v)
 	}
@@ -155,7 +163,7 @@ func subnetExecReq(r *http.Request, headers map[string]string) (string, error) {
 		r.Header.Add("Content-Type", "application/json")
 	}
 
-	resp, e := execReq(r)
+	resp, e := httpDo(r)
 	if e != nil {
 		return "", e
 	}
@@ -174,17 +182,23 @@ func subnetExecReq(r *http.Request, headers map[string]string) (string, error) {
 }
 
 func subnetGetReq(reqURL string, headers map[string]string) (string, error) {
-	r, _ := http.NewRequest("GET", reqURL, nil)
-	return subnetExecReq(r, headers)
-}
-
-func subnetPostReq(reqURL string, payload interface{}, headers map[string]string) (string, error) {
-	body, _ := json.Marshal(payload)
-	r, e := http.NewRequest("POST", reqURL, bytes.NewBuffer(body))
+	r, e := http.NewRequest(http.MethodGet, reqURL, nil)
 	if e != nil {
 		return "", e
 	}
-	return subnetExecReq(r, headers)
+	return subnetReqDo(r, headers)
+}
+
+func subnetPostReq(reqURL string, payload interface{}, headers map[string]string) (string, error) {
+	body, e := json.Marshal(payload)
+	if e != nil {
+		return "", e
+	}
+	r, e := http.NewRequest(http.MethodPost, reqURL, bytes.NewReader(body))
+	if e != nil {
+		return "", e
+	}
+	return subnetReqDo(r, headers)
 }
 
 func getSubnetLicenseFromConfig(alias string) string {
@@ -409,12 +423,4 @@ JkO2PfyyAYEO/5dBlPh1Undu9WQl6J7B
 	}
 	_, e = lv.Verify(lic)
 	return e
-}
-
-func subnetNotReachableMsg() string {
-	errMsg := "https://subnet.min.io is not reachable"
-	if globalSubnetProxyURL != nil {
-		errMsg += " using proxy " + globalSubnetProxyURL.String()
-	}
-	return errMsg
 }
