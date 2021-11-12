@@ -46,11 +46,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Register the MinIO cluster with alias 'play' to SUBNET, using the alias as the cluster name.
+  1. Register MinIO cluster at alias 'play' on SUBNET, using alias as the cluster name.
      {{.Prompt}} {{.HelpName}} play
-  2. Register the MinIO cluster with alias 'play' to SUBNET using the name "play-cluster".
+
+  2. Register MinIO cluster at alias 'play' on SUBNET, using the name "play-cluster".
      {{.Prompt}} {{.HelpName}} play --name play-cluster
-  3. Register the MinIO cluster with alias 'play' to SUBNET, using the proxy https://192.168.1.3:3128
+
+  3. Register MinIO cluster at alias 'play' on SUBNET, using the proxy https://192.168.1.3:3128
      {{.Prompt}} {{.HelpName}} play --subnet-proxy https://192.168.1.3:3128
 `,
 }
@@ -105,14 +107,14 @@ type SubnetMFAReq struct {
 func mainAdminRegister(ctx *cli.Context) error {
 	checkAdminRegisterSyntax(ctx)
 
-	offlineMode := ctx.Bool("airgap") || ctx.Bool("offline")
-	if !offlineMode && !subnetReachable() {
-		console.Fatalln(subnetNotReachableMsg())
-	}
-
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
+
+	offline := ctx.Bool("airgap") || ctx.Bool("offline")
+	if !offline {
+		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s register", subnetBaseURL())
+	}
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
@@ -124,19 +126,20 @@ func mainAdminRegister(ctx *cli.Context) error {
 	clusterName := ctx.String("name")
 	if len(clusterName) == 0 {
 		clusterName = alias
+	} else {
+		if offline {
+			fatalIf(errInvalidArgument(), "'--name' is not allowed in airgapped mode")
+		}
 	}
 
 	regInfo := getClusterRegInfo(admInfo, clusterName)
 
-	if offlineMode {
+	if offline {
 		registerOffline(regInfo, alias)
 	} else {
 		registerOnline(regInfo, alias, clusterName)
 	}
-
-	msg := fmt.Sprintln("Cluster", alias, "successfully registered on SUBNET.")
-	console.Infoln(msg)
-
+	console.Infoln(fmt.Sprintln("Cluster", clusterName, "successfully registered on SUBNET."))
 	return nil
 }
 
