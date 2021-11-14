@@ -22,28 +22,81 @@ import (
 )
 
 var testCases = []struct {
-	pattern []string
+	filters []nameFilter
 
-	object string
+	name string
 
-	match bool
+	excluded bool
 }{
 	{nil, "testfile", false},
-	{[]string{"test*"}, "testfile", true},
-	{[]string{"file*"}, "file/abc/bcd/def", true},
-	{[]string{"*"}, "file/abc/bcd/def", true},
-	{[]string{""}, "file/abc/bcd/def", false},
-	{[]string{"abc*"}, "file/abc/bcd/def", false},
-	{[]string{"abc*", "*abc/*"}, "file/abc/bcd/def", true},
-	{[]string{"*.txt"}, "file/abc/bcd/def.txt", true},
-	{[]string{".*"}, ".sys", true},
-	{[]string{"*."}, ".sys.", true},
+	{[]nameFilter{excludeWildcardFilter{"test*"}}, "testfile", true},
+	{[]nameFilter{excludeWildcardFilter{"file*"}}, "file/abc/bcd/def", true},
+	{[]nameFilter{excludeWildcardFilter{"*"}}, "file/abc/bcd/def", true},
+	{[]nameFilter{excludeWildcardFilter{""}}, "file/abc/bcd/def", false},
+	{[]nameFilter{excludeWildcardFilter{"abc*"}}, "file/abc/bcd/def", false},
+	{[]nameFilter{excludeWildcardFilter{"abc*"}, excludeWildcardFilter{"*abc/*"}}, "file/abc/bcd/def", true},
+	{[]nameFilter{excludeWildcardFilter{"*.txt"}}, "file/abc/bcd/def.txt", true},
+	{[]nameFilter{excludeWildcardFilter{".*"}}, ".sys", true},
+	{[]nameFilter{excludeWildcardFilter{"*."}}, ".sys.", true},
+
+	// select all files. Filter does not affect.
+	{[]nameFilter{includeWildcardFilter{"*.zip"}}, "backup.zip", false},
+	{[]nameFilter{includeWildcardFilter{"*.zip"}}, "some.log", false},
+
+	// Exclude all and ignore empty inclusion
+	{[]nameFilter{
+		excludeWildcardFilter{"*"},
+		includeWildcardFilter{""},
+	}, "some.log", true},
+
+	// select zips only
+	{[]nameFilter{
+		excludeWildcardFilter{"*"},
+		includeWildcardFilter{"*.zip"},
+	}, "some.log", true},
+	{[]nameFilter{
+		excludeWildcardFilter{"*"},
+		includeWildcardFilter{"*.zip"},
+	}, "backup.zip", false},
+
+	// select zips except ignored zips
+	{[]nameFilter{
+		excludeWildcardFilter{"*"},
+		includeWildcardFilter{"*.zip"},
+		excludeWildcardFilter{"ignore*.zip"},
+	}, "backup.zip", false},
+	{[]nameFilter{
+		excludeWildcardFilter{"*"},
+		includeWildcardFilter{"*.zip"},
+		excludeWildcardFilter{"ignore*.zip"},
+	}, "ignored.zip", true},
+
+	// select all, ignore logs except important.log
+	{[]nameFilter{
+		excludeWildcardFilter{"*.log"},
+		includeWildcardFilter{"important.log"},
+	}, "important.log", false},
+
+	// select zips and important.log
+	{[]nameFilter{
+		excludeWildcardFilter{"*"},
+		includeWildcardFilter{"*.zip"},
+		includeWildcardFilter{"important.log"},
+	}, "important.log", false},
+
+	// select all except zips and logs but select important zips
+	{[]nameFilter{
+		excludeWildcardFilter{"*.zip"},
+		excludeWildcardFilter{"*.log"},
+		includeWildcardFilter{"important*.zip"},
+	}, "important.zip", false},
 }
 
 func TestExcludeOptions(t *testing.T) {
 	for _, test := range testCases {
-		if matchExcludeOptions(test.pattern, test.object) != test.match {
-			t.Fatalf("Unexpected result %t, with pattern %s and object %s \n", !test.match, test.pattern, test.object)
+		if shouldExcludeFileByFilters(test.filters, test.name) != test.excluded {
+			t.Fatalf("Unexpected result %t, with filters %s and name %s \n",
+				!test.excluded, test.filters, test.name)
 		}
 	}
 }

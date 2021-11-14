@@ -44,6 +44,9 @@ import (
 
 // mirror specific flags.
 var (
+	// --exclude and --include flags store its values here. See nameFiltersFlagValue
+	nameFiltersValue = nameFiltersFlagValue{}
+
 	mirrorFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:   "force",
@@ -92,10 +95,16 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
-		cli.StringSliceFlag{
-			Name:  "exclude",
-			Usage: "exclude object(s) that match specified object name pattern",
-		},
+		newExcludeWildcardFilterFlag(
+			"exclude",
+			"exclude object(s) that match specified object name pattern",
+			&nameFiltersValue,
+		),
+		newIncludeWildcardFilterFlag(
+			"include",
+			"include object(s) that match specified object name pattern",
+			&nameFiltersValue,
+		),
 		cli.StringFlag{
 			Name:  "older-than",
 			Usage: "filter object(s) older than L days, M hours and N minutes",
@@ -551,8 +560,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// build target path, it is the relative of the eventPath with the sourceUrl
 		// joined to the targetURL.
 		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
-		//Skip the object, if it matches the Exclude options provided
-		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix) {
+		// Skip the object, if it matches the Exclude options provided
+		if shouldExcludeFileByFilters(mj.opts.nameFilters, sourceSuffix) {
 			continue
 		}
 
@@ -887,7 +896,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		isMetadata:       isMetadata,
 		md5:              cli.Bool("md5"),
 		disableMultipart: cli.Bool("disable-multipart"),
-		excludeOptions:   cli.StringSlice("exclude"),
+		nameFilters:      nameFiltersValue.Get(),
 		olderThan:        cli.String("older-than"),
 		newerThan:        cli.String("newer-than"),
 		storageClass:     cli.String("storage-class"),

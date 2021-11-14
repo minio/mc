@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/pkg/wildcard"
 )
 
 //
@@ -89,13 +88,14 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	return
 }
 
-func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
-	for _, pattern := range excludeOptions {
-		if wildcard.Match(pattern, srcSuffix) {
-			return true
-		}
-	}
-	return false
+// shouldExcludeFileByFilters returns true if name should be excluded from further processing through filter matching.
+// Each filter specifies how the name will match it, and depends on its implementation.
+// See nameFilter
+//
+// An empty name is the special case, and we do not filter it and the function always returns false.
+// Consult with TestExcludeOptions in difference_test.go to see use cases
+func shouldExcludeFileByFilters(filters nameFilterSlice, name string) bool {
+	return name != "" && !filters.filter(name)
 }
 
 func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mirrorOptions, URLsCh chan<- URLs) {
@@ -136,14 +136,14 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		}
 
 		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
-		//Skip the source object if it matches the Exclude options provided
-		if matchExcludeOptions(opts.excludeOptions, srcSuffix) {
+		// Skip the source object if it matches the pattern filters provided
+		if shouldExcludeFileByFilters(opts.nameFilters, srcSuffix) {
 			continue
 		}
 
 		tgtSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
-		//Skip the target object if it matches the Exclude options provided
-		if matchExcludeOptions(opts.excludeOptions, tgtSuffix) {
+		// Skip the target object if it matches the pattern filters provided
+		if shouldExcludeFileByFilters(opts.nameFilters, tgtSuffix) {
 			continue
 		}
 
@@ -205,7 +205,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 type mirrorOptions struct {
 	isFake, isOverwrite, activeActive bool
 	isWatch, isRemove, isMetadata     bool
-	excludeOptions                    []string
+	nameFilters                       []nameFilter
 	encKeyDB                          map[string][]prefixSSEPair
 	md5, disableMultipart             bool
 	olderThan, newerThan              string
