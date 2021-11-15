@@ -333,7 +333,7 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 //   Use cases:
 //      * Remove objects recursively
 //      * Remove all versions of a single object
-func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersion, isRecursive, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersion, isForce, isRecursive, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
 	ctx, cancelRemove := context.WithCancel(globalContext)
 	defer cancelRemove()
 
@@ -517,6 +517,11 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 	}
 
 	if !atLeastOneObjectFound {
+		if isForce {
+			// Do not throw an exit code with --force check unix `rm -f`
+			// behavior and do not print an error as well.
+			return nil
+		}
 		errorIf(errDummy().Trace(url), "No object/version found to be removed in `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
@@ -562,7 +567,7 @@ func mainRm(cliCtx *cli.Context) error {
 	// Support multiple targets.
 	for _, url := range cliCtx.Args() {
 		if isRecursive || withVersions {
-			e = listAndRemove(url, rewind, withVersions, withNoncurrentVersion, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
+			e = listAndRemove(url, rewind, withVersions, withNoncurrentVersion, isForce, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
 			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
@@ -579,7 +584,7 @@ func mainRm(cliCtx *cli.Context) error {
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive || withVersions {
-			e = listAndRemove(url, rewind, withVersions, withNoncurrentVersion, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
+			e = listAndRemove(url, rewind, withVersions, withNoncurrentVersion, isForce, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
 		} else {
 			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
