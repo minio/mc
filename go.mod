@@ -14,6 +14,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.13.6
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
