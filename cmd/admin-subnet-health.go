@@ -347,10 +347,10 @@ func subnetUploadReq(url string, filename string) (*http.Request, error) {
 	if e != nil {
 		return nil, e
 	}
-	defer writer.Close()
 	if _, e = io.Copy(part, file); e != nil {
 		return nil, e
 	}
+	writer.Close()
 
 	r, e := http.NewRequest(http.MethodPost, url, &body)
 	if e != nil {
