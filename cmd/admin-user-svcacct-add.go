@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	iampolicy "github.com/minio/pkg/iam/policy"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{
@@ -158,15 +160,21 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var buf []byte
+	var policyBytes []byte
 	if policyPath != "" {
+		// Validate the policy document and ensure it has at least when statement
 		var e error
-		buf, e = ioutil.ReadFile(policyPath)
+		policyBytes, e = ioutil.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
+		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
+		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
+		if p.IsEmpty() {
+			fatalIf(errDummy(), "Policy document does not contain any statement.")
+		}
 	}
 
 	opts := madmin.AddServiceAccountReq{
-		Policy:     buf,
+		Policy:     policyBytes,
 		AccessKey:  accessKey,
 		SecretKey:  secretKey,
 		TargetUser: user,
