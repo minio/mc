@@ -169,7 +169,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
 		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
 		if p.IsEmpty() {
-			fatalIf(errDummy(), "Policy document does not contain any statement.")
+			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
 		}
 	}
 
