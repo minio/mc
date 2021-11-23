@@ -23,10 +23,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
-	"github.com/tidwall/gjson"
 )
 
 var adminSubnetRegisterCmd = cli.Command{
@@ -158,20 +158,20 @@ Please follow these steps to complete the registration:
 1) Copy the registration token shown above
 2) Open ` + subnetRegisterPageURL + `
 3) Paste the registration token there and submit the form
-4) Copy the license string generated
+4) Copy the api key generated
 5) Paste it here: `)
 
 	reader := bufio.NewReader(os.Stdin)
-	lic, e := reader.ReadString('\n')
-	fatalIf(probe.NewError(e), "Error in reading license string")
-	lic = strings.Trim(lic, "\n")
+	apiKey, e := reader.ReadString('\n')
+	fatalIf(probe.NewError(e), "Error in reading api key")
+	apiKey = strings.Trim(apiKey, "\n")
 
-	if len(lic) > 0 {
-		e := verifySubnetLicense(lic)
-		fatalIf(probe.NewError(e), "Invalid license specified:")
-		setSubnetLicenseConfig(alias, lic)
+	if len(apiKey) > 0 {
+		_, e := uuid.Parse(apiKey)
+		fatalIf(probe.NewError(e), "Invalid api key specified:")
+		setSubnetAPIKeyConfig(alias, apiKey)
 	} else {
-		console.Fatalln("Invalid license specified. Please run the command again with a valid SUBNET license to complete registration.")
+		console.Fatalln("Invalid api key specified. Please run the command again with a valid SUBNET api key to complete registration.")
 	}
 }
 
@@ -179,9 +179,5 @@ func registerOnline(clusterRegInfo ClusterRegistrationInfo, alias string, cluste
 	resp, e := registerClusterOnSubnet(alias, clusterRegInfo)
 	fatalIf(probe.NewError(e), "Could not register cluster with SUBNET:")
 
-	// extract license from response and set it in minio config
-	subnetLic := gjson.Parse(resp).Get("license").String()
-	if len(subnetLic) > 0 {
-		setSubnetLicenseConfig(alias, subnetLic)
-	}
+	extractAndSaveAPIKey(alias, resp)
 }
