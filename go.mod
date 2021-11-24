@@ -7,6 +7,8 @@ require (
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
+	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/goccy/go-json v0.8.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
@@ -45,7 +47,10 @@ require (
 require (
 	github.com/charmbracelet/bubbles v0.10.0
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
+	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
+	github.com/navidys/tvxwidgets v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/rivo/tview v0.0.0-20211202162923-2a6de950f73b
 	github.com/tinylib/msgp v1.1.6
 )
 
@@ -57,8 +62,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/goccy/go-json v0.8.1 // indirect
+	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
