@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -63,19 +61,19 @@ func checkAdminTierListSyntax(ctx *cli.Context) {
 	}
 }
 
-type tierRowHdr int
+type tierLSRowHdr int
 
 const (
-	tierNameHdr tierRowHdr = iota
-	tierTypeHdr
-	tierEndpointHdr
-	tierBucketHdr
-	tierPrefixHdr
-	tierRegionHdr
-	tierStorageClassHdr
+	tierLSNameHdr tierLSRowHdr = iota
+	tierLSTypeHdr
+	tierLSEndpointHdr
+	tierLSBucketHdr
+	tierLSPrefixHdr
+	tierLSRegionHdr
+	tierLSStorageClassHdr
 )
 
-var tierRowNames = []string{
+var tierLSRowNames = []string{
 	"Name",
 	"Type",
 	"Endpoint",
@@ -85,7 +83,7 @@ var tierRowNames = []string{
 	"Storage-Class",
 }
 
-var tierColorScheme = []*color.Color{
+var tierLSColorScheme = []*color.Color{
 	color.New(color.FgYellow),
 	color.New(color.FgCyan),
 	color.New(color.FgGreen),
@@ -108,52 +106,45 @@ func storageClass(t *madmin.TierConfig) string {
 	}
 }
 
-type tierCfg struct {
-	*madmin.TierConfig
+type tierLS []*madmin.TierConfig
+
+func (t tierLS) NumRows() int {
+	return len(([]*madmin.TierConfig)(t))
 }
 
-func (tc *tierCfg) toRow(lengths []int) []string {
-	row := make([]string, len(tierRowNames))
-	row[tierNameHdr] = tc.Name
-	row[tierTypeHdr] = tc.Type.String()
-	row[tierEndpointHdr] = tc.Endpoint()
-	row[tierBucketHdr] = tc.Bucket()
-	row[tierPrefixHdr] = tc.Prefix()
-	row[tierRegionHdr] = tc.Region()
-	row[tierStorageClassHdr] = storageClass(tc.TierConfig)
-	for i := range tierRowNames {
-		if lengths[i] < len(row[i]) {
-			lengths[i] = len(row[i])
+func (t tierLS) NumCols() int {
+	return len(tierLSRowNames)
+}
+func (t tierLS) EmptyMessage() string {
+	return "No remote tier has been configured"
+}
+
+func (t tierLS) ToRow(i int, ls []int) []string {
+	row := make([]string, len(tierLSRowNames))
+	if i == -1 {
+		copy(row, tierLSRowNames)
+	} else {
+		tc := t[i]
+		row[tierLSNameHdr] = tc.Name
+		row[tierLSTypeHdr] = tc.Type.String()
+		row[tierLSEndpointHdr] = tc.Endpoint()
+		row[tierLSBucketHdr] = tc.Bucket()
+		row[tierLSPrefixHdr] = tc.Prefix()
+		row[tierLSRegionHdr] = tc.Region()
+		row[tierLSStorageClassHdr] = storageClass(tc)
+
+	}
+
+	// update ls to accommodate this row's values
+	for i := range tierLSRowNames {
+		if ls[i] < len(row[i]) {
+			ls[i] = len(row[i])
 		}
 	}
 	return row
 }
 
-// getTierListRowsAndCols returns a list of rows and a list of column header
-// metadata like color theme and max cell length, given a list of tiers. Each
-// row is represented by a list of cells in that row.
-func getTierListRowsAndCols(tiers []*madmin.TierConfig) ([][]string, []Field) {
-	rows := make([][]string, len(tiers))
-	rows[0] = tierRowNames
-	lengths := make([]int, len(rows[0]))
-	for i := range lengths {
-		lengths[i] = len(rows[0][i])
-	}
-	for _, tier := range tiers {
-		tierCfg := tierCfg{tier}
-		rows = append(rows, tierCfg.toRow(lengths))
-	}
-	// add 2 spaces to each column's max length to improve readability of
-	// each cell
-	cols := make([]Field, len(tierRowNames))
-	for i, hdr := range rows[0] {
-		cols[i] = Field{
-			colorTheme: hdr,
-			maxLen:     lengths[i] + 2,
-		}
-	}
-	return rows, cols
-}
+var _ tabulator = (tierLS)(nil)
 
 type tierListMessage struct {
 	Status  string               `json:"status"`
@@ -163,18 +154,7 @@ type tierListMessage struct {
 
 // String method returns a tabular listing of remote tier configurations.
 func (msg *tierListMessage) String() string {
-	if len(msg.Tiers) == 0 {
-		return "No remote tier has been configured"
-	}
-
-	const tableSeparator = "|"
-	rows, cols := getTierListRowsAndCols(msg.Tiers)
-	tbl := newPrettyTable(tableSeparator, cols...)
-	var contents string
-	for _, row := range rows {
-		contents += fmt.Sprintf("%s\n", tbl.buildRow(row...))
-	}
-	return contents
+	return toTable(tierLS(msg.Tiers))
 }
 
 // JSON method returns JSON encoding of msg.
@@ -186,8 +166,8 @@ func (msg *tierListMessage) JSON() string {
 func mainAdminTierList(ctx *cli.Context) error {
 	checkAdminTierListSyntax(ctx)
 
-	for i, color := range tierColorScheme {
-		console.SetColor(tierRowNames[i], color)
+	for i, color := range tierLSColorScheme {
+		console.SetColor(tierLSRowNames[i], color)
 	}
 
 	args := ctx.Args()
