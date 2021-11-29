@@ -81,23 +81,30 @@ EXAMPLES:
 type speedTestResult madmin.SpeedTestResult
 
 func (s speedTestResult) String() (msg string) {
+	msg += fmt.Sprintf("\nMinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
+
+	var errorReturned bool
 	for _, node := range s.PUTStats.Servers {
 		if node.Err != "" {
-			globalSpeedTestVerbose = true
+			errorReturned = true
 			break
 		}
 	}
 	for _, node := range s.GETStats.Servers {
 		if node.Err != "" {
-			globalSpeedTestVerbose = true
+			errorReturned = true
 			break
 		}
 	}
 
-	msg += fmt.Sprintf("\nMinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
-	if globalSpeedTestVerbose {
+	// When no error is found and yet without results, this means the speedtest duration is too short
+	if !errorReturned && (s.PUTStats.ThroughputPerSec == 0 || s.GETStats.ThroughputPerSec == 0) {
 		msg += "\n"
+		msg += "No results found for this speedtest iteration. Try increasing --duration flag."
+		msg += "\n"
+		return
 	}
+
 	msg += fmt.Sprintf("PUT: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.PUTStats.ThroughputPerSec)), humanize.Comma(int64(s.PUTStats.ObjectsPerSec)))
 	if globalSpeedTestVerbose {
 		for _, node := range s.PUTStats.Servers {
