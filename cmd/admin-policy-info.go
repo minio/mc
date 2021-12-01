@@ -20,6 +20,7 @@ package cmd
 import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -56,6 +57,23 @@ func checkAdminPolicyInfoSyntax(ctx *cli.Context) {
 	}
 }
 
+func getPolicyInfo(client *madmin.AdminClient, policyName string) (*madmin.PolicyInfo, error) {
+	pinfo, e := client.InfoCannedPolicyV2(globalContext, policyName)
+	if e != nil {
+		return nil, e
+	}
+
+	if pinfo.PolicyName == "" {
+		// Likely server only supports the older version.
+		pinfo.Policy, e = client.InfoCannedPolicy(globalContext, policyName)
+		if e != nil {
+			return nil, e
+		}
+		pinfo.PolicyName = policyName
+	}
+	return pinfo, nil
+}
+
 // mainAdminPolicyInfo is the handler for "mc admin policy info" command.
 func mainAdminPolicyInfo(ctx *cli.Context) error {
 	checkAdminPolicyInfoSyntax(ctx)
@@ -72,13 +90,13 @@ func mainAdminPolicyInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection")
 
-	buf, e := client.InfoCannedPolicy(globalContext, policyName)
+	pinfo, e := getPolicyInfo(client, policyName)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch policy")
 
 	printMsg(userPolicyMessage{
 		op:         "info",
 		Policy:     policyName,
-		PolicyJSON: buf,
+		PolicyInfo: *pinfo,
 	})
 
 	return nil

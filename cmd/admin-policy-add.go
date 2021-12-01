@@ -24,6 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -66,11 +67,11 @@ func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 // userPolicyMessage container for content message structure
 type userPolicyMessage struct {
 	op          string
-	Status      string          `json:"status"`
-	Policy      string          `json:"policy,omitempty"`
-	PolicyJSON  json.RawMessage `json:"policyJSON,omitempty"`
-	UserOrGroup string          `json:"userOrGroup,omitempty"`
-	IsGroup     bool            `json:"isGroup"`
+	Status      string            `json:"status"`
+	Policy      string            `json:"policy,omitempty"`
+	PolicyInfo  madmin.PolicyInfo `json:"policyInfo,omitempty"`
+	UserOrGroup string            `json:"userOrGroup,omitempty"`
+	IsGroup     bool              `json:"isGroup"`
 }
 
 func (u userPolicyMessage) accountType() string {
@@ -87,7 +88,9 @@ func (u userPolicyMessage) accountType() string {
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
-		return string(u.PolicyJSON)
+		buf, err := json.MarshalIndent(u.PolicyInfo, "", " ")
+		fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
+		return string(buf)
 	case "list":
 		policyFieldMaxLen := 20
 		// Create a new pretty table with cols configuration
