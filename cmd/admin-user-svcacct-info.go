@@ -22,6 +22,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -95,7 +96,7 @@ func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 		AccountStatus: svcInfo.AccountStatus,
 		ParentUser:    svcInfo.ParentUser,
 		ImpliedPolicy: svcInfo.ImpliedPolicy,
-		Policy:        svcInfo.Policy,
+		Policy:        json.RawMessage(svcInfo.Policy),
 	})
 
 	return nil
