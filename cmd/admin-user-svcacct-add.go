@@ -83,14 +83,14 @@ func checkAdminUserSvcAcctAddSyntax(ctx *cli.Context) {
 // svcAcctMessage container for content message structure
 type svcAcctMessage struct {
 	op            string
-	Status        string   `json:"status"`
-	AccessKey     string   `json:"accessKey,omitempty"`
-	SecretKey     string   `json:"secretKey,omitempty"`
-	ParentUser    string   `json:"parentUser,omitempty"`
-	ImpliedPolicy bool     `json:"impliedPolicy,omitempty"`
-	Policy        string   `json:"policy,omitempty"`
-	AccountStatus string   `json:"accountStatus,omitempty"`
-	MemberOf      []string `json:"memberOf,omitempty"`
+	Status        string          `json:"status"`
+	AccessKey     string          `json:"accessKey,omitempty"`
+	SecretKey     string          `json:"secretKey,omitempty"`
+	ParentUser    string          `json:"parentUser,omitempty"`
+	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
+	Policy        json.RawMessage `json:"policy,omitempty"`
+	AccountStatus string          `json:"accountStatus,omitempty"`
+	MemberOf      []string        `json:"memberOf,omitempty"`
 }
 
 const (
