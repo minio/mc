@@ -76,6 +76,7 @@ type ListOptions struct {
 	WithMetadata      bool
 	WithOlderVersions bool
 	WithDeleteMarkers bool
+	IsDir             bool
 	TimeRef           time.Time
 	ShowDir           DirOpt
 	Count             int
