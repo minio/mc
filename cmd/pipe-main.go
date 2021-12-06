@@ -41,7 +41,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "tags",
-			Usage: "apply tags to the uploaded objects",
+			Usage: "apply one or more tags to the uploaded objects",
 		},
 	}
 )
@@ -87,7 +87,7 @@ EXAMPLES:
       {{.Prompt}} cat music.mp3 | {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000;Artist=Unknown" play/mybucket/music.mp3
 
   7. Set tags to the uploaded objects
-      {{.Prompt}} tar cvf - . | {{.HelpName}} --tags "category=backup" play/mybucket/backup.tar
+      {{.Prompt}} tar cvf - . | {{.HelpName}} --tags "category=prod&type=backup" play/mybucket/backup.tar
 `,
 }
 

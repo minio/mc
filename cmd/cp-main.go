@@ -88,7 +88,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "tags",
-			Usage: "apply tags to the uploaded objects",
+			Usage: "apply one or more tags to the uploaded objects",
 		},
 		cli.StringFlag{
 			Name:  rmFlag,
@@ -193,7 +193,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --rewind 10d -r play/mybucket/ /tmp/dest/
 
   20. Set tags to the uploaded objects
-      {{.Prompt}} {{.HelpName}} -r --tags "category=prod" ./data/ play/another-bucket/
+      {{.Prompt}} {{.HelpName}} -r --tags "category=prod&type=backup" ./data/ play/another-bucket/
 
 `,
 }
