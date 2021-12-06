@@ -1699,11 +1699,9 @@ func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 // it falls back to the regular listing if not.
 func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
 	b, o := c.url2BucketAndObject()
-
 	if opts.IsDir {
 		o += "/"
 	}
-	
 	switch {
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets(ctx)
