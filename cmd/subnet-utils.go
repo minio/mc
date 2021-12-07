@@ -277,7 +277,7 @@ func setSubnetAPIKeyConfig(alias string, apiKey string) {
 
 		configStr := "subnet api_key=" + apiKey
 		_, e := client.SetConfigKV(globalContext, configStr)
-		fatalIf(probe.NewError(e), "Unable to set SUBNET api key config on minio")
+		fatalIf(probe.NewError(e), "Unable to set SUBNET API key config on minio")
 		return
 	}
 	mcCfg := mcConfig()

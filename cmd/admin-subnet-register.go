@@ -157,21 +157,21 @@ Please follow these steps to complete the registration:
 
 1) Copy the registration token shown above
 2) Open ` + subnetRegisterPageURL + `
-3) Paste the registration token there and submit the form
-4) Copy the api key generated
-5) Paste it here: `)
+3) Paste the registration token and submit the form
+4) Copy the API key generated
+5) And paste it here: `)
 
 	reader := bufio.NewReader(os.Stdin)
 	apiKey, e := reader.ReadString('\n')
-	fatalIf(probe.NewError(e), "Error in reading api key")
+	fatalIf(probe.NewError(e), "Error in reading API key")
 	apiKey = strings.Trim(apiKey, "\n")
 
 	if len(apiKey) > 0 {
 		_, e := uuid.Parse(apiKey)
-		fatalIf(probe.NewError(e), "Invalid api key specified:")
+		fatalIf(probe.NewError(e), "Invalid API key specified:")
 		setSubnetAPIKeyConfig(alias, apiKey)
 	} else {
-		console.Fatalln("Invalid api key specified. Please run the command again with a valid SUBNET api key to complete registration.")
+		console.Fatalln("Invalid API key specified. Please run the command again with a valid SUBNET API key to complete registration.")
 	}
 }
 
