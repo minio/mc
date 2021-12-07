@@ -340,7 +340,7 @@ func subnetLogin() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("SUBNET username: ")
 	username, _ := reader.ReadString('\n')
-	username = strings.Trim(username, "\n")
+	username = strings.TrimSpace(username)
 
 	if len(username) == 0 {
 		return "", errors.New("Username cannot be empty. If you don't have one, please create one from here: " + minioSubscriptionURL)

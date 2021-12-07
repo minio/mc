@@ -164,7 +164,7 @@ Please follow these steps to complete the registration:
 	reader := bufio.NewReader(os.Stdin)
 	apiKey, e := reader.ReadString('\n')
 	fatalIf(probe.NewError(e), "Error in reading API key")
-	apiKey = strings.Trim(apiKey, "\n")
+	apiKey = strings.TrimSpace(apiKey)
 
 	if len(apiKey) > 0 {
 		_, e := uuid.Parse(apiKey)
