@@ -45,8 +45,9 @@ const (
 
 // GetOptions holds options of the GET operation
 type GetOptions struct {
-	SSE       encrypt.ServerSide
-	VersionID string
+	SSE        encrypt.ServerSide
+	VersionID  string
+	PartNumber int
 }
 
 // PutOptions holds options for PUT operation

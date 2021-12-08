@@ -447,6 +447,7 @@ var appCmds = []cli.Command{
 	tagCmd,
 	replicateCmd,
 	adminCmd,
+	verifyCmd,
 	configCmd,
 	updateCmd,
 }

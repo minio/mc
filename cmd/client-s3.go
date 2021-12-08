@@ -809,6 +809,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 		minio.GetObjectOptions{
 			ServerSideEncryption: opts.SSE,
 			VersionID:            opts.VersionID,
+			PartNumber:           opts.PartNumber,
 		})
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
