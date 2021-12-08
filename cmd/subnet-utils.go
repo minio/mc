@@ -275,7 +275,7 @@ func setSubnetAPIKeyConfig(alias string, apiKey string) {
 		client, err := newAdminClient(alias)
 		fatalIf(err, "Unable to initialize admin connection.")
 
-		configStr := "subnet api_key=" + apiKey
+		configStr := "subnet license= api_key=" + apiKey
 		_, e := client.SetConfigKV(globalContext, configStr)
 		fatalIf(probe.NewError(e), "Unable to set SUBNET API key config on minio")
 		return
