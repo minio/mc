@@ -60,8 +60,9 @@ var adminHealthFlags = append([]cli.Flag{
 		EnvVar: "MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
 	cli.StringFlag{
-		Name:  "license",
-		Usage: "SUBNET license key",
+		Name:   "license",
+		Usage:  "SUBNET license key",
+		Hidden: true, // deprecated dec 2021
 	},
 	cli.IntFlag{
 		Name:  "schedule",
@@ -292,13 +293,18 @@ func prepareHealthUploadURL(alias string, clusterName string, filename string, l
 		clusterName = alias
 	}
 
+	apiKey := ""
 	if len(license) == 0 {
-		license = getSubnetLicenseFromConfig(alias)
+		apiKey = getSubnetAPIKeyFromConfig(alias)
+
+		if len(apiKey) == 0 {
+			license = getSubnetLicenseFromConfig(alias)
+		}
 	}
 
 	uploadURL := subnetHealthUploadURL()
 
-	reqURL, headers, e := subnetURLWithAuth(uploadURL, license)
+	reqURL, headers, e := subnetURLWithAuth(uploadURL, apiKey, license)
 	fatalIf(probe.NewError(e).Trace(uploadURL), "Unable to fetch SUBNET authentication")
 
 	reqURL = fmt.Sprintf("%s&clustername=%s&filename=%s", reqURL, clusterName, filename)
@@ -316,11 +322,7 @@ func uploadHealthReport(alias string, filename string, reqURL string, headers ma
 		return e
 	}
 
-	// extract license from response and set it in minio config
-	subnetLic := gjson.Get(resp, "license").String()
-	if len(subnetLic) > 0 {
-		setSubnetLicenseConfig(alias, subnetLic)
-	}
+	extractAndSaveAPIKey(alias, resp)
 
 	// Delete the report after successful upload
 	deleteFile(filename)
