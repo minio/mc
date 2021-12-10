@@ -37,6 +37,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/env"
 	"github.com/minio/pkg/trie"
 	"github.com/minio/pkg/words"
 	"github.com/pkg/profile"
@@ -78,6 +79,10 @@ VERSION:
 {{end}}`
 
 func init() {
+	if env.IsSet(mcEnvConfigFile) {
+		configFile := env.Get(mcEnvConfigFile, "")
+		fatalIf(readAliasesFromFile(configFile).Trace(configFile), "Unable to parse "+configFile)
+	}
 	if runtime.GOOS == "windows" {
 		if mousetrap.StartedByExplorer() {
 			fmt.Printf("Don't double-click %s\n", os.Args[0])
