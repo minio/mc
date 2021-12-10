@@ -23,6 +23,7 @@ var adminReplicateSubcommands = []cli.Command{
 	adminReplicateAddCmd,
 	// adminReplicateDisableCmd,
 	adminReplicateInfoCmd,
+	adminReplicateStatusCmd,
 }
 
 var adminReplicateCmd = cli.Command{
