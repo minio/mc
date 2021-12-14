@@ -377,10 +377,8 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 		fmt.Fprintf(&msg, "Pool %d:\n", pool+1)
 
 		// Sort servers in this pool by name
-		var orderedEndpoints []string
-		for _, endpoint := range poolsInfo[pool].endpoints {
-			orderedEndpoints = append(orderedEndpoints, endpoint)
-		}
+		var orderedEndpoints = make([]string, len(poolsInfo[pool].endpoints))
+		copy(orderedEndpoints, poolsInfo[pool].endpoints)
 		sort.Strings(orderedEndpoints)
 
 		for _, endpoint := range orderedEndpoints {
