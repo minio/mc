@@ -350,25 +350,17 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 	parity, showTolerance := s.HealInfo.SCParity[s.ToleranceForSC]
 
 	offlineEndpoints := getOfflineNodes(s.HealInfo.OfflineEndpoints)
-
 	allDisks := getAllDisks(s.HealInfo.Sets)
 	pools := getPoolsIndexes(allDisks)
 	setsStatus := generateSetsStatus(allDisks)
 	serversStatus := generateServersStatus(allDisks)
 
-	var poolsTolerance = make(map[int]poolInfo)
+	var poolsInfo = make(map[int]poolInfo)
 	for _, pool := range pools {
 		tolerance := computePoolTolerance(pool, parity, setsStatus, serversStatus)
 		endpoints := computePoolEndpoints(pool, serversStatus)
-		poolsTolerance[pool] = poolInfo{tolerance: tolerance, endpoints: endpoints}
+		poolsInfo[pool] = poolInfo{tolerance: tolerance, endpoints: endpoints}
 	}
-
-	// Sort endpoints by name
-	var orderedEndpoints []string
-	for endpoint := range serversStatus {
-		orderedEndpoints = append(orderedEndpoints, endpoint)
-	}
-	sort.Strings(orderedEndpoints)
 
 	distributed := len(serversStatus) > 1
 
@@ -380,10 +372,17 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 	fmt.Fprintf(&msg, "==============\n")
 
 	sort.Ints(pools)
+
 	for _, pool := range pools {
 		fmt.Fprintf(&msg, "Pool %d:\n", pool+1)
 
+		// Sort servers in this pool by name
+		var orderedEndpoints = make([]string, len(poolsInfo[pool].endpoints))
+		copy(orderedEndpoints, poolsInfo[pool].endpoints)
+		sort.Strings(orderedEndpoints)
+
 		for _, endpoint := range orderedEndpoints {
+			// Print offline status if node is offline
 			_, ok := offlineEndpoints[endpoint]
 			if ok {
 				stateText := console.Colorize("NodeFailed", "OFFLINE")
@@ -394,7 +393,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 			switch {
 			case showTolerance:
 				serverHeader := "  %s: (Tolerance: %d server(s))\n"
-				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint, poolsTolerance[serverStatus.pool].tolerance))
+				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint, poolsInfo[serverStatus.pool].tolerance))
 			default:
 				serverHeader := "  %s:\n"
 				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint))
@@ -436,7 +435,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 	if showTolerance && distributed {
 		fmt.Fprintf(&msg, "Server Failure Tolerance:\n")
 		fmt.Fprintf(&msg, "========================\n")
-		for _, pool := range poolsTolerance {
+		for _, pool := range poolsInfo {
 			fmt.Fprintf(&msg, "Pool 1:\n")
 			fmt.Fprintf(&msg, "   Tolerance : %d server(s)\n", pool.tolerance)
 			fmt.Fprintf(&msg, "       Nodes :")
@@ -447,12 +446,12 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 		}
 	}
 
-	summry := shortBackgroundHealStatusMessage{HealInfo: s.HealInfo}
+	summary := shortBackgroundHealStatusMessage{HealInfo: s.HealInfo}
 
 	fmt.Fprintf(&msg, "\n")
 	fmt.Fprintf(&msg, "Summary:\n")
 	fmt.Fprintf(&msg, "=======\n")
-	fmt.Fprintf(&msg, summry.String())
+	fmt.Fprintf(&msg, summary.String())
 	fmt.Fprintf(&msg, "\n")
 
 	return msg.String()
