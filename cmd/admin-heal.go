@@ -536,7 +536,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		}
 	}
 
-	if startedAt.IsZero() {
+	if startedAt.IsZero() && itemsHealed == 0 {
 		healPrettyMsg += "No ongoing active healing."
 		return healPrettyMsg
 	}
@@ -553,11 +553,13 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.Bytes(bytesHealed))
 	}
 
-	bytesHealedPerSec := float64(uint64(time.Second)*bytesHealed) / float64(accumulatedElapsedTime)
-	itemsHealedPerSec := float64(uint64(time.Second)*itemsHealed) / float64(accumulatedElapsedTime)
-	healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))
+	if accumulatedElapsedTime > 0 {
+		bytesHealedPerSec := float64(uint64(time.Second)*bytesHealed) / float64(accumulatedElapsedTime)
+		itemsHealedPerSec := float64(uint64(time.Second)*itemsHealed) / float64(accumulatedElapsedTime)
+		healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))
+	}
 
-	if totalItems > 0 && totalBytes > 0 {
+	if totalItems > 0 && totalBytes > 0 && !startedAt.IsZero() {
 		// Estimation completion
 		avgTimePerObject := float64(accumulatedElapsedTime) / float64(itemsHealed)
 		estimatedDuration := time.Duration(avgTimePerObject * float64(totalItems))
