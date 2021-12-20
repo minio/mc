@@ -65,7 +65,12 @@ USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Create a restored copy of one or more archived objects.
+  Create a restored copy of one or more objects archived on a remote tier. The copy automatically expires 
+  after the specified number of days (Default 1 day). 
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 
 EXAMPLES:
   1. Restore one specific object
