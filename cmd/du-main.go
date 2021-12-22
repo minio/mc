@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -151,7 +151,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			continue
 		}
 
-		if content.Type.IsDir() {
+		if content.Type.IsDir() && !recursive {
 			depth := depth
 			if depth > 0 {
 				depth--
