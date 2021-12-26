@@ -136,13 +136,13 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		}
 
 		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
-		//Skip the source object if it matches the Exclude options provided
+		// Skip the source object if it matches the Exclude options provided
 		if matchExcludeOptions(opts.excludeOptions, srcSuffix) {
 			continue
 		}
 
 		tgtSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
-		//Skip the target object if it matches the Exclude options provided
+		// Skip the target object if it matches the Exclude options provided
 		if matchExcludeOptions(opts.excludeOptions, tgtSuffix) {
 			continue
 		}
