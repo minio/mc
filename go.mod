@@ -18,7 +18,7 @@ require (
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
 	github.com/minio/madmin-go v1.1.17
-	github.com/minio/minio-go/v7 v7.0.18
+	github.com/minio/minio-go/v7 v7.0.20
 	github.com/minio/pkg v1.1.3
 	github.com/minio/selfupdate v0.3.1
 	github.com/minio/sha256-simd v1.0.0

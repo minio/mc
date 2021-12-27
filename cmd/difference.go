@@ -26,7 +26,6 @@ import (
 	// golang does not support flat keys for path matching, find does
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v7"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -335,27 +334,18 @@ func difference(ctx context.Context, sourceClnt, targetClnt Client, sourceURL, t
 	go func() {
 		defer close(diffCh)
 
-		retryCtx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
-		for range newRetryTimerContinous(retryCtx, time.Second, time.Second*30, minio.MaxJitter) {
-			err := differenceInternal(retryCtx, sourceClnt, targetClnt, sourceURL, targetURL,
-				isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
-			if err != nil {
-				// handle this specifically for filesystem related errors.
-				switch err.ToGoError().(type) {
-				case PathNotFound, PathInsufficientPermission:
-					diffCh <- diffMessage{
-						Error: err,
-					}
-					return
+		err := differenceInternal(ctx, sourceClnt, targetClnt, sourceURL, targetURL,
+			isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
+		if err != nil {
+			// handle this specifically for filesystem related errors.
+			switch err.ToGoError().(type) {
+			case PathNotFound, PathInsufficientPermission:
+				diffCh <- diffMessage{
+					Error: err,
 				}
-				errorIf(err, "Unable to list comparison retrying..")
-			} else {
-				// Success.
-				break
+				return
 			}
-
+			errorIf(err, "Unable to list comparison retrying..")
 		}
 	}()
 
