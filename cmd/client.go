@@ -137,7 +137,7 @@ type Client interface {
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
