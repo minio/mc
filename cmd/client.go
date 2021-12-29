@@ -175,6 +175,7 @@ type Client interface {
 // ClientContent - Content container for content metadata
 type ClientContent struct {
 	URL          ClientURL
+	BucketName   string // only valid and set for client-type objectStorage
 	Time         time.Time
 	Size         int64
 	Type         os.FileMode

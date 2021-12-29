@@ -325,7 +325,7 @@ func uploadHealthReport(alias string, filename string, reqURL string, headers ma
 	extractAndSaveAPIKey(alias, resp)
 
 	// Delete the report after successful upload
-	deleteFile(filename)
+	os.Remove(filename)
 
 	msg := "MinIO health report was successfully uploaded to SUBNET."
 	clusterURL, _ := url.PathUnescape(gjson.Get(resp, "cluster_url").String())

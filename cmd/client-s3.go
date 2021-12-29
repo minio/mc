@@ -1448,6 +1448,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 		}
 
 		if objectMultipartInfo.Key == object {
+			objectMetadata.BucketName = bucket
 			objectMetadata.URL = c.targetURL.Clone()
 			objectMetadata.Time = objectMultipartInfo.Initiated
 			objectMetadata.Size = objectMultipartInfo.Size
@@ -1457,6 +1458,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 		}
 
 		if strings.HasSuffix(objectMultipartInfo.Key, string(c.targetURL.Separator)) {
+			objectMetadata.BucketName = bucket
 			objectMetadata.URL = c.targetURL.Clone()
 			objectMetadata.Type = os.ModeDir
 			objectMetadata.Metadata = map[string]string{}
@@ -1477,9 +1479,11 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	if bucket == "" {
 		url := c.targetURL.Clone()
 		url.Path = string(c.targetURL.Separator)
-		return &ClientContent{URL: url,
-			Size: 0,
-			Type: os.ModeDir,
+		return &ClientContent{
+			URL:        url,
+			Size:       0,
+			Type:       os.ModeDir,
+			BucketName: bucket,
 		}, nil
 	}
 
@@ -1973,6 +1977,7 @@ func (c *S3Client) bucketInfo2ClientContent(bucket minio.BucketInfo) *ClientCont
 	url := c.targetURL.Clone()
 	url.Path = c.joinPath(bucket.Name)
 	content.URL = url
+	content.BucketName = bucket.Name
 	content.Size = 0
 	content.Time = bucket.CreationDate
 	content.Type = os.ModeDir
@@ -1989,6 +1994,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	}
 	url.Path = c.joinPath(bucket, entry.Key)
 	content.URL = url
+	content.BucketName = bucket
 	content.Size = entry.Size
 	content.ETag = entry.ETag
 	content.Time = entry.LastModified
@@ -2045,7 +2051,8 @@ func (c *S3Client) bucketStat(ctx context.Context, bucket string) (*ClientConten
 	if !exists {
 		return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 	}
-	return &ClientContent{URL: c.targetURL.Clone(), Time: time.Unix(0, 0), Type: os.ModeDir}, nil
+	return &ClientContent{
+		URL: c.targetURL.Clone(), BucketName: bucket, Time: time.Unix(0, 0), Type: os.ModeDir}, nil
 }
 
 func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {

@@ -449,7 +449,7 @@ func isSysErrNotEmpty(err error) bool {
 // deleteFile deletes a file path if its empty. If it's successfully deleted,
 // it will recursively delete empty parent directories
 // until it finds one with files in it. Returns nil for a non-empty directory.
-func deleteFile(deletePath string) error {
+func deleteFile(basePath, deletePath string) error {
 	// Attempt to remove path.
 	if e := os.Remove(deletePath); e != nil {
 		if isSysErrNotEmpty(e) {
@@ -466,8 +466,15 @@ func deleteFile(deletePath string) error {
 	parentPath := strings.TrimSuffix(deletePath, slashSeperator)
 	parentPath = path.Dir(parentPath)
 
+	if !strings.HasPrefix(parentPath, basePath) {
+		// If parentPath jumps out of the original basePath,
+		// make sure to cancel such calls, we don't want
+		// to be deleting more than we should.
+		return nil
+	}
+
 	if parentPath != "." {
-		return deleteFile(parentPath)
+		return deleteFile(basePath, parentPath)
 	}
 
 	return nil
@@ -493,7 +500,7 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			if isIncomplete {
 				name += partSuffix
 			}
-			e := deleteFile(name)
+			e := deleteFile(f.PathURL.Path, name)
 			if e == nil {
 				_, objectName := url2BucketAndObject(&content.URL, false)
 				res := RemoveResult{}
@@ -501,9 +508,9 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				resultCh <- res
 				continue
 			}
-			if os.IsNotExist(e) && isRemoveBucket {
-				// ignore PathNotFound for dir removal.
-				return
+			if os.IsNotExist(e) {
+				// ignore if path already removed.
+				continue
 			}
 			if os.IsPermission(e) {
 				// Ignore permission error.
@@ -737,6 +744,14 @@ func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, 
 	listDir = func(currentPath string) (isStop bool) {
 		files, e := readDir(currentPath)
 		if e != nil {
+			if os.IsNotExist(e) {
+				contentCh <- &ClientContent{
+					Err: probe.NewError(PathNotFound{
+						Path: currentPath,
+					}),
+				}
+				return false
+			}
 			if os.IsPermission(e) {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{

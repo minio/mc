@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -308,7 +309,8 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		}
 
 		contentCh := make(chan *ClientContent, 1)
-		contentCh <- &ClientContent{URL: *newClientURL(targetURL), VersionID: versionID}
+		contentURL := *newClientURL(targetURL)
+		contentCh <- &ClientContent{URL: contentURL, VersionID: versionID}
 		close(contentCh)
 		isRemoveBucket := false
 		resultCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
@@ -322,11 +324,11 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 				}
 				return exitStatus(globalErrorExitStatus)
 			}
-			if result.DeleteMarker {
+			if versionID == "" {
 				versionID = result.DeleteMarkerVersionID
 			}
 			printMsg(rmMessage{
-				Key:          result.ObjectName,
+				Key:          targetAlias + contentURL.Path,
 				Size:         size,
 				VersionID:    versionID,
 				DeleteMarker: result.DeleteMarker,
@@ -429,7 +431,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 								versionID = result.DeleteMarkerVersionID
 							}
 							printMsg(rmMessage{
-								Key:          result.ObjectName,
+								Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
 								Size:         content.Size,
 								VersionID:    versionID,
 								DeleteMarker: result.DeleteMarker,
@@ -488,7 +490,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 						versionID = result.DeleteMarkerVersionID
 					}
 					printMsg(rmMessage{
-						Key:          result.ObjectName,
+						Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
 						Size:         content.Size,
 						VersionID:    versionID,
 						DeleteMarker: result.DeleteMarker,
@@ -524,7 +526,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 						versionID = result.DeleteMarkerVersionID
 					}
 					printMsg(rmMessage{
-						Key:          result.ObjectName,
+						Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
 						Size:         content.Size,
 						VersionID:    versionID,
 						DeleteMarker: result.DeleteMarker,
