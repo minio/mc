@@ -33,6 +33,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -1758,7 +1759,9 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 			}
 			return
 		}
-
+		if opts.Recursive {
+			sortBucketsNameWithSlash(buckets)
+		}
 		for _, bucket := range buckets {
 			if opts.ShowDir != DirLast {
 				contentCh <- c.bucketInfo2ClientContent(bucket)
@@ -1905,6 +1908,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 			}
 			return
 		}
+		sortBucketsNameWithSlash(buckets)
 		isRecursive := true
 		for _, bucket := range buckets {
 			if opts.ShowDir != DirLast {
@@ -2099,6 +2103,15 @@ const (
 	s3StorageClassGlacier = "GLACIER"
 )
 
+// Sorting buckets name with an additional '/' to make sure that a
+// site-wide listing returns sorted output. This is crucial for
+// correct diff/mirror calculation.
+func sortBucketsNameWithSlash(bucketsInfo []minio.BucketInfo) {
+	sort.Slice(bucketsInfo, func(i, j int) bool {
+		return bucketsInfo[i].Name+"/" < bucketsInfo[j].Name+"/"
+	})
+}
+
 func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -2111,6 +2124,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 			}
 			return
 		}
+		sortBucketsNameWithSlash(buckets)
 		for _, bucket := range buckets {
 			if opts.ShowDir == DirFirst {
 				contentCh <- c.bucketInfo2ClientContent(bucket)
