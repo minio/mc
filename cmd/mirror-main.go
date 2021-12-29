@@ -317,8 +317,10 @@ func (mj *mirrorJob) doDeleteBucket(ctx context.Context, sURLs URLs) URLs {
 	contentCh <- &ClientContent{URL: clnt.GetURL()}
 	close(contentCh)
 
-	for err := range clnt.Remove(ctx, false, true, false, contentCh) {
-		return sURLs.WithError(err)
+	for result := range clnt.Remove(ctx, false, true, false, contentCh) {
+		if result.Err != nil {
+			return sURLs.WithError(result.Err)
+		}
 	}
 
 	return sURLs.WithError(nil)
@@ -341,15 +343,15 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
 	isRemoveBucket := false
-	errorCh := clnt.Remove(ctx, false, isRemoveBucket, false, contentCh)
-	for pErr := range errorCh {
-		if pErr != nil {
-			switch pErr.ToGoError().(type) {
+	resultCh := clnt.Remove(ctx, false, isRemoveBucket, false, contentCh)
+	for result := range resultCh {
+		if result.Err != nil {
+			switch result.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
 				// Ignore Permission error.
 				continue
 			}
-			return sURLs.WithError(pErr)
+			return sURLs.WithError(result.Err)
 		}
 	}
 

@@ -474,16 +474,18 @@ func deleteFile(deletePath string) error {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
-	errorCh := make(chan *probe.Error)
+func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+	resultCh := make(chan RemoveResult)
 
 	// Goroutine reads from contentCh and removes the entry in content.
 	go func() {
-		defer close(errorCh)
+		defer close(resultCh)
 
 		for content := range contentCh {
 			if content.Err != nil {
-				errorCh <- content.Err
+				resultCh <- RemoveResult{
+					Err: content.Err,
+				}
 				continue
 			}
 			name := content.URL.Path
@@ -493,6 +495,10 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 			e := deleteFile(name)
 			if e == nil {
+				_, objectName := url2BucketAndObject(&content.URL, false)
+				res := RemoveResult{}
+				res.ObjectName = objectName
+				resultCh <- res
 				continue
 			}
 			if os.IsNotExist(e) && isRemoveBucket {
@@ -501,15 +507,21 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 			if os.IsPermission(e) {
 				// Ignore permission error.
-				errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+				resultCh <- RemoveResult{
+					Err: probe.NewError(PathInsufficientPermission{
+						Path: content.URL.Path,
+					}),
+				}
 			} else {
-				errorCh <- probe.NewError(e)
+				resultCh <- RemoveResult{
+					Err: probe.NewError(e),
+				}
 				return
 			}
 		}
 	}()
 
-	return errorCh
+	return resultCh
 }
 
 // List - list files and folders.
