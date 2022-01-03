@@ -147,7 +147,7 @@ EXAMPLES:
 type removeClientInfo struct {
 	client    Client
 	contentCh chan *ClientContent
-	errorCh   <-chan *probe.Error
+	resultCh  <-chan RemoveResult
 }
 
 type removeManager struct {
@@ -156,12 +156,14 @@ type removeManager struct {
 	wg             sync.WaitGroup
 }
 
-func (rm *removeManager) readErrors(errorCh <-chan *probe.Error, targetURL string) {
+func (rm *removeManager) readErrors(resultCh <-chan RemoveResult, targetURL string) {
 	rm.wg.Add(1)
 	go func() {
 		defer rm.wg.Done()
-		for pErr := range errorCh {
-			errorIf(pErr.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
+		for result := range resultCh {
+			if result.Err != nil {
+				errorIf(result.Err.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
+			}
 		}
 	}()
 }
@@ -179,13 +181,13 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 		}
 
 		contentCh := make(chan *ClientContent, 10000)
-		errorCh := client.Remove(ctx, false, false, false, contentCh)
-		rm.readErrors(errorCh, targetURL)
+		resultCh := client.Remove(ctx, false, false, false, contentCh)
+		rm.readErrors(resultCh, targetURL)
 
 		clientInfo = &removeClientInfo{
 			client:    client,
 			contentCh: contentCh,
-			errorCh:   errorCh,
+			resultCh:  resultCh,
 		}
 
 		rm.removeMap[targetAlias] = clientInfo

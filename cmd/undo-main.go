@@ -145,7 +145,7 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 	}
 
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+	resultCh := clnt.Remove(ctx, false, false, false, contentCh)
 
 	prefixPath := clnt.GetURL().Path
 	prefixPath = filepath.ToSlash(prefixPath)
@@ -177,9 +177,9 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 		close(contentCh)
 	}()
 
-	for err := range errorCh {
-		if err != nil {
-			errorIf(err.Trace(), "Unable to undo")
+	for result := range resultCh {
+		if result.Err != nil {
+			errorIf(result.Err.Trace(), "Unable to undo")
 			exitErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 		}
 	}

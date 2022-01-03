@@ -159,7 +159,7 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 		return pErr
 	}
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+	resultCh := clnt.Remove(ctx, false, false, false, contentCh)
 
 	go func() {
 		defer close(contentCh)
@@ -196,8 +196,10 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	}()
 
 	// Give up on the first error.
-	for perr := range errorCh {
-		return perr
+	for result := range resultCh {
+		if result.Err != nil {
+			return result.Err.Trace(url)
+		}
 	}
 
 	// Remove a bucket without force flag first because force

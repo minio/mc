@@ -449,7 +449,7 @@ func isSysErrNotEmpty(err error) bool {
 // deleteFile deletes a file path if its empty. If it's successfully deleted,
 // it will recursively delete empty parent directories
 // until it finds one with files in it. Returns nil for a non-empty directory.
-func deleteFile(deletePath string) error {
+func deleteFile(basePath, deletePath string) error {
 	// Attempt to remove path.
 	if e := os.Remove(deletePath); e != nil {
 		if isSysErrNotEmpty(e) {
@@ -466,24 +466,33 @@ func deleteFile(deletePath string) error {
 	parentPath := strings.TrimSuffix(deletePath, slashSeperator)
 	parentPath = path.Dir(parentPath)
 
+	if !strings.HasPrefix(parentPath, basePath) {
+		// If parentPath jumps out of the original basePath,
+		// make sure to cancel such calls, we don't want
+		// to be deleting more than we should.
+		return nil
+	}
+
 	if parentPath != "." {
-		return deleteFile(parentPath)
+		return deleteFile(basePath, parentPath)
 	}
 
 	return nil
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
-	errorCh := make(chan *probe.Error)
+func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+	resultCh := make(chan RemoveResult)
 
 	// Goroutine reads from contentCh and removes the entry in content.
 	go func() {
-		defer close(errorCh)
+		defer close(resultCh)
 
 		for content := range contentCh {
 			if content.Err != nil {
-				errorCh <- content.Err
+				resultCh <- RemoveResult{
+					Err: content.Err,
+				}
 				continue
 			}
 			name := content.URL.Path
@@ -491,25 +500,35 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			if isIncomplete {
 				name += partSuffix
 			}
-			e := deleteFile(name)
+			e := deleteFile(f.PathURL.Path, name)
 			if e == nil {
+				_, objectName := url2BucketAndObject(&content.URL, false)
+				res := RemoveResult{}
+				res.ObjectName = objectName
+				resultCh <- res
 				continue
 			}
-			if os.IsNotExist(e) && isRemoveBucket {
-				// ignore PathNotFound for dir removal.
-				return
+			if os.IsNotExist(e) {
+				// ignore if path already removed.
+				continue
 			}
 			if os.IsPermission(e) {
 				// Ignore permission error.
-				errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+				resultCh <- RemoveResult{
+					Err: probe.NewError(PathInsufficientPermission{
+						Path: content.URL.Path,
+					}),
+				}
 			} else {
-				errorCh <- probe.NewError(e)
+				resultCh <- RemoveResult{
+					Err: probe.NewError(e),
+				}
 				return
 			}
 		}
 	}()
 
-	return errorCh
+	return resultCh
 }
 
 // List - list files and folders.
@@ -725,6 +744,14 @@ func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, 
 	listDir = func(currentPath string) (isStop bool) {
 		files, e := readDir(currentPath)
 		if e != nil {
+			if os.IsNotExist(e) {
+				contentCh <- &ClientContent{
+					Err: probe.NewError(PathNotFound{
+						Path: currentPath,
+					}),
+				}
+				return false
+			}
 			if os.IsPermission(e) {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{

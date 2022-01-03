@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -158,16 +159,20 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	Status    string    `json:"status"`
-	Key       string    `json:"key"`
-	VersionID string    `json:"versionID"`
-	ModTime   time.Time `json:"modTime"`
-	Size      int64     `json:"size"`
+	Status       string    `json:"status"`
+	Key          string    `json:"key"`
+	DeleteMarker bool      `json:"deleteMarker"`
+	VersionID    string    `json:"versionID"`
+	ModTime      time.Time `json:"modTime"`
+	Size         int64     `json:"size"`
 }
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
 	msg := console.Colorize("Remove", fmt.Sprintf("Removing `%s`", r.Key))
+	if r.DeleteMarker {
+		msg = console.Colorize("Remove", fmt.Sprintf("Creating delete marker `%s`", r.Key))
+	}
 	if r.VersionID != "" {
 		if !r.ModTime.IsZero() {
 			msg += fmt.Sprintf(" (versionId=%s, modTime=%s)", r.VersionID, r.ModTime)
@@ -291,12 +296,6 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		return nil
 	}
 
-	printMsg(rmMessage{
-		Key:       url,
-		Size:      size,
-		VersionID: versionID,
-	})
-
 	if !isFake {
 		targetAlias, targetURL, _ := mustExpandAlias(url)
 		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
@@ -310,20 +309,30 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		}
 
 		contentCh := make(chan *ClientContent, 1)
-		contentCh <- &ClientContent{URL: *newClientURL(targetURL), VersionID: versionID}
+		contentURL := *newClientURL(targetURL)
+		contentCh <- &ClientContent{URL: contentURL, VersionID: versionID}
 		close(contentCh)
 		isRemoveBucket := false
-		errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
-		for pErr := range errorCh {
-			if pErr != nil {
-				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
-				switch pErr.ToGoError().(type) {
+		resultCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
+		for result := range resultCh {
+			if result.Err != nil {
+				errorIf(result.Err.Trace(url), "Failed to remove `"+url+"`.")
+				switch result.Err.ToGoError().(type) {
 				case PathInsufficientPermission:
 					// Ignore Permission error.
 					continue
 				}
 				return exitStatus(globalErrorExitStatus)
 			}
+			if versionID == "" {
+				versionID = result.DeleteMarkerVersionID
+			}
+			printMsg(rmMessage{
+				Key:          targetAlias + contentURL.Path,
+				Size:         size,
+				VersionID:    versionID,
+				DeleteMarker: result.DeleteMarker,
+			})
 		}
 	}
 	return nil
@@ -346,8 +355,6 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 	contentCh := make(chan *ClientContent)
 	isRemoveBucket := false
 
-	errorCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
-
 	listOpts := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirLast}
 	if !timeRef.IsZero() {
 		listOpts.WithOlderVersions = withVersions
@@ -365,6 +372,8 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 	}
 
 	atLeastOneObjectFound := false
+
+	resultCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
 
 	var lastPath string
 	var perObjectVersions []*ClientContent
@@ -403,23 +412,31 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 						continue
 					}
 					for _, content := range perObjectVersions {
-						printMsg(rmMessage{
-							Key:       targetAlias + content.URL.Path,
-							Size:      content.Size,
-							VersionID: content.VersionID,
-							ModTime:   content.Time,
-						})
 						select {
 						case contentCh <- content:
-						case pErr := <-errorCh:
-							errorIf(pErr.Trace(content.URL.Path), "Failed to remove `"+content.URL.Path+"`.")
-							switch pErr.ToGoError().(type) {
-							case PathInsufficientPermission:
-								// Ignore Permission error.
-								continue
+						case result := <-resultCh:
+							if result.Err != nil {
+								errorIf(result.Err.Trace(content.URL.Path),
+									"Failed to remove `"+content.URL.Path+"`.")
+								switch result.Err.ToGoError().(type) {
+								case PathInsufficientPermission:
+									// Ignore Permission error.
+									continue
+								}
+								close(contentCh)
+								return exitStatus(globalErrorExitStatus)
 							}
-							close(contentCh)
-							return exitStatus(globalErrorExitStatus)
+							versionID := content.VersionID
+							if content.VersionID == "" {
+								versionID = result.DeleteMarkerVersionID
+							}
+							printMsg(rmMessage{
+								Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
+								Size:         content.Size,
+								VersionID:    versionID,
+								DeleteMarker: result.DeleteMarker,
+								ModTime:      content.Time,
+							})
 						}
 					}
 				}
@@ -450,28 +467,35 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 			continue
 		}
 
-		printMsg(rmMessage{
-			Key:       targetAlias + urlString,
-			Size:      content.Size,
-			VersionID: content.VersionID,
-			ModTime:   content.Time,
-		})
-
 		if !isFake {
 			sent := false
 			for !sent {
 				select {
 				case contentCh <- content:
 					sent = true
-				case pErr := <-errorCh:
-					errorIf(pErr.Trace(urlString), "Failed to remove `"+urlString+"`.")
-					switch pErr.ToGoError().(type) {
-					case PathInsufficientPermission:
-						// Ignore Permission error.
-						continue
+				case result := <-resultCh:
+					if result.Err != nil {
+						errorIf(result.Err.Trace(content.URL.Path),
+							"Failed to remove `"+content.URL.Path+"`.")
+						switch result.Err.ToGoError().(type) {
+						case PathInsufficientPermission:
+							// Ignore Permission error.
+							continue
+						}
+						close(contentCh)
+						return exitStatus(globalErrorExitStatus)
 					}
-					close(contentCh)
-					return exitStatus(globalErrorExitStatus)
+					versionID := content.VersionID
+					if content.VersionID == "" {
+						versionID = result.DeleteMarkerVersionID
+					}
+					printMsg(rmMessage{
+						Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
+						Size:         content.Size,
+						VersionID:    versionID,
+						DeleteMarker: result.DeleteMarker,
+						ModTime:      content.Time,
+					})
 				}
 			}
 		}
@@ -483,37 +507,47 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 				return nil
 			}
 			for _, content := range perObjectVersions {
-				printMsg(rmMessage{
-					Key:       targetAlias + content.URL.Path,
-					Size:      content.Size,
-					VersionID: content.VersionID,
-					ModTime:   content.Time,
-				})
 				select {
 				case contentCh <- content:
-				case pErr := <-errorCh:
-					errorIf(pErr.Trace(content.URL.Path), "Failed to remove `"+content.URL.Path+"`.")
-					switch pErr.ToGoError().(type) {
-					case PathInsufficientPermission:
-						// Ignore Permission error.
-						continue
+				case result := <-resultCh:
+					if result.Err != nil {
+						errorIf(result.Err.Trace(content.URL.Path),
+							"Failed to remove `"+content.URL.Path+"`.")
+						switch result.Err.ToGoError().(type) {
+						case PathInsufficientPermission:
+							// Ignore Permission error.
+							continue
+						}
+						close(contentCh)
+						return exitStatus(globalErrorExitStatus)
 					}
-					close(contentCh)
-					return exitStatus(globalErrorExitStatus)
+					versionID := content.VersionID
+					if content.VersionID == "" {
+						versionID = result.DeleteMarkerVersionID
+					}
+					printMsg(rmMessage{
+						Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
+						Size:         content.Size,
+						VersionID:    versionID,
+						DeleteMarker: result.DeleteMarker,
+						ModTime:      content.Time,
+					})
 				}
 			}
 		}
 	}
 
 	close(contentCh)
-	for pErr := range errorCh {
-		errorIf(pErr.Trace(url), "Failed to remove `"+url+"` recursively.")
-		switch pErr.ToGoError().(type) {
-		case PathInsufficientPermission:
-			// Ignore Permission error.
-			continue
+	for result := range resultCh {
+		if result.Err != nil {
+			errorIf(result.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
+			switch result.Err.ToGoError().(type) {
+			case PathInsufficientPermission:
+				// Ignore Permission error.
+				continue
+			}
+			return exitStatus(globalErrorExitStatus)
 		}
-		return exitStatus(globalErrorExitStatus)
 	}
 
 	if !atLeastOneObjectFound {

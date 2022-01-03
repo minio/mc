@@ -137,7 +137,7 @@ type Client interface {
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
@@ -175,6 +175,7 @@ type Client interface {
 // ClientContent - Content container for content metadata
 type ClientContent struct {
 	URL          ClientURL
+	BucketName   string // only valid and set for client-type objectStorage
 	Time         time.Time
 	Size         int64
 	Type         os.FileMode
