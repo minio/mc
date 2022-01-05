@@ -183,15 +183,9 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 	}
 	globalSpeedTestVerbose = ctx.Bool("verbose")
 
-	autotune := false
-
-	if ctx.NumFlags() == 0 {
-		autotune = true
-	}
-
-	if ctx.NumFlags() == 2 && globalSpeedTestVerbose {
-		autotune = true
-	}
+	// Turn-off autotuning only when "concurrent" is specified
+	// in all other scenarios keep auto-tuning on.
+	autotune := !ctx.IsSet("concurrent")
 
 	resultCh, err := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
