@@ -19,12 +19,13 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/briandowns/spinner"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -44,6 +45,10 @@ var adminSpeedtestFlags = []cli.Flag{
 		Name:  "concurrent",
 		Usage: "number of concurrent requests per server",
 		Value: 32,
+	},
+	cli.BoolFlag{
+		Name:  "verbose, v",
+		Usage: "Show per-server stats",
 	},
 }
 
@@ -65,13 +70,75 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Run speedtest with default values, check '--help' for default values:
+  1. Run speedtest with autotuning the concurrency to figure out the maximum throughput and iops values:
      {{.Prompt}} {{.HelpName}} myminio/
 
-  2. Run speedtest for 20seconds with object size of 128MiB, 32 concurrent requests per server:
-     {{.Prompt}} {{.HelpName}} --duration 20s --size 128MiB --concurrent 32 myminio/
+  2. Run speedtest for 20 seconds with object size of 128MiB, 32 concurrent requests per server:
+     {{.Prompt}} {{.HelpName}} myminio/ --duration 20s --size 128MiB --concurrent 32
 `,
 }
+
+type speedTestResult madmin.SpeedTestResult
+
+func (s speedTestResult) String() (msg string) {
+	msg += fmt.Sprintf("\nMinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
+
+	var errorReturned bool
+	for _, node := range s.PUTStats.Servers {
+		if node.Err != "" {
+			errorReturned = true
+			break
+		}
+	}
+	for _, node := range s.GETStats.Servers {
+		if node.Err != "" {
+			errorReturned = true
+			break
+		}
+	}
+
+	// When no error is found and yet without results, this means the speedtest duration is too short
+	if !errorReturned && (s.PUTStats.ThroughputPerSec == 0 || s.GETStats.ThroughputPerSec == 0) {
+		msg += "\n"
+		msg += "No results found for this speedtest iteration. Try increasing --duration flag."
+		msg += "\n"
+		return
+	}
+
+	msg += fmt.Sprintf("PUT: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.PUTStats.ThroughputPerSec)), humanize.Comma(int64(s.PUTStats.ObjectsPerSec)))
+	if globalSpeedTestVerbose {
+		for _, node := range s.PUTStats.Servers {
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), humanize.Comma(int64(node.ObjectsPerSec)))
+			if node.Err != "" {
+				msg += " error: " + node.Err
+			}
+			msg += "\n"
+
+		}
+	}
+	if globalSpeedTestVerbose {
+		msg += "\n"
+	}
+	msg += fmt.Sprintf("GET: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.GETStats.ThroughputPerSec)), humanize.Comma(int64(s.GETStats.ObjectsPerSec)))
+	if globalSpeedTestVerbose {
+		for _, node := range s.GETStats.Servers {
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), humanize.Comma(int64(node.ObjectsPerSec)))
+			if node.Err != "" {
+				msg += " error: " + node.Err
+			}
+			msg += "\n"
+		}
+	}
+	return msg
+}
+
+func (s speedTestResult) JSON() string {
+	JSONBytes, e := json.MarshalIndent(s, "", "    ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(JSONBytes)
+}
+
+var globalSpeedTestVerbose bool
 
 func mainAdminSpeedtest(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
@@ -114,58 +181,77 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument(), "concurrency cannot be '0' or negative")
 		return nil
 	}
-	results, e := client.Speedtest(ctxt, madmin.SpeedtestOpts{
+	globalSpeedTestVerbose = ctx.Bool("verbose")
+
+	autotune := false
+
+	if ctx.NumFlags() == 0 {
+		autotune = true
+	}
+
+	if ctx.NumFlags() == 2 && globalSpeedTestVerbose {
+		autotune = true
+	}
+
+	resultCh, err := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
 		Duration:    duration,
 		Concurrency: concurrent,
+		Autotune:    autotune,
 	})
-	if e != nil {
-		fatalIf(probe.NewError(e), "Unable to run speedtest")
-		return nil
+	fatalIf(probe.NewError(err), "Failed to execute speedtest")
+
+	spinnerCh, s := startSpinner()
+
+	var result madmin.SpeedTestResult
+	for result = range resultCh {
+		select {
+		case spinnerCh <- struct{}{}:
+		default:
+		}
+		if result.Version == "" {
+			continue
+		}
+		if !globalJSON {
+			s.Stop()
+			close(spinnerCh)
+			fmt.Printf("(With %s object size, %d concurrency) PUT: %s/s GET: %s/s\n", humanize.IBytes(uint64(result.Size)), result.Concurrent, humanize.IBytes(uint64(result.PUTStats.ThroughputPerSec)), humanize.IBytes(uint64(result.GETStats.ThroughputPerSec)))
+			spinnerCh, s = startSpinner()
+		}
 	}
-
-	if globalJSON {
-		buf, e := json.Marshal(results)
-		fatalIf(probe.NewError(e), "Unable to marshal into JSON results")
-		fmt.Println(string(buf))
-		return nil
+	if result.Version != "" {
+		s.Stop()
+		close(spinnerCh)
+		printMsg(speedTestResult(result))
 	}
-
-	uploads := uint64(0)
-	downloads := uint64(0)
-	for _, result := range results {
-		uploads += result.Uploads
-		downloads += result.Downloads
-	}
-
-	durationSecs := duration.Seconds()
-	uploadSpeed := humanize.IBytes(uploads * uint64(size) / uint64(durationSecs))
-	downloadSpeed := humanize.IBytes(downloads * uint64(size) / uint64(durationSecs))
-
-	fmt.Printf("Operation: PUT\n* Average: %s/s, %d objs/s\n\n",
-		uploadSpeed, uploads/uint64(durationSecs))
-
-	fmt.Printf("Throughput by host:\n")
-	for _, result := range results {
-		fmt.Printf(" * %s: Avg: %s/s, %d objs/s\n",
-			result.Endpoint,
-			humanize.IBytes(result.Uploads*uint64(size)/uint64(durationSecs)),
-			result.Uploads/uint64(durationSecs),
-		)
-	}
-
-	fmt.Printf("\nOperation: GET\n* Average: %s/s, %d objs/s\n\n",
-		downloadSpeed, downloads/uint64(durationSecs))
-
-	fmt.Printf("Throughput by host:\n")
-	for _, result := range results {
-		fmt.Printf(" * %s: Avg: %s/s, %d objs/s\n",
-			result.Endpoint,
-			humanize.IBytes(result.Downloads*uint64(size)/uint64(durationSecs)),
-			result.Downloads/uint64(durationSecs),
-		)
-	}
-	fmt.Println()
 
 	return nil
+}
+
+func startSpinner() (chan struct{}, *spinner.Spinner) {
+	ch := make(chan struct{}, 1)
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	firstTimeDelay := true
+	go func() {
+		for {
+			if !globalJSON {
+				s.Suffix = " Running speedtest"
+				if firstTimeDelay {
+					// First time delay is a work around for the case where after the last server response
+					// we don't endup printing a redundant "Running speedtest" line. Because of the sleep here
+					// the program would have printed results and exited.
+					time.Sleep(100 * time.Millisecond)
+					firstTimeDelay = false
+				}
+				_, ok := <-ch
+				if !ok {
+					return
+				}
+				s.Start()
+				time.Sleep(500 * time.Millisecond)
+				s.Stop()
+			}
+		}
+	}()
+	return ch, s
 }

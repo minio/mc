@@ -18,15 +18,18 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	iampolicy "github.com/minio/pkg/iam/policy"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{
@@ -80,14 +83,14 @@ func checkAdminUserSvcAcctAddSyntax(ctx *cli.Context) {
 // svcAcctMessage container for content message structure
 type svcAcctMessage struct {
 	op            string
-	Status        string   `json:"status"`
-	AccessKey     string   `json:"accessKey,omitempty"`
-	SecretKey     string   `json:"secretKey,omitempty"`
-	ParentUser    string   `json:"parentUser,omitempty"`
-	ImpliedPolicy bool     `json:"impliedPolicy,omitempty"`
-	Policy        string   `json:"policy,omitempty"`
-	AccountStatus string   `json:"accountStatus,omitempty"`
-	MemberOf      []string `json:"memberOf,omitempty"`
+	Status        string          `json:"status"`
+	AccessKey     string          `json:"accessKey,omitempty"`
+	SecretKey     string          `json:"secretKey,omitempty"`
+	ParentUser    string          `json:"parentUser,omitempty"`
+	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
+	Policy        json.RawMessage `json:"policy,omitempty"`
+	AccountStatus string          `json:"accountStatus,omitempty"`
+	MemberOf      []string        `json:"memberOf,omitempty"`
 }
 
 const (
@@ -96,7 +99,7 @@ const (
 
 func (u svcAcctMessage) String() string {
 	switch u.op {
-	case "ls":
+	case "list":
 		// Create a new pretty table with cols configuration
 		return newPrettyTable("  ",
 			Field{"AccessKey", accessFieldMaxLen},
@@ -108,7 +111,7 @@ func (u svcAcctMessage) String() string {
 		} else {
 			policyField = "embedded"
 		}
-		return console.Colorize("UserMessage", strings.Join(
+		return console.Colorize("SVCMessage", strings.Join(
 			[]string{
 				fmt.Sprintf("AccessKey: %s", u.AccessKey),
 				fmt.Sprintf("ParentUser: %s", u.ParentUser),
@@ -116,16 +119,16 @@ func (u svcAcctMessage) String() string {
 				fmt.Sprintf("Policy: %s", policyField),
 			}, "\n"))
 	case "rm":
-		return console.Colorize("UserMessage", "Removed service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Removed service account `"+u.AccessKey+"` successfully.")
 	case "disable":
-		return console.Colorize("UserMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
 	case "enable":
-		return console.Colorize("UserMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
 	case "add":
-		return console.Colorize("UserMessage",
+		return console.Colorize("SVCMessage",
 			fmt.Sprintf("Access Key: %s\nSecret Key: %s", u.AccessKey, u.SecretKey))
 	case "set":
-		return console.Colorize("UserMessage", "Edited service account `"+u.AccessKey+"` successfully.")
+		return console.Colorize("SVCMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
 	return ""
 }
@@ -142,6 +145,8 @@ func (u svcAcctMessage) JSON() string {
 func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	checkAdminUserSvcAcctAddSyntax(ctx)
 
+	console.SetColor("SVCMessage", color.New(color.FgGreen))
+
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
@@ -155,15 +160,21 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var buf []byte
+	var policyBytes []byte
 	if policyPath != "" {
+		// Validate the policy document and ensure it has at least when statement
 		var e error
-		buf, e = ioutil.ReadFile(policyPath)
+		policyBytes, e = ioutil.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
+		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
+		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
+		if p.IsEmpty() {
+			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
+		}
 	}
 
 	opts := madmin.AddServiceAccountReq{
-		Policy:     buf,
+		Policy:     policyBytes,
 		AccessKey:  accessKey,
 		SecretKey:  secretKey,
 		TargetUser: user,

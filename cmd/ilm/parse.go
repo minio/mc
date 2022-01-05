@@ -53,39 +53,25 @@ func extractILMTags(tagLabelVal string) []lifecycle.Tag {
 // Storage class must be specified if transition date/days is provided.
 func validateTranExpDate(rule lifecycle.Rule) error {
 	expiryDateSet := !rule.Expiration.IsDateNull()
-	expiryDaySet := !rule.Expiration.IsDaysNull()
-
 	transitionSet := !rule.Transition.IsNull()
 	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
-	transitionDaySet := transitionSet && !rule.Transition.IsDaysNull()
-	errMsg := "Error in Transition/Expiration Date/days compatibility. Transition should happen before Expiration"
 	if transitionDateSet && expiryDateSet {
 		if rule.Expiration.Date.Before(rule.Transition.Date.Time) {
-			return errors.New(errMsg)
-		}
-	}
-	if transitionDaySet && expiryDaySet {
-		if rule.Transition.Days >= rule.Expiration.Days {
-			return errors.New(errMsg)
+			return errors.New("transition should apply before expiration")
 		}
 	}
 	if transitionDateSet && rule.Transition.StorageClass == "" {
-		return errors.New("if transitionDate or transitionDay is set, a valid storage class must be set")
-	}
-	if transitionDaySet && rule.Transition.StorageClass == "" {
-		return errors.New("if transitionDate or transitionDay is set, a valid storage class must be set")
-	}
-	if rule.Transition.StorageClass != "" && (!transitionDateSet && !transitionDaySet) {
-		return errors.New("if storage class is set, transitionDate or transitionDay must be set")
+		return errors.New("missing transition storage-class")
 	}
 	return nil
 }
 
 func validateTranDays(rule lifecycle.Rule) error {
-	transitionSet := !rule.Transition.IsNull()
-	transitionDaySet := transitionSet && !rule.Transition.IsDaysNull()
-	if transitionDaySet && rule.Transition.Days < 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
-		return errors.New("Transition Date/Days are less than or equal to 30 when Storage class is STANDARD_IA")
+	if rule.Transition.Days < 0 {
+		return errors.New("number of days to transition can't be negative")
+	}
+	if rule.Transition.Days < 30 && strings.ToLower(rule.Transition.StorageClass) == "standard_ia" {
+		return errors.New("number of days to transition should be >= 30 with STANDARD_IA storage-class")
 	}
 	return nil
 }
@@ -95,10 +81,9 @@ func validateRuleAction(rule lifecycle.Rule) error {
 	expirySet := !rule.Expiration.IsNull()
 	transitionSet := !rule.Transition.IsNull()
 	noncurrentExpirySet := !rule.NoncurrentVersionExpiration.IsDaysNull()
-	noncurrentTransitionSet := !rule.NoncurrentVersionTransition.IsDaysNull()
+	noncurrentTransitionSet := rule.NoncurrentVersionTransition.StorageClass != ""
 	if !expirySet && !transitionSet && !noncurrentExpirySet && !noncurrentTransitionSet {
-		errMsg := "At least one action (Expiry, Transition, NoncurrentExpiry or NoncurrentTransition) needs to be specified in a rule."
-		return errors.New(errMsg)
+		return errors.New("at least one of Expiry, Transition, NoncurrentExpiry, NoncurrentVersionTransition actions should be specified in a rule")
 	}
 	return nil
 }
@@ -115,7 +100,7 @@ func validateExpiration(rule lifecycle.Rule) error {
 		i++
 	}
 	if i > 1 {
-		return errors.New("Only one parameter under Expiration can be specified")
+		return errors.New("only one parameter under Expiration can be specified")
 	}
 	return nil
 }
@@ -134,8 +119,8 @@ func validateNoncurrentTransition(rule lifecycle.Rule) error {
 	if days < 0 {
 		return errors.New("NoncurrentVersionTransition.NoncurrentDays is not a positive integer")
 	}
-	if days > 0 && storageClass == "" || days == 0 && storageClass != "" {
-		return errors.New("Both NoncurrentVersionTransition NoncurrentDays and StorageClass need to be specified")
+	if days > 0 && storageClass == "" {
+		return errors.New("both NoncurrentVersionTransition NoncurrentDays and StorageClass need to be specified")
 	}
 	return nil
 }
@@ -154,9 +139,9 @@ func validateTranExpCurdate(rule lifecycle.Rule) error {
 		return e
 	}
 	if expirySet && expiryDateSet && rule.Expiration.Date.Before(currentTime) {
-		e = errors.New("Expiry date falls before or on today's date")
+		e = errors.New("expiry date falls before or on today's date")
 	} else if transitionSet && transitionDateSet && rule.Transition.Date.Before(currentTime) {
-		e = errors.New("Transition date falls before or on today's date")
+		e = errors.New("transition date falls before or on today's date")
 	}
 	return e
 }

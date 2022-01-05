@@ -18,6 +18,7 @@
 package ilm
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -101,17 +102,19 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 
 // LifecycleOptions is structure to encapsulate
 type LifecycleOptions struct {
-	ID                string
-	Prefix            string
-	Status            bool
-	IsTagsSet         bool
-	IsStorageClassSet bool
-	Tags              string
-	ExpiryDate        string
-	ExpiryDays        string
-	TransitionDate    string
-	TransitionDays    string
-	StorageClass      string
+	ID                                   string
+	Prefix                               string
+	Status                               bool
+	IsTagsSet                            bool
+	IsTransitionDaysSet                  bool
+	IsNoncurrentVersionTransitionDaysSet bool
+
+	Tags           string
+	ExpiryDate     string
+	ExpiryDays     string
+	TransitionDate string
+	TransitionDays string
+	StorageClass   string
 
 	ExpiredObjectDeleteMarker               bool
 	NoncurrentVersionExpirationDays         int
@@ -184,7 +187,7 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 }
 
 // GetLifecycleOptions create LifeCycleOptions based on cli inputs
-func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
+func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	id := ctx.String("id")
 	if id == "" {
 		id = xid.New().String()
@@ -196,9 +199,14 @@ func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
 	if len(result) > 2 {
 		prefix = result[len(result)-1]
 	}
-	scSet := ctx.IsSet("storage-class")
 	sc := strings.ToUpper(ctx.String("storage-class"))
 	noncurrentSC := strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class"))
+	if sc != "" && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
+		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
+	}
+	if noncurrentSC != "" && !ctx.IsSet("noncurrentversion-transition-days") {
+		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
+	}
 	// for MinIO transition storage-class is same as label defined on
 	// `mc admin bucket remote add --service ilm --label` command
 	return LifecycleOptions{
@@ -206,18 +214,19 @@ func GetLifecycleOptions(ctx *cli.Context) LifecycleOptions {
 		Prefix:                                  prefix,
 		Status:                                  !ctx.Bool("disable"),
 		IsTagsSet:                               ctx.IsSet("tags"),
-		IsStorageClassSet:                       scSet,
 		Tags:                                    ctx.String("tags"),
 		ExpiryDate:                              ctx.String("expiry-date"),
 		ExpiryDays:                              ctx.String("expiry-days"),
 		TransitionDate:                          ctx.String("transition-date"),
 		TransitionDays:                          ctx.String("transition-days"),
+		IsTransitionDaysSet:                     ctx.IsSet("transition-days"),
 		StorageClass:                            sc,
 		ExpiredObjectDeleteMarker:               ctx.Bool("expired-object-delete-marker"),
 		NoncurrentVersionExpirationDays:         ctx.Int("noncurrentversion-expiration-days"),
 		NoncurrentVersionTransitionDays:         ctx.Int("noncurrentversion-transition-days"),
+		IsNoncurrentVersionTransitionDaysSet:    ctx.IsSet("noncurrentversion-transition-days"),
 		NoncurrentVersionTransitionStorageClass: noncurrentSC,
-	}
+	}, nil
 }
 
 // Applies non empty fields from src to dest Rule and return the dest Rule
@@ -272,7 +281,7 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOpti
 		dest.Transition.Date = src.Transition.Date
 		// reset everything else
 		dest.Transition.Days = 0
-	} else if !src.Transition.IsDaysNull() {
+	} else if opts.IsTransitionDaysSet {
 		dest.Transition.Days = src.Transition.Days
 		// reset everything else
 		dest.Transition.Date = lifecycle.ExpirationDate{}
@@ -282,7 +291,7 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOpti
 		dest.NoncurrentVersionExpiration.NoncurrentDays = src.NoncurrentVersionExpiration.NoncurrentDays
 	}
 
-	if !src.NoncurrentVersionTransition.IsDaysNull() {
+	if opts.IsNoncurrentVersionTransitionDaysSet {
 		dest.NoncurrentVersionTransition.NoncurrentDays = src.NoncurrentVersionTransition.NoncurrentDays
 	}
 
@@ -290,7 +299,7 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOpti
 		dest.NoncurrentVersionTransition.StorageClass = src.NoncurrentVersionTransition.StorageClass
 	}
 
-	if opts.IsStorageClassSet {
+	if src.Transition.StorageClass != "" {
 		dest.Transition.StorageClass = src.Transition.StorageClass
 	}
 

@@ -121,7 +121,9 @@ func mainILMEdit(cliCtx *cli.Context) error {
 
 	// Configuration that needs to be set is returned by ilm.GetILMConfigToSet.
 	// A new rule is added or the rule (if existing) is replaced
-	opts := ilm.GetLifecycleOptions(cliCtx)
+	opts, err := ilm.GetLifecycleOptions(cliCtx)
+	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
+
 	lfcCfg, err = opts.ToConfig(lfcCfg)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 

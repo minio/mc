@@ -137,7 +137,7 @@ type Client interface {
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
 	// GetURL returns back internal url
 	GetURL() ClientURL
 
@@ -160,18 +160,22 @@ type Client interface {
 	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error
 	RemoveReplication(ctx context.Context) *probe.Error
 	GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error)
-	ResetReplication(ctx context.Context, before time.Duration) (string, *probe.Error)
+	ResetReplication(ctx context.Context, before time.Duration, arn string) (replication.ResyncTargetsInfo, *probe.Error)
 	// Encryption operations
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)
 	SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error
 	DeleteEncryption(ctx context.Context) *probe.Error
 	// Bucket info operation
 	GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
+
+	// Restore an object
+	Restore(ctx context.Context, versionID string, days int) *probe.Error
 }
 
 // ClientContent - Content container for content metadata
 type ClientContent struct {
 	URL          ClientURL
+	BucketName   string // only valid and set for client-type objectStorage
 	Time         time.Time
 	Size         int64
 	Type         os.FileMode
@@ -194,7 +198,10 @@ type ClientContent struct {
 	IsDeleteMarker    bool
 	IsLatest          bool
 	ReplicationStatus string
-	Err               *probe.Error
+
+	Restore *minio.RestoreInfo
+
+	Err *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

@@ -158,9 +158,9 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Test bucket operations.
 func (s *TestSuite) TestBucketOperations(c *C) {
-	bucket := bucketHandler(bucketHandler{
+	bucket := bucketHandler{
 		resource: "/bucket/",
-	})
+	}
 	server := httptest.NewServer(bucket)
 	defer server.Close()
 
@@ -205,10 +205,10 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 
 // Test all object operations.
 func (s *TestSuite) TestObjectOperations(c *C) {
-	object := objectHandler(objectHandler{
+	object := objectHandler{
 		resource: "/bucket/object",
 		data:     []byte("Hello, World"),
-	})
+	}
 	server := httptest.NewServer(object)
 	defer server.Close()
 

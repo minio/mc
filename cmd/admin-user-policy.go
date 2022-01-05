@@ -73,10 +73,10 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	user, e := client.GetUserInfo(globalContext, args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
-	buf, e := client.InfoCannedPolicy(globalContext, user.PolicyName)
+	pinfo, e := getPolicyInfo(client, user.PolicyName)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 
-	fmt.Println(string(buf))
+	fmt.Println(string(pinfo.Policy))
 
 	return nil
 }

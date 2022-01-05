@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -72,38 +73,103 @@ func (s replicateStatusMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-func printReplicateStatusHeader() {
-	if globalJSON {
-		return
-	}
-	maxLen := 15
-	console.Println(console.Colorize("Headers", newPrettyTable(" | ",
-		Field{"Status", 20},
-		Field{"Size", maxLen},
-		Field{"Count", maxLen},
-	).buildRow("Replication Status", "Size (Bytes)", "Count")))
-}
-
 func (s replicateStatusMessage) String() string {
+	coloredDot := console.Colorize("Headers", dot)
 	maxLen := 15
-	var contents = [][]string{
-		{"Pending", humanize.IBytes(s.ReplicationStatus.PendingSize), humanize.Comma(int64(s.ReplicationStatus.PendingCount))},
-		{"Failed", humanize.IBytes(s.ReplicationStatus.FailedSize), humanize.Comma(int64(s.ReplicationStatus.FailedCount))},
-		{"Replicated", humanize.IBytes(s.ReplicationStatus.ReplicatedSize), ""},
-		{"Replica", humanize.IBytes(s.ReplicationStatus.ReplicaSize), ""},
-	}
+	var contents [][]string
+
 	var rows string
-	var theme = []string{"Pending", "Failed", "Replica", "Replica"}
+	var arntheme = []string{"Headers"}
+	var theme = []string{"Pending", "Failed", "Replicated", "Replica"}
+	contents = append(contents, []string{"Pending", humanize.IBytes(s.ReplicationStatus.PendingSize), humanize.Comma(int64(s.ReplicationStatus.PendingCount))})
+	contents = append(contents, []string{"Failed", humanize.IBytes(s.ReplicationStatus.FailedSize), humanize.Comma(int64(s.ReplicationStatus.FailedCount))})
+	contents = append(contents, []string{"Replicated", humanize.IBytes(s.ReplicationStatus.ReplicatedSize), ""})
+	contents = append(contents, []string{"Replica", humanize.IBytes(s.ReplicationStatus.ReplicaSize), ""})
+	var th string
+
+	if s.ReplicationStatus.PendingSize == 0 &&
+		s.ReplicationStatus.FailedSize == 0 &&
+		s.ReplicationStatus.ReplicaSize == 0 &&
+		s.ReplicationStatus.ReplicatedSize == 0 {
+		return "Replication status not available."
+	}
+	r := console.Colorize("THeaders", newPrettyTable(" | ",
+		Field{"Summary", 95},
+	).buildRow("Summary: "))
+	rows += r
+	rows += "\n"
+
+	hIdx := 0
 	for i, row := range contents {
-		th := theme[i]
-		if row[1] == "0 B" && i == 1 {
-			th = theme[0]
+		if i%4 == 0 {
+			if hIdx > 0 {
+				rows += "\n"
+			}
+			hIdx++
+			rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
+				Field{"Status", 21},
+				Field{"Size", maxLen},
+				Field{"Count", maxLen},
+			).buildRow("Replication Status   ", "Size (Bytes)", "Count"))
+			rows += "\n"
 		}
+
+		idx := i % 4
+		th = theme[idx]
 		r := console.Colorize(th, newPrettyTable(" | ",
-			Field{"Status", 20},
+			Field{"Status", 21},
 			Field{"Size", maxLen},
 			Field{"Count", maxLen},
-		).buildRow(row[0], row[1], row[2])+"\n")
+		).buildRow("   "+row[0], row[1], row[2])+"\n")
+		rows += r
+	}
+
+	contents = nil
+	var arns []string
+	for arn := range s.ReplicationStatus.Stats {
+		arns = append(arns, arn)
+	}
+	for _, st := range s.ReplicationStatus.Stats {
+		contents = append(contents, []string{"Pending", humanize.IBytes(st.PendingSize), humanize.Comma(int64(st.PendingCount))})
+		contents = append(contents, []string{"Failed", humanize.IBytes(st.FailedSize), humanize.Comma(int64(st.FailedCount))})
+		contents = append(contents, []string{"Replicated", humanize.IBytes(st.ReplicatedSize), ""})
+	}
+	if len(contents) > 0 {
+		rows += "\n"
+		r := console.Colorize("THeaders", newPrettyTable(" | ",
+			Field{"Target statuses", 95},
+		).buildRow("Remote Target Statuses: "))
+		rows += r
+		rows += "\n"
+	}
+	hIdx = 0
+	for i, row := range contents {
+		if i%3 == 0 {
+			if hIdx > 0 {
+				rows += "\n"
+			}
+			th = arntheme[0]
+			r := console.Colorize(th, newPrettyTable(" | ",
+				Field{"ARN", 120},
+			).buildRow(fmt.Sprintf("%s %s", coloredDot, arns[hIdx])))
+			rows += r
+			rows += "\n"
+			hIdx++
+			rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
+				Field{"Status", 21},
+				Field{"Size", maxLen},
+				Field{"Count", maxLen},
+			).buildRow("Replication Status   ", "Size (Bytes)", "Count"))
+			rows += "\n"
+		}
+
+		idx := i % 3
+		th = theme[idx]
+		r := console.Colorize(th, newPrettyTable(" | ",
+			Field{"Status", 21},
+			Field{"Size", maxLen},
+			Field{"Count", maxLen},
+		).buildRow("   "+row[0], row[1], row[2])+"\n")
 		rows += r
 	}
 	return console.Colorize("replicateStatusMessage", rows)
@@ -113,10 +179,13 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	ctx, cancelReplicateStatus := context.WithCancel(globalContext)
 	defer cancelReplicateStatus()
 
-	console.SetColor("Headers", color.New(color.FgGreen))
-	console.SetColor("Replica", color.New(color.Bold, color.FgCyan))
+	console.SetColor("THeaders", color.New(color.Bold, color.FgHiWhite))
+	console.SetColor("Headers", color.New(color.Bold, color.FgGreen))
+	console.SetColor("TgtHeaders", color.New(color.Bold, color.FgCyan))
+
+	console.SetColor("Replica", color.New(color.FgCyan))
 	console.SetColor("Failed", color.New(color.Bold, color.FgRed))
-	console.SetColor("Pending", color.New(color.Bold, color.FgWhite))
+	console.SetColor("Pending", color.New(color.FgWhite))
 
 	checkReplicateStatusSyntax(cliCtx)
 
@@ -129,7 +198,6 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	replicateStatus, err := client.GetReplicationMetrics(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication status")
 
-	printReplicateStatusHeader()
 	printMsg(replicateStatusMessage{
 		Op:                "status",
 		URL:               aliasedURL,

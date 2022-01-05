@@ -85,28 +85,25 @@ FLAGS:
 EXAMPLES:
  1. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all objects with tags
     "key1=value1, key2=value2" to destbucket, including delete markers and versioned deletes.
-    {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \
-         --storage-class "STANDARD" \
-         --arn 'arn:minio:replication::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
-         --priority 1 \
-         --remote-bucket "destbucket"
-         --replicate "delete,delete-marker"
+	{{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \
+			--remote-bucket 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
+			--storage-class "STANDARD" \
+			--priority 1 \
+			--replicate "delete,delete-marker"
 
  2. Add replication configuration rule with Disabled status on bucket "mybucket" for alias "myminio".
     {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \
         --storage-class "STANDARD" --disable \
-        --arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
-        --priority 1 \
-		--remote-bucket "destbucket"
+        --remote-bucket 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
+        --priority 1 
 
- 3. Add replication configuration rule with existing object replication, delete marker replication and versioned deletes 
-    enabled on bucket "mybucket" for alias "myminio".
-	{{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \
-	 --storage-class "STANDARD" --disable \
-	 --arn 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
-	 --priority 1 \
-	 --remote-bucket "destbucket" \
-	 --replicate "existing-objects,delete,delete-marker"
+ 3. Add replication configuration rule with existing object replication, delete marker replication and versioned deletes
+ 	 enabled on bucket "mybucket" for alias "myminio".
+	 {{.Prompt}} {{.HelpName}} myminio/mybucket/prefix --tags "key1=value1&key2=value2" \
+		--storage-class "STANDARD"  \
+		--remote-bucket 'arn:minio:replica::c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' \
+		--priority 1 \
+		--replicate "existing-objects,delete,delete-marker"
 `,
 }
 
@@ -114,9 +111,6 @@ EXAMPLES:
 func checkReplicateAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
-	}
-	if ctx.String("arn") == "" {
-		fatal(errDummy().Trace(), "--arn flag needs to be specified.")
 	}
 	if ctx.String("remote-bucket") == "" {
 		fatal(errDummy().Trace(), "--remote-bucket flag needs to be specified.")

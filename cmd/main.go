@@ -33,9 +33,11 @@ import (
 	"time"
 
 	"github.com/cheggaaa/pb"
+	"github.com/inconshreveable/mousetrap"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/env"
 	"github.com/minio/pkg/trie"
 	"github.com/minio/pkg/words"
 	"github.com/pkg/profile"
@@ -75,6 +77,22 @@ VERSION:
 {{$key}}:
   {{$value}}
 {{end}}`
+
+func init() {
+	if env.IsSet(mcEnvConfigFile) {
+		configFile := env.Get(mcEnvConfigFile, "")
+		fatalIf(readAliasesFromFile(configFile).Trace(configFile), "Unable to parse "+configFile)
+	}
+	if runtime.GOOS == "windows" {
+		if mousetrap.StartedByExplorer() {
+			fmt.Printf("Don't double-click %s\n", os.Args[0])
+			fmt.Println("You need to open cmd.exe/PowerShell and run it from the command line")
+			fmt.Println("Press the Enter Key to Exit")
+			fmt.Scanln()
+			os.Exit(1)
+		}
+	}
+}
 
 // Main starts mc application
 func Main(args []string) {

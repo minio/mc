@@ -81,13 +81,14 @@ func (l legalHoldCmdMessage) JSON() string {
 }
 
 var errBucketLockConfigNotFound = errors.New("bucket lock config not found")
+var errBucketLockNotSupported = errors.New("bucket lock not supported")
 
 func isBucketLockEnabled(ctx context.Context, aliasedURL string) (bool, *probe.Error) {
 	st, err := getBucketLockStatus(ctx, aliasedURL)
 	if err == nil {
 		return st == "Enabled", nil
 	}
-	if err.ToGoError() == errBucketLockConfigNotFound {
+	if err.ToGoError() == errBucketLockConfigNotFound || err.ToGoError() == errBucketLockNotSupported {
 		return false, nil
 	}
 	return false, err
@@ -105,6 +106,8 @@ func getBucketLockStatus(ctx context.Context, aliasedURL string) (status string,
 		errResp := minio.ToErrorResponse(err.ToGoError())
 		if errResp.StatusCode == http.StatusNotFound {
 			return "", probe.NewError(errBucketLockConfigNotFound)
+		} else if errResp.StatusCode == http.StatusNotImplemented {
+			return "", probe.NewError(errBucketLockNotSupported)
 		}
 		return "", err
 	}

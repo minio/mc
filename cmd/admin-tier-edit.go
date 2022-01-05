@@ -43,11 +43,6 @@ var adminTierEditFlags = []cli.Flag{
 		Usage: "use AWS S3 role",
 	},
 	cli.StringFlag{
-		Name:  "account-name",
-		Value: "",
-		Usage: "Azure Blob Storage account name",
-	},
-	cli.StringFlag{
 		Name:  "account-key",
 		Value: "",
 		Usage: "Azure Blob Storage account key",
@@ -65,7 +60,7 @@ var adminTierEditCmd = cli.Command{
 	Action:       mainAdminTierEdit,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        adminTierEditFlags,
+	Flags:        append(globalFlags, adminTierEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -81,7 +76,7 @@ FLAGS:
 
 EXAMPLES:
   1. Update credentials for an existing Azure Blob Storage remote tier.
-     {{.Prompt}} {{.HelpName}} myminio AZTIER --account-name foobar-new --account-key foobar-new123
+     {{.Prompt}} {{.HelpName}} myminio AZTIER --account-key foobar-new123
 
   2. Update credentials for an existing AWS S3 compatible remote tier.
      {{.Prompt}} {{.HelpName}} myminio S3TIER --access-key foobar-new --secret-key foobar-new123
@@ -119,7 +114,6 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	var creds madmin.TierCreds
 	accessKey := ctx.String("access-key")
 	secretKey := ctx.String("secret-key")
-	accountName := ctx.String("account-name")
 	accountKey := ctx.String("account-key")
 	credsPath := ctx.String("credentials-file")
 	useAwsRole := ctx.IsSet("use-aws-role")
@@ -130,8 +124,7 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 		creds.SecretKey = secretKey
 	case useAwsRole:
 		creds.AWSRole = true
-	case accountName != "" && accountKey != "": // Azure tier
-		creds.AccessKey = accountName
+	case accountKey != "": // Azure tier
 		creds.SecretKey = accountKey
 	case credsPath != "": // GCS tier
 		credsBytes, err := ioutil.ReadFile(credsPath)

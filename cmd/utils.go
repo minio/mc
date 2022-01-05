@@ -343,7 +343,7 @@ func parseAtimeMtime(attr map[string]string) (atime, mtime time.Time, err *probe
 				return atime, mtime, probe.NewError(e)
 			}
 		}
-		atime = time.Unix(int64(atim), int64(atimnsec))
+		atime = time.Unix(atim, atimnsec)
 	}
 
 	if val, ok := attr["mtime"]; ok {
@@ -359,7 +359,7 @@ func parseAtimeMtime(attr map[string]string) (atime, mtime time.Time, err *probe
 				return atime, mtime, probe.NewError(e)
 			}
 		}
-		mtime = time.Unix(int64(mtim), int64(mtimnsec))
+		mtime = time.Unix(mtim, mtimnsec)
 	}
 	return atime, mtime, nil
 }
@@ -457,8 +457,13 @@ func httpClient(timeout time.Duration) *http.Client {
 		Timeout: timeout,
 		Transport: &http.Transport{
 			Proxy: ieproxy.GetProxyFunc(),
-			// need to close connection after usage.
-			DisableKeepAlives: true,
+			TLSClientConfig: &tls.Config{
+				RootCAs: globalRootCAs,
+				// Can't use SSLv3 because of POODLE and BEAST
+				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+				// Can't use TLSv1.1 because of RC4 cipher usage
+				MinVersion: tls.VersionTLS12,
+			},
 		},
 	}
 }

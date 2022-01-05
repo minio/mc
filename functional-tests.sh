@@ -255,6 +255,36 @@ function test_make_bucket_error() {
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_rb()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket1="mc-test-bucket-$RANDOM-1"
+    bucket2="mc-test-bucket-$RANDOM-2"
+    object_name="mc-test-object-$RANDOM"
+
+    # Tets rb when the bucket is empty
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb "${SERVER_ALIAS}/${bucket1}"
+
+    # Test rb with --force flag when the bucket is not empty
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket1}"
+
+    # Test rb with --force and --dangerous to remove a site content
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket2}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket2}/${object_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force --dangerous "${SERVER_ALIAS}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function setup()
 {
     start_time=$(get_time)
@@ -885,10 +915,76 @@ function test_put_object_multipart_sse()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_admin_users()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+
+    # create a user
+    username=foo
+    password=foobar12345
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user add "$SERVER_ALIAS" "$username" "$password"
+
+    # check that user appears in the user list
+    "${MC_CMD[@]}" --json admin user list "${SERVER_ALIAS}" | jq -r '.accessKey' | grep --quiet "^${username}$"
+    rv=$?
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure ${rv} "user ${username} did NOT appear in the list of users returned by server"
+
+    # setup temporary alias to make requests as the created user.
+    scheme="https"
+    if [ "$ENABLE_HTTPS" != "1" ]; then
+        scheme="http"
+    fi
+    object1_name="mc-test-object-$RANDOM"
+    object2_name="mc-test-object-$RANDOM"
+    export MC_HOST_foo=${scheme}://${username}:${password}@${SERVER_ENDPOINT}
+
+    # check that the user can write objects with readwrite policy
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy set "$SERVER_ALIAS" readwrite user="${username}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object1_name}"
+
+    # check that the user cannot write objects with readonly policy
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy set "$SERVER_ALIAS" readonly user="$username"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object2_name}"
+
+    # check that the user can read with readonly policy
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+
+    # check that user can delete with readwrite policy
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy set "$SERVER_ALIAS" readwrite user="${username}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "foo/${BUCKET_NAME}/${object1_name}"
+
+    # check that user cannot perform admin actions with readwrite policy
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd admin info "foo"
+
+    # create object1_name for subsequent tests.
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object1_name}"
+
+    # check that user can be disabled
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user disable "$SERVER_ALIAS" "$username"
+
+    # check that disabled cannot perform any action
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+
+    # check that user can be enabled and can then perform an allowed action
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user enable "$SERVER_ALIAS" "$username"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+
+    # check that user can be removed, and then is no longer available
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user remove "$SERVER_ALIAS" "$username"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+
+    unset MC_HOST_foo
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function run_test()
 {
     test_make_bucket
     test_make_bucket_error
+    test_rb
 
     setup
     test_put_object
@@ -932,6 +1028,10 @@ function run_test()
 
     test_config_host_add
     test_config_host_add_error
+
+    if [ "$ENABLE_ADMIN" == "1" ]; then
+        test_admin_users
+    fi
 
     teardown
 }

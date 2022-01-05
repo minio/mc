@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -116,6 +117,10 @@ func (u clusterStruct) String() (msg string) {
 		coloredDot = console.Colorize("InfoWarning", dot)
 	}
 
+	sort.Slice(u.Info.Servers, func(i, j int) bool {
+		return u.Info.Servers[i].Endpoint < u.Info.Servers[j].Endpoint
+	})
+
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
 		// Check if MinIO server is offline ("Mode" field),
@@ -170,16 +175,20 @@ func (u clusterStruct) String() (msg string) {
 		msg += fmt.Sprintf("   Version: %s\n", version)
 
 		// Network info, only available for non-FS types
-		var connectionAlive int
-		totalNodes := strconv.Itoa(len(srv.Network))
+		connectionAlive := 0
+		totalNodes := len(srv.Network)
 		if srv.Network != nil {
 			for _, v := range srv.Network {
 				if v == "online" {
 					connectionAlive++
 				}
 			}
-			displayNwInfo := strconv.Itoa(connectionAlive) + "/" + totalNodes
-			msg += fmt.Sprintf("   Network: %s %s\n", displayNwInfo, console.Colorize("Info", "OK "))
+			clr := "Info"
+			if connectionAlive != totalNodes {
+				clr = "InfoWarning"
+			}
+			displayNwInfo := strconv.Itoa(connectionAlive) + "/" + strconv.Itoa(totalNodes)
+			msg += fmt.Sprintf("   Network: %s %s\n", displayNwInfo, console.Colorize(clr, "OK "))
 		}
 
 		if backendType != "FS" {
@@ -201,9 +210,12 @@ func (u clusterStruct) String() (msg string) {
 			totalDisksPerServer := OnDisks + OffDisks
 			totalOnlineDisksCluster += OnDisks
 			totalOfflineDisksCluster += OffDisks
-
+			clr := "Info"
+			if OnDisks != totalDisksPerServer {
+				clr = "InfoWarning"
+			}
 			dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
-			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize("Info", "OK "))
+			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize(clr, "OK "))
 
 		}
 
@@ -212,7 +224,7 @@ func (u clusterStruct) String() (msg string) {
 
 	// Summary on used space, total no of buckets and
 	// total no of objects at the Cluster level
-	usedTotal := humanize.IBytes(uint64(u.Info.Usage.Size))
+	usedTotal := humanize.IBytes(u.Info.Usage.Size)
 	if u.Info.Buckets.Count > 0 {
 		msg += fmt.Sprintf("%s Used, %s, %s\n", usedTotal,
 			english.Plural(int(u.Info.Buckets.Count), "Bucket", ""),
@@ -269,7 +281,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 		clusterInfo.Error = ""
 	}
 	clusterInfo.Info = admInfo
-	printMsg(clusterStruct(clusterInfo))
+	printMsg(clusterInfo)
 
 	return nil
 }

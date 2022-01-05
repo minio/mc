@@ -291,12 +291,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/share/list":     nil,
 	"/share/upload":   s3Completer,
 
-	"/ilm/ls":     s3Complete{deepLevel: 2},
-	"/ilm/add":    s3Complete{deepLevel: 2},
-	"/ilm/edit":   s3Complete{deepLevel: 2},
-	"/ilm/rm":     s3Complete{deepLevel: 2},
-	"/ilm/export": s3Complete{deepLevel: 2},
-	"/ilm/import": s3Complete{deepLevel: 2},
+	"/ilm/ls":      s3Complete{deepLevel: 2},
+	"/ilm/add":     s3Complete{deepLevel: 2},
+	"/ilm/edit":    s3Complete{deepLevel: 2},
+	"/ilm/rm":      s3Complete{deepLevel: 2},
+	"/ilm/export":  s3Complete{deepLevel: 2},
+	"/ilm/import":  s3Complete{deepLevel: 2},
+	"/ilm/restore": s3Completer,
 
 	"/undo": s3Completer,
 
@@ -345,7 +346,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/user/policy":  aliasCompleter,
 
 	"/admin/user/svcacct/add":     aliasCompleter,
-	"/admin/user/svcacct/ls":      aliasCompleter,
+	"/admin/user/svcacct/list":    aliasCompleter,
 	"/admin/user/svcacct/rm":      aliasCompleter,
 	"/admin/user/svcacct/info":    aliasCompleter,
 	"/admin/user/svcacct/set":     aliasCompleter,
@@ -369,11 +370,16 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/kms/key/create": aliasCompleter,
 	"/admin/kms/key/status": aliasCompleter,
 
-	"/admin/subnet/health": aliasCompleter,
+	"/admin/subnet/health":   aliasCompleter,
+	"/admin/subnet/register": aliasCompleter,
 
 	"/admin/tier/add":  nil,
 	"/admin/tier/edit": nil,
 	"/admin/tier/ls":   nil,
+	"/admin/tier/info": nil,
+
+	"/admin/replicate/add":  aliasCompleter,
+	"/admin/replicate/info": aliasCompleter,
 
 	"/alias/set":    nil,
 	"/alias/list":   aliasCompleter,

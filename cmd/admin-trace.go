@@ -104,7 +104,7 @@ EXAMPLES:
     {{.Prompt}} {{.HelpName}} -v --status-code 503 myminio
 
   4. Show console trace for a specific path
-    {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/ myminio
+    {{.Prompt}} {{.HelpName}} --path my-bucket/my-prefix/* myminio
 
   5. Show console trace for requests with '404' and '503' status code
     {{.Prompt}} {{.HelpName}} --status-code 404 --status-code 503 myminio
@@ -478,7 +478,7 @@ func colorizedNodeName(nodeName string) string {
 	nodeHash := fnv.New32a()
 	nodeHash.Write([]byte(nodeName))
 	nHashSum := nodeHash.Sum32()
-	idx := uint32(nHashSum) % uint32(len(colors))
+	idx := nHashSum % uint32(len(colors))
 	return console.Colorize(fmt.Sprintf("Node%d", colors[idx]), nodeName)
 }
 
@@ -592,7 +592,7 @@ func (t traceMessage) String() string {
 
 	for k, v := range rs.Headers {
 		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey",
-			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
+			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ","))))
 	}
 	fmt.Fprintf(b, "%s%s\n", nodeNameStr, console.Colorize("Body", string(rs.Body)))
 	fmt.Fprint(b, nodeNameStr)

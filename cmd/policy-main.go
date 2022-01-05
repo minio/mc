@@ -162,7 +162,7 @@ type policyLinksMessage struct {
 
 // String colorized access message.
 func (s policyLinksMessage) String() string {
-	return console.Colorize("Policy", string(s.URL))
+	return console.Colorize("Policy", s.URL)
 }
 
 // JSON jsonified policy message.
@@ -200,7 +200,7 @@ func checkPolicySyntax(ctx *cli.Context) {
 			accessPerms(secondArg) != accessUpload &&
 			accessPerms(secondArg) != accessPublic {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission `"+string(secondArg)+"`. Allowed values are [none, download, upload, public].")
+				"Unrecognized permission `"+secondArg+"`. Allowed values are [none, download, upload, public].")
 		}
 
 	case "set-json":

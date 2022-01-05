@@ -20,9 +20,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -107,7 +107,7 @@ func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 	isDangerous := cliCtx.Bool("dangerous")
 
 	for _, url := range cliCtx.Args() {
-		if isNamespaceRemoval(ctx, url) {
+		if isS3NamespaceRemoval(ctx, url) {
 			if isForce && isDangerous {
 				continue
 			}
@@ -115,6 +115,40 @@ func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 				"This operation results in **site-wide** removal of buckets. If you are really sure, retry this command with ‘--force’ and ‘--dangerous’ flags.")
 		}
 	}
+}
+
+// Return a list of aliased urls of buckets under the passed url
+func listBucketsURLs(ctx context.Context, url string) ([]string, *probe.Error) {
+	var buckets []string
+
+	targetAlias, targetURL, _ := mustExpandAlias(url)
+	clnt, err := newClientFromAlias(targetAlias, targetURL)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := ListOptions{
+		ShowDir: DirLast,
+	}
+
+	for content := range clnt.List(ctx, opts) {
+		if content.Err != nil {
+			errorIf(content.Err, "")
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, probe.NewError(ctx.Err())
+		default:
+		}
+
+		bucketName := strings.TrimPrefix(content.URL.Path, clnt.GetURL().Path)
+		bucketPath := path.Join(url, bucketName)
+		buckets = append(buckets, bucketPath)
+	}
+
+	return buckets, nil
 }
 
 // Delete a bucket and all its objects and versions will be removed as well.
@@ -125,7 +159,7 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 		return pErr
 	}
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+	resultCh := clnt.Remove(ctx, false, false, false, contentCh)
 
 	go func() {
 		defer close(contentCh)
@@ -162,8 +196,10 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	}()
 
 	// Give up on the first error.
-	for perr := range errorCh {
-		return perr
+	for result := range resultCh {
+		if result.Err != nil {
+			return result.Err.Trace(url)
+		}
 	}
 
 	// Remove a bucket without force flag first because force
@@ -179,18 +215,15 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	return err
 }
 
-// isNamespaceRemoval returns true if alias
+// isS3NamespaceRemoval returns true if alias
 // is not qualified by bucket
-func isNamespaceRemoval(ctx context.Context, url string) bool {
+func isS3NamespaceRemoval(ctx context.Context, url string) bool {
 	// clean path for aliases like s3/.
 	//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 	url = filepath.ToSlash(filepath.Clean(url))
 	// namespace removal applies only for non FS. So filter out if passed url represents a directory
-	if !isAliasURLDir(ctx, url, nil, time.Time{}) {
-		_, path := url2Alias(url)
-		return (path == "")
-	}
-	return false
+	_, path := url2Alias(url)
+	return (path == "")
 }
 
 // mainRemoveBucket is entry point for rb command.
@@ -250,12 +283,20 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 
-		e := deleteBucket(ctx, targetURL, isForce)
-		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
+		var bucketsURL []string
+		if isS3NamespaceRemoval(ctx, targetURL) {
+			bucketsURL, err = listBucketsURLs(ctx, targetURL)
+			fatalIf(err.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
+		} else {
+			bucketsURL = []string{targetURL}
+		}
 
-		if !isNamespaceRemoval(ctx, targetURL) {
+		for _, bucketURL := range bucketsURL {
+			e := deleteBucket(ctx, bucketURL, isForce)
+			fatalIf(e.Trace(bucketURL), "Failed to remove `"+bucketURL+"`.")
+
 			printMsg(removeBucketMessage{
-				Bucket: targetURL, Status: "success",
+				Bucket: bucketURL, Status: "success",
 			})
 		}
 	}

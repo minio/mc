@@ -18,13 +18,12 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 )
 
 var subnetHealthSubcommands = []cli.Command{
 	adminSubnetHealthCmd,
-	// adminSubnetRegister to be added
+	adminSubnetRegisterCmd,
 }
 
 var adminSubnetCmd = cli.Command{
@@ -44,18 +43,8 @@ func mainAdminSubnet(ctx *cli.Context) error {
 	// Sub-commands like "health", "register" have their own main.
 }
 
-// Deprecated - to be removed in a future release
-// mainAdminSubnet is the handle for "mc admin subnet" command.
-func mainAdminOBD(ctx *cli.Context) error {
-	color.Yellow("Deprecated - please use 'mc admin subnet health'")
-	return nil
-}
-
-var adminHealthCmd = cli.Command{
-	Name:               "health",
-	Aliases:            []string{"obd"},
-	Usage:              "Deprecated - please use 'mc admin subnet health'",
-	Action:             mainAdminOBD,
-	CustomHelpTemplate: `{{.Usage}}`,
-	Hidden:             true,
+func adminHealthCmd() cli.Command {
+	cmd := adminSubnetHealthCmd
+	cmd.Hidden = true
+	return cmd
 }

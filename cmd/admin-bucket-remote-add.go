@@ -246,7 +246,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 	}
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
-	proxy := cli.Bool("proxy")
+	disableproxy := cli.Bool("disable-proxy")
 	bktTarget = &madmin.BucketTarget{
 		TargetBucket:        tgtBucket,
 		Secure:              u.Scheme == "https",
@@ -258,7 +258,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		Region:              cli.String("region"),
 		BandwidthLimit:      int64(bandwidth),
 		ReplicationSync:     cli.Bool("sync"),
-		DisableProxy:        !proxy,
+		DisableProxy:        disableproxy,
 		HealthCheckDuration: time.Duration(cli.Uint("healthcheck-seconds")) * time.Second,
 	}
 	return sourceBucket, bktTarget

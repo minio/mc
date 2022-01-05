@@ -31,7 +31,7 @@ import (
 
 var ilmAddCmd = cli.Command{
 	Name:         "add",
-	Usage:        "add a lifecycle configuration rule to existing (if any) rule(s) on a bucket",
+	Usage:        "add a lifecycle configuration rule for a bucket",
 	Action:       mainILMAdd,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -49,16 +49,17 @@ DESCRIPTION:
   Add a lifecycle configuration rule.
 
 EXAMPLES:
-  1. Add expiration rule on mybucket.
+  1. Add a lifecycle rule with an expiration action for all objects in mybucket.
      {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
 
-  2. Add expiry and transition date rules on a prefix in mybucket.
-     {{.Prompt}} {{.HelpName}} --expiry-date "2025-09-17" --transition-date "2025-05-01" \
-          --storage-class "GLACIER" s3/mybucket/doc
+  2. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
+     {{.Prompt}} {{.HelpName}} --transition-days "90" --storage-class "MINIOTIER-1" \
+          --noncurrentversion-transition-days "45" --noncurrentversion-transition-storage-class "MINIOTIER2" \
+          myminio/mybucket/doc
 
-  3. Add expiry and transition days rules on a prefix in mybucket.
-     {{.Prompt}} {{.HelpName}} --expiry-days "300" --transition-days "200" \
-          --storage-class "GLACIER" s3/mybucket/doc
+  3. Add a lifecycle rule with an expiration and a noncurrent version expiration action for all objects with prefix doc/ in mybucket.
+     {{.Prompt}} {{.HelpName}} --expiry-days "300" --noncurrentversion-expiration-days "100" \
+          myminio/mybucket/doc
 `,
 }
 
@@ -68,16 +69,18 @@ var ilmAddFlags = []cli.Flag{
 		Usage: "format '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>', multiple values allowed for multiple key/value pairs",
 	},
 	cli.StringFlag{
-		Name:  "expiry-date",
-		Usage: "format 'YYYY-MM-DD' the date of expiration",
+		Name:   "expiry-date",
+		Usage:  "format 'YYYY-MM-DD' the date of expiration",
+		Hidden: true,
 	},
 	cli.StringFlag{
 		Name:  "expiry-days",
 		Usage: "the number of days to expiration",
 	},
 	cli.StringFlag{
-		Name:  "transition-date",
-		Usage: "format 'YYYY-MM-DD' for the date to transition",
+		Name:   "transition-date",
+		Usage:  "format 'YYYY-MM-DD' for the date to transition",
+		Hidden: true,
 	},
 	cli.StringFlag{
 		Name:  "transition-days",
@@ -85,11 +88,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "storage-class",
-		Usage: "storage class for transition (STANDARD_IA, ONEZONE_IA, GLACIER. Etc).",
-	},
-	cli.BoolFlag{
-		Name:  "disable",
-		Usage: "disable the rule",
+		Usage: "storage class for current version to transition into. MinIO supports any warm tier configured via `mc-admin-tier-add`",
 	},
 	cli.BoolFlag{
 		Name:  "expired-object-delete-marker",
@@ -105,7 +104,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "noncurrentversion-transition-storage-class",
-		Usage: "the transition storage class for noncurrent versions",
+		Usage: "storage class for noncurrent versions to transition into",
 	},
 }
 
@@ -121,7 +120,7 @@ func (i ilmAddMessage) String() string {
 
 func (i ilmAddMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(i, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	fatalIf(probe.NewError(e), "Unable to encode as JSON.")
 	return string(msgBytes)
 }
 
@@ -155,11 +154,13 @@ func mainILMAdd(cliCtx *cli.Context) error {
 		}
 	}
 
-	opts := ilm.GetLifecycleOptions(cliCtx)
+	opts, err := ilm.GetLifecycleOptions(cliCtx)
+	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
+
 	lfcCfg, err = opts.ToConfig(lfcCfg)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
-	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to add this lifecycle rule")
 
 	printMsg(ilmAddMessage{
 		Status: "success",

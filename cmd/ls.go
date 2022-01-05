@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -90,12 +89,6 @@ func (c contentMessage) JSON() string {
 // Use OS separator and adds a trailing separator if it is a dir
 func getOSDependantKey(path string, isDir bool) string {
 	sep := "/"
-
-	// for windows make sure to print in 'windows' specific style.
-	if runtime.GOOS == "windows" {
-		path = strings.Replace(path, "/", "\\", -1)
-		sep = "\\"
-	}
 
 	if isDir && !strings.HasSuffix(path, sep) {
 		return fmt.Sprintf("%s%s", path, sep)

@@ -86,7 +86,7 @@ func isNotSupported(e error) bool {
 	}
 
 	// check if filesystem supports extended attributes
-	return errno.Err == syscall.Errno(syscall.ENOTSUP) || errno.Err == syscall.Errno(syscall.EOPNOTSUPP)
+	return errno.Err == syscall.ENOTSUP || errno.Err == syscall.EOPNOTSUPP
 }
 
 // isIgnoredFile returns true if 'filename' is on the exclude list.
@@ -449,7 +449,7 @@ func isSysErrNotEmpty(err error) bool {
 // deleteFile deletes a file path if its empty. If it's successfully deleted,
 // it will recursively delete empty parent directories
 // until it finds one with files in it. Returns nil for a non-empty directory.
-func deleteFile(deletePath string) error {
+func deleteFile(basePath, deletePath string) error {
 	// Attempt to remove path.
 	if e := os.Remove(deletePath); e != nil {
 		if isSysErrNotEmpty(e) {
@@ -466,24 +466,33 @@ func deleteFile(deletePath string) error {
 	parentPath := strings.TrimSuffix(deletePath, slashSeperator)
 	parentPath = path.Dir(parentPath)
 
+	if !strings.HasPrefix(parentPath, basePath) {
+		// If parentPath jumps out of the original basePath,
+		// make sure to cancel such calls, we don't want
+		// to be deleting more than we should.
+		return nil
+	}
+
 	if parentPath != "." {
-		return deleteFile(parentPath)
+		return deleteFile(basePath, parentPath)
 	}
 
 	return nil
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan *probe.Error {
-	errorCh := make(chan *probe.Error)
+func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+	resultCh := make(chan RemoveResult)
 
 	// Goroutine reads from contentCh and removes the entry in content.
 	go func() {
-		defer close(errorCh)
+		defer close(resultCh)
 
 		for content := range contentCh {
 			if content.Err != nil {
-				errorCh <- content.Err
+				resultCh <- RemoveResult{
+					Err: content.Err,
+				}
 				continue
 			}
 			name := content.URL.Path
@@ -491,25 +500,35 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			if isIncomplete {
 				name += partSuffix
 			}
-			e := deleteFile(name)
+			e := deleteFile(f.PathURL.Path, name)
 			if e == nil {
+				_, objectName := url2BucketAndObject(&content.URL, false)
+				res := RemoveResult{}
+				res.ObjectName = objectName
+				resultCh <- res
 				continue
 			}
-			if os.IsNotExist(e) && isRemoveBucket {
-				// ignore PathNotFound for dir removal.
-				return
+			if os.IsNotExist(e) {
+				// ignore if path already removed.
+				continue
 			}
 			if os.IsPermission(e) {
 				// Ignore permission error.
-				errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+				resultCh <- RemoveResult{
+					Err: probe.NewError(PathInsufficientPermission{
+						Path: content.URL.Path,
+					}),
+				}
 			} else {
-				errorCh <- probe.NewError(e)
+				resultCh <- RemoveResult{
+					Err: probe.NewError(e),
+				}
 				return
 			}
 		}
 	}()
 
-	return errorCh
+	return resultCh
 }
 
 // List - list files and folders.
@@ -725,6 +744,14 @@ func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, 
 	listDir = func(currentPath string) (isStop bool) {
 		files, e := readDir(currentPath)
 		if e != nil {
+			if os.IsNotExist(e) {
+				contentCh <- &ClientContent{
+					Err: probe.NewError(PathNotFound{
+						Path: currentPath,
+					}),
+				}
+				return false
+			}
 			if os.IsPermission(e) {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(PathInsufficientPermission{
@@ -786,6 +813,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetad
 	var dirName string
 	var filePrefix string
 	pathURL := *f.PathURL
+	if runtime.GOOS == "windows" {
+		pathURL.Path = filepath.FromSlash(pathURL.Path)
+		pathURL.Separator = os.PathSeparator
+	}
 	visitFS := func(fp string, fi os.FileInfo, e error) error {
 		// If file path ends with filepath.Separator and equals to root path, skip it.
 		if strings.HasSuffix(fp, string(pathURL.Separator)) {
@@ -869,7 +900,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetad
 		dirName = filepath.Dir(pathURL.Path)
 		if !strings.HasSuffix(dirName, string(pathURL.Separator)) {
 			// basepath truncates the filepath.Separator,
-			// add it deligently useful for trimming file path inside WalkFunc
+			// add it diligently useful for trimming file path inside WalkFunc
 			dirName = dirName + string(pathURL.Separator)
 		}
 		// filePrefix is kept for filtering incoming contents through WalkFunc.
@@ -1187,8 +1218,8 @@ func (f *fsClient) GetReplicationMetrics(ctx context.Context) (replication.Metri
 
 // ResetReplication - kicks off replication again on previously replicated objects if existing object
 // replication is enabled in the replication config, not implemented
-func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration) (string, *probe.Error) {
-	return "", probe.NewError(APINotImplemented{
+func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
+	return rinfo, probe.NewError(APINotImplemented{
 		API:     "ResetReplication",
 		APIType: "filesystem",
 	})
@@ -1222,6 +1253,14 @@ func (f *fsClient) DeleteEncryption(ctx context.Context) *probe.Error {
 func (f *fsClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
 	return BucketInfo{}, probe.NewError(APINotImplemented{
 		API:     "GetBucketInfo",
+		APIType: "filesystem",
+	})
+}
+
+// Restore object - not implemented
+func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "Restore",
 		APIType: "filesystem",
 	})
 }
