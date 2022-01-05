@@ -1091,7 +1091,8 @@ func (c *S3Client) AddUserAgent(app string, version string) {
 // RemoveResult returns the error or result of the removed objects.
 type RemoveResult struct {
 	minio.RemoveObjectResult
-	Err *probe.Error
+	BucketName string
+	Err        *probe.Error
 }
 
 // Remove - remove object or bucket(s).
@@ -1159,10 +1160,12 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					for removeStatus := range statusCh {
 						if removeStatus.Err != nil {
 							resultCh <- RemoveResult{
-								Err: probe.NewError(removeStatus.Err),
+								BucketName: bucket,
+								Err:        probe.NewError(removeStatus.Err),
 							}
 						} else {
 							resultCh <- RemoveResult{
+								BucketName:         bucket,
 								RemoveObjectResult: removeStatus,
 							}
 						}
@@ -1172,7 +1175,8 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					if isRemoveBucket && !isIncomplete {
 						if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
 							resultCh <- RemoveResult{
-								Err: probe.NewError(err),
+								BucketName: bucket,
+								Err:        probe.NewError(err),
 							}
 							return
 						}
@@ -1202,10 +1206,12 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 						case removeStatus := <-statusCh:
 							if removeStatus.Err != nil {
 								resultCh <- RemoveResult{
-									Err: probe.NewError(removeStatus.Err),
+									BucketName: bucket,
+									Err:        probe.NewError(removeStatus.Err),
 								}
 							} else {
 								resultCh <- RemoveResult{
+									BucketName:         bucket,
 									RemoveObjectResult: removeStatus,
 								}
 							}

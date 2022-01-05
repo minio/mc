@@ -526,7 +526,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 						versionID = result.DeleteMarkerVersionID
 					}
 					printMsg(rmMessage{
-						Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
+						Key:          path.Join(targetAlias, result.BucketName, result.ObjectName),
 						Size:         content.Size,
 						VersionID:    versionID,
 						DeleteMarker: result.DeleteMarker,
@@ -548,6 +548,15 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 			}
 			return exitStatus(globalErrorExitStatus)
 		}
+		versionID := result.ObjectVersionID
+		if versionID == "" {
+			versionID = result.DeleteMarkerVersionID
+		}
+		printMsg(rmMessage{
+			Key:          path.Join(targetAlias, result.BucketName, result.ObjectName),
+			VersionID:    versionID,
+			DeleteMarker: result.DeleteMarker,
+		})
 	}
 
 	if !atLeastOneObjectFound {
