@@ -59,11 +59,11 @@ var catCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
-{{if .VisibleFlags}}
+  {{.HelpName}} [FLAGS] TARGET [TARGET...]
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}{{end}}
+  {{end}}
 ENVIRONMENT VARIABLES:
   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 

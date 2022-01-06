@@ -33,18 +33,18 @@ import (
 
 var (
 	undoFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "undo last S3 put/delete operations",
-		},
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force recursive operation",
-		},
 		cli.IntFlag{
 			Name:  "last",
 			Usage: "undo N last changes",
 			Value: 1,
+		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "undo last S3 PUT/DELETE operations recursively",
+		},
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "force recursive operation",
 		},
 		cli.BoolFlag{
 			Name:  "dry-run",
@@ -64,18 +64,17 @@ var undoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
-{{if .VisibleFlags}}
+  {{.HelpName}} [FLAGS] TARGET
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}{{end}}
-
+  {{end}}
 EXAMPLES:
   1. Undo the last 3 uploads and/or removals of a particular object
      {{.Prompt}} {{.HelpName}} s3/backups/file.zip --last 3
 
   2. Undo the last upload/removal change of all objects under a prefix
-     {{.Prompt}} {{.HelpName}} --recursive --force s3/backups/prefix/
+     {{.Prompt}} {{.HelpName}} s3/backups/prefix/ --recursive --force
 `,
 }
 
@@ -259,8 +258,16 @@ func checkIfBucketIsVersioned(ctx context.Context, aliasedURL string) (versioned
 	return false
 }
 
+func checkUndoSyntax(cliCtx *cli.Context) {
+	if !cliCtx.Args().Present() {
+		cli.ShowCommandHelpAndExit(cliCtx, "undo", 1)
+	}
+}
+
 // mainUndo is the main entry point for undo command.
 func mainUndo(cliCtx *cli.Context) error {
+	checkUndoSyntax(cliCtx)
+
 	ctx, cancelCat := context.WithCancel(globalContext)
 	defer cancelCat()
 

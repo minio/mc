@@ -65,11 +65,11 @@ var watchCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] PATH
-{{if .VisibleFlags}}
+  {{.HelpName}} [FLAGS] TARGET
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}{{end}}
+  {{end}}
 EXAMPLES:
   1. Watch new S3 operations on a MinIO server
      {{.Prompt}} {{.HelpName}} play/testbucket

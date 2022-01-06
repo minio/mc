@@ -44,18 +44,6 @@ var (
 			Usage: "remove object(s) and all its versions",
 		},
 		cli.BoolFlag{
-			Name:  "non-current",
-			Usage: "remove object(s) versions that are non current (with top-level delete marker)",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "roll back object(s) to current version at specified time",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "delete a specific version of an object",
-		},
-		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "remove recursively",
 		},
@@ -66,6 +54,14 @@ var (
 		cli.BoolFlag{
 			Name:  "dangerous",
 			Usage: "allow site-wide removal of objects",
+		},
+		cli.StringFlag{
+			Name:  "rewind",
+			Usage: "roll back object(s) to current version at specified time",
+		},
+		cli.StringFlag{
+			Name:  "version-id, vid",
+			Usage: "delete a specific version of an object",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
@@ -91,13 +87,17 @@ var (
 			Name:  "bypass",
 			Usage: "bypass governance",
 		},
+		cli.BoolFlag{
+			Name:  "non-current",
+			Usage: "remove object(s) versions that are non-current (with top-level delete marker)",
+		},
 	}
 )
 
 // remove a file or folder.
 var rmCmd = cli.Command{
 	Name:         "rm",
-	Usage:        "remove objects",
+	Usage:        "remove object(s)",
 	Action:       mainRm,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -154,6 +154,8 @@ EXAMPLES:
   13. Remove all object versions older than one year.
       {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --versions --rewind 365d
 
+  14. Remove object(s) versions that are non-current (with top-level delete marker).
+      {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --versions --non-current
 `,
 }
 
@@ -200,6 +202,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	isStdin := cliCtx.Bool("stdin")
 	isDangerous := cliCtx.Bool("dangerous")
 	isVersions := cliCtx.Bool("versions")
+	isNoncurrentVersion := cliCtx.Bool("non-current")
 	versionID := cliCtx.String("version-id")
 	rewind := cliCtx.String("rewind")
 	isNamespaceRemoval := false
@@ -207,6 +210,11 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	if versionID != "" && (isRecursive || isVersions || rewind != "") {
 		fatalIf(errDummy().Trace(),
 			"You cannot specify --version-id with any of --versions, --rewind and --recursive flags.")
+	}
+
+	if isNoncurrentVersion && !isVersions {
+		fatalIf(errDummy().Trace(),
+			"You cannot specify --non-current without --versions, please use --non-current --versions.")
 	}
 
 	for _, url := range cliCtx.Args() {
