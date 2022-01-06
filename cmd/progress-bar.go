@@ -173,7 +173,7 @@ func cursorAnimate() <-chan string {
 		// cursors = "←↖↑↗→↘↓↙"
 		// cursors = "◴◷◶◵"
 		// cursors = "◰◳◲◱"
-		//cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
+		// cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
 	case "darwin":
 		cursors = "◐◓◑◒"
 	default:

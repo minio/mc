@@ -151,7 +151,7 @@ func (i ilmListMessage) JSON() string {
 
 // validateILMListFlagSet - Only one of these flags needs to be set for display: --json, --expiry, --transition
 func validateILMListFlagSet(ctx *cli.Context) bool {
-	var flags = [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json")}
+	flags := [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json")}
 	found := false
 	for _, flag := range flags {
 		if found && flag {

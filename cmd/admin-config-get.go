@@ -86,7 +86,6 @@ func checkAdminConfigGetSyntax(ctx *cli.Context) {
 }
 
 func mainAdminConfigGet(ctx *cli.Context) error {
-
 	checkAdminConfigGetSyntax(ctx)
 
 	// Get the alias parameter from cli

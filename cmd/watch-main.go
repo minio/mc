@@ -32,27 +32,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	watchFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "events",
-			Value: "put,delete,get",
-			Usage: "filter specific types of events; defaults to all events by default",
-		},
-		cli.StringFlag{
-			Name:  "prefix",
-			Usage: "filter events for a prefix",
-		},
-		cli.StringFlag{
-			Name:  "suffix",
-			Usage: "filter events for a suffix",
-		},
-		cli.BoolFlag{
-			Name:  "recursive",
-			Usage: "recursively watch for events",
-		},
-	}
-)
+var watchFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "events",
+		Value: "put,delete,get",
+		Usage: "filter specific types of events; defaults to all events by default",
+	},
+	cli.StringFlag{
+		Name:  "prefix",
+		Usage: "filter events for a prefix",
+	},
+	cli.StringFlag{
+		Name:  "suffix",
+		Usage: "filter events for a suffix",
+	},
+	cli.BoolFlag{
+		Name:  "recursive",
+		Usage: "recursively watch for events",
+	},
+}
 
 var watchCmd = cli.Command{
 	Name:         "watch",

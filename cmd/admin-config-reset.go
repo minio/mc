@@ -72,7 +72,6 @@ func (u configResetMessage) String() (msg string) {
 	if u.restart {
 		msg += console.Colorize("ResetConfigSuccess",
 			fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
-
 	}
 	return
 }
@@ -95,7 +94,6 @@ func checkAdminConfigResetSyntax(ctx *cli.Context) {
 
 // main config set function
 func mainAdminConfigReset(ctx *cli.Context) error {
-
 	// Check command arguments
 	checkAdminConfigResetSyntax(ctx)
 

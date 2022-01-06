@@ -34,7 +34,7 @@ func validateConfigVersion(config *configV10) (bool, string) {
 // Verifies the config file of the MinIO Client
 func validateConfigFile(config *configV10) (bool, []string) {
 	ok, err := validateConfigVersion(config)
-	var validationSuccessful = true
+	validationSuccessful := true
 	var errors []string
 	if !ok {
 		validationSuccessful = false
@@ -52,7 +52,7 @@ func validateConfigFile(config *configV10) (bool, []string) {
 }
 
 func validateConfigHost(host aliasConfigV10) (bool, []string) {
-	var validationSuccessful = true
+	validationSuccessful := true
 	var hostErrors []string
 	if !isValidAPI(strings.ToLower(host.API)) {
 		validationSuccessful = false

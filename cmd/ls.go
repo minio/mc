@@ -196,7 +196,6 @@ func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, print
 
 // doList - list all entities inside a folder.
 func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions bool) error {
-
 	var (
 		lastPath          string
 		perObjectVersions []*ClientContent

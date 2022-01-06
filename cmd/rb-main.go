@@ -32,18 +32,16 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	rbFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force a recursive remove operation on all object versions",
-		},
-		cli.BoolFlag{
-			Name:  "dangerous",
-			Usage: "allow site-wide removal of objects",
-		},
-	}
-)
+var rbFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "force",
+		Usage: "force a recursive remove operation on all object versions",
+	},
+	cli.BoolFlag{
+		Name:  "dangerous",
+		Usage: "allow site-wide removal of objects",
+	},
+}
 
 // remove a bucket.
 var rbCmd = cli.Command{
@@ -219,7 +217,7 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 // is not qualified by bucket
 func isS3NamespaceRemoval(ctx context.Context, url string) bool {
 	// clean path for aliases like s3/.
-	//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
+	// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 	url = filepath.ToSlash(filepath.Clean(url))
 	// namespace removal applies only for non FS. So filter out if passed url represents a directory
 	_, path := url2Alias(url)

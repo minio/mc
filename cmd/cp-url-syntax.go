@@ -197,7 +197,6 @@ func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, 
 			}
 		}
 	}
-
 }
 
 // checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.

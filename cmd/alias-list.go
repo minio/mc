@@ -88,7 +88,7 @@ func mainAliasList(ctx *cli.Context, deprecated bool) error {
 
 // Prints all the aliases
 func printAliases(aliases ...aliasMessage) {
-	var maxAlias = 0
+	maxAlias := 0
 	for _, alias := range aliases {
 		if len(alias.Alias) > maxAlias {
 			maxAlias = len(alias.Alias)

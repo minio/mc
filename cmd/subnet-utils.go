@@ -20,6 +20,8 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,9 +31,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"encoding/base64"
-	"encoding/json"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"

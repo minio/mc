@@ -137,7 +137,6 @@ func setTags(ctx context.Context, clnt Client, versionID, tags string, verbose b
 		Name:      clnt.GetURL().String(),
 		VersionID: versionID,
 	})
-
 }
 
 func mainSetTag(cliCtx *cli.Context) error {

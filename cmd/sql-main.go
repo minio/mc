@@ -38,43 +38,41 @@ import (
 	"github.com/minio/pkg/mimedb"
 )
 
-var (
-	sqlFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "query, e",
-			Usage: "sql query expression",
-			Value: "select * from s3object",
-		},
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "sql query recursively",
-		},
-		cli.StringFlag{
-			Name:  "csv-input",
-			Usage: "csv input serialization option",
-		},
-		cli.StringFlag{
-			Name:  "json-input",
-			Usage: "json input serialization option",
-		},
-		cli.StringFlag{
-			Name:  "compression",
-			Usage: "input compression type",
-		},
-		cli.StringFlag{
-			Name:  "csv-output",
-			Usage: "csv output serialization option",
-		},
-		cli.StringFlag{
-			Name:  "csv-output-header",
-			Usage: "optional csv output header ",
-		},
-		cli.StringFlag{
-			Name:  "json-output",
-			Usage: "json output serialization option",
-		},
-	}
-)
+var sqlFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "query, e",
+		Usage: "sql query expression",
+		Value: "select * from s3object",
+	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "sql query recursively",
+	},
+	cli.StringFlag{
+		Name:  "csv-input",
+		Usage: "csv input serialization option",
+	},
+	cli.StringFlag{
+		Name:  "json-input",
+		Usage: "json input serialization option",
+	},
+	cli.StringFlag{
+		Name:  "compression",
+		Usage: "input compression type",
+	},
+	cli.StringFlag{
+		Name:  "csv-output",
+		Usage: "csv output serialization option",
+	},
+	cli.StringFlag{
+		Name:  "csv-output-header",
+		Usage: "optional csv output header ",
+	},
+	cli.StringFlag{
+		Name:  "json-output",
+		Usage: "json output serialization option",
+	},
+}
 
 // Display contents of a file.
 var sqlCmd = cli.Command{
@@ -174,7 +172,7 @@ func parseKVArgs(is string) (map[string]string, *probe.Error) {
 					e++
 				}
 			}
-			var vEnd = len(is)
+			vEnd := len(is)
 			if e != -1 {
 				vEnd = s + e
 			}

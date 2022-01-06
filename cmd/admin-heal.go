@@ -356,7 +356,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 	setsStatus := generateSetsStatus(allDisks)
 	serversStatus := generateServersStatus(allDisks)
 
-	var poolsInfo = make(map[int]poolInfo)
+	poolsInfo := make(map[int]poolInfo)
 	for _, pool := range pools {
 		tolerance := computePoolTolerance(pool, parity, setsStatus, serversStatus)
 		endpoints := computePoolEndpoints(pool, serversStatus)
@@ -365,7 +365,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 
 	distributed := len(serversStatus) > 1
 
-	var plural = ""
+	plural := ""
 	if distributed {
 		plural = "s"
 	}
@@ -376,7 +376,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 		fmt.Fprintf(&msg, "Pool %s:\n", humanize.Ordinal(pool+1))
 
 		// Sort servers in this pool by name
-		var orderedEndpoints = make([]string, len(poolsInfo[pool].endpoints))
+		orderedEndpoints := make([]string, len(poolsInfo[pool].endpoints))
 		copy(orderedEndpoints, poolsInfo[pool].endpoints)
 		sort.Strings(orderedEndpoints)
 
@@ -586,7 +586,6 @@ func transformScanArg(scanArg string) madmin.HealScanMode {
 
 // mainAdminHeal - the entry function of heal command
 func mainAdminHeal(ctx *cli.Context) error {
-
 	// Check for command syntax
 	checkAdminHealSyntax(ctx)
 

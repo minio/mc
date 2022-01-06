@@ -45,15 +45,13 @@ import (
 	completeinstall "github.com/posener/complete/cmd/install"
 )
 
-var (
-	// global flags for mc.
-	mcFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "autocompletion",
-			Usage: "install auto-completion for your shell",
-		},
-	}
-)
+// global flags for mc.
+var mcFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "autocompletion",
+		Usage: "install auto-completion for your shell",
+	},
+}
 
 // Help template for mc
 var mcHelpTemplate = `NAME:
@@ -96,7 +94,6 @@ func init() {
 
 // Main starts mc application
 func Main(args []string) {
-
 	if len(args) > 1 {
 		switch args[1] {
 		case "mc", filepath.Base(args[0]):
@@ -153,7 +150,7 @@ func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 
 	// Calculate the maximum width of the flag name field
 	// for a good looking printing
-	var help = make([]subCommandHelp, len(ctx.Command.Flags))
+	help := make([]subCommandHelp, len(ctx.Command.Flags))
 	maxWidth := 0
 	for i, f := range ctx.Command.Flags {
 		s := strings.Split(f.String(), "\t")
@@ -187,7 +184,7 @@ func commandNotFound(ctx *cli.Context, cmds []cli.Command) {
 		return
 	}
 	msg := fmt.Sprintf("`%s` is not a recognized command. Get help using `--help` flag.", command)
-	var commandsTree = trie.NewTrie()
+	commandsTree := trie.NewTrie()
 	for _, cmd := range cmds {
 		commandsTree.Insert(cmd.Name)
 	}
@@ -300,7 +297,6 @@ func initMC() {
 
 	// Load all authority certificates present in CAs dir
 	loadRootCAs()
-
 }
 
 func installAutoCompletion() {

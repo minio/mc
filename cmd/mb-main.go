@@ -27,23 +27,21 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	mbFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "region",
-			Value: "us-east-1",
-			Usage: "specify bucket region; defaults to 'us-east-1'",
-		},
-		cli.BoolFlag{
-			Name:  "ignore-existing, p",
-			Usage: "ignore if bucket/directory already exists",
-		},
-		cli.BoolFlag{
-			Name:  "with-lock, l",
-			Usage: "enable object lock",
-		},
-	}
-)
+var mbFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "region",
+		Value: "us-east-1",
+		Usage: "specify bucket region; defaults to 'us-east-1'",
+	},
+	cli.BoolFlag{
+		Name:  "ignore-existing, p",
+		Usage: "ignore if bucket/directory already exists",
+	},
+	cli.BoolFlag{
+		Name:  "with-lock, l",
+		Usage: "enable object lock",
+	},
+}
 
 // make a bucket.
 var mbCmd = cli.Command{
@@ -115,7 +113,6 @@ func checkMakeBucketSyntax(cliCtx *cli.Context) {
 
 // mainMakeBucket is entry point for mb command.
 func mainMakeBucket(cli *cli.Context) error {
-
 	// check 'mb' cli arguments.
 	checkMakeBucketSyntax(cli)
 

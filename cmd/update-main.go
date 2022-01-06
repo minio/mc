@@ -85,10 +85,8 @@ const (
 	envMinisignPubKey = "MC_UPDATE_MINISIGN_PUBKEY"
 )
 
-var (
-	// For windows our files have .exe additionally.
-	mcReleaseWindowsInfoURL = mcReleaseURL + "mc.exe.sha256sum"
-)
+// For windows our files have .exe additionally.
+var mcReleaseWindowsInfoURL = mcReleaseURL + "mc.exe.sha256sum"
 
 // mcVersionToReleaseTime - parses a standard official release
 // mc --version string.
@@ -208,7 +206,6 @@ func IsSourceBuild() bool {
 // Any change here should be discussed by opening an issue at
 // https://github.com/minio/mc/issues.
 func getUserAgent() string {
-
 	userAgentParts := []string{}
 	// Helper function to concisely append a pair of strings to a
 	// the user-agent slice.

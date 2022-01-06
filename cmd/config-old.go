@@ -250,6 +250,7 @@ type hostConfigV8 struct {
 	SecretKey string `json:"secretKey"`
 	API       string `json:"api"`
 }
+
 type configV8 struct {
 	Version string                  `json:"version"`
 	Hosts   map[string]hostConfigV8 `json:"hosts"`

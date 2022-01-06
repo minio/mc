@@ -29,34 +29,32 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	retentionSetFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "apply retention recursively",
-		},
-		cli.BoolFlag{
-			Name:  "bypass",
-			Usage: "bypass governance",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "apply retention to a specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "roll back object(s) to current version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "apply retention object(s) and all its versions",
-		},
-		cli.BoolFlag{
-			Name:  "default",
-			Usage: "set bucket default retention mode",
-		},
-	}
-)
+var retentionSetFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "apply retention recursively",
+	},
+	cli.BoolFlag{
+		Name:  "bypass",
+		Usage: "bypass governance",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "apply retention to a specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "roll back object(s) to current version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "apply retention object(s) and all its versions",
+	},
+	cli.BoolFlag{
+		Name:  "default",
+		Usage: "set bucket default retention mode",
+	},
+}
 
 var retentionSetCmd = cli.Command{
 	Name:         "set",
@@ -92,7 +90,8 @@ EXAMPLES:
 
   5. Set default lock retention configuration for a bucket
      $ {{.HelpName}} --default governance 30d myminio/mybucket/
-`}
+`,
+}
 
 func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions bool, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypass, bucketMode bool) {
 	args := cliCtx.Args()

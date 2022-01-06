@@ -80,8 +80,8 @@ func (stat statMessage) String() (msg string) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
 	}
-	var maxKeyMetadata = 0
-	var maxKeyEncrypted = 0
+	maxKeyMetadata := 0
+	maxKeyEncrypted := 0
 	for k := range stat.Metadata {
 		// Skip encryption headers, we print them later.
 		if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
@@ -330,7 +330,6 @@ func (v bucketInfoMessage) JSON() string {
 
 	fatalIf(probe.NewError(enc.Encode(v)), "Unable to marshal into JSON.")
 	return buf.String()
-
 }
 
 func (v bucketInfoMessage) String() string {

@@ -27,30 +27,28 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	retentionClearFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "clear retention recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "clear retention of a specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "roll back object(s) to current version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "clear retention of object(s) and all its versions",
-		},
-		cli.BoolFlag{
-			Name:  "default",
-			Usage: "set default bucket locking",
-		},
-	}
-)
+var retentionClearFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "clear retention recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "clear retention of a specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "roll back object(s) to current version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "clear retention of object(s) and all its versions",
+	},
+	cli.BoolFlag{
+		Name:  "default",
+		Usage: "set default bucket locking",
+	},
+}
 
 var retentionClearCmd = cli.Command{
 	Name:         "clear",

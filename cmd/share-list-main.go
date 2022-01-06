@@ -25,9 +25,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	shareListFlags = []cli.Flag{}
-)
+var shareListFlags = []cli.Flag{}
 
 // Share documents via URL.
 var shareList = cli.Command{
@@ -105,7 +103,6 @@ func doShareList(cmd string) *probe.Error {
 
 // main entry point for share list.
 func mainShareList(ctx *cli.Context) error {
-
 	// validate command-line args.
 	checkShareListSyntax(ctx)
 

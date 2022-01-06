@@ -35,9 +35,7 @@ import (
 //   ----
 //
 
-var (
-	aliasFlags = []cli.Flag{}
-)
+var aliasFlags = []cli.Flag{}
 
 var aliasSubcommands = []cli.Command{
 	aliasSetCmd,

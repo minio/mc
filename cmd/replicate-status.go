@@ -79,8 +79,8 @@ func (s replicateStatusMessage) String() string {
 	var contents [][]string
 
 	var rows string
-	var arntheme = []string{"Headers"}
-	var theme = []string{"Pending", "Failed", "Replicated", "Replica"}
+	arntheme := []string{"Headers"}
+	theme := []string{"Pending", "Failed", "Replicated", "Replica"}
 	contents = append(contents, []string{"Pending", humanize.IBytes(s.ReplicationStatus.PendingSize), humanize.Comma(int64(s.ReplicationStatus.PendingCount))})
 	contents = append(contents, []string{"Failed", humanize.IBytes(s.ReplicationStatus.FailedSize), humanize.Comma(int64(s.ReplicationStatus.FailedCount))})
 	contents = append(contents, []string{"Replicated", humanize.IBytes(s.ReplicationStatus.ReplicatedSize), ""})

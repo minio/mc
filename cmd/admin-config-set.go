@@ -94,7 +94,6 @@ func checkAdminConfigSetSyntax(ctx *cli.Context) {
 
 // main config set function
 func mainAdminConfigSet(ctx *cli.Context) error {
-
 	// Check command arguments
 	checkAdminConfigSetSyntax(ctx)
 

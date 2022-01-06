@@ -59,12 +59,11 @@ const (
 	metadataKeyS3Cmd = "X-Amz-Meta-S3cmd-Attrs"
 )
 
-var ( // GOOS specific ignore list.
-	ignoreFiles = map[string][]string{
-		"darwin":  {"*.DS_Store"},
-		"default": {"lost+found"},
-	}
-)
+// GOOS specific ignore list.
+var ignoreFiles = map[string][]string{
+	"darwin":  {"*.DS_Store"},
+	"default": {"lost+found"},
+}
 
 // fsNew - instantiate a new fs
 func fsNew(path string) (Client, *probe.Error) {
@@ -274,7 +273,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, progre
 
 	if objectDir != "" {
 		// Create any missing top level directories.
-		if e := os.MkdirAll(objectDir, 0777); e != nil {
+		if e := os.MkdirAll(objectDir, 0o777); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
@@ -294,7 +293,7 @@ func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, progre
 	// should remove any partial download if any.
 	defer os.Remove(objectPartPath)
 
-	tmpFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0666)
+	tmpFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0o666)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
@@ -921,7 +920,7 @@ func (f *fsClient) MakeBucket(ctx context.Context, region string, ignoreExisting
 	// to call os.Mkdir() when ignoredExisting is disabled and os.MkdirAll()
 	// otherwise.
 	// NOTE: withLock=true has no meaning here.
-	e := os.MkdirAll(f.PathURL.Path, 0777)
+	e := os.MkdirAll(f.PathURL.Path, 0o777)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -1009,11 +1008,11 @@ func (f *fsClient) GetAccess(ctx context.Context) (access string, policyJSON str
 	}
 	// Mask with os.ModePerm to get only inode permissions
 	switch st.Mode() & os.ModePerm {
-	case os.FileMode(0777):
+	case os.FileMode(0o777):
 		return "readwrite", "", nil
-	case os.FileMode(0555):
+	case os.FileMode(0o555):
 		return "readonly", "", nil
-	case os.FileMode(0333):
+	case os.FileMode(0o333):
 		return "writeonly", "", nil
 	}
 	return "none", "", nil
@@ -1036,13 +1035,13 @@ func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *p
 	var mode os.FileMode
 	switch access {
 	case "readonly":
-		mode = os.FileMode(0555)
+		mode = os.FileMode(0o555)
 	case "writeonly":
-		mode = os.FileMode(0333)
+		mode = os.FileMode(0o333)
 	case "readwrite":
-		mode = os.FileMode(0777)
+		mode = os.FileMode(0o777)
 	case "none":
-		mode = os.FileMode(0755)
+		mode = os.FileMode(0o755)
 	}
 	e := os.Chmod(f.PathURL.Path, mode)
 	if e != nil {
@@ -1205,7 +1204,6 @@ func (f *fsClient) RemoveReplication(ctx context.Context) *probe.Error {
 		API:     "RemoveReplication",
 		APIType: "filesystem",
 	})
-
 }
 
 // GetReplicationMetrics - Get replication metrics for a given bucket, not implemented.

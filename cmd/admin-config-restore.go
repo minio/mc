@@ -82,7 +82,6 @@ func checkAdminConfigRestoreSyntax(ctx *cli.Context) {
 }
 
 func mainAdminConfigRestore(ctx *cli.Context) error {
-
 	checkAdminConfigRestoreSyntax(ctx)
 
 	console.SetColor("ConfigRestoreMessage", color.New(color.FgGreen))

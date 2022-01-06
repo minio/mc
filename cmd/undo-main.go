@@ -31,27 +31,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	undoFlags = []cli.Flag{
-		cli.IntFlag{
-			Name:  "last",
-			Usage: "undo N last changes",
-			Value: 1,
-		},
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "undo last S3 PUT/DELETE operations recursively",
-		},
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force recursive operation",
-		},
-		cli.BoolFlag{
-			Name:  "dry-run",
-			Usage: "fake an undo operation",
-		},
-	}
-)
+var undoFlags = []cli.Flag{
+	cli.IntFlag{
+		Name:  "last",
+		Usage: "undo N last changes",
+		Value: 1,
+	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "undo last S3 PUT/DELETE operations recursively",
+	},
+	cli.BoolFlag{
+		Name:  "force",
+		Usage: "force recursive operation",
+	},
+	cli.BoolFlag{
+		Name:  "dry-run",
+		Usage: "fake an undo operation",
+	},
+}
 
 var undoCmd = cli.Command{
 	Name:         "undo",

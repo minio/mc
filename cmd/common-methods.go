@@ -245,7 +245,7 @@ func getSourceStream(ctx context.Context, alias, urlStr, versionID string, fetch
 			st.Size = oinfo.Size
 			st.ETag = oinfo.ETag
 			st.Expires = oinfo.Expires
-			st.Type = os.FileMode(0664)
+			st.Type = os.FileMode(0o664)
 			st.Metadata = map[string]string{}
 			for k := range oinfo.Metadata {
 				st.Metadata[k] = oinfo.Metadata.Get(k)
@@ -347,7 +347,6 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, opts Pu
 
 // copySourceToTargetURL copies to targetURL from source.
 func copySourceToTargetURL(ctx context.Context, alias, urlStr, source, sourceVersionID, mode, until, legalHold string, size int64, progress io.Reader, opts CopyOptions) *probe.Error {
-
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
@@ -423,7 +422,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	tgtSSE := getSSE(targetPath, encKeyDB[targetAlias])
 
 	var err *probe.Error
-	var metadata = map[string]string{}
+	metadata := map[string]string{}
 	var mode, until, legalHold string
 
 	// add object retention fields in metadata for target, if target wants

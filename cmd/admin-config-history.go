@@ -114,7 +114,6 @@ func checkAdminConfigHistorySyntax(ctx *cli.Context) {
 }
 
 func mainAdminConfigHistory(ctx *cli.Context) error {
-
 	checkAdminConfigHistorySyntax(ctx)
 
 	console.SetColor("ConfigHistoryMessageRestoreID", color.New(color.Bold))

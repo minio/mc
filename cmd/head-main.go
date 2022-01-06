@@ -33,23 +33,21 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	headFlags = []cli.Flag{
-		cli.Int64Flag{
-			Name:  "n,lines",
-			Usage: "print the first 'n' lines",
-			Value: 10,
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "select an object version at specified time",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "select an object version to display",
-		},
-	}
-)
+var headFlags = []cli.Flag{
+	cli.Int64Flag{
+		Name:  "n,lines",
+		Usage: "print the first 'n' lines",
+		Value: 10,
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "select an object version at specified time",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "select an object version to display",
+	},
+}
 
 // Display contents of a file.
 var headCmd = cli.Command{

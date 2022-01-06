@@ -101,7 +101,6 @@ func checkAdminServiceRestartSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceRestart(ctx *cli.Context) error {
-
 	// Validate serivce restart syntax.
 	checkAdminServiceRestartSyntax(ctx)
 

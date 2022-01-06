@@ -83,7 +83,6 @@ func checkAdminConfigImportSyntax(ctx *cli.Context) {
 }
 
 func mainAdminConfigImport(ctx *cli.Context) error {
-
 	checkAdminConfigImportSyntax(ctx)
 
 	// Set color preference of command outputs

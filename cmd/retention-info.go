@@ -31,30 +31,28 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	retentionInfoFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "show retention info recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "show retention info of specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "roll back object(s) to current version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "show retention info on object(s) and all its versions",
-		},
-		cli.BoolFlag{
-			Name:  "default",
-			Usage: "show bucket default retention mode",
-		},
-	}
-)
+var retentionInfoFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "show retention info recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "show retention info of specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "roll back object(s) to current version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "show retention info on object(s) and all its versions",
+	},
+	cli.BoolFlag{
+		Name:  "default",
+		Usage: "show bucket default retention mode",
+	},
+}
 
 var retentionInfoCmd = cli.Command{
 	Name:         "info",
@@ -88,7 +86,8 @@ EXAMPLES:
 
   5. Show default lock retention configuration for a bucket
      $ {{.HelpName}} myminio/mybucket/ --default
-`}
+`,
+}
 
 func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions, defaultMode bool) {
 	args := cliCtx.Args()

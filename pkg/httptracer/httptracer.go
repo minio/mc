@@ -71,6 +71,8 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 // Takes first argument a custom tracer which implements Response, Request() conforming to HTTPTracer interface.
 // Another argument can be a default transport or a custom http.RoundTripper implementation
 func GetNewTraceTransport(trace HTTPTracer, transport http.RoundTripper) RoundTripTrace {
-	return RoundTripTrace{Trace: trace,
-		Transport: transport}
+	return RoundTripTrace{
+		Trace:     trace,
+		Transport: transport,
+	}
 }

@@ -311,10 +311,10 @@ func mainILMRestore(cliCtx *cli.Context) (cErr error) {
 		fatalIf(errDummy().Trace(), "Unable to restore the given URL")
 	}
 
-	var restoreReqStatus = make(chan *probe.Error)
-	var restoreStatus = make(chan *probe.Error)
+	restoreReqStatus := make(chan *probe.Error)
+	restoreStatus := make(chan *probe.Error)
 
-	var done = make(chan struct{})
+	done := make(chan struct{})
 
 	go func() {
 		showRestoreStatus(restoreReqStatus, restoreStatus, done)

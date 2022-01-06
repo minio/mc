@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: fmt
-        run: diff -au <(gofmt -s -d .) <(printf "")
+        run: diff -au <(gofumpt -d .) <(printf "")
 
       - name: Test 386
         run: GOOS=linux GOARCH=386 go test -short ./...

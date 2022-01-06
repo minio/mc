@@ -30,9 +30,9 @@ func TestGetDecodedKey(t *testing.T) {
 		err    error
 		status bool
 	}{
-		//success scenario the key contains non printable (tab) character as key
+		// success scenario the key contains non printable (tab) character as key
 		{"s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=", "s3/documents/=32byteslongsecreabcdefg	givenn21", nil, true},
-		//success scenario the key contains non printable (tab character) as key
+		// success scenario the key contains non printable (tab character) as key
 		{"s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,play/documents/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE=", "s3/documents/=32byteslongsecreabcdefg	givenn21,play/documents/=32byteslongsecretke	mustbegiven1", nil, true},
 		// success scenario using a normal string
 		{"s3/documents/=32byteslongsecretkeymustbegiven1", "s3/documents/=32byteslongsecretkeymustbegiven1", nil, true},

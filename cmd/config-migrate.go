@@ -234,7 +234,6 @@ func migrateConfigV3ToV4() {
 	fatalIf(probe.NewError(e), "Unable to save config version `4`.")
 
 	console.Infof("Successfully migrated %s from version `3` to version `4`.\n", mustGetMcConfigPath())
-
 }
 
 // Migrate config version `4` to `5`. Rename hostConfigV4.Signature  -> hostConfigV5.API.

@@ -27,16 +27,14 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	shareUploadFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "recursively upload any object matching the prefix",
-		},
-		shareFlagExpire,
-		shareFlagContentType,
-	}
-)
+var shareUploadFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "recursively upload any object matching the prefix",
+	},
+	shareFlagExpire,
+	shareFlagContentType,
+}
 
 // Share documents via URL.
 var shareUpload = cli.Command{

@@ -99,7 +99,6 @@ func (r replicateResetMessage) String() string {
 		return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResyncTargetsInfo.Targets[0].ResetID))
 	}
 	return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s", r.URL))
-
 }
 
 func mainReplicateReset(cliCtx *cli.Context) error {

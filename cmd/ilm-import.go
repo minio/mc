@@ -71,7 +71,7 @@ func (i ilmImportMessage) JSON() string {
 // readILMConfig read from stdin, returns XML.
 func readILMConfig() (*lifecycle.Configuration, *probe.Error) {
 	// User is expected to enter the lifecycleConfiguration instance contents in JSON format
-	var cfg = lifecycle.NewConfiguration()
+	cfg := lifecycle.NewConfiguration()
 
 	// Consume json from STDIN
 	dec := json.NewDecoder(os.Stdin)

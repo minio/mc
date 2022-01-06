@@ -104,8 +104,8 @@ type showDetails struct {
 // table with information. Table is constructed row-by-row. Headers are first, then the rest of the rows.
 func PopulateILMDataForDisplay(ilmCfg *lifecycle.Configuration, rowCheck *map[string]int, alignedHdrLabels *[]string,
 	cellDataNoTags *[][]string, cellDataWithTags *[][]string, tagRows *map[string][]string,
-	showAll, showExpiry, showTransition bool) {
-
+	showAll, showExpiry, showTransition bool,
+) {
 	// We need the different column headers and their respective column index
 	// where they appear in a map data-structure format.
 	// [Column Label] -> [Column Number]
@@ -412,7 +412,6 @@ func showExpiryDetails(rule lifecycle.Rule, showOpts showDetails) bool {
 	expirySet := !rule.Expiration.IsNull()
 
 	return (expirySet && (showOpts.allAvailable || showOpts.expiry))
-
 }
 
 func showExpTick(showOpts showDetails) bool {
