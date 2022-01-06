@@ -89,10 +89,10 @@ func (i srStatus) String() string {
 		nameIDMap[sname] = dID
 	}
 	sort.Strings(siteNames)
-	var rowLegend = []string{"Buckets", "Policies", "Users", "Groups"}
-	var legendHdr = []string{"Site"}
-	var legendFields = []Field{{"Entity", 15}}
-	var detailFields = make([][]Field, len(rowLegend))
+	rowLegend := []string{"Buckets", "Policies", "Users", "Groups"}
+	legendHdr := []string{"Site"}
+	legendFields := []Field{{"Entity", 15}}
+	detailFields := make([][]Field, len(rowLegend))
 	for _, sname := range siteNames {
 		legendHdr = append(legendHdr, sname)
 		legendFields = append(legendFields, Field{"sname", 15})
@@ -120,7 +120,7 @@ func (i srStatus) String() string {
 		}
 	}
 
-	var rows = make([]string, 4)
+	rows := make([]string, 4)
 	fieldLen := 15
 	for j, sname := range siteNames {
 		dID := nameIDMap[sname]
