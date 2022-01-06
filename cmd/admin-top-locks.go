@@ -117,7 +117,6 @@ func checkAdminTopLocksSyntax(ctx *cli.Context) {
 }
 
 func mainAdminTopLocks(ctx *cli.Context) error {
-
 	checkAdminTopLocksSyntax(ctx)
 
 	// Get the alias parameter from cli

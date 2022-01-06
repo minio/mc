@@ -34,18 +34,16 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	catFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "display an earlier object version",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "display a specific version of an object",
-		},
-	}
-)
+var catFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "display an earlier object version",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "display a specific version of an object",
+	},
+}
 
 // Display contents of a file.
 var catCmd = cli.Command{
@@ -174,7 +172,7 @@ func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.T
 	case "-":
 		reader = os.Stdin
 	default:
-		var versionID = sourceVersion
+		versionID := sourceVersion
 		var err *probe.Error
 		// Try to stat the object, the purpose is to:
 		// 1. extract the size of S3 object so we can check if the size of the

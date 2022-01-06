@@ -76,7 +76,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 		}
 
 		if srcClient.Type == fileSystem && !filepath.IsAbs(srcURL) {
-			var origSrcURL = srcURL
+			origSrcURL := srcURL
 			var e error
 			// Changing relative path to absolute path, if it is a local directory.
 			// Save original in case of error

@@ -96,7 +96,6 @@ type CopyOptions struct {
 type Client interface {
 	// Common operations
 	Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error)
-
 	List(ctx context.Context, opts ListOptions) <-chan *ClientContent
 
 	// Bucket operations
@@ -120,7 +119,6 @@ type Client interface {
 
 	// I/O operations with metadata.
 	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, err *probe.Error)
-
 	Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
 
 	// Object Locking related API
@@ -140,7 +138,6 @@ type Client interface {
 	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
 	// GetURL returns back internal url
 	GetURL() ClientURL
-
 	AddUserAgent(app, version string)
 
 	// Tagging operations

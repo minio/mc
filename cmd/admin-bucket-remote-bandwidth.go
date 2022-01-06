@@ -132,6 +132,7 @@ func printTable(report madmin.Report, bits bool, iec bool) {
 		}
 	}
 }
+
 func checkAdminBwInfoSyntax(ctx *cli.Context) {
 	u := ctx.String("unit")
 	if u != "bi" &&

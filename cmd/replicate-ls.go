@@ -66,6 +66,7 @@ func checkReplicateListSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 }
+
 func printReplicateListHeader() {
 	if globalJSON {
 		return

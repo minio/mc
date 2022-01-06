@@ -29,14 +29,12 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	policyFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "list recursively",
-		},
-	}
-)
+var policyFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "list recursively",
+	},
+}
 
 // Manage anonymous access to buckets and objects.
 var policyCmd = cli.Command{

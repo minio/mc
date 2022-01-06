@@ -82,7 +82,7 @@ func createMcConfigDir() *probe.Error {
 	if err != nil {
 		return err.Trace()
 	}
-	if e := os.MkdirAll(p, 0700); e != nil {
+	if e := os.MkdirAll(p, 0o700); e != nil {
 		return probe.NewError(e)
 	}
 	return nil

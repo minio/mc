@@ -176,9 +176,7 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, sour
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh
 
-	var (
-		srcEOF, tgtEOF bool
-	)
+	var srcEOF, tgtEOF bool
 
 	for {
 		srcEOF = !srcOk

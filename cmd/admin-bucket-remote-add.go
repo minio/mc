@@ -65,6 +65,7 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 		Usage: "disable proxying in active-active replication. If unset, default behavior is to proxy",
 	},
 }
+
 var adminBucketRemoteAddCmd = cli.Command{
 	Name:         "add",
 	Usage:        "add a new remote target",

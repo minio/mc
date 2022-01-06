@@ -313,7 +313,7 @@ func (mj *mirrorJob) doDeleteBucket(ctx context.Context, sURLs URLs) URLs {
 		return sURLs.WithError(pErr)
 	}
 
-	var contentCh = make(chan *ClientContent, 1)
+	contentCh := make(chan *ClientContent, 1)
 	contentCh <- &ClientContent{URL: clnt.GetURL()}
 	close(contentCh)
 
@@ -407,7 +407,6 @@ func convertSizeToTag(size int64) string {
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
-
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
@@ -553,7 +552,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// build target path, it is the relative of the eventPath with the sourceUrl
 		// joined to the targetURL.
 		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
-		//Skip the object, if it matches the Exclude options provided
+		// Skip the object, if it matches the Exclude options provided
 		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix) {
 			continue
 		}
@@ -736,7 +735,6 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 
 // when using a struct for copying, we could save a lot of passing of variables
 func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc) bool {
-
 	var wg sync.WaitGroup
 
 	// Starts watcher loop for watching for new events.
@@ -1010,7 +1008,6 @@ func mainMirror(cliCtx *cli.Context) error {
 			if e := http.ListenAndServe(prometheusAddress, nil); e != nil {
 				fatalIf(probe.NewError(e), "Unable to setup monitoring endpoint.")
 			}
-
 		}()
 	}
 

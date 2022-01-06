@@ -252,7 +252,6 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 		fatalIf(errDummy().Trace(),
 			"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 	}
-
 }
 
 // Remove a single object or a single version in a versioned bucket

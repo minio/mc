@@ -100,7 +100,6 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 }
 
 func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget) {
-
 	maxURLLen := 10
 	maxTgtLen := 6
 	maxSrcLen := 6

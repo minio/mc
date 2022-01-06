@@ -115,6 +115,7 @@ func (t tierLS) NumRows() int {
 func (t tierLS) NumCols() int {
 	return len(tierLSRowNames)
 }
+
 func (t tierLS) EmptyMessage() string {
 	return "No remote tier has been configured"
 }

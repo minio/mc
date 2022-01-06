@@ -53,7 +53,6 @@ func (h hri) getObjectHCCChange() (b, a col, err error) {
 			err, surplusShardsAfterHeal, parityShards)
 	}
 	return
-
 }
 
 // getReplicatedFileHCCChange - fetches health color code for metadata

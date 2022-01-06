@@ -208,7 +208,6 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 		timeStr, err := getRetainUntilDate(validity, unit)
 		if err != nil {
 			return err.ToGoError()
-
 		}
 		var e error
 		until, e = time.Parse(time.RFC3339, timeStr)

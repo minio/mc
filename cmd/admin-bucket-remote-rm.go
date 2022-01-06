@@ -30,6 +30,7 @@ var adminBucketRemoteRmFlags = []cli.Flag{
 		Usage: "ARN to be removed",
 	},
 }
+
 var adminBucketRemoteRmCmd = cli.Command{
 	Name:         "rm",
 	Usage:        "remove configured remote target",
@@ -55,7 +56,6 @@ EXAMPLES:
 
 // checkAdminBucketRemoteRemoveSyntax - validate all the passed arguments
 func checkAdminBucketRemoteRemoveSyntax(ctx *cli.Context) {
-
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}

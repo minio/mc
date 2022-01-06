@@ -140,7 +140,6 @@ func parseTreeSyntax(ctx context.Context, cliCtx *cli.Context) (args []string, d
 
 // doTree - list all entities inside a folder in a tree format.
 func doTree(ctx context.Context, url string, timeRef time.Time, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
-
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"

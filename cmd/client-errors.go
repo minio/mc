@@ -170,8 +170,7 @@ func (e ObjectMissing) Error() string {
 }
 
 // ObjectIsDeleteMarker - object is a delete marker as latest
-type ObjectIsDeleteMarker struct {
-}
+type ObjectIsDeleteMarker struct{}
 
 func (e ObjectIsDeleteMarker) Error() string {
 	return "Object is marked as deleted"

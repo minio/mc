@@ -114,9 +114,9 @@ func checkAdminHealthSyntax(ctx *cli.Context) {
 	}
 }
 
-//compress and tar MinIO health output
+// compress and tar MinIO health output
 func tarGZ(healthInfo interface{}, version string, filename string, showMessages bool) error {
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o666)
 	if err != nil {
 		return err
 	}
@@ -665,5 +665,7 @@ func (f HealthDataTypeFlag) ApplyWithError(set *flag.FlagSet) error {
 	return nil
 }
 
-var liteOptions = HealthDataTypeSlice(madmin.HealthDataTypesLite)
-var fullOptions = HealthDataTypeSlice(madmin.HealthDataTypesList)
+var (
+	liteOptions = HealthDataTypeSlice(madmin.HealthDataTypesLite)
+	fullOptions = HealthDataTypeSlice(madmin.HealthDataTypesList)
+)

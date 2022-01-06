@@ -103,6 +103,7 @@ func (t tierInfos) NumRows() int {
 func (t tierInfos) NumCols() int {
 	return len(tierInfoRowNames)
 }
+
 func (t tierInfos) EmptyMessage() string {
 	return "No remote tiers configured."
 }

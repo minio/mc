@@ -28,9 +28,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	eventListFlags = []cli.Flag{}
-)
+var eventListFlags = []cli.Flag{}
 
 var eventListCmd = cli.Command{
 	Name:         "list",
@@ -135,7 +133,8 @@ func mainEventList(cliCtx *cli.Context) error {
 			Prefix: config.Prefix,
 			Suffix: config.Suffix,
 			Arn:    config.Arn,
-			ID:     config.ID})
+			ID:     config.ID,
+		})
 	}
 
 	return nil

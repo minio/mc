@@ -105,9 +105,11 @@ var (
 	}
 )
 
-var rmFlag = "retention-mode"
-var rdFlag = "retention-duration"
-var lhFlag = "legal-hold"
+var (
+	rmFlag = "retention-mode"
+	rdFlag = "retention-duration"
+	lhFlag = "legal-hold"
+)
 
 // ErrInvalidMetadata reflects invalid metadata format
 var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=value1;key2=value2;... and so on")
@@ -328,7 +330,7 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 				break
 			}
 
-			var jsoniter = jsoniter.ConfigCompatibleWithStandardLibrary
+			jsoniter := jsoniter.ConfigCompatibleWithStandardLibrary
 			jsonData, e := jsoniter.Marshal(cpURLs)
 			if e != nil {
 				session.Delete()
@@ -363,7 +365,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
 
-	var cpURLsCh = make(chan URLs, 10000)
+	cpURLsCh := make(chan URLs, 10000)
 
 	// Store a progress bar or an accounter
 	var pg ProgressReader
@@ -401,7 +403,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		pg.SetTotal(totalBytes)
 
 		go func() {
-			var jsoniter = jsoniter.ConfigCompatibleWithStandardLibrary
+			jsoniter := jsoniter.ConfigCompatibleWithStandardLibrary
 			// Prepare URL scanner from session data file.
 			urlScanner := bufio.NewScanner(session.NewDataReader())
 			for {
@@ -457,8 +459,8 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		}()
 	}
 
-	var quitCh = make(chan struct{})
-	var statusCh = make(chan URLs)
+	quitCh := make(chan struct{})
+	statusCh := make(chan URLs)
 
 	parallel := newParallelManager(statusCh)
 

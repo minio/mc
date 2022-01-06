@@ -28,27 +28,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	eventAddFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "event",
-			Value: "put,delete,get",
-			Usage: "filter specific type of event. Defaults to all event",
-		},
-		cli.StringFlag{
-			Name:  "prefix",
-			Usage: "filter event associated to the specified prefix",
-		},
-		cli.StringFlag{
-			Name:  "suffix",
-			Usage: "filter event associated to the specified suffix",
-		},
-		cli.BoolFlag{
-			Name:  "ignore-existing, p",
-			Usage: "ignore if event already exists",
-		},
-	}
-)
+var eventAddFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "event",
+		Value: "put,delete,get",
+		Usage: "filter specific type of event. Defaults to all event",
+	},
+	cli.StringFlag{
+		Name:  "prefix",
+		Usage: "filter event associated to the specified prefix",
+	},
+	cli.StringFlag{
+		Name:  "suffix",
+		Usage: "filter event associated to the specified suffix",
+	},
+	cli.BoolFlag{
+		Name:  "ignore-existing, p",
+		Usage: "ignore if event already exists",
+	},
+}
 
 var eventAddCmd = cli.Command{
 	Name:         "add",

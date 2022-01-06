@@ -73,7 +73,6 @@ func checkAdminConfigExportSyntax(ctx *cli.Context) {
 }
 
 func mainAdminConfigExport(ctx *cli.Context) error {
-
 	checkAdminConfigExportSyntax(ctx)
 
 	// Export the alias parameter from cli

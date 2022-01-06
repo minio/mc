@@ -440,11 +440,13 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 			continue
 		}
 		prefix, suffix := getFilters(config.Config)
-		configs = append(configs, NotificationConfig{ID: config.ID,
+		configs = append(configs, NotificationConfig{
+			ID:     config.ID,
 			Arn:    config.Topic,
 			Events: prettyEventNames(config.Events),
 			Prefix: prefix,
-			Suffix: suffix})
+			Suffix: suffix,
+		})
 	}
 
 	for _, config := range mb.QueueConfigs {
@@ -452,11 +454,13 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 			continue
 		}
 		prefix, suffix := getFilters(config.Config)
-		configs = append(configs, NotificationConfig{ID: config.ID,
+		configs = append(configs, NotificationConfig{
+			ID:     config.ID,
 			Arn:    config.Queue,
 			Events: prettyEventNames(config.Events),
 			Prefix: prefix,
-			Suffix: suffix})
+			Suffix: suffix,
+		})
 	}
 
 	for _, config := range mb.LambdaConfigs {
@@ -464,11 +468,13 @@ func (c *S3Client) ListNotificationConfigs(ctx context.Context, arn string) ([]N
 			continue
 		}
 		prefix, suffix := getFilters(config.Config)
-		configs = append(configs, NotificationConfig{ID: config.ID,
+		configs = append(configs, NotificationConfig{
+			ID:     config.ID,
 			Arn:    config.Lambda,
 			Events: prettyEventNames(config.Events),
 			Prefix: prefix,
-			Suffix: suffix})
+			Suffix: suffix,
+		})
 	}
 
 	return configs, nil
@@ -646,7 +652,7 @@ func (c *S3Client) Select(ctx context.Context, expression string, sse encrypt.Se
 }
 
 func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo {
-	var eventsInfo = make([]EventInfo, len(ninfo.Records))
+	eventsInfo := make([]EventInfo, len(ninfo.Records))
 	for i, record := range ninfo.Records {
 		bucketName := record.S3.Bucket.Name
 		var key string
@@ -1115,7 +1121,8 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					Err: probe.NewError(errors.New(
 						"use `mc rm` command to delete prefixes, or point your" +
 							" bucket directly, `mc rb <alias>/<bucket-name>/`"),
-					)}
+					),
+				}
 				return
 			}
 		}
@@ -1405,7 +1412,7 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 	if e != nil {
 		return probe.NewError(e)
 	}
-	var p = policy.BucketAccessPolicy{Version: "2012-10-17"}
+	p := policy.BucketAccessPolicy{Version: "2012-10-17"}
 	if policyStr != "" {
 		if e = json.Unmarshal([]byte(policyStr), &p); e != nil {
 			return probe.NewError(e)
@@ -1458,7 +1465,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 			objectMetadata.URL = c.targetURL.Clone()
 			objectMetadata.Time = objectMultipartInfo.Initiated
 			objectMetadata.Size = objectMultipartInfo.Size
-			objectMetadata.Type = os.FileMode(0664)
+			objectMetadata.Type = os.FileMode(0o664)
 			objectMetadata.Metadata = map[string]string{}
 			return objectMetadata, nil
 		}
@@ -1816,7 +1823,6 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 
 noVersioning:
 	c.unversionedList(ctx, contentCh, opts)
-
 }
 
 // unversionedList is the non versioned S3 listing
@@ -2042,7 +2048,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 			content.Time = time.Now()
 		}
 	} else {
-		content.Type = os.FileMode(0664)
+		content.Type = os.FileMode(0o664)
 	}
 
 	return content
@@ -2058,7 +2064,8 @@ func (c *S3Client) bucketStat(ctx context.Context, bucket string) (*ClientConten
 		return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 	}
 	return &ClientContent{
-		URL: c.targetURL.Clone(), BucketName: bucket, Time: time.Unix(0, 0), Type: os.ModeDir}, nil
+		URL: c.targetURL.Clone(), BucketName: bucket, Time: time.Unix(0, 0), Type: os.ModeDir,
+	}, nil
 }
 
 func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {

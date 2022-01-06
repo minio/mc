@@ -82,7 +82,7 @@ func (r replicateImportMessage) String() string {
 // readReplicationConfig read from stdin, returns XML.
 func readReplicationConfig() (*replication.Config, *probe.Error) {
 	// User is expected to enter the replication configuration in JSON format
-	var cfg = replication.Config{}
+	cfg := replication.Config{}
 
 	// Consume json from STDIN
 	dec := json.NewDecoder(os.Stdin)

@@ -103,7 +103,6 @@ func (d diffMessage) String() string {
 			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
 	}
 	return msg
-
 }
 
 // JSON jsonified diff message

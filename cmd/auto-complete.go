@@ -84,7 +84,6 @@ func completeAdminConfigKeys(aliasPath string, keyPrefix string) (prediction []s
 // then recursively scans it. This is needed to satisfy posener/complete
 // (look at posener/complete.PredictFiles)
 func completeS3Path(s3Path string) (prediction []string) {
-
 	// Convert alias/bucket/incompl to alias/bucket/ to list its contents
 	parentDirPath := filepath.Dir(s3Path) + "/"
 	clnt, err := newClient(parentDirPath)
@@ -220,10 +219,12 @@ func (al aliasComplete) Predict(a complete.Args) (prediction []string) {
 	return
 }
 
-var adminConfigCompleter = adminConfigComplete{}
-var s3Completer = s3Complete{}
-var aliasCompleter = aliasComplete{}
-var fsCompleter = fsComplete{}
+var (
+	adminConfigCompleter = adminConfigComplete{}
+	s3Completer          = s3Complete{}
+	aliasCompleter       = aliasComplete{}
+	fsCompleter          = fsComplete{}
+)
 
 // The list of all commands supported by mc with their mapping
 // with their bash completer function
@@ -391,7 +392,7 @@ var completeCmds = map[string]complete.Predictor{
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags
 // understood by posener/complete library.
 func flagsToCompleteFlags(flags []cli.Flag) complete.Flags {
-	var complFlags = make(complete.Flags)
+	complFlags := make(complete.Flags)
 	for _, f := range flags {
 		for _, s := range strings.Split(f.GetName(), ",") {
 			var flagName string
@@ -429,7 +430,7 @@ func cmdToCompleteCmd(cmd cli.Command, parentPath string) complete.Command {
 func mainComplete() error {
 	// Recursively register all commands and subcommands
 	// along with global and local flags
-	var complCmds = make(complete.Commands)
+	complCmds := make(complete.Commands)
 	for _, cmd := range appCmds {
 		if cmd.Hidden {
 			continue

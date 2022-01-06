@@ -74,7 +74,6 @@ func checkAdminServiceStopSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceStop(ctx *cli.Context) error {
-
 	// Validate serivce stop syntax.
 	checkAdminServiceStopSyntax(ctx)
 

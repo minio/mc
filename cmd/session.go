@@ -46,7 +46,7 @@ func createSessionDir() *probe.Error {
 		return err.Trace()
 	}
 
-	if e := os.MkdirAll(sessionDir, 0700); e != nil {
+	if e := os.MkdirAll(sessionDir, 0o700); e != nil {
 		return probe.NewError(e)
 	}
 	return nil

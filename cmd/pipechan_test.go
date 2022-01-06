@@ -26,7 +26,6 @@ import (
 )
 
 func testPipeChan(inputCh, outputCh chan notify.EventInfo, totalMsgs int) error {
-
 	var wg sync.WaitGroup
 
 	msgCtnt := notify.EventInfo(nil)

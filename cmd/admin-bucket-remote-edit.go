@@ -59,6 +59,7 @@ var adminBucketRemoteEditFlags = []cli.Flag{
 		Usage: "bucket path lookup supported by the server. Valid options are '[on,off,auto]'",
 	},
 }
+
 var adminBucketRemoteEditCmd = cli.Command{
 	Name:         "edit",
 	Usage:        "edit remote target",

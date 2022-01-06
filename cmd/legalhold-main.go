@@ -80,8 +80,10 @@ func (l legalHoldCmdMessage) JSON() string {
 	return string(msgBytes)
 }
 
-var errBucketLockConfigNotFound = errors.New("bucket lock config not found")
-var errBucketLockNotSupported = errors.New("bucket lock not supported")
+var (
+	errBucketLockConfigNotFound = errors.New("bucket lock config not found")
+	errBucketLockNotSupported   = errors.New("bucket lock not supported")
+)
 
 func isBucketLockEnabled(ctx context.Context, aliasedURL string) (bool, *probe.Error) {
 	st, err := getBucketLockStatus(ctx, aliasedURL)
