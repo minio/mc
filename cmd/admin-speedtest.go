@@ -105,10 +105,10 @@ func (s speedTestResult) String() (msg string) {
 		return
 	}
 
-	msg += fmt.Sprintf("PUT: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.PUTStats.ThroughputPerSec)), humanize.Comma(int64(s.PUTStats.ObjectsPerSec)))
+	msg += fmt.Sprintf("PUT: %s/s, %s objs/s\n", humanize.IBytes(s.PUTStats.ThroughputPerSec), humanize.Comma(int64(s.PUTStats.ObjectsPerSec)))
 	if globalSpeedTestVerbose {
 		for _, node := range s.PUTStats.Servers {
-			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), humanize.Comma(int64(node.ObjectsPerSec)))
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
@@ -119,10 +119,10 @@ func (s speedTestResult) String() (msg string) {
 	if globalSpeedTestVerbose {
 		msg += "\n"
 	}
-	msg += fmt.Sprintf("GET: %s/s, %s objs/s\n", humanize.IBytes(uint64(s.GETStats.ThroughputPerSec)), humanize.Comma(int64(s.GETStats.ObjectsPerSec)))
+	msg += fmt.Sprintf("GET: %s/s, %s objs/s\n", humanize.IBytes(s.GETStats.ThroughputPerSec), humanize.Comma(int64(s.GETStats.ObjectsPerSec)))
 	if globalSpeedTestVerbose {
 		for _, node := range s.GETStats.Servers {
-			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(uint64(node.ThroughputPerSec)), humanize.Comma(int64(node.ObjectsPerSec)))
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
@@ -209,7 +209,7 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 		if !globalJSON {
 			s.Stop()
 			close(spinnerCh)
-			fmt.Printf("(With %s object size, %d concurrency) PUT: %s/s GET: %s/s\n", humanize.IBytes(uint64(result.Size)), result.Concurrent, humanize.IBytes(uint64(result.PUTStats.ThroughputPerSec)), humanize.IBytes(uint64(result.GETStats.ThroughputPerSec)))
+			fmt.Printf("(With %s object size, %d concurrency) PUT: %s/s GET: %s/s\n", humanize.IBytes(uint64(result.Size)), result.Concurrent, humanize.IBytes(result.PUTStats.ThroughputPerSec), humanize.IBytes(result.GETStats.ThroughputPerSec))
 			spinnerCh, s = startSpinner()
 		}
 	}

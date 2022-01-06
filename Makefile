@@ -18,14 +18,13 @@ checks:
 
 getdeps:
 	@mkdir -p ${GOPATH}/bin
-	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.40.1
-	@echo "Installing gofumpt" && go install mvdan.cc/gofumpt@latest
+	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.43.0
 	@echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@latest
 
 crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)
 
-verifiers: getdeps vet fmt lint
+verifiers: getdeps vet lint
 
 docker: build
 	@docker build -t $(TAG) . -f Dockerfile.dev
@@ -34,14 +33,8 @@ vet:
 	@echo "Running $@"
 	@GO111MODULE=on go vet github.com/minio/mc/...
 
-fmt:
-	@echo "Running $@"
-	@GO111MODULE=on gofmt -d cmd/
-	@GO111MODULE=on gofmt -d pkg/
-
 lint:
 	@echo "Running $@ check"
-	@GO111MODULE=on ${GOPATH}/bin/golangci-lint cache clean
 	@GO111MODULE=on ${GOPATH}/bin/golangci-lint run --timeout=5m --config ./.golangci.yml
 
 # Builds mc, runs the verifiers then runs the tests.

@@ -215,7 +215,7 @@ func (msg *tierInfoMessage) String() string {
 	if msg.Status == "error" {
 		fatal(probe.NewError(errors.New(msg.Error)), "Unable to get tier statistics")
 	}
-	return toTable(tierInfos(msg.TierInfos))
+	return toTable(msg.TierInfos)
 }
 
 // JSON method returns JSON encoding of msg.
