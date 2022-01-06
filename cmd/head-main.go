@@ -63,7 +63,7 @@ var headCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

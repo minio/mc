@@ -47,7 +47,7 @@ var diffCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] FIRST SECOND
+  {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
