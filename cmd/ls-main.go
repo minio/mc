@@ -53,6 +53,10 @@ var (
 			Name:  "summarize",
 			Usage: "display summary information (number of objects, total size)",
 		},
+		cli.StringFlag{
+			Name:  "storage-class, sc",
+			Usage: "filter to specified storage class",
+		},
 	}
 )
 
@@ -102,6 +106,12 @@ EXAMPLES:
 
   9. List all objects on mybucket, summarize the number of objects and total size.
      {{.Prompt}} {{.HelpName}} --summarize s3/mybucket/
+
+  10. List all objects on mybucket, for all storageClass
+     {{.Prompt}} {{.HelpName}} --storage-classes '*' s3/mybucket
+  
+  11. List all objects on mybucket, for the GLACIER storage class
+     {{.Prompt}} {{.HelpName}} --storage-classes 'GLACIER' s3/mybucket 
 `,
 }
 
@@ -147,7 +157,7 @@ func parseRewindFlag(rewind string) (timeRef time.Time) {
 }
 
 // checkListSyntax - validate all the passed arguments
-func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, bool, bool, time.Time, bool) {
+func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, bool, bool, time.Time, bool, string) {
 	args := cliCtx.Args()
 	if !cliCtx.Args().Present() {
 		args = []string{"."}
@@ -168,7 +178,12 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, 
 		timeRef = time.Now().UTC()
 	}
 
-	return args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions
+	storageClasss := cliCtx.String("storage-class")
+	if len(storageClasss) == 0 {
+		storageClasss = "STANDARD"
+	}
+
+	return args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClasss
 }
 
 // mainList - is a handler for mc ls command
@@ -186,9 +201,10 @@ func mainList(cliCtx *cli.Context) error {
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
 	console.SetColor("Summarize", color.New(color.Bold))
+	console.SetColor("SC", color.New(color.FgBlue))
 
 	// check 'ls' cliCtx arguments.
-	args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions := checkListSyntax(ctx, cliCtx)
+	args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClassFilter := checkListSyntax(ctx, cliCtx)
 
 	var cErr error
 	for _, targetURL := range args {
@@ -203,7 +219,7 @@ func mainList(cliCtx *cli.Context) error {
 				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 			}
 		}
-		if e := doList(ctx, clnt, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions); e != nil {
+		if e := doList(ctx, clnt, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClassFilter); e != nil {
 			cErr = e
 		}
 	}
