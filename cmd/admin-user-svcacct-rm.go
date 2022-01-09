@@ -24,6 +24,7 @@ import (
 
 var adminUserSvcAcctRemoveCmd = cli.Command{
 	Name:         "rm",
+	Aliases:      []string{"remove"},
 	Usage:        "Remove a service account",
 	Action:       mainAdminUserSvcAcctRemove,
 	OnUsageError: onUsageError,
@@ -47,8 +48,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctRemoveSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct rm command.")
+		cli.ShowCommandHelpAndExit(ctx, "rm", 1)
 	}
 }
 

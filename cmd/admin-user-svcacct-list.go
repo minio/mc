@@ -25,8 +25,8 @@ import (
 )
 
 var adminUserSvcAcctListCmd = cli.Command{
-	Name:         "list",
-	Aliases:      []string{"ls"},
+	Name:         "ls",
+	Aliases:      []string{"list"},
 	Usage:        "List services accounts",
 	Action:       mainAdminUserSvcAcctList,
 	OnUsageError: onUsageError,
@@ -53,8 +53,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctListSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct ls command.")
+		cli.ShowCommandHelpAndExit(ctx, "ls", 1)
 	}
 }
 
