@@ -88,8 +88,8 @@ func (u userPolicyMessage) accountType() string {
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
-		buf, err := json.MarshalIndent(u.PolicyInfo, "", " ")
-		fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
+		buf, e := json.MarshalIndent(u.PolicyInfo, "", " ")
+		fatalIf(probe.NewError(e), "Unable to marshal to JSON.")
 		return string(buf)
 	case "list":
 		policyFieldMaxLen := 20
