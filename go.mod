@@ -18,9 +18,10 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.2.2
+	github.com/minio/madmin-go v1.2.4
+	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.20
-	github.com/minio/pkg v1.1.11
+	github.com/minio/pkg v1.1.14
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -68,7 +69,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/minio/argon2 v1.0.0 // indirect
-	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

@@ -315,6 +315,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/config/history": aliasCompleter,
 	"/admin/config/restore": aliasCompleter,
 
+	"/admin/decom/start":         aliasCompleter,
+	"/admin/decom/status":        aliasCompleter,
+	"/admin/decom/cancel":        aliasCompleter,
+	"/admin/decommission/start":  aliasCompleter,
+	"/admin/decommission/status": aliasCompleter,
+	"/admin/decommission/cancel": aliasCompleter,
+
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
 	"/admin/console":   aliasCompleter,
