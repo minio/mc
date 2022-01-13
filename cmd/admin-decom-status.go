@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -76,31 +77,33 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 		poolStatus, e := client.StatusPool(globalContext, pool)
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to get status per pool")
 
+		var msg string
 		if poolStatus.Decommission.Complete {
-			console.Infof("Decommission of pool %s is complete, you may now remove it from server command line\n", poolStatus.CmdLine)
+			msg = color.GreenString(fmt.Sprintf("Decommission of pool %s is complete, you may now remove it from server command line", poolStatus.CmdLine))
 		} else if poolStatus.Decommission.Failed {
-			console.Infof("Decommission of pool %s failed, please retry again", poolStatus.CmdLine)
+			msg = color.GreenString(fmt.Sprintf("Decommission of pool %s failed, please retry again", poolStatus.CmdLine))
 		} else if poolStatus.Decommission.Canceled {
-			console.Infof("Decommission of pool %s was canceled, you may start again", poolStatus.CmdLine)
+			msg = color.GreenString(fmt.Sprintf("Decommission of pool %s was canceled, you may start again", poolStatus.CmdLine))
 		} else if !poolStatus.Decommission.StartTime.IsZero() {
-			usedCurrent := (poolStatus.Decommission.TotalSize - poolStatus.Decommission.CurrentSize)
 			usedStart := (poolStatus.Decommission.TotalSize - poolStatus.Decommission.StartSize)
-			duration := time.Since(poolStatus.Decommission.StartTime).Seconds()
+			usedCurrent := (poolStatus.Decommission.TotalSize - poolStatus.Decommission.CurrentSize)
+
 			if usedStart > usedCurrent {
+				duration := uint64(time.Since(poolStatus.Decommission.StartTime).Seconds())
 				copied := uint64(usedStart - usedCurrent)
-				speed := copied / uint64(duration)
-				remainingDuration := time.Duration(poolStatus.Decommission.TotalSize/int64(speed)) * time.Second
-				msg := "Decommissioning currently at " + humanize.IBytes(speed) + "/sec " + "[" + humanize.IBytes(
+				speed := copied / duration
+				msg = "Decommissioning rate at " + humanize.IBytes(speed) + "/sec " + "[" + humanize.IBytes(
 					uint64(usedCurrent)) + "/" + humanize.IBytes(uint64(poolStatus.Decommission.TotalSize)) + "]"
-				eta := time.Now().UTC().Add(remainingDuration)
-				msg += "\nTime Remaining: " + humanize.RelTime(time.Now().UTC(), eta, "ago", "") + "( " + humanize.RelTime(time.Now().UTC(), poolStatus.Decommission.StartTime, "ago", "") + " )"
-				console.Infoln(msg)
+				msg += "\nStarted: " + humanize.RelTime(time.Now().UTC(), poolStatus.Decommission.StartTime, "", "ago")
 			} else {
-				errorIf(errDummy().Trace(args...), "Decommissioning in progress however there is no progress reported,please report this issue at https://github.com/minio/mc/issues")
+				msg = "Decommissioning is starting..."
 			}
+			msg = color.GreenString(msg)
 		} else {
 			errorIf(errDummy().Trace(args...), "This pool is currently not scheduled for decomissioning")
+			return nil
 		}
+		fmt.Println(msg)
 		return nil
 	}
 	poolStatuses, e := client.ListPoolsStatus(globalContext)
