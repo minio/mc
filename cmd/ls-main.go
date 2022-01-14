@@ -179,9 +179,6 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, 
 	}
 
 	storageClasss := cliCtx.String("storage-class")
-	if len(storageClasss) == 0 {
-		storageClasss = "STANDARD"
-	}
 
 	return args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClasss
 }
