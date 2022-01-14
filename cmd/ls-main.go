@@ -106,12 +106,9 @@ EXAMPLES:
 
   9. List all objects on mybucket, summarize the number of objects and total size.
      {{.Prompt}} {{.HelpName}} --summarize s3/mybucket/
-
-  10. List all objects on mybucket, for all storageClass
-     {{.Prompt}} {{.HelpName}} --storage-classes '*' s3/mybucket
   
-  11. List all objects on mybucket, for the GLACIER storage class
-     {{.Prompt}} {{.HelpName}} --storage-classes 'GLACIER' s3/mybucket 
+  10. List all objects on mybucket, for the GLACIER storage class
+     {{.Prompt}} {{.HelpName}} --storage-class 'GLACIER' s3/mybucket 
 `,
 }
 
