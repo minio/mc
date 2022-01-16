@@ -379,8 +379,7 @@ func fetchServerHealthInfo(ctx *cli.Context, client *madmin.AdminClient) (interf
 		optsMap[opt] = struct{}{}
 	}
 
-	spinners := []string{"/", "|", "\\", "--", "|"}
-
+	spinners := []string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●"}
 	cont, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
