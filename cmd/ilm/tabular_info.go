@@ -73,8 +73,8 @@ const (
 
 // Some cell values
 const (
-	tickCell      string = "\u2713 "
-	crossTickCell string = "\u2717 "
+	tickCell      string = "✔ "
+	crossTickCell string = "✗ "
 	blankCell     string = " "
 )
 
