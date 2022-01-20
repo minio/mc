@@ -128,7 +128,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, sourceURL, targetURL, opts.isMetadata) {
+	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, opts.isMetadata) {
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
 			URLsCh <- URLs{Error: diffMsg.Error, ErrorCond: differInUnknown}
