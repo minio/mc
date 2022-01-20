@@ -46,6 +46,7 @@ require (
 require (
 	github.com/charmbracelet/bubbles v0.10.0
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220128151721-7ec01f75421d
+	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
 )
 
