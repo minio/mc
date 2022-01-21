@@ -51,7 +51,7 @@ EXAMPLES:
   1. Add the "diagnostics" policy for user "james".
      {{.Prompt}} {{.HelpName}} myminio diagnostics user=james
 
-  2. add the "diagnostics" policy for group "auditors".
+  2. Add the "diagnostics" policy for group "auditors".
      {{.Prompt}} {{.HelpName}} myminio diagnostics group=auditors
 `,
 }
@@ -123,7 +123,7 @@ func mainAdminPolicyUpdate(ctx *cli.Context) error {
 	}
 
 	updatedPolicies, e := updateCannedPolicies(existingPolicies, policiesToAdd)
-	if err != nil {
+	if e != nil {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to update the policy")
 	}
 
