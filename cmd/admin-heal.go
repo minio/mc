@@ -69,6 +69,10 @@ var adminHealFlags = []cli.Flag{
 		Name:  "storage-class",
 		Usage: "show server/disks failure tolerance with the given storage class",
 	},
+	cli.BoolFlag{
+		Name:  "verbose, v",
+		Usage: "show verbose information",
+	},
 }
 
 var adminHealCmd = cli.Command{
@@ -91,11 +95,6 @@ FLAGS:
 EXAMPLES:
   1. Monitor healing status on a running server at alias 'myminio':
      {{.Prompt}} {{.HelpName}} myminio/
-     ...
-     ...
-     Summary:
-     =======
-     No ongoing active healing.
 `,
 }
 
@@ -129,15 +128,6 @@ func (s stopHealMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(stopHealJSONBytes)
-}
-
-// verboseBackgroundHealStatusMessage is container for stop heal success and failure messages.
-type verboseBackgroundHealStatusMessage struct {
-	Status   string `json:"status"`
-	HealInfo madmin.BgHealState
-
-	// Specify storage class to show servers/disks tolerance
-	ToleranceForSC string `json:"-"`
 }
 
 type setIndex struct {
@@ -343,6 +333,15 @@ func getOfflineNodes(endpoints []string) map[string]struct{} {
 		offlineNodes[endpoint] = struct{}{}
 	}
 	return offlineNodes
+}
+
+// verboseBackgroundHealStatusMessage is container for stop heal success and failure messages.
+type verboseBackgroundHealStatusMessage struct {
+	Status   string `json:"status"`
+	HealInfo madmin.BgHealState
+
+	// Specify storage class to show servers/disks tolerance
+	ToleranceForSC string `json:"-"`
 }
 
 // String colorized to show background heal status message.
@@ -628,11 +627,18 @@ func mainAdminHeal(ctx *cli.Context) error {
 	if bucket == "" && !ctx.Bool("recursive") {
 		bgHealStatus, berr := adminClnt.BackgroundHealStatus(globalContext)
 		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
-		printMsg(verboseBackgroundHealStatusMessage{
-			Status:         "success",
-			HealInfo:       bgHealStatus,
-			ToleranceForSC: strings.ToUpper(ctx.String("storage-class")),
-		})
+		if ctx.Bool("verbose") {
+			printMsg(verboseBackgroundHealStatusMessage{
+				Status:         "success",
+				HealInfo:       bgHealStatus,
+				ToleranceForSC: strings.ToUpper(ctx.String("storage-class")),
+			})
+		} else {
+			printMsg(shortBackgroundHealStatusMessage{
+				Status:   "success",
+				HealInfo: bgHealStatus,
+			})
+		}
 		return nil
 	}
 
