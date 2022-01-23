@@ -155,6 +155,17 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 mc alias set gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
+### Example - IBM Cloud Object Storage
+Get your AccessKeyID and SecretAccessKey by creating a service account [with HMAC credentials](https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-uhc-hmac-credentials-main).  This option is only available from **Resources > Cloud Object Storage > Service credentials** (not from Manage > Access (IAM) > Service IDs). Once created, the values you will use for `accessKey` and `secretKey` are found in the `cos_hmac_keys` field of the service credentials.
+
+Finally, the url will be the **public endpoint specific to the region/resiliency** that you chose when setting up your bucket. There is no single, global url for all buckets. Find your bucket's URL in the console by going to Cloud Object Storage > Buckets > [your-bucket] > Configuration > Endpoints > public. Remember to prepend `https://` to the URL provided.
+
+```
+mc alias set ibm https://s3.us-east.cloud-object-storage.appdomain.cloud BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v4
+```
+
+**Note**: The service ID you create must have an access policy granting it access to your Object Storage instance(s). 
+
 ### Example - Specify keys using standard input
 
 #### Prompt
