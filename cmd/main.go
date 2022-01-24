@@ -36,6 +36,7 @@ import (
 	"github.com/inconshreveable/mousetrap"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
 	"github.com/minio/pkg/env"
 	"github.com/minio/pkg/trie"
@@ -299,12 +300,7 @@ func initMC() {
 	loadRootCAs()
 }
 
-func installAutoCompletion() {
-	if runtime.GOOS == "windows" {
-		console.Infoln("autocompletion feature is not available for this operating system")
-		return
-	}
-
+func getShellName() (string, bool) {
 	shellName := os.Getenv("SHELL")
 	if shellName == "" {
 		ppid := os.Getppid()
@@ -315,19 +311,26 @@ func installAutoCompletion() {
 				"no SHELL environment variable found")
 		}
 		shellName = strings.TrimSpace(string(ppName))
+		return strings.ToLower(filepath.Base(shellName)), false
+	}
+	return strings.ToLower(filepath.Base(shellName)), true
+}
+
+func installAutoCompletion() {
+	if runtime.GOOS == "windows" {
+		console.Infoln("autocompletion feature is not available for this operating system")
+		return
+	}
+
+	shellName, ok := getShellName()
+	if !ok {
 		console.Infoln("No 'SHELL' env var. Your shell is auto determined as '" + shellName + "'.")
 	} else {
 		console.Infoln("Your shell is set to '" + shellName + "', by env var 'SHELL'.")
 	}
-	shellName = strings.ToLower(filepath.Base(shellName))
 
-	supportedShells := map[string]bool{
-		"bash": true,
-		"zsh":  true,
-		"fish": true,
-	}
-
-	if !supportedShells[shellName] {
+	supportedShellsSet := set.CreateStringSet("bash", "zsh", "fish")
+	if !supportedShellsSet.Contains(shellName) {
 		fatalIf(probe.NewError(errors.New("")),
 			"'"+shellName+"' is not a supported shell. "+
 				"Supported shells are: bash, zsh, fish")
