@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/fatih/color"
@@ -72,15 +73,16 @@ func (s serviceRestartCommand) JSON() string {
 
 // serviceRestartMessage is container for service restart success and failure messages.
 type serviceRestartMessage struct {
-	Status    string `json:"status"`
-	ServerURL string `json:"serverURL"`
-	Err       error  `json:"error,omitempty"`
+	Status    string        `json:"status"`
+	ServerURL string        `json:"serverURL"`
+	TimeTaken time.Duration `json:"timeTaken"`
+	Err       error         `json:"error,omitempty"`
 }
 
 // String colorized service restart message.
 func (s serviceRestartMessage) String() string {
 	if s.Err == nil {
-		return console.Colorize("ServiceRestart", "\nRestarted `"+s.ServerURL+"` successfully.")
+		return console.Colorize("ServiceRestart", fmt.Sprintf("\nRestarted `%s` successfully in %s", s.ServerURL, timeDurationToHumanizedDuration(s.TimeTaken).StringShort()))
 	}
 	return console.Colorize("FailedServiceRestart", "Failed to restart `"+s.ServerURL+"`. error: "+s.Err.Error())
 }
@@ -136,18 +138,28 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	printProgress()
 	mark = "."
 
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
+
+	t := time.Now()
 	for {
 		select {
 		case <-globalContext.Done():
 			return globalContext.Err()
-		case <-time.NewTimer(3 * time.Second).C:
-			ctx, cancel := context.WithTimeout(globalContext, 1*time.Second)
+		case <-timer.C:
+			timer.Reset(time.Second)
+
+			ctx, cancel := context.WithTimeout(globalContext, 3*time.Second)
 			// Fetch the service status of the specified MinIO server
 			info, e := client.ServerInfo(ctx)
 			cancel()
 			switch {
 			case e == nil && info.Mode == string(madmin.ItemOnline):
-				printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+				printMsg(serviceRestartMessage{
+					Status:    "success",
+					ServerURL: aliasedURL,
+					TimeTaken: time.Since(t),
+				})
 				return nil
 			case err == nil && info.Mode == string(madmin.ItemInitializing):
 				coloring = color.New(color.FgYellow)
