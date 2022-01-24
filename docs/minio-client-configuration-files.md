@@ -62,6 +62,13 @@ cat config.json
 			"secretKey": "YOUR-SECRET-KEY-HERE",
 			"api": "S3v4",
                         "path": "auto"
+		},
+		"ibm": {
+			"url": "https://s3.YOUR-REGION.cloud-object-storage.appdomain.cloud",
+			"accessKey": "YOUR-HMAC-ACCESS-KEY-ID",
+			"secretKey": "YOUR-HMAC-SECRET-ACCESS-KEY",
+			"api": "S3v4", 
+			"path": "auto" 
 		}
 	}
 }
