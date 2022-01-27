@@ -23,7 +23,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/pkg/set"
+	"github.com/minio/minio-go/v7/pkg/set"
 )
 
 var callhomeFlags = append(globalFlags, cli.BoolFlag{
