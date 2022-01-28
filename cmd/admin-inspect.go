@@ -27,6 +27,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -62,7 +64,15 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+EXAMPLES:
+  1. Download 'xl.meta' for a specific object from all the drives in a zip file.
+     {{.Prompt}} {{.HelpName}} myminio/bucket/test*/xl.meta
 
+  2. Download all constituent parts for a specific object, and optionally encrypt the downloaded zip.
+     {{.Prompt}} {{.HelpName}} --encrypt myminio/bucket/test*/*/part.*
+
+  3. Download recursively all objects at a prefix. NOTE: This can be an expensive operation use it with caution.
+     {{.Prompt}} {{.HelpName}} myminio/bucket/test/**
 `,
 }
 
@@ -97,7 +107,15 @@ func mainAdminInspect(ctx *cli.Context) error {
 	splits := splitStr(aliasedURL, "/", 3)
 	bucket, prefix := splits[1], splits[2]
 
-	key, r, ierr := client.Inspect(context.Background(), madmin.InspectOptions{Volume: bucket, File: prefix})
+	shellName, _ := getShellName()
+	if runtime.GOOS != "windows" && shellName != "bash" && strings.Contains(prefix, "*") {
+		console.Infoln("Your shell is auto determined as '" + shellName + "', wildcard patterns are only supported with 'bash' SHELL.")
+	}
+
+	key, r, ierr := client.Inspect(context.Background(), madmin.InspectOptions{
+		Volume: bucket,
+		File:   prefix,
+	})
 	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to inspect file.")
 
 	// Create profile zip file
