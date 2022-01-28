@@ -315,6 +315,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/config/history": aliasCompleter,
 	"/admin/config/restore": aliasCompleter,
 
+	"/admin/decom/start":         aliasCompleter,
+	"/admin/decom/status":        aliasCompleter,
+	"/admin/decom/cancel":        aliasCompleter,
+	"/admin/decommission/start":  aliasCompleter,
+	"/admin/decommission/status": aliasCompleter,
+	"/admin/decommission/cancel": aliasCompleter,
+
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
 	"/admin/console":   aliasCompleter,
@@ -348,8 +355,10 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/user/svcacct/add":     aliasCompleter,
 	"/admin/user/svcacct/list":    aliasCompleter,
+	"/admin/user/svcacct/ls":      aliasCompleter,
 	"/admin/user/svcacct/rm":      aliasCompleter,
 	"/admin/user/svcacct/info":    aliasCompleter,
+	"/admin/user/svcacct/edit":    aliasCompleter,
 	"/admin/user/svcacct/set":     aliasCompleter,
 	"/admin/user/svcacct/enable":  aliasCompleter,
 	"/admin/user/svcacct/disable": aliasCompleter,

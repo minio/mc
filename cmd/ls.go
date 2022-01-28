@@ -50,6 +50,7 @@ type contentMessage struct {
 	VersionOrd     int    `json:"versionOrdinal,omitempty"`
 	VersionIndex   int    `json:"versionIndex,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
+	StorageClass   string `json:"storageClass,omitempty"`
 }
 
 // String colorized string message.
@@ -57,6 +58,10 @@ func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s]", c.Time.Format(printDate)))
 	message += console.Colorize("Size", fmt.Sprintf("%7s", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
 	fileDesc := ""
+
+	if c.StorageClass != "" {
+		message += " " + console.Colorize("SC", c.StorageClass)
+	}
 
 	if c.VersionID != "" {
 		fileDesc += console.Colorize("VersionID", " "+c.VersionID) + console.Colorize("VersionOrd", fmt.Sprintf(" v%d", c.VersionOrd))
@@ -131,6 +136,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		}()
 
 		contentMsg.Size = c.Size
+		contentMsg.StorageClass = c.StorageClass
 		md5sum := strings.TrimPrefix(c.ETag, "\"")
 		md5sum = strings.TrimSuffix(md5sum, "\"")
 		contentMsg.ETag = md5sum
@@ -195,7 +201,7 @@ func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, print
 }
 
 // doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions bool) error {
+func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions bool, filter string) error {
 	var (
 		lastPath          string
 		perObjectVersions []*ClientContent
@@ -233,7 +239,7 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 			continue
 		}
 
-		if content.StorageClass == s3StorageClassGlacier {
+		if content.StorageClass != "" && filter != "" && filter != "*" && content.StorageClass != filter {
 			continue
 		}
 

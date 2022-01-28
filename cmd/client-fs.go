@@ -70,8 +70,18 @@ func fsNew(path string) (Client, *probe.Error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, probe.NewError(EmptyPath{})
 	}
+	absPath, e := filepath.Abs(path)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+	// filepath.Abs removes the trailing slash in a path
+	// but we still need it because fsClient.List() does not
+	// traverse a directory without a trailing slash in the name
+	if path[len(path)-1] == filepath.Separator {
+		absPath += string(filepath.Separator)
+	}
 	return &fsClient{
-		PathURL: newClientURL(normalizePath(path)),
+		PathURL: newClientURL(normalizePath(absPath)),
 	}, nil
 }
 

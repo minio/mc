@@ -37,7 +37,8 @@ var adminUserSvcAcctSetFlags = []cli.Flag{
 }
 
 var adminUserSvcAcctSetCmd = cli.Command{
-	Name:         "set",
+	Name:         "edit",
+	Aliases:      []string{"set"},
 	Usage:        "edit an existing service account",
 	Action:       mainAdminUserSvcAcctSet,
 	OnUsageError: onUsageError,
@@ -61,8 +62,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctSetSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctSetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct set command.")
+		cli.ShowCommandHelpAndExit(ctx, "edit", 1)
 	}
 }
 

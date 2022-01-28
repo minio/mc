@@ -20,9 +20,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/briandowns/spinner"
+	tea "github.com/charmbracelet/bubbletea"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -78,62 +79,42 @@ EXAMPLES:
 `,
 }
 
-type speedTestResult madmin.SpeedTestResult
-
-func (s speedTestResult) String() (msg string) {
-	msg += fmt.Sprintf("\nMinIO %s, %d servers, %d drives\n", s.Version, s.Servers, s.Disks)
-
-	var errorReturned bool
-	for _, node := range s.PUTStats.Servers {
-		if node.Err != "" {
-			errorReturned = true
-			break
-		}
-	}
-	for _, node := range s.GETStats.Servers {
-		if node.Err != "" {
-			errorReturned = true
-			break
-		}
-	}
-
-	// When no error is found and yet without results, this means the speedtest duration is too short
-	if !errorReturned && (s.PUTStats.ThroughputPerSec == 0 || s.GETStats.ThroughputPerSec == 0) {
-		msg += "\n"
-		msg += "No results found for this speedtest iteration. Try increasing --duration flag."
-		msg += "\n"
-		return
-	}
-
-	msg += fmt.Sprintf("PUT: %s/s, %s objs/s\n", humanize.IBytes(s.PUTStats.ThroughputPerSec), humanize.Comma(int64(s.PUTStats.ObjectsPerSec)))
+func (s speedTestResult) StringVerbose() (msg string) {
+	result := s.result
 	if globalSpeedTestVerbose {
-		for _, node := range s.PUTStats.Servers {
-			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
+		msg += "\n\n"
+		for _, node := range result.PUTStats.Servers {
+			msg += fmt.Sprintf("PUT:\n   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
-			msg += "\n"
-
 		}
-	}
-	if globalSpeedTestVerbose {
+
 		msg += "\n"
-	}
-	msg += fmt.Sprintf("GET: %s/s, %s objs/s\n", humanize.IBytes(s.GETStats.ThroughputPerSec), humanize.Comma(int64(s.GETStats.ObjectsPerSec)))
-	if globalSpeedTestVerbose {
-		for _, node := range s.GETStats.Servers {
-			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
+
+		for _, node := range result.GETStats.Servers {
+			msg += fmt.Sprintf("GET:\n   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
-			msg += "\n"
 		}
+
+		msg += "\n"
 	}
 	return msg
 }
 
+func (s speedTestResult) String() (msg string) {
+	result := s.result
+	msg += fmt.Sprintf("MinIO %s, %d servers, %d drives, %s objects, %d threads",
+		result.Version, result.Servers, result.Disks,
+		humanize.IBytes(uint64(result.Size)), result.Concurrent)
+
+	return msg
+}
+
 func (s speedTestResult) JSON() string {
-	JSONBytes, e := json.MarshalIndent(s, "", "    ")
+	JSONBytes, e := json.MarshalIndent(s.result, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(JSONBytes)
 }
@@ -195,57 +176,45 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 	})
 	fatalIf(probe.NewError(err), "Failed to execute speedtest")
 
-	spinnerCh, s := startSpinner()
+	if globalJSON {
+		for result := range resultCh {
+			if result.Version == "" {
+				continue
+			}
+			printMsg(speedTestResult{
+				result: result,
+			})
+		}
+		return nil
+	}
 
-	var result madmin.SpeedTestResult
-	for result = range resultCh {
-		select {
-		case spinnerCh <- struct{}{}:
-		default:
+	done := make(chan struct{})
+
+	p := tea.NewProgram(initSpeedTestUI())
+	go func() {
+		if e := p.Start(); e != nil {
+			os.Exit(1)
 		}
-		if result.Version == "" {
-			continue
+		close(done)
+	}()
+
+	go func() {
+		var result madmin.SpeedTestResult
+		for result = range resultCh {
+			if result.Version == "" {
+				continue
+			}
+			p.Send(speedTestResult{
+				result: result,
+			})
 		}
-		if !globalJSON {
-			s.Stop()
-			close(spinnerCh)
-			fmt.Printf("(With %s object size, %d concurrency) PUT: %s/s GET: %s/s\n", humanize.IBytes(uint64(result.Size)), result.Concurrent, humanize.IBytes(result.PUTStats.ThroughputPerSec), humanize.IBytes(result.GETStats.ThroughputPerSec))
-			spinnerCh, s = startSpinner()
-		}
-	}
-	if result.Version != "" {
-		s.Stop()
-		close(spinnerCh)
-		printMsg(speedTestResult(result))
-	}
+		p.Send(speedTestResult{
+			result: result,
+			final:  true,
+		})
+	}()
+
+	<-done
 
 	return nil
-}
-
-func startSpinner() (chan struct{}, *spinner.Spinner) {
-	ch := make(chan struct{}, 1)
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	firstTimeDelay := true
-	go func() {
-		for {
-			if !globalJSON {
-				s.Suffix = " Running speedtest"
-				if firstTimeDelay {
-					// First time delay is a work around for the case where after the last server response
-					// we don't endup printing a redundant "Running speedtest" line. Because of the sleep here
-					// the program would have printed results and exited.
-					time.Sleep(100 * time.Millisecond)
-					firstTimeDelay = false
-				}
-				_, ok := <-ch
-				if !ok {
-					return
-				}
-				s.Start()
-				time.Sleep(500 * time.Millisecond)
-				s.Stop()
-			}
-		}
-	}()
-	return ch, s
 }

@@ -3,7 +3,7 @@ module github.com/minio/mc
 go 1.17
 
 require (
-	github.com/briandowns/spinner v1.18.0
+	github.com/charmbracelet/bubbletea v0.19.3
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
@@ -18,9 +18,10 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.1
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.2.2
+	github.com/minio/madmin-go v1.3.0
+	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.20
-	github.com/minio/pkg v1.1.11
+	github.com/minio/pkg v1.1.14
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -43,8 +44,15 @@ require (
 )
 
 require (
+	github.com/charmbracelet/bubbles v0.10.0
+	github.com/charmbracelet/lipgloss v0.4.1-0.20220128151721-7ec01f75421d
+	github.com/olekukonko/tablewriter v0.0.5
+)
+
+require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/containerd/console v1.0.2 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
@@ -63,14 +71,17 @@ require (
 	github.com/lestrrat-go/iter v1.0.1 // indirect
 	github.com/lestrrat-go/jwx v1.2.14 // indirect
 	github.com/lestrrat-go/option v1.0.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/minio/argon2 v1.0.0 // indirect
-	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
+	github.com/muesli/reflow v0.3.0 // indirect
+	github.com/muesli/termenv v0.10.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
