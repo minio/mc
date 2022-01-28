@@ -158,6 +158,8 @@ type Client interface {
 	RemoveReplication(ctx context.Context) *probe.Error
 	GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error)
 	ResetReplication(ctx context.Context, before time.Duration, arn string) (replication.ResyncTargetsInfo, *probe.Error)
+	ReplicationResyncStatus(ctx context.Context, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error)
+
 	// Encryption operations
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)
 	SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error

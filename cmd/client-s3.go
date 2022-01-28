@@ -2587,6 +2587,20 @@ func (c *S3Client) ResetReplication(ctx context.Context, before time.Duration, t
 	return rinfo, nil
 }
 
+// ReplicationResyncStatus - gets status of replication resync for this target arn
+func (c *S3Client) ReplicationResyncStatus(ctx context.Context, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return rinfo, probe.NewError(BucketNameEmpty{})
+	}
+
+	rinfo, e := c.api.GetBucketReplicationResyncStatus(ctx, bucket, arn)
+	if e != nil {
+		return rinfo, probe.NewError(e)
+	}
+	return rinfo, nil
+}
+
 // GetEncryption - gets bucket encryption info.
 func (c *S3Client) GetEncryption(ctx context.Context) (algorithm, keyID string, err *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()

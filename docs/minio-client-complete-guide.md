@@ -1897,8 +1897,14 @@ mc replicate export myminio/mybucket > /data/replicate/config
 mc replicate status myminio/mybucket
 ```
 
-*Example: Resync replication of previously replicated objects from `mybucket` on alias `myminio` to configured remote target in replication configuration.
+*Example: Resync replication of previously replicated objects from `mybucket` on alias `myminio` to remote target "arn:minio:replication::xxx:mybucket".
 
 ```
-mc replicate resync myminio/mybucket
+mc replicate resync start myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
+```
+
+*Example: Show status of replication resync of target "arn:minio:replication::xxx:mybucket" for `mybucket` on alias `myminio`.
+
+```
+mc replicate resync status myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
 ```

@@ -1233,6 +1233,14 @@ func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration, a
 	})
 }
 
+// ReplicationResyncStatus - gets status of replication resync for this target arn
+func (f *fsClient) ReplicationResyncStatus(ctx context.Context, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
+	return rinfo, probe.NewError(APINotImplemented{
+		API:     "ReplicationResyncStatus",
+		APIType: "filesystem",
+	})
+}
+
 // Get encryption info for a bucket, not implemented.
 func (f *fsClient) GetEncryption(ctx context.Context) (string, string, *probe.Error) {
 	return "", "", probe.NewError(APINotImplemented{
