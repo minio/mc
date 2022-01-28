@@ -398,6 +398,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/alias/remove": aliasCompleter,
 
 	"/support/callhome/set": aliasCompleter,
+	"/support/register":     aliasCompleter,
+	"/support/diagnostics":  aliasCompleter,
 
 	"/update": nil,
 }

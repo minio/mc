@@ -22,6 +22,8 @@ import (
 )
 
 var supportSubcommands = []cli.Command{
+	supportRegisterCmd,
+	supportDiagnosticsCmd,
 	supportCallhomeCmd,
 }
 
@@ -39,5 +41,5 @@ var supportCmd = cli.Command{
 func mainSupport(ctx *cli.Context) error {
 	commandNotFound(ctx, supportSubcommands)
 	return nil
-	// Sub-commands like "callhome" have their own main.
+	// Sub-commands like "register", "callhome", "diagnostics" have their own main.
 }
