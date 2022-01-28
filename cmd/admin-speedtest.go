@@ -83,23 +83,22 @@ func (s speedTestResult) StringVerbose() (msg string) {
 	result := s.result
 	if globalSpeedTestVerbose {
 		msg += "\n\n"
+		msg += "PUT:\n"
 		for _, node := range result.PUTStats.Servers {
-			msg += fmt.Sprintf("PUT:\n   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s\n", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
 		}
 
-		msg += "\n"
-
+		msg += "GET:\n"
 		for _, node := range result.GETStats.Servers {
-			msg += fmt.Sprintf("GET:\n   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
+			msg += fmt.Sprintf("   * %s: %s/s %s objs/s\n", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
 			if node.Err != "" {
 				msg += " error: " + node.Err
 			}
 		}
 
-		msg += "\n"
 	}
 	return msg
 }
