@@ -256,7 +256,7 @@ func mainAdminReplicationStatus(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	info, e := client.SRStatusInfo(globalContext)
+	info, e := client.SRStatusInfo(globalContext, madmin.SRStatusOptions{})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get cluster replication information")
 
 	printMsg(srStatus(info))
