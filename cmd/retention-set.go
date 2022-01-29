@@ -113,6 +113,7 @@ func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recur
 	timeRef = parseRewindFlag(cliCtx.String("rewind"))
 	withVersions = cliCtx.Bool("versions")
 	recursive = cliCtx.Bool("recursive")
+	bypass = cliCtx.Bool("bypass")
 	bucketMode = cliCtx.Bool("default")
 	return
 }
