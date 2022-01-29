@@ -51,7 +51,7 @@ var adminReplicateEditCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS1 --deployment-id --endpoint
+  {{.HelpName}} ALIAS --deployment-id [DEPLOYMENT-ID] --endpoint [NEW-ENDPOINT]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -59,7 +59,7 @@ FLAGS:
 
 EXAMPLES:
   1. Edit a site endpoint participating in cluster-level replication:
-     {{.Prompt}} {{.HelpName}} --deployment-id xyz --endpoint https://minio2:9000
+     {{.Prompt}} {{.HelpName}} --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --endpoint https://minio2:9000
 `,
 }
 
