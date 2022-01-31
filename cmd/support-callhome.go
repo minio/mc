@@ -33,22 +33,6 @@ var supportCallhomeCmd = cli.Command{
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
 	Subcommands:  callhomeSubcommands,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Enable logs callhome
-     {{.Prompt}} {{.HelpName}} play set log=on
-
-  2. Disable logs callhome
-     {{.Prompt}} {{.HelpName}} play set log=off
-`,
 }
 
 func mainCallhome(ctx *cli.Context) error {

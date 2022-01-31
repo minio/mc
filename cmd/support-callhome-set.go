@@ -46,7 +46,7 @@ USAGE:
   {{.HelpName}} TARGET option=on|off
 
 OPTIONS:
-  logs - Push minio log entries to SUBNET
+  logs - Push MinIO log entries to SUBNET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -64,7 +64,7 @@ func supportedOptions() set.StringSet {
 	return set.CreateStringSet("logs")
 }
 
-func validVals() set.StringSet {
+func validOptionValues() set.StringSet {
 	return set.CreateStringSet("on", "off")
 }
 
@@ -96,11 +96,7 @@ func mainCallhomeSet(ctx *cli.Context) error {
 		// options have already been validated, so third (error) return value can be ignored
 		k, v, _ := getOptionKV(option)
 		if k == "logs" {
-			if v == "on" {
-				configureSubnetWebhook(aliasedURL, true)
-			} else {
-				configureSubnetWebhook(aliasedURL, false)
-			}
+			configureSubnetWebhook(aliasedURL, v == "on")
 		}
 	}
 
@@ -142,14 +138,20 @@ func configureSubnetWebhook(aliasedURL string, enable bool) {
 
 func getOptionKV(input string) (string, string, error) {
 	so := supportedOptions()
+	vv := validOptionValues()
 	parts := strings.Split(input, "=")
+
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("Invalid argument %s. Must be of the form '%s=%s'",
+			input, strings.Join(so.ToSlice(), "|"), strings.Join(vv.ToSlice(), "|"))
+	}
+
 	opt := parts[0]
 	if !so.Contains(opt) {
 		return "", "", fmt.Errorf("Invalid option %s. Valid options are %s", opt, so.String())
 	}
 
 	val := parts[1]
-	vv := validVals()
 	if !vv.Contains(val) {
 		return "", "", fmt.Errorf("Invalid value %s for option %s. Valid values are %s", val, opt, vv.String())
 	}
