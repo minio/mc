@@ -46,7 +46,7 @@ USAGE:
   {{.HelpName}} TARGET option=on|off
 
 OPTIONS:
-  logs - Push MinIO log entries to SUBNET
+  logs - Push MinIO log entries to SUBNET in realtime
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
