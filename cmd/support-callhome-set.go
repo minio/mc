@@ -113,8 +113,8 @@ func configureSubnetWebhook(aliasedURL string, enable bool) {
 
 	apiKey := getSubnetAPIKeyFromConfig(alias)
 	if len(apiKey) == 0 {
-		err := fmt.Errorf("Please register the cluster first by running 'mc admin subnet register %s'", alias)
-		fatalIf(probe.NewError(err), "Cluster not registered.")
+		e := fmt.Errorf("Please register the cluster first by running 'mc admin subnet register %s'", alias)
+		fatalIf(probe.NewError(e), "Cluster not registered.")
 	}
 
 	enableStr := "off"
