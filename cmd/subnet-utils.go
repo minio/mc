@@ -78,6 +78,10 @@ func subnetBaseURL() string {
 	return "https://subnet.min.io"
 }
 
+func subnetLogWebhookURL() string {
+	return subnetBaseURL() + "/api/logs"
+}
+
 func subnetHealthUploadURL() string {
 	return subnetBaseURL() + "/api/health/upload"
 }
