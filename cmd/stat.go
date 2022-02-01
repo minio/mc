@@ -45,8 +45,8 @@ type statMessage struct {
 	Size              int64             `json:"size"`
 	ETag              string            `json:"etag"`
 	Type              string            `json:"type,omitempty"`
-	Expires           time.Time         `json:"expires,omitempty"`
-	Expiration        time.Time         `json:"expiration,omitempty"`
+	Expires           *time.Time        `json:"expires,omitempty"`
+	Expiration        *time.Time        `json:"expiration,omitempty"`
 	ExpirationRuleID  string            `json:"expirationRuleID,omitempty"`
 	ReplicationStatus string            `json:"replicationStatus,omitempty"`
 	Metadata          map[string]string `json:"metadata,omitempty"`
@@ -73,10 +73,10 @@ func (stat statMessage) String() (msg string) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField) + "\n")
 	}
 	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Type", stat.Type) + "\n")
-	if !stat.Expires.IsZero() {
+	if stat.Expires != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)) + "\n")
 	}
-	if !stat.Expiration.IsZero() {
+	if stat.Expiration != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
 	}
@@ -145,8 +145,12 @@ func parseStat(c *ClientContent) statMessage {
 	content.Metadata = c.Metadata
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
-	content.Expires = c.Expires
-	content.Expiration = c.Expiration
+	if !c.Expires.IsZero() {
+		content.Expires = &c.Expires
+	}
+	if !c.Expiration.IsZero() {
+		content.Expiration = &c.Expiration
+	}
 	content.ExpirationRuleID = c.ExpirationRuleID
 	content.ReplicationStatus = c.ReplicationStatus
 	return content

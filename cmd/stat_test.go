@@ -46,8 +46,10 @@ func TestParseStat(t *testing.T) {
 			if testCase.content.Size != statMsg.Size {
 				t.Errorf("Expecting %d, got %d", testCase.content.Size, statMsg.Size)
 			}
-			if testCase.content.Expires != statMsg.Expires {
-				t.Errorf("Expecting %s, got %s", testCase.content.Expires, statMsg.Expires)
+			if statMsg.Expires != nil {
+				if testCase.content.Expires != *statMsg.Expires {
+					t.Errorf("Expecting %s, got %s", testCase.content.Expires, statMsg.Expires)
+				}
 			}
 			if testCase.content.Type.IsRegular() {
 				if statMsg.Type != "file" {
