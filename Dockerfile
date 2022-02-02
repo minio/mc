@@ -11,7 +11,7 @@ RUN  \
      git clone https://github.com/minio/mc && cd mc && \
      go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5
 
 ARG TARGETARCH
 
