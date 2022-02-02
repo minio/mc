@@ -41,11 +41,12 @@ var aliasSubcommands = []cli.Command{
 	aliasSetCmd,
 	aliasListCmd,
 	aliasRemoveCmd,
+	aliasImportCmd,
 }
 
 var aliasCmd = cli.Command{
 	Name:            "alias",
-	Usage:           "set, remove and list aliases in configuration file",
+	Usage:           "manage server credentials in configuration file",
 	Action:          mainAlias,
 	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,
@@ -102,6 +103,8 @@ func (h aliasMessage) String() string {
 		fallthrough
 	case "set":
 		return console.Colorize("AliasMessage", "Added `"+h.Alias+"` successfully.")
+	case "import":
+		return console.Colorize("AliasMessage", "Imported `"+h.Alias+"` successfully.")
 	default:
 		return ""
 	}
