@@ -28,6 +28,7 @@ var adminSubnetHealthCmd = cli.Command{
 	OnUsageError:       onUsageError,
 	Action:             mainSubnetHealth,
 	Before:             setGlobalsFromContext,
+	Hidden:             true,
 	CustomHelpTemplate: "Please use 'mc support diagnostics'",
 }
 

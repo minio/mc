@@ -28,6 +28,7 @@ var adminSubnetRegisterCmd = cli.Command{
 	OnUsageError:       onUsageError,
 	Action:             mainAdminRegister,
 	Before:             setGlobalsFromContext,
+	Hidden:             true,
 	CustomHelpTemplate: "Please use 'mc support register'",
 }
 
