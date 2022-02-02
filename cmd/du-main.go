@@ -91,16 +91,25 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type duMessage struct {
-	Prefix string `json:"prefix"`
-	Size   int64  `json:"size"`
-	Status string `json:"status"`
+	Prefix     string `json:"prefix"`
+	Size       int64  `json:"size"`
+	Objects    int64  `json:"objects"`
+	Status     string `json:"status"`
+	IsVersions bool   `json:"is_versions"`
 }
 
 // Colorized message for console printing.
 func (r duMessage) String() string {
 	humanSize := strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
-
-	return fmt.Sprintf("%s\t%s", console.Colorize("Size", humanSize),
+	cnt := fmt.Sprintf("%d object", r.Objects)
+	if r.IsVersions {
+		cnt = fmt.Sprintf("%d version", r.Objects)
+	}
+	if r.Objects != 1 {
+		cnt += "s" // pluralize
+	}
+	return fmt.Sprintf("%s\t%s\t%s", console.Colorize("Size", humanSize),
+		console.Colorize("Objects", cnt),
 		console.Colorize("Prefix", r.Prefix))
 }
 
@@ -111,7 +120,7 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
+func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (sz, objs int64, err error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
@@ -120,7 +129,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
 		errorIf(pErr.Trace(urlStr), "Failed to summarize disk usage `"+urlStr+"`.")
-		return 0, exitStatus(globalErrorExitStatus) // End of journey.
+		return 0, 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
 	// No disk usage details below this level,
@@ -134,6 +143,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		ShowDir:           DirFirst,
 	})
 	size := int64(0)
+	objects := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -145,7 +155,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 				continue
 			}
 			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
-			return 0, exitStatus(globalErrorExitStatus)
+			return 0, 0, exitStatus(globalErrorExitStatus)
 		}
 		if content.URL.String() == targetURL {
 			continue
@@ -161,13 +171,17 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			used, err := du(ctx, subDirAlias, timeRef, withVersions, depth, encKeyDB)
+			used, n, err := du(ctx, subDirAlias, timeRef, withVersions, depth, encKeyDB)
 			if err != nil {
-				return 0, err
+				return 0, 0, err
 			}
 			size += used
+			objects += n
 		} else {
 			size += content.Size
+			if !content.IsDeleteMarker {
+				objects++
+			}
 		}
 	}
 
@@ -178,13 +192,15 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		}
 
 		printMsg(duMessage{
-			Prefix: strings.Trim(u.Path, "/"),
-			Size:   size,
-			Status: "success",
+			Prefix:     strings.Trim(u.Path, "/"),
+			Size:       size,
+			Objects:    objects,
+			Status:     "success",
+			IsVersions: withVersions,
 		})
 	}
 
-	return size, nil
+	return size, objects, nil
 }
 
 // main for du command.
@@ -196,6 +212,7 @@ func mainDu(cliCtx *cli.Context) error {
 	// Set colors.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Objects", color.New(color.FgGreen))
 	console.SetColor("Size", color.New(color.FgYellow))
 
 	ctx, cancelRm := context.WithCancel(globalContext)
@@ -226,7 +243,7 @@ func mainDu(cliCtx *cli.Context) error {
 			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}
 
-		if _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
+		if _, _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
 			duErr = err
 		}
 	}
