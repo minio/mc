@@ -95,7 +95,7 @@ type duMessage struct {
 	Size       int64  `json:"size"`
 	Objects    int64  `json:"objects"`
 	Status     string `json:"status"`
-	IsVersions bool   `json:"is_versions"`
+	IsVersions bool   `json:"isVersions"`
 }
 
 // Colorized message for console printing.
