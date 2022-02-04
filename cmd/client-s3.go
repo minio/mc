@@ -1115,17 +1115,18 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 
 	go func() {
 		defer close(resultCh)
-		if isRemoveBucket {
-			if _, object := c.url2BucketAndObject(); object != "" {
-				resultCh <- RemoveResult{
-					Err: probe.NewError(errors.New(
-						"use `mc rm` command to delete prefixes, or point your" +
-							" bucket directly, `mc rb <alias>/<bucket-name>/`"),
-					),
-				}
-				return
+
+		_, object := c.url2BucketAndObject()
+		if isRemoveBucket && object != "" {
+			resultCh <- RemoveResult{
+				Err: probe.NewError(errors.New(
+					"use `mc rm` command to delete prefixes, or point your" +
+						" bucket directly, `mc rb <alias>/<bucket-name>/`"),
+				),
 			}
+			return
 		}
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -1257,6 +1258,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					}
 				} else {
 					resultCh <- RemoveResult{
+						BucketName:         prevBucket,
 						RemoveObjectResult: removeStatus,
 					}
 				}
@@ -1266,7 +1268,8 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		if isRemoveBucket && prevBucket != "" && !isIncomplete {
 			if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
 				resultCh <- RemoveResult{
-					Err: probe.NewError(err),
+					BucketName: prevBucket,
+					Err:        probe.NewError(err),
 				}
 				return
 			}
