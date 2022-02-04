@@ -45,7 +45,7 @@ require (
 
 require (
 	github.com/charmbracelet/bubbles v0.10.0
-	github.com/charmbracelet/lipgloss v0.4.1-0.20220131213100-024177a6307a
+	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
 	github.com/olekukonko/tablewriter v0.0.5
 )
 
@@ -81,7 +81,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.11.0 // indirect
+	github.com/muesli/termenv v0.11.1-0.20220204035834-5ac8409525e0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
