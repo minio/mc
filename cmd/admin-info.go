@@ -101,10 +101,20 @@ func (u clusterStruct) String() (msg string) {
 	backendType := madmin.Unknown
 
 	// Set the type of MinIO server ("FS", "Erasure", "Unknown")
-	if _, ok := u.Info.Backend.(madmin.FSBackend); ok {
+	switch v := u.Info.Backend.(type) {
+	case madmin.FSBackend:
 		backendType = madmin.FS
-	} else if _, ok := u.Info.Backend.(madmin.ErasureBackend); ok {
+	case madmin.ErasureBackend:
 		backendType = madmin.Erasure
+	case map[string]interface{}:
+		vt, ok := v["backendType"]
+		if ok {
+			backendTypeS, _ := vt.(string)
+			switch backendTypeS {
+			case "Erasure":
+				backendType = madmin.Erasure
+			}
+		}
 	}
 
 	coloredDot := console.Colorize("Info", dot)
