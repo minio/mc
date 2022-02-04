@@ -23,7 +23,7 @@ import (
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
-	supportDiagnosticsCmd,
+	supportDiagCmd,
 	supportCallhomeCmd,
 }
 

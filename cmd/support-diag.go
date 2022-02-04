@@ -44,7 +44,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var supportDiagnosticsFlags = append([]cli.Flag{
+var supportDiagFlags = append([]cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
 		Usage:  "choose specific diagnostics to run [" + fullOptions.String() + "]",
@@ -76,13 +76,13 @@ var supportDiagnosticsFlags = append([]cli.Flag{
 	},
 }, subnetCommonFlags...)
 
-var supportDiagnosticsCmd = cli.Command{
-	Name:         "diagnostics",
+var supportDiagCmd = cli.Command{
+	Name:         "diag",
 	Usage:        "Generate MinIO diagnostics report for SUBNET",
 	OnUsageError: onUsageError,
-	Action:       mainSupportDiagnostics,
+	Action:       mainSupportDiag,
 	Before:       setGlobalsFromContext,
-	Flags:        append(supportDiagnosticsFlags, globalFlags...),
+	Flags:        append(supportDiagFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -107,8 +107,8 @@ EXAMPLES:
 `,
 }
 
-// checkSupportDiagnosticsSyntax - validate arguments passed by a user
-func checkSupportDiagnosticsSyntax(ctx *cli.Context) {
+// checkSupportDiagSyntax - validate arguments passed by a user
+func checkSupportDiagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		cli.ShowCommandHelpAndExit(ctx, "diagnostics", 1) // last argument is exit code
 	}
@@ -169,8 +169,8 @@ func warnText(s string) string {
 	return console.Colorize("WARN", s)
 }
 
-func mainSupportDiagnostics(ctx *cli.Context) error {
-	checkSupportDiagnosticsSyntax(ctx)
+func mainSupportDiag(ctx *cli.Context) error {
+	checkSupportDiagSyntax(ctx)
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
@@ -198,7 +198,7 @@ func mainSupportDiagnostics(ctx *cli.Context) error {
 	}
 
 	// Main execution
-	execAdminDiagnostics(ctx, client, alias, license, name, uploadToSubnet)
+	execSupportDiag(ctx, client, alias, license, name, uploadToSubnet)
 
 	if uploadToSubnet && uploadPeriodically {
 		// Periodic upload to subnet
@@ -207,7 +207,7 @@ func mainSupportDiagnostics(ctx *cli.Context) error {
 			console.Infoln("Waiting for", sleepDuration, "before running diagnostics again.")
 			time.Sleep(sleepDuration)
 
-			execAdminDiagnostics(ctx, client, alias, license, name, uploadToSubnet)
+			execSupportDiag(ctx, client, alias, license, name, uploadToSubnet)
 		}
 	}
 	return nil
@@ -255,7 +255,7 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, name string) er
 	return nil
 }
 
-func execAdminDiagnostics(ctx *cli.Context, client *madmin.AdminClient, alias string, license string, clusterName string, uploadToSubnet bool) {
+func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string, license string, clusterName string, uploadToSubnet bool) {
 	var reqURL string
 	var headers map[string]string
 
@@ -263,10 +263,10 @@ func execAdminDiagnostics(ctx *cli.Context, client *madmin.AdminClient, alias st
 	if uploadToSubnet {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the health information
-		reqURL, headers = prepareDiagnosticsUploadURL(alias, clusterName, filename, license)
+		reqURL, headers = prepareDiagUploadURL(alias, clusterName, filename, license)
 	}
 
-	healthInfo, version, e := fetchServerDiagnosticsInfo(ctx, client)
+	healthInfo, version, e := fetchServerDiagInfo(ctx, client)
 	fatalIf(probe.NewError(e), "Unable to fetch health information.")
 
 	if globalJSON {
@@ -283,12 +283,12 @@ func execAdminDiagnostics(ctx *cli.Context, client *madmin.AdminClient, alias st
 	fatalIf(probe.NewError(e), "Unable to save MinIO diagnostics report")
 
 	if uploadToSubnet {
-		e = uploadDiagnosticsReport(alias, filename, reqURL, headers)
+		e = uploadDiagReport(alias, filename, reqURL, headers)
 		fatalIf(probe.NewError(e), "Unable to upload MinIO diagnostics report to SUBNET portal")
 	}
 }
 
-func prepareDiagnosticsUploadURL(alias string, clusterName string, filename string, license string) (string, map[string]string) {
+func prepareDiagUploadURL(alias string, clusterName string, filename string, license string) (string, map[string]string) {
 	if len(clusterName) == 0 {
 		clusterName = alias
 	}
@@ -311,7 +311,7 @@ func prepareDiagnosticsUploadURL(alias string, clusterName string, filename stri
 	return reqURL, headers
 }
 
-func uploadDiagnosticsReport(alias string, filename string, reqURL string, headers map[string]string) error {
+func uploadDiagReport(alias string, filename string, reqURL string, headers map[string]string) error {
 	req, e := subnetUploadReq(reqURL, filename)
 	if e != nil {
 		return e
@@ -363,7 +363,7 @@ func subnetUploadReq(url string, filename string) (*http.Request, error) {
 	return r, nil
 }
 
-func fetchServerDiagnosticsInfo(ctx *cli.Context, client *madmin.AdminClient) (interface{}, string, error) {
+func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interface{}, string, error) {
 	opts := GetHealthDataTypeSlice(ctx, "test")
 	if len(*opts) == 0 {
 		full := ctx.Bool("full")
