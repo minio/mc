@@ -20,7 +20,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -99,15 +98,21 @@ func (u clusterStruct) String() (msg string) {
 	console.SetColor("InfoWarning", color.New(color.FgYellow, color.Bold))
 
 	// MinIO server type default
-	backendType := "Unknown"
+	backendType := madmin.Unknown
+
 	// Set the type of MinIO server ("FS", "Erasure", "Unknown")
-	v := reflect.ValueOf(u.Info.Backend)
-	if v.Kind() == reflect.Map {
-		for _, key := range v.MapKeys() {
-			val := v.MapIndex(key)
-			switch t := val.Interface().(type) {
-			case string:
-				backendType = t
+	switch v := u.Info.Backend.(type) {
+	case madmin.FSBackend:
+		backendType = madmin.FS
+	case madmin.ErasureBackend:
+		backendType = madmin.Erasure
+	case map[string]interface{}:
+		vt, ok := v["backendType"]
+		if ok {
+			backendTypeS, _ := vt.(string)
+			switch backendTypeS {
+			case "Erasure":
+				backendType = madmin.Erasure
 			}
 		}
 	}
@@ -121,6 +126,7 @@ func (u clusterStruct) String() (msg string) {
 		return u.Info.Servers[i].Endpoint < u.Info.Servers[j].Endpoint
 	})
 
+	poolIdx := -1
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
 		// Check if MinIO server is offline ("Mode" field),
@@ -130,16 +136,14 @@ func (u clusterStruct) String() (msg string) {
 			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
 			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
 
-			if backendType != "FS" {
+			if backendType == madmin.Erasure {
 				// Info about drives on a server, only available for non-FS types
 				var OffDisks int
 				var OnDisks int
 				var dispNoOfDisks string
 				for _, disk := range srv.Disks {
 					switch disk.State {
-					case madmin.DriveStateOk:
-						fallthrough
-					case madmin.DriveStateUnformatted:
+					case madmin.DriveStateOk, madmin.DriveStateUnformatted:
 						OnDisks++
 					default:
 						OffDisks++
@@ -173,7 +177,6 @@ func (u clusterStruct) String() (msg string) {
 			version = "<development>"
 		}
 		msg += fmt.Sprintf("   Version: %s\n", version)
-
 		// Network info, only available for non-FS types
 		connectionAlive := 0
 		totalNodes := len(srv.Network)
@@ -191,16 +194,17 @@ func (u clusterStruct) String() (msg string) {
 			msg += fmt.Sprintf("   Network: %s %s\n", displayNwInfo, console.Colorize(clr, "OK "))
 		}
 
-		if backendType != "FS" {
+		if backendType == madmin.Erasure {
 			// Info about drives on a server, only available for non-FS types
 			var OffDisks int
 			var OnDisks int
 			var dispNoOfDisks string
 			for _, disk := range srv.Disks {
+				if poolIdx == -1 {
+					poolIdx = disk.PoolIndex
+				}
 				switch disk.State {
-				case madmin.DriveStateOk:
-					fallthrough
-				case madmin.DriveStateUnformatted:
+				case madmin.DriveStateOk, madmin.DriveStateUnformatted:
 					OnDisks++
 				default:
 					OffDisks++
@@ -216,9 +220,11 @@ func (u clusterStruct) String() (msg string) {
 			}
 			dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
 			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize(clr, "OK "))
-
 		}
 
+		if poolIdx != -1 {
+			msg += fmt.Sprintf("   Pool: %s\n", console.Colorize("Info", humanize.Ordinal(poolIdx+1)))
+		}
 		msg += "\n"
 	}
 
@@ -230,12 +236,19 @@ func (u clusterStruct) String() (msg string) {
 			english.Plural(int(u.Info.Buckets.Count), "Bucket", ""),
 			english.Plural(int(u.Info.Objects.Count), "Object", ""))
 	}
-	if backendType != "FS" {
+	if backendType == madmin.Erasure {
 		// Summary on total no of online and total
 		// number of offline disks at the Cluster level
-		msg += fmt.Sprintf("%s online, %s offline\n",
-			english.Plural(totalOnlineDisksCluster, "drive", ""),
-			english.Plural(totalOfflineDisksCluster, "drive", ""))
+		bkInfo, ok := u.Info.Backend.(madmin.ErasureBackend)
+		if ok {
+			msg += fmt.Sprintf("%s online, %s offline\n",
+				english.Plural(bkInfo.OnlineDisks, "drive", ""),
+				english.Plural(bkInfo.OfflineDisks, "drive", ""))
+		} else {
+			msg += fmt.Sprintf("%s online, %s offline\n",
+				english.Plural(totalOnlineDisksCluster, "drive", ""),
+				english.Plural(totalOfflineDisksCluster, "drive", ""))
+		}
 	}
 
 	// Remove the last new line if any
