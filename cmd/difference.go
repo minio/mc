@@ -26,6 +26,7 @@ import (
 	// golang does not support flat keys for path matching, find does
 
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -335,12 +336,20 @@ func difference(ctx context.Context, sourceClnt, targetClnt Client, isMetadata b
 		err := differenceInternal(ctx, sourceClnt, targetClnt, isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
 		if err != nil {
 			// handle this specifically for filesystem related errors.
-			switch err.ToGoError().(type) {
+			switch v := err.ToGoError().(type) {
 			case PathNotFound, PathInsufficientPermission:
 				diffCh <- diffMessage{
 					Error: err,
 				}
 				return
+			case minio.ErrorResponse:
+				switch v.Code {
+				case "NoSuchBucket", "NoSuchKey":
+					diffCh <- diffMessage{
+						Error: err,
+					}
+					return
+				}
 			}
 			errorIf(err, "Unable to list comparison retrying..")
 		}
