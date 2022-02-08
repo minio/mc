@@ -153,7 +153,7 @@ func mainAliasImport(cli *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to parse input credentials")
 
 	msg := importAlias(alias, credentialsJSON)
-	msg.op = "import"
+	msg.op = cli.Command.Name
 
 	printMsg(msg)
 
