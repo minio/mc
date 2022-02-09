@@ -25,6 +25,7 @@ var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
 	supportDiagCmd,
 	supportCallhomeCmd,
+	supportInspectCmd,
 }
 
 var supportCmd = cli.Command{
