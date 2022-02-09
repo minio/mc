@@ -29,6 +29,7 @@ var adminInspectCmd = cli.Command{
 	OnUsageError:       onUsageError,
 	Before:             setGlobalsFromContext,
 	HideHelpCommand:    true,
+	Hidden:             true,
 	CustomHelpTemplate: "Please use 'mc support inspect'",
 }
 
