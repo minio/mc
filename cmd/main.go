@@ -302,20 +302,19 @@ func initMC() {
 
 func getShellName() (string, bool) {
 	shellName := os.Getenv("SHELL")
-	if runtime.GOOS != "windows" {
-		if shellName == "" {
-			ppid := os.Getppid()
-			cmd := exec.Command("ps", "-p", strconv.Itoa(ppid), "-o", "comm=")
-			ppName, err := cmd.Output()
-			if err != nil {
-				fatalIf(probe.NewError(err), "Failed to enable autocompletion. Cannot determine shell type and "+
-					"no SHELL environment variable found")
-			}
-			shellName = strings.TrimSpace(string(ppName))
-			return strings.ToLower(filepath.Base(shellName)), false
-		}
+	if shellName != "" || runtime.GOOS == "windows" {
+		return strings.ToLower(filepath.Base(shellName)), true
 	}
-	return strings.ToLower(filepath.Base(shellName)), true
+
+	ppid := os.Getppid()
+	cmd := exec.Command("ps", "-p", strconv.Itoa(ppid), "-o", "comm=")
+	ppName, err := cmd.Output()
+	if err != nil {
+		fatalIf(probe.NewError(err), "Failed to enable autocompletion. Cannot determine shell type and "+
+			"no SHELL environment variable found")
+	}
+	shellName = strings.TrimSpace(string(ppName))
+	return strings.ToLower(filepath.Base(shellName)), false
 }
 
 func installAutoCompletion() {
