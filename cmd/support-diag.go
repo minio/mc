@@ -316,6 +316,11 @@ func prepareDiagUploadURL(alias string, clusterName string, filename string, lic
 }
 
 func uploadDiagReport(alias string, filename string, reqURL string, headers map[string]string) error {
+	e := setSubnetProxyFromConfig(alias)
+	if e != nil {
+		return e
+	}
+
 	req, e := subnetUploadReq(reqURL, filename)
 	if e != nil {
 		return e

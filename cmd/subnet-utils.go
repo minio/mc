@@ -27,6 +27,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -240,6 +241,24 @@ func getSubnetAPIKeyFromConfig(alias string) string {
 	return mcConfig().Aliases[alias].APIKey
 }
 
+func setSubnetProxyFromConfig(alias string) error {
+	if globalSubnetProxyURL != nil {
+		// proxy already set via command line arg.
+		return nil
+	}
+
+	// get the subnet proxy config from MinIO if available
+	supported, proxy := getSubnetKeyFromMinIOConfig(alias, "proxy")
+	if supported {
+		proxyURL, e := url.Parse(proxy)
+		if e != nil {
+			return e
+		}
+		globalSubnetProxyURL = proxyURL
+	}
+	return nil
+}
+
 func getSubnetLicenseFromConfig(alias string) string {
 	// get the subnet license config from MinIO if available
 	supported, lic := getSubnetKeyFromMinIOConfig(alias, "license")
@@ -414,6 +433,11 @@ func getSubnetAccID(headers map[string]string) (string, error) {
 
 // registerClusterOnSubnet - Registers the given cluster on SUBNET
 func registerClusterOnSubnet(alias string, clusterRegInfo ClusterRegistrationInfo) (string, error) {
+	e := setSubnetProxyFromConfig(alias)
+	if e != nil {
+		return "", e
+	}
+
 	apiKey := getSubnetAPIKeyFromConfig(alias)
 
 	lic := ""
