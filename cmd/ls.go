@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
@@ -200,8 +200,18 @@ func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, print
 	}
 }
 
+type doListOptions struct {
+	timeRef           time.Time
+	isRecursive       bool
+	isIncomplete      bool
+	isSummary         bool
+	withOlderVersions bool
+	listZip           bool
+	filter            string
+}
+
 // doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSummary bool, timeRef time.Time, withOlderVersions bool, filter string) error {
+func doList(ctx context.Context, clnt Client, o doListOptions) error {
 	var (
 		lastPath          string
 		perObjectVersions []*ClientContent
@@ -211,12 +221,13 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 	)
 
 	for content := range clnt.List(ctx, ListOptions{
-		Recursive:         isRecursive,
-		Incomplete:        isIncomplete,
-		TimeRef:           timeRef,
-		WithOlderVersions: withOlderVersions || !timeRef.IsZero(),
+		Recursive:         o.isRecursive,
+		Incomplete:        o.isIncomplete,
+		TimeRef:           o.timeRef,
+		WithOlderVersions: o.withOlderVersions || !o.timeRef.IsZero(),
 		WithDeleteMarkers: true,
 		ShowDir:           DirNone,
+		ListZip:           o.listZip,
 	}) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -239,13 +250,13 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 			continue
 		}
 
-		if content.StorageClass != "" && filter != "" && filter != "*" && content.StorageClass != filter {
+		if content.StorageClass != "" && o.filter != "" && o.filter != "*" && content.StorageClass != o.filter {
 			continue
 		}
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
+			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions, o.isSummary)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -255,9 +266,9 @@ func doList(ctx context.Context, clnt Client, isRecursive, isIncomplete, isSumma
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, withOlderVersions, isSummary)
+	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions, o.isSummary)
 
-	if isSummary {
+	if o.isSummary {
 		printMsg(summaryMessage{
 			TotalObjects: totalObjects,
 			TotalSize:    totalSize,
