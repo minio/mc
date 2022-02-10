@@ -104,7 +104,7 @@ func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB
 	// Validate if object exists only if the `--recursive` flag was NOT specified
 	if !isRecursive {
 		for _, url := range cliCtx.Args() {
-			_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{})
+			_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}, false)
 			if err != nil {
 				fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 			}

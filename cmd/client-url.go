@@ -186,7 +186,7 @@ func urlJoinPath(url1, url2 string) string {
 }
 
 // url2Stat returns stat info for URL.
-func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time) (client Client, content *ClientContent, err *probe.Error) {
+func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -194,7 +194,7 @@ func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encK
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID})
+	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID, isZip: isZip})
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
@@ -202,12 +202,12 @@ func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encK
 }
 
 // firstURL2Stat returns the stat info of the first object having the specified prefix
-func firstURL2Stat(ctx context.Context, prefix string, timeRef time.Time) (client Client, content *ClientContent, err *probe.Error) {
+func firstURL2Stat(ctx context.Context, prefix string, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(prefix)
 	if err != nil {
 		return nil, nil, err.Trace(prefix)
 	}
-	content = <-client.List(ctx, ListOptions{Recursive: true, TimeRef: timeRef, Count: 1})
+	content = <-client.List(ctx, ListOptions{Recursive: true, TimeRef: timeRef, Count: 1, ListZip: isZip})
 	if content == nil {
 		return nil, nil, probe.NewError(ObjectMissing{timeRef: timeRef}).Trace(prefix)
 	}
