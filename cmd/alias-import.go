@@ -75,7 +75,7 @@ func checkAliasImportSyntax(ctx *cli.Context) {
 	if argsNr == 0 {
 		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1)
 	}
-	if argsNr < 0 || argsNr > 2 {
+	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for alias Import command.")
 	}
@@ -133,7 +133,7 @@ func importAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 }
 
 func mainAliasImport(cli *cli.Context) error {
-	// console.SetColor("AliasMessage", color.New(color.FgGreen))
+
 	var (
 		args  = cli.Args()
 		alias = cleanAlias(args.Get(0))
