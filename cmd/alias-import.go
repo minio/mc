@@ -30,7 +30,7 @@ import (
 var aliasImportCmd = cli.Command{
 	Name:      "import",
 	ShortName: "i",
-	Usage:     "Import configuration info to configuration file from a JSON formatted string ",
+	Usage:     "import configuration info to configuration file from a JSON formatted string ",
 	Action: func(cli *cli.Context) error {
 		return mainAliasImport(cli)
 	},
