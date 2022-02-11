@@ -299,6 +299,11 @@ func prepareDiagUploadURL(alias string, clusterName string, filename string, lic
 
 		if len(apiKey) == 0 {
 			license = getSubnetLicenseFromConfig(alias)
+			if len(license) == 0 {
+				// Both api key and license not available. Ask user to register the cluster first
+				e := fmt.Errorf("Please register the cluster first by running 'mc support register %s', or use --airgap flag", alias)
+				fatalIf(probe.NewError(e), "Cluster not registered.")
+			}
 		}
 	}
 
