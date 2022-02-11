@@ -28,12 +28,10 @@ import (
 )
 
 var aliasImportCmd = cli.Command{
-	Name:      "import",
-	ShortName: "i",
-	Usage:     "import configuration info to configuration file from a JSON formatted string ",
-	Action: func(cli *cli.Context) error {
-		return mainAliasImport(cli)
-	},
+	Name:            "import",
+	ShortName:       "i",
+	Usage:           "import configuration info to configuration file from a JSON formatted string ",
+	Action:          mainAliasImport,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
@@ -44,26 +42,25 @@ var aliasImportCmd = cli.Command{
 USAGE:
   {{.HelpName}} ALIAS ./credentials.json
 
-  Credentials to  be imported must be in the following JSON format: 
+  Credentials to be imported must be in the following JSON format:
   
   {
-    "url": "http://localhost:5000",
+    "url": "http://localhost:9000",
     "accessKey": "YJ0RI0F4R5HWY38MD873",
     "secretKey": "OHz5CT7xdMHiXnKZP0BmZ5P4G5UvWvVaxR8gljLG",
     "api": "s3v4",
     "path": "auto"
-   }
+  }
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
+  1. Import the provided credentials.json file as 'myminio' to the config:
+     {{ .Prompt }} {{ .HelpName }} myminio/ ./credentials.json
 
- 1. Import the provided credentials.json file as 'exampleAlias' to the config:
-   {{ .Prompt }} {{ .HelpName }} exampleAlias/ ./credentials.json
-
-2. Import the credentials through standard input as 'exampleAlias'  to the config:
-   {{ .Prompt }} cat credentials.json | {{ .HelpName }} exampleAlias/
+  2. Import the credentials through standard input as 'myminio' to the config:
+     {{ .Prompt }} cat credentials.json | {{ .HelpName }} myminio/
 `,
 }
 
