@@ -133,7 +133,6 @@ func importAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 }
 
 func mainAliasImport(cli *cli.Context) error {
-
 	var (
 		args  = cli.Args()
 		alias = cleanAlias(args.Get(0))
