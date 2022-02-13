@@ -403,6 +403,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/support/callhome/set": aliasCompleter,
 	"/support/register":     aliasCompleter,
 	"/support/diag":         aliasCompleter,
+	"/support/inspect":      aliasCompleter,
 
 	"/update": nil,
 }
