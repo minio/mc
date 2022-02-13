@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,30 +19,25 @@ package cmd
 
 import "github.com/minio/cli"
 
-var replicateSubcommands = []cli.Command{
-	replicateAddCmd,
-	replicateEditCmd,
-	replicateListCmd,
-	replicateStatusCmd,
-	replicateResyncCmd,
-	replicateExportCmd,
-	replicateImportCmd,
-	replicateRemoveCmd,
+var replicateResyncSubcommands = []cli.Command{
+	replicateResyncStartCmd,
+	replicateResyncStatusCmd,
 }
 
-var replicateCmd = cli.Command{
-	Name:            "replicate",
-	Usage:           "configure server side bucket replication",
+var replicateResyncCmd = cli.Command{
+	Name:            "resync",
+	Usage:           "replicate back all previously replicated objects",
 	HideHelpCommand: true,
-	Action:          mainReplicate,
+	Action:          mainReplicateResync,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     replicateSubcommands,
+	Subcommands:     replicateResyncSubcommands,
+	Aliases:         []string{"reset"},
 }
 
-// mainReplicate is the handle for "mc replicate" command.
-func mainReplicate(ctx *cli.Context) error {
-	commandNotFound(ctx, replicateSubcommands)
+// mainReplicateResync is the handle for "mc replicate resync" command.
+func mainReplicateResync(ctx *cli.Context) error {
+	commandNotFound(ctx, replicateResyncSubcommands)
 	return nil
-	// Sub-commands like "list", "clear", "add" have their own main.
+	// Sub-commands like "status", "start", have their own main.
 }

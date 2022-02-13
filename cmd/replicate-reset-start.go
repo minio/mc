@@ -32,10 +32,10 @@ import (
 	"maze.io/x/duration"
 )
 
-var replicateResetFlags = []cli.Flag{
+var replicateResyncStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "older-than",
-		Usage: "re-replicate objects older than n days",
+		Usage: "replicate back objects older than n days",
 	},
 	cli.StringFlag{
 		Name:  "remote-bucket",
@@ -43,14 +43,13 @@ var replicateResetFlags = []cli.Flag{
 	},
 }
 
-var replicateResetCmd = cli.Command{
-	Name:         "resync",
-	Usage:        "re-replicate all previously replicated objects",
-	Aliases:      []string{"reset"},
-	Action:       mainReplicateReset,
+var replicateResyncStartCmd = cli.Command{
+	Name:         "start",
+	Usage:        "start replicating back all previously replicated objects",
+	Action:       mainReplicateResyncStart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, replicateResetFlags...),
+	Flags:        append(globalFlags, replicateResyncStartFlags...),
 	CustomHelpTemplate: `NAME:
    {{.HelpName}} - {{.Usage}}
 
@@ -69,17 +68,17 @@ EXAMPLES:
 `,
 }
 
-// checkReplicateResetSyntax - validate all the passed arguments
-func checkReplicateResetSyntax(ctx *cli.Context) {
+// checkReplicateResyncStartSyntax - validate all the passed arguments
+func checkReplicateResyncStartSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "reset", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "start", 1) // last argument is exit code
 	}
 	if ctx.String("remote-bucket") == "" {
 		fatal(errDummy().Trace(), "--remote-bucket flag needs to be specified.")
 	}
 }
 
-type replicateResetMessage struct {
+type replicateResyncMessage struct {
 	Op                string                        `json:"op"`
 	URL               string                        `json:"url"`
 	ResyncTargetsInfo replication.ResyncTargetsInfo `json:"resyncInfo"`
@@ -87,27 +86,27 @@ type replicateResetMessage struct {
 	TargetArn         string                        `json:"targetArn"`
 }
 
-func (r replicateResetMessage) JSON() string {
+func (r replicateResyncMessage) JSON() string {
 	r.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(r, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (r replicateResetMessage) String() string {
+func (r replicateResyncMessage) String() string {
 	if len(r.ResyncTargetsInfo.Targets) == 1 {
-		return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResyncTargetsInfo.Targets[0].ResetID))
+		return console.Colorize("replicateResyncMessage", fmt.Sprintf("Replication reset started for %s with ID %s", r.URL, r.ResyncTargetsInfo.Targets[0].ResetID))
 	}
-	return console.Colorize("replicateResetMessage", fmt.Sprintf("Replication reset started for %s", r.URL))
+	return console.Colorize("replicateResyncMessage", fmt.Sprintf("Replication reset started for %s", r.URL))
 }
 
-func mainReplicateReset(cliCtx *cli.Context) error {
-	ctx, cancelReplicateReset := context.WithCancel(globalContext)
-	defer cancelReplicateReset()
+func mainReplicateResyncStart(cliCtx *cli.Context) error {
+	ctx, cancelReplicateResyncStart := context.WithCancel(globalContext)
+	defer cancelReplicateResyncStart()
 
-	console.SetColor("replicateResetMessage", color.New(color.FgGreen))
+	console.SetColor("replicateResyncMessage", color.New(color.FgGreen))
 
-	checkReplicateResetSyntax(cliCtx)
+	checkReplicateResyncStartSyntax(cliCtx)
 
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
@@ -133,8 +132,8 @@ func mainReplicateReset(cliCtx *cli.Context) error {
 
 	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to reset replication")
-	printMsg(replicateResetMessage{
-		Op:                "status",
+	printMsg(replicateResyncMessage{
+		Op:                "start",
 		URL:               aliasedURL,
 		ResyncTargetsInfo: rinfo,
 	})
