@@ -29,7 +29,7 @@ var supportSubcommands = []cli.Command{
 
 var supportCmd = cli.Command{
 	Name:            "support",
-	Usage:           "Support related commands",
+	Usage:           "support related commands",
 	Action:          mainSupport,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

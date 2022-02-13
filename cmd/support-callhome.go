@@ -27,7 +27,7 @@ var callhomeSubcommands = []cli.Command{
 
 var supportCallhomeCmd = cli.Command{
 	Name:         "callhome",
-	Usage:        "Configure the callhome functionality",
+	Usage:        "configure the callhome functionality",
 	OnUsageError: onUsageError,
 	Action:       mainCallhome,
 	Before:       setGlobalsFromContext,
