@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2021 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -21,27 +21,24 @@ import (
 	"github.com/minio/cli"
 )
 
-var supportSubcommands = []cli.Command{
-	supportRegisterCmd,
-	supportDiagCmd,
-	supportCallhomeCmd,
-	supportProfileCmd,
-	supportInspectCmd,
+var supportProfileSubcommands = []cli.Command{
+	supportProfileStartCmd,
+	supportProfileStopCmd,
 }
 
-var supportCmd = cli.Command{
-	Name:            "support",
-	Usage:           "support related commands",
-	Action:          mainSupport,
+var supportProfileCmd = cli.Command{
+	Name:            "profile",
+	Usage:           "generate profile data for debugging purposes",
+	Action:          mainSupportProfile,
+	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     supportSubcommands,
+	Subcommands:     supportProfileSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainSupport is the handle for "mc support" command.
-func mainSupport(ctx *cli.Context) error {
-	commandNotFound(ctx, supportSubcommands)
+// mainSupportProfile is the handle for "mc support profile" command.
+func mainSupportProfile(ctx *cli.Context) error {
+	commandNotFound(ctx, supportProfileSubcommands)
 	return nil
-	// Sub-commands like "register", "callhome", "diagnostics" have their own main.
 }
