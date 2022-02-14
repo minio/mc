@@ -51,6 +51,20 @@ var supportPerfFlags = []cli.Flag{
 		Name:  "verbose, v",
 		Usage: "Show per-server stats",
 	},
+	cli.StringFlag{
+		Name:  "filesize",
+		Usage: "total amount of data read/written to each drive",
+		Value: "1GiB",
+	},
+	cli.StringFlag{
+		Name:  "blocksize",
+		Usage: "read/write block size",
+		Value: "4MiB",
+	},
+	cli.BoolFlag{
+		Name:  "serial",
+		Usage: "run tests on drives one-by-one",
+	},
 }
 
 var supportPerfCmd = cli.Command{
@@ -65,17 +79,29 @@ var supportPerfCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET
+  {{.HelpName}} [COMMAND] [FLAGS] TARGET
+
+COMMAND:
+  drives  Run speed test on the drives in the cluster
+  objects measure speed of writing and reading objects
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
 EXAMPLES:
   1. Run performance tests with autotuning the concurrency to figure out the maximum throughput and iops values:
      {{.Prompt}} {{.HelpName}} myminio/
 
   2. Run performance tests for 20 seconds with object size of 128MiB, 32 concurrent requests per server:
      {{.Prompt}} {{.HelpName}} myminio/ --duration 20s --size 128MiB --concurrent 32
+
+  3. Run drive performance tests where only one drive is tested at a time in any given node :
+     {{.Prompt}} {{.HelpName}} drives myminio/ --serial
+
+  4. Run drive performance tests with blocksize of 8MiB, and 2GiB of data read/written from each drive:
+     {{.Prompt}} {{.HelpName}} drives myminio/ --blocksize 8MiB --filesize 2GiB
+
 `,
 }
 
@@ -121,13 +147,33 @@ func (s speedTestResult) JSON() string {
 var globalPerfTestVerbose bool
 
 func mainSupportPerf(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
+	args := ctx.Args()
+
+	// the alias parameter from cli
+	aliasedURL := ""
+	switch len(args) {
+	case 1:
+		// cannot use alias by the name 'drives'
+		if args[0] == "drives" {
+			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
+		}
+		aliasedURL = args[0]
+	case 2:
+		switch args[0] {
+		case "drives":
+			aliasedURL = args[1]
+			return mainAdminSpeedtestDrive(ctx, aliasedURL)
+		case "objects":
+			aliasedURL = args[1]
+		case "net":
+			aliasedURL = args[1]
+			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
+		default:
+			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+		}
+	default:
 		cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 	}
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
 
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
