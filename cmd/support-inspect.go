@@ -43,7 +43,12 @@ import (
 var supportInspectFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "encrypt",
-		Usage: "Encrypt content with one time key for confidential data",
+		Usage: "encrypt content with one time key for confidential data",
+	},
+	cli.StringFlag{
+		Name:  "export",
+		Value: "json",
+		Usage: "exports inspect data as JSON or data JSON from 'xl.meta', supported values are 'json' or 'djson'",
 	},
 }
 
@@ -79,6 +84,10 @@ EXAMPLES:
 func checkSupportInspectSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
+	}
+
+	if ctx.IsSet("export") && globalJSON {
+		fatalIf(errInvalidArgument(), "--export=type cannot be specified with --json flag")
 	}
 }
 
@@ -123,7 +132,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 
 	ext := "enc"
-	if !encrypt {
+	if !encrypt || ctx.IsSet("export") {
 		ext = "zip"
 		r = decryptInspect(key, r)
 	}
@@ -148,10 +157,25 @@ func mainSupportInspect(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e), "Unable to create a backup of "+downloadPath)
 	} else {
 		if !os.IsNotExist(e) {
-			fatal(probe.NewError(e), "Unable to download file data.")
+			fatal(probe.NewError(e), "Unable to download file data")
 		}
 	}
-	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to download file data.")
+
+	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable rename downloaded data, file exists at %s", tmpFile.Name())
+	if ctx.IsSet("export") {
+		switch v := ctx.String("export"); v {
+		case "json":
+			inspectToExportType(downloadPath, false)
+		case "djson":
+			inspectToExportType(downloadPath, true)
+		default:
+			os.Remove(downloadPath)
+			fatalIf(errInvalidArgument().Trace("export="+v), "Unable to export inspect data")
+		}
+		os.Remove(downloadPath)
+		return nil
+	}
+
 	hexKey := hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
 	if !globalJSON {
 		if !encrypt {
