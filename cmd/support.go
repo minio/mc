@@ -23,10 +23,11 @@ import (
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
-	supportDiagCmd,
 	supportCallhomeCmd,
-	supportProfileCmd,
+	supportDiagCmd,
+	supportPerfCmd,
 	supportInspectCmd,
+	supportProfileCmd,
 }
 
 var supportCmd = cli.Command{
