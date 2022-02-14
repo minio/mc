@@ -77,7 +77,7 @@ var supportDiagFlags = append([]cli.Flag{
 var supportDiagCmd = cli.Command{
 	Name:         "diag",
 	Aliases:      []string{"diagnostics"},
-	Usage:        "generate MinIO diagnostics report for SUBNET",
+	Usage:        "upload health data for diagnostics",
 	OnUsageError: onUsageError,
 	Action:       mainSupportDiag,
 	Before:       setGlobalsFromContext,

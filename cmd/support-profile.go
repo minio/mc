@@ -28,7 +28,7 @@ var supportProfileSubcommands = []cli.Command{
 
 var supportProfileCmd = cli.Command{
 	Name:            "profile",
-	Usage:           "generate profile data for debugging purposes",
+	Usage:           "generate profile data for debugging",
 	Action:          mainSupportProfile,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
