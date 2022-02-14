@@ -34,7 +34,7 @@ var callhomeFlags = append(globalFlags, cli.BoolFlag{
 
 var callhomeSetCmd = cli.Command{
 	Name:         "set",
-	Usage:        "enable/disable a callhome support",
+	Usage:        "configure callhome settings",
 	OnUsageError: onUsageError,
 	Action:       mainCallhomeSet,
 	Before:       setGlobalsFromContext,

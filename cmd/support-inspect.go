@@ -49,7 +49,7 @@ var supportInspectFlags = []cli.Flag{
 
 var supportInspectCmd = cli.Command{
 	Name:            "inspect",
-	Usage:           "inspect files on MinIO server",
+	Usage:           "upload raw object contents for analysis",
 	Action:          mainSupportInspect,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,

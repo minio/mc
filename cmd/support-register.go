@@ -31,7 +31,7 @@ import (
 
 var supportRegisterCmd = cli.Command{
 	Name:         "register",
-	Usage:        "register the MinIO Cluster with SUBNET",
+	Usage:        "register with MinIO subscription network",
 	OnUsageError: onUsageError,
 	Action:       mainSupportRegister,
 	Before:       setGlobalsFromContext,

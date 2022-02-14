@@ -69,7 +69,7 @@ var supportPerfFlags = []cli.Flag{
 
 var supportPerfCmd = cli.Command{
 	Name:            "perf",
-	Usage:           "Run server side performance test",
+	Usage:           "analyze object storage, network and drive performance",
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
