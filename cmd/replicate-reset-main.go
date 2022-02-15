@@ -17,30 +17,27 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportSubcommands = []cli.Command{
-	supportRegisterCmd,
-	supportDiagCmd,
-	supportCallhomeCmd,
-	supportInspectCmd,
+var replicateResyncSubcommands = []cli.Command{
+	replicateResyncStartCmd,
+	replicateResyncStatusCmd,
 }
 
-var supportCmd = cli.Command{
-	Name:            "support",
-	Usage:           "support related commands",
-	Action:          mainSupport,
+var replicateResyncCmd = cli.Command{
+	Name:            "resync",
+	Usage:           "replicate back all previously replicated objects",
+	HideHelpCommand: true,
+	Action:          mainReplicateResync,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     supportSubcommands,
-	HideHelpCommand: true,
+	Subcommands:     replicateResyncSubcommands,
+	Aliases:         []string{"reset"},
 }
 
-// mainSupport is the handle for "mc support" command.
-func mainSupport(ctx *cli.Context) error {
-	commandNotFound(ctx, supportSubcommands)
+// mainReplicateResync is the handle for "mc replicate resync" command.
+func mainReplicateResync(ctx *cli.Context) error {
+	commandNotFound(ctx, replicateResyncSubcommands)
 	return nil
-	// Sub-commands like "register", "callhome", "diagnostics" have their own main.
+	// Sub-commands like "status", "start", have their own main.
 }

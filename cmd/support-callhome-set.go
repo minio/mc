@@ -28,13 +28,13 @@ import (
 
 var callhomeFlags = append(globalFlags, cli.BoolFlag{
 	Name:   "dev",
-	Usage:  "Development mode - talks to local SUBNET",
+	Usage:  "development mode - talks to local SUBNET",
 	Hidden: true,
 })
 
 var callhomeSetCmd = cli.Command{
 	Name:         "set",
-	Usage:        "Enable/disable a callhome option",
+	Usage:        "enable/disable a callhome support",
 	OnUsageError: onUsageError,
 	Action:       mainCallhomeSet,
 	Before:       setGlobalsFromContext,
@@ -46,7 +46,7 @@ USAGE:
   {{.HelpName}} TARGET option=on|off
 
 OPTIONS:
-  logs - Push MinIO log entries to SUBNET in realtime
+  logs - push MinIO server logs to SUBNET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -113,7 +113,7 @@ func configureSubnetWebhook(aliasedURL string, enable bool) {
 
 	apiKey := getSubnetAPIKeyFromConfig(alias)
 	if len(apiKey) == 0 {
-		e := fmt.Errorf("Please register the cluster first by running 'mc admin subnet register %s'", alias)
+		e := fmt.Errorf("Please register the cluster first by running 'mc support register %s'", alias)
 		fatalIf(probe.NewError(e), "Cluster not registered.")
 	}
 

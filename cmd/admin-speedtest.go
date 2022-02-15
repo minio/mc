@@ -47,6 +47,20 @@ var adminSpeedtestFlags = []cli.Flag{
 		Usage: "number of concurrent requests per server",
 		Value: 32,
 	},
+	cli.StringFlag{
+		Name:  "filesize",
+		Usage: "total amount of data read/written to each drive",
+		Value: "1GiB",
+	},
+	cli.StringFlag{
+		Name:  "blocksize",
+		Usage: "read/write block size",
+		Value: "4MiB",
+	},
+	cli.BoolFlag{
+		Name:  "serial",
+		Usage: "run tests on drives one-by-one",
+	},
 	cli.BoolFlag{
 		Name:  "verbose, v",
 		Usage: "Show per-server stats",
@@ -65,7 +79,11 @@ var adminSpeedtestCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET
+  {{.HelpName}} [COMMAND] [FLAGS] TARGET
+
+COMMAND:
+  drives  Run speed test on the drives in the cluster
+  objects measure speed of writing and reading objects 
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -76,6 +94,13 @@ EXAMPLES:
 
   2. Run speedtest for 20 seconds with object size of 128MiB, 32 concurrent requests per server:
      {{.Prompt}} {{.HelpName}} myminio/ --duration 20s --size 128MiB --concurrent 32
+
+  3. Run drive speedtest where only one drive is tested at a time in any given node :
+     {{.Prompt}} {{.HelpName}} drives myminio/ --serial
+
+  4. Run drive speedtest with blocksize of 8MiB, and 2GiB of data read/written from each drive:
+     {{.Prompt}} {{.HelpName}} drives myminio/ --blocksize 8MiB --filesize 2GiB
+
 `,
 }
 
@@ -121,13 +146,32 @@ func (s speedTestResult) JSON() string {
 var globalSpeedTestVerbose bool
 
 func mainAdminSpeedtest(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
+	args := ctx.Args()
+	// the alias parameter from cli
+	aliasedURL := ""
+	switch len(args) {
+	case 1:
+		// cannot use alias by the name 'drives'
+		if args[0] == "drives" {
+			cli.ShowCommandHelpAndExit(ctx, "speedtest", 1)
+		}
+		aliasedURL = args[0]
+	case 2:
+		switch args[0] {
+		case "drives":
+			aliasedURL = args[1]
+			return mainAdminSpeedtestDrive(ctx, aliasedURL)
+		case "objects":
+			aliasedURL = args[1]
+		case "net":
+			aliasedURL = args[1]
+			cli.ShowCommandHelpAndExit(ctx, "speedtest", 1)
+		default:
+			cli.ShowCommandHelpAndExit(ctx, "speedtest", 1) // last argument is exit code
+		}
+	default:
 		cli.ShowCommandHelpAndExit(ctx, "speedtest", 1) // last argument is exit code
 	}
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
 
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {

@@ -266,14 +266,15 @@ var completeCmds = map[string]complete.Predictor{
 	"/encrypt/info":  s3Complete{deepLevel: 2},
 	"/encrypt/clear": s3Complete{deepLevel: 2},
 
-	"/replicate/add":    s3Complete{deepLevel: 2},
-	"/replicate/edit":   s3Complete{deepLevel: 2},
-	"/replicate/ls":     s3Complete{deepLevel: 2},
-	"/replicate/rm":     s3Complete{deepLevel: 2},
-	"/replicate/export": s3Complete{deepLevel: 2},
-	"/replicate/import": s3Complete{deepLevel: 2},
-	"/replicate/status": s3Complete{deepLevel: 2},
-	"/replicate/resync": s3Complete{deepLevel: 2},
+	"/replicate/add":           s3Complete{deepLevel: 2},
+	"/replicate/edit":          s3Complete{deepLevel: 2},
+	"/replicate/ls":            s3Complete{deepLevel: 2},
+	"/replicate/rm":            s3Complete{deepLevel: 2},
+	"/replicate/export":        s3Complete{deepLevel: 2},
+	"/replicate/import":        s3Complete{deepLevel: 2},
+	"/replicate/status":        s3Complete{deepLevel: 2},
+	"/replicate/resync/start":  s3Complete{deepLevel: 3},
+	"/replicate/resync/status": s3Complete{deepLevel: 3},
 
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,
@@ -392,14 +393,17 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/replicate/edit":   aliasCompleter,
 	"/admin/replicate/info":   aliasCompleter,
 	"/admin/replicate/status": aliasCompleter,
+	"/admin/replicate/remove": aliasCompleter,
 
 	"/alias/set":    nil,
 	"/alias/list":   aliasCompleter,
 	"/alias/remove": aliasCompleter,
+	"/alias/import": nil,
 
 	"/support/callhome/set": aliasCompleter,
 	"/support/register":     aliasCompleter,
 	"/support/diag":         aliasCompleter,
+	"/support/inspect":      aliasCompleter,
 
 	"/update": nil,
 }

@@ -49,7 +49,6 @@ var supportDiagFlags = append([]cli.Flag{
 		Name:   "test",
 		Usage:  "choose specific diagnostics to run [" + fullOptions.String() + "]",
 		Value:  nil,
-		EnvVar: "MC_HEALTH_TEST,MC_OBD_TEST",
 		Hidden: true,
 	},
 	cli.DurationFlag{
@@ -57,7 +56,6 @@ var supportDiagFlags = append([]cli.Flag{
 		Usage:  "maximum duration diagnostics should be allowed to run",
 		Value:  1 * time.Hour,
 		Hidden: true,
-		EnvVar: "MC_DIAGNOSTICS_DEADLINE,MC_HEALTH_DEADLINE,MC_OBD_DEADLINE",
 	},
 	cli.StringFlag{
 		Name:   "license",
@@ -78,7 +76,8 @@ var supportDiagFlags = append([]cli.Flag{
 
 var supportDiagCmd = cli.Command{
 	Name:         "diag",
-	Usage:        "Generate MinIO diagnostics report for SUBNET",
+	Aliases:      []string{"diagnostics"},
+	Usage:        "generate MinIO diagnostics report for SUBNET",
 	OnUsageError: onUsageError,
 	Action:       mainSupportDiag,
 	Before:       setGlobalsFromContext,
@@ -110,7 +109,7 @@ EXAMPLES:
 // checkSupportDiagSyntax - validate arguments passed by a user
 func checkSupportDiagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "diagnostics", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
 	}
 }
 
@@ -299,6 +298,11 @@ func prepareDiagUploadURL(alias string, clusterName string, filename string, lic
 
 		if len(apiKey) == 0 {
 			license = getSubnetLicenseFromConfig(alias)
+			if len(license) == 0 {
+				// Both api key and license not available. Ask user to register the cluster first
+				e := fmt.Errorf("Please register the cluster first by running 'mc support register %s', or use --airgap flag", alias)
+				fatalIf(probe.NewError(e), "Cluster not registered.")
+			}
 		}
 	}
 
