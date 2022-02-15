@@ -47,6 +47,7 @@ require (
 	github.com/charmbracelet/bubbles v0.10.0
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/tinylib/msgp v1.1.6
 )
 
 require (
@@ -93,7 +94,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tinylib/msgp v1.1.6 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
