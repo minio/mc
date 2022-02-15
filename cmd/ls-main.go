@@ -180,7 +180,7 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, doList
 		timeRef = time.Now().UTC()
 	}
 
-	if listZip && withOlderVersions {
+	if listZip && (withOlderVersions || !timeRef.IsZero()) {
 		fatalIf(errInvalidArgument().Trace(args...), "Zip file listing can only be performed on the latest version")
 	}
 	storageClasss := cliCtx.String("storage-class")

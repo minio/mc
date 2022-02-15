@@ -53,6 +53,10 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 		fatalIf(errDummy().Trace(cliCtx.Args()...), "Unable to pass --version flag with multiple copy sources arguments.")
 	}
 
+	if isZip && cliCtx.String("rewind") != "" {
+		fatalIf(errDummy().Trace(cliCtx.Args()...), "--zip and --rewind cannot be used together")
+	}
+
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
 		var err *probe.Error
