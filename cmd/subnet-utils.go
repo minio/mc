@@ -249,7 +249,7 @@ func setSubnetProxyFromConfig(alias string) error {
 
 	// get the subnet proxy config from MinIO if available
 	supported, proxy := getSubnetKeyFromMinIOConfig(alias, "proxy")
-	if supported {
+	if supported && len(proxy) > 0 {
 		proxyURL, e := url.Parse(proxy)
 		if e != nil {
 			return e
