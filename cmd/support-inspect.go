@@ -161,7 +161,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 		}
 	}
 
-	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable rename downloaded data, file exists at %s", tmpFile.Name())
+	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to rename downloaded data, file exists at %s", tmpFile.Name())
 	if ctx.IsSet("export") {
 		switch v := ctx.String("export"); v {
 		case "json":
