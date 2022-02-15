@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/replication"
@@ -47,6 +47,7 @@ const (
 type GetOptions struct {
 	SSE       encrypt.ServerSide
 	VersionID string
+	Zip       bool
 }
 
 // PutOptions holds options for PUT operation
@@ -67,6 +68,7 @@ type StatOptions struct {
 	sse        encrypt.ServerSide
 	timeRef    time.Time
 	versionID  string
+	isZip      bool
 }
 
 // ListOptions holds options for listing operation
@@ -76,6 +78,7 @@ type ListOptions struct {
 	WithMetadata      bool
 	WithOlderVersions bool
 	WithDeleteMarkers bool
+	ListZip           bool
 	TimeRef           time.Time
 	ShowDir           DirOpt
 	Count             int

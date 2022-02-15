@@ -39,7 +39,7 @@ import (
 	"github.com/minio/mc/pkg/disk"
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
@@ -542,8 +542,15 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 
 // List - list files and folders.
 func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
-	contentCh := make(chan *ClientContent)
-	filteredCh := make(chan *ClientContent)
+	contentCh := make(chan *ClientContent, 1)
+	filteredCh := make(chan *ClientContent, 1)
+	if opts.ListZip {
+		contentCh <- &ClientContent{
+			Err: probe.NewError(errors.New("zip listing not supported for local files")),
+		}
+		close(filteredCh)
+		return filteredCh
+	}
 
 	if opts.Recursive {
 		if opts.ShowDir == DirNone {

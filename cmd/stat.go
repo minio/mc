@@ -229,7 +229,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef)
+		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef, false)
 		if err != nil {
 			continue
 		}

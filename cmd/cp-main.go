@@ -102,6 +102,10 @@ var (
 			Name:  lhFlag,
 			Usage: "apply legal hold to the copied object (on, off)",
 		},
+		cli.BoolFlag{
+			Name:  "zip",
+			Usage: "Extract from remote zip file (MinIO server source only)",
+		},
 	}
 )
 
@@ -239,7 +243,7 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a single file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool, preserve bool) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool, preserve, isZip bool) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -265,7 +269,7 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
+	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve, isZip)
 	if isMvCmd && urls.Error == nil {
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
 	}
@@ -308,7 +312,18 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive, encKeyDB, olderThan, newerThan, parseRewindFlag(rewind), versionID)
+	opts := prepareCopyURLsOpts{
+		sourceURLs:  sourceURLs,
+		targetURL:   targetURL,
+		isRecursive: isRecursive,
+		encKeyDB:    encKeyDB,
+		olderThan:   olderThan,
+		newerThan:   newerThan,
+		timeRef:     parseRewindFlag(rewind),
+		versionID:   versionID,
+	}
+
+	URLsCh := prepareCopyURLs(ctx, opts)
 	done := false
 	for !done {
 		select {
@@ -431,8 +446,18 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 		go func() {
 			totalBytes := int64(0)
-			for cpURLs := range prepareCopyURLs(ctx, sourceURLs, targetURL, isRecursive,
-				encKeyDB, olderThan, newerThan, parseRewindFlag(rewind), versionID) {
+			opts := prepareCopyURLsOpts{
+				sourceURLs:  sourceURLs,
+				targetURL:   targetURL,
+				isRecursive: isRecursive,
+				encKeyDB:    encKeyDB,
+				olderThan:   olderThan,
+				newerThan:   newerThan,
+				timeRef:     parseRewindFlag(rewind),
+				versionID:   versionID,
+				isZip:       cli.Bool("zip"),
+			}
+			for cpURLs := range prepareCopyURLs(ctx, opts) {
 				if cpURLs.Error != nil {
 					// Print in new line and adjust to top so that we
 					// don't print over the ongoing scan bar
@@ -515,6 +540,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				}
 
 				preserve := cli.Bool("preserve")
+				isZip := cli.Bool("zip")
 				if cli.String("attr") != "" {
 					userMetaMap, _ := getMetaDataEntry(cli.String("attr"))
 					for metadataKey, metaDataVal := range userMetaMap {
@@ -532,7 +558,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 					}, 0)
 				} else {
 					parallel.queueTask(func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve)
+						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve, isZip)
 					}, cpURLs.SourceContent.Size)
 				}
 			}
@@ -641,7 +667,6 @@ func mainCopy(cliCtx *cli.Context) error {
 
 	// check 'copy' cli arguments.
 	checkCopySyntax(ctx, cliCtx, encKeyDB, false)
-
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 

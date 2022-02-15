@@ -40,7 +40,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
@@ -811,12 +811,15 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 // Get - get object with GET options.
 func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
+	o := minio.GetObjectOptions{
+		ServerSideEncryption: opts.SSE,
+		VersionID:            opts.VersionID,
+	}
+	if opts.Zip {
+		o.Set("x-minio-extract", "true")
+	}
 
-	reader, e := c.api.GetObject(ctx, bucket, object,
-		minio.GetObjectOptions{
-			ServerSideEncryption: opts.SSE,
-			VersionID:            opts.VersionID,
-		})
+	reader, e := c.api.GetObject(ctx, bucket, object, o)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -1439,7 +1442,7 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 }
 
 // listObjectWrapper - select ObjectList mode depending on arguments
-func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool, maxKeys int) <-chan minio.ObjectInfo {
+func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool, maxKeys int, zip bool) <-chan minio.ObjectInfo {
 	if !timeRef.IsZero() || withVersions {
 		return c.listVersions(ctx, bucket, object, isRecursive, timeRef, withVersions, withDeleteMarkers)
 	}
@@ -1449,7 +1452,15 @@ func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string,
 		// https://github.com/minio/mc/issues/3073
 		return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, UseV1: true, MaxKeys: maxKeys})
 	}
-	return c.api.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata, MaxKeys: maxKeys})
+	opts := minio.ListObjectsOptions{Prefix: object, Recursive: isRecursive, WithMetadata: metadata, MaxKeys: maxKeys}
+	if zip {
+		// If prefix ends with .zip, add a slash.
+		if strings.HasSuffix(object, ".zip") {
+			opts.Prefix = object + "/"
+		}
+		opts.Set("x-minio-extract", "true")
+	}
+	return c.api.ListObjects(ctx, bucket, opts)
 }
 
 func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object string) (*ClientContent, *probe.Error) {
@@ -1531,7 +1542,11 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	if !strings.HasSuffix(object, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
 		// Issue HEAD request first but ignore no such key error
 		// so we can check if there is such prefix which exists
-		ctnt, err := c.getObjectStat(ctx, bucket, object, minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID})
+		o := minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID}
+		if opts.isZip {
+			o.Set("x-minio-extract", "true")
+		}
+		ctnt, err := c.getObjectStat(ctx, bucket, object, o)
 		if err == nil {
 			return ctnt, nil
 		}
@@ -1546,7 +1561,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
 	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false, 1) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false, 1, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
@@ -2074,6 +2089,12 @@ func (c *S3Client) bucketStat(ctx context.Context, bucket string) (*ClientConten
 func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
+	if opts.ListZip && (b == "" || o == "") {
+		contentCh <- &ClientContent{
+			Err: probe.NewError(errors.New("listing zip files must provide bucket and object")),
+		}
+		return
+	}
 	switch {
 	case b == "" && o == "":
 		buckets, e := c.api.ListBuckets(ctx)
@@ -2095,7 +2116,7 @@ func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientCont
 		contentCh <- content
 	default:
 		isRecursive := false
-		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1) {
+		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1, opts.ListZip) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
@@ -2154,7 +2175,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 			}
 
 			isRecursive := true
-			for object := range c.listObjectWrapper(ctx, bucket.Name, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1) {
+			for object := range c.listObjectWrapper(ctx, bucket.Name, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1, opts.ListZip) {
 				if object.Err != nil {
 					contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
@@ -2170,7 +2191,7 @@ func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *C
 		}
 	default:
 		isRecursive := true
-		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1) {
+		for object := range c.listObjectWrapper(ctx, b, o, isRecursive, time.Time{}, false, false, opts.WithMetadata, -1, opts.ListZip) {
 			if object.Err != nil {
 				contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),

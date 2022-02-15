@@ -125,7 +125,7 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	}
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url, versionID, false, encKeyDB, rewind)
+		_, _, err := url2Stat(ctx, url, versionID, false, encKeyDB, rewind, false)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}

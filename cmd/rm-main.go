@@ -272,7 +272,7 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		modTime time.Time
 	)
 
-	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{})
+	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{}, false)
 	if pErr != nil {
 		switch minio.ToErrorResponse(pErr.ToGoError()).StatusCode {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:

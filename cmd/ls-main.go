@@ -57,6 +57,10 @@ var (
 			Name:  "storage-class, sc",
 			Usage: "filter to specified storage class",
 		},
+		cli.BoolFlag{
+			Name:  "zip",
+			Usage: "list files inside zip archive (MinIO servers only)",
+		},
 	}
 )
 
@@ -154,7 +158,7 @@ func parseRewindFlag(rewind string) (timeRef time.Time) {
 }
 
 // checkListSyntax - validate all the passed arguments
-func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, bool, bool, time.Time, bool, string) {
+func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, doListOptions) {
 	args := cliCtx.Args()
 	if !cliCtx.Args().Present() {
 		args = []string{"."}
@@ -169,15 +173,27 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, 
 	isIncomplete := cliCtx.Bool("incomplete")
 	withOlderVersions := cliCtx.Bool("versions")
 	isSummary := cliCtx.Bool("summarize")
+	listZip := cliCtx.Bool("zip")
 
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 	if timeRef.IsZero() && withOlderVersions {
 		timeRef = time.Now().UTC()
 	}
 
+	if listZip && (withOlderVersions || !timeRef.IsZero()) {
+		fatalIf(errInvalidArgument().Trace(args...), "Zip file listing can only be performed on the latest version")
+	}
 	storageClasss := cliCtx.String("storage-class")
-
-	return args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClasss
+	opts := doListOptions{
+		timeRef:           timeRef,
+		isRecursive:       isRecursive,
+		isIncomplete:      isIncomplete,
+		isSummary:         isSummary,
+		withOlderVersions: withOlderVersions,
+		listZip:           listZip,
+		filter:            storageClasss,
+	}
+	return args, opts
 }
 
 // mainList - is a handler for mc ls command
@@ -198,7 +214,7 @@ func mainList(cliCtx *cli.Context) error {
 	console.SetColor("SC", color.New(color.FgBlue))
 
 	// check 'ls' cliCtx arguments.
-	args, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClassFilter := checkListSyntax(ctx, cliCtx)
+	args, opts := checkListSyntax(ctx, cliCtx)
 
 	var cErr error
 	for _, targetURL := range args {
@@ -206,14 +222,14 @@ func mainList(cliCtx *cli.Context) error {
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 			var st *ClientContent
-			st, err = clnt.Stat(ctx, StatOptions{incomplete: isIncomplete})
+			st, err = clnt.Stat(ctx, StatOptions{incomplete: opts.isIncomplete})
 			if st != nil && err == nil && st.Type.IsDir() {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 				clnt, err = newClient(targetURL)
 				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 			}
 		}
-		if e := doList(ctx, clnt, isRecursive, isIncomplete, isSummary, timeRef, withOlderVersions, storageClassFilter); e != nil {
+		if e := doList(ctx, clnt, opts); e != nil {
 			cErr = e
 		}
 	}
