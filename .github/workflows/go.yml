@@ -37,12 +37,17 @@ jobs:
           go test -v -race --timeout 30m ./...
       - name: Build on ${{ matrix.os }}
         if: matrix.os == 'ubuntu-latest'
+        env:
+          ACCESS_KEY: minioadmin
+          SECRET_KEY: minioadmin
+          ENABLE_HTTPS: 1
+          MINIO_CI_CD: 1
+          SERVER_ENDPOINT: localhost:9000
         run: |
           wget https://dl.min.io/server/minio/release/linux-amd64/minio && chmod +x minio
           mkdir -p ~/.minio/certs/ && cp testdata/localhost.crt ~/.minio/certs/public.crt && cp testdata/localhost.key ~/.minio/certs/private.key
           sudo cp testdata/localhost.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
           ./minio server /tmp/test-xl/{1...4}/ & sleep 10
-          export SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1
           make
           make test-race
           make verify

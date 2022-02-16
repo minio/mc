@@ -180,7 +180,7 @@ func (u clusterStruct) String() (msg string) {
 		// Network info, only available for non-FS types
 		connectionAlive := 0
 		totalNodes := len(srv.Network)
-		if srv.Network != nil {
+		if srv.Network != nil && backendType == madmin.Erasure {
 			for _, v := range srv.Network {
 				if v == "online" {
 					connectionAlive++
@@ -226,6 +226,8 @@ func (u clusterStruct) String() (msg string) {
 			msg += fmt.Sprintf("   Pool: %s\n", console.Colorize("Info", humanize.Ordinal(poolIdx+1)))
 		}
 		msg += "\n"
+
+		poolIdx = -1
 	}
 
 	// Summary on used space, total no of buckets and
