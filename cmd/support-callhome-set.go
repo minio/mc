@@ -75,7 +75,7 @@ func checkCallhomeSetSyntax(ctx *cli.Context) {
 	}
 }
 
-func validateArgs(args []string) error {
+func validateCallhomeSetArgs(args []string) error {
 	for _, arg := range args {
 		_, _, e := getOptionKV(arg)
 		if e != nil {
@@ -90,7 +90,7 @@ func mainCallhomeSet(ctx *cli.Context) error {
 
 	aliasedURL := ctx.Args().Get(0)
 	args := ctx.Args().Tail()
-	fatalIf(probe.NewError(validateArgs(args)), fmt.Sprintf("Invalid arguments: %s", strings.Join(args, ",")))
+	fatalIf(probe.NewError(validateCallhomeSetArgs(args)), fmt.Sprintf("Invalid arguments: %s", strings.Join(args, ",")))
 
 	for _, option := range ctx.Args().Tail() {
 		// options have already been validated, so third (error) return value can be ignored

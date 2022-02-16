@@ -203,32 +203,33 @@ func subnetPostReq(reqURL string, payload interface{}, headers map[string]string
 	return subnetReqDo(r, headers)
 }
 
-func getSubnetKeyFromMinIOConfig(alias string, key string) (bool, string) {
+func getSubSysKeyFromMinIOConfig(client *madmin.AdminClient, subSys string) madmin.KVS {
+	sh, pe := client.HelpConfigKV(globalContext, subSys, "", false)
+	fatalIf(probe.NewError(pe), fmt.Sprintf("Unable to get config keys for %s", subSys))
+
+	buf, e := client.GetConfigKV(globalContext, subSys)
+	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to get server config for %s", subSys))
+
+	tgt, e := madmin.ParseSubSysTarget(buf, sh)
+	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to parse sub-system target '%s'", subSys))
+
+	return tgt.KVS
+}
+
+func getSubnetKeyFromMinIOConfig(alias string, key string) (string, bool) {
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	if minioConfigSupportsSubnet(client) {
-		sh, pe := client.HelpConfigKV(globalContext, "subnet", "", false)
-		fatalIf(probe.NewError(pe), "Unable to get config keys for SUBNET")
-
-		buf, e := client.GetConfigKV(globalContext, "subnet")
-		fatalIf(probe.NewError(e), "Unable to get server SUBNET config")
-
-		tgt, e := madmin.ParseSubSysTarget(buf, sh)
-		fatalIf(probe.NewError(e), "Unable to parse sub-system target 'subnet'")
-
-		for _, kv := range tgt.KVS {
-			if kv.Key == key {
-				return true, kv.Value
-			}
-		}
+		return getSubSysKeyFromMinIOConfig(client, "subnet").Lookup(key)
 	}
-	return false, ""
+
+	return "", false
 }
 
 func getSubnetAPIKeyFromConfig(alias string) string {
 	// get the subnet api_key config from MinIO if available
-	supported, apiKey := getSubnetKeyFromMinIOConfig(alias, "api_key")
+	apiKey, supported := getSubnetKeyFromMinIOConfig(alias, "api_key")
 	if supported {
 		return apiKey
 	}
@@ -244,7 +245,7 @@ func setSubnetProxyFromConfig(alias string) error {
 	}
 
 	// get the subnet proxy config from MinIO if available
-	supported, proxy := getSubnetKeyFromMinIOConfig(alias, "proxy")
+	proxy, supported := getSubnetKeyFromMinIOConfig(alias, "proxy")
 	if supported && len(proxy) > 0 {
 		proxyURL, e := url.Parse(proxy)
 		if e != nil {
@@ -257,7 +258,7 @@ func setSubnetProxyFromConfig(alias string) error {
 
 func getSubnetLicenseFromConfig(alias string) string {
 	// get the subnet license config from MinIO if available
-	supported, lic := getSubnetKeyFromMinIOConfig(alias, "license")
+	lic, supported := getSubnetKeyFromMinIOConfig(alias, "license")
 	if supported {
 		return lic
 	}
@@ -287,7 +288,7 @@ func minioConfigSupportsSubnet(client *madmin.AdminClient) bool {
 }
 
 func setSubnetAPIKeyConfig(alias string, apiKey string) {
-	supported, _ := getSubnetKeyFromMinIOConfig(alias, "api_key")
+	_, supported := getSubnetKeyFromMinIOConfig(alias, "api_key")
 	if supported {
 		// Create a new MinIO Admin Client
 		client, err := newAdminClient(alias)
