@@ -20,7 +20,7 @@ require (
 	github.com/minio/filepath v1.0.0
 	github.com/minio/madmin-go v1.3.1
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.22-0.20220210201649-8c600e5ae0e8
+	github.com/minio/minio-go/v7 v7.0.22
 	github.com/minio/pkg v1.1.14
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
