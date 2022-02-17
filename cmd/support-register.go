@@ -51,9 +51,6 @@ EXAMPLES:
 
   2. Register MinIO cluster at alias 'play' on SUBNET, using the name "play-cluster".
      {{.Prompt}} {{.HelpName}} play --name play-cluster
-
-  3. Register MinIO cluster at alias 'play' on SUBNET, using the proxy https://192.168.1.3:3128
-     {{.Prompt}} {{.HelpName}} play --subnet-proxy https://192.168.1.3:3128
 `,
 }
 

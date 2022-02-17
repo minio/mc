@@ -77,7 +77,7 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxyURL *url.URL) {
+func setGlobals(quiet, debug, json, noColor, insecure, devMode bool) {
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
 	globalJSONLine = !isTerminal() && json
@@ -85,7 +85,6 @@ func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxy
 	globalNoColor = globalNoColor || noColor || globalJSONLine
 	globalInsecure = globalInsecure || insecure
 	globalDevMode = globalDevMode || devMode
-	globalSubnetProxyURL = subnetProxyURL
 
 	// Disable colorified messages if requested.
 	if globalNoColor || globalQuiet {
@@ -102,17 +101,6 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
 	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
 
-	subnetProxy := ctx.String("subnet-proxy")
-
-	var proxyURL *url.URL
-	var e error
-	if value := ctx.String("subnet-proxy"); value != "" {
-		proxyURL, e = url.Parse(subnetProxy)
-		if e != nil {
-			return e
-		}
-	}
-
-	setGlobals(quiet, debug, json, noColor, insecure, devMode, proxyURL)
+	setGlobals(quiet, debug, json, noColor, insecure, devMode)
 	return nil
 }

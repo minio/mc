@@ -95,13 +95,10 @@ EXAMPLES:
   1. Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
      {{.Prompt}} {{.HelpName}} play
 
-  2. Upload MinIO diagnostics report for alias 'play' (https://play.min.io by default) to SUBNET proxying via https://192.168.1.3:3128
-     {{.Prompt}} {{.HelpName}} play --subnet-proxy https://192.168.1.3:3128
-
-  3. Schedule periodic upload of MinIO diagnostics report for alias 'play' (https://play.min.io by default) to SUBNET every 2 days
+  2. Schedule periodic upload of MinIO diagnostics report for alias 'play' (https://play.min.io by default) to SUBNET every 2 days
      {{.Prompt}} {{.HelpName}} play --schedule 2
 
-  4. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
+  3. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
      {{.Prompt}} {{.HelpName}} play --airgap
 `,
 }
