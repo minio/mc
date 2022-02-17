@@ -50,10 +50,6 @@ var subnetCommonFlags = []cli.Flag{
 		Name:  "name",
 		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},
-	cli.StringFlag{
-		Name:  "subnet-proxy",
-		Usage: "Specify the HTTP(S) proxy URL to use for connecting to SUBNET",
-	},
 	cli.BoolFlag{
 		Name:  "airgap",
 		Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
@@ -243,7 +239,7 @@ func getSubnetAPIKeyFromConfig(alias string) string {
 
 func setSubnetProxyFromConfig(alias string) error {
 	if globalSubnetProxyURL != nil {
-		// proxy already set via command line arg.
+		// proxy already set
 		return nil
 	}
 
