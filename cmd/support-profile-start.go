@@ -30,7 +30,7 @@ import (
 var supportProfileStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
+		Usage: "start profiler type, possible values are 'cpu', 'cpuio' 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
 		Value: "cpu,mem,block,goroutines",
 	},
 }
@@ -76,6 +76,7 @@ func checkAdminProfileStartSyntax(ctx *cli.Context) {
 		madmin.ProfilerTrace,
 		madmin.ProfilerThreads,
 		madmin.ProfilerGoroutines,
+		"cpuio", // Added in https://github.com/minio/madmin-go/pull/71
 	}
 	for _, profilerType := range supportedProfilerTypes {
 		s.Add(string(profilerType))
