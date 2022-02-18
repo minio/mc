@@ -89,7 +89,7 @@ func (m callhomeGetMessage) JSON() string {
 	return string(statusJSONBytes)
 }
 
-func retrieveCallhomeSetting(alias string, s string) (v string, e error) {
+func printCallhomeSetting(alias string, s string) {
 	switch s {
 	case "logs":
 		// Create a new MinIO Admin Client
@@ -118,7 +118,6 @@ func retrieveCallhomeSetting(alias string, s string) (v string, e error) {
 			Value: val,
 		})
 	}
-	return "", nil
 }
 
 func mainCallhomeGet(ctx *cli.Context) error {
@@ -136,10 +135,10 @@ func mainCallhomeGet(ctx *cli.Context) error {
 	if opt == "" {
 		// print all settings
 		for _, o := range supportedOptions().ToSlice() {
-			retrieveCallhomeSetting(alias, o)
+			printCallhomeSetting(alias, o)
 		}
 	} else {
-		retrieveCallhomeSetting(alias, opt)
+		printCallhomeSetting(alias, opt)
 	}
 
 	return nil
