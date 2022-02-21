@@ -63,13 +63,13 @@ var supportPerfFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "serial",
-		Usage: "run tests on drives one-by-one",
+		Usage: "run tests on drive(s) one-by-one",
 	},
 }
 
 var supportPerfCmd = cli.Command{
 	Name:            "perf",
-	Usage:           "analyze object storage, network and drive performance",
+	Usage:           "analyze object, network and drive performance",
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -82,26 +82,25 @@ USAGE:
   {{.HelpName}} [COMMAND] [FLAGS] TARGET
 
 COMMAND:
-  drives  Run speed test on the drives in the cluster
-  objects measure speed of writing and reading objects
+  drive  measure speed of drive in a cluster
+  object measure speed of reading and writing object in a cluster
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 
 EXAMPLES:
-  1. Run performance tests with autotuning the concurrency to figure out the maximum throughput and iops values:
-     {{.Prompt}} {{.HelpName}} myminio/
+  1. Run object speed measurement with autotuning the concurrency to obtain maximum throughput and IOPs:
+     {{.Prompt}} {{.HelpName}} object myminio/
 
-  2. Run performance tests for 20 seconds with object size of 128MiB, 32 concurrent requests per server:
-     {{.Prompt}} {{.HelpName}} myminio/ --duration 20s --size 128MiB --concurrent 32
+  2. Run object speed measurement for 20 seconds with object size of 128MiB with autotuning the concurrency to obtain maximum throughput:
+     {{.Prompt}} {{.HelpName}} object myminio/ --duration 20s --size 128MiB
 
-  3. Run drive performance tests where only one drive is tested at a time in any given node :
-     {{.Prompt}} {{.HelpName}} drives myminio/ --serial
+  3. Run drive speed measurements on all drive on all nodes (with default blockSize of 4MiB):
+     {{.Prompt}} {{.HelpName}} drive myminio/
 
-  4. Run drive performance tests with blocksize of 8MiB, and 2GiB of data read/written from each drive:
-     {{.Prompt}} {{.HelpName}} drives myminio/ --blocksize 8MiB --filesize 2GiB
-
+  4. Run drive speed measurements with blocksize of 64KiB, and 2GiB of data read/written from each drive:
+     {{.Prompt}} {{.HelpName}} drive myminio/ --blocksize 64KiB --filesize 2GiB
 `,
 }
 
@@ -153,17 +152,17 @@ func mainSupportPerf(ctx *cli.Context) error {
 	aliasedURL := ""
 	switch len(args) {
 	case 1:
-		// cannot use alias by the name 'drives'
-		if args[0] == "drives" {
+		// cannot use alias by the name 'drive'
+		if args[0] == "drive" {
 			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
 		}
 		aliasedURL = args[0]
 	case 2:
 		switch args[0] {
-		case "drives":
+		case "drive":
 			aliasedURL = args[1]
 			return mainAdminSpeedtestDrive(ctx, aliasedURL)
-		case "objects":
+		case "object":
 			aliasedURL = args[1]
 		case "net":
 			aliasedURL = args[1]
