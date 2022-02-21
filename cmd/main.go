@@ -41,7 +41,6 @@ import (
 	"github.com/minio/pkg/env"
 	"github.com/minio/pkg/trie"
 	"github.com/minio/pkg/words"
-	"github.com/pkg/profile"
 
 	completeinstall "github.com/posener/complete/cmd/install"
 )
@@ -103,15 +102,12 @@ func Main(args []string) {
 		}
 	}
 
-	// Enable profiling supported modes are [cpu, mem, block].
-	// ``MC_PROFILER`` supported options are [cpu, mem, block].
-	switch os.Getenv("MC_PROFILER") {
-	case "cpu":
-		defer profile.Start(profile.CPUProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	case "mem":
-		defer profile.Start(profile.MemProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	case "block":
-		defer profile.Start(profile.BlockProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
+	// ``MC_PROFILER`` supported options are [cpu, mem, block, goroutine].
+	if p := os.Getenv("MC_PROFILER"); p != "" {
+		profilers := strings.Split(p, ",")
+		if e := enableProfilers(mustGetProfileDir(), profilers); e != nil {
+			console.Fatal(e)
+		}
 	}
 
 	probe.Init() // Set project's root source path.
