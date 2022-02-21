@@ -23,6 +23,7 @@ import (
 
 var callhomeSubcommands = []cli.Command{
 	callhomeSetCmd,
+	callhomeGetCmd,
 }
 
 var supportCallhomeCmd = cli.Command{
