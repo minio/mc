@@ -212,9 +212,9 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 			"You cannot specify --version-id with any of --versions, --rewind and --recursive flags.")
 	}
 
-	if isNoncurrentVersion && !isVersions {
+	if isNoncurrentVersion && !(isVersions && isRecursive) {
 		fatalIf(errDummy().Trace(),
-			"You cannot specify --non-current without --versions, please use --non-current --versions.")
+			"You cannot specify --non-current without --versions --recursive, please use --non-current --versions --recursive.")
 	}
 
 	for _, url := range cliCtx.Args() {
@@ -345,11 +345,25 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 	return nil
 }
 
+type removeOpts struct {
+	timeRef           time.Time
+	withVersions      bool
+	nonCurrentVersion bool
+	isForce           bool
+	isRecursive       bool
+	isIncomplete      bool
+	isFake            bool
+	isBypass          bool
+	olderThan         string
+	newerThan         string
+	encKeyDB          map[string][]prefixSSEPair
+}
+
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
 //   Use cases:
 //      * Remove objects recursively
 //      * Remove all versions of a single object
-func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersion, isForce, isRecursive, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func listAndRemove(url string, opts removeOpts) error {
 	ctx, cancelRemove := context.WithCancel(globalContext)
 	defer cancelRemove()
 
@@ -362,11 +376,11 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 	contentCh := make(chan *ClientContent)
 	isRemoveBucket := false
 
-	listOpts := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirLast}
-	if !timeRef.IsZero() {
-		listOpts.WithOlderVersions = withVersions
+	listOpts := ListOptions{Recursive: opts.isRecursive, Incomplete: opts.isIncomplete, ShowDir: DirLast}
+	if !opts.timeRef.IsZero() {
+		listOpts.WithOlderVersions = opts.withVersions
 		listOpts.WithDeleteMarkers = true
-		listOpts.TimeRef = timeRef
+		listOpts.TimeRef = opts.timeRef
 	}
 
 	isNonCurrent := func(contents []*ClientContent) bool {
@@ -380,7 +394,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 
 	atLeastOneObjectFound := false
 
-	resultCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
+	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, contentCh)
 
 	var lastPath string
 	var perObjectVersions []*ClientContent
@@ -403,7 +417,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 			continue
 		}
 
-		if !isRecursive {
+		if !opts.isRecursive {
 			currentObjectURL := targetAlias + getKey(content)
 			standardizedURL := getStandardizedURL(currentObjectURL)
 			if !strings.HasPrefix(url, standardizedURL) {
@@ -411,11 +425,11 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 			}
 		}
 
-		if nonCurrentVersion && isRecursive && withVersions {
+		if opts.nonCurrentVersion && opts.isRecursive && opts.withVersions {
 			if lastPath != content.URL.Path {
 				lastPath = content.URL.Path
 				if isNonCurrent(perObjectVersions) {
-					if isFake {
+					if opts.isFake {
 						continue
 					}
 					for _, content := range perObjectVersions {
@@ -461,12 +475,12 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 
 		if !content.Time.IsZero() {
 			// Skip objects older than --older-than parameter, if specified
-			if olderThan != "" && isOlder(content.Time, olderThan) {
+			if opts.olderThan != "" && isOlder(content.Time, opts.olderThan) {
 				continue
 			}
 
 			// Skip objects newer than --newer-than parameter if specified
-			if newerThan != "" && isNewer(content.Time, newerThan) {
+			if opts.newerThan != "" && isNewer(content.Time, opts.newerThan) {
 				continue
 			}
 		} else {
@@ -474,7 +488,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 			continue
 		}
 
-		if !isFake {
+		if !opts.isFake {
 			sent := false
 			for !sent {
 				select {
@@ -508,9 +522,9 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 		}
 	}
 
-	if nonCurrentVersion && isRecursive && withVersions {
+	if opts.nonCurrentVersion && opts.isRecursive && opts.withVersions {
 		if isNonCurrent(perObjectVersions) {
-			if isFake {
+			if opts.isFake {
 				return nil
 			}
 			for _, content := range perObjectVersions {
@@ -567,7 +581,7 @@ func listAndRemove(url string, timeRef time.Time, withVersions, nonCurrentVersio
 	}
 
 	if !atLeastOneObjectFound {
-		if isForce {
+		if opts.isForce {
 			// Do not throw an exit code with --force check unix `rm -f`
 			// behavior and do not print an error as well.
 			return nil
@@ -617,7 +631,19 @@ func mainRm(cliCtx *cli.Context) error {
 	// Support multiple targets.
 	for _, url := range cliCtx.Args() {
 		if isRecursive || withVersions {
-			e = listAndRemove(url, rewind, withVersions, withNoncurrentVersion, isForce, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
+			e = listAndRemove(url, removeOpts{
+				timeRef:           rewind,
+				withVersions:      withVersions,
+				nonCurrentVersion: withNoncurrentVersion,
+				isForce:           isForce,
+				isRecursive:       isRecursive,
+				isIncomplete:      isIncomplete,
+				isFake:            isFake,
+				isBypass:          isBypass,
+				olderThan:         olderThan,
+				newerThan:         newerThan,
+				encKeyDB:          encKeyDB,
+			})
 		} else {
 			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
@@ -634,7 +660,19 @@ func mainRm(cliCtx *cli.Context) error {
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive || withVersions {
-			e = listAndRemove(url, rewind, withVersions, withNoncurrentVersion, isForce, isRecursive, isIncomplete, isFake, isBypass, olderThan, newerThan, encKeyDB)
+			e = listAndRemove(url, removeOpts{
+				timeRef:           rewind,
+				withVersions:      withVersions,
+				nonCurrentVersion: withNoncurrentVersion,
+				isForce:           isForce,
+				isRecursive:       isRecursive,
+				isIncomplete:      isIncomplete,
+				isFake:            isFake,
+				isBypass:          isBypass,
+				olderThan:         olderThan,
+				newerThan:         newerThan,
+				encKeyDB:          encKeyDB,
+			})
 		} else {
 			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
 		}
