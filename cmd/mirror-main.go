@@ -645,6 +645,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 
 // this goroutine will watch for notifications, and add modified objects to the queue
 func (mj *mirrorJob) watchMirror(ctx context.Context) {
+	defer mj.watcher.Stop()
+
 	for {
 		select {
 		case events, ok := <-mj.watcher.Events():
