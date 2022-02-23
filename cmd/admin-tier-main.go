@@ -24,6 +24,7 @@ var adminTierSubCommands = []cli.Command{
 	adminTierListCmd,
 	adminTierEditCmd,
 	adminTierRmCmd,
+	adminTierVerifyCmd,
 	adminTierInfoCmd,
 }
 
