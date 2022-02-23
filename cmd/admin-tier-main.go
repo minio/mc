@@ -42,5 +42,5 @@ var adminTierCmd = cli.Command{
 func mainAdminTier(ctx *cli.Context) error {
 	commandNotFound(ctx, adminTierSubCommands)
 	return nil
-	// Sub-commands like "add", "ls", "edit" and "rm" have their own main.
+	// Sub-commands like "add", "ls", "edit", "rm" and "verify" have their own main.
 }
