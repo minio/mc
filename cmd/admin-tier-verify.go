@@ -78,5 +78,4 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 		TierName: tierName,
 	})
 	return nil
-
 }
