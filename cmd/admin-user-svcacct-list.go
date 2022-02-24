@@ -27,7 +27,7 @@ import (
 var adminUserSvcAcctListCmd = cli.Command{
 	Name:         "ls",
 	Aliases:      []string{"list"},
-	Usage:        "List services accounts",
+	Usage:        "list services accounts",
 	Action:       mainAdminUserSvcAcctList,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -39,7 +39,7 @@ USAGE:
   {{.HelpName}} ALIAS TARGET-ACCOUNT
 
 TARGET-ACCOUNT:
-  Could be a MinIO user, STS or LDAP account.
+  Is either a MinIO user, LDAP account.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
