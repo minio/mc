@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -66,6 +67,12 @@ EXAMPLES:
   4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
      {{.Prompt}} {{.HelpName}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
 `,
+}
+
+var shellQuoteRegex = regexp.MustCompile("([&; \t\n<>|'\"])")
+
+func shellQuote(s string) string {
+	return shellQuoteRegex.ReplaceAllString(s, "\\$1")
 }
 
 // checkShareUploadSyntax - validate command-line args.
@@ -119,9 +126,9 @@ func makeCurlCmd(key, postURL string, isRecursive bool, uploadInfo map[string]st
 	}
 	// If key starts with is enabled prefix it with the output.
 	if isRecursive {
-		curlCommand += fmt.Sprintf("-F key=%s<NAME> ", key) // Object name.
+		curlCommand += fmt.Sprintf("-F key=%s<NAME> ", shellQuote(key)) // Object name.
 	} else {
-		curlCommand += fmt.Sprintf("-F key=%s ", key) // Object name.
+		curlCommand += fmt.Sprintf("-F key=%s ", shellQuote(key)) // Object name.
 	}
 	curlCommand += "-F file=@<FILE>" // File to upload.
 	return curlCommand, nil
