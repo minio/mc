@@ -384,10 +384,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/subnet/health":   aliasCompleter,
 	"/admin/subnet/register": aliasCompleter,
 
-	"/admin/tier/add":  nil,
-	"/admin/tier/edit": nil,
-	"/admin/tier/ls":   nil,
-	"/admin/tier/info": nil,
+	"/admin/tier/add":    nil,
+	"/admin/tier/edit":   nil,
+	"/admin/tier/ls":     nil,
+	"/admin/tier/info":   nil,
+	"/admin/tier/rm":     nil,
+	"/admin/tier/verify": nil,
 
 	"/admin/replicate/add":    aliasCompleter,
 	"/admin/replicate/edit":   aliasCompleter,
