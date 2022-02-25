@@ -76,7 +76,7 @@ func checkAdminProfileStartSyntax(ctx *cli.Context) {
 		madmin.ProfilerTrace,
 		madmin.ProfilerThreads,
 		madmin.ProfilerGoroutines,
-		"cpuio", // Added in https://github.com/minio/madmin-go/pull/71
+		madmin.ProfilerCPUIO,
 	}
 	for _, profilerType := range supportedProfilerTypes {
 		s.Add(string(profilerType))
