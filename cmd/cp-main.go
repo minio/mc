@@ -394,9 +394,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 	sourceURLs := cli.Args()[:len(cli.Args())-1]
 	targetURL := cli.Args()[len(cli.Args())-1] // Last one is target
-	if strings.Contains(targetURL, "//") {
-		fatalIf(errInvalidArgument().Trace(), "targetURL contains double slash `"+targetURL+"`.")
-	}
 
 	tgtClnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize `"+targetURL+"`.")
