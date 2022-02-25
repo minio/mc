@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -73,6 +74,12 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 			msg += "."
 			console.Fatalln(msg)
 		}
+	}
+
+	// In minio, it is not supported to contain double slash in object name.
+	// https://github.com/minio/minio/issues/5874
+	if strings.Contains(tgtURL, "//") {
+		fatalIf(errInvalidArgument().Trace(), "tgtURL contains double slash `"+tgtURL+"`.")
 	}
 
 	// Check if bucket name is passed for URL type arguments.

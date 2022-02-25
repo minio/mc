@@ -45,6 +45,12 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	srcURL = URLs[0]
 	tgtURL = URLs[1]
 
+	// In minio, it is not supported to contain double slash in object name.
+	// https://github.com/minio/minio/issues/5874
+	if strings.Contains(tgtURL, "//") {
+		fatalIf(errInvalidArgument().Trace(), "tgtURL contains double slash `"+tgtURL+"`.")
+	}
+
 	if cliCtx.Bool("force") && cliCtx.Bool("remove") {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated, please use `--overwrite` instead with `--remove` for the same functionality.")
 	} else if cliCtx.Bool("force") {
