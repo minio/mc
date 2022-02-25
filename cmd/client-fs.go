@@ -181,6 +181,9 @@ func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 		close(eventChan)
 		close(errorChan)
 		notify.Stop(in)
+		// At this point, notify is guaranteed to not write
+		// in 'in' channel so we can close it.
+		close(in)
 	}()
 
 	timeFormatFS := "2006-01-02T15:04:05.000Z"
