@@ -25,7 +25,7 @@ import (
 var adminUserSvcAcctRemoveCmd = cli.Command{
 	Name:         "rm",
 	Aliases:      []string{"remove"},
-	Usage:        "Remove a service account",
+	Usage:        "remove a service account",
 	Action:       mainAdminUserSvcAcctRemove,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -40,7 +40,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove the service account 'J123C4ZXEQN8RK6ND35I' from MinIO server.
+  1. Remove a service account 'J123C4ZXEQN8RK6ND35I' from MinIO server.
      {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
 `,
 }
