@@ -69,7 +69,7 @@ EXAMPLES:
 `,
 }
 
-var shellQuoteRegex = regexp.MustCompile("([&; \t\n<>|'\"])")
+var shellQuoteRegex = regexp.MustCompile("([&;#$` \t\n<>()|'\"])")
 
 func shellQuote(s string) string {
 	return shellQuoteRegex.ReplaceAllString(s, "\\$1")
