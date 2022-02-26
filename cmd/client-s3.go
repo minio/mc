@@ -783,26 +783,34 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 	}
 
 	go func() {
-		// Start listening on all bucket events.
-		for notificationInfo := range eventsCh {
-			if notificationInfo.Err != nil {
-				var perr *probe.Error
-				if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
-					perr = probe.NewError(APINotImplemented{
-						API:     "Watch",
-						APIType: c.GetURL().String(),
-					})
-				} else {
-					perr = probe.NewError(notificationInfo.Err)
+		defer close(wo.EventInfoChan)
+		defer close(wo.ErrorChan)
+
+		for {
+			// Start listening on all bucket events.
+			select {
+			case notificationInfo, ok := <-eventsCh:
+				if !ok {
+					return
 				}
-				wo.Errors() <- perr
-			} else {
-				wo.Events() <- c.notificationToEventsInfo(notificationInfo)
+				if notificationInfo.Err != nil {
+					var perr *probe.Error
+					if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
+						perr = probe.NewError(APINotImplemented{
+							API:     "Watch",
+							APIType: c.GetURL().String(),
+						})
+					} else {
+						perr = probe.NewError(notificationInfo.Err)
+					}
+					wo.Errors() <- perr
+				} else {
+					wo.Events() <- c.notificationToEventsInfo(notificationInfo)
+				}
+			case <-wo.DoneChan:
+				return
 			}
 		}
-
-		close(wo.EventInfoChan)
-		close(wo.ErrorChan)
 	}()
 
 	return wo, nil
