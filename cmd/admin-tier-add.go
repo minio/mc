@@ -286,11 +286,12 @@ func (msg *tierMessage) String() string {
 	case "add":
 		addMsg := fmt.Sprintf("Added remote tier %s of type %s", msg.TierName, msg.TierType)
 		return console.Colorize("TierMessage", addMsg)
-	case "ls":
-		// nothing to do here; ls has its own type to use with printMsg
 	case "rm":
 		rmMsg := fmt.Sprintf("Removed remote tier %s", msg.TierName)
 		return console.Colorize("TierMessage", rmMsg)
+	case "verify":
+		verifyMsg := fmt.Sprintf("Verified remote tier %s", msg.TierName)
+		return console.Colorize("TierMessage", verifyMsg)
 	case "edit":
 		editMsg := fmt.Sprintf("Updated remote tier %s", msg.TierName)
 		return console.Colorize("TierMessage", editMsg)
