@@ -47,7 +47,7 @@ import (
 var supportDiagFlags = append([]cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
-		Usage:  "choose specific diagnostics to run [" + fullOptions.String() + "]",
+		Usage:  "choose specific diagnostics to run [" + options.String() + "]",
 		Value:  nil,
 		Hidden: true,
 	},
@@ -61,11 +61,6 @@ var supportDiagFlags = append([]cli.Flag{
 		Name:   "license",
 		Usage:  "SUBNET license key",
 		Hidden: true, // deprecated dec 2021
-	},
-	cli.BoolFlag{
-		Name:   "full",
-		Usage:  "include long running diagnostics (takes longer to generate the report)",
-		Hidden: false,
 	},
 }, subnetCommonFlags...)
 
@@ -344,12 +339,7 @@ func subnetUploadReq(url string, filename string) (*http.Request, error) {
 func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interface{}, string, error) {
 	opts := GetHealthDataTypeSlice(ctx, "test")
 	if len(*opts) == 0 {
-		full := ctx.Bool("full")
-		if full {
-			opts = &fullOptions
-		} else {
-			opts = &liteOptions
-		}
+		opts = &options
 	}
 
 	optsMap := make(map[madmin.HealthDataType]struct{})
@@ -439,21 +429,32 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	config := spinner("Server Config", madmin.HealthDataTypeMinioConfig)
 	drive := spinner("Drive Test", madmin.HealthDataTypePerfDrive)
 	net := spinner("Network Test", madmin.HealthDataTypePerfNet)
+	obj := spinner("Objects Test", madmin.HealthDataTypePerfObj)
 	syserr := spinner("System Errors", madmin.HealthDataTypeSysErrors)
 	syssrv := spinner("System Services", madmin.HealthDataTypeSysServices)
 	sysconfig := spinner("System Config", madmin.HealthDataTypeSysConfig)
 
 	progressV0 := func(info madmin.HealthInfoV0) {
-		noOfServers := len(info.Sys.CPUInfo)
 		_ = admin(len(info.Minio.Info.Servers) > 0) &&
 			cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.DiskHwInfo) > 0) &&
 			osInfo(len(info.Sys.OsInfo) > 0) &&
 			mem(len(info.Sys.MemInfo) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
-			config(info.Minio.Config != nil) &&
-			drive(len(info.Perf.DriveInfo) > 0) &&
-			net(noOfServers == 1 || (len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0))
+			config(info.Minio.Config != nil)
+	}
+
+	progressV2 := func(info madmin.HealthInfoV2) {
+		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
+			diskHw(len(info.Sys.Partitions) > 0) &&
+			osInfo(len(info.Sys.OSInfo) > 0) &&
+			mem(len(info.Sys.MemInfo) > 0) &&
+			process(len(info.Sys.ProcInfo) > 0) &&
+			config(info.Minio.Config.Config != nil) &&
+			syserr(len(info.Sys.SysErrs) > 0) &&
+			syssrv(len(info.Sys.SysServices) > 0) &&
+			sysconfig(len(info.Sys.SysConfig) > 0) &&
+			admin(len(info.Minio.Info.Servers) > 0)
 	}
 
 	progress := func(info madmin.HealthInfo) {
@@ -464,8 +465,9 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 			mem(len(info.Sys.MemInfo) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config.Config != nil) &&
-			drive(len(info.Perf.Drives) > 0) &&
-			net(noOfServers == 1 || (len(info.Perf.Net) > 1 && len(info.Perf.NetParallel.Addr) > 0)) &&
+			drive(len(info.Perf.DrivePerf) > 0) &&
+			obj(len(info.Perf.ObjPerf) > 0) &&
+			net(noOfServers == 1 || len(info.Perf.NetPerf) > 0) &&
 			syserr(len(info.Sys.SysErrs) > 0) &&
 			syssrv(len(info.Sys.SysServices) > 0) &&
 			sysconfig(len(info.Sys.SysConfig) > 0) &&
@@ -509,7 +511,20 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 
 		healthInfo = MapHealthInfoToV1(info, nil)
 		version = madmin.HealthInfoVersion1
+	case madmin.HealthInfoVersion2:
+		info := madmin.HealthInfoV2{}
+		for {
+			if err = decoder.Decode(&info); err != nil {
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
 
+				break
+			}
+
+			progressV2(info)
+		}
+		healthInfo = info
 	case madmin.HealthInfoVersion:
 		info := madmin.HealthInfo{}
 		for {
@@ -540,7 +555,7 @@ func (d *HealthDataTypeSlice) Set(value string) error {
 		if obdData, ok := madmin.HealthDataTypesMap[strings.Trim(v, " ")]; ok {
 			*d = append(*d, obdData)
 		} else {
-			return fmt.Errorf("valid options include %s", fullOptions.String())
+			return fmt.Errorf("valid options include %s", options.String())
 		}
 	}
 	return nil
@@ -642,7 +657,4 @@ func (f HealthDataTypeFlag) ApplyWithError(set *flag.FlagSet) error {
 	return nil
 }
 
-var (
-	liteOptions = HealthDataTypeSlice(madmin.HealthDataTypesLite)
-	fullOptions = HealthDataTypeSlice(madmin.HealthDataTypesList)
-)
+var options = HealthDataTypeSlice(madmin.HealthDataTypesList)
