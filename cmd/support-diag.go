@@ -62,11 +62,6 @@ var supportDiagFlags = append([]cli.Flag{
 		Usage:  "SUBNET license key",
 		Hidden: true, // deprecated dec 2021
 	},
-	cli.IntFlag{
-		Name:  "schedule",
-		Usage: "schedule automatic upload of diagnostics data to SUBNET based on number of days (e.g. --schedule 2 is every 2 days)",
-		Value: 0,
-	},
 	cli.BoolFlag{
 		Name:   "full",
 		Usage:  "include long running diagnostics (takes longer to generate the report)",
@@ -95,10 +90,7 @@ EXAMPLES:
   1. Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
      {{.Prompt}} {{.HelpName}} play
 
-  2. Schedule periodic upload of MinIO diagnostics report for alias 'play' (https://play.min.io by default) to SUBNET every 2 days
-     {{.Prompt}} {{.HelpName}} play --schedule 2
-
-  3. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
+  2. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
      {{.Prompt}} {{.HelpName}} play --airgap
 `,
 }
@@ -172,18 +164,16 @@ func mainSupportDiag(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
 
-	license, schedule, name, offline := fetchSubnetUploadFlags(ctx)
+	license, name, offline := fetchSubnetUploadFlags(ctx)
 
 	// license should be provided for us to reach subnet
-	// if `--offline` is provided do not need to reach out.
+	// if `--airgap` is provided do not need to reach out.
 	uploadToSubnet := !offline
 	if uploadToSubnet {
 		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s to upload MinIO diagnostics report, please use --airgap to upload manually", subnetBaseURL())
 	}
 
-	uploadPeriodically := schedule != 0
-
-	e := validateFlags(uploadToSubnet, uploadPeriodically, name)
+	e := validateFlags(uploadToSubnet, name)
 	fatalIf(probe.NewError(e), "unable to parse input values")
 
 	// Create a new MinIO Admin Client
@@ -196,26 +186,12 @@ func mainSupportDiag(ctx *cli.Context) error {
 	// Main execution
 	execSupportDiag(ctx, client, alias, license, name, uploadToSubnet)
 
-	if uploadToSubnet && uploadPeriodically {
-		// Periodic upload to subnet
-		for {
-			sleepDuration := time.Hour * 24 * time.Duration(schedule)
-			console.Infoln("Waiting for", sleepDuration, "before running diagnostics again.")
-			time.Sleep(sleepDuration)
-
-			execSupportDiag(ctx, client, alias, license, name, uploadToSubnet)
-		}
-	}
 	return nil
 }
 
-func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
+func fetchSubnetUploadFlags(ctx *cli.Context) (string, string, bool) {
 	// license info to upload to subnet.
 	license := ctx.String("license")
-
-	// non-zero schedule means that health diagnostics
-	// are to be run periodically and uploaded to subnet
-	schedule := ctx.Int("schedule")
 
 	// If set (along with --license), this will be passed to
 	// subnet as the name of the cluster
@@ -225,13 +201,13 @@ func fetchSubnetUploadFlags(ctx *cli.Context) (string, int, string, bool) {
 	// to subnet and will only be saved locally.
 	offline := ctx.Bool("airgap") || ctx.Bool("offline")
 
-	return license, schedule, name, offline
+	return license, name, offline
 }
 
-func validateFlags(uploadToSubnet bool, uploadPeriodically bool, name string) error {
+func validateFlags(uploadToSubnet bool, name string) error {
 	if uploadToSubnet {
 		if globalJSON {
-			return errors.New("--json and --license should not be passed together")
+			return errors.New("--json is applicable only when --airgap is also passed")
 		}
 		return nil
 	}
@@ -240,12 +216,8 @@ func validateFlags(uploadToSubnet bool, uploadPeriodically bool, name string) er
 		return errors.New("--dev is not applicable in airgap mode")
 	}
 
-	if uploadPeriodically {
-		return errors.New("--schedule is applicable only when --license is also passed")
-	}
-
 	if len(name) > 0 {
-		return errors.New("--name is applicable only when --license is also passed")
+		return errors.New("--name is not applicable in airgap mode")
 	}
 
 	return nil
