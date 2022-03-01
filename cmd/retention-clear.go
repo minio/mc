@@ -90,6 +90,11 @@ EXAMPLES:
 
 func parseClearRetentionArgs(cliCtx *cli.Context) (target, versionID string, timeRef time.Time, withVersions, recursive, bucketMode bool) {
 	args := cliCtx.Args()
+
+	if len(args) != 1 {
+		cli.ShowCommandHelpAndExit(cliCtx, "clear", 1)
+	}
+
 	target = args[0]
 	if target == "" {
 		fatalIf(errInvalidArgument().Trace(), "invalid target url '%v'", target)
@@ -100,6 +105,11 @@ func parseClearRetentionArgs(cliCtx *cli.Context) (target, versionID string, tim
 	withVersions = cliCtx.Bool("versions")
 	recursive = cliCtx.Bool("recursive")
 	bucketMode = cliCtx.Bool("default")
+
+	if bucketMode && (versionID != "" || !timeRef.IsZero() || withVersions || recursive) {
+		fatalIf(errDummy(), "--default cannot be specified with any of --version-id, --rewind, --versions or --recursive.")
+	}
+
 	return
 }
 
@@ -119,10 +129,6 @@ func mainRetentionClear(cliCtx *cli.Context) error {
 
 	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("RetentionFailure", color.New(color.FgYellow))
-
-	if len(cliCtx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(cliCtx, "clear", 1)
-	}
 
 	target, versionID, rewind, withVersions, recursive, bucketMode := parseClearRetentionArgs(cliCtx)
 

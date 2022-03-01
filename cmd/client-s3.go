@@ -2258,7 +2258,11 @@ func (c *S3Client) ShareUpload(ctx context.Context, isRecursive bool, expires ti
 
 // SetObjectLockConfig - Set object lock configurataion of bucket.
 func (c *S3Client) SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
-	bucket, _ := c.url2BucketAndObject()
+	bucket, object := c.url2BucketAndObject()
+
+	if bucket == "" || object != "" {
+		return errInvalidArgument().Trace(bucket, object)
+	}
 
 	// FIXME: This is too ugly, fix minio-go
 	vuint := (uint)(validity)
@@ -2374,7 +2378,11 @@ func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (mi
 
 // GetObjectLockConfig - Get object lock configuration of bucket.
 func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
-	bucket, _ := c.url2BucketAndObject()
+	bucket, object := c.url2BucketAndObject()
+
+	if bucket == "" || object != "" {
+		return "", "", 0, "", errInvalidArgument().Trace(bucket, object)
+	}
 
 	status, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
 	if e != nil {
