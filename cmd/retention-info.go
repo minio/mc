@@ -92,6 +92,10 @@ EXAMPLES:
 func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions, defaultMode bool) {
 	args := cliCtx.Args()
 
+	if len(args) != 1 {
+		cli.ShowCommandHelpAndExit(cliCtx, "info", 1)
+	}
+
 	target = args[0]
 	if target == "" {
 		fatalIf(errInvalidArgument().Trace(), "invalid target url '%v'", target)
@@ -102,6 +106,11 @@ func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recu
 	withVersions = cliCtx.Bool("versions")
 	recursive = cliCtx.Bool("recursive")
 	defaultMode = cliCtx.Bool("default")
+
+	if defaultMode && (versionID != "" || !timeRef.IsZero() || withVersions || recursive) {
+		fatalIf(errDummy(), "--default flag cannot be specified with any of --version-id, --rewind, --versions, --recursive.")
+	}
+
 	return
 }
 
@@ -370,10 +379,6 @@ func mainRetentionInfo(cliCtx *cli.Context) error {
 	console.SetColor("RetentionVersionID", color.New(color.FgGreen))
 	console.SetColor("RetentionExpired", color.New(color.FgRed, color.Bold))
 	console.SetColor("RetentionFailure", color.New(color.FgYellow))
-
-	if len(cliCtx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(cliCtx, "info", 1)
-	}
 
 	target, versionID, recursive, rewind, withVersions, bucketMode := parseInfoRetentionArgs(cliCtx)
 
