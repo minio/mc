@@ -33,7 +33,7 @@ import (
 
 var adminTierInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "Displays per-tier statistics of all tier targets",
+	Usage:        "display tier statistics",
 	Action:       mainAdminTierInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -42,17 +42,17 @@ var adminTierInfoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} ALIAS [NAME]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 
 EXAMPLES:
-  1. Prints per-tier statistics of all remote tier targets configured in myminio
+  1. Prints per-tier statistics of all remote tier targets configured on 'myminio':
      {{.Prompt}} {{.HelpName}} myminio
 
-  2. Print per-tier statistcs of given tier
+  2. Print per-tier statistcs of given tier name 'MINIOTIER-1':
      {{.Prompt}} {{.HelpName}} myminio MINIOTIER-1
 `,
 }

@@ -24,7 +24,7 @@ import (
 
 var adminTierRmCmd = cli.Command{
 	Name:         "rm",
-	Usage:        "removes an empty remote tier target",
+	Usage:        "removes an empty remote tier",
 	Action:       mainAdminTierRm,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -33,7 +33,7 @@ var adminTierRmCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET NAME
+  {{.HelpName}} ALIAS NAME
 
 NAME:
   Name of remote tier target. e.g WARM-TIER
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove an empty tier
+  1. Remove an empty tier by name 'WARM-TIER':
      {{.Prompt}} {{.HelpName}} myminio WARM-TIER
 `,
 }

@@ -56,7 +56,7 @@ var adminTierEditFlags = []cli.Flag{
 
 var adminTierEditCmd = cli.Command{
 	Name:         "edit",
-	Usage:        "edits a remote tier",
+	Usage:        "update an existing remote tier configuration",
 	Action:       mainAdminTierEdit,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -65,7 +65,7 @@ var adminTierEditCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET NAME
+  {{.HelpName}} ALIAS NAME
 
 NAME:
   Name of remote tier. e.g WARM-TIER
@@ -73,15 +73,14 @@ NAME:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 EXAMPLES:
-  1. Update credentials for an existing Azure Blob Storage remote tier.
-     {{.Prompt}} {{.HelpName}} myminio AZTIER --account-key foobar-new123
+  1. Update credentials for an existing Azure Blob Storage remote tier:
+     {{.Prompt}} {{.HelpName}} myminio AZTIER --account-key ACCOUNT-KEY
 
-  2. Update credentials for an existing AWS S3 compatible remote tier.
-     {{.Prompt}} {{.HelpName}} myminio S3TIER --access-key foobar-new --secret-key foobar-new123
+  2. Update credentials for an existing AWS S3 compatible remote tier:
+     {{.Prompt}} {{.HelpName}} myminio S3TIER --access-key ACCESS-KEY --secret-key SECRET-KEY
 
-  3. Update credentials for an existing Google Cloud Storage remote tier.
+  3. Update credentials for an existing Google Cloud Storage remote tier:
      {{.Prompt}} {{.HelpName}} myminio GCSTIER --credentials-file /path/to/credentials.json
 `,
 }

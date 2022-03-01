@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Verify if tier's config is valid.
+  1. Verify if a tier config is valid.
      {{.Prompt}} {{.HelpName}} myminio WARM-TIER
 `,
 }

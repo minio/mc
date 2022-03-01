@@ -28,7 +28,7 @@ import (
 
 var adminTierListCmd = cli.Command{
 	Name:         "ls",
-	Usage:        "lists remote tier targets",
+	Usage:        "lists configured remote tier targets",
 	Action:       mainAdminTierList,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -37,14 +37,14 @@ var adminTierListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} ALIAS
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 
 EXAMPLES:
-  1. List remote tier targets configured in myminio
+  1. List remote tier targets configured on 'myminio':
      {{.Prompt}} {{.HelpName}} myminio
 `,
 }
