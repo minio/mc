@@ -98,35 +98,35 @@ var adminTierAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TIER_TYPE TARGET NAME [TIER_FLAGS]
+  {{.HelpName}} TYPE ALIAS NAME [FLAGS]
+
+TYPE:
+  Transition objects to supported cloud storage backend tier. Supported values are s3, azure and gcs.
 
 NAME:
-  Name of remote tier target. e.g WARM-TIER
-
-TIER_TYPE:
-  Cloud storage backend where objects specified by bucket lifecycle configuration can be transitioned to.
-  Supported values are s3, azure and gcs.
-
-TIER_FLAGS:
-  Tier type specific flags.
+  Name of the remote tier target. e.g WARM-TIER
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage.
-     {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name foobar --account-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/
+  1. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage:
+     {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name ACCOUNT-NAME --account-key ACCOUNT-KEY \
+        --bucket myazurebucket --prefix myazureprefix/
 
-  2. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class.
-     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --access-key foobar \
-        --secret-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
+  2. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
+     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
+        --access-key ACCESSKEY --secret-key SECRETKEY --bucket mys3bucket --prefix mys3prefix/ \
+        --storage-class "STANDARD" --region us-west-2
 
-  3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage.
-     {{.Prompt}} {{.HelpName}} s3 myminio GCSTIER --credentials-file /path/to/credentials.json --region us-east-1 --bucket testbucket --prefix testprefix/
+  3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage:
+     {{.Prompt}} {{.HelpName}} gcs myminio GCSTIER --credentials-file /path/to/credentials.json \
+        --bucket mygcsbucket  --prefix mygcsprefix/
 
-  4. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class using aws role.
-	 {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --use-aws-role \
-	 	--region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
+  4. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class using aws role:
+     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
+        --use-aws-role --bucket mys3bucket --prefix mys3prefix/ --storage-class "STANDARD" \
+        --region us-east-2
 `,
 }
 
