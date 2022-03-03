@@ -101,7 +101,7 @@ USAGE:
   {{.HelpName}} TYPE ALIAS NAME [FLAGS]
 
 TYPE:
-  Transition objects to supported cloud storage backend tier. Supported values are s3, azure and gcs.
+  Transition objects to supported cloud storage backend tier. Supported values are minio, s3, azure and gcs.
 
 NAME:
   Name of the remote tier target. e.g WARM-TIER
@@ -110,23 +110,22 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage:
+  1. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
+     {{.Prompt}} {{.HelpName}} minio myminio WARM-MINIO-TIER --endpoint https://warm-minio.com \
+        --access-key ACCESSKEY --secret-key SECRETKEY --bucket mybucket --prefix myprefix/
+
+  2. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage:
      {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name ACCOUNT-NAME --account-key ACCOUNT-KEY \
         --bucket myazurebucket --prefix myazureprefix/
 
-  2. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
+  3. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
      {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
         --access-key ACCESSKEY --secret-key SECRETKEY --bucket mys3bucket --prefix mys3prefix/ \
         --storage-class "STANDARD" --region us-west-2
 
-  3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage:
+  4. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage:
      {{.Prompt}} {{.HelpName}} gcs myminio GCSTIER --credentials-file /path/to/credentials.json \
         --bucket mygcsbucket  --prefix mygcsprefix/
-
-  4. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class using aws role:
-     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
-        --use-aws-role --bucket mys3bucket --prefix mys3prefix/ --storage-class "STANDARD" \
-        --region us-east-2
 `,
 }
 
