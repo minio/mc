@@ -152,6 +152,40 @@ const (
 // the flags contain invalid values.
 func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType) *madmin.TierConfig {
 	switch tierType {
+	case madmin.MinIO:
+		accessKey := ctx.String("access-key")
+		secretKey := ctx.String("secret-key")
+		if accessKey == "" || secretKey == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials", tierType))
+		}
+		bucket := ctx.String("bucket")
+		if bucket == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target bucket", tierType))
+		}
+
+		endpoint := ctx.String("endpoint")
+		if endpoint == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target endpoint", tierType))
+		}
+
+		minioOpts := []madmin.MinIOOptions{}
+		prefix := ctx.String("prefix")
+		if prefix != "" {
+			minioOpts = append(minioOpts, madmin.MinIOPrefix(prefix))
+		}
+
+		region := ctx.String("region")
+		if region != "" {
+			minioOpts = append(minioOpts, madmin.MinIORegion(region))
+		}
+
+		minioCfg, err := madmin.NewTierMinIO(tierName, endpoint, accessKey, secretKey, bucket, minioOpts...)
+		if err != nil {
+			fatalIf(probe.NewError(err), "Invalid configuration for MinIO tier")
+		}
+
+		return minioCfg
+
 	case madmin.S3:
 		accessKey := ctx.String("access-key")
 		secretKey := ctx.String("secret-key")
