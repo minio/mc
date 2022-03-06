@@ -3,22 +3,23 @@
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```
-service     restart and stop all MinIO servers
-update      update all MinIO servers
-info        display MinIO server information
-user        manage users
-group       manage groups
-policy      manage policies defined in the MinIO server
-config      manage MinIO server configuration
-heal        heal disks, buckets and objects on MinIO server
-profile     generate profile data for debugging purposes
-top         provide top like statistics for MinIO
-trace       show http trace for MinIO server
-console     show console logs for MinIO server
-prometheus  manages prometheus config
-kms         perform KMS management operations
-bucket      manage buckets defined in the MinIO server
-
+service              restart and stop all MinIO servers
+update               update all MinIO servers
+info                 display MinIO server information
+user                 manage users
+group                manage groups
+policy               manage policies defined in the MinIO server
+replicate            manage MinIO site replication
+config               manage MinIO server configuration
+decommission, decom  manage MinIO server pool decommissioning
+heal                 heal disks, buckets and objects on MinIO server
+prometheus           manages prometheus config
+kms                  perform KMS management operations
+bucket               manage buckets defined in the MinIO server
+tier                 manage remote tier targets for ILM transition
+top                  provide top like statistics for MinIO
+trace                show http trace for MinIO server
+console              show console logs for MinIO server
 ```
 
 ## 1.  Download MinIO Client

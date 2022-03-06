@@ -95,6 +95,10 @@ EXAMPLES:
 
 func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions bool, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypass, bucketMode bool) {
 	args := cliCtx.Args()
+	if len(args) != 3 {
+		cli.ShowCommandHelpAndExit(cliCtx, "set", 1)
+	}
+
 	mode = minio.RetentionMode(strings.ToUpper(args[0]))
 	if !mode.IsValid() {
 		fatalIf(errInvalidArgument().Trace(args...), "invalid retention mode '%v'", mode)
@@ -115,6 +119,11 @@ func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recur
 	recursive = cliCtx.Bool("recursive")
 	bypass = cliCtx.Bool("bypass")
 	bucketMode = cliCtx.Bool("default")
+
+	if bucketMode && (versionID != "" || !timeRef.IsZero() || withVersions || recursive || bypass) {
+		fatalIf(errDummy(), "--default cannot be specified with any of --version-id, --rewind, --versions, --recursive, --bypass.")
+	}
+
 	return
 }
 
@@ -135,10 +144,6 @@ func mainRetentionSet(cliCtx *cli.Context) error {
 
 	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("RetentionFailure", color.New(color.FgYellow))
-
-	if len(cliCtx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(cliCtx, "set", 1)
-	}
 
 	target, versionID, recursive, rewind, withVersions, mode, validity, unit, bypass, bucketMode := parseSetRetentionArgs(cliCtx)
 

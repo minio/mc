@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	json "github.com/minio/colorjson"
@@ -178,9 +179,20 @@ func checkObjectLockSupport(ctx context.Context, aliasedURL string) {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
 	}
 
+	// Remove the prefix/object from the aliased url and reconstruct the client
+	switch c := clnt.(type) {
+	case *S3Client:
+		_, object := c.url2BucketAndObject()
+		if object != "" {
+			clnt, _ = newClient(strings.TrimSuffix(aliasedURL, object))
+		}
+	default:
+		fatalIf(errDummy(), "Bucket locking feature is unsupported with `%s`", aliasedURL)
+	}
+
 	status, _, _, _, err := clnt.GetObjectLockConfig(ctx)
 	if err != nil {
-		fatalIf(err.Trace(), "Unable to get bucket object lock configuration from `%s`", aliasedURL)
+		fatalIf(err.Trace(), "Unable to get bucket lock configuration from `%s`", aliasedURL)
 	}
 
 	if status != "Enabled" {
@@ -277,10 +289,10 @@ func applyBucketLock(op lockOpType, urlStr string, mode minio.RetentionMode, val
 	defer cancelLock()
 	if op == lockOpClear || mode != "" {
 		err = client.SetObjectLockConfig(ctx, mode, validity, unit)
-		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
+		fatalIf(err, "Unable to apply bucket lock configuration.")
 	} else {
 		_, mode, validity, unit, err = client.GetObjectLockConfig(ctx)
-		fatalIf(err, "Unable to apply object lock configuration on the specified bucket.")
+		fatalIf(err, "Unable to apply bucket lock configuration.")
 	}
 
 	printMsg(retentionBucketMessage{
@@ -305,7 +317,7 @@ func showBucketLock(urlStr string) error {
 	defer cancelLock()
 
 	status, mode, validity, unit, err := client.GetObjectLockConfig(ctx)
-	fatalIf(err, "Unable to get object lock configuration on the specified bucket.")
+	fatalIf(err, "Unable to get bucket lock configuration.")
 
 	printMsg(retentionBucketMessage{
 		Op:       lockOpInfo,

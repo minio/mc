@@ -28,11 +28,12 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	"github.com/rivo/tview"
 )
 
 var adminTierInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "Displays per-tier statistics of all tier targets",
+	Usage:        "display tier statistics",
 	Action:       mainAdminTierInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -41,15 +42,18 @@ var adminTierInfoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} ALIAS [NAME]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 
 EXAMPLES:
-  1. Prints per-tier statistics of all remote tier targets configured in myminio
+  1. Prints per-tier statistics of all remote tier targets configured on 'myminio':
      {{.Prompt}} {{.HelpName}} myminio
+
+  2. Print per-tier statistics of given tier name 'MINIOTIER-1':
+     {{.Prompt}} {{.HelpName}} myminio MINIOTIER-1
 `,
 }
 
@@ -59,7 +63,7 @@ func checkAdminTierInfoSyntax(ctx *cli.Context) {
 	if argsNr < 1 {
 		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
-	if argsNr > 1 {
+	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for tier-info subcommand.")
 	}
@@ -110,18 +114,20 @@ func (t tierInfos) EmptyMessage() string {
 
 func (t tierInfos) MarshalJSON() ([]byte, error) {
 	type tierInfo struct {
-		Name  string
-		API   string
-		Type  string
-		Stats madmin.TierStats
+		Name       string
+		API        string
+		Type       string
+		Stats      madmin.TierStats
+		DailyStats madmin.DailyTierStats
 	}
 	ts := make([]tierInfo, 0, len(t))
 	for _, tInfo := range t {
 		ts = append(ts, tierInfo{
-			Name:  tInfo.Name,
-			API:   tierInfoAPI(tInfo.Type),
-			Type:  tierInfoType(tInfo.Type),
-			Stats: tInfo.Stats,
+			Name:       tInfo.Name,
+			API:        tierInfoAPI(tInfo.Type),
+			Type:       tierInfoType(tInfo.Type),
+			Stats:      tInfo.Stats,
+			DailyStats: tInfo.DailyStats,
 		})
 	}
 	return json.Marshal(ts)
@@ -172,13 +178,9 @@ func (t tierInfos) ToRow(i int, ls []int) []string {
 
 func mainAdminTierInfo(ctx *cli.Context) error {
 	checkAdminTierInfoSyntax(ctx)
-
-	for i, color := range tierInfoColorScheme {
-		console.SetColor(tierInfoRowNames[i], color)
-	}
-
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	var err error
 
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
@@ -199,7 +201,36 @@ func mainAdminTierInfo(ctx *cli.Context) error {
 			TierInfos: tierInfos(tInfos),
 		}
 	}
-	printMsg(&msg)
+
+	for i, color := range tierInfoColorScheme {
+		console.SetColor(tierInfoRowNames[i], color)
+	}
+
+	if globalJSON {
+		printMsg(&msg)
+		return nil
+	}
+
+	layout := tview.NewFlex().SetDirection(tview.FlexRow)
+	if tier := args.Get(1); tier != "" {
+		if obc, vbc := tierInfos(tInfos).Barcharts(tier); obc != nil && vbc != nil {
+			layout.AddItem(obc, 0, 1, false)
+			layout.AddItem(vbc, 0, 1, false)
+		}
+	} else {
+		table := tierInfos(tInfos).TableUI()
+		layout.AddItem(table, 0, 1, false)
+	}
+
+	app := tview.NewApplication().
+		SetRoot(layout, true).
+		SetFocus(layout)
+
+	app.SetInputCapture(quitOnKeys(app))
+	if err := app.Run(); err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 

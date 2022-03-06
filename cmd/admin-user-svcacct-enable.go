@@ -27,7 +27,7 @@ import (
 
 var adminUserSvcAcctEnableCmd = cli.Command{
 	Name:         "enable",
-	Usage:        "Enable a service account",
+	Usage:        "enable a service account",
 	Action:       mainAdminUserSvcAcctEnable,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
+  1. Enable a service account 'J123C4ZXEQN8RK6ND35I' on MinIO server.
      {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
 `,
 }

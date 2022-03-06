@@ -232,10 +232,6 @@ const uaMirrorAppName = "mc-mirror"
 type mirrorJob struct {
 	stopCh chan struct{}
 
-	// mutex for shutdown, this prevents the shutdown
-	// to be initiated multiple times
-	m sync.Mutex
-
 	// the global watcher object, which receives notifications of created
 	// and deleted files
 	watcher *Watcher
@@ -472,12 +468,21 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 }
 
 // Update progress status
-func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
+func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMirror bool) {
 	// now we want to start the progress bar
 	mj.status.Start()
 	defer mj.status.Finish()
 
+	var cancelInProgress bool
+
 	for sURLs := range mj.statusCh {
+		if cancelInProgress {
+			// Do not need to print any error after
+			// canceling the context, just draining
+			// the status channel here.
+			continue
+		}
+
 		// Update prometheus fields
 		mirrorTotalOps.Inc()
 
@@ -504,9 +509,11 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 				}
 				errDuringMirror = true
 			}
+
 			if mj.opts.activeActive {
-				close(mj.stopCh)
-				break
+				cancel()
+				cancelInProgress = true
+				continue
 			}
 		}
 
@@ -637,18 +644,18 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
+func (mj *mirrorJob) watchMirror(ctx context.Context) {
+	defer mj.watcher.Stop()
+
 	for {
 		select {
 		case events, ok := <-mj.watcher.Events():
 			if !ok {
-				stopParallel()
 				return
 			}
 			mj.watchMirrorEvents(ctx, events)
 		case err, ok := <-mj.watcher.Errors():
 			if !ok {
-				stopParallel()
 				return
 			}
 			switch err.ToGoError().(type) {
@@ -662,8 +669,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, stopParallel func()) {
 					return URLs{Error: err}
 				}, 0)
 			}
-		case <-globalContext.Done():
-			stopParallel()
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -674,18 +680,13 @@ func (mj *mirrorJob) watchURL(ctx context.Context, sourceClient Client) *probe.E
 }
 
 // Fetch urls that need to be mirrored
-func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc, stopParallel func()) {
-	// Do not run multiple startMirror's
-	mj.m.Lock()
-	defer mj.m.Unlock()
-
+func (mj *mirrorJob) startMirror(ctx context.Context) {
 	URLsCh := prepareMirrorURLs(ctx, mj.sourceURL, mj.targetURL, mj.opts)
 
 	for {
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok {
-				stopParallel()
 				return
 			}
 			if sURLs.Error != nil {
@@ -723,30 +724,25 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 					return mj.doRemove(ctx, sURLs)
 				}, 0)
 			}
-		case <-globalContext.Done():
-			stopParallel()
+		case <-ctx.Done():
 			return
 		case <-mj.stopCh:
-			stopParallel()
 			return
 		}
 	}
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
-func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc) bool {
+func (mj *mirrorJob) mirror(ctx context.Context) bool {
 	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(ctx)
 
 	// Starts watcher loop for watching for new events.
 	if mj.opts.isWatch {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			stopParallel := func() {
-				mj.parallel.stopAndWait()
-				cancelMirror()
-			}
-			mj.watchMirror(ctx, stopParallel)
+			mj.watchMirror(ctx)
 		}()
 	}
 
@@ -754,23 +750,18 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		stopParallel := func() {
-			if !mj.opts.isWatch {
-				mj.parallel.stopAndWait()
-				cancelMirror()
-			}
-		}
 		// startMirror locks and blocks itself.
-		mj.startMirror(ctx, cancelMirror, stopParallel)
+		mj.startMirror(ctx)
 	}()
 
 	// Close statusCh when both watch & mirror quits
 	go func() {
 		wg.Wait()
+		mj.parallel.stopAndWait()
 		close(mj.statusCh)
 	}()
 
-	return mj.monitorMirrorStatus()
+	return mj.monitorMirrorStatus(cancel)
 }
 
 func newMirrorJob(srcURL, dstURL string, opts mirrorOptions) *mirrorJob {
@@ -984,7 +975,7 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 		}
 	}
 
-	return mj.mirror(ctx, cancelMirror)
+	return mj.mirror(ctx)
 }
 
 // Main entry point for mirror command.

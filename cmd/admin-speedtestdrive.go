@@ -20,7 +20,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -104,7 +103,7 @@ func mainAdminSpeedtestDrive(ctx *cli.Context, aliasedURL string) error {
 				cellText[i+1] = []string{
 					fmt.Sprintf("%.64s%s", result.Endpoint,
 						trailerIfGreaterThan(result.Endpoint, 64)),
-					fmt.Sprintf("%.64s%s", filepath.Dir(item.Path),
+					fmt.Sprintf("%.64s%s", item.Path,
 						trailerIfGreaterThan(result.Endpoint, 64)),
 					humanize.IBytes(item.ReadThroughput) + "/s",
 					humanize.IBytes(item.WriteThroughput) + "/s",

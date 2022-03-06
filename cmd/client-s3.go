@@ -783,26 +783,34 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 	}
 
 	go func() {
-		// Start listening on all bucket events.
-		for notificationInfo := range eventsCh {
-			if notificationInfo.Err != nil {
-				var perr *probe.Error
-				if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
-					perr = probe.NewError(APINotImplemented{
-						API:     "Watch",
-						APIType: c.GetURL().String(),
-					})
-				} else {
-					perr = probe.NewError(notificationInfo.Err)
+		defer close(wo.EventInfoChan)
+		defer close(wo.ErrorChan)
+
+		for {
+			// Start listening on all bucket events.
+			select {
+			case notificationInfo, ok := <-eventsCh:
+				if !ok {
+					return
 				}
-				wo.Errors() <- perr
-			} else {
-				wo.Events() <- c.notificationToEventsInfo(notificationInfo)
+				if notificationInfo.Err != nil {
+					var perr *probe.Error
+					if minio.ToErrorResponse(notificationInfo.Err).Code == "NotImplemented" {
+						perr = probe.NewError(APINotImplemented{
+							API:     "Watch",
+							APIType: c.GetURL().String(),
+						})
+					} else {
+						perr = probe.NewError(notificationInfo.Err)
+					}
+					wo.Errors() <- perr
+				} else {
+					wo.Events() <- c.notificationToEventsInfo(notificationInfo)
+				}
+			case <-wo.DoneChan:
+				return
 			}
 		}
-
-		close(wo.EventInfoChan)
-		close(wo.ErrorChan)
 	}()
 
 	return wo, nil
@@ -2250,7 +2258,11 @@ func (c *S3Client) ShareUpload(ctx context.Context, isRecursive bool, expires ti
 
 // SetObjectLockConfig - Set object lock configurataion of bucket.
 func (c *S3Client) SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
-	bucket, _ := c.url2BucketAndObject()
+	bucket, object := c.url2BucketAndObject()
+
+	if bucket == "" || object != "" {
+		return errInvalidArgument().Trace(bucket, object)
+	}
 
 	// FIXME: This is too ugly, fix minio-go
 	vuint := (uint)(validity)
@@ -2366,7 +2378,11 @@ func (c *S3Client) GetObjectLegalHold(ctx context.Context, versionID string) (mi
 
 // GetObjectLockConfig - Get object lock configuration of bucket.
 func (c *S3Client) GetObjectLockConfig(ctx context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
-	bucket, _ := c.url2BucketAndObject()
+	bucket, object := c.url2BucketAndObject()
+
+	if bucket == "" || object != "" {
+		return "", "", 0, "", errInvalidArgument().Trace(bucket, object)
+	}
 
 	status, mode, validity, unit, e := c.api.GetObjectLockConfig(ctx, bucket)
 	if e != nil {
