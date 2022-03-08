@@ -45,6 +45,7 @@ require (
 )
 
 require (
+	github.com/briandowns/spinner v1.18.1
 	github.com/charmbracelet/bubbles v0.10.0
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
