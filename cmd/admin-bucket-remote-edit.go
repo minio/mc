@@ -177,9 +177,6 @@ func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget) (*madmi
 		}
 		console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 		creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
-		if host != bktTarget.Endpoint {
-			fatalIf(errInvalidArgument().Trace(args...), "configured Endpoint `"+host+"` does not match "+bktTarget.Endpoint+"` for this ARN `"+bktTarget.Arn+"`")
-		}
 		if tgtBucket != bktTarget.TargetBucket {
 			fatalIf(errInvalidArgument().Trace(args...), "configured remote target bucket `"+tgtBucket+"` does not match "+bktTarget.TargetBucket+"` for this ARN `"+bktTarget.Arn+"`")
 		}
