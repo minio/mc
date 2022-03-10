@@ -395,14 +395,8 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	sourceURLs := cli.Args()[:len(cli.Args())-1]
 	targetURL := cli.Args()[len(cli.Args())-1] // Last one is target
 
-	tgtClnt, err := newClient(targetURL)
-	fatalIf(err, "Unable to initialize `"+targetURL+"`.")
-
-	// Check if the target bucket has object locking enabled
-	var withLock bool
-	if _, _, _, _, err = tgtClnt.GetObjectLockConfig(ctx); err == nil {
-		withLock = true
-	}
+	// Check if the target path has object locking enabled
+	withLock, _ := isBucketLockEnabled(ctx, targetURL)
 
 	if session != nil {
 		// isCopied returns true if an object has been already copied
