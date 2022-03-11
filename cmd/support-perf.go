@@ -84,6 +84,7 @@ USAGE:
 COMMAND:
   drive  measure speed of drive in a cluster
   object measure speed of reading and writing object in a cluster
+  net    measure network throughput of all nodes
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -101,6 +102,10 @@ EXAMPLES:
 
   4. Run drive speed measurements with blocksize of 64KiB, and 2GiB of data read/written from each drive:
      {{.Prompt}} {{.HelpName}} drive myminio/ --blocksize 64KiB --filesize 2GiB
+
+  5. Run network throughput test:
+     {{.Prompt}} {{.HelpName}} net myminio
+
 `,
 }
 
@@ -152,8 +157,8 @@ func mainSupportPerf(ctx *cli.Context) error {
 	aliasedURL := ""
 	switch len(args) {
 	case 1:
-		// cannot use alias by the name 'drive'
-		if args[0] == "drive" {
+		// cannot use alias by the name 'drive' or 'net'
+		if args[0] == "drive" || args[0] == "net" {
 			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
 		}
 		aliasedURL = args[0]
@@ -166,7 +171,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 			aliasedURL = args[1]
 		case "net":
 			aliasedURL = args[1]
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
+			return mainAdminSpeedtestNetperf(ctx, aliasedURL)
 		default:
 			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 		}
