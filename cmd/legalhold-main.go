@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -85,6 +86,10 @@ var (
 	errBucketLockNotSupported   = errors.New("bucket lock not supported")
 )
 
+// Return true if this an S3 bucket with locking enabled
+// Return false if this an S3 bucket with no locking enabled
+// Return false if this is a filesystem URL
+// Otherwise return unexpected errors
 func isBucketLockEnabled(ctx context.Context, aliasedURL string) (bool, *probe.Error) {
 	st, err := getBucketLockStatus(ctx, aliasedURL)
 	if err == nil {
@@ -103,12 +108,24 @@ func getBucketLockStatus(ctx context.Context, aliasedURL string) (status string,
 		return "", err
 	}
 
+	// Remove the prefix/object from the aliased url and reconstruct the client
+	switch c := clnt.(type) {
+	case *S3Client:
+		_, object := c.url2BucketAndObject()
+		if object != "" {
+			clnt, _ = newClient(strings.TrimSuffix(aliasedURL, object))
+		}
+	default:
+		return "", probe.NewError(errBucketLockNotSupported)
+	}
+
 	status, _, _, _, err = clnt.GetObjectLockConfig(ctx)
 	if err != nil {
 		errResp := minio.ToErrorResponse(err.ToGoError())
-		if errResp.StatusCode == http.StatusNotFound {
+		switch {
+		case errResp.Code == "ObjectLockConfigurationNotFoundError":
 			return "", probe.NewError(errBucketLockConfigNotFound)
-		} else if errResp.StatusCode == http.StatusNotImplemented {
+		case errResp.StatusCode == http.StatusNotImplemented:
 			return "", probe.NewError(errBucketLockNotSupported)
 		}
 		return "", err

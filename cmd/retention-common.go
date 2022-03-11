@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	json "github.com/minio/colorjson"
@@ -171,31 +170,10 @@ func parseRetentionValidity(validityStr string) (uint64, minio.ValidityUnit, *pr
 	return validity, unit, nil
 }
 
-// Check if the bucket corresponding to the target url has
-// object locking enabled, this to show a pretty error message
-func checkObjectLockSupport(ctx context.Context, aliasedURL string) {
-	clnt, err := newClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(), "Unable to parse the provided url.")
-	}
-
-	// Remove the prefix/object from the aliased url and reconstruct the client
-	switch c := clnt.(type) {
-	case *S3Client:
-		_, object := c.url2BucketAndObject()
-		if object != "" {
-			clnt, _ = newClient(strings.TrimSuffix(aliasedURL, object))
-		}
-	default:
-		fatalIf(errDummy(), "Bucket locking feature is unsupported with `%s`", aliasedURL)
-	}
-
-	status, _, _, _, err := clnt.GetObjectLockConfig(ctx)
-	if err != nil {
-		fatalIf(err.Trace(), "Unable to get bucket lock configuration from `%s`", aliasedURL)
-	}
-
-	if status != "Enabled" {
+func fatalIfBucketLockNotEnabled(ctx context.Context, aliasedURL string) {
+	enabled, err := getBucketLockStatus(ctx, aliasedURL)
+	fatalIf(err.Trace(), "Unable to get bucket lock configuration from `%s`", aliasedURL)
+	if enabled != "Enabled" {
 		fatalIf(errDummy().Trace(), "Remote bucket does not support locking `%s`", aliasedURL)
 	}
 }
