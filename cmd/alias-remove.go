@@ -83,13 +83,12 @@ func mainAliasRemove(ctx *cli.Context, deprecated bool) error {
 	return nil
 }
 
-//isAliasIn is a helper function that checks if a given alias is present in Aliases array, returns error if not found
+// isAliasIn is a helper function that checks if a given alias is present in Aliases array, returns error if not found
 func isAliasIn(alias string, aliasMap map[string]aliasConfigV10) *probe.Error {
 	if _, ok := aliasMap[alias]; ok {
 		return nil
-	} else {
-		return probe.NewError(errors.New("Alias not found in alias list"))
 	}
+	return probe.NewError(errors.New("Alias not found in alias list"))
 }
 
 // removeAlias - removes an alias.
