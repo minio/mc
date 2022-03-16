@@ -18,7 +18,11 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/minio/cli"
+	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
 )
 
@@ -30,10 +34,32 @@ var adminSubnetHealthCmd = cli.Command{
 	Before:             setGlobalsFromContext,
 	Hidden:             true,
 	Flags:              append(supportDiagFlags, globalFlags...),
-	CustomHelpTemplate: "Please use 'mc support diag'",
+	CustomHelpTemplate: "Please use 'mc support diag'\n",
 }
 
 func mainSubnetHealth(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc support diag'")
+	boolValSet := set.CreateStringSet("true", "false")
+	newCmd := []string{"mc support diag"}
+	newCmd = append(newCmd, ctx.Args()...)
+	for _, flg := range ctx.Command.Flags {
+		flgName := flg.GetName()
+		if !ctx.IsSet(flgName) {
+			continue
+		}
+
+		// replace the deprecated --offline with --airgap
+		if flgName == "offline" {
+			flgName = "airgap"
+		}
+
+		flgStr := "--" + flgName
+		flgVal := ctx.String(flgName)
+		if !boolValSet.Contains(flgVal) {
+			flgStr = fmt.Sprintf("%s \"%s\"", flgStr, flgVal)
+		}
+		newCmd = append(newCmd, flgStr)
+	}
+	msg := fmt.Sprintf("Please use '%s'", strings.Join(newCmd, " "))
+	console.Infoln(msg)
 	return nil
 }
