@@ -29,10 +29,10 @@ var adminSubnetHealthCmd = cli.Command{
 	Action:             mainSubnetHealth,
 	Before:             setGlobalsFromContext,
 	Hidden:             true,
-	CustomHelpTemplate: "Please use 'mc support diagnostics'",
+	CustomHelpTemplate: "Please use 'mc support diag'",
 }
 
 func mainSubnetHealth(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc support diagnostics'")
+	console.Infoln("Please use 'mc support diag'")
 	return nil
 }
