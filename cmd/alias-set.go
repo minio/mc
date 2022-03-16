@@ -19,10 +19,19 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"math/rand"
+	"net"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,6 +41,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/pkg/console"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const cred = "YellowItalics"
@@ -172,7 +182,7 @@ func setAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
 // using v4 signature then v2 in case of failure.
-func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (string, *probe.Error) {
+func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, peerCert *x509.Certificate) (string, *probe.Error) {
 	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bucket-sign-")
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
@@ -182,6 +192,9 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (st
 		SecretKey: secretKey,
 		HostURL:   urlJoinPath(url, probeBucketName),
 		Debug:     globalDebug,
+	}
+	if peerCert != nil {
+		configurePeerCertificate(s3Config, peerCert)
 	}
 
 	probeSignatureType := func(stype string) (string, *probe.Error) {
@@ -222,13 +235,16 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (st
 
 // BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path string) (*Config, *probe.Error) {
+func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, path string, peerCert *x509.Certificate) (*Config, *probe.Error) {
 	s3Config := NewS3Config(url, &aliasConfigV10{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
 		Path:      path,
 	})
+	if peerCert != nil {
+		configurePeerCertificate(s3Config, peerCert)
+	}
 
 	// If api is provided we do not auto probe signature, this is
 	// required in situations when signature type is provided by the user.
@@ -237,7 +253,7 @@ func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path str
 		return s3Config, nil
 	}
 	// Probe S3 signature version
-	api, err := probeS3Signature(ctx, accessKey, secretKey, url)
+	api, err := probeS3Signature(ctx, accessKey, secretKey, url, peerCert)
 	if err != nil {
 		return nil, err.Trace(url, accessKey, secretKey, api, path)
 	}
@@ -314,7 +330,10 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	ctx, cancelAliasAdd := context.WithCancel(globalContext)
 	defer cancelAliasAdd()
 
-	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, path)
+	peerCert, e := inspectPeerCertificate(ctx, url, alias)
+	fatalIf(probe.NewError(e).Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+
+	s3Config, err := BuildS3Config(ctx, url, alias, accessKey, secretKey, api, path, peerCert)
 	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
 
 	msg := setAlias(alias, aliasConfigV10{
@@ -332,4 +351,114 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 
 	printMsg(msg)
 	return nil
+}
+
+// inspectPeerCertificate connects to the given endpoint and
+// checks whether the peer certificate can be verified.
+// If not, it computes a fingerprint of the peer certificate
+// public key, asks the user to confirm the fingerprint and
+// adds the peer certificate to the local trust store in the
+// CAs directory.
+func inspectPeerCertificate(ctx context.Context, endpoint, alias string) (*x509.Certificate, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	var client http.Client
+	_, tlsErr := client.Do(req)
+	if tlsErr == nil || !strings.Contains(tlsErr.Error(), "x509: certificate signed by unknown authority") {
+		return nil, nil
+	}
+
+	if globalJSON || !term.IsTerminal(int(os.Stdout.Fd())) {
+		return nil, tlsErr
+	}
+
+	// Now, we fetch the peer certificate, compute the SHA-256 of
+	// public key and let the user confirm the fingerprint.
+	// If the user confirms, we store the peer certificate in the CAs
+	// directory and retry.
+	peerCert, err := fetchPeerCertificate(ctx, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that the subject key id is equal to the authority key id.
+	// If true, the certificate is its own issuer, and therefore, a
+	// self-signed certificate.
+	// Otherwise, the certificate has been issued by some other
+	// certificate that is just not trusted
+	if !bytes.Equal(peerCert.SubjectKeyId, peerCert.AuthorityKeyId) {
+		return nil, tlsErr
+	}
+
+	fingerprint := sha256.Sum256(peerCert.RawSubjectPublicKeyInfo)
+	fmt.Printf("Fingerprint of %s public key: %s\nConfirm public key y/N: ", color.GreenString(alias), color.YellowString(hex.EncodeToString(fingerprint[:])))
+	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+	if answer = strings.ToLower(answer); answer != "y\n" && answer != "yes\n" {
+		return nil, tlsErr
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: peerCert.Raw})
+	if err = os.WriteFile(filepath.Join(mustGetCAsDir(), alias+".crt"), certPEM, 0o644); err != nil {
+		return nil, err
+	}
+	return peerCert, nil
+}
+
+// fetchPeerCertificate uses the given transport to fetch the peer
+// certificate from the given endpoint.
+func fetchPeerCertificate(ctx context.Context, endpoint string) (*x509.Certificate, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
+		return nil, fmt.Errorf("Unable to read remote TLS certificate")
+	}
+	return resp.TLS.PeerCertificates[0], nil
+}
+
+// configurePeerCertificate adds the peer certificate to the
+// TLS root CAs of s3Config. Once configured, any client
+// initialized with this config trusts the given peer certificate.
+func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
+	switch {
+	case s3Config.Transport == nil:
+		CAs := x509.NewCertPool()
+		CAs.AddCert(peerCert)
+		s3Config.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 15 * time.Second,
+			}).DialContext,
+			MaxIdleConnsPerHost:   256,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
+			DisableCompression:    true,
+			TLSClientConfig:       &tls.Config{RootCAs: CAs},
+		}
+	case s3Config.Transport.TLSClientConfig == nil || s3Config.Transport.TLSClientConfig.RootCAs == nil:
+		CAs := x509.NewCertPool()
+		CAs.AddCert(peerCert)
+		s3Config.Transport.TLSClientConfig = &tls.Config{RootCAs: CAs}
+	default:
+		s3Config.Transport.TLSClientConfig.RootCAs.AddCert(peerCert)
+	}
 }
