@@ -167,21 +167,19 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	deleteReplicationStatus := disableStatus
 	replicaSync := enableStatus
 	existingReplicationStatus := disableStatus
-	if cliCtx.IsSet("replicate") {
-		replSlice := strings.Split(cliCtx.String("replicate"), ",")
-		for _, opt := range replSlice {
-			switch strings.TrimSpace(strings.ToLower(opt)) {
-			case "delete-marker":
-				dmReplicateStatus = enableStatus
-			case "delete":
-				deleteReplicationStatus = enableStatus
-			case "metadata-sync", "replica-metadata-sync":
-				replicaSync = enableStatus
-			case "existing-objects":
-				existingReplicationStatus = enableStatus
-			default:
-				fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), `--replicate flag takes one or more comma separated string with values "delete", "delete-marker", "metadata-sync", "existing-objects" or "" to disable these settings`)
-			}
+	replSlice := strings.Split(cliCtx.String("replicate"), ",")
+	for _, opt := range replSlice {
+		switch strings.TrimSpace(strings.ToLower(opt)) {
+		case "delete-marker":
+			dmReplicateStatus = enableStatus
+		case "delete":
+			deleteReplicationStatus = enableStatus
+		case "metadata-sync", "replica-metadata-sync":
+			replicaSync = enableStatus
+		case "existing-objects":
+			existingReplicationStatus = enableStatus
+		default:
+			fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), `--replicate flag takes one or more comma separated string with values "delete", "delete-marker", "metadata-sync", "existing-objects" or "" to disable these settings`)
 		}
 	}
 
