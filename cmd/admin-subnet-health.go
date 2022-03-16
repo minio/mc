@@ -29,6 +29,7 @@ var adminSubnetHealthCmd = cli.Command{
 	Action:             mainSubnetHealth,
 	Before:             setGlobalsFromContext,
 	Hidden:             true,
+	Flags:              append(supportDiagFlags, globalFlags...),
 	CustomHelpTemplate: "Please use 'mc support diag'",
 }
 
