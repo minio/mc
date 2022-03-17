@@ -34,7 +34,7 @@ var adminSubnetHealthCmd = cli.Command{
 	Before:             setGlobalsFromContext,
 	Hidden:             true,
 	Flags:              append(supportDiagFlags, globalFlags...),
-	CustomHelpTemplate: "Please use 'mc support diag'\n",
+	CustomHelpTemplate: "This command is deprecated and will be removed in a future release. Use 'mc support diag' instead.\n",
 }
 
 func mainSubnetHealth(ctx *cli.Context) error {
