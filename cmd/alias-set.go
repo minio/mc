@@ -308,6 +308,9 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 		url   = trimTrailingSeparator(args.Get(1))
 		api   = cli.String("api")
 		path  = cli.String("path")
+
+		peerCert *x509.Certificate
+		err      *probe.Error
 	)
 
 	// Support deprecated lookup flag
@@ -330,8 +333,10 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	ctx, cancelAliasAdd := context.WithCancel(globalContext)
 	defer cancelAliasAdd()
 
-	peerCert, e := inspectPeerCertificate(ctx, url, alias)
-	fatalIf(probe.NewError(e).Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+	if !globalInsecure && !globalJSON && term.IsTerminal(int(os.Stdout.Fd())) {
+		peerCert, err = promptTrustSelfSignedCert(ctx, url, alias)
+		fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+	}
 
 	s3Config, err := BuildS3Config(ctx, url, alias, accessKey, secretKey, api, path, peerCert)
 	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
@@ -353,25 +358,21 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	return nil
 }
 
-// inspectPeerCertificate connects to the given endpoint and
+// promptTrustSelfSignedCert connects to the given endpoint and
 // checks whether the peer certificate can be verified.
 // If not, it computes a fingerprint of the peer certificate
 // public key, asks the user to confirm the fingerprint and
 // adds the peer certificate to the local trust store in the
 // CAs directory.
-func inspectPeerCertificate(ctx context.Context, endpoint, alias string) (*x509.Certificate, error) {
+func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x509.Certificate, *probe.Error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return nil, err
+		return nil, probe.NewError(err)
 	}
 	var client http.Client
 	_, tlsErr := client.Do(req)
 	if tlsErr == nil || !strings.Contains(tlsErr.Error(), "x509: certificate signed by unknown authority") {
-		return nil, nil
-	}
-
-	if globalJSON || !term.IsTerminal(int(os.Stdout.Fd())) {
-		return nil, tlsErr
+		return nil, probe.NewError(tlsErr)
 	}
 
 	// Now, we fetch the peer certificate, compute the SHA-256 of
@@ -380,7 +381,7 @@ func inspectPeerCertificate(ctx context.Context, endpoint, alias string) (*x509.
 	// directory and retry.
 	peerCert, err := fetchPeerCertificate(ctx, endpoint)
 	if err != nil {
-		return nil, err
+		return nil, probe.NewError(err)
 	}
 
 	// Check that the subject key id is equal to the authority key id.
@@ -389,22 +390,22 @@ func inspectPeerCertificate(ctx context.Context, endpoint, alias string) (*x509.
 	// Otherwise, the certificate has been issued by some other
 	// certificate that is just not trusted
 	if !bytes.Equal(peerCert.SubjectKeyId, peerCert.AuthorityKeyId) {
-		return nil, tlsErr
+		return nil, probe.NewError(tlsErr)
 	}
 
 	fingerprint := sha256.Sum256(peerCert.RawSubjectPublicKeyInfo)
 	fmt.Printf("Fingerprint of %s public key: %s\nConfirm public key y/N: ", color.GreenString(alias), color.YellowString(hex.EncodeToString(fingerprint[:])))
 	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
-		return nil, err
+		return nil, probe.NewError(err)
 	}
 	if answer = strings.ToLower(answer); answer != "y\n" && answer != "yes\n" {
-		return nil, tlsErr
+		return nil, probe.NewError(tlsErr)
 	}
 
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: peerCert.Raw})
 	if err = os.WriteFile(filepath.Join(mustGetCAsDir(), alias+".crt"), certPEM, 0o644); err != nil {
-		return nil, err
+		return nil, probe.NewError(err)
 	}
 	return peerCert, nil
 }
