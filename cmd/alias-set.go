@@ -242,6 +242,7 @@ func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, p
 		URL:       url,
 		Path:      path,
 	})
+
 	if peerCert != nil {
 		configurePeerCertificate(s3Config, peerCert)
 	}
@@ -369,9 +370,27 @@ func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x5
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
-	var client http.Client
+
+	// no need to probe certs for http endpoints.
+	if req.URL.Scheme == "http" {
+		return nil, nil
+	}
+
+	client := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: globalRootCAs, // make sure to use loaded certs before probing
+			},
+		},
+	}
+
 	_, tlsErr := client.Do(req)
-	if tlsErr == nil || !strings.Contains(tlsErr.Error(), "x509: certificate signed by unknown authority") {
+	if tlsErr == nil {
+		// certs are already trusted system wide, nothing to do.
+		return nil, nil
+	}
+
+	if tlsErr != nil && !strings.Contains(tlsErr.Error(), "certificate signed by unknown authority") {
 		return nil, probe.NewError(tlsErr)
 	}
 
@@ -440,8 +459,9 @@ func fetchPeerCertificate(ctx context.Context, endpoint string) (*x509.Certifica
 func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
 	switch {
 	case s3Config.Transport == nil:
-		CAs := x509.NewCertPool()
-		CAs.AddCert(peerCert)
+		if globalRootCAs != nil {
+			globalRootCAs.AddCert(peerCert)
+		}
 		s3Config.Transport = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
@@ -453,12 +473,13 @@ func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 10 * time.Second,
 			DisableCompression:    true,
-			TLSClientConfig:       &tls.Config{RootCAs: CAs},
+			TLSClientConfig:       &tls.Config{RootCAs: globalRootCAs},
 		}
 	case s3Config.Transport.TLSClientConfig == nil || s3Config.Transport.TLSClientConfig.RootCAs == nil:
-		CAs := x509.NewCertPool()
-		CAs.AddCert(peerCert)
-		s3Config.Transport.TLSClientConfig = &tls.Config{RootCAs: CAs}
+		if globalRootCAs != nil {
+			globalRootCAs.AddCert(peerCert)
+		}
+		s3Config.Transport.TLSClientConfig = &tls.Config{RootCAs: globalRootCAs}
 	default:
 		s3Config.Transport.TLSClientConfig.RootCAs.AddCert(peerCert)
 	}
