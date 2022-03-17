@@ -53,6 +53,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rivo/tview v0.0.0-20211202162923-2a6de950f73b
 	github.com/tinylib/msgp v1.1.6
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 )
 
 require (
@@ -109,7 +110,6 @@ require (
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb // indirect
 	google.golang.org/grpc v1.43.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
