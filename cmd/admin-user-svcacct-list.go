@@ -74,7 +74,7 @@ func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	svcList, e := client.ListServiceAccounts(globalContext, user)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list service accounts")
 
 	for _, svc := range svcList.Accounts {
 		printMsg(svcAcctMessage{

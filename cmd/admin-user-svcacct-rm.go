@@ -70,7 +70,7 @@ func mainAdminUserSvcAcctRemove(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	e := client.DeleteServiceAccount(globalContext, svcAccount)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove a new service account")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove the specified service account")
 
 	printMsg(svcAcctMessage{
 		op:        "rm",
