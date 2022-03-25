@@ -314,7 +314,8 @@ type shortTraceMsg struct {
 
 	StorageStats storageStats     `json:"storageStats"`
 	OSStats      osStats          `json:"osStats"`
-	Type         madmin.TraceType `json:"type"`
+	trcType      madmin.TraceType `json:"-"`
+	Type         string           `json:"type"`
 }
 
 type traceMessage struct {
@@ -357,7 +358,8 @@ type storageStats struct {
 }
 
 type verboseTrace struct {
-	Type madmin.TraceType `json:"type"`
+	trcType madmin.TraceType `json:"-"`
+	Type    string           `json:"type"`
 
 	NodeName string    `json:"host"`
 	FuncName string    `json:"api"`
@@ -371,12 +373,24 @@ type verboseTrace struct {
 	OSStats      osStats      `json:"osStats"`
 }
 
+func toTypeStr(t madmin.TraceType) string {
+	switch t {
+	case madmin.TraceStorage:
+		return "STORAGE"
+	case madmin.TraceOS:
+		return "OS"
+	default:
+		return "S3"
+	}
+}
+
 // return a struct with minimal trace info.
 func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s := shortTraceMsg{}
 	t := ti.Trace
 
-	s.Type = t.TraceType
+	s.trcType = t.TraceType
+	s.Type = toTypeStr(t.TraceType)
 	s.FuncName = t.FuncName
 	s.Time = t.Time
 
@@ -427,7 +441,7 @@ func (s shortTraceMsg) String() string {
 	}
 	fmt.Fprintf(b, "%s ", s.Time.Local().Format(timeFormat))
 
-	switch s.Type {
+	switch s.trcType {
 	case madmin.TraceStorage:
 		fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", "STORAGE"), console.Colorize("FuncName", s.FuncName),
 			hostStr,
@@ -492,7 +506,8 @@ func (t traceMessage) JSON() string {
 		rspHdrs[k] = strings.Join(v, " ")
 	}
 	trc := verboseTrace{
-		Type:     t.Trace.TraceType,
+		trcType:  t.Trace.TraceType,
+		Type:     toTypeStr(t.Trace.TraceType),
 		NodeName: t.Trace.NodeName,
 		FuncName: t.Trace.FuncName,
 		Time:     t.Trace.Time,
