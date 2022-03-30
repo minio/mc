@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -84,11 +82,13 @@ func mainAliasRemove(ctx *cli.Context, deprecated bool) error {
 }
 
 // isAliasIn is a helper function that checks if a given alias is present in Aliases array, returns error if not found
-func isAliasIn(alias string, aliasMap map[string]aliasConfigV10) *probe.Error {
-	if _, ok := aliasMap[alias]; ok {
+func isAliasIn(alias string) *probe.Error {
+	hostConfig := mustGetHostConfig(alias)
+	if hostConfig == nil {
+		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
 		return nil
 	}
-	return probe.NewError(errors.New("Alias not found in alias list"))
+	return nil
 }
 
 // removeAlias - removes an alias.
@@ -96,7 +96,9 @@ func removeAlias(alias string) aliasMessage {
 	conf, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
 
-	err = isAliasIn(alias, conf.Aliases)
+	//check if alias is valid
+	err = isAliasIn(alias)
+
 	fatalIf(err.Trace(alias), alias+" not found in the configuration file. Please confirm the alias name you are trying to remove. You can use mc alias list to view a list of all aliases configured.")
 	// Remove the alias from the config.
 	delete(conf.Aliases, alias)
