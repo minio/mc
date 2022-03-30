@@ -97,7 +97,7 @@ func removeAlias(alias string) aliasMessage {
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
 
 	err = isAliasIn(alias, conf.Aliases)
-	fatalIf(err.Trace(alias), alias+"not found in this instances configuration file. Please confirm the alias name you are trying to remove. You can use mc alias list to view a list of all aliases configured on this instance.")
+	fatalIf(err.Trace(alias), alias+" not found in the configuration file. Please confirm the alias name you are trying to remove. You can use mc alias list to view a list of all aliases configured.")
 	// Remove the alias from the config.
 	delete(conf.Aliases, alias)
 
