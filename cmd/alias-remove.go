@@ -86,7 +86,6 @@ func isAliasIn(alias string) *probe.Error {
 	hostConfig := mustGetHostConfig(alias)
 	if hostConfig == nil {
 		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
-		return nil
 	}
 	return nil
 }
