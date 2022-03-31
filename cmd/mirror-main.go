@@ -510,11 +510,13 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				errDuringMirror = true
 			}
 
-			if mj.opts.activeActive {
+			// Do not quit mirroring if we are in --watch or --active-active mode
+			if !mj.opts.activeActive && !mj.opts.isWatch {
 				cancel()
 				cancelInProgress = true
-				continue
 			}
+
+			continue
 		}
 
 		if sURLs.SourceContent != nil {
