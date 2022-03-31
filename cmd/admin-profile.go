@@ -22,10 +22,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminProfileSubcommands = []cli.Command{
-	adminProfileStartCmd,
-	adminProfileStopCmd,
-}
+var adminProfileSubcommands = []cli.Command{}
 
 var adminProfileCmd = cli.Command{
 	Name:            "profile",
