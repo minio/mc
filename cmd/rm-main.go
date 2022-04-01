@@ -159,7 +159,8 @@ EXAMPLES:
   13. Remove all object versions older than one year.
       {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --versions --rewind 365d
 
-  14. Perform a fake removal of object(s) versions that are non-current and older than 10 days.
+  14. Perform a fake removal of object(s) versions that are non-current and older than 10 days. If top-level version is a delete 
+  marker, this will also be deleted when --non-current flag is specified.
       {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --force --versions --non-current --older-than 10d --dry-run
 `,
 }
@@ -398,7 +399,6 @@ func listAndRemove(url string, opts removeOpts) error {
 		listOpts.WithDeleteMarkers = true
 		listOpts.TimeRef = opts.timeRef
 	}
-
 	atLeastOneObjectFound := false
 
 	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, contentCh)
@@ -436,7 +436,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			if lastPath != content.URL.Path {
 				lastPath = content.URL.Path
 				for _, content := range perObjectVersions {
-					if content.IsLatest {
+					if content.IsLatest && !content.IsDeleteMarker {
 						continue
 					}
 					if !content.Time.IsZero() {
@@ -547,7 +547,7 @@ func listAndRemove(url string, opts removeOpts) error {
 
 	if opts.nonCurrentVersion && opts.isRecursive && opts.withVersions {
 		for _, content := range perObjectVersions {
-			if content.IsLatest {
+			if content.IsLatest && !content.IsDeleteMarker {
 				continue
 			}
 			if !content.Time.IsZero() {
