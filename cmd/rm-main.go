@@ -364,6 +364,17 @@ type removeOpts struct {
 	encKeyDB          map[string][]prefixSSEPair
 }
 
+func printDryRunMsg(content *ClientContent) {
+	if globalJSON {
+		return
+	}
+	if content.VersionID != "" {
+		fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+		return
+	}
+	fmt.Println("DRYRUN: Removing ", content.URL.Path)
+}
+
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
 //   Use cases:
 //      * Remove objects recursively
@@ -444,7 +455,7 @@ func listAndRemove(url string, opts removeOpts) error {
 					}
 
 					if opts.isFake {
-						fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+						printDryRunMsg(content)
 						continue
 					}
 
@@ -529,6 +540,8 @@ func listAndRemove(url string, opts removeOpts) error {
 					})
 				}
 			}
+		} else {
+			printDryRunMsg(content)
 		}
 	}
 
@@ -553,7 +566,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			}
 
 			if opts.isFake {
-				fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+				printDryRunMsg(content)
 				continue
 			}
 
