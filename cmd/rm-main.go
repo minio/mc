@@ -459,27 +459,31 @@ func listAndRemove(url string, opts removeOpts) error {
 						continue
 					}
 
-					select {
-					case contentCh <- content:
-					case result := <-resultCh:
-						if result.Err != nil {
-							errorIf(result.Err.Trace(content.URL.Path),
-								"Failed to remove `"+content.URL.Path+"`.")
-							switch result.Err.ToGoError().(type) {
-							case PathInsufficientPermission:
-								// Ignore Permission error.
-								continue
+					sent := false
+					for !sent {
+						select {
+						case contentCh <- content:
+							sent = true
+						case result := <-resultCh:
+							if result.Err != nil {
+								errorIf(result.Err.Trace(content.URL.Path),
+									"Failed to remove `"+content.URL.Path+"`.")
+								switch result.Err.ToGoError().(type) {
+								case PathInsufficientPermission:
+									// Ignore Permission error.
+									continue
+								}
+								close(contentCh)
+								return exitStatus(globalErrorExitStatus)
 							}
-							close(contentCh)
-							return exitStatus(globalErrorExitStatus)
+							printMsg(rmMessage{
+								Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
+								Size:         content.Size,
+								VersionID:    content.VersionID,
+								DeleteMarker: result.DeleteMarker,
+								ModTime:      content.Time,
+							})
 						}
-						printMsg(rmMessage{
-							Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
-							Size:         content.Size,
-							VersionID:    content.VersionID,
-							DeleteMarker: result.DeleteMarker,
-							ModTime:      content.Time,
-						})
 					}
 				}
 				perObjectVersions = []*ClientContent{}
@@ -570,27 +574,31 @@ func listAndRemove(url string, opts removeOpts) error {
 				continue
 			}
 
-			select {
-			case contentCh <- content:
-			case result := <-resultCh:
-				if result.Err != nil {
-					errorIf(result.Err.Trace(content.URL.Path),
-						"Failed to remove `"+content.URL.Path+"`.")
-					switch result.Err.ToGoError().(type) {
-					case PathInsufficientPermission:
-						// Ignore Permission error.
-						continue
+			sent := false
+			for !sent {
+				select {
+				case contentCh <- content:
+					sent = true
+				case result := <-resultCh:
+					if result.Err != nil {
+						errorIf(result.Err.Trace(content.URL.Path),
+							"Failed to remove `"+content.URL.Path+"`.")
+						switch result.Err.ToGoError().(type) {
+						case PathInsufficientPermission:
+							// Ignore Permission error.
+							continue
+						}
+						close(contentCh)
+						return exitStatus(globalErrorExitStatus)
 					}
-					close(contentCh)
-					return exitStatus(globalErrorExitStatus)
+					printMsg(rmMessage{
+						Key:          path.Join(targetAlias, result.BucketName, result.ObjectName),
+						Size:         content.Size,
+						VersionID:    content.VersionID,
+						DeleteMarker: result.DeleteMarker,
+						ModTime:      content.Time,
+					})
 				}
-				printMsg(rmMessage{
-					Key:          path.Join(targetAlias, result.BucketName, result.ObjectName),
-					Size:         content.Size,
-					VersionID:    content.VersionID,
-					DeleteMarker: result.DeleteMarker,
-					ModTime:      content.Time,
-				})
 			}
 		}
 	}
