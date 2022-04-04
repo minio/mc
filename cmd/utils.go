@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -405,23 +404,6 @@ func parseAttribute(meta map[string]string) (map[string]string, error) {
 	}
 
 	return attribute, nil
-}
-
-// Returns true if "s3" is entirely in sub-domain and false otherwise.
-// true for s3.amazonaws.com, false for ams3.digitaloceanspaces.com, 192.168.1.12
-func matchS3InHost(urlHost string) bool {
-	if strings.Contains(urlHost, ":") {
-		if host, _, err := net.SplitHostPort(urlHost); err == nil {
-			urlHost = host
-		}
-	}
-	fqdnParts := strings.Split(urlHost, ".")
-	for _, fqdn := range fqdnParts {
-		if fqdn == "s3" {
-			return true
-		}
-	}
-	return false
 }
 
 const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
