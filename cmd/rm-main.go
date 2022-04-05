@@ -159,7 +159,8 @@ EXAMPLES:
   13. Remove all object versions older than one year.
       {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --versions --rewind 365d
 
-  14. Perform a fake removal of object(s) versions that are non-current and older than 10 days.
+  14. Perform a fake removal of object(s) versions that are non-current and older than 10 days. If top-level version is a delete 
+  marker, this will also be deleted when --non-current flag is specified.
       {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --force --versions --non-current --older-than 10d --dry-run
 `,
 }
@@ -364,6 +365,17 @@ type removeOpts struct {
 	encKeyDB          map[string][]prefixSSEPair
 }
 
+func printDryRunMsg(content *ClientContent) {
+	if globalJSON {
+		return
+	}
+	if content.VersionID != "" {
+		fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+		return
+	}
+	fmt.Println("DRYRUN: Removing ", content.URL.Path)
+}
+
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
 //   Use cases:
 //      * Remove objects recursively
@@ -387,7 +399,6 @@ func listAndRemove(url string, opts removeOpts) error {
 		listOpts.WithDeleteMarkers = true
 		listOpts.TimeRef = opts.timeRef
 	}
-
 	atLeastOneObjectFound := false
 
 	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, contentCh)
@@ -425,7 +436,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			if lastPath != content.URL.Path {
 				lastPath = content.URL.Path
 				for _, content := range perObjectVersions {
-					if content.IsLatest {
+					if content.IsLatest && !content.IsDeleteMarker {
 						continue
 					}
 					if !content.Time.IsZero() {
@@ -444,31 +455,35 @@ func listAndRemove(url string, opts removeOpts) error {
 					}
 
 					if opts.isFake {
-						fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+						printDryRunMsg(content)
 						continue
 					}
 
-					select {
-					case contentCh <- content:
-					case result := <-resultCh:
-						if result.Err != nil {
-							errorIf(result.Err.Trace(content.URL.Path),
-								"Failed to remove `"+content.URL.Path+"`.")
-							switch result.Err.ToGoError().(type) {
-							case PathInsufficientPermission:
-								// Ignore Permission error.
-								continue
+					sent := false
+					for !sent {
+						select {
+						case contentCh <- content:
+							sent = true
+						case result := <-resultCh:
+							if result.Err != nil {
+								errorIf(result.Err.Trace(content.URL.Path),
+									"Failed to remove `"+content.URL.Path+"`.")
+								switch result.Err.ToGoError().(type) {
+								case PathInsufficientPermission:
+									// Ignore Permission error.
+									continue
+								}
+								close(contentCh)
+								return exitStatus(globalErrorExitStatus)
 							}
-							close(contentCh)
-							return exitStatus(globalErrorExitStatus)
+							printMsg(rmMessage{
+								Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
+								Size:         content.Size,
+								VersionID:    content.VersionID,
+								DeleteMarker: result.DeleteMarker,
+								ModTime:      content.Time,
+							})
 						}
-						printMsg(rmMessage{
-							Key:          path.Join(targetAlias, content.BucketName, result.ObjectName),
-							Size:         content.Size,
-							VersionID:    content.VersionID,
-							DeleteMarker: result.DeleteMarker,
-							ModTime:      content.Time,
-						})
 					}
 				}
 				perObjectVersions = []*ClientContent{}
@@ -529,12 +544,14 @@ func listAndRemove(url string, opts removeOpts) error {
 					})
 				}
 			}
+		} else {
+			printDryRunMsg(content)
 		}
 	}
 
 	if opts.nonCurrentVersion && opts.isRecursive && opts.withVersions {
 		for _, content := range perObjectVersions {
-			if content.IsLatest {
+			if content.IsLatest && !content.IsDeleteMarker {
 				continue
 			}
 			if !content.Time.IsZero() {
@@ -553,31 +570,35 @@ func listAndRemove(url string, opts removeOpts) error {
 			}
 
 			if opts.isFake {
-				fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+				printDryRunMsg(content)
 				continue
 			}
 
-			select {
-			case contentCh <- content:
-			case result := <-resultCh:
-				if result.Err != nil {
-					errorIf(result.Err.Trace(content.URL.Path),
-						"Failed to remove `"+content.URL.Path+"`.")
-					switch result.Err.ToGoError().(type) {
-					case PathInsufficientPermission:
-						// Ignore Permission error.
-						continue
+			sent := false
+			for !sent {
+				select {
+				case contentCh <- content:
+					sent = true
+				case result := <-resultCh:
+					if result.Err != nil {
+						errorIf(result.Err.Trace(content.URL.Path),
+							"Failed to remove `"+content.URL.Path+"`.")
+						switch result.Err.ToGoError().(type) {
+						case PathInsufficientPermission:
+							// Ignore Permission error.
+							continue
+						}
+						close(contentCh)
+						return exitStatus(globalErrorExitStatus)
 					}
-					close(contentCh)
-					return exitStatus(globalErrorExitStatus)
+					printMsg(rmMessage{
+						Key:          path.Join(targetAlias, result.BucketName, result.ObjectName),
+						Size:         content.Size,
+						VersionID:    content.VersionID,
+						DeleteMarker: result.DeleteMarker,
+						ModTime:      content.Time,
+					})
 				}
-				printMsg(rmMessage{
-					Key:          path.Join(targetAlias, result.BucketName, result.ObjectName),
-					Size:         content.Size,
-					VersionID:    content.VersionID,
-					DeleteMarker: result.DeleteMarker,
-					ModTime:      content.Time,
-				})
 			}
 		}
 	}
