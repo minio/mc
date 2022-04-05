@@ -30,16 +30,14 @@ const (
 	prefixColumnWidth int = 16
 	// StatusColumnWidth column width in table output
 	statusColumnWidth int = 12
-	// ExpiryColumnWidth column width in table output
-	expiryColumnWidth int = 8
-	// ExpiryDatesColumnWidth column width in table output
-	expiryDatesColumnWidth int = 14
+	// IlmDatesColumnWidth column width in table output
+	ilmDatesColumnWidth int = 14
 	// TagsColumnWidth column width in table output
 	tagsColumnWidth int = 24
-	// TransitionColumnWidth column width in table output
-	transitionColumnWidth int = 14
-	// TransitionDateColumnWidth column width in table output
-	transitionDateColumnWidth int = 18
+	// TypeColumnWidth column width in table output
+	typeColumnWidth int = 12
+	// VersionColumnWidth column width in table output
+	versionColumnWidth int = 14
 	// StorageClassColumnWidth column width in table output
 	storageClassColumnWidth int = 18
 )
@@ -56,19 +54,20 @@ const (
 	prefixLabel         string = "Prefix"
 	statusLabel         string = "Enabled "
 	expiryLabel         string = "Expiry"
-	expiryDatesLabel    string = "Date/Days "
+	lifecycleDatesLabel string = "Date/Days    "
 	tagLabel            string = "Tags"
 	transitionLabel     string = "Transition"
-	transitionDateLabel string = "Date/Days "
-	storageClassLabel   string = "Storage-Class "
+	storageClassLabel   string = "Tier  "
+	typeLabel           string = "Type"
+	versionLabel        string = "Version "
+	unknownLabel        string = "Unknown "
 )
 
 // Keys to be used in map structure which stores the columns to be displayed.
 const (
-	statusLabelKey          string = "Enabled"
-	storageClassLabelKey    string = "Storage-Class"
-	expiryDatesLabelKey     string = "Expiry-Dates"
-	transitionDatesLabelKey string = "Transition-Date"
+	statusLabelKey       string = "Enabled"
+	storageClassLabelKey string = "Storage-Class"
+	ilmDatesLabelKey     string = "ILM-Dates"
 )
 
 // Some cell values
@@ -143,10 +142,9 @@ func getILMColumnWidthTable() map[string]int {
 	colWidth[idLabel] = idColumnWidth
 	colWidth[prefixLabel] = prefixColumnWidth
 	colWidth[statusLabelKey] = statusColumnWidth
-	colWidth[expiryLabel] = expiryColumnWidth
-	colWidth[expiryDatesLabelKey] = expiryDatesColumnWidth
-	colWidth[transitionLabel] = transitionColumnWidth
-	colWidth[transitionDatesLabelKey] = transitionDateColumnWidth
+	colWidth[typeLabel] = typeColumnWidth
+	colWidth[versionLabel] = versionColumnWidth
+	colWidth[lifecycleDatesLabel] = ilmDatesColumnWidth
 	colWidth[storageClassLabelKey] = storageClassColumnWidth
 	colWidth[tagLabel] = tagsColumnWidth
 
@@ -198,15 +196,6 @@ func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts s
 	}
 }
 
-// The right kind of tick is returned. Cross-tick if expiry is not set.
-func getExpiryTick(rule lifecycle.Rule) string {
-	expiryTick := crossTickCell
-	if !rule.Expiration.IsNull() {
-		expiryTick = tickCell
-	}
-	return expiryTick
-}
-
 // The right kind of tick is returned. Cross-tick if status is 'Disabled' & tick if status is 'Enabled'.
 func getStatusTick(rule lifecycle.Rule) string {
 	statusTick := crossTickCell
@@ -217,43 +206,76 @@ func getStatusTick(rule lifecycle.Rule) string {
 }
 
 // Expiry date. 'YYYY-MM-DD'. Set for 00:00:00 GMT as per the standard.
-func getExpiryDateVal(rule lifecycle.Rule) string {
-	expiryDate := blankCell
+func getLifeCycleDateVal(rule lifecycle.Rule) string {
+	columnDate := blankCell
+	// For Expiration Type Rules
 	if !rule.Expiration.IsDateNull() {
-		expiryDate = strconv.Itoa(rule.Expiration.Date.Day()) + " " +
+		columnDate = strconv.Itoa(rule.Expiration.Date.Day()) + " " +
 			rule.Expiration.Date.Month().String()[0:3] + " " +
 			strconv.Itoa(rule.Expiration.Date.Year())
 	} else if !rule.Expiration.IsDaysNull() {
-		expiryDate = strconv.Itoa(int(rule.Expiration.Days)) + " day(s)"
+		columnDate = strconv.Itoa(int(rule.Expiration.Days)) + " day(s)"
 	}
-	return expiryDate
-}
 
-// Cross-tick if Transition is not set.
-func getTransitionTick(rule lifecycle.Rule) string {
-	transitionSet := !rule.Transition.IsNull()
-	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
-	transitionDaysSet := transitionSet && !rule.Transition.IsDaysNull()
-	if !transitionSet && !transitionDateSet && !transitionDaysSet {
-		return crossTickCell
+	if !rule.Expiration.IsDateNull() {
+		columnDate = strconv.Itoa(rule.Expiration.Date.Day()) + " " +
+			rule.Expiration.Date.Month().String()[0:3] + " " +
+			strconv.Itoa(rule.Expiration.Date.Year())
+	} else if !rule.Expiration.IsDaysNull() {
+		columnDate = strconv.Itoa(int(rule.Expiration.Days)) + " day(s)"
 	}
-	return tickCell
-}
 
-// Transition date. 'YYYY-MM-DD'. Set for 00:00:00 GMT as per the standard.
-func getTransitionDate(rule lifecycle.Rule) string {
-	transitionDate := blankCell
-	transitionSet := !rule.Transition.IsNull()
-	transitionDateSet := transitionSet && !rule.Transition.IsDateNull()
-	transitionDaySet := transitionSet && !rule.Transition.IsDaysNull()
-	if transitionDateSet {
-		transitionDate = strconv.Itoa(rule.Transition.Date.Day()) + " " +
+	if !rule.NoncurrentVersionExpiration.IsDaysNull() {
+		columnDate = strconv.Itoa(int(rule.NoncurrentVersionExpiration.NoncurrentDays)) + " day(s)"
+	}
+
+	if !rule.Transition.IsDateNull() {
+		columnDate = strconv.Itoa(rule.Transition.Date.Day()) + " " +
 			rule.Transition.Date.Month().String()[0:3] + " " +
 			strconv.Itoa(rule.Transition.Date.Year())
-	} else if transitionDaySet {
-		transitionDate = strconv.Itoa(int(rule.Transition.Days)) + " day(s)"
+	} else if !rule.Transition.IsDaysNull() {
+		columnDate = strconv.Itoa(int(rule.Transition.Days)) + " day(s)"
 	}
-	return transitionDate
+
+	if !rule.NoncurrentVersionTransition.IsDaysNull() {
+		columnDate = strconv.Itoa(int(rule.NoncurrentVersionTransition.NoncurrentDays)) + " day(s)"
+	}
+
+	return columnDate
+}
+
+// Returns whether the rule is Transition or Expiration
+func getIlmRuleType(rule lifecycle.Rule) string {
+	if !rule.Transition.IsNull() {
+		return transitionLabel
+	}
+	if !rule.NoncurrentVersionTransition.IsDaysNull() {
+		return transitionLabel
+	}
+	if !rule.Expiration.IsNull() {
+		return expiryLabel
+	}
+	if !rule.NoncurrentVersionExpiration.IsDaysNull() {
+		return expiryLabel
+	}
+	return unknownLabel
+}
+
+// Returns whether the rule is for current or non-current
+func getTargetVersion(rule lifecycle.Rule) string {
+	if !rule.NoncurrentVersionTransition.IsDaysNull() {
+		return "Non-Current"
+	}
+	if !rule.Transition.IsNull() {
+		return "Current"
+	}
+	if !rule.NoncurrentVersionExpiration.IsDaysNull() {
+		return "Non-Current"
+	}
+	if !rule.Expiration.IsNull() {
+		return "Current"
+	}
+	return unknownLabel
 }
 
 // Storage class name for transition.
@@ -330,19 +352,18 @@ func getILMShowDataWithoutTags(cellInfo *[][]string, rowCheck map[string]int, in
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: rule.ID, labelKey: idLabel, columnWidth: idColumnWidth, align: leftAlign})
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getIlmRuleType(rule), labelKey: typeLabel, columnWidth: typeColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getTargetVersion(rule), labelKey: versionLabel, columnWidth: versionColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getStorageClassName(rule), labelKey: storageClassLabelKey, columnWidth: storageClassColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getLifeCycleDateVal(rule), labelKey: ilmDatesLabelKey, columnWidth: ilmDatesColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: getPrefixVal(rule), labelKey: prefixLabel, columnWidth: prefixColumnWidth, align: centerAlign})
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: getStatusTick(rule), labelKey: statusLabelKey, columnWidth: statusColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getExpiryTick(rule), labelKey: expiryLabel, columnWidth: expiryColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getExpiryDateVal(rule), labelKey: expiryDatesLabelKey, columnWidth: expiryDatesColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getTransitionTick(rule), labelKey: transitionLabel, columnWidth: transitionColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getTransitionDate(rule), labelKey: transitionDatesLabelKey, columnWidth: transitionDateColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getStorageClassName(rule), labelKey: storageClassLabelKey, columnWidth: storageClassColumnWidth, align: centerAlign})
+
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: blankCell, labelKey: tagLabel, columnWidth: tagsColumnWidth, align: centerAlign})
 		count++
@@ -372,19 +393,18 @@ func getILMShowDataWithTags(cellInfo *[][]string, newRows map[string][]string, r
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: rule.ID, labelKey: idLabel, columnWidth: idColumnWidth, align: leftAlign})
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getIlmRuleType(rule), labelKey: typeLabel, columnWidth: versionColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getTargetVersion(rule), labelKey: versionLabel, columnWidth: typeColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getStorageClassName(rule), labelKey: storageClassLabelKey, columnWidth: storageClassColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
+			tableCellInfo{label: getLifeCycleDateVal(rule), labelKey: ilmDatesLabelKey, columnWidth: ilmDatesColumnWidth, align: centerAlign})
+		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: getPrefixVal(rule), labelKey: prefixLabel, columnWidth: prefixColumnWidth, align: centerAlign})
 		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
 			tableCellInfo{label: getStatusTick(rule), labelKey: statusLabelKey, columnWidth: statusColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getExpiryTick(rule), labelKey: expiryLabel, columnWidth: expiryColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getExpiryDateVal(rule), labelKey: expiryDatesLabelKey, columnWidth: expiryDatesColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getTransitionTick(rule), labelKey: transitionLabel, columnWidth: transitionColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getTransitionDate(rule), labelKey: transitionDatesLabelKey, columnWidth: transitionDateColumnWidth, align: centerAlign})
-		checkAddTableCell(&((*cellInfo)[count]), rowCheck,
-			tableCellInfo{label: getStorageClassName(rule), labelKey: storageClassLabelKey, columnWidth: storageClassColumnWidth, align: centerAlign})
+
 		checkAddTableCellRows(&((*cellInfo)[count]), rowCheck, showOpts,
 			tableCellInfo{multLabels: getTagArr(rule), label: "", labelKey: tagLabel, columnWidth: tagsColumnWidth, align: leftAlign},
 			rule.ID, newRows)
@@ -405,30 +425,13 @@ func getPrefixVal(rule lifecycle.Rule) string {
 	return prefixVal
 }
 
-func showExpiryDetails(rule lifecycle.Rule, showOpts showDetails) bool {
+func showLifeCycleDetails(rule lifecycle.Rule, showOpts showDetails) bool {
 	if showOpts.allAvailable {
 		return true
 	}
 	expirySet := !rule.Expiration.IsNull()
 
 	return (expirySet && (showOpts.allAvailable || showOpts.expiry))
-}
-
-func showExpTick(showOpts showDetails) bool {
-	return showOpts.allAvailable
-}
-
-func showTransitionTick(showOpts showDetails) bool {
-	return showOpts.allAvailable
-}
-
-func showTransitionDetails(rule lifecycle.Rule, showOpts showDetails) bool {
-	if showOpts.allAvailable {
-		return true
-	}
-	transitionSet := !rule.Transition.IsNull()
-	transitionDetailsShow := (showOpts.allAvailable || showOpts.transition)
-	return transitionSet && transitionDetailsShow
 }
 
 func showTags(rule lifecycle.Rule, showOpts showDetails) bool {
@@ -457,6 +460,26 @@ func getColumns(info *lifecycle.Configuration, rowCheck map[string]int, alignedH
 			rowCheck[idLabel] = colIdx
 			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(idLabel, centerAlign, colWidthTbl[idLabel]))
 		}
+		_, ok = rowCheck[typeLabel]
+		if !ok {
+			rowCheck[typeLabel] = incColIdx()
+			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(typeLabel, centerAlign, colWidthTbl[typeLabel]))
+		}
+		_, ok = rowCheck[versionLabel]
+		if !ok {
+			rowCheck[versionLabel] = incColIdx()
+			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(versionLabel, centerAlign, colWidthTbl[versionLabel]))
+		}
+		_, ok = rowCheck[storageClassLabelKey]
+		if !ok {
+			rowCheck[storageClassLabelKey] = incColIdx()
+			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(storageClassLabel, centerAlign, colWidthTbl[storageClassLabelKey]))
+		}
+		_, ok = rowCheck[ilmDatesLabelKey]
+		if !ok && showLifeCycleDetails(rule, showOpts) {
+			rowCheck[ilmDatesLabelKey] = incColIdx()
+			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(lifecycleDatesLabel, centerAlign, colWidthTbl[ilmDatesLabelKey]))
+		}
 		_, ok = rowCheck[prefixLabel]
 		if !ok { // ID & Prefix are shown always.
 			rowCheck[prefixLabel] = incColIdx()
@@ -466,31 +489,6 @@ func getColumns(info *lifecycle.Configuration, rowCheck map[string]int, alignedH
 		if !ok {
 			rowCheck[statusLabelKey] = incColIdx()
 			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(statusLabel, centerAlign, colWidthTbl[statusLabelKey]))
-		}
-		_, ok = rowCheck[expiryLabel]
-		if !ok && showExpTick(showOpts) {
-			rowCheck[expiryLabel] = incColIdx()
-			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(expiryLabel, centerAlign, colWidthTbl[expiryLabel]))
-		}
-		_, ok = rowCheck[expiryDatesLabelKey]
-		if !ok && showExpiryDetails(rule, showOpts) {
-			rowCheck[expiryDatesLabelKey] = incColIdx()
-			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(expiryDatesLabel, centerAlign, colWidthTbl[expiryDatesLabelKey]))
-		}
-		_, ok = rowCheck[transitionLabel]
-		if !ok && showTransitionTick(showOpts) {
-			rowCheck[transitionLabel] = incColIdx()
-			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(transitionLabel, centerAlign, colWidthTbl[transitionLabel]))
-		}
-		_, ok = rowCheck[transitionDatesLabelKey]
-		if !ok && showTransitionDetails(rule, showOpts) {
-			rowCheck[transitionDatesLabelKey] = incColIdx()
-			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(transitionDateLabel, centerAlign, colWidthTbl[transitionDatesLabelKey]))
-		}
-		_, ok = rowCheck[storageClassLabelKey]
-		if !ok && showTransitionDetails(rule, showOpts) {
-			rowCheck[storageClassLabelKey] = incColIdx()
-			(*alignedHdrLabels) = append((*alignedHdrLabels), getAlignedText(storageClassLabel, centerAlign, colWidthTbl[storageClassLabelKey]))
 		}
 		_, ok = rowCheck[tagLabel]
 		if !ok && showTags(rule, showOpts) {
