@@ -1650,37 +1650,14 @@ func isVirtualHostStyle(host string, lookup minio.BucketLookupType) bool {
 	return isAmazon(host) && !isAmazonChina(host) || isGoogle(host) || isAmazonAccelerated(host)
 }
 
-func url2BucketAndObject(u *ClientURL, virtualStyle bool) (bucketName, objectName string) {
-	path := u.Path
-	// Convert any virtual host styled requests.
-	//
-	// For the time being this check is introduced for S3,
-	// If you have custom virtual styled hosts please.
-	// List them below.
-	if virtualStyle {
-		var bucket string
-		hostIndex := strings.Index(u.Host, "s3")
-		if hostIndex != -1 && !matchS3InHost(u.Host) {
-			hostIndex = -1
-		}
-		if hostIndex == -1 {
-			hostIndex = strings.Index(u.Host, "s3-accelerate")
-		}
-		if hostIndex == -1 {
-			hostIndex = strings.Index(u.Host, "storage.googleapis")
-		}
-		if hostIndex > 0 {
-			bucket = u.Host[:hostIndex-1]
-			path = string(u.Separator) + bucket + u.Path
-		}
-	}
-	tokens := splitStr(path, string(u.Separator), 3)
+func url2BucketAndObject(u *ClientURL) (bucketName, objectName string) {
+	tokens := splitStr(u.Path, string(u.Separator), 3)
 	return tokens[1], tokens[2]
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path.
 func (c *S3Client) url2BucketAndObject() (bucketName, objectName string) {
-	return url2BucketAndObject(c.targetURL, c.virtualStyle)
+	return url2BucketAndObject(c.targetURL)
 }
 
 // splitPath split path into bucket and object.
