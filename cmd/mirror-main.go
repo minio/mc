@@ -524,8 +524,7 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 		} else if sURLs.TargetContent != nil {
 			// Construct user facing message and path.
 			targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
-			size := sURLs.TargetContent.Size
-			mj.status.PrintMsg(rmMessage{Key: targetPath, Size: size})
+			mj.status.PrintMsg(rmMessage{Key: targetPath})
 		}
 	}
 
