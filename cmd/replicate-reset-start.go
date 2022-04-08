@@ -35,7 +35,7 @@ import (
 var replicateResyncStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "older-than",
-		Usage: "replicate back objects older than n days",
+		Usage: "replicate back objects older than value in duration string (e.g. 7d10h31s)",
 	},
 	cli.StringFlag{
 		Name:  "remote-bucket",
