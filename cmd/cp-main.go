@@ -52,11 +52,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "copy objects older than L days, M hours and N minutes",
+			Usage: "copy objects older than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "copy objects newer than L days, M hours and N minutes",
+			Usage: "copy objects newer than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
