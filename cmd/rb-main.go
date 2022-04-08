@@ -110,7 +110,7 @@ func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 				continue
 			}
 			fatalIf(errDummy().Trace(),
-				"This operation results in **site-wide** removal of buckets. If you are really sure, retry this command with ‘--force’ and ‘--dangerous’ flags.")
+				"This operation results in the *permanent deletion of ALL BUCKETS* in this account! If you are really sure, retry this command with ‘--force’ and ‘--dangerous’ flags.")
 		}
 	}
 }
