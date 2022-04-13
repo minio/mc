@@ -234,9 +234,13 @@ func (u clusterStruct) String() (msg string) {
 	// total no of objects at the Cluster level
 	usedTotal := humanize.IBytes(u.Info.Usage.Size)
 	if u.Info.Buckets.Count > 0 {
-		msg += fmt.Sprintf("%s Used, %s, %s\n", usedTotal,
+		msg += fmt.Sprintf("%s Used, %s, %s", usedTotal,
 			english.Plural(int(u.Info.Buckets.Count), "Bucket", ""),
 			english.Plural(int(u.Info.Objects.Count), "Object", ""))
+		if u.Info.Versions.Count > 0 {
+			msg += ", " + english.Plural(int(u.Info.Versions.Count), "Version", "")
+		}
+		msg += "\n"
 	}
 	if backendType == madmin.Erasure {
 		// Summary on total no of online and total
