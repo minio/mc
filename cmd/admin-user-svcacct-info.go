@@ -32,7 +32,7 @@ import (
 var adminUserSvcAcctInfoFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "policy",
-		Usage: "print policy is JSON format",
+		Usage: "print policy in JSON format",
 	},
 }
 
