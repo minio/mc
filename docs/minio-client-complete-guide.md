@@ -1012,7 +1012,7 @@ FLAGS:
   --force                          allow a recursive remove operation
   --dangerous                      allow site-wide removal of objects
   --incomplete, -I                 remove incomplete uploads
-  --fake                           perform a fake remove operation
+  --dry-run                        perform a fake remove operation
   --stdin                          read object names from STDIN
   --older-than value               remove objects older than L days, M hours and N minutes
   --newer-than value               remove objects newer than L days, M hours and N minutes
@@ -1172,7 +1172,7 @@ USAGE:
 
 FLAGS:
   --overwrite                        overwrite object(s) on target if it differs from source
-  --fake                             perform a fake mirror operation
+  --dry-run                          perform a fake mirror operation
   --watch, -w                        watch and synchronize changes
   --remove                           remove extraneous object(s) on target
   --region value                     specify region when creating new bucket(s) on target (default: "us-east-1")
