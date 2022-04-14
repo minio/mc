@@ -55,7 +55,12 @@ var (
 			Usage: "overwrite object(s) on target if it differs from source",
 		},
 		cli.BoolFlag{
-			Name:  "fake",
+			Name:   "fake",
+			Usage:  "perform a fake mirror operation",
+			Hidden: true, // deprecated 2022
+		},
+		cli.BoolFlag{
+			Name:  "dry-run",
 			Usage: "perform a fake mirror operation",
 		},
 		cli.BoolFlag{
@@ -870,9 +875,10 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
 	isOverwrite = isOverwrite || isMetadata
+	isFake := cli.Bool("fake") || cli.Bool("dry-run")
 
 	mopts := mirrorOptions{
-		isFake:           cli.Bool("fake"),
+		isFake:           isFake,
 		isRemove:         isRemove,
 		isOverwrite:      isOverwrite,
 		isWatch:          isWatch,
