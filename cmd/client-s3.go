@@ -772,19 +772,22 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 		DoneChan:      make(chan struct{}),
 	}
 
+	listenCtx, listenCancel := context.WithCancel(ctx)
+
 	var eventsCh <-chan notification.Info
 	if bucket != "" {
 		if object != "" && options.Prefix == "" {
 			options.Prefix = object
 		}
-		eventsCh = c.api.ListenBucketNotification(ctx, bucket, options.Prefix, options.Suffix, events)
+		eventsCh = c.api.ListenBucketNotification(listenCtx, bucket, options.Prefix, options.Suffix, events)
 	} else {
-		eventsCh = c.api.ListenNotification(ctx, "", "", events)
+		eventsCh = c.api.ListenNotification(listenCtx, "", "", events)
 	}
 
 	go func() {
 		defer close(wo.EventInfoChan)
 		defer close(wo.ErrorChan)
+		defer listenCancel()
 
 		for {
 			// Start listening on all bucket events.
