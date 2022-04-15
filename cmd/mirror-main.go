@@ -946,6 +946,16 @@ func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dst
 						withLock = true
 					}
 				}
+
+				mj.status.PrintMsg(mirrorMessage{
+					Source: newSrcURL,
+					Target: newTgtURL,
+				})
+
+				if mj.opts.isFake {
+					continue
+				}
+
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx, cli.String("region"), false, withLock); err != nil {
 					errorIf(err, "Unable to create bucket at `"+newTgtURL+"`.")
