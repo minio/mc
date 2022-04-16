@@ -378,6 +378,7 @@ func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x5
 
 	client := http.Client{
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				RootCAs: globalRootCAs, // make sure to use loaded certs before probing
 			},
