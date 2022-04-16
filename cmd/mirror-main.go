@@ -103,11 +103,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "filter object(s) older than L days, M hours and N minutes",
+			Usage: "filter object(s) older than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "filter object(s) newer than L days, M hours and N minutes",
+			Usage: "filter object(s) newer than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",

@@ -46,11 +46,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "match all objects newer than L days, M hours and N minutes",
+			Usage: "match all objects newer than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "match all objects older than L days, M hours and N minutes",
+			Usage: "match all objects older than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "path",

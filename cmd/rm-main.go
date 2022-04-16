@@ -82,11 +82,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "remove objects older than L days, M hours and N minutes",
+			Usage: "remove objects older than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "remove objects newer than L days, M hours and N minutes",
+			Usage: "remove objects newer than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.BoolFlag{
 			Name:  "bypass",
