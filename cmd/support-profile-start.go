@@ -30,8 +30,8 @@ import (
 var supportProfileStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "start profiler type, possible values are 'cpu', 'cpuio' 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
-		Value: "cpu,cpuio,mem,block,mutex,threads,goroutines",
+		Usage: "start profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
+		Value: "cpu,mem,block,mutex,threads,goroutines",
 	},
 }
 
