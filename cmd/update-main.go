@@ -484,10 +484,11 @@ func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateSta
 				fmtReleaseTime, pathErrMsg)
 			return updateStatusMsg, nil
 		}
+
+		return colorYellowBold(fmt.Sprintf("Error in mc update to version RELEASE.%s %v.", fmtReleaseTime, e)), nil
 	}
 
-	return colorGreenBold("mc updated to version RELEASE.%s successfully.",
-		fmtReleaseTime), nil
+	return colorGreenBold("mc updated to version RELEASE.%s successfully.", fmtReleaseTime), nil
 }
 
 type updateMessage struct {
