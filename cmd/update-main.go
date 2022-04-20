@@ -463,8 +463,8 @@ func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateSta
 		opts.Verifier = v
 	}
 
-	if err := opts.CheckPermissions(); err != nil {
-		permErrMsg := fmt.Sprintf(" failed with: %s", err)
+	if e := opts.CheckPermissions(); e != nil {
+		permErrMsg := fmt.Sprintf(" failed with: %s", e)
 		updateStatusMsg = colorYellowBold("mc update to version RELEASE.%s %s.",
 			fmtReleaseTime, permErrMsg)
 		return updateStatusMsg, nil
