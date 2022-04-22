@@ -22,10 +22,13 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	jwtgo "github.com/golang-jwt/jwt"
+	jwtgo "github.com/golang-jwt/jwt/v4"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	dto "github.com/prometheus/client_model/go"
+	prom2json "github.com/prometheus/prom2json"
 )
 
 var supportMetricsCmd = cli.Command{
@@ -77,8 +80,8 @@ func listPrometheusMetrics(ctx *cli.Context) error {
 		return nil
 	}
 
-	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
-		ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
+	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.RegisteredClaims{
+		ExpiresAt: jwtgo.NewNumericDate(UTCNow().Add(defaultPrometheusJWTExpiry)),
 		Subject:   hostConfig.AccessKey,
 		Issuer:    "prometheus",
 	})
@@ -98,14 +101,46 @@ func listPrometheusMetrics(ctx *cli.Context) error {
 	}
 
 	defer resp.Body.Close()
-	respBytes, e := ioutil.ReadAll(io.LimitReader(resp.Body, metricsRespBodyLimit))
-	if e != nil {
-		return e
-	}
+
 	if resp.StatusCode == http.StatusOK {
-		console.Println(string(respBytes))
+		if globalJSON {
+			mfChan := make(chan *dto.MetricFamily)
+			go func() {
+				if err := prom2json.ParseReader(io.LimitReader(resp.Body, metricsRespBodyLimit), mfChan); err != nil {
+					fatalIf(probe.NewError(err), "error reading metrics:")
+				}
+			}()
+			result := []*prom2json.Family{}
+			for mf := range mfChan {
+				result = append(result, prom2json.NewFamily(mf))
+			}
+			printMsg(PrometheusMetrics{Metrics: result})
+		} else {
+			respBytes, e := ioutil.ReadAll(io.LimitReader(resp.Body, metricsRespBodyLimit))
+			if e != nil {
+				return e
+			}
+			console.Println(string(respBytes))
+		}
 	}
 	return nil
+}
+
+// JSON returns jsonified message
+func (pm PrometheusMetrics) JSON() string {
+	jsonMessageBytes, e := json.MarshalIndent(pm, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
+}
+
+// String implemented to make interface compatible
+func (pm PrometheusMetrics) String() string {
+	return ""
+}
+
+// PrometheusMetrics mirrors the MetricFamily proto message.
+type PrometheusMetrics struct {
+	Metrics []*prom2json.Family `json:"family,omitempty"`
 }
 
 func mainSupportMetrics(ctx *cli.Context) error {
