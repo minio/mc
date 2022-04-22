@@ -2526,7 +2526,7 @@ func (c *S3Client) GetVersion(ctx context.Context) (config minio.BucketVersionin
 }
 
 // SetVersion - Set version configuration on a bucket
-func (c *S3Client) SetVersion(ctx context.Context, status string) *probe.Error {
+func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -2534,7 +2534,14 @@ func (c *S3Client) SetVersion(ctx context.Context, status string) *probe.Error {
 	var err error
 	switch status {
 	case "enable":
-		err = c.api.EnableVersioning(ctx, bucket)
+		if len(prefixes) > 0 {
+			err = c.api.SetBucketVersioning(ctx, bucket, minio.BucketVersioningConfiguration{
+				Status:            minio.Enabled,
+				SuspendedPrefixes: prefixes,
+			})
+		} else {
+			err = c.api.EnableVersioning(ctx, bucket)
+		}
 	case "suspend":
 		err = c.api.SuspendVersioning(ctx, bucket)
 	default:

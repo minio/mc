@@ -63,8 +63,9 @@ type versioningInfoMessage struct {
 	Status     string `json:"status"`
 	URL        string `json:"url"`
 	Versioning struct {
-		Status    string `json:"status"`
-		MFADelete string `json:"MFADelete"`
+		Status            string   `json:"status"`
+		MFADelete         string   `json:"MFADelete"`
+		SuspendedPrefixes []string `json:"SuspendedPrefixes,omitempty"`
 	} `json:"versioning"`
 }
 
@@ -109,6 +110,8 @@ func mainVersionInfo(cliCtx *cli.Context) error {
 	}
 	vMsg.Versioning.Status = vConfig.Status
 	vMsg.Versioning.MFADelete = vConfig.MFADelete
+	vMsg.Versioning.SuspendedPrefixes = vConfig.SuspendedPrefixes
+
 	printMsg(vMsg)
 	return nil
 }
