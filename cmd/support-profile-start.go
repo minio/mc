@@ -18,12 +18,7 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
-	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
 )
 
@@ -43,83 +38,11 @@ var supportProfileStartCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           append(supportProfileStartFlags, globalFlags...),
 	HideHelpCommand: true,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} [FLAGS] TARGET
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-    1. Start CPU profiling only
-       {{.Prompt}} {{.HelpName}} --type cpu myminio/
-
-    2. Start CPU, Memory and Block profiling concurrently
-       {{.Prompt}} {{.HelpName}} --type cpu,mem,block myminio/
-`,
-}
-
-func checkAdminProfileStartSyntax(ctx *cli.Context) {
-	// Check flags combinations
-	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "start", 1) // last argument is exit code
-	}
-
-	s := set.NewStringSet()
-	supportedProfilerTypes := []madmin.ProfilerType{
-		madmin.ProfilerCPU,
-		madmin.ProfilerMEM,
-		madmin.ProfilerBlock,
-		madmin.ProfilerMutex,
-		madmin.ProfilerTrace,
-		madmin.ProfilerThreads,
-		madmin.ProfilerGoroutines,
-		madmin.ProfilerCPUIO,
-	}
-	for _, profilerType := range supportedProfilerTypes {
-		s.Add(string(profilerType))
-	}
-	// Check if the provided profiler type is known and supported
-	supportedProfiler := false
-	profilers := strings.Split(strings.ToLower(ctx.String("type")), ",")
-	for _, profiler := range profilers {
-		if profiler != "" {
-			if s.Contains(profiler) {
-				supportedProfiler = true
-				break
-			}
-		}
-	}
-	if !supportedProfiler {
-		fatalIf(errDummy().Trace(ctx.String("type")),
-			"Profiler type unrecognized. Possible values are: %v.", supportedProfilerTypes)
-	}
+	Hidden:          true,
 }
 
 // mainSupportProfileStart - the entry function of profile command
 func mainSupportProfileStart(ctx *cli.Context) error {
-	// Check for command syntax
-	checkAdminProfileStartSyntax(ctx)
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	profilers := ctx.String("type")
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-		return nil
-	}
-
-	// Start profile
-	_, cmdErr := client.StartProfiling(globalContext, madmin.ProfilerType(profilers))
-	fatalIf(probe.NewError(cmdErr), "Unable to start profile.")
-
-	console.Infoln("Profile data successfully started.")
+	console.Infoln("Please use 'mc support profile <alias>'")
 	return nil
 }

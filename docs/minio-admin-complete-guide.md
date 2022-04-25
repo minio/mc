@@ -302,7 +302,6 @@ Skip SSL certificate verification.
 | [**policy** - manage canned policies](#policy)                         |
 | [**config** - manage server configuration file](#config)               |
 | [**heal** - heal disks, buckets and objects on MinIO server](#heal)    |
-| [**profile** - generate profile data for debugging purposes](#profile) |
 | [**top** - provide top like statistics for MinIO](#top)                |
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
@@ -647,22 +646,6 @@ mc admin config import myminio < /tmp/my-serverconfig
 ### Command `heal` - Heal disks, buckets and objects on MinIO server
 Healing is automatic on server side which runs on a continuous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
 
-<a name="profile"></a>
-### Command `profile` - generate profile data for debugging purposes
-
-```
-NAME:
-  mc admin profile - generate profile data for debugging purposes
-
-COMMANDS:
-  start  start recording profile data
-  stop   stop and download profile data
-```
-
-Start CPU profiling
-```
-mc admin profile start --type cpu myminio/
-```
 
 <a name="top"></a>
 ### Command `top` - provide top like statistics for MinIO
