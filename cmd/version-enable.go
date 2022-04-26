@@ -31,7 +31,7 @@ import (
 
 var versionEnableFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "suspended-prefixes",
+		Name:  "excluded-prefixes",
 		Usage: "/path/to/prefix1,/path/to/prefix2",
 	},
 }
@@ -69,9 +69,9 @@ type versionEnableMessage struct {
 	Status     string `json:"status"`
 	URL        string `json:"url"`
 	Versioning struct {
-		Status            string   `json:"status"`
-		MFADelete         string   `json:"MFADelete"`
-		SuspendedPrefixes []string `json:"SuspendedPrefixes,omitempty"`
+		Status           string   `json:"status"`
+		MFADelete        string   `json:"MFADelete"`
+		ExcludedPrefixes []string `json:"ExcludedPrefixes,omitempty"`
 	} `json:"versioning"`
 }
 
@@ -98,15 +98,15 @@ func mainVersionEnable(cliCtx *cli.Context) error {
 	args := cliCtx.Args()
 	aliasedURL := args.Get(0)
 
-	var suspendedPrefixes []string
-	prefixesStr := cliCtx.String("suspended-prefixes")
+	var excludedPrefixes []string
+	prefixesStr := cliCtx.String("excluded-prefixes")
 	if prefixesStr != "" {
-		suspendedPrefixes = strings.Split(prefixesStr, ",")
+		excludedPrefixes = strings.Split(prefixesStr, ",")
 	}
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	fatalIf(client.SetVersion(ctx, "enable", suspendedPrefixes), "Unable to enable versioning")
+	fatalIf(client.SetVersion(ctx, "enable", excludedPrefixes), "Unable to enable versioning")
 	printMsg(versionEnableMessage{
 		Op:     "enable",
 		Status: "success",
