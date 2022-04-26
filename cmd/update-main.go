@@ -421,9 +421,10 @@ func getUpdateReaderFromURL(u *url.URL, transport http.RoundTripper) (io.ReadClo
 }
 
 func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateStatusMsg string, err *probe.Error) {
+	fmtReleaseTime := latestReleaseTime.Format(mcReleaseTagTimeLayout)
 	if !ok {
 		updateStatusMsg = colorGreenBold("mc update to version RELEASE.%s canceled.",
-			latestReleaseTime.Format(mcReleaseTagTimeLayout))
+			fmtReleaseTime)
 		return updateStatusMsg, nil
 	}
 
@@ -462,14 +463,32 @@ func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateSta
 		opts.Verifier = v
 	}
 
-	if e = selfupdate.Apply(rc, opts); e != nil {
-		if re := selfupdate.RollbackError(e); re != nil {
-			return updateStatusMsg, probe.NewError(e)
-		}
+	if e := opts.CheckPermissions(); e != nil {
+		permErrMsg := fmt.Sprintf(" failed with: %s", e)
+		updateStatusMsg = colorYellowBold("mc update to version RELEASE.%s %s.",
+			fmtReleaseTime, permErrMsg)
+		return updateStatusMsg, nil
 	}
 
-	return colorGreenBold("mc updated to version RELEASE.%s successfully.",
-		latestReleaseTime.Format(mcReleaseTagTimeLayout)), nil
+	if e = selfupdate.Apply(rc, opts); e != nil {
+		if re := selfupdate.RollbackError(e); re != nil {
+			rollBackErr := fmt.Sprintf("Failed to rollback from bad update: %v", re)
+			updateStatusMsg = colorYellowBold("mc update to version RELEASE.%s %s.", fmtReleaseTime, rollBackErr)
+			return updateStatusMsg, probe.NewError(e)
+		}
+
+		var pathErr *os.PathError
+		if errors.As(e, &pathErr) {
+			pathErrMsg := fmt.Sprintf("Unable to update the binary at %s: %v", filepath.Dir(pathErr.Path), pathErr.Err)
+			updateStatusMsg = colorYellowBold("mc update to version RELEASE.%s %s.",
+				fmtReleaseTime, pathErrMsg)
+			return updateStatusMsg, nil
+		}
+
+		return colorYellowBold(fmt.Sprintf("Error in mc update to version RELEASE.%s %v.", fmtReleaseTime, e)), nil
+	}
+
+	return colorGreenBold("mc updated to version RELEASE.%s successfully.", fmtReleaseTime), nil
 }
 
 type updateMessage struct {
