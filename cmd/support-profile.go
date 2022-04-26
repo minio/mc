@@ -45,6 +45,11 @@ var (
 			Usage: "interval between two profile data in seconds",
 			Value: 30,
 		},
+		cli.IntFlag{
+			Name:  "duration",
+			Usage: "start profiling for the specified duration in seconds",
+			Value: 10,
+		},
 		cli.StringFlag{
 			Name:  "type",
 			Usage: "profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
@@ -53,20 +58,16 @@ var (
 	}
 )
 
-var supportProfileSubcommands = []cli.Command{
-	supportProfileStartCmd,
-	supportProfileStopCmd,
-}
-
 var supportProfileCmd = cli.Command{
-	Name:            "profile",
-	Usage:           "generate profile data for debugging",
-	Action:          mainSupportProfile,
-	OnUsageError:    onUsageError,
-	Before:          setGlobalsFromContext,
-	Flags:           append(profileFlags, globalFlags...),
-	Subcommands:     supportProfileSubcommands,
+	Name:         "profile",
+	Usage:        "generate profile data for debugging",
+	Action:       mainSupportProfile,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        append(profileFlags, globalFlags...),
+
 	HideHelpCommand: true,
+	Hidden:          true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -77,44 +78,41 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Fetch CPU profiling only
-       {{.Prompt}} {{.HelpName}} --type cpu myminio/
+  1. Fetch CPU profiling only
+     {{.Prompt}} {{.HelpName}} --type cpu myminio/
 
-    2. Fetch CPU, Memory and Block profiling concurrently
-       {{.Prompt}} {{.HelpName}} --type cpu,mem,block myminio/
+  2. Fetch CPU, Memory and Block profiling concurrently
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,block myminio/
 
-	3. Fetch CPU, Memory and Block profiling concurrently 3 times
-       {{.Prompt}} {{.HelpName}} --type cpu,mem,block --count 3 myminio/ 
+  3. Fetch CPU, Memory and Block profiling concurrently 3 times
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,block --count 3 myminio/
 
-	4. Fetch CPU, Memory and Block profiling concurrently 2 times with an interval of 10 mins
-       {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --count 2 --interval 600 myminio/
+  4. Fetch CPU, Memory and Block profiling concurrently 2 times with an interval of 10 mins
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --count 2 --interval 600 myminio/
 
+  5. Fetch CPU, Memory and Block profiling concurrently for 10 minutes
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --duration 600 myminio/
+
+	 
 `,
 }
 
 func checkAdminProfileSyntax(ctx *cli.Context) {
-	s := set.NewStringSet()
-	supportedProfilerTypes := []madmin.ProfilerType{
-		madmin.ProfilerCPU,
-		madmin.ProfilerMEM,
-		madmin.ProfilerBlock,
-		madmin.ProfilerMutex,
-		madmin.ProfilerTrace,
-		madmin.ProfilerThreads,
-		madmin.ProfilerGoroutines,
-		madmin.ProfilerCPUIO,
-	}
-	for _, profilerType := range supportedProfilerTypes {
-		s.Add(string(profilerType))
-	}
+	s := set.CreateStringSet(string(madmin.ProfilerCPU),
+		string(madmin.ProfilerMEM),
+		string(madmin.ProfilerBlock),
+		string(madmin.ProfilerMutex),
+		string(madmin.ProfilerTrace),
+		string(madmin.ProfilerThreads),
+		string(madmin.ProfilerGoroutines),
+		string(madmin.ProfilerCPUIO))
 	// Check if the provided profiler type is known and supported
-	supportedProfiler := false
 	profilers := strings.Split(strings.ToLower(ctx.String("type")), ",")
 	for _, profiler := range profilers {
 		if profiler != "" {
-			if s.Contains(profiler) {
-				supportedProfiler = true
-				break
+			if !s.Contains(profiler) {
+				fatalIf(errDummy().Trace(ctx.String("type")),
+					"Profiler type %s unrecognized. Possible values are: %v.", profiler, s)
 			}
 		}
 	}
@@ -122,7 +120,7 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 	var interval int
 	if ctx.IsSet("interval") {
 		interval = ctx.Int("interval")
-		if interval <= 30 {
+		if interval < 30 {
 			fatalIf(errInvalidArgument().Trace(ctx.Args()...), " the minimum interval between two profiling must be 30 seconds, for example: '--interval 30 --count 2' to get two profilers output at 30 seconds interval")
 		}
 		if interval >= 30 && (ctx.Int("count") <= 1) {
@@ -130,9 +128,8 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 		}
 	}
 
-	if !supportedProfiler {
-		fatalIf(errDummy().Trace(ctx.String("type")),
-			"Profiler type unrecognized. Possible values are: %v.", supportedProfilerTypes)
+	if ctx.Int("duration") < 10 {
+		fatal(errDummy().Trace(), "profiling must be run for atleast 10 seconds")
 	}
 }
 
@@ -163,21 +160,17 @@ func moveFile(sourcePath, destPath string) error {
 	return os.Remove(sourcePath)
 }
 
-func getProfileData(client *madmin.AdminClient) string {
+func getProfileData(data io.ReadCloser) string {
 	// Create profile zip file
 	tmpFile, e := ioutil.TempFile("", "mc-profile-")
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
-	// Ask for profile data, which will come compressed with zip format
-	zippedData, adminErr := client.DownloadProfilingData(globalContext)
-	fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
-
 	// Copy zip content to target download file
-	_, e = io.Copy(tmpFile, zippedData)
+	_, e = io.Copy(tmpFile, data)
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
 	// Close everything
-	zippedData.Close()
+	data.Close()
 	tmpFile.Close()
 
 	downloadPath := "profile.zip"
@@ -207,6 +200,7 @@ func mainSupportProfile(ctx *cli.Context) error {
 	profilers := ctx.String("type")
 	count := ctx.Int("count")
 	interval := ctx.Int("interval")
+	duration := ctx.Int("duration")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -216,17 +210,13 @@ func mainSupportProfile(ctx *cli.Context) error {
 	}
 
 	for i := 1; i <= count; i++ {
-		_, cmdErr := client.StartProfiling(globalContext, madmin.ProfilerType(profilers))
-		fatalIf(probe.NewError(cmdErr), "Unable to start profile. ")
 		console.Infof("count %d : Profile data successfully started. \n", i)
+		log.Printf("Collecting data for %d seconds \n", duration)
+		sleep := time.Duration(duration)
+		data, adminErr := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*sleep)
 
-		log.Println("Collecting data for 10 seconds")
-		sleep := time.Duration(10)
-		time.Sleep(time.Second * sleep)
-		log.Println("Stopping profiling..")
-
-		getProfileData(client)
-		console.Infof("count %d : Profile data successfully downloaded as %s\n", i, getProfileData(client))
+		fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
+		console.Infof("count %d : Profile data successfully downloaded as %s\n", i, getProfileData(data))
 
 		if count > 1 && i <= count-1 {
 			log.Printf("Waiting for %d seconds, before starting another profile\n", interval)
