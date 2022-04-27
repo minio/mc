@@ -28,7 +28,6 @@ var supportSubcommands = []cli.Command{
 	supportPerfCmd,
 	supportInspectCmd,
 	supportProfileCmd,
-	supportMetricsCmd,
 }
 
 var supportCmd = cli.Command{
@@ -45,5 +44,5 @@ var supportCmd = cli.Command{
 func mainSupport(ctx *cli.Context) error {
 	commandNotFound(ctx, supportSubcommands)
 	return nil
-	// Sub-commands like "register", "callhome", "diagnostics", "metrics" have their own main.
+	// Sub-commands like "register", "callhome", "diagnostics" have their own main.
 }

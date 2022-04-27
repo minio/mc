@@ -334,6 +334,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/service/restart": aliasCompleter,
 
 	"/admin/prometheus/generate": aliasCompleter,
+	"/admin/prometheus/metrics":  aliasCompleter,
 
 	"/admin/profile/start": aliasCompleter,
 	"/admin/profile/stop":  aliasCompleter,
