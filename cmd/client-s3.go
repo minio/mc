@@ -2535,9 +2535,13 @@ func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []str
 	switch status {
 	case "enable":
 		if len(prefixes) > 0 {
+			eprefixes := make([]minio.ExcludedPrefix, 0, len(prefixes))
+			for _, prefix := range prefixes {
+				eprefixes = append(eprefixes, minio.ExcludedPrefix{prefix})
+			}
 			err = c.api.SetBucketVersioning(ctx, bucket, minio.BucketVersioningConfiguration{
 				Status:           minio.Enabled,
-				ExcludedPrefixes: prefixes,
+				ExcludedPrefixes: eprefixes,
 			})
 		} else {
 			err = c.api.EnableVersioning(ctx, bucket)

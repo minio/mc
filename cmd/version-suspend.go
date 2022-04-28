@@ -62,9 +62,8 @@ type versionSuspendMessage struct {
 	Status     string `json:"status"`
 	URL        string `json:"url"`
 	Versioning struct {
-		Status            string   `json:"status"`
-		MFADelete         string   `json:"MFADelete"`
-		SuspendedPrefixes []string `json:"SuspendedPrefixes,omitempty"`
+		Status    string `json:"status"`
+		MFADelete string `json:"MFADelete"`
 	} `json:"versioning"`
 }
 

@@ -110,7 +110,13 @@ func mainVersionInfo(cliCtx *cli.Context) error {
 	}
 	vMsg.Versioning.Status = vConfig.Status
 	vMsg.Versioning.MFADelete = vConfig.MFADelete
-	vMsg.Versioning.ExcludedPrefixes = vConfig.ExcludedPrefixes
+	if len(vConfig.ExcludedPrefixes) > 0 {
+		prefixes := make([]string, 0, len(vConfig.ExcludedPrefixes))
+		for _, eprefix := range vConfig.ExcludedPrefixes {
+			prefixes = append(prefixes, eprefix.Prefix)
+		}
+		vMsg.Versioning.ExcludedPrefixes = prefixes
+	}
 
 	printMsg(vMsg)
 	return nil
