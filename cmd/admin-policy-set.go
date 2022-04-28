@@ -41,7 +41,7 @@ USAGE:
   {{.HelpName}} TARGET POLICYNAME [ user=username1 | group=groupname1 ]
 
 POLICYNAME:
-  Name of the policy on the MinIO server. To set multiple policies separate names with a comma (,)
+  Name of the policy on the MinIO server. To set multiple policies, separate names with a comma (,).
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
