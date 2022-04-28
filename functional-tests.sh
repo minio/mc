@@ -297,6 +297,25 @@ function teardown()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${BUCKET_NAME}"
 }
 
+# Test mc ls on a S3 prefix where a lower similar prefix exists as well e.g. dir-foo/ and dir/
+function test_list_dir()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir-foo/object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir/object2"
+    diff -bB <(echo "object2")  <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${BUCKET_NAME}/dir" |  jq -r '.key')  >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unexpected listing dir"
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir-foo/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+
 function test_put_object()
 {
     show "${FUNCNAME[0]}"
@@ -1024,6 +1043,7 @@ function run_test()
     test_rb
 
     setup
+    test_list_dir
     test_put_object
     test_put_object_error
     test_put_object_0byte
