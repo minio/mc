@@ -444,6 +444,9 @@ func cmdToCompleteCmd(cmd cli.Command, parentPath string) complete.Command {
 			continue
 		}
 		complCmd.Sub[subCmd.Name] = cmdToCompleteCmd(subCmd, parentPath+"/"+cmd.Name)
+		for _, alias := range subCmd.Aliases {
+			complCmd.Sub[alias] = cmdToCompleteCmd(subCmd, parentPath+"/"+cmd.Name)
+		}
 	}
 
 	complCmd.Flags = flagsToCompleteFlags(cmd.Flags)
@@ -461,6 +464,9 @@ func mainComplete() error {
 			continue
 		}
 		complCmds[cmd.Name] = cmdToCompleteCmd(cmd, "")
+		for _, alias := range cmd.Aliases {
+			complCmds[alias] = cmdToCompleteCmd(cmd, "")
+		}
 	}
 	complFlags := flagsToCompleteFlags(globalFlags)
 	mcComplete := complete.Command{
