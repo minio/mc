@@ -1511,7 +1511,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, *probe.Error) {
 	c.Lock()
 	defer c.Unlock()
-	bucket, object := c.url2BucketAndObject()
+	bucket, path := c.url2BucketAndObject()
 
 	// Bucket name cannot be empty, stat on URL has no meaning.
 	if bucket == "" {
@@ -1525,7 +1525,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		}, nil
 	}
 
-	if object == "" {
+	if path == "" {
 		content, err := c.bucketStat(ctx, bucket)
 		if err != nil {
 			return nil, err.Trace(bucket)
@@ -1535,7 +1535,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	// If the request is for incomplete upload stat, handle it here.
 	if opts.incomplete {
-		return c.statIncompleteUpload(ctx, bucket, object)
+		return c.statIncompleteUpload(ctx, bucket, path)
 	}
 
 	// The following code tries to calculate if a given prefix/object does really exist
@@ -1550,14 +1550,14 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	// because the list could be very large. At the same time, the HEAD call is avoided if the
 	// object already contains a trailing prefix or we passed rewind flag to know the object version
 	// created just before the rewind parameter.
-	if !strings.HasSuffix(object, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
+	if !strings.HasSuffix(path, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
 		// Issue HEAD request first but ignore no such key error
 		// so we can check if there is such prefix which exists
 		o := minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID}
 		if opts.isZip {
 			o.Set("x-minio-extract", "true")
 		}
-		ctnt, err := c.getObjectStat(ctx, bucket, object, o)
+		ctnt, err := c.getObjectStat(ctx, bucket, path, o)
 		if err == nil {
 			return ctnt, nil
 		}
@@ -1568,19 +1568,26 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		}
 	}
 
-	nonRecursive := false
-	// Prefix to pass to minio-go listing in order to fetch if a prefix exists
-	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
+	// No object found, start looking for a prefix with the same name
+	// or a directory marker. Add a trailing slash if it is not in the path
+	if !strings.HasSuffix(path, string(c.targetURL.Separator)) {
+		path += string(c.targetURL.Separator)
+	}
 
-	for objectStat := range c.listObjectWrapper(ctx, bucket, prefix, nonRecursive, opts.timeRef, false, false, false, 1, opts.isZip) {
+	nonRecursive := false
+	maxKeys := 1
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, false, false, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
-
-		if object == objectStat.Key || object == strings.TrimSuffix(objectStat.Key, string(c.targetURL.Separator)) {
+		// In case of a directory marker
+		if path == objectStat.Key {
 			return c.objectInfo2ClientContent(bucket, objectStat), nil
 		}
-		break
+		if strings.HasPrefix(objectStat.Key, path) {
+			// An object inside the prefix is found, then the prefix exists.
+			return c.prefixInfo2ClientContent(bucket, path), nil
+		}
 	}
 
 	return nil, probe.NewError(ObjectMissing{opts.timeRef})
@@ -1999,6 +2006,22 @@ func (c *S3Client) bucketInfo2ClientContent(bucket minio.BucketInfo) *ClientCont
 	content.Size = 0
 	content.Time = bucket.CreationDate
 	content.Type = os.ModeDir
+	return content
+}
+
+// Convert objectInfo to ClientContent
+func (c *S3Client) prefixInfo2ClientContent(bucket string, prefix string) *ClientContent {
+	// Join bucket and incoming object key.
+	if bucket == "" {
+		panic("should never happen, bucket cannot be empty")
+	}
+	content := &ClientContent{}
+	url := c.targetURL.Clone()
+	url.Path = c.joinPath(bucket, prefix)
+	content.URL = url
+	content.BucketName = bucket
+	content.Type = os.ModeDir
+	content.Time = time.Now()
 	return content
 }
 
