@@ -1116,22 +1116,23 @@ type RemoveResult struct {
 }
 
 // Remove - remove object or bucket(s).
-func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+func (c *S3Client) Remove(ctx context.Context, opts RemoveOptions, contentCh <-chan *ClientContent) <-chan RemoveResult {
 	resultCh := make(chan RemoveResult)
 
 	prevBucket := ""
 	// Maintain objectsCh, statusCh for each bucket
 	var objectsCh chan minio.ObjectInfo
 	var statusCh <-chan minio.RemoveObjectResult
-	opts := minio.RemoveObjectsOptions{
-		GovernanceBypass: isBypass,
+	removeObjectOpts := minio.RemoveObjectsOptions{
+		GovernanceBypass: opts.Bypass,
+		PurgeOnDelete:    opts.Immediate,
 	}
 
 	go func() {
 		defer close(resultCh)
 
 		_, object := c.url2BucketAndObject()
-		if isRemoveBucket && object != "" {
+		if opts.RemoveBucket && object != "" {
 			resultCh <- RemoveResult{
 				Err: probe.NewError(errors.New(
 					"use `mc rm` command to delete prefixes, or point your" +
@@ -1167,10 +1168,10 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 				if prevBucket == "" {
 					objectsCh = make(chan minio.ObjectInfo)
 					prevBucket = bucket
-					if isIncomplete {
+					if opts.Incomplete {
 						statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
 					} else {
-						statusCh = c.api.RemoveObjectsWithResult(ctx, bucket, objectsCh, opts)
+						statusCh = c.api.RemoveObjectsWithResult(ctx, bucket, objectsCh, removeObjectOpts)
 					}
 				}
 
@@ -1194,7 +1195,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					}
 
 					// Remove bucket if it qualifies.
-					if isRemoveBucket && !isIncomplete {
+					if opts.RemoveBucket && !opts.Incomplete {
 						if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
 							resultCh <- RemoveResult{
 								BucketName: bucket,
@@ -1205,10 +1206,10 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 					}
 					// Re-init objectsCh for next bucket
 					objectsCh = make(chan minio.ObjectInfo)
-					if isIncomplete {
+					if opts.Incomplete {
 						statusCh = c.removeIncompleteObjects(ctx, bucket, objectsCh)
 					} else {
-						statusCh = c.api.RemoveObjectsWithResult(ctx, bucket, objectsCh, opts)
+						statusCh = c.api.RemoveObjectsWithResult(ctx, bucket, objectsCh, removeObjectOpts)
 					}
 					prevBucket = bucket
 				}
@@ -1279,7 +1280,7 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 		}
 		// Remove last bucket if it qualifies.
-		if isRemoveBucket && prevBucket != "" && !isIncomplete {
+		if opts.RemoveBucket && prevBucket != "" && !opts.Incomplete {
 			if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
 				resultCh <- RemoveResult{
 					BucketName: prevBucket,

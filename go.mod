@@ -2,6 +2,8 @@ module github.com/minio/mc
 
 go 1.17
 
+replace github.com/minio/minio-go/v7 => ../minio-go
+
 require (
 	github.com/charmbracelet/bubbletea v0.19.3
 	github.com/cheggaaa/pb v1.0.29

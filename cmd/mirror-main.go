@@ -317,8 +317,12 @@ func (mj *mirrorJob) doDeleteBucket(ctx context.Context, sURLs URLs) URLs {
 	contentCh := make(chan *ClientContent, 1)
 	contentCh <- &ClientContent{URL: clnt.GetURL()}
 	close(contentCh)
-
-	for result := range clnt.Remove(ctx, false, true, false, contentCh) {
+	for result := range clnt.Remove(ctx, RemoveOptions{
+		Incomplete:   false,
+		RemoveBucket: true,
+		Bypass:       false,
+		Immediate:    false,
+	}, contentCh) {
 		if result.Err != nil {
 			return sURLs.WithError(result.Err)
 		}
@@ -344,7 +348,12 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
 	isRemoveBucket := false
-	resultCh := clnt.Remove(ctx, false, isRemoveBucket, false, contentCh)
+	resultCh := clnt.Remove(ctx, RemoveOptions{
+		Incomplete:   false,
+		RemoveBucket: isRemoveBucket,
+		Bypass:       false,
+		Immediate:    false,
+	}, contentCh)
 	for result := range resultCh {
 		if result.Err != nil {
 			switch result.Err.ToGoError().(type) {

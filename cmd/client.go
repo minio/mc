@@ -95,6 +95,14 @@ type CopyOptions struct {
 	storageClass     string
 }
 
+// RemoveOptions holds options for delete operation
+type RemoveOptions struct {
+	Incomplete   bool
+	RemoveBucket bool
+	Bypass       bool
+	Immediate    bool
+}
+
 // Client - client interface
 type Client interface {
 	// Common operations
@@ -138,7 +146,7 @@ type Client interface {
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
+	Remove(ctx context.Context, options RemoveOptions, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
 	// GetURL returns back internal url
 	GetURL() ClientURL
 	AddUserAgent(app, version string)

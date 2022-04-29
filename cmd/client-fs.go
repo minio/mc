@@ -493,7 +493,7 @@ func deleteFile(basePath, deletePath string) error {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+func (f *fsClient) Remove(ctx context.Context, opts RemoveOptions, contentCh <-chan *ClientContent) <-chan RemoveResult {
 	resultCh := make(chan RemoveResult)
 
 	// Goroutine reads from contentCh and removes the entry in content.
@@ -509,7 +509,7 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 			name := content.URL.Path
 			// Add partSuffix for incomplete uploads.
-			if isIncomplete {
+			if opts.Incomplete {
 				name += partSuffix
 			}
 			e := deleteFile(f.PathURL.Path, name)

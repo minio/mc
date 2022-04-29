@@ -96,6 +96,10 @@ var (
 			Name:  "non-current",
 			Usage: "remove object(s) versions that are non-current",
 		},
+		cli.BoolFlag{
+			Name:  "immediate",
+			Usage: "purge object(s) immediately",
+		},
 	}
 )
 
@@ -254,8 +258,19 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	}
 }
 
+type removeSingleOptions struct {
+	versionID  string
+	incomplete bool
+	fake       bool
+	bypass     bool
+	olderThan  string
+	newerThan  string
+	encKeyDB   map[string][]prefixSSEPair
+	immediate  bool
+}
+
 // Remove a single object or a single version in a versioned bucket
-func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func removeSingle(url string, opts removeSingleOptions) error {
 	ctx, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
@@ -271,7 +286,7 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		modTime time.Time
 	)
 
-	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{}, false)
+	_, content, pErr := url2Stat(ctx, url, opts.versionID, false, opts.encKeyDB, time.Time{}, false)
 	if pErr != nil {
 		switch minio.ToErrorResponse(pErr.ToGoError()).StatusCode {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:
@@ -286,22 +301,22 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 	}
 
 	// We should not proceed
-	if ignoreStatError && olderThan != "" || newerThan != "" {
+	if ignoreStatError && opts.olderThan != "" || opts.newerThan != "" {
 		errorIf(pErr.Trace(url), "Unable to stat `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
 
 	// Skip objects older than older--than parameter if specified
-	if olderThan != "" && isOlder(modTime, olderThan) {
+	if opts.olderThan != "" && isOlder(modTime, opts.olderThan) {
 		return nil
 	}
 
 	// Skip objects older than older--than parameter if specified
-	if newerThan != "" && isNewer(modTime, newerThan) {
+	if opts.newerThan != "" && isNewer(modTime, opts.newerThan) {
 		return nil
 	}
 
-	if !isFake {
+	if !opts.fake {
 		targetAlias, targetURL, _ := mustExpandAlias(url)
 		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 		if pErr != nil {
@@ -315,10 +330,15 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 
 		contentCh := make(chan *ClientContent, 1)
 		contentURL := *newClientURL(targetURL)
-		contentCh <- &ClientContent{URL: contentURL, VersionID: versionID}
+		contentCh <- &ClientContent{URL: contentURL, VersionID: opts.versionID}
 		close(contentCh)
 		isRemoveBucket := false
-		resultCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
+		resultCh := clnt.Remove(ctx, RemoveOptions{
+			Incomplete:   opts.incomplete,
+			RemoveBucket: isRemoveBucket,
+			Bypass:       opts.bypass,
+			Immediate:    opts.immediate,
+		}, contentCh)
 		for result := range resultCh {
 			if result.Err != nil {
 				errorIf(result.Err.Trace(url), "Failed to remove `"+url+"`.")
@@ -347,14 +367,15 @@ type removeOpts struct {
 	timeRef           time.Time
 	withVersions      bool
 	nonCurrentVersion bool
-	isForce           bool
-	isRecursive       bool
-	isIncomplete      bool
-	isFake            bool
-	isBypass          bool
+	force             bool
+	recursive         bool
+	incomplete        bool
+	fake              bool
+	bypass            bool
 	olderThan         string
 	newerThan         string
 	encKeyDB          map[string][]prefixSSEPair
+	immediate         bool
 }
 
 func printDryRunMsg(content *ClientContent) {
@@ -385,7 +406,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	contentCh := make(chan *ClientContent)
 	isRemoveBucket := false
 
-	listOpts := ListOptions{Recursive: opts.isRecursive, Incomplete: opts.isIncomplete, ShowDir: DirLast}
+	listOpts := ListOptions{Recursive: opts.recursive, Incomplete: opts.incomplete, ShowDir: DirLast}
 	if !opts.timeRef.IsZero() {
 		listOpts.WithOlderVersions = opts.withVersions
 		listOpts.WithDeleteMarkers = true
@@ -393,7 +414,12 @@ func listAndRemove(url string, opts removeOpts) error {
 	}
 	atLeastOneObjectFound := false
 
-	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, contentCh)
+	resultCh := clnt.Remove(ctx, RemoveOptions{
+		Incomplete:   opts.incomplete,
+		RemoveBucket: isRemoveBucket,
+		Bypass:       opts.bypass,
+		Immediate:    opts.immediate,
+	}, contentCh)
 
 	var lastPath string
 	var perObjectVersions []*ClientContent
@@ -416,7 +442,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			continue
 		}
 
-		if !opts.isRecursive {
+		if !opts.recursive {
 			currentObjectURL := targetAlias + getKey(content)
 			standardizedURL := getStandardizedURL(currentObjectURL)
 			if !strings.HasPrefix(url, standardizedURL) {
@@ -424,7 +450,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			}
 		}
 
-		if opts.nonCurrentVersion && opts.isRecursive && opts.withVersions {
+		if opts.nonCurrentVersion && opts.recursive && opts.withVersions {
 			if lastPath != content.URL.Path {
 				lastPath = content.URL.Path
 				for _, content := range perObjectVersions {
@@ -446,7 +472,7 @@ func listAndRemove(url string, opts removeOpts) error {
 						continue
 					}
 
-					if opts.isFake {
+					if opts.fake {
 						printDryRunMsg(content)
 						continue
 					}
@@ -508,7 +534,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			continue
 		}
 
-		if !opts.isFake {
+		if !opts.fake {
 			sent := false
 			for !sent {
 				select {
@@ -543,7 +569,7 @@ func listAndRemove(url string, opts removeOpts) error {
 		}
 	}
 
-	if opts.nonCurrentVersion && opts.isRecursive && opts.withVersions {
+	if opts.nonCurrentVersion && opts.recursive && opts.withVersions {
 		for _, content := range perObjectVersions {
 			if content.IsLatest && !content.IsDeleteMarker {
 				continue
@@ -563,7 +589,7 @@ func listAndRemove(url string, opts removeOpts) error {
 				continue
 			}
 
-			if opts.isFake {
+			if opts.fake {
 				printDryRunMsg(content)
 				continue
 			}
@@ -601,7 +627,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	}
 
 	close(contentCh)
-	if opts.isFake {
+	if opts.fake {
 		return nil
 	}
 	for result := range resultCh {
@@ -627,7 +653,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	}
 
 	if !atLeastOneObjectFound {
-		if opts.isForce {
+		if opts.force {
 			// Do not throw an exit code with --force check unix `rm -f`
 			// behavior and do not print an error as well.
 			return nil
@@ -664,6 +690,7 @@ func mainRm(cliCtx *cli.Context) error {
 	withVersions := cliCtx.Bool("versions")
 	versionID := cliCtx.String("version-id")
 	rewind := parseRewindFlag(cliCtx.String("rewind"))
+	isImmediate := cliCtx.Bool("immediate")
 
 	if withVersions && rewind.IsZero() {
 		rewind = time.Now().UTC()
@@ -681,23 +708,33 @@ func mainRm(cliCtx *cli.Context) error {
 				timeRef:           rewind,
 				withVersions:      withVersions,
 				nonCurrentVersion: withNoncurrentVersion,
-				isForce:           isForce,
-				isRecursive:       isRecursive,
-				isIncomplete:      isIncomplete,
-				isFake:            isFake,
-				isBypass:          isBypass,
+				force:             isForce,
+				recursive:         isRecursive,
+				incomplete:        isIncomplete,
+				fake:              isFake,
+				bypass:            isBypass,
 				olderThan:         olderThan,
 				newerThan:         newerThan,
 				encKeyDB:          encKeyDB,
+				immediate:         isImmediate,
 			})
 		} else {
-			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, removeSingleOptions{
+				versionID:  versionID,
+				incomplete: isIncomplete,
+				fake:       isFake,
+				bypass:     isBypass,
+				olderThan:  olderThan,
+				newerThan:  newerThan,
+				encKeyDB:   encKeyDB,
+				immediate:  isImmediate,
+			})
+
 		}
 		if rerr == nil {
 			rerr = e
 		}
 	}
-
 	if !isStdin {
 		return rerr
 	}
@@ -710,17 +747,27 @@ func mainRm(cliCtx *cli.Context) error {
 				timeRef:           rewind,
 				withVersions:      withVersions,
 				nonCurrentVersion: withNoncurrentVersion,
-				isForce:           isForce,
-				isRecursive:       isRecursive,
-				isIncomplete:      isIncomplete,
-				isFake:            isFake,
-				isBypass:          isBypass,
+				force:             isForce,
+				recursive:         isRecursive,
+				incomplete:        isIncomplete,
+				fake:              isFake,
+				bypass:            isBypass,
 				olderThan:         olderThan,
 				newerThan:         newerThan,
 				encKeyDB:          encKeyDB,
+				immediate:         isImmediate,
 			})
 		} else {
-			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, removeSingleOptions{
+				versionID:  versionID,
+				incomplete: isIncomplete,
+				fake:       isFake,
+				bypass:     isBypass,
+				olderThan:  olderThan,
+				newerThan:  newerThan,
+				encKeyDB:   encKeyDB,
+				immediate:  isImmediate,
+			})
 		}
 		if rerr == nil {
 			rerr = e
