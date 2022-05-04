@@ -451,6 +451,7 @@ var appCmds = []cli.Command{
 	configCmd,
 	updateCmd,
 	readyCmd,
+	pingCmd,
 }
 
 func printMCVersion(c *cli.Context) {
