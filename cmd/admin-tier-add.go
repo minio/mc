@@ -101,7 +101,7 @@ USAGE:
   {{.HelpName}} TYPE ALIAS NAME [FLAGS]
 
 TYPE:
-  Transition objects to supported cloud storage backend tier. Supported values are s3, azure and gcs.
+  Transition objects to supported cloud storage backend tier. Supported values are minio, s3, azure and gcs.
 
 NAME:
   Name of the remote tier target. e.g WARM-TIER
@@ -110,23 +110,22 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage:
+  1. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
+     {{.Prompt}} {{.HelpName}} minio myminio WARM-MINIO-TIER --endpoint https://warm-minio.com \
+        --access-key ACCESSKEY --secret-key SECRETKEY --bucket mybucket --prefix myprefix/
+
+  2. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage:
      {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name ACCOUNT-NAME --account-key ACCOUNT-KEY \
         --bucket myazurebucket --prefix myazureprefix/
 
-  2. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
+  3. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
      {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
         --access-key ACCESSKEY --secret-key SECRETKEY --bucket mys3bucket --prefix mys3prefix/ \
         --storage-class "STANDARD" --region us-west-2
 
-  3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage:
+  4. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage:
      {{.Prompt}} {{.HelpName}} gcs myminio GCSTIER --credentials-file /path/to/credentials.json \
         --bucket mygcsbucket  --prefix mygcsprefix/
-
-  4. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class using aws role:
-     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
-        --use-aws-role --bucket mys3bucket --prefix mys3prefix/ --storage-class "STANDARD" \
-        --region us-east-2
 `,
 }
 
@@ -152,6 +151,40 @@ const (
 // the flags contain invalid values.
 func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType) *madmin.TierConfig {
 	switch tierType {
+	case madmin.MinIO:
+		accessKey := ctx.String("access-key")
+		secretKey := ctx.String("secret-key")
+		if accessKey == "" || secretKey == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials", tierType))
+		}
+		bucket := ctx.String("bucket")
+		if bucket == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target bucket", tierType))
+		}
+
+		endpoint := ctx.String("endpoint")
+		if endpoint == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target endpoint", tierType))
+		}
+
+		minioOpts := []madmin.MinIOOptions{}
+		prefix := ctx.String("prefix")
+		if prefix != "" {
+			minioOpts = append(minioOpts, madmin.MinIOPrefix(prefix))
+		}
+
+		region := ctx.String("region")
+		if region != "" {
+			minioOpts = append(minioOpts, madmin.MinIORegion(region))
+		}
+
+		minioCfg, err := madmin.NewTierMinIO(tierName, endpoint, accessKey, secretKey, bucket, minioOpts...)
+		if err != nil {
+			fatalIf(probe.NewError(err), "Invalid configuration for MinIO tier")
+		}
+
+		return minioCfg
+
 	case madmin.S3:
 		accessKey := ctx.String("access-key")
 		secretKey := ctx.String("secret-key")
