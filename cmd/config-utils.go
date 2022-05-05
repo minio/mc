@@ -24,6 +24,7 @@ var validAPIs = []string{"S3v4", "S3v2"}
 const (
 	accessKeyMinLen = 3
 	secretKeyMinLen = 8
+	tokenKeyMinLen  = 900
 )
 
 // isValidAccessKey - validate access key for right length.
@@ -68,6 +69,14 @@ func isValidAPI(api string) (ok bool) {
 		ok = true
 	}
 	return ok
+}
+
+// isValidToken - Validates if AWS Sessiont token string of supported type.
+func isValidAWSToken(token string) (ok bool) {
+	if token == "" {
+		return true
+	}
+	return len(token) >= tokenKeyMinLen
 }
 
 // isValidLookup - validates if bucket lookup is of valid type
