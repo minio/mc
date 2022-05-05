@@ -63,15 +63,16 @@ func mainAlias(ctx *cli.Context) error {
 
 // aliasMessage container for content message structure
 type aliasMessage struct {
-	op          string
-	prettyPrint bool
-	Status      string `json:"status"`
-	Alias       string `json:"alias"`
-	URL         string `json:"URL"`
-	AccessKey   string `json:"accessKey,omitempty"`
-	SecretKey   string `json:"secretKey,omitempty"`
-	API         string `json:"api,omitempty"`
-	Path        string `json:"path,omitempty"`
+	op           string
+	prettyPrint  bool
+	Status       string `json:"status"`
+	Alias        string `json:"alias"`
+	URL          string `json:"URL"`
+	AccessKey    string `json:"accessKey,omitempty"`
+	SecretKey    string `json:"secretKey,omitempty"`
+	SessionToken string `json:"sessiontoken,omitempty"`
+	API          string `json:"api,omitempty"`
+	Path         string `json:"path,omitempty"`
 	// Deprecated field, replaced by Path
 	Lookup string `json:"lookup,omitempty"`
 }

@@ -56,6 +56,10 @@ var aliasSetFlags = []cli.Flag{
 		Name:  "api",
 		Usage: "API signature. Valid options are '[S3v4, S3v2]'",
 	},
+	cli.StringFlag{
+		Name:  "token",
+		Usage: "AWS Session token. Needs to be set when your AWS Credentials are temporary.",
+	},
 }
 
 var aliasSetCmd = cli.Command{
@@ -121,6 +125,7 @@ func checkAliasSetSyntax(ctx *cli.Context, accessKey string, secretKey string, d
 	url := args.Get(1)
 	api := ctx.String("api")
 	path := ctx.String("path")
+	token := ctx.String("token")
 	bucketLookup := ctx.String("lookup")
 
 	if !isValidAlias(alias) {
@@ -144,6 +149,11 @@ func checkAliasSetSyntax(ctx *cli.Context, accessKey string, secretKey string, d
 	if api != "" && !isValidAPI(api) { // Empty value set to default "S3v4".
 		fatalIf(errInvalidArgument().Trace(api),
 			"Unrecognized API signature. Valid options are `[S3v4, S3v2]`.")
+	}
+
+	if token != "" && !isValidAWSToken(token) {
+		fatalIf(errInvalidArgument().Trace(api),
+			"Invalid session token key `"+token+"`.")
 	}
 
 	if deprecated {
@@ -171,18 +181,19 @@ func setAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 	fatalIf(err.Trace(alias), "Unable to update hosts in config version `"+mustGetMcConfigPath()+"`.")
 
 	return aliasMessage{
-		Alias:     alias,
-		URL:       aliasCfgV10.URL,
-		AccessKey: aliasCfgV10.AccessKey,
-		SecretKey: aliasCfgV10.SecretKey,
-		API:       aliasCfgV10.API,
-		Path:      aliasCfgV10.Path,
+		Alias:        alias,
+		URL:          aliasCfgV10.URL,
+		AccessKey:    aliasCfgV10.AccessKey,
+		SecretKey:    aliasCfgV10.SecretKey,
+		SessionToken: aliasCfgV10.SessionToken,
+		API:          aliasCfgV10.API,
+		Path:         aliasCfgV10.Path,
 	}
 }
 
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
 // using v4 signature then v2 in case of failure.
-func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, peerCert *x509.Certificate) (string, *probe.Error) {
+func probeS3Signature(ctx context.Context, accessKey, secretKey, url, token string, peerCert *x509.Certificate) (string, *probe.Error) {
 	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bucket-sign-")
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
@@ -193,6 +204,11 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, pee
 		HostURL:   urlJoinPath(url, probeBucketName),
 		Debug:     globalDebug,
 	}
+
+	if token != "" {
+		s3Config.SessionToken = token
+	}
+
 	if peerCert != nil {
 		configurePeerCertificate(s3Config, peerCert)
 	}
@@ -235,7 +251,7 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, pee
 
 // BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, path string, peerCert *x509.Certificate) (*Config, *probe.Error) {
+func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, path, token string, peerCert *x509.Certificate) (*Config, *probe.Error) {
 	s3Config := NewS3Config(url, &aliasConfigV10{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
@@ -247,6 +263,9 @@ func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, p
 		configurePeerCertificate(s3Config, peerCert)
 	}
 
+	if token != "" {
+		s3Config.SessionToken = token
+	}
 	// If api is provided we do not auto probe signature, this is
 	// required in situations when signature type is provided by the user.
 	if api != "" {
@@ -254,7 +273,7 @@ func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, p
 		return s3Config, nil
 	}
 	// Probe S3 signature version
-	api, err := probeS3Signature(ctx, accessKey, secretKey, url, peerCert)
+	api, err := probeS3Signature(ctx, accessKey, secretKey, url, token, peerCert)
 	if err != nil {
 		return nil, err.Trace(url, accessKey, secretKey, api, path)
 	}
@@ -309,6 +328,7 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 		url   = trimTrailingSeparator(args.Get(1))
 		api   = cli.String("api")
 		path  = cli.String("path")
+		token = cli.String("token")
 
 		peerCert *x509.Certificate
 		err      *probe.Error
@@ -339,15 +359,16 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 		fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
 	}
 
-	s3Config, err := BuildS3Config(ctx, url, alias, accessKey, secretKey, api, path, peerCert)
+	s3Config, err := BuildS3Config(ctx, url, alias, accessKey, secretKey, api, path, token, peerCert)
 	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
 
 	msg := setAlias(alias, aliasConfigV10{
-		URL:       s3Config.HostURL,
-		AccessKey: s3Config.AccessKey,
-		SecretKey: s3Config.SecretKey,
-		API:       s3Config.Signature,
-		Path:      path,
+		URL:          s3Config.HostURL,
+		AccessKey:    s3Config.AccessKey,
+		SecretKey:    s3Config.SecretKey,
+		API:          s3Config.Signature,
+		SessionToken: s3Config.SessionToken,
+		Path:         path,
 	}) // Add an alias with specified credentials.
 
 	msg.op = "set"
