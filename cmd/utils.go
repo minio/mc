@@ -40,6 +40,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"maze.io/x/duration"
 
+	jwtgo "github.com/golang-jwt/jwt/v4"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -448,4 +449,18 @@ func httpClient(timeout time.Duration) *http.Client {
 			},
 		},
 	}
+}
+
+func getPrometheusToken(hostConfig *aliasConfigV10) (string, error) {
+	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
+		ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
+		Subject:   hostConfig.AccessKey,
+		Issuer:    "prometheus",
+	})
+
+	token, e := jwt.SignedString([]byte(hostConfig.SecretKey))
+	if e != nil {
+		return "", e
+	}
+	return token, nil
 }

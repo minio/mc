@@ -147,7 +147,7 @@ func subnetAuthHeaders(authToken string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + authToken}
 }
 
-func httpDo(req *http.Request) (*http.Response, error) {
+func subnetHTTPDo(req *http.Request) (*http.Response, error) {
 	client := httpClient(10 * time.Second)
 	if globalSubnetProxyURL != nil {
 		client.Transport.(*http.Transport).Proxy = http.ProxyURL(globalSubnetProxyURL)
@@ -165,7 +165,7 @@ func subnetReqDo(r *http.Request, headers map[string]string) (string, error) {
 		r.Header.Add("Content-Type", "application/json")
 	}
 
-	resp, e := httpDo(r)
+	resp, e := subnetHTTPDo(r)
 	if e != nil {
 		return "", e
 	}

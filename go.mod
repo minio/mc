@@ -28,14 +28,15 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/xattr v0.4.4
 	github.com/posener/complete v1.2.3
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/prom2json v1.3.1
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.3.0
 	github.com/secure-io/sio-go v0.3.1
 	github.com/shirou/gopsutil/v3 v3.21.12
 	github.com/tidwall/gjson v1.12.1
-	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/crypto v0.0.0-20220128200615-198e4374d7ed
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b
 	gopkg.in/h2non/filetype.v1 v1.0.5
@@ -51,6 +52,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/navidys/tvxwidgets v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/prometheus/client_model v0.2.0
 	github.com/rivo/tview v0.0.0-20211202162923-2a6de950f73b
 	github.com/tinylib/msgp v1.1.6
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
@@ -91,8 +93,7 @@ require (
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.32.1 // indirect
+	github.com/prometheus/common v0.33.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
