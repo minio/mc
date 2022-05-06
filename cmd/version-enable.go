@@ -35,7 +35,7 @@ var versionEnableFlags = []cli.Flag{
 		Usage: "/path/to/prefix1,/path/to/prefix2",
 	},
 	cli.BoolFlag{
-		Name:   "exclude-prefix-marker",
+		Name:   "exclude-folders",
 		Usage:  "",
 		Hidden: false,
 	},
@@ -59,6 +59,13 @@ FLAGS:
 EXAMPLES:
   1. Enable versioning on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket
+
+  2. Enable versioning on bucket "mybucket" while excluding versioning on a few select prefixes.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --excluded-prefixes "app1/*/_temporary/,app2/*/_staging/"
+
+  3. Enable versioning on bucket "mybucket" while excluding versioning on a few select prefixes and all folders.
+     Note: this is useful on buckets used with Spark/Hadoop workloads.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --excluded-prefixes "app1/*/_temporary/,app2/*/_staging/" --exclude-folders
 `,
 }
 
@@ -74,10 +81,10 @@ type versionEnableMessage struct {
 	Status     string `json:"status"`
 	URL        string `json:"url"`
 	Versioning struct {
-		Status              string   `json:"status"`
-		MFADelete           string   `json:"MFADelete"`
-		ExcludedPrefixes    []string `json:"ExcludedPrefixes,omitempty"`
-		ExcludePrefixMarker bool     `json:"ExcludePrefixMarker,,omitempty"`
+		Status           string   `json:"status"`
+		MFADelete        string   `json:"MFADelete"`
+		ExcludedPrefixes []string `json:"ExcludedPrefixes,omitempty"`
+		ExcludeFolders   bool     `json:"ExcludeFolders,,omitempty"`
 	} `json:"versioning"`
 }
 
@@ -109,12 +116,12 @@ func mainVersionEnable(cliCtx *cli.Context) error {
 	if prefixesStr != "" {
 		excludedPrefixes = strings.Split(prefixesStr, ",")
 	}
-	excludePrefixMarker := cliCtx.Bool("exclude-prefix-marker")
+	excludeFolders := cliCtx.Bool("exclude-folders")
 
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	fatalIf(client.SetVersion(ctx, "enable", excludedPrefixes, excludePrefixMarker), "Unable to enable versioning")
+	fatalIf(client.SetVersion(ctx, "enable", excludedPrefixes, excludeFolders), "Unable to enable versioning")
 	printMsg(versionEnableMessage{
 		Op:     "enable",
 		Status: "success",

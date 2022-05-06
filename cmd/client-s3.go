@@ -2526,7 +2526,7 @@ func (c *S3Client) GetVersion(ctx context.Context) (config minio.BucketVersionin
 }
 
 // SetVersion - Set version configuration on a bucket
-func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []string, excludePrefixMarker bool) *probe.Error {
+func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []string, excludeFolders bool) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -2535,10 +2535,10 @@ func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []str
 	switch status {
 	case "enable":
 
-		if len(prefixes) > 0 || excludePrefixMarker {
+		if len(prefixes) > 0 || excludeFolders {
 			vc := minio.BucketVersioningConfiguration{
-				Status:              minio.Enabled,
-				ExcludePrefixMarker: excludePrefixMarker,
+				Status:         minio.Enabled,
+				ExcludeFolders: excludeFolders,
 			}
 			if len(prefixes) > 0 {
 				eprefixes := make([]minio.ExcludedPrefix, 0, len(prefixes))

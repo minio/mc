@@ -63,10 +63,10 @@ type versioningInfoMessage struct {
 	Status     string `json:"status"`
 	URL        string `json:"url"`
 	Versioning struct {
-		Status              string   `json:"status"`
-		MFADelete           string   `json:"MFADelete"`
-		ExcludedPrefixes    []string `json:"ExcludedPrefixes,omitempty"`
-		ExcludePrefixMarker bool     `json:"ExcludePrefixMarker,omitempty"`
+		Status           string   `json:"status"`
+		MFADelete        string   `json:"MFADelete"`
+		ExcludedPrefixes []string `json:"ExcludedPrefixes,omitempty"`
+		ExcludeFolders   bool     `json:"ExcludeFolders,omitempty"`
 	} `json:"versioning"`
 }
 
@@ -111,7 +111,7 @@ func mainVersionInfo(cliCtx *cli.Context) error {
 	}
 	vMsg.Versioning.Status = vConfig.Status
 	vMsg.Versioning.MFADelete = vConfig.MFADelete
-	vMsg.Versioning.ExcludePrefixMarker = vConfig.ExcludePrefixMarker
+	vMsg.Versioning.ExcludeFolders = vConfig.ExcludeFolders
 	if len(vConfig.ExcludedPrefixes) > 0 {
 		prefixes := make([]string, 0, len(vConfig.ExcludedPrefixes))
 		for _, eprefix := range vConfig.ExcludedPrefixes {
