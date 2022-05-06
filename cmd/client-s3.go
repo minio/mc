@@ -2526,7 +2526,7 @@ func (c *S3Client) GetVersion(ctx context.Context) (config minio.BucketVersionin
 }
 
 // SetVersion - Set version configuration on a bucket
-func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []string) *probe.Error {
+func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []string, excludePrefixMarker bool) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -2534,15 +2534,20 @@ func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []str
 	var err error
 	switch status {
 	case "enable":
-		if len(prefixes) > 0 {
-			eprefixes := make([]minio.ExcludedPrefix, 0, len(prefixes))
-			for _, prefix := range prefixes {
-				eprefixes = append(eprefixes, minio.ExcludedPrefix{prefix})
+
+		if len(prefixes) > 0 || excludePrefixMarker {
+			vc := minio.BucketVersioningConfiguration{
+				Status:              minio.Enabled,
+				ExcludePrefixMarker: excludePrefixMarker,
 			}
-			err = c.api.SetBucketVersioning(ctx, bucket, minio.BucketVersioningConfiguration{
-				Status:           minio.Enabled,
-				ExcludedPrefixes: eprefixes,
-			})
+			if len(prefixes) > 0 {
+				eprefixes := make([]minio.ExcludedPrefix, 0, len(prefixes))
+				for _, prefix := range prefixes {
+					eprefixes = append(eprefixes, minio.ExcludedPrefix{prefix})
+				}
+				vc.ExcludedPrefixes = eprefixes
+			}
+			err = c.api.SetBucketVersioning(ctx, bucket, vc)
 		} else {
 			err = c.api.EnableVersioning(ctx, bucket)
 		}
