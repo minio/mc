@@ -339,7 +339,11 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 	if pErr != nil {
 		return sURLs.WithError(pErr)
 	}
-	clnt.AddUserAgent(uaMirrorAppName, ReleaseTag)
+	if sURLs.SourceAlias != "" {
+		clnt.AddUserAgent(uaMirrorAppName+":"+sURLs.SourceAlias, ReleaseTag)
+	} else {
+		clnt.AddUserAgent(uaMirrorAppName, ReleaseTag)
+	}
 	contentCh := make(chan *ClientContent, 1)
 	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
@@ -607,7 +611,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
 			}, mirrorURL.SourceContent.Size)
 		} else if event.Type == notification.ObjectRemovedDelete {
-			if strings.Contains(event.UserAgent, uaMirrorAppName) {
+			if targetAlias != "" && strings.Contains(event.UserAgent, uaMirrorAppName+":"+targetAlias) {
+				// Ignore delete cascading delete events if cyclical.
 				continue
 			}
 			mirrorURL := URLs{
