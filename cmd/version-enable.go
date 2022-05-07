@@ -32,14 +32,14 @@ import (
 var versionEnableFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "excluded-prefixes",
-		Usage: "/path/to/prefix1,/path/to/prefix2",
+		Usage: "exclude versioning on these prefix patterns",
 	},
 	cli.BoolFlag{
-		Name:   "exclude-folders",
-		Usage:  "",
-		Hidden: false,
+		Name:  "exclude-folders",
+		Usage: "exclude versioning on folder objects",
 	},
 }
+
 var versionEnableCmd = cli.Command{
 	Name:         "enable",
 	Usage:        "enable bucket versioning",

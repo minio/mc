@@ -2543,7 +2543,7 @@ func (c *S3Client) SetVersion(ctx context.Context, status string, prefixes []str
 			if len(prefixes) > 0 {
 				eprefixes := make([]minio.ExcludedPrefix, 0, len(prefixes))
 				for _, prefix := range prefixes {
-					eprefixes = append(eprefixes, minio.ExcludedPrefix{prefix})
+					eprefixes = append(eprefixes, minio.ExcludedPrefix{Prefix: prefix})
 				}
 				vc.ExcludedPrefixes = eprefixes
 			}

@@ -21,7 +21,7 @@ require (
 	github.com/minio/filepath v1.0.0
 	github.com/minio/madmin-go v1.3.13
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.24
+	github.com/minio/minio-go/v7 v7.0.26
 	github.com/minio/pkg v1.1.22
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
@@ -115,5 +115,3 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
 )
-
-replace github.com/minio/minio-go/v7 => ../minio-go

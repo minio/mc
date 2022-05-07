@@ -180,7 +180,8 @@ func fatalIfBucketLockNotEnabled(ctx context.Context, aliasedURL string) {
 
 // Apply Retention for one object/version or many objects within a given prefix.
 func applyRetention(ctx context.Context, op lockOpType, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool,
-	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool) error {
+	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool,
+) error {
 	clnt, err := newClient(target)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
