@@ -129,7 +129,8 @@ func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recur
 
 // Set Retention for one object/version or many objects within a given prefix.
 func setRetention(ctx context.Context, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool,
-	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool) error {
+	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool,
+) error {
 	return applyRetention(ctx, lockOpSet, target, versionID, timeRef, withOlderVersions, isRecursive, mode, validity, unit, bypassGovernance)
 }
 

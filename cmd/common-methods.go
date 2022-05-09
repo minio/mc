@@ -146,7 +146,8 @@ func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefi
 
 // getSourceStreamMetadataFromURL gets a reader from URL.
 func getSourceStreamMetadataFromURL(ctx context.Context, aliasedURL, versionID string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser,
-	metadata map[string]string, err *probe.Error) {
+	metadata map[string]string, err *probe.Error,
+) {
 	alias, urlStrFull, _, err := expandAlias(aliasedURL)
 	if err != nil {
 		return nil, nil, err.Trace(aliasedURL)

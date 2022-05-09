@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -28,13 +29,24 @@ import (
 	"github.com/minio/pkg/console"
 )
 
+var versionEnableFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "excluded-prefixes",
+		Usage: "exclude versioning on these prefix patterns",
+	},
+	cli.BoolFlag{
+		Name:  "exclude-folders",
+		Usage: "exclude versioning on folder objects",
+	},
+}
+
 var versionEnableCmd = cli.Command{
 	Name:         "enable",
 	Usage:        "enable bucket versioning",
 	Action:       mainVersionEnable,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, versionEnableFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -47,6 +59,13 @@ FLAGS:
 EXAMPLES:
   1. Enable versioning on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket
+
+  2. Enable versioning on bucket "mybucket" while excluding versioning on a few select prefixes.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --excluded-prefixes "app1/*/_temporary/,app2/*/_staging/"
+
+  3. Enable versioning on bucket "mybucket" while excluding versioning on a few select prefixes and all folders.
+     Note: this is useful on buckets used with Spark/Hadoop workloads.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --excluded-prefixes "app1/*/_temporary/,app2/*/_staging/" --exclude-folders
 `,
 }
 
@@ -62,8 +81,10 @@ type versionEnableMessage struct {
 	Status     string `json:"status"`
 	URL        string `json:"url"`
 	Versioning struct {
-		Status    string `json:"status"`
-		MFADelete string `json:"MFADelete"`
+		Status           string   `json:"status"`
+		MFADelete        string   `json:"MFADelete"`
+		ExcludedPrefixes []string `json:"ExcludedPrefixes,omitempty"`
+		ExcludeFolders   bool     `json:"ExcludeFolders,,omitempty"`
 	} `json:"versioning"`
 }
 
@@ -89,10 +110,18 @@ func mainVersionEnable(cliCtx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
 	aliasedURL := args.Get(0)
+
+	var excludedPrefixes []string
+	prefixesStr := cliCtx.String("excluded-prefixes")
+	if prefixesStr != "" {
+		excludedPrefixes = strings.Split(prefixesStr, ",")
+	}
+	excludeFolders := cliCtx.Bool("exclude-folders")
+
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	fatalIf(client.SetVersion(ctx, "enable"), "Unable to enable versioning")
+	fatalIf(client.SetVersion(ctx, "enable", excludedPrefixes, excludeFolders), "Unable to enable versioning")
 	printMsg(versionEnableMessage{
 		Op:     "enable",
 		Status: "success",

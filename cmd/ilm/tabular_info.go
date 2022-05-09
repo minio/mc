@@ -155,7 +155,8 @@ func getILMColumnWidthTable() map[string]int {
 // Multiple rows are required for display of data with tags.
 // Each 'key:value' pair is shown in 1 row and the rest of it is cells populated with blanks.
 func checkAddTableCellRows(rowArr *[]string, rowCheck map[string]int, showOpts showDetails,
-	cellInfo tableCellInfo, ruleID string, newRows map[string][]string) {
+	cellInfo tableCellInfo, ruleID string, newRows map[string][]string,
+) {
 	var cellLabel string
 	multLth := len(cellInfo.multLabels)
 	if cellInfo.label != "" || multLth == 0 {

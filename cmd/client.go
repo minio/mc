@@ -154,7 +154,7 @@ type Client interface {
 
 	// Versioning operations
 	GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
-	SetVersion(ctx context.Context, status string) *probe.Error
+	SetVersion(ctx context.Context, status string, prefixes []string, excludeFolders bool) *probe.Error
 	// Replication operations
 	GetReplication(ctx context.Context) (replication.Config, *probe.Error)
 	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error

@@ -1195,7 +1195,7 @@ func (f *fsClient) GetVersion(ctx context.Context) (minio.BucketVersioningConfig
 }
 
 // SetVersion - Set version configuration on a bucket, not implemented
-func (f *fsClient) SetVersion(ctx context.Context, status string) *probe.Error {
+func (f *fsClient) SetVersion(ctx context.Context, status string, _ []string, _ bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetVersion",
 		APIType: "filesystem",
