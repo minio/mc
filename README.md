@@ -59,7 +59,7 @@ docker run -it --entrypoint=/bin/sh minio/mc
 then use the [`mc alias` command](#add-a-cloud-storage-service).
 
 ### GitLab CI
-When using the Docker container in GitLab CI, you must [set the entrypoint to an empty string](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#overriding-the-entrypoint-of-an-image).
+When using the Docker container in GitLab CI, you must [set the entrypoint to an empty string](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image).
 
 ```
 deploy:
