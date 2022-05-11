@@ -1950,7 +1950,7 @@ Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to S
 mc support diag play
 ```
 
-Get CPU profiling.
+Get CPU profiling for 2 minutes
 ```
-mc support profile  --type cpu myminio/
+mc support profile  --type cpu --duration 120 myminio/
 ```

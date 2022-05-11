@@ -36,16 +36,6 @@ import (
 var (
 	profileFlags = []cli.Flag{
 		cli.IntFlag{
-			Name:  "count",
-			Usage: "number of times the profiling is needed",
-			Value: 1,
-		},
-		cli.IntFlag{
-			Name:  "interval",
-			Usage: "interval between two profile data in seconds",
-			Value: 30,
-		},
-		cli.IntFlag{
 			Name:  "duration",
 			Usage: "start profiling for the specified duration in seconds",
 			Value: 10,
@@ -59,15 +49,13 @@ var (
 )
 
 var supportProfileCmd = cli.Command{
-	Name:         "profile",
-	Usage:        "generate profile data for debugging",
-	Action:       mainSupportProfile,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(profileFlags, globalFlags...),
-
+	Name:            "profile",
+	Usage:           "generate profile data for debugging",
+	Action:          mainSupportProfile,
+	OnUsageError:    onUsageError,
+	Before:          setGlobalsFromContext,
+	Flags:           append(profileFlags, globalFlags...),
 	HideHelpCommand: true,
-	Hidden:          true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -84,16 +72,8 @@ EXAMPLES:
   2. Fetch CPU, Memory and Block profiling concurrently
      {{.Prompt}} {{.HelpName}} --type cpu,mem,block myminio/
 
-  3. Fetch CPU, Memory and Block profiling concurrently 3 times
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,block --count 3 myminio/
-
-  4. Fetch CPU, Memory and Block profiling concurrently 2 times with an interval of 10 mins
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --count 2 --interval 600 myminio/
-
-  5. Fetch CPU, Memory and Block profiling concurrently for 10 minutes
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --duration 600 myminio/
-
-	 
+  3. Fetch CPU, Memory and Block profiling concurrently for 10 minutes
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --duration 600 myminio/	 
 `,
 }
 
@@ -116,16 +96,8 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 			}
 		}
 	}
-
-	var interval int
-	if ctx.IsSet("interval") {
-		interval = ctx.Int("interval")
-		if interval < 30 {
-			fatalIf(errInvalidArgument().Trace(ctx.Args()...), " the minimum interval between two profiling must be 30 seconds, for example: '--interval 30 --count 2' to get two profilers output at 30 seconds interval")
-		}
-		if interval >= 30 && (ctx.Int("count") <= 1) {
-			fatal(errDummy().Trace(), "count flag must be specified with value greater than 1 when '--interval' flag is specified.")
-		}
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelpAndExit(ctx, "profile", 1) // last argument is exit code
 	}
 
 	if ctx.Int("duration") < 10 {
@@ -198,8 +170,6 @@ func mainSupportProfile(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	profilers := ctx.String("type")
-	count := ctx.Int("count")
-	interval := ctx.Int("interval")
 	duration := ctx.Int("duration")
 
 	// Create a new MinIO Admin Client
@@ -209,20 +179,10 @@ func mainSupportProfile(ctx *cli.Context) error {
 		return nil
 	}
 
-	for i := 1; i <= count; i++ {
-		console.Infof("count %d : Profile data successfully started. \n", i)
-		log.Printf("Collecting data for %d seconds \n", duration)
-		sleep := time.Duration(duration)
-		data, adminErr := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*sleep)
+	log.Printf("Collecting data for %d seconds \n", duration)
+	data, adminErr := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
 
-		fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
-		console.Infof("count %d : Profile data successfully downloaded as %s\n", i, getProfileData(data))
-
-		if count > 1 && i <= count-1 {
-			log.Printf("Waiting for %d seconds, before starting another profile\n", interval)
-			sleepBetweenIntervals := time.Duration(interval)
-			time.Sleep(time.Second * sleepBetweenIntervals)
-		}
-	}
+	fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
+	console.Infof(" Profile data successfully downloaded as %s\n", getProfileData(data))
 	return nil
 }
