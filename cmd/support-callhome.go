@@ -19,12 +19,8 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
 )
-
-var callhomeSubcommands = []cli.Command{
-	callhomeSetCmd,
-	callhomeGetCmd,
-}
 
 var supportCallhomeCmd = cli.Command{
 	Name:         "callhome",
@@ -33,12 +29,61 @@ var supportCallhomeCmd = cli.Command{
 	Action:       mainCallhome,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
-	Hidden:       true,
-	Subcommands:  callhomeSubcommands,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} ALIAS enable|disable|status
+
+OPTIONS:
+  enable - Enable pushing callhome info to SUBNET every 24hrs
+  disable - Disable pushing callhome info to SUBNET
+  status - Display callhome settings
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Enable callhome for cluster with alias 'play'
+     {{.Prompt}} {{.HelpName}} play enable
+
+  2. Disable callhome for cluster with alias 'play'
+     {{.Prompt}} {{.HelpName}} play disable
+
+  3. Check callhome status for cluster with alias 'play'
+     {{.Prompt}} {{.HelpName}} play status
+`,
 }
 
 func mainCallhome(ctx *cli.Context) error {
-	commandNotFound(ctx, callhomeSubcommands)
+	alias, arg := checkToggleCmdSyntax(ctx, "callhome")
+
+	if arg == "status" {
+		printToggleFeatureStatus(alias, "callhome", "callhome")
+		return nil
+	}
+
+	setCallhomeConfig(alias, arg == "enable")
+
 	return nil
-	// Sub-commands like "set", "get" have their own main.
+}
+
+func setCallhomeConfig(alias string, enableCallhome bool) {
+	client, err := newAdminClient(alias)
+	// Create a new MinIO Admin Client
+	fatalIf(err, "Unable to initialize admin connection.")
+
+	if !minioConfigSupportsSubSys(client, "callhome") {
+		fatal(errDummy().Trace(), "Your version of MinIO doesn't support this configuration")
+	}
+
+	enableStr := "off"
+	if enableCallhome {
+		enableStr = "on"
+	}
+	configStr := "callhome enable=" + enableStr
+	_, e := client.SetConfigKV(globalContext, configStr)
+	fatalIf(probe.NewError(e), "Unable to set callhome config on minio")
+
+	return
 }
