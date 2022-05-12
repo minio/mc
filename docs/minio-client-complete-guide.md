@@ -34,6 +34,7 @@ tag         manage tags for bucket(s) and object(s)
 replicate   configure server side bucket replication
 admin       manage MinIO servers
 update      update mc to latest release
+support     supportability tools like  profile, register, callhome, inspect
 ```
 
 ## 1.  Download MinIO Client
@@ -323,7 +324,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
 | [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
-| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | |
+| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | [**support** - generate profile data for debugging purposes](#support) |
 
 
 
@@ -1907,4 +1908,49 @@ mc replicate resync start myminio/mybucket --remote-bucket "arn:minio:replicatio
 
 ```
 mc replicate resync status myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
+```
+
+
+<a name="support"></a>
+### Command `support` - support related commands
+
+```
+NAME:
+  mc support register           register with MinIO subscription network
+  mc support callhome           configure callhome settings
+  mc support diag, diagnostics  upload health data for diagnostics
+  mc support perf               analyze object, network and drive performance
+  mc support inspect            upload raw object contents for analysis
+  mc support profile            generate profile data for debugging
+
+```
+
+Register MinIO cluster at alias 'play' on SUBNET, using the name "play-cluster".
+```
+mc support register play --name play-cluster
+```
+
+Enable logs callhome for cluster with alias 'play'.
+```
+mc support callhome set play logs=on
+```
+
+Download 'xl.meta' for a specific object from all the drives in a zip file.
+```
+mc support inspect myminio/bucket/test*/xl.meta
+```
+
+Run object speed measurement with autotuning the concurrency to obtain maximum throughput and IOPs.
+```
+mc support perf object myminio/
+```
+
+Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
+```
+mc support diag play
+```
+
+Get CPU profiling for 2 minutes
+```
+mc support profile  --type cpu --duration 120 myminio/
 ```
