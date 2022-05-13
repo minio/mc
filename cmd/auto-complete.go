@@ -401,6 +401,8 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/cluster/bucket/export": aliasCompleter,
 	"/admin/cluster/bucket/import": aliasCompleter,
+	"/admin/cluster/iam/export":    aliasCompleter,
+	"/admin/cluster/iam/import":    aliasCompleter,
 
 	"/alias/set":    nil,
 	"/alias/list":   aliasCompleter,
