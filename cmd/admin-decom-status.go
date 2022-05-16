@@ -25,6 +25,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -77,6 +78,13 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 		poolStatus, e := client.StatusPool(globalContext, pool)
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to get status per pool")
 
+		if globalJSON {
+			statusJSONBytes, e := json.MarshalIndent(poolStatus, "", "    ")
+			fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+			console.Println(string(statusJSONBytes))
+			return nil
+		}
+
 		var msg string
 		if poolStatus.Decommission.Complete {
 			msg = color.GreenString(fmt.Sprintf("Decommission of pool %s is complete, you may now remove it from server command line", poolStatus.CmdLine))
@@ -108,6 +116,13 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 	}
 	poolStatuses, e := client.ListPoolsStatus(globalContext)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get status for all pools")
+
+	if globalJSON {
+		statusJSONBytes, e := json.MarshalIndent(poolStatuses, "", "    ")
+		fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+		console.Println(string(statusJSONBytes))
+		return nil
+	}
 
 	dspOrder := []col{colGreen} // Header
 	for i := 0; i < len(poolStatuses); i++ {
