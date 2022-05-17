@@ -203,17 +203,23 @@ func subnetPostReq(reqURL string, payload interface{}, headers map[string]string
 	return subnetReqDo(r, headers)
 }
 
-func getSubSysKeyFromMinIOConfig(client *madmin.AdminClient, subSys string) madmin.KVS {
-	sh, pe := client.HelpConfigKV(globalContext, subSys, "", false)
-	fatalIf(probe.NewError(pe), fmt.Sprintf("Unable to get config keys for %s", subSys))
+func getSubSysKeyFromMinIOConfig(client *madmin.AdminClient, subSys string) (madmin.KVS, error) {
+	sh, e := client.HelpConfigKV(globalContext, subSys, "", false)
+	if e != nil {
+		return madmin.KVS{}, e
+	}
 
 	buf, e := client.GetConfigKV(globalContext, subSys)
-	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to get server config for %s", subSys))
+	if e != nil {
+		return madmin.KVS{}, e
+	}
 
 	tgt, e := madmin.ParseSubSysTarget(buf, sh)
-	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to parse sub-system target '%s'", subSys))
+	if e != nil {
+		return madmin.KVS{}, e
+	}
 
-	return tgt.KVS
+	return tgt.KVS, nil
 }
 
 func getSubnetKeyFromMinIOConfig(alias string, key string) (string, bool) {
@@ -221,7 +227,9 @@ func getSubnetKeyFromMinIOConfig(alias string, key string) (string, bool) {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	if minioConfigSupportsSubnet(client) {
-		return getSubSysKeyFromMinIOConfig(client, "subnet").Lookup(key)
+		kvs, e := getSubSysKeyFromMinIOConfig(client, "subnet")
+		fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+		return kvs.Lookup(key)
 	}
 
 	return "", false
