@@ -62,6 +62,11 @@ var supportDiagFlags = append([]cli.Flag{
 		Usage:  "SUBNET license key",
 		Hidden: true, // deprecated dec 2021
 	},
+	cli.StringFlag{
+		Name:   "name",
+		Usage:  "Specify the name to associate to this MinIO cluster in SUBNET",
+		Hidden: true, // deprecated may 2022
+	},
 }, subnetCommonFlags...)
 
 var supportDiagCmd = cli.Command{
@@ -159,7 +164,7 @@ func mainSupportDiag(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
 
-	license, name, offline := fetchSubnetUploadFlags(ctx)
+	license, offline := fetchSubnetUploadFlags(ctx)
 
 	// license should be provided for us to reach subnet
 	// if `--airgap` is provided do not need to reach out.
@@ -168,38 +173,30 @@ func mainSupportDiag(ctx *cli.Context) error {
 		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s to upload MinIO diagnostics report, please use --airgap to upload manually", subnetBaseURL())
 	}
 
-	e := validateFlags(uploadToSubnet, name)
+	e := validateFlags(uploadToSubnet)
 	fatalIf(probe.NewError(e), "unable to parse input values")
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
 
-	if len(name) == 0 {
-		name = alias
-	}
-
 	// Main execution
-	execSupportDiag(ctx, client, alias, license, name, uploadToSubnet)
+	execSupportDiag(ctx, client, alias, license, uploadToSubnet)
 
 	return nil
 }
 
-func fetchSubnetUploadFlags(ctx *cli.Context) (string, string, bool) {
+func fetchSubnetUploadFlags(ctx *cli.Context) (string, bool) {
 	// license info to upload to subnet.
 	license := ctx.String("license")
-
-	// If set (along with --license), this will be passed to
-	// subnet as the name of the cluster
-	name := ctx.String("name")
 
 	// If set, the MinIO diagnostics will not be uploaded
 	// to subnet and will only be saved locally.
 	offline := ctx.Bool("airgap") || ctx.Bool("offline")
 
-	return license, name, offline
+	return license, offline
 }
 
-func validateFlags(uploadToSubnet bool, name string) error {
+func validateFlags(uploadToSubnet bool) error {
 	if uploadToSubnet {
 		if globalJSON {
 			return errors.New("--json is applicable only when --airgap is also passed")
@@ -211,14 +208,10 @@ func validateFlags(uploadToSubnet bool, name string) error {
 		return errors.New("--dev is not applicable in airgap mode")
 	}
 
-	if len(name) > 0 {
-		return errors.New("--name is not applicable in airgap mode")
-	}
-
 	return nil
 }
 
-func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string, license string, clusterName string, uploadToSubnet bool) {
+func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string, license string, uploadToSubnet bool) {
 	var reqURL string
 	var headers map[string]string
 
@@ -226,7 +219,7 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string,
 	if uploadToSubnet {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the health information
-		reqURL, headers = prepareDiagUploadURL(alias, clusterName, filename, license)
+		reqURL, headers = prepareDiagUploadURL(alias, filename, license)
 	}
 
 	healthInfo, version, e := fetchServerDiagInfo(ctx, client)
@@ -251,11 +244,7 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string,
 	}
 }
 
-func prepareDiagUploadURL(alias string, clusterName string, filename string, license string) (string, map[string]string) {
-	if len(clusterName) == 0 {
-		clusterName = alias
-	}
-
+func prepareDiagUploadURL(alias string, filename string, license string) (string, map[string]string) {
 	apiKey := ""
 	if len(license) == 0 {
 		apiKey = getSubnetAPIKeyFromConfig(alias)
@@ -275,7 +264,7 @@ func prepareDiagUploadURL(alias string, clusterName string, filename string, lic
 	reqURL, headers, e := subnetURLWithAuth(uploadURL, apiKey, license)
 	fatalIf(probe.NewError(e).Trace(uploadURL), "Unable to fetch SUBNET authentication")
 
-	reqURL = fmt.Sprintf("%s&clustername=%s&filename=%s", reqURL, clusterName, filename)
+	reqURL = fmt.Sprintf("%s&filename=%s", reqURL, filename)
 	return reqURL, headers
 }
 
