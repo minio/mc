@@ -33,6 +33,7 @@ var supportCallhomeCmd = cli.Command{
 	Action:       mainCallhome,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
+	Hidden:       true,
 	Subcommands:  callhomeSubcommands,
 }
 
