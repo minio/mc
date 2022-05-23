@@ -19,19 +19,14 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -71,8 +66,10 @@ var aliasSetCmd = cli.Command{
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
+
 USAGE:
   {{.HelpName}} ALIAS URL ACCESSKEY SECRETKEY
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -357,101 +354,6 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 
 	printMsg(msg)
 	return nil
-}
-
-// promptTrustSelfSignedCert connects to the given endpoint and
-// checks whether the peer certificate can be verified.
-// If not, it computes a fingerprint of the peer certificate
-// public key, asks the user to confirm the fingerprint and
-// adds the peer certificate to the local trust store in the
-// CAs directory.
-func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x509.Certificate, *probe.Error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	// no need to probe certs for http endpoints.
-	if req.URL.Scheme == "http" {
-		return nil, nil
-	}
-
-	client := http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
-				RootCAs: globalRootCAs, // make sure to use loaded certs before probing
-			},
-		},
-	}
-
-	_, tlsErr := client.Do(req)
-	if tlsErr == nil {
-		// certs are already trusted system wide, nothing to do.
-		return nil, nil
-	}
-
-	if tlsErr != nil && !strings.Contains(tlsErr.Error(), "certificate signed by unknown authority") {
-		return nil, probe.NewError(tlsErr)
-	}
-
-	// Now, we fetch the peer certificate, compute the SHA-256 of
-	// public key and let the user confirm the fingerprint.
-	// If the user confirms, we store the peer certificate in the CAs
-	// directory and retry.
-	peerCert, err := fetchPeerCertificate(ctx, endpoint)
-	if err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	// Check that the subject key id is equal to the authority key id.
-	// If true, the certificate is its own issuer, and therefore, a
-	// self-signed certificate.
-	// Otherwise, the certificate has been issued by some other
-	// certificate that is just not trusted
-	if !bytes.Equal(peerCert.SubjectKeyId, peerCert.AuthorityKeyId) {
-		return nil, probe.NewError(tlsErr)
-	}
-
-	fingerprint := sha256.Sum256(peerCert.RawSubjectPublicKeyInfo)
-	fmt.Printf("Fingerprint of %s public key: %s\nConfirm public key y/N: ", color.GreenString(alias), color.YellowString(hex.EncodeToString(fingerprint[:])))
-	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil {
-		return nil, probe.NewError(err)
-	}
-	if answer = strings.ToLower(answer); answer != "y\n" && answer != "yes\n" {
-		return nil, probe.NewError(tlsErr)
-	}
-
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: peerCert.Raw})
-	if err = os.WriteFile(filepath.Join(mustGetCAsDir(), alias+".crt"), certPEM, 0o644); err != nil {
-		return nil, probe.NewError(err)
-	}
-	return peerCert, nil
-}
-
-// fetchPeerCertificate uses the given transport to fetch the peer
-// certificate from the given endpoint.
-func fetchPeerCertificate(ctx context.Context, endpoint string) (*x509.Certificate, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	client := http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
-		return nil, fmt.Errorf("Unable to read remote TLS certificate")
-	}
-	return resp.TLS.PeerCertificates[0], nil
 }
 
 // configurePeerCertificate adds the peer certificate to the
