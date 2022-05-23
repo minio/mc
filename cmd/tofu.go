@@ -102,7 +102,8 @@ func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x5
 		return nil, nil
 	}
 
-	if te != nil && !strings.Contains(te.Error(), "certificate signed by unknown authority") {
+	if te != nil && !strings.Contains(te.Error(), "certificate signed by unknown authority") &&
+		!strings.Contains(te.Error(), "certificate is not trusted") /* darwin specific error message */ {
 		return nil, probe.NewError(te)
 	}
 
