@@ -35,7 +35,7 @@ require (
 	github.com/secure-io/sio-go v0.3.1
 	github.com/shirou/gopsutil/v3 v3.21.12
 	github.com/tidwall/gjson v1.12.1
-	golang.org/x/crypto v0.0.0-20220128200615-198e4374d7ed
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b
