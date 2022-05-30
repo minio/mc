@@ -46,10 +46,6 @@ const (
 )
 
 var subnetCommonFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "name",
-		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
-	},
 	cli.BoolFlag{
 		Name:  "airgap",
 		Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",

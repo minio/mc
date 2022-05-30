@@ -21,7 +21,7 @@ require (
 	github.com/minio/filepath v1.0.0
 	github.com/minio/madmin-go v1.3.13
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.26
+	github.com/minio/minio-go/v7 v7.0.27
 	github.com/minio/pkg v1.1.22
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
@@ -35,7 +35,7 @@ require (
 	github.com/secure-io/sio-go v0.3.1
 	github.com/shirou/gopsutil/v3 v3.21.12
 	github.com/tidwall/gjson v1.12.1
-	golang.org/x/crypto v0.0.0-20220128200615-198e4374d7ed
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b
@@ -114,4 +114,5 @@ require (
 	google.golang.org/grpc v1.43.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
