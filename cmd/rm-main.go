@@ -96,6 +96,11 @@ var (
 			Name:  "non-current",
 			Usage: "remove object(s) versions that are non-current",
 		},
+		cli.BoolFlag{
+			Name:   "force-delete",
+			Usage:  "attempt a prefix force delete, requires confirmation please use with caution",
+			Hidden: true,
+		},
 	}
 )
 
@@ -203,6 +208,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	isDangerous := cliCtx.Bool("dangerous")
 	isVersions := cliCtx.Bool("versions")
 	isNoncurrentVersion := cliCtx.Bool("non-current")
+	isForceDel := cliCtx.Bool("force-delete")
 	versionID := cliCtx.String("version-id")
 	rewind := cliCtx.String("rewind")
 	isNamespaceRemoval := false
@@ -215,6 +221,16 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	if isNoncurrentVersion && !(isVersions && isRecursive) {
 		fatalIf(errDummy().Trace(),
 			"You cannot specify --non-current without --versions --recursive, please use --non-current --versions --recursive.")
+	}
+
+	if isForceDel && !isForce {
+		fatalIf(errDummy().Trace(),
+			"You cannot specify --force-delete without --force.")
+	}
+
+	if isForceDel && isRecursive {
+		fatalIf(errDummy().Trace(),
+			"You cannot specify --force-delete with --recursive.")
 	}
 
 	for _, url := range cliCtx.Args() {
@@ -255,7 +271,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 }
 
 // Remove a single object or a single version in a versioned bucket
-func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func removeSingle(url, versionID string, opts removeOpts) error {
 	ctx, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
@@ -271,7 +287,7 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		modTime time.Time
 	)
 
-	_, content, pErr := url2Stat(ctx, url, versionID, false, encKeyDB, time.Time{}, false)
+	_, content, pErr := url2Stat(ctx, url, versionID, false, opts.encKeyDB, time.Time{}, false)
 	if pErr != nil {
 		switch minio.ToErrorResponse(pErr.ToGoError()).StatusCode {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:
@@ -286,22 +302,22 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 	}
 
 	// We should not proceed
-	if ignoreStatError && olderThan != "" || newerThan != "" {
+	if ignoreStatError && opts.olderThan != "" || opts.newerThan != "" {
 		errorIf(pErr.Trace(url), "Unable to stat `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
 
 	// Skip objects older than older--than parameter if specified
-	if olderThan != "" && isOlder(modTime, olderThan) {
+	if opts.olderThan != "" && isOlder(modTime, opts.olderThan) {
 		return nil
 	}
 
 	// Skip objects older than older--than parameter if specified
-	if newerThan != "" && isNewer(modTime, newerThan) {
+	if opts.newerThan != "" && isNewer(modTime, opts.newerThan) {
 		return nil
 	}
 
-	if !isFake {
+	if !opts.isFake {
 		targetAlias, targetURL, _ := mustExpandAlias(url)
 		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 		if pErr != nil {
@@ -318,7 +334,7 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 		contentCh <- &ClientContent{URL: contentURL, VersionID: versionID}
 		close(contentCh)
 		isRemoveBucket := false
-		resultCh := clnt.Remove(ctx, isIncomplete, isRemoveBucket, isBypass, contentCh)
+		resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, opts.isForce && opts.isForceDel, contentCh)
 		for result := range resultCh {
 			if result.Err != nil {
 				errorIf(result.Err.Trace(url), "Failed to remove `"+url+"`.")
@@ -352,6 +368,7 @@ type removeOpts struct {
 	isIncomplete      bool
 	isFake            bool
 	isBypass          bool
+	isForceDel        bool
 	olderThan         string
 	newerThan         string
 	encKeyDB          map[string][]prefixSSEPair
@@ -393,7 +410,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	}
 	atLeastOneObjectFound := false
 
-	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, contentCh)
+	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, false, contentCh)
 
 	var lastPath string
 	var perObjectVersions []*ClientContent
@@ -660,6 +677,7 @@ func mainRm(cliCtx *cli.Context) error {
 	olderThan := cliCtx.String("older-than")
 	newerThan := cliCtx.String("newer-than")
 	isForce := cliCtx.Bool("force")
+	isForceDel := cliCtx.Bool("force-delete")
 	withNoncurrentVersion := cliCtx.Bool("non-current")
 	withVersions := cliCtx.Bool("versions")
 	versionID := cliCtx.String("version-id")
@@ -691,7 +709,16 @@ func mainRm(cliCtx *cli.Context) error {
 				encKeyDB:          encKeyDB,
 			})
 		} else {
-			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, versionID, removeOpts{
+				isIncomplete: isIncomplete,
+				isFake:       isFake,
+				isForce:      isForce,
+				isForceDel:   isForceDel,
+				isBypass:     isBypass,
+				olderThan:    olderThan,
+				newerThan:    newerThan,
+				encKeyDB:     encKeyDB,
+			})
 		}
 		if rerr == nil {
 			rerr = e
@@ -720,7 +747,16 @@ func mainRm(cliCtx *cli.Context) error {
 				encKeyDB:          encKeyDB,
 			})
 		} else {
-			e = removeSingle(url, versionID, isIncomplete, isFake, isForce, isBypass, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, versionID, removeOpts{
+				isIncomplete: isIncomplete,
+				isFake:       isFake,
+				isForce:      isForce,
+				isForceDel:   isForceDel,
+				isBypass:     isBypass,
+				olderThan:    olderThan,
+				newerThan:    newerThan,
+				encKeyDB:     encKeyDB,
+			})
 		}
 		if rerr == nil {
 			rerr = e
