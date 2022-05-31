@@ -450,6 +450,7 @@ var appCmds = []cli.Command{
 	adminCmd,
 	configCmd,
 	updateCmd,
+	readyCmd,
 }
 
 func printMCVersion(c *cli.Context) {
