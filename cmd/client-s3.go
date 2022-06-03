@@ -1116,7 +1116,7 @@ type RemoveResult struct {
 }
 
 // Remove - remove object or bucket(s).
-func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass, isForceDel bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
 	resultCh := make(chan RemoveResult)
 
 	prevBucket := ""
@@ -1129,6 +1129,25 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 
 	go func() {
 		defer close(resultCh)
+
+		if isForceDel {
+			bucket, object := c.url2BucketAndObject()
+			if e := c.api.RemoveObject(ctx, bucket, object, minio.RemoveObjectOptions{
+				ForceDelete: isForceDel,
+			}); e != nil {
+				resultCh <- RemoveResult{
+					Err: probe.NewError(e),
+				}
+				return
+			}
+			resultCh <- RemoveResult{
+				BucketName: bucket,
+				RemoveObjectResult: minio.RemoveObjectResult{
+					ObjectName: object,
+				},
+			}
+			return
+		}
 
 		_, object := c.url2BucketAndObject()
 		if isRemoveBucket && object != "" {
@@ -1195,10 +1214,10 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 
 					// Remove bucket if it qualifies.
 					if isRemoveBucket && !isIncomplete {
-						if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
+						if e := c.api.RemoveBucket(ctx, prevBucket); e != nil {
 							resultCh <- RemoveResult{
 								BucketName: bucket,
-								Err:        probe.NewError(err),
+								Err:        probe.NewError(e),
 							}
 							return
 						}
@@ -1280,10 +1299,10 @@ func (c *S3Client) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 		}
 		// Remove last bucket if it qualifies.
 		if isRemoveBucket && prevBucket != "" && !isIncomplete {
-			if err := c.api.RemoveBucket(ctx, prevBucket); err != nil {
+			if e := c.api.RemoveBucket(ctx, prevBucket); e != nil {
 				resultCh <- RemoveResult{
 					BucketName: prevBucket,
-					Err:        probe.NewError(err),
+					Err:        probe.NewError(e),
 				}
 				return
 			}

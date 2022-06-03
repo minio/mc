@@ -181,7 +181,7 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 		}
 
 		contentCh := make(chan *ClientContent, 10000)
-		resultCh := client.Remove(ctx, false, false, false, contentCh)
+		resultCh := client.Remove(ctx, false, false, false, false, contentCh)
 		rm.readErrors(resultCh, targetURL)
 
 		clientInfo = &removeClientInfo{

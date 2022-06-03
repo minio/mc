@@ -157,7 +157,7 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 		return pErr
 	}
 	contentCh := make(chan *ClientContent)
-	resultCh := clnt.Remove(ctx, false, false, false, contentCh)
+	resultCh := clnt.Remove(ctx, false, false, false, false, contentCh)
 
 	go func() {
 		defer close(contentCh)

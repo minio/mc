@@ -20,11 +20,11 @@ package cmd
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
@@ -66,14 +66,14 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Fetch CPU profiling only
+  1. Profile CPU for 10 seconds.
      {{.Prompt}} {{.HelpName}} --type cpu myminio/
 
-  2. Fetch CPU, Memory and Block profiling concurrently
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,block myminio/
+  2. Profile CPU, Memory, Goroutines for 10 seconds.
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines myminio/
 
-  3. Fetch CPU, Memory and Block profiling concurrently for 10 minutes
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,block  --duration 600 myminio/	 
+  3. Profile CPU, Memory, Goroutines for 10 minutes.
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 myminio/
 `,
 }
 
@@ -154,11 +154,11 @@ func getProfileData(data io.ReadCloser) string {
 		fatalIf(probe.NewError(e), "Unable to create a backup of profile.zip")
 	} else {
 		if !os.IsNotExist(e) {
-			fatal(probe.NewError(e), "Unable to download profile data.")
+			fatal(probe.NewError(e), "Unable to save profile data")
 		}
 	}
-	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to download profile data.")
-	return downloadedFile
+	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to save profile data")
+	return downloadPath
 }
 
 // mainSupportProfile is the handle for "mc support profile" command.
@@ -175,14 +175,15 @@ func mainSupportProfile(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client")
 		return nil
 	}
 
-	log.Printf("Collecting data for %d seconds \n", duration)
+	console.Infof("Profiling '%s' for %d seconds... ", aliasedURL, duration)
 	data, adminErr := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
 
-	fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
-	console.Infof(" Profile data successfully downloaded as %s\n", getProfileData(data))
+	fatalIf(probe.NewError(adminErr), "Unable to save profile data")
+	clr := color.New(color.FgGreen, color.Bold)
+	clr.Printf("saved successfully at '%s'\n", getProfileData(data))
 	return nil
 }
