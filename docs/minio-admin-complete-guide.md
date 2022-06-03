@@ -19,7 +19,7 @@ bucket               manage buckets defined in the MinIO server
 tier                 manage remote tier targets for ILM transition
 top                  provide top like statistics for MinIO
 trace                show http trace for MinIO server
-console              show console logs for MinIO server
+log                  show console logs for MinIO server
 ```
 
 ## 1.  Download MinIO Client
@@ -304,7 +304,7 @@ Skip SSL certificate verification.
 | [**heal** - heal disks, buckets and objects on MinIO server](#heal)    |
 | [**top** - provide top like statistics for MinIO](#top)                |
 | [**trace** - show http trace for MinIO server](#trace)                 |
-| [**console** - show console logs for MinIO server](#console)           |
+| [**log** - show console logs for MinIO server](#log)           |
 | [**prometheus** - manages prometheus config settings](#prometheus)     |
 | [**bucket** - manages buckets defined in the MinIO server](#bucket)     |
 
@@ -706,13 +706,13 @@ mc admin trace myminio
 ...
 ```
 
-<a name="console"></a>
-### Command `console` - show console logs for MinIO server
-`console` command displays server logs of one or all MinIO servers (under distributed cluster)
+<a name="log"></a>
+### Command `log` - show console logs for MinIO server
+`log` command displays server logs of one or all MinIO servers (under distributed cluster)
 
 ```sh
 NAME:
-  mc admin console - show console logs for MinIO server
+  mc admin log - show console logs for MinIO server
 
 FLAGS:
   --limit value, -l value       show last n log entries (default: 10)
@@ -722,7 +722,7 @@ FLAGS:
 *Example: Display MinIO server http trace.*
 
 ```sh
-mc admin console myminio
+mc admin log myminio
 
  API: SYSTEM(bucket=images)
  Time: 22:48:06 PDT 09/05/2019
