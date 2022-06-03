@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -80,15 +81,13 @@ func (s replicateStatusMessage) String() string {
 
 	var rows string
 	arntheme := []string{"Headers"}
-	theme := []string{"Pending", "Failed", "Replicated", "Replica"}
-	contents = append(contents, []string{"Pending", humanize.IBytes(s.ReplicationStatus.PendingSize), humanize.Comma(int64(s.ReplicationStatus.PendingCount))})
+	theme := []string{"Failed", "Replicated", "Replica"}
 	contents = append(contents, []string{"Failed", humanize.IBytes(s.ReplicationStatus.FailedSize), humanize.Comma(int64(s.ReplicationStatus.FailedCount))})
 	contents = append(contents, []string{"Replicated", humanize.IBytes(s.ReplicationStatus.ReplicatedSize), ""})
 	contents = append(contents, []string{"Replica", humanize.IBytes(s.ReplicationStatus.ReplicaSize), ""})
 	var th string
 
-	if s.ReplicationStatus.PendingSize == 0 &&
-		s.ReplicationStatus.FailedSize == 0 &&
+	if s.ReplicationStatus.FailedSize == 0 &&
 		s.ReplicationStatus.ReplicaSize == 0 &&
 		s.ReplicationStatus.ReplicatedSize == 0 {
 		return "Replication status not available."
@@ -101,59 +100,10 @@ func (s replicateStatusMessage) String() string {
 
 	hIdx := 0
 	for i, row := range contents {
-		if i%4 == 0 {
-			if hIdx > 0 {
-				rows += "\n"
-			}
-			hIdx++
-			rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
-				Field{"Status", 21},
-				Field{"Size", maxLen},
-				Field{"Count", maxLen},
-			).buildRow("Replication Status   ", "Size (Bytes)", "Count"))
-			rows += "\n"
-		}
-
-		idx := i % 4
-		th = theme[idx]
-		r := console.Colorize(th, newPrettyTable(" | ",
-			Field{"Status", 21},
-			Field{"Size", maxLen},
-			Field{"Count", maxLen},
-		).buildRow("   "+row[0], row[1], row[2])+"\n")
-		rows += r
-	}
-
-	contents = nil
-	var arns []string
-	for arn := range s.ReplicationStatus.Stats {
-		arns = append(arns, arn)
-	}
-	for _, st := range s.ReplicationStatus.Stats {
-		contents = append(contents, []string{"Pending", humanize.IBytes(st.PendingSize), humanize.Comma(int64(st.PendingCount))})
-		contents = append(contents, []string{"Failed", humanize.IBytes(st.FailedSize), humanize.Comma(int64(st.FailedCount))})
-		contents = append(contents, []string{"Replicated", humanize.IBytes(st.ReplicatedSize), ""})
-	}
-	if len(contents) > 0 {
-		rows += "\n"
-		r := console.Colorize("THeaders", newPrettyTable(" | ",
-			Field{"Target statuses", 95},
-		).buildRow("Remote Target Statuses: "))
-		rows += r
-		rows += "\n"
-	}
-	hIdx = 0
-	for i, row := range contents {
 		if i%3 == 0 {
 			if hIdx > 0 {
 				rows += "\n"
 			}
-			th = arntheme[0]
-			r := console.Colorize(th, newPrettyTable(" | ",
-				Field{"ARN", 120},
-			).buildRow(fmt.Sprintf("%s %s", coloredDot, arns[hIdx])))
-			rows += r
-			rows += "\n"
 			hIdx++
 			rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
 				Field{"Status", 21},
@@ -172,6 +122,57 @@ func (s replicateStatusMessage) String() string {
 		).buildRow("   "+row[0], row[1], row[2])+"\n")
 		rows += r
 	}
+
+	tgtDetails := make(map[string][][]string)
+	var arns []string
+	for arn, st := range s.ReplicationStatus.Stats {
+		var tgtDetail [][]string
+		tgtDetail = append(tgtDetail, []string{"Failed", humanize.IBytes(st.FailedSize), humanize.Comma(int64(st.FailedCount))})
+		tgtDetail = append(tgtDetail, []string{"Replicated", humanize.IBytes(st.ReplicatedSize), ""})
+		tgtDetails[arn] = tgtDetail
+		arns = append(arns, arn)
+	}
+	sort.Strings(arns)
+	if len(arns) > 0 {
+		rows += "\n"
+		r := console.Colorize("THeaders", newPrettyTable(" | ",
+			Field{"Target statuses", 95},
+		).buildRow("Remote Target Statuses: "))
+		rows += r
+		rows += "\n"
+	}
+	for i, arn := range arns {
+		if i > 0 {
+			rows += "\n"
+		}
+
+		th = arntheme[0]
+		r := console.Colorize(th, newPrettyTable(" | ",
+			Field{"ARN", 120},
+		).buildRow(fmt.Sprintf("%s %s", coloredDot, arn)))
+		rows += r
+		rows += "\n"
+		rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
+			Field{"Status", 21},
+			Field{"Size", maxLen},
+			Field{"Count", maxLen},
+		).buildRow("Replication Status   ", "Size (Bytes)", "Count"))
+		rows += "\n"
+
+		tgtDetail, ok := tgtDetails[arn]
+		if ok {
+			for i, row := range tgtDetail {
+				idx := i % 2
+				th = theme[idx]
+				r := console.Colorize(th, newPrettyTable(" | ",
+					Field{"Status", 21},
+					Field{"Size", maxLen},
+					Field{"Count", maxLen},
+				).buildRow("   "+row[0], row[1], row[2])+"\n")
+				rows += r
+			}
+		}
+	}
 	return console.Colorize("replicateStatusMessage", rows)
 }
 
@@ -185,7 +186,6 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 
 	console.SetColor("Replica", color.New(color.FgCyan))
 	console.SetColor("Failed", color.New(color.Bold, color.FgRed))
-	console.SetColor("Pending", color.New(color.FgWhite))
 
 	checkReplicateStatusSyntax(cliCtx)
 
