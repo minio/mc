@@ -98,18 +98,26 @@ func printCallhomeSetting(alias string, s string) {
 
 		val := "off"
 
-		kvs := getSubSysKeyFromMinIOConfig(client, "logger_webhook:subnet")
-		ep, found := kvs.Lookup("endpoint")
+		key := "logger_webhook:subnet"
+		kvs, e := getSubSysKeyFromMinIOConfig(client, key)
+		if e != nil {
+			// Ignore error saying the subnet webhook is not configured
+			if e.Error() != fmt.Sprintf("sub-system target '%s' doesn't exist", key) {
+				fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+			}
+		} else {
+			ep, found := kvs.Lookup("endpoint")
 
-		if found && len(ep) > 0 {
-			// subnet webhook is configured. check if it is enabled
-			enable, found := kvs.Lookup("enable")
+			if found && len(ep) > 0 {
+				// subnet webhook is configured. check if it is enabled
+				enable, found := kvs.Lookup("enable")
 
-			if found {
-				val = enable
-			} else {
-				// if the 'enable' key is not found, it means that the webhook is enabled
-				val = "on"
+				if found {
+					val = enable
+				} else {
+					// if the 'enable' key is not found, it means that the webhook is enabled
+					val = "on"
+				}
 			}
 		}
 
