@@ -352,6 +352,14 @@ func (v bucketInfoMessage) String() string {
 	}()
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Type", fType))
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s:\n", "Metadata"))
+
+	fmt.Fprintf(&b, prettyPrintBucketMetadata(info))
+	return b.String()
+}
+
+// Pretty print bucket configuration - used by stat and admin bucket info as well
+func prettyPrintBucketMetadata(info BucketInfo) string {
+	var b strings.Builder
 	placeHolder := ""
 	if info.Encryption.Algorithm != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
@@ -370,7 +378,7 @@ func (v bucketInfoMessage) String() string {
 	fmt.Fprintln(&b)
 
 	if info.Locking.Mode != "" {
-		fmt.Fprintf(&b, "%2s%s", placeHolder, "LockConfiguration: ")
+		fmt.Fprintf(&b, "%2s%s\n", placeHolder, "LockConfiguration: ")
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "RetentionMode: ")
 		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Mode))
 		fmt.Fprintln(&b)
