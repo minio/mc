@@ -343,6 +343,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/profile/start": aliasCompleter,
 	"/admin/profile/stop":  aliasCompleter,
 
+	"/admin/idp/set":  aliasCompleter,
+	"/admin/idp/info": aliasCompleter,
+	"/admin/idp/ls":   aliasCompleter,
+	"/admin/idp/rm":   aliasCompleter,
+
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
 	"/admin/policy/unset":  aliasCompleter,
