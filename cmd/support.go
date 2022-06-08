@@ -20,10 +20,14 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
+	"github.com/minio/pkg/console"
 )
+
+const featureToggleMessageTag = "FeatureToggleMessage"
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
@@ -62,8 +66,8 @@ func checkToggleCmdSyntax(ctx *cli.Context, cmdName string) (string, string) {
 		cli.ShowCommandHelpAndExit(ctx, cmdName, 1) // last argument is exit code
 	}
 
-	aliasedURL := ctx.Args().Get(0)
-	arg := ctx.Args().Get(1)
+	arg := ctx.Args().Get(0)
+	aliasedURL := ctx.Args().Get(1)
 	fatalIf(probe.NewError(validateToggleCmdArg(arg)), "Invalid arguments.")
 
 	alias, _ := url2Alias(aliasedURL)
@@ -71,13 +75,24 @@ func checkToggleCmdSyntax(ctx *cli.Context, cmdName string) (string, string) {
 	return alias, arg
 }
 
-func printToggleFeatureStatus(aliasedURL string, subSys string, target string) {
-	enabled := isFeatureEnabled(aliasedURL, subSys, target)
+func setToggleMessageColor() {
+	console.SetColor(featureToggleMessageTag, color.New(color.FgGreen, color.Bold))
+}
+
+func featureStatusStr(enabled bool) string {
 	if enabled {
-		fmt.Println("enabled")
-	} else {
-		fmt.Println("disabled")
+		return "enabled"
 	}
+	return "disabled"
+}
+
+func validateClusterRegistered(alias string) string {
+	apiKey := getSubnetAPIKeyFromConfig(alias)
+	if len(apiKey) == 0 {
+		e := fmt.Errorf("Please register the cluster first by running 'mc support register %s'", alias)
+		fatalIf(probe.NewError(e), "Cluster not registered.")
+	}
+	return apiKey
 }
 
 // isFeatureEnabled - checks if a feature is enabled in MinIO config

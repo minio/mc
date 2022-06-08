@@ -21,7 +21,9 @@ import (
 	"fmt"
 
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var logsFlags = append(globalFlags, cli.BoolFlag{
@@ -41,7 +43,7 @@ var supportLogsCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS enable|disable|status
+  {{.HelpName}} enable|disable|status ALIAS
 
 OPTIONS:
   enable - Enable pushing MinIO logs to SUBNET in real-time
@@ -53,30 +55,49 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Enable logs for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} play enable
+     {{.Prompt}} {{.HelpName}} enable play
 
   2. Disable logs for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} play disable
+     {{.Prompt}} {{.HelpName}} disable play
 
   3. Check logs status for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} play status
+     {{.Prompt}} {{.HelpName}} status play
 `,
 }
 
-func mainLogs(ctx *cli.Context) error {
-	checkToggleCmdSyntax(ctx, "logs")
+type supportLogsMessage struct {
+	Status string `json:"status"`
+	Logs   string `json:"logs"`
+	MsgPfx string `json:"-"`
+}
 
-	aliasedURL := ctx.Args().Get(0)
-	arg := ctx.Args().Get(1)
-	fatalIf(probe.NewError(validateToggleCmdArg(arg)), "Invalid arguments.")
+// String colorized service status message.
+func (s supportLogsMessage) String() string {
+	return console.Colorize(featureToggleMessageTag, s.MsgPfx+s.Logs)
+}
+
+// JSON jsonified service status message.
+func (s supportLogsMessage) JSON() string {
+	s.Status = "success"
+	jsonBytes, e := json.MarshalIndent(s, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonBytes)
+}
+
+func mainLogs(ctx *cli.Context) error {
+	setToggleMessageColor()
+	alias, arg := checkToggleCmdSyntax(ctx, "logs")
 
 	if arg == "status" {
-		printToggleFeatureStatus(aliasedURL, "logger_webhook", "logger_webhook:subnet")
+		enabled := isFeatureEnabled(alias, "logger_webhook", "logger_webhook:subnet")
+		printMsg(supportLogsMessage{
+			Logs: featureStatusStr(enabled),
+		})
 		return nil
 	}
 
-	enable := arg == "enable"
-	configureSubnetWebhook(aliasedURL, enable)
+	configureSubnetWebhook(alias, arg == "enable")
 
 	return nil
 }
@@ -86,11 +107,7 @@ func configureSubnetWebhook(alias string, enable bool) {
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	apiKey := getSubnetAPIKeyFromConfig(alias)
-	if len(apiKey) == 0 {
-		e := fmt.Errorf("Please register the cluster first by running 'mc support register %s'", alias)
-		fatalIf(probe.NewError(e), "Cluster not registered.")
-	}
+	apiKey := validateClusterRegistered(alias)
 
 	enableStr := "off"
 	if enable {
@@ -101,12 +118,11 @@ func configureSubnetWebhook(alias string, enable bool) {
 		subnetLogWebhookURL(), apiKey, enableStr)
 
 	// Call set config API
-	restart, e := client.SetConfigKV(globalContext, input)
+	_, e := client.SetConfigKV(globalContext, input)
 	fatalIf(probe.NewError(e), "Unable to set '%s' to server", input)
 
-	// Print set config result
-	printMsg(configSetMessage{
-		targetAlias: alias,
-		restart:     restart,
+	printMsg(supportLogsMessage{
+		Logs:   featureStatusStr(enable),
+		MsgPfx: "Logging to support is now ",
 	})
 }
