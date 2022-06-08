@@ -23,6 +23,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -109,6 +110,7 @@ type SubnetMFAReq struct {
 }
 
 func mainSupportRegister(ctx *cli.Context) error {
+	console.SetColor("RegisterSuccessMessage", color.New(color.FgGreen, color.Bold))
 	checkSupportRegisterSyntax(ctx)
 
 	// Get the alias parameter from cli
@@ -138,12 +140,26 @@ func mainSupportRegister(ctx *cli.Context) error {
 
 	regInfo := getClusterRegInfo(admInfo, clusterName)
 
+	alreadyRegistered := false
+	apiKey, lic, e := getSubnetCreds(alias)
+	fatalIf(probe.NewError(e), "Error in fetching subnet credentials")
+	if len(apiKey) > 0 || len(lic) > 0 {
+		alreadyRegistered = true
+	}
+
 	if offline {
 		registerOffline(regInfo, alias)
 	} else {
 		registerOnline(regInfo, alias, clusterName)
 	}
-	console.Infoln(fmt.Sprintln("Cluster", clusterName, "successfully registered on SUBNET."))
+
+	action := "registered"
+	if alreadyRegistered {
+		action = "updated"
+	}
+
+	msg := console.Colorize("RegisterSuccessMessage", fmt.Sprintf("%s %s successfully.", clusterName, action))
+	fmt.Println(msg)
 	return nil
 }
 
