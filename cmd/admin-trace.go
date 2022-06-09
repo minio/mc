@@ -53,7 +53,6 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "response-threshold",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
-
 	cli.IntSliceFlag{
 		Name:  "status-code",
 		Usage: "trace only matching status code",
