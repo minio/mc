@@ -64,10 +64,24 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
+   1. Display current in-progress all S3 API calls.
+      {{.Prompt}} {{.HelpName}} myminio/
+
+   2. Display current in-progress all 's3.PutObject' API calls.
+      {{.Prompt}} {{.HelpName}} --name s3.PutObject myminio/
 `,
 }
 
+// checkAdminTopAPISyntax - validate all the passed arguments
+func checkAdminTopAPISyntax(ctx *cli.Context) {
+	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
+		cli.ShowCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
+	}
+}
+
 func mainAdminTopAPI(ctx *cli.Context) error {
+	checkAdminTopAPISyntax(ctx)
+
 	aliasedURL := ctx.Args().Get(0)
 
 	// Create a new MinIO Admin Client
