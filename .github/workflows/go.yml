@@ -5,6 +5,12 @@ on:
     branches:
     - master
 
+# This ensures that previous jobs for the PR are canceled when the PR is
+# updated.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Test on Go ${{ matrix.go-version }} and ${{ matrix.os }}
@@ -13,7 +19,7 @@ jobs:
       GO111MODULE: on
     strategy:
       matrix:
-        go-version: [1.17.x]
+        go-version: [1.17.x, 1.18.x]
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Set up Go ${{ matrix.go-version }} on ${{ matrix.os }}
