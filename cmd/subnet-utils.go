@@ -434,16 +434,9 @@ func getSubnetAccID(headers map[string]string) (string, error) {
 
 // registerClusterOnSubnet - Registers the given cluster on SUBNET
 func registerClusterOnSubnet(alias string, clusterRegInfo ClusterRegistrationInfo) (string, error) {
-	e := setSubnetProxyFromConfig(alias)
+	apiKey, lic, e := getSubnetCreds(alias)
 	if e != nil {
 		return "", e
-	}
-
-	apiKey := getSubnetAPIKeyFromConfig(alias)
-
-	lic := ""
-	if len(apiKey) == 0 {
-		lic = getSubnetLicenseFromConfig(alias)
 	}
 
 	regURL, headers, e := subnetURLWithAuth(subnetRegisterURL(), apiKey, lic)
@@ -458,6 +451,22 @@ func registerClusterOnSubnet(alias string, clusterRegInfo ClusterRegistrationInf
 
 	reqPayload := ClusterRegistrationReq{Token: regToken}
 	return subnetPostReq(regURL, reqPayload, headers)
+}
+
+func getSubnetCreds(alias string) (string, string, error) {
+	e := setSubnetProxyFromConfig(alias)
+	if e != nil {
+		return "", "", e
+	}
+
+	apiKey := getSubnetAPIKeyFromConfig(alias)
+
+	lic := ""
+	if len(apiKey) == 0 {
+		lic = getSubnetLicenseFromConfig(alias)
+	}
+
+	return apiKey, lic, nil
 }
 
 // extractAndSaveAPIKey - extract api key from response and set it in minio config
