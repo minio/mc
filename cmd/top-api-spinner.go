@@ -68,6 +68,7 @@ type traceUI struct {
 	quitting    bool
 	startTime   time.Time
 	result      topAPIResult
+	lastResult  topAPIResult
 	apiStatsMap map[string]*topAPIStats
 }
 
@@ -82,7 +83,6 @@ func initTraceUI() *traceUI {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	return &traceUI{
 		spinner:     s,
-		startTime:   time.Now(),
 		apiStatsMap: make(map[string]*topAPIStats),
 	}
 }
@@ -103,6 +103,9 @@ func (m *traceUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case topAPIResult:
 		m.result = msg
+		if m.result.apiCallInfo.Trace.FuncName != "" {
+			m.lastResult = m.result
+		}
 		if msg.final {
 			m.quitting = true
 			return m, tea.Quit
@@ -137,6 +140,9 @@ func (m *traceUI) View() string {
 	table.SetNoWhiteSpace(true)
 
 	res := m.result.apiCallInfo
+	if m.startTime.IsZero() && !res.Trace.Time.IsZero() {
+		m.startTime = res.Trace.Time
+	}
 	if res.Trace.FuncName != "" && res.Trace.FuncName != "errorResponseHandler" {
 		traceSt, ok := m.apiStatsMap[res.Trace.FuncName]
 		if !ok {
@@ -170,21 +176,20 @@ func (m *traceUI) View() string {
 		s.WriteString(fmt.Sprintf("\nTopAPI: %s", m.spinner.View()))
 	} else {
 		var totalTX, totalRX, totalCalls uint64
-		currentTime := time.Now()
-		duration := currentTime.Sub(m.startTime).Seconds()
-		if duration == 0 {
-			duration = 1 // duration is always 1-sec atleast
+		lastReqTime := m.lastResult.apiCallInfo.Trace.Time
+		if m.lastResult.apiCallInfo.Trace.Time.IsZero() {
+			lastReqTime = time.Now()
 		}
 		for _, stats := range m.apiStatsMap {
 			totalRX += stats.loadAPIBytesRX()
 			totalTX += stats.loadAPIBytesTX()
 			totalCalls += stats.loadAPICall()
 		}
-		msg := fmt.Sprintf("\n========\n%d IOP/s, RX %s/s, TX %s/s - in the last %s",
-			totalCalls/uint64(duration),
-			humanize.IBytes(totalRX/uint64(duration)),
-			humanize.IBytes(totalTX/uint64(duration)),
-			humanize.RelTime(m.startTime, currentTime, "", ""),
+		msg := fmt.Sprintf("\n========\nTotal: %d Calls, %s RX, %s TX - in %.02fs",
+			totalCalls,
+			humanize.IBytes(totalRX),
+			humanize.IBytes(totalTX),
+			lastReqTime.Sub(m.startTime).Seconds(),
 		)
 		s.WriteString(msg)
 		s.WriteString("\n")
