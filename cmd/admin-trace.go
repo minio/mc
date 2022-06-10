@@ -53,7 +53,6 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "response-threshold",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
-
 	cli.IntSliceFlag{
 		Name:  "status-code",
 		Usage: "trace only matching status code",
@@ -69,6 +68,10 @@ var adminTraceFlags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "path",
 		Usage: "trace only matching path",
+	},
+	cli.StringSliceFlag{
+		Name:  "node",
+		Usage: "trace only matching servers",
 	},
 	cli.BoolFlag{
 		Name:  "errors, e",
@@ -129,21 +132,19 @@ func printTrace(verbose bool, traceInfo madmin.ServiceTraceInfo) {
 	}
 }
 
-func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
-	statusCodes := ctx.IntSlice("status-code")
-	methods := ctx.StringSlice("method")
-	funcNames := ctx.StringSlice("funcname")
-	apiPaths := ctx.StringSlice("path")
+type matchOpts struct {
+	statusCodes []int
+	methods     []string
+	funcNames   []string
+	apiPaths    []string
+	nodes       []string
+}
 
-	if len(statusCodes) == 0 && len(methods) == 0 && len(funcNames) == 0 && len(apiPaths) == 0 {
-		// no specific filtering found trace all the requests
-		return true
-	}
-
+func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 	// Filter request path if passed by the user
-	if len(apiPaths) > 0 {
+	if len(opts.apiPaths) > 0 {
 		matched := false
-		for _, apiPath := range apiPaths {
+		for _, apiPath := range opts.apiPaths {
 			if pathMatch(path.Join("/", apiPath), traceInfo.Trace.ReqInfo.Path) {
 				matched = true
 				break
@@ -155,9 +156,9 @@ func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
 	}
 
 	// Filter response status codes if passed by the user
-	if len(statusCodes) > 0 {
+	if len(opts.statusCodes) > 0 {
 		matched := false
-		for _, code := range statusCodes {
+		for _, code := range opts.statusCodes {
 			if traceInfo.Trace.RespInfo.StatusCode == code {
 				matched = true
 				break
@@ -170,9 +171,9 @@ func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
 	}
 
 	// Filter request method if passed by the user
-	if len(methods) > 0 {
+	if len(opts.methods) > 0 {
 		matched := false
-		for _, method := range methods {
+		for _, method := range opts.methods {
 			if traceInfo.Trace.ReqInfo.Method == method {
 				matched = true
 				break
@@ -184,11 +185,25 @@ func matchTrace(ctx *cli.Context, traceInfo madmin.ServiceTraceInfo) bool {
 
 	}
 
-	if len(funcNames) > 0 {
+	if len(opts.funcNames) > 0 {
 		matched := false
 		// Filter request function handler names if passed by the user.
-		for _, funcName := range funcNames {
+		for _, funcName := range opts.funcNames {
 			if nameMatch(funcName, traceInfo.Trace.FuncName) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+
+	if len(opts.nodes) > 0 {
+		matched := false
+		// Filter request by node if passed by the user.
+		for _, node := range opts.nodes {
+			if nameMatch(node, traceInfo.Trace.NodeName) {
 				matched = true
 				break
 			}
@@ -286,13 +301,21 @@ func mainAdminTrace(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx)
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
+	mopts := matchOpts{
+		statusCodes: ctx.IntSlice("status-code"),
+		methods:     ctx.StringSlice("method"),
+		funcNames:   ctx.StringSlice("funcname"),
+		apiPaths:    ctx.StringSlice("path"),
+		nodes:       ctx.StringSlice("node"),
+	}
+
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
-		if matchTrace(ctx, traceInfo) {
+		if matchTrace(mopts, traceInfo) {
 			printTrace(verbose, traceInfo)
 		}
 	}
