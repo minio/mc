@@ -44,6 +44,7 @@ type speedTestResult struct {
 	final   bool
 	result  *madmin.SpeedTestResult
 	nresult *madmin.NetperfResult
+	dresult []madmin.DriveSpeedTestResult
 }
 
 func initSpeedTestUI() *speedTestUI {
@@ -105,6 +106,14 @@ func (m *speedTestUI) View() string {
 
 	res := m.result.result
 	nres := m.result.nresult
+	dres := m.result.dresult
+
+	trailerIfGreaterThan := func(in string, max int) string {
+		if len(in) < max {
+			return in
+		}
+		return in[:max] + "..."
+	}
 
 	if res != nil {
 		table.SetHeader([]string{"", "Throughput", "IOPS"})
@@ -148,21 +157,30 @@ func (m *speedTestUI) View() string {
 		table.SetHeader([]string{"Node", "RX", "TX", ""})
 		data := make([][]string, 0, len(nres.NodeResults))
 
-		for _, nodeResult := range nres.NodeResults {
-			if nodeResult.Error != "" {
-				data = append(data, []string{
-					nodeResult.Endpoint,
-					"✗",
-					"✗",
-					"Err: " + nodeResult.Error,
-				})
-			} else {
-				data = append(data, []string{
-					nodeResult.Endpoint,
-					humanize.IBytes(uint64(nodeResult.RX)),
-					humanize.IBytes(uint64(nodeResult.TX)),
-					"✔",
-				})
+		if len(nres.NodeResults) == 0 {
+			data = append(data, []string{
+				"...",
+				whiteStyle.Render("-- MiB/s"),
+				whiteStyle.Render("-- MiB/s"),
+				"",
+			})
+		} else {
+			for _, nodeResult := range nres.NodeResults {
+				if nodeResult.Error != "" {
+					data = append(data, []string{
+						trailerIfGreaterThan(nodeResult.Endpoint, 64),
+						"✗",
+						"✗",
+						"Err: " + nodeResult.Error,
+					})
+				} else {
+					data = append(data, []string{
+						trailerIfGreaterThan(nodeResult.Endpoint, 64),
+						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX))) + "/s",
+						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX))) + "/s",
+						"",
+					})
+				}
 			}
 		}
 
@@ -176,12 +194,55 @@ func (m *speedTestUI) View() string {
 		if m.quitting {
 			s.WriteString("\nNetperf: ✔\n")
 		}
+	} else if dres != nil {
+		table.SetHeader([]string{"Node", "Path", "Read", "Write", ""})
+		data := make([][]string, 0, len(dres))
+
+		if len(dres) == 0 {
+			data = append(data, []string{
+				"...",
+				"...",
+				whiteStyle.Render("-- KiB/s"),
+				whiteStyle.Render("-- KiB/s"),
+				"",
+			})
+		} else {
+			for _, driveResult := range dres {
+				for _, result := range driveResult.DrivePerf {
+					if result.Error != "" {
+						data = append(data, []string{
+							trailerIfGreaterThan(driveResult.Endpoint, 64),
+							result.Path,
+							"✗",
+							"✗",
+							"Err: " + result.Error,
+						})
+					} else {
+						data = append(data, []string{
+							trailerIfGreaterThan(driveResult.Endpoint, 64),
+							result.Path,
+							whiteStyle.Render(humanize.IBytes(result.ReadThroughput)) + "/s",
+							whiteStyle.Render(humanize.IBytes(result.WriteThroughput)) + "/s",
+							"",
+						})
+					}
+				}
+			}
+		}
+		table.AppendBulk(data)
+		table.Render()
+
+		if m.quitting {
+			s.WriteString("\nDriveperf: ✔\n")
+		}
 	}
 	if !m.quitting {
 		if nres != nil {
 			s.WriteString(fmt.Sprintf("\nNetperf: %s", m.spinner.View()))
 		} else if res != nil {
-			s.WriteString(fmt.Sprintf("\nSpeedtest: %s", m.spinner.View()))
+			s.WriteString(fmt.Sprintf("\nObjectperf: %s", m.spinner.View()))
+		} else if dres != nil {
+			s.WriteString(fmt.Sprintf("\nDriveperf: %s", m.spinner.View()))
 		}
 	}
 	return s.String()
