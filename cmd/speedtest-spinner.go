@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -40,8 +41,9 @@ type speedTestUI struct {
 }
 
 type speedTestResult struct {
-	final  bool
-	result madmin.SpeedTestResult
+	final   bool
+	result  *madmin.SpeedTestResult
+	nresult *madmin.NetperfResult
 }
 
 func initSpeedTestUI() *speedTestUI {
@@ -100,45 +102,86 @@ func (m *speedTestUI) View() string {
 	table.SetBorder(false)
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
+
 	res := m.result.result
+	nres := m.result.nresult
 
-	table.SetHeader([]string{"", "Throughput", "IOPS"})
-	data := make([][]string, 2)
+	if res != nil {
+		table.SetHeader([]string{"", "Throughput", "IOPS"})
+		data := make([][]string, 2)
 
-	if res.Version == "" {
-		data[0] = []string{
-			"PUT",
-			whiteStyle.Render("-- KiB/sec"),
-			whiteStyle.Render("-- objs/sec"),
+		if res.Version == "" {
+			data[0] = []string{
+				"PUT",
+				whiteStyle.Render("-- KiB/sec"),
+				whiteStyle.Render("-- objs/sec"),
+			}
+			data[1] = []string{
+				"GET",
+				whiteStyle.Render("-- KiB/sec"),
+				whiteStyle.Render("-- objs/sec"),
+			}
+		} else {
+			data[0] = []string{
+				"PUT",
+				whiteStyle.Render(humanize.IBytes(res.PUTStats.ThroughputPerSec) + "/s"),
+				whiteStyle.Render(humanize.Comma(int64(res.PUTStats.ObjectsPerSec)) + " objs/s"),
+			}
+			data[1] = []string{
+				"GET",
+				whiteStyle.Render(humanize.IBytes(res.GETStats.ThroughputPerSec) + "/s"),
+				whiteStyle.Render(humanize.Comma(int64(res.GETStats.ObjectsPerSec)) + " objs/s"),
+			}
 		}
-		data[1] = []string{
-			"GET",
-			whiteStyle.Render("-- KiB/sec"),
-			whiteStyle.Render("-- objs/sec"),
+		table.AppendBulk(data)
+		table.Render()
+
+		if m.quitting {
+			s.WriteString(fmt.Sprintf("\nSpeedtest: %s", m.result.String()))
+			if vstr := m.result.StringVerbose(); vstr != "" {
+				s.WriteString(vstr)
+			} else {
+				s.WriteString("\n")
+			}
 		}
-	} else {
-		data[0] = []string{
-			"PUT",
-			whiteStyle.Render(humanize.IBytes(res.PUTStats.ThroughputPerSec) + "/s"),
-			whiteStyle.Render(humanize.Comma(int64(res.PUTStats.ObjectsPerSec)) + " objs/s"),
+	} else if nres != nil {
+		table.SetHeader([]string{"Node", "RX", "TX", ""})
+		data := make([][]string, 0, len(nres.NodeResults))
+
+		for _, nodeResult := range nres.NodeResults {
+			if nodeResult.Error != "" {
+				data = append(data, []string{
+					nodeResult.Endpoint,
+					"✗",
+					"✗",
+					"Err: " + nodeResult.Error,
+				})
+			} else {
+				data = append(data, []string{
+					nodeResult.Endpoint,
+					humanize.IBytes(uint64(nodeResult.RX)),
+					humanize.IBytes(uint64(nodeResult.TX)),
+					"✔",
+				})
+			}
 		}
-		data[1] = []string{
-			"GET",
-			whiteStyle.Render(humanize.IBytes(res.GETStats.ThroughputPerSec) + "/s"),
-			whiteStyle.Render(humanize.Comma(int64(res.GETStats.ObjectsPerSec)) + " objs/s"),
+
+		sort.Slice(data, func(i, j int) bool {
+			return data[i][0] < data[j][0]
+		})
+
+		table.AppendBulk(data)
+		table.Render()
+
+		if m.quitting {
+			s.WriteString("\nNetperf: ✔\n")
 		}
 	}
-	table.AppendBulk(data)
-	table.Render()
-
 	if !m.quitting {
-		s.WriteString(fmt.Sprintf("\nSpeedtest: %s", m.spinner.View()))
-	} else {
-		s.WriteString(fmt.Sprintf("\nSpeedtest: %s", m.result.String()))
-		if vstr := m.result.StringVerbose(); vstr != "" {
-			s.WriteString(vstr)
-		} else {
-			s.WriteString("\n")
+		if nres != nil {
+			s.WriteString(fmt.Sprintf("\nNetperf: %s", m.spinner.View()))
+		} else if res != nil {
+			s.WriteString(fmt.Sprintf("\nSpeedtest: %s", m.spinner.View()))
 		}
 	}
 	return s.String()
