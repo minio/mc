@@ -41,7 +41,6 @@ require (
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.4.0
-	maze.io/x/duration v0.0.0-20160924141736-faac084b6075
 )
 
 require (

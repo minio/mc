@@ -38,7 +38,6 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"maze.io/x/duration"
 
 	jwtgo "github.com/golang-jwt/jwt/v4"
 	"github.com/minio/mc/pkg/probe"
@@ -177,7 +176,7 @@ func isOlder(ti time.Time, olderRef string) bool {
 		return false
 	}
 	objectAge := time.Since(ti)
-	olderThan, e := duration.ParseDuration(olderRef)
+	olderThan, e := ParseDuration(olderRef)
 	fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`.")
 	return objectAge < time.Duration(olderThan)
 }
@@ -189,7 +188,7 @@ func isNewer(ti time.Time, newerRef string) bool {
 	}
 
 	objectAge := time.Since(ti)
-	newerThan, e := duration.ParseDuration(newerRef)
+	newerThan, e := ParseDuration(newerRef)
 	fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`.")
 	return objectAge >= time.Duration(newerThan)
 }

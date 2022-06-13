@@ -154,15 +154,15 @@ func (m *traceUI) View() string {
 		m.apiStatsMap[res.Trace.FuncName] = traceSt
 	}
 
-	table.SetHeader([]string{"API", "RX", "TX", "N"})
+	table.SetHeader([]string{"API", "CALLS", "RX", "TX"})
 	data := make([][]string, 0, len(m.apiStatsMap))
 
 	for k, stats := range m.apiStatsMap {
 		data = append(data, []string{
 			k,
+			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesRX())),
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesTX())),
-			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
 		})
 	}
 	sort.Slice(data, func(i, j int) bool {
@@ -185,7 +185,7 @@ func (m *traceUI) View() string {
 			totalTX += stats.loadAPIBytesTX()
 			totalCalls += stats.loadAPICall()
 		}
-		msg := fmt.Sprintf("\n========\nTotal: %d Calls, %s RX, %s TX - in %.02fs",
+		msg := fmt.Sprintf("\n========\nTotal: %d CALLS, %s RX, %s TX - in %.02fs",
 			totalCalls,
 			humanize.IBytes(totalRX),
 			humanize.IBytes(totalTX),
