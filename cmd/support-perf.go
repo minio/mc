@@ -105,7 +105,6 @@ EXAMPLES:
 
   5. Run network throughput test:
      {{.Prompt}} {{.HelpName}} net myminio
-
 `,
 }
 
@@ -231,7 +230,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 				continue
 			}
 			printMsg(speedTestResult{
-				result: result,
+				result: &result,
 			})
 		}
 		return nil
@@ -250,15 +249,12 @@ func mainSupportPerf(ctx *cli.Context) error {
 	go func() {
 		var result madmin.SpeedTestResult
 		for result = range resultCh {
-			if result.Version == "" {
-				continue
-			}
 			p.Send(speedTestResult{
-				result: result,
+				result: &result,
 			})
 		}
 		p.Send(speedTestResult{
-			result: result,
+			result: &result,
 			final:  true,
 		})
 	}()
