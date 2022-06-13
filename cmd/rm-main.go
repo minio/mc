@@ -536,10 +536,14 @@ func listAndRemove(url string, opts removeOpts) error {
 					if result.Err != nil {
 						errorIf(result.Err.Trace(path),
 							"Failed to remove `"+path+"`.")
-						switch result.Err.ToGoError().(type) {
+						switch e := result.Err.ToGoError().(type) {
 						case PathInsufficientPermission:
 							// Ignore Permission error.
 							continue
+						case minio.ErrorResponse:
+							if strings.Contains(e.Message, "Object is WORM protected and cannot be overwritten") {
+								continue
+							}
 						}
 						close(contentCh)
 						return exitStatus(globalErrorExitStatus)

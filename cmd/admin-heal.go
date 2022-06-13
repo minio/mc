@@ -136,6 +136,7 @@ type setIndex struct {
 
 type healingStatus struct {
 	started      time.Time
+	updated      time.Time
 	totalObjects uint64
 	totalHealed  uint64
 }
@@ -143,9 +144,9 @@ type healingStatus struct {
 // Estimation of when the healing will finish
 func (h healingStatus) ETA() time.Time {
 	if !h.started.IsZero() && h.totalObjects > h.totalHealed {
-		objScanSpeed := float64(time.Now().UTC().Sub(h.started)) / float64(h.totalHealed)
+		objScanSpeed := float64(h.updated.Sub(h.started)) / float64(h.totalHealed)
 		remainingDuration := float64(h.totalObjects-h.totalHealed) * objScanSpeed
-		return time.Now().UTC().Add(time.Duration(remainingDuration))
+		return h.updated.Add(time.Duration(remainingDuration))
 	}
 	return time.Time{}
 }
@@ -226,6 +227,7 @@ func generateSetsStatus(disks []madmin.Disk) map[setIndex]setInfo {
 		}
 		if d.Healing && d.HealInfo != nil {
 			setSt.healingStatus.started = d.HealInfo.Started
+			setSt.healingStatus.updated = d.HealInfo.LastUpdate
 			setSt.healingStatus.totalObjects = d.HealInfo.ObjectsTotalCount
 			setSt.healingStatus.totalHealed = d.HealInfo.ObjectsHealed
 		}

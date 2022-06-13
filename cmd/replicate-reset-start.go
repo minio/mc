@@ -29,7 +29,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/pkg/console"
-	"maze.io/x/duration"
 )
 
 var replicateResyncStartFlags = []cli.Flag{
@@ -119,7 +118,7 @@ func mainReplicateResyncStart(cliCtx *cli.Context) error {
 	if cliCtx.IsSet("older-than") {
 		olderThanStr = cliCtx.String("older-than")
 		if olderThanStr != "" {
-			days, e := duration.ParseDuration(olderThanStr)
+			days, e := ParseDuration(olderThanStr)
 			if e != nil || !strings.ContainsAny(olderThanStr, "dwy") {
 				fatalIf(probe.NewError(e), "Unable to parse older-than=`"+olderThanStr+"`.")
 			}

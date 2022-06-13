@@ -19,12 +19,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"os"
 	"time"
 
-	"github.com/briandowns/spinner"
-	humanize "github.com/dustin/go-humanize"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
@@ -34,15 +32,8 @@ import (
 type netperfResult madmin.NetperfResult
 
 func (m netperfResult) String() (msg string) {
-	for _, r := range m.NodeResults {
-		msg += fmt.Sprintf("%s TX: %s/s RX: %s/s", r.Endpoint, humanize.IBytes(uint64(r.TX)), humanize.IBytes(uint64(r.RX)))
-		if r.Error != "" {
-			msg += " Error: " + r.Error
-		}
-		msg += "\n"
-	}
-	msg = strings.TrimSuffix(msg, "\n")
-	return msg
+	// string version is handled by banner.
+	return ""
 }
 
 func (m netperfResult) JSON() string {
@@ -71,15 +62,54 @@ func mainAdminSpeedtestNetperf(ctx *cli.Context, aliasedURL string) error {
 		return nil
 	}
 
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	resultCh := make(chan madmin.NetperfResult)
+	go func() {
+		result, err := client.Netperf(ctxt, duration)
+		fatalIf(probe.NewError(err), "Unable to capture network perf results")
 
-	if !globalJSON {
-		s.Start()
+		resultCh <- result
+		close(resultCh)
+	}()
+
+	if globalJSON {
+		for {
+			select {
+			case result := <-resultCh:
+				printMsg(netperfResult(result))
+				return nil
+			}
+		}
 	}
 
-	result, err := client.Netperf(ctxt, duration)
-	s.Stop()
-	fatalIf(probe.NewError(err), "Failed to execute netperf")
-	printMsg(netperfResult(result))
+	done := make(chan struct{})
+
+	p := tea.NewProgram(initSpeedTestUI())
+	go func() {
+		if e := p.Start(); e != nil {
+			os.Exit(1)
+		}
+		close(done)
+	}()
+
+	go func() {
+		for {
+			select {
+			case result := <-resultCh:
+				p.Send(speedTestResult{
+					nresult: &result,
+					final:   true,
+				})
+				return
+			default:
+				p.Send(speedTestResult{
+					nresult: &madmin.NetperfResult{},
+				})
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	}()
+
+	<-done
+
 	return nil
 }
