@@ -1,0 +1,480 @@
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+# GNU Make 4.1
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2014 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+# Make data base, printed on Wed Jul 13 16:57:11 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# environment
+DESKTOP_SESSION = ubuntu
+# default
+.SHELLFLAGS := -c
+# environment
+XDG_SESSION_TYPE = x11
+# environment
+VSCODE_LOG_NATIVE = false
+# environment
+NVM_INC = /home/kp/.nvm/versions/node/v14.5.0/include/node
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# environment
+IM_CONFIG_PHASE = 2
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# environment
+XAUTHORITY = /home/kp/.Xauthority
+# environment
+GDMSESSION = ubuntu
+# environment
+XMODIFIERS = @im=ibus
+# makefile
+CURDIR := /home/kp/code/src/github.com/minio/mc
+# makefile
+SHELL = /bin/sh
+# environment
+GDM_LANG = en_US
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+_ = /usr/share/code/code
+# makefile (from 'Makefile', line 8)
+BUILD_LDFLAGS := '-s -w -X github.com/minio/mc/cmd.Version=2022-07-11T16:16:12Z -X github.com/minio/mc/cmd.CopyrightYear=2022 -X github.com/minio/mc/cmd.ReleaseTag=DEVELOPMENT.2022-07-11T16-16-12Z -X github.com/minio/mc/cmd.CommitID=add7b7b8814c7e7aeeedcc829724cae31d34ee7a -X github.com/minio/mc/cmd.ShortCommitID=add7b7b8814c'
+# environment
+XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
+# makefile (from 'Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# environment
+JAVA_HOME = /usr/lib/jvm/jdk1.8.0_221
+# automatic
+@F = $(notdir $@)
+# environment
+GIO_LAUNCHED_DESKTOP_FILE = /usr/share/applications/code.desktop
+# 'override' directive
+GNUMAKEFLAGS := 
+# environment
+MANDATORY_PATH = /usr/share/gconf/ubuntu.mandatory.path
+# environment
+XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+AUTOJUMP_SOURCED = 1
+# environment
+DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
+# makefile (from 'Makefile', line 10)
+VERSION = $(shell git describe --tags)
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+CLUTTER_IM_MODULE = xim
+# environment
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-83485c13-728b-468b-91ff-6404eb0cc004.sock
+# environment
+VSCODE_CWD = /home/kp
+# environment
+GOPROXY = https://proxy.golang.org,direct
+# environment
+XDG_SESSION_PATH = /org/freedesktop/DisplayManager/Session0
+# default
+MAKE_HOST := x86_64-pc-linux-gnu
+# environment
+PATH = /home/kp/code/spark-3.1.2-bin-hadoop3.2/bin:/home/kp/.krew/bin:/home/kp/.cargo/bin:/usr/lib/jvm/jdk1.8.0_221/bin:/home/kp/.pyenv/plugins/pyenv-virtualenv/shims:/home/kp/.pyenv/shims:/home/kp/.pyenv/bin:/home/kp/.nvm/versions/node/v14.5.0/bin:/home/kp/.cargo/bin:/home/kp/.cargo/bin:/home/kp/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/kp/.dotnet/tools:/usr/local/go/bin:/home/kp/.oh-my-zsh/custom/plugins/kubetail:/home/kp/go/bin:/home/kp/code/flutter/bin:/usr/lib/postgresql/10/bin/:/home/kp/code/anaconda3/bin:/usr/local/go/bin:/home/kp/.fzf/bin
+# environment
+GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
+# environment
+LSCOLORS = Gxfxcxdxbxegedabagacad
+# environment
+SESSION_MANAGER = local/ubuntu:@/tmp/.ICE-unix/3146,unix/ubuntu:/tmp/.ICE-unix/3146
+# environment
+XDG_RUNTIME_DIR = /run/user/1000
+# environment
+TEXTDOMAIN = im-config
+# makefile (from 'Makefile', line 2)
+GOPATH := /home/kp/go
+# environment
+NVM_BIN = /home/kp/.nvm/versions/node/v14.5.0/bin
+# environment
+XDG_MENU_PREFIX = gnome-
+# environment
+VSCODE_LOG_STACK = false
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# makefile (from 'Makefile', line 3)
+LDFLAGS := -s -w -X github.com/minio/mc/cmd.Version=2022-07-11T16:16:12Z -X github.com/minio/mc/cmd.CopyrightYear=2022 -X github.com/minio/mc/cmd.ReleaseTag=DEVELOPMENT.2022-07-11T16-16-12Z -X github.com/minio/mc/cmd.CommitID=add7b7b8814c7e7aeeedcc829724cae31d34ee7a -X github.com/minio/mc/cmd.ShortCommitID=add7b7b8814c
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
+# makefile (from 'Makefile', line 11)
+TAG = "minio/mc:$(VERSION)"
+# environment
+XDG_GREETER_DATA_DIR = /var/lib/lightdm-data/kp
+# environment
+LS_COLORS = 
+# environment
+XDG_SESSION_DESKTOP = ubuntu
+# environment
+SSH_AUTH_SOCK = /tmp/ssh-eqIlKREaYlvG/agent.3146
+# environment
+GIO_LAUNCHED_DESKTOP_FILE_PID = 4096
+# automatic
+%F = $(notdir $%)
+# environment
+DISPLAY = :0
+# environment
+GTK_IM_MODULE = ibus
+# environment
+VSCODE_PIPE_LOGGING = true
+# makefile (from 'Makefile', line 1)
+PWD := /home/kp/code/src/github.com/minio/mc
+# environment
+XDG_SEAT = seat0
+# environment
+SSH_AGENT_PID = 3284
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
+# environment
+GTK_MODULES = gail:atk-bridge
+# environment
+GOMODCACHE = /home/kp/go/pkg/mod
+# environment
+PYENV_SHELL = zsh
+# environment
+HOME = /home/kp
+# environment
+VSCODE_CODE_CACHE_PATH = /home/kp/.config/Code/CachedData/30d9c6cd9483b2cc586687151bcbcd635f373630
+# environment
+LOGNAME = kp
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
+# environment
+NVM_CD_FLAGS = -q
+# environment
+ZSH = /home/kp/.oh-my-zsh
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# default
+MAKE_VERSION := 4.1
+# environment
+GNOME_DESKTOP_SESSION_ID = this-is-deprecated
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+XDG_VTNR = 7
+# environment
+MAKELEVEL := 0
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+QT_IM_MODULE = ibus
+# environment
+SHLVL = 0
+# environment
+MINIO_CI_CD = on
+# environment
+GNOME_SHELL_SESSION_MODE = ubuntu
+# environment
+XDG_SESSION_ID = c2
+# environment
+USER = kp
+# environment
+LC_CTYPE = en_US.UTF-8
+# makefile
+.DEFAULT_GOAL := all
+# environment
+XDG_CURRENT_DESKTOP = Unity
+# environment
+LIBVIRT_DEFAULT_URI = qemu:///system
+# environment
+LESS = -R
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# default
+MAKE_COMMAND := make
+# environment
+OLDPWD = /home/kp
+# default
+.VARIABLES := 
+# automatic
+*F = $(notdir $*)
+# environment
+LANGUAGE = en_US
+# environment
+XDG_SEAT_PATH = /org/freedesktop/DisplayManager/Seat0
+# makefile (from 'Makefile', line 6)
+GOOS := linux
+# environment
+VSCODE_IPC_HOOK = /run/user/1000/vscode-eab95248-1.68.1-main.sock
+# environment
+SPARK_HOME = /home/kp/code/spark-3.1.2-bin-hadoop3.2
+# makefile
+MAKEFLAGS = pqrR
+# environment
+MFLAGS = -pqrR
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+NVM_DIR = /home/kp/.nvm
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# environment
+GDK_BACKEND = x11
+# automatic
++F = $(notdir $+)
+# environment
+GTK2_MODULES = overlay-scrollbar
+# environment
+S_COLORS = auto
+# environment
+QT_ACCESSIBILITY = 1
+# environment
+DEFAULTS_PATH = /usr/share/gconf/ubuntu.default.path
+# environment
+TEXTDOMAINDIR = /usr/share/locale/
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+PYSPARK_PYTHON = python3
+# environment
+PAGER = less
+# environment
+LC_ALL = C
+# makefile (from 'Makefile', line 5)
+GOARCH := amd64
+# environment
+QT4_IM_MODULE = xim
+# environment
+GJS_DEBUG_TOPICS = JS ERROR;JS LOG
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+CHROME_DESKTOP = code-url-handler.desktop
+# environment
+PYENV_VIRTUALENV_INIT = 1
+# default
+.INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
+# environment
+GJS_DEBUG_OUTPUT = stderr
+# default
+.RECIPEPREFIX := 
+# environment
+AUTOJUMP_ERROR_PATH = /home/kp/.local/share/autojump/errors.log
+# environment
+LANG = C
+# environment
+VSCODE_PID = 4096
+# variable set hash-table stats:
+ 
+# Load=133/1024=13%, Rehash=0, Collisions=13/182=7%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 64768, inode 14813010): 39 files, no impossibilities.
+
+# 39 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+all: build
+#  Command line target.
+#  Implicit rule search has been done.
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/4=0%
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-13 14:27:45.64369745
+#  File has been updated.
+#  Successfully updated.
+
+verifiers: getdeps vet lint
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+test: verifiers build
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 43):
+	@echo "Running unit tests"
+	@GO111MODULE=on CGO_ENABLED=0 go test -tags kqueue ./... 1>/dev/null
+	@echo "Running functional tests"
+	@(env bash $(PWD)/functional-tests.sh)
+
+build: checks
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/4=0%
+#  recipe to execute (from 'Makefile', line 61):
+	@echo "Building mc binary to './mc'"
+	@GO111MODULE=on CGO_ENABLED=0 go build -trimpath -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
+
+vet:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 33):
+	@echo "Running $@"
+	@GO111MODULE=on go vet github.com/minio/mc/...
+
+test-race: verifiers build
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 49):
+	@echo "Running unit tests under -race"
+	@GO111MODULE=on go test -race -v --timeout 20m ./... 1>/dev/null
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+crosscompile:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 25):
+	@(env bash $(PWD)/buildscripts/cross-compile.sh)
+
+clean:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 71):
+	@echo "Cleaning up all the generated files"
+	@find . -name '*.test' | xargs rm -fv
+	@find . -name '*~' | xargs rm -fv
+	@rm -rvf mc
+	@rm -rvf build
+	@rm -rvf release
+
+docker: build
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 30):
+	@docker build -t $(TAG) . -f Dockerfile.dev
+
+checks:
+#  Implicit rule search has not been done.
+#  Implicit/static pattern stem: ''
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# automatic
+# @ := checks
+# automatic
+# % := 
+# automatic
+# * := 
+# automatic
+# + := 
+# automatic
+# | := 
+# automatic
+# < := 
+# automatic
+# ^ := 
+# automatic
+# ? := 
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=1/12=8%
+#  recipe to execute (from 'Makefile', line 16):
+	@echo "Checking dependencies"
+	@(env bash $(PWD)/buildscripts/checkdeps.sh)
+
+verify:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 54):
+	@echo "Verifying build with race"
+	@GO111MODULE=on CGO_ENABLED=1 go build -race -tags kqueue -trimpath --ldflags "$(LDFLAGS)" -o $(PWD)/mc 1>/dev/null
+	@echo "Running functional tests"
+	@(env bash $(PWD)/functional-tests.sh)
+
+getdeps:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 20):
+	@mkdir -p ${GOPATH}/bin
+	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.46.2
+	@echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@latest
+
+lint:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 37):
+	@echo "Running $@ check"
+	@GO111MODULE=on ${GOPATH}/bin/golangci-lint run --timeout=5m --config ./.golangci.yml
+
+check: test
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+install: build
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 66):
+	@echo "Installing mc binary to '$(GOPATH)/bin/mc'"
+	@mkdir -p $(GOPATH)/bin && cp -f $(PWD)/mc $(GOPATH)/bin/mc
+	@echo "Installation successful. To learn more, try \"mc --help\"."
+
+# files hash-table stats:
+# Load=18/1024=2%, Rehash=0, Collisions=0/46=0%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 58 / storage = 557 B / avg = 9 B
+# current buf: size = 8162 B / used = 557 B / count = 58 / avg = 9 B
+
+# strcache performance: lookups = 91 / hit rate = 36%
+# hash-table stats:
+# Load=58/8192=1%, Rehash=0, Collisions=1/91=1%
+# Finished Make data base on Wed Jul 13 16:57:11 2022
+
+ 

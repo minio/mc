@@ -1,0 +1,10 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/kp/code/src/github.com/minio/mc'
+ 
+echo "Checking dependencies"
+(env bash /home/kp/code/src/github.com/minio/mc/buildscripts/checkdeps.sh)
+echo "Building mc binary to './mc'"
+ 
+GO111MODULE=on CGO_ENABLED=0 go build -trimpath -tags kqueue --ldflags '-s -w -X github.com/minio/mc/cmd.Version=2022-07-11T16:16:12Z -X github.com/minio/mc/cmd.CopyrightYear=2022 -X github.com/minio/mc/cmd.ReleaseTag=DEVELOPMENT.2022-07-11T16-16-12Z -X github.com/minio/mc/cmd.CommitID=add7b7b8814c7e7aeeedcc829724cae31d34ee7a -X github.com/minio/mc/cmd.ShortCommitID=add7b7b8814c' -o /home/kp/code/src/github.com/minio/mc/mc
+make: Leaving directory '/home/kp/code/src/github.com/minio/mc'
+ 

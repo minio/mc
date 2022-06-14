@@ -28,6 +28,7 @@ var replicateSubcommands = []cli.Command{
 	replicateExportCmd,
 	replicateImportCmd,
 	replicateRemoveCmd,
+	replicateDiffCmd,
 }
 
 var replicateCmd = cli.Command{
