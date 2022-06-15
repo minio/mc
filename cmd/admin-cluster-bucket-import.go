@@ -42,17 +42,17 @@ var adminClusterBucketImportCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET/[BUCKET] /path/to/bucket-metadata.zip
+  {{.HelpName}} [FLAGS] TARGET/[BUCKET] /path/to/backups/bucket-metadata.zip
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Set bucket metadata for 'mybucket' from previously exported metadata zip file.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket /tmp/mybucket-metadata.zip
+     {{.Prompt}} {{.HelpName}} myminio/mybucket /backups/mybucket-metadata.zip
 
   2. Set bucket metadata for all buckets from previously exported metadata zip file.
-     {{.Prompt}} {{.HelpName}} myminio /tmp/cluster-bucket-metadata.zip
+     {{.Prompt}} {{.HelpName}} myminio /backups/cluster-bucket-metadata.zip
 `,
 }
 

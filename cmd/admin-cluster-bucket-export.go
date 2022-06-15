@@ -52,11 +52,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Download all bucket metadata for a bucket into zip file.
-		 {{.Prompt}} {{.HelpName}} myminio/bucket
+     {{.Prompt}} {{.HelpName}} myminio/bucket
 
   2. Download metadata of all buckets in cluster into zip file.
-		 {{.Prompt}} {{.HelpName}} myminio
-
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 
