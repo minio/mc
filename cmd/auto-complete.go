@@ -407,14 +407,14 @@ var completeCmds = map[string]complete.Predictor{
 	"/alias/remove": aliasCompleter,
 	"/alias/import": nil,
 
-	"/support/callhome/set": aliasCompleter,
-	"/support/callhome/get": aliasCompleter,
-	"/support/register":     aliasCompleter,
-	"/support/diag":         aliasCompleter,
-	"/support/profile":      aliasCompleter,
-	"/support/inspect":      aliasCompleter,
-	"/support/perf":         aliasCompleter,
-	"/support/metrics":      aliasCompleter,
+	"/support/callhome": aliasCompleter,
+	"/support/logs":     aliasCompleter,
+	"/support/register": aliasCompleter,
+	"/support/diag":     aliasCompleter,
+	"/support/profile":  aliasCompleter,
+	"/support/inspect":  aliasCompleter,
+	"/support/perf":     aliasCompleter,
+	"/support/metrics":  aliasCompleter,
 
 	"/update": nil,
 }
