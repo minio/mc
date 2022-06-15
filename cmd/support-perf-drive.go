@@ -19,10 +19,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	humanize "github.com/dustin/go-humanize"
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
@@ -62,61 +62,53 @@ func mainAdminSpeedtestDrive(ctx *cli.Context, aliasedURL string) error {
 
 	serial := ctx.Bool("serial")
 
-	resultCh, err := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
+	resultCh, e := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
 		Serial:    serial,
 		BlockSize: uint64(blocksize),
 		FileSize:  uint64(filesize),
 	})
-	fatalIf(probe.NewError(err), "Failed to execute drive speedtest")
+	fatalIf(probe.NewError(e), "Failed to execute drive speedtest")
 
-	for result := range resultCh {
-		if result.Version != "" {
-			if globalJSON {
+	if globalJSON {
+		for result := range resultCh {
+			if result.Version != "" {
 				jsonBytes, e := json.MarshalIndent(result, "", " ")
 				fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-				fmt.Println(string(jsonBytes))
-				continue
-			}
-			tbl := console.NewTable(func() []*color.Color {
-				colors := []*color.Color{
-					color.New(color.FgWhite, color.BgBlack, color.Bold),
-				}
-				for range result.DrivePerf {
-					colors = append(colors, color.New(color.FgGreen))
-				}
-				return colors
-			}(), []bool{false, false, false, false}, 0)
-			cellText := make([][]string, len(result.DrivePerf)+1)
-			cellText[0] = []string{
-				"Node",
-				"Path",
-				"Read",
-				"Write",
-			}
-			trailerIfGreaterThan := func(in string, max int) string {
-				if len(in) < max {
-					return ""
-				}
-				return "..."
-			}
-			for i, item := range result.DrivePerf {
-				cellText[i+1] = []string{
-					fmt.Sprintf("%.64s%s", result.Endpoint,
-						trailerIfGreaterThan(result.Endpoint, 64)),
-					fmt.Sprintf("%.64s%s", item.Path,
-						trailerIfGreaterThan(result.Endpoint, 64)),
-					humanize.IBytes(item.ReadThroughput) + "/s",
-					humanize.IBytes(item.WriteThroughput) + "/s",
-				}
-			}
-			if len(result.DrivePerf) > 0 {
-				tbl.DisplayTable(cellText)
-			}
-			if result.Error != "" {
-				fmt.Println(color.New(color.FgRed, color.Bold).Sprintf("ERROR"), result.Error)
+
+				console.Println(string(jsonBytes))
 			}
 		}
+		return nil
 	}
+
+	done := make(chan struct{})
+
+	p := tea.NewProgram(initSpeedTestUI())
+	go func() {
+		if e := p.Start(); e != nil {
+			os.Exit(1)
+		}
+		close(done)
+	}()
+
+	go func() {
+		var results []madmin.DriveSpeedTestResult
+		for result := range resultCh {
+			if result.Version != "" {
+				results = append(results, result)
+			} else {
+				p.Send(speedTestResult{
+					dresult: []madmin.DriveSpeedTestResult{},
+				})
+			}
+		}
+		p.Send(speedTestResult{
+			dresult: results,
+			final:   true,
+		})
+	}()
+
+	<-done
 
 	return nil
 }
