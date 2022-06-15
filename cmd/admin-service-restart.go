@@ -32,7 +32,7 @@ import (
 
 var adminServiceRestartCmd = cli.Command{
 	Name:         "restart",
-	Usage:        "restart all MinIO servers",
+	Usage:        "restart a MinIO cluster",
 	Action:       mainAdminServiceRestart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
