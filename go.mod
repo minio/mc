@@ -19,7 +19,7 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/colorjson v1.0.2
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.3.13
+	github.com/minio/madmin-go v1.3.19
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.27
 	github.com/minio/pkg v1.1.22
@@ -44,7 +44,6 @@ require (
 )
 
 require (
-	github.com/briandowns/spinner v1.18.1
 	github.com/charmbracelet/bubbles v0.10.0
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
