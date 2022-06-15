@@ -331,8 +331,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/top/locks": aliasCompleter,
 	"/admin/top/api":   aliasCompleter,
 
-	"/admin/service/stop":    aliasCompleter,
-	"/admin/service/restart": aliasCompleter,
+	"/admin/service/stop":     aliasCompleter,
+	"/admin/service/restart":  aliasCompleter,
+	"/admin/service/freeze":   aliasCompleter,
+	"/admin/service/unfreeze": aliasCompleter,
 
 	"/admin/prometheus/generate": aliasCompleter,
 	"/admin/prometheus/metrics":  aliasCompleter,
