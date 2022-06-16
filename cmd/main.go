@@ -453,11 +453,21 @@ var appCmds = []cli.Command{
 	updateCmd,
 }
 
+func printMCVersion(c *cli.Context) {
+	fmt.Fprintf(c.App.Writer, "%s version %s (commit-id=%s)\n", c.App.Name, c.App.Version, CommitID)
+	fmt.Fprintf(c.App.Writer, "Runtime: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(c.App.Writer, "Copyright (c) 2015-%s MinIO, Inc.\n", CopyrightYear)
+	fmt.Fprintf(c.App.Writer, "Licence AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>\n")
+}
+
 func registerApp(name string) *cli.App {
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",
 		Usage: "show help",
 	}
+
+	// Override default cli version printer
+	cli.VersionPrinter = printMCVersion
 
 	app := cli.NewApp()
 	app.Name = name
