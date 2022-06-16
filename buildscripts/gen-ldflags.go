@@ -28,10 +28,15 @@ import (
 	"time"
 )
 
-func genLDFlags(version string) string {
+func genLDFlags(now time.Time) string {
+	version := now.Format(time.RFC3339)
+	releaseTag := releaseTag(version)
+	copyrightYear := fmt.Sprintf("%d", now.Year())
+
 	var ldflagsStr string
 	ldflagsStr = "-s -w -X github.com/minio/mc/cmd.Version=" + version + " "
-	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.ReleaseTag=" + releaseTag(version) + " "
+	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.CopyrightYear=" + copyrightYear + " "
+	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.ReleaseTag=" + releaseTag + " "
 	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.CommitID=" + commitID() + " "
 	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.ShortCommitID=" + commitID()[:12]
 	return ldflagsStr
@@ -68,5 +73,5 @@ func commitID() string {
 }
 
 func main() {
-	fmt.Println(genLDFlags(time.Now().UTC().Format(time.RFC3339)))
+	fmt.Println(genLDFlags(time.Now().UTC()))
 }
