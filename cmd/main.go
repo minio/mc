@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -138,6 +139,25 @@ func Main(args []string) {
 	}
 }
 
+func flagValue(f cli.Flag) reflect.Value {
+	fv := reflect.ValueOf(f)
+	for fv.Kind() == reflect.Ptr {
+		fv = reflect.Indirect(fv)
+	}
+	return fv
+}
+
+func visibleFlags(fl []cli.Flag) []cli.Flag {
+	visible := []cli.Flag{}
+	for _, flag := range fl {
+		field := flagValue(flag).FieldByName("Hidden")
+		if !field.IsValid() || !field.Bool() {
+			visible = append(visible, flag)
+		}
+	}
+	return visible
+}
+
 // Function invoked when invalid flag is passed
 func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 	type subCommandHelp struct {
@@ -147,9 +167,10 @@ func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 
 	// Calculate the maximum width of the flag name field
 	// for a good looking printing
-	help := make([]subCommandHelp, len(ctx.Command.Flags))
+	vflags := visibleFlags(ctx.Command.Flags)
+	help := make([]subCommandHelp, len(vflags))
 	maxWidth := 0
-	for i, f := range ctx.Command.Flags {
+	for i, f := range vflags {
 		s := strings.Split(f.String(), "\t")
 		if len(s[0]) > maxWidth {
 			maxWidth = len(s[0])
@@ -453,11 +474,21 @@ var appCmds = []cli.Command{
 	updateCmd,
 }
 
+func printMCVersion(c *cli.Context) {
+	fmt.Fprintf(c.App.Writer, "%s version %s (commit-id=%s)\n", c.App.Name, c.App.Version, CommitID)
+	fmt.Fprintf(c.App.Writer, "Runtime: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(c.App.Writer, "Copyright (c) 2015-%s MinIO, Inc.\n", CopyrightYear)
+	fmt.Fprintf(c.App.Writer, "Licence AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>\n")
+}
+
 func registerApp(name string) *cli.App {
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",
 		Usage: "show help",
 	}
+
+	// Override default cli version printer
+	cli.VersionPrinter = printMCVersion
 
 	app := cli.NewApp()
 	app.Name = name

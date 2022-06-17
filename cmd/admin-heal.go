@@ -134,39 +134,23 @@ type setIndex struct {
 	pool, set int
 }
 
-type healingStatus struct {
-	started      time.Time
-	updated      time.Time
-	totalObjects uint64
-	totalHealed  uint64
-}
-
-// Estimation of when the healing will finish
-func (h healingStatus) ETA() time.Time {
-	if !h.started.IsZero() && h.totalObjects > h.totalHealed {
-		objScanSpeed := float64(h.updated.Sub(h.started)) / float64(h.totalHealed)
-		remainingDuration := float64(h.totalObjects-h.totalHealed) * objScanSpeed
-		return h.updated.Add(time.Duration(remainingDuration))
-	}
-	return time.Time{}
-}
-
 type poolInfo struct {
 	tolerance int
 	endpoints []string
 }
 
 type diskInfo struct {
-	set     setIndex
-	path    string
-	state   string
-	healing bool
+	set   setIndex
+	path  string
+	state string
+
+	healStarted, healLastUpdate time.Time
 
 	usedSpace, totalSpace uint64
 }
 
 type setInfo struct {
-	healingStatus  healingStatus
+	maxUsedSpace   uint64
 	totalDisks     int
 	incapableDisks int
 }
@@ -182,7 +166,7 @@ func (s serverInfo) onlineDisksForSet(index setIndex) (setFound bool, count int)
 			continue
 		}
 		setFound = true
-		if disk.state == "ok" && !disk.healing {
+		if disk.state == "ok" && disk.healStarted.IsZero() {
 			count++
 		}
 	}
@@ -222,14 +206,11 @@ func generateSetsStatus(disks []madmin.Disk) map[setIndex]setInfo {
 			setSt = setInfo{}
 		}
 		setSt.totalDisks++
+		if d.UsedSpace > setSt.maxUsedSpace {
+			setSt.maxUsedSpace = d.UsedSpace
+		}
 		if d.State != "ok" || d.Healing {
 			setSt.incapableDisks++
-		}
-		if d.Healing && d.HealInfo != nil {
-			setSt.healingStatus.started = d.HealInfo.Started
-			setSt.healingStatus.updated = d.HealInfo.LastUpdate
-			setSt.healingStatus.totalObjects = d.HealInfo.ObjectsTotalCount
-			setSt.healingStatus.totalHealed = d.HealInfo.ObjectsHealed
 		}
 		m[idx] = setSt
 	}
@@ -255,14 +236,20 @@ func generateServersStatus(disks []madmin.Disk) map[string]serverInfo {
 			}
 		}
 		setIndex := setIndex{pool: d.PoolIndex, set: d.SetIndex}
-		serverSt.disks = append(serverSt.disks, diskInfo{
+		di := diskInfo{
 			set:        setIndex,
 			path:       u.Path,
 			state:      d.State,
-			healing:    d.Healing,
 			usedSpace:  d.UsedSpace,
 			totalSpace: d.TotalSpace,
-		})
+		}
+
+		if d.HealInfo != nil {
+			di.healStarted = d.HealInfo.Started
+			di.healLastUpdate = d.HealInfo.LastUpdate
+		}
+
+		serverSt.disks = append(serverSt.disks, di)
 		m[endpoint] = serverSt
 	}
 	return m
@@ -405,7 +392,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 				}
 				stateText := ""
 				switch {
-				case d.state == "ok" && d.healing:
+				case d.state == "ok" && !d.healStarted.IsZero():
 					stateText = console.Colorize("DiskHealing", "HEALING")
 				case d.state == "ok":
 					stateText = console.Colorize("DiskOK", "OK")
@@ -413,11 +400,11 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 					stateText = console.Colorize("DiskFailed", d.state)
 				}
 				fmt.Fprintf(&msg, "  +  %s : %s\n", d.path, stateText)
-				if d.healing {
-					estimationText := "Calculating..."
-					if eta := setsStatus[d.set].healingStatus.ETA(); !eta.IsZero() {
-						estimationText = humanize.RelTime(time.Now().UTC(), eta, "", "")
-					}
+				if !d.healStarted.IsZero() {
+					now := time.Now().UTC()
+					scanSpeed := float64(d.usedSpace) / float64(now.Sub(d.healStarted))
+					remainingTime := time.Duration(float64(setsStatus[d.set].maxUsedSpace-d.usedSpace) / scanSpeed)
+					estimationText := humanize.RelTime(now, now.Add(remainingTime), "", "")
 					fmt.Fprintf(&msg, "  |__ Estimated: %s\n", estimationText)
 				}
 				fmt.Fprintf(&msg, "  |__  Capacity: %s/%s\n", humanize.IBytes(d.usedSpace), humanize.IBytes(d.totalSpace))
@@ -481,25 +468,26 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		startedAt   time.Time
 
 		// The addition of Elapsed time of each parallel healing operation
+		// this is needed to calculate the rate of healing
 		accumulatedElapsedTime time.Duration
+
+		// ETA of healing - it is the latest ETA of all disks currently healing
+		healingRemaining time.Duration
 	)
 
-	type setInfo struct {
-		pool, set int
-	}
-
-	dedup := make(map[setInfo]struct{})
+	dedup := make(map[setIndex]struct{})
 
 	for _, set := range s.HealInfo.Sets {
+		setsStatus := generateSetsStatus(set.Disks)
 		for _, disk := range set.Disks {
 			if disk.HealInfo != nil {
 				// Avoid counting two disks beloning to the same pool/set
-				diskLocation := setInfo{pool: disk.PoolIndex, set: disk.SetIndex}
-				_, found := dedup[diskLocation]
+				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
+				_, found := dedup[diskSet]
 				if found {
 					continue
 				}
-				dedup[diskLocation] = struct{}{}
+				dedup[diskSet] = struct{}{}
 
 				// Approximate values
 				totalItems += disk.HealInfo.ObjectsTotalCount
@@ -507,31 +495,22 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				itemsHealed += disk.HealInfo.ItemsHealed
 				bytesHealed += disk.HealInfo.BytesDone
 
-				if !disk.HealInfo.Started.IsZero() && !disk.HealInfo.Started.Before(startedAt) {
-					startedAt = disk.HealInfo.Started
-				}
+				if !disk.HealInfo.Started.IsZero() {
+					if !disk.HealInfo.Started.Before(startedAt) {
+						startedAt = disk.HealInfo.Started
+					}
 
-				if !disk.HealInfo.Started.IsZero() && !disk.HealInfo.LastUpdate.IsZero() {
-					accumulatedElapsedTime += disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started)
+					if !disk.HealInfo.LastUpdate.IsZero() {
+						accumulatedElapsedTime += disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started)
+					}
+
+					scanSpeed := float64(disk.UsedSpace) / float64(time.Now().Sub(disk.HealInfo.Started))
+					remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
+					if remainingTime > healingRemaining {
+						healingRemaining = remainingTime
+					}
 				}
 			}
-		}
-	}
-
-	now := time.Now()
-
-	for _, mrf := range s.HealInfo.MRF {
-		totalItems += mrf.TotalItems
-		totalBytes += mrf.TotalBytes
-		bytesHealed += mrf.BytesHealed
-		itemsHealed += mrf.ItemsHealed
-
-		if !mrf.Started.IsZero() {
-			if startedAt.IsZero() || mrf.Started.Before(startedAt) {
-				startedAt = mrf.Started
-			}
-
-			accumulatedElapsedTime += now.Sub(mrf.Started)
 		}
 	}
 
@@ -558,13 +537,9 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))
 	}
 
-	if totalItems > 0 && totalBytes > 0 && !startedAt.IsZero() {
-		// Estimation completion
-		avgTimePerObject := float64(accumulatedElapsedTime) / float64(itemsHealed)
-		estimatedDuration := time.Duration(avgTimePerObject * float64(totalItems))
-		estimatedFinishTime := startedAt.Add(estimatedDuration)
-		healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, estimatedFinishTime, "", ""))
-	}
+	// Estimation completion
+	now := time.Now()
+	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, now.Add(healingRemaining), "", ""))
 
 	return healPrettyMsg
 }
