@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -70,12 +70,12 @@ GLOBAL FLAGS:
 TIP:
   Use '{{.Name}} --autocompletion' to enable shell autocompletion
 
-VERSION:
-  ` + ReleaseTag +
-	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
-{{$key}}:
-  {{$value}}
-{{end}}`
+COPYRIGHT:
+  Copyright (c) 2015-` + CopyrightYear + ` MinIO, Inc.
+
+LICENSE:
+  GNU AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>
+`
 
 func init() {
 	if env.IsSet(mcEnvConfigFile) {
@@ -257,28 +257,6 @@ func migrate() {
 
 	// Migrate shared urls if any.
 	migrateShare()
-}
-
-// Get os/arch/platform specific information.
-// Returns a map of current os/arch/platform/memstats.
-func getSystemData() map[string]string {
-	host, e := os.Hostname()
-	fatalIf(probe.NewError(e), "Unable to determine the hostname.")
-
-	memstats := &runtime.MemStats{}
-	runtime.ReadMemStats(memstats)
-	mem := fmt.Sprintf("Used: %s | Allocated: %s | UsedHeap: %s | AllocatedHeap: %s",
-		pb.Format(int64(memstats.Alloc)).To(pb.U_BYTES),
-		pb.Format(int64(memstats.TotalAlloc)).To(pb.U_BYTES),
-		pb.Format(int64(memstats.HeapAlloc)).To(pb.U_BYTES),
-		pb.Format(int64(memstats.HeapSys)).To(pb.U_BYTES))
-	platform := fmt.Sprintf("Host: %s | OS: %s | Arch: %s", host, runtime.GOOS, runtime.GOARCH)
-	goruntime := fmt.Sprintf("Version: %s | CPUs: %s", runtime.Version(), strconv.Itoa(runtime.NumCPU()))
-	return map[string]string{
-		"PLATFORM": platform,
-		"RUNTIME":  goruntime,
-		"MEM":      mem,
-	}
 }
 
 // initMC - initialize 'mc'.
@@ -478,7 +456,7 @@ func printMCVersion(c *cli.Context) {
 	fmt.Fprintf(c.App.Writer, "%s version %s (commit-id=%s)\n", c.App.Name, c.App.Version, CommitID)
 	fmt.Fprintf(c.App.Writer, "Runtime: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 	fmt.Fprintf(c.App.Writer, "Copyright (c) 2015-%s MinIO, Inc.\n", CopyrightYear)
-	fmt.Fprintf(c.App.Writer, "Licence AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>\n")
+	fmt.Fprintf(c.App.Writer, "License GNU AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>\n")
 }
 
 func registerApp(name string) *cli.App {
@@ -514,15 +492,8 @@ func registerApp(name string) *cli.App {
 	}
 
 	app.Before = registerBefore
-	app.ExtraInfo = func() map[string]string {
-		if globalDebug {
-			return getSystemData()
-		}
-		return make(map[string]string)
-	}
-
 	app.HideHelpCommand = true
-	app.Usage = "MinIO Client for cloud storage and filesystems."
+	app.Usage = "MinIO Client for object storage and filesystems."
 	app.Commands = appCmds
 	app.Author = "MinIO, Inc."
 	app.Version = ReleaseTag
