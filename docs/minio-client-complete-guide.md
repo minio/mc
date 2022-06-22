@@ -1922,6 +1922,7 @@ NAME:
   mc support perf               analyze object, network and drive performance
   mc support inspect            upload raw object contents for analysis
   mc support profile            generate profile data for debugging
+  mc support logs               configure/display MinIO console logs
 
 ```
 
@@ -1953,4 +1954,14 @@ mc support diag play
 Get CPU profiling for 2 minutes
 ```
 mc support profile  --type cpu --duration 120 myminio/
+```
+
+Print last 5 application error logs entries for node 'node1' on MinIO server with alias 'myminio'
+```
+mc support logs print --limit 5 --type application myminio node1
+```
+
+Enable logs for cluster with alias 'play'
+```
+mc support logs enable play
 ```

@@ -26,43 +26,28 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var logsFlags = append(globalFlags, cli.BoolFlag{
+var supportLogsSubcommands = []cli.Command{
+	supportLogsEnableCmd,
+	supportLogsDisableCmd,
+	supportLogsStatusCmd,
+	supportLogsPrintCmd,
+}
+
+var logsConfigureFlags = append(globalFlags, cli.BoolFlag{
 	Name:   "dev",
 	Usage:  "development mode - talks to local SUBNET",
 	Hidden: true,
 })
 
 var supportLogsCmd = cli.Command{
-	Name:         "logs",
-	Usage:        "configure logs settings",
-	OnUsageError: onUsageError,
-	Action:       mainLogs,
-	Before:       setGlobalsFromContext,
-	Flags:        logsFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} enable|disable|status ALIAS
-
-OPTIONS:
-  enable - Enable pushing MinIO logs to SUBNET in real-time
-  disable - Disable pushing MinIO logs to SUBNET
-  status - Display logs settings
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Enable logs for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} enable play
-
-  2. Disable logs for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} disable play
-
-  3. Check logs status for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} status play
-`,
+	Name:            "logs",
+	Usage:           "configure/display MinIO console logs",
+	OnUsageError:    onUsageError,
+	Action:          mainLogs,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
+	Subcommands:     supportLogsSubcommands,
 }
 
 type supportLogsMessage struct {
@@ -83,23 +68,6 @@ func (s supportLogsMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonBytes)
-}
-
-func mainLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias, arg := checkToggleCmdSyntax(ctx, "logs")
-
-	if arg == "status" {
-		enabled := isFeatureEnabled(alias, "logger_webhook", "logger_webhook:subnet")
-		printMsg(supportLogsMessage{
-			Logs: featureStatusStr(enabled),
-		})
-		return nil
-	}
-
-	configureSubnetWebhook(alias, arg == "enable")
-
-	return nil
 }
 
 func configureSubnetWebhook(alias string, enable bool) {
@@ -125,4 +93,19 @@ func configureSubnetWebhook(alias string, enable bool) {
 		Logs:   featureStatusStr(enable),
 		MsgPfx: "Logging to support is now ",
 	})
+}
+
+func validateLogsToggleCmd(ctx *cli.Context, cmdName string) string {
+	if len(ctx.Args()) != 1 {
+		cli.ShowCommandHelpAndExit(ctx, cmdName, 1) // last argument is exit code
+	}
+	alias, _ := url2Alias(ctx.Args().Get(0))
+	return alias
+}
+
+// mainLogs is the handle for "mc support logs" command.
+func mainLogs(ctx *cli.Context) error {
+	commandNotFound(ctx, supportLogsSubcommands)
+	return nil
+	// Sub-commands like "enable", "disable", "status", "print" have their own main.
 }

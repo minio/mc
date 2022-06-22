@@ -708,34 +708,7 @@ mc admin trace myminio
 
 <a name="console"></a>
 ### Command `console` - show console logs for MinIO server
-`console` command displays server logs of one or all MinIO servers (under distributed cluster)
-
-```sh
-NAME:
-  mc admin console - show console logs for MinIO server
-
-FLAGS:
-  --limit value, -l value       show last n log entries (default: 10)
-  --help, -h                    show help
-```
-
-*Example: Display MinIO server http trace.*
-
-```sh
-mc admin console myminio
-
- API: SYSTEM(bucket=images)
- Time: 22:48:06 PDT 09/05/2019
- DeploymentID: 6faeded5-5cf3-4133-8a37-07c5d500207c
- RequestID: <none>
- RemoteHost: <none>
- UserAgent: <none>
- Error: ARN 'arn:minio:sqs:us-east-1:1:webhook' not found
-        4: cmd/notification.go:1189:cmd.readNotificationConfig()
-        3: cmd/notification.go:780:cmd.(*NotificationSys).refresh()
-        2: cmd/notification.go:815:cmd.(*NotificationSys).Init()
-        1: cmd/server-main.go:375:cmd.serverMain()
-```
+This command is deprecated and will be removed in a future release. Use 'mc support logs print' instead.
 
 <a name="prometheus"></a>
 
