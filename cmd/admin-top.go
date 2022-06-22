@@ -22,6 +22,7 @@ import "github.com/minio/cli"
 var adminTopSubcommands = []cli.Command{
 	adminTopAPICmd,
 	adminTopLocksCmd,
+	adminTopScannerCmd,
 }
 
 var adminTopCmd = cli.Command{

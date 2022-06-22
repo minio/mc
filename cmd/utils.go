@@ -151,8 +151,8 @@ func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 		s3Config.SecretKey = aliasCfg.SecretKey
 		s3Config.SessionToken = aliasCfg.SessionToken
 		s3Config.Signature = aliasCfg.API
+		s3Config.Lookup = getLookupType(aliasCfg.Path)
 	}
-	s3Config.Lookup = getLookupType(aliasCfg.Path)
 	return s3Config
 }
 

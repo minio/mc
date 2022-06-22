@@ -27,7 +27,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/minio/madmin-go"
 	"github.com/olekukonko/tablewriter"
 )
@@ -149,8 +149,10 @@ func (m *traceUI) View() string {
 			traceSt = &topAPIStats{}
 		}
 		traceSt.addAPICall(1)
-		traceSt.addAPIBytesRX(res.Trace.CallStats.InputBytes)
-		traceSt.addAPIBytesTX(res.Trace.CallStats.OutputBytes)
+		if res.Trace.HTTP != nil {
+			traceSt.addAPIBytesRX(res.Trace.HTTP.CallStats.InputBytes)
+			traceSt.addAPIBytesTX(res.Trace.HTTP.CallStats.OutputBytes)
+		}
 		m.apiStatsMap[res.Trace.FuncName] = traceSt
 	}
 
