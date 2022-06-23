@@ -33,9 +33,9 @@ import (
 
 const logTimeFormat string = "15:04:05 MST 01/02/2006"
 
-var logsPrintFlags = []cli.Flag{
+var logsShowFlags = []cli.Flag{
 	cli.IntFlag{
-		Name:  "limit, l",
+		Name:  "last, l",
 		Usage: "show last n log entries",
 		Value: 10,
 	},
@@ -46,13 +46,13 @@ var logsPrintFlags = []cli.Flag{
 	},
 }
 
-var supportLogsPrintCmd = cli.Command{
-	Name:            "print",
-	Usage:           "show console logs for MinIO server",
-	Action:          mainLogsPrintConsole,
+var supportLogsShowCmd = cli.Command{
+	Name:            "show",
+	Usage:           "show MinIO logs",
+	Action:          mainLogsShowConsole,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(logsPrintFlags, globalFlags...),
+	Flags:           append(logsShowFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -62,18 +62,18 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show console logs for a MinIO server with alias 'play'
+  1. Show logs for a MinIO server with alias 'play'
      {{.Prompt}} {{.HelpName}} play
-  2. Show last 5 console log entries for node 'node1' on MinIO server with alias 'myminio'
-     {{.Prompt}} {{.HelpName}} --limit 5 myminio node1
-  3. Show application errors in console logs on MinIO server with alias 'play'
+  2. Show last 5 log entries for node 'node1' for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} --last 5 myminio node1
+  3. Show application errors in logs for a MinIO server with alias 'play'
      {{.Prompt}} {{.HelpName}} --type application play
 `,
 }
 
-func checkLogsPrintSyntax(ctx *cli.Context) {
+func checkLogsShowSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 3 {
-		cli.ShowCommandHelpAndExit(ctx, "print", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "show", 1) // last argument is exit code
 	}
 }
 
@@ -164,10 +164,10 @@ func (l logMessage) String() string {
 	return fmt.Sprintf("%s\n", logMsg)
 }
 
-// mainLogsPrintConsole - the entry function of console logs
-func mainLogsPrintConsole(ctx *cli.Context) error {
+// mainLogsShowConsole - the entry function of support logs show
+func mainLogsShowConsole(ctx *cli.Context) error {
 	// Check for command syntax
-	checkLogsPrintSyntax(ctx)
+	checkLogsShowSyntax(ctx)
 	console.SetColor("LogMessage", color.New(color.Bold, color.FgRed))
 	console.SetColor("Api", color.New(color.Bold, color.FgWhite))
 	for _, c := range colors {
@@ -178,11 +178,11 @@ func mainLogsPrintConsole(ctx *cli.Context) error {
 	if len(ctx.Args()) > 1 {
 		node = ctx.Args().Get(1)
 	}
-	var limit int
-	if ctx.IsSet("limit") {
-		limit = ctx.Int("limit")
-		if limit <= 0 {
-			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "please set a proper limit, for example: '--limit 5' to display last 5 logs, omit this flag to display all available logs")
+	var last int
+	if ctx.IsSet("last") {
+		last = ctx.Int("last")
+		if last <= 0 {
+			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "please set a proper limit, for example: '--last 5' to display last 5 logs, omit this flag to display all available logs")
 		}
 	}
 	logType := strings.ToLower(ctx.String("type"))
@@ -200,7 +200,7 @@ func mainLogsPrintConsole(ctx *cli.Context) error {
 	defer cancel()
 
 	// Start listening on all console log activity.
-	logCh := client.GetLogs(ctxt, node, limit, logType)
+	logCh := client.GetLogs(ctxt, node, last, logType)
 	for logInfo := range logCh {
 		if logInfo.Err != nil {
 			fatalIf(probe.NewError(logInfo.Err), "Unable to listen to console logs")

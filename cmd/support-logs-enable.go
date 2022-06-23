@@ -23,7 +23,7 @@ import (
 
 var supportLogsEnableCmd = cli.Command{
 	Name:            "enable",
-	Usage:           "enable pushing MinIO logs to SUBNET in real-time",
+	Usage:           "enable uploading real-time MinIO logs to SUBNET",
 	Action:          mainEnableLogs,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -37,7 +37,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable logs for cluster with alias 'play'
+  1. Enable  uploading real-time logs for cluster with alias 'play' to SUBNET.
      {{.Prompt}} {{.HelpName}} play
 `,
 }

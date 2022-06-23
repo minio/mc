@@ -30,7 +30,7 @@ var supportLogsSubcommands = []cli.Command{
 	supportLogsEnableCmd,
 	supportLogsDisableCmd,
 	supportLogsStatusCmd,
-	supportLogsPrintCmd,
+	supportLogsShowCmd,
 }
 
 var logsConfigureFlags = append(globalFlags, cli.BoolFlag{

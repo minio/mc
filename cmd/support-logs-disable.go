@@ -23,7 +23,7 @@ import (
 
 var supportLogsDisableCmd = cli.Command{
 	Name:         "disable",
-	Usage:        "disable pushing MinIO logs to SUBNET",
+	Usage:        "disable uploading MinIO logs to SUBNET",
 	OnUsageError: onUsageError,
 	Action:       mainDisableLogs,
 	Before:       setGlobalsFromContext,
@@ -36,7 +36,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Disable logs for cluster with alias 'play'
+  1. Disable uploading logs for cluster with alias 'play' to SUBNET
      {{.Prompt}} {{.HelpName}} play
 `,
 }

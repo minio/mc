@@ -1958,7 +1958,7 @@ mc support profile  --type cpu --duration 120 myminio/
 
 Print last 5 application error logs entries for node 'node1' on MinIO server with alias 'myminio'
 ```
-mc support logs print --limit 5 --type application myminio node1
+mc support logs show --last 5 --type application myminio node1
 ```
 
 Enable logs for cluster with alias 'play'

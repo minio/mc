@@ -40,26 +40,24 @@ var adminConsoleFlags = []cli.Flag{
 
 var adminConsoleCmd = cli.Command{
 	Name:               "console",
-	Usage:              "show console logs for MinIO server",
+	Usage:              "show MinIO logs",
 	Action:             mainAdminConsole,
 	OnUsageError:       onUsageError,
 	Before:             setGlobalsFromContext,
 	Flags:              append(adminConsoleFlags, globalFlags...),
 	Hidden:             true,
 	HideHelpCommand:    true,
-	CustomHelpTemplate: "This command is deprecated and will be removed in a future release. Use 'mc support logs print' instead.\n",
+	CustomHelpTemplate: "This command is not supported now and replaced by 'support logs show' command. Please use 'mc support logs show'.\n",
 }
 
 // mainAdminConsole - the entry function of console command
 func mainAdminConsole(ctx *cli.Context) error {
-
-	//boolValSet := set.CreateStringSet("true", "false")
-	newCmd := []string{"mc support logs print"}
+	newCmd := []string{"mc support logs show"}
 
 	var flgStr string
 
 	if ctx.IsSet("limit") {
-		flgStr = fmt.Sprintf("%s %d", "--limit", ctx.Int("limit"))
+		flgStr = fmt.Sprintf("%s %d", "--last", ctx.Int("limit"))
 		newCmd = append(newCmd, flgStr)
 	}
 

@@ -708,7 +708,7 @@ mc admin trace myminio
 
 <a name="console"></a>
 ### Command `console` - show console logs for MinIO server
-This command is deprecated and will be removed in a future release. Use 'mc support logs print' instead.
+This command is deprecated and will be removed in a future release. Use 'mc support logs show' instead.
 
 <a name="prometheus"></a>
 

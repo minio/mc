@@ -23,7 +23,7 @@ import (
 
 var supportLogsStatusCmd = cli.Command{
 	Name:         "status",
-	Usage:        "check logs status for cluster with alias 'play'",
+	Usage:        "show current status of MinIO logs",
 	OnUsageError: onUsageError,
 	Action:       mainStatusLogs,
 	Before:       setGlobalsFromContext,
@@ -36,7 +36,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-	1. Check logs status for cluster with alias 'play'
+  1. Show current status of MinIO logs with alias 'play', whether
+  	 it is uploading to SUBNET or not
      {{.Prompt}} {{.HelpName}} play
 `,
 }
