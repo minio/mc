@@ -291,22 +291,42 @@ func minioConfigSupportsSubSys(client *madmin.AdminClient, subSys string) bool {
 	return false
 }
 
-func setSubnetAPIKeyConfig(alias string, apiKey string) {
-	_, supported := getKeyFromMinIOConfig(alias, "subnet", "api_key")
-	if supported {
-		// Create a new MinIO Admin Client
-		client, err := newAdminClient(alias)
-		fatalIf(err, "Unable to initialize admin connection.")
-
-		configStr := "subnet license= api_key=" + apiKey
-		_, e := client.SetConfigKV(globalContext, configStr)
-		fatalIf(probe.NewError(e), "Unable to set SUBNET API key config on MinIO")
-		return
-	}
+func setSubnetCredsInMcConfig(alias string, apiKey string, lic string) {
 	mcCfg := mcConfig()
 	aliasCfg := mcCfg.Aliases[alias]
-	aliasCfg.APIKey = apiKey
+	if len(apiKey) > 0 {
+		aliasCfg.APIKey = apiKey
+	}
+	if len(lic) > 0 {
+		aliasCfg.License = lic
+	}
 	setAlias(alias, aliasCfg)
+}
+
+func setSubnetCreds(alias string, apiKey string, lic string) {
+	if len(apiKey) == 0 && len(lic) == 0 {
+		fatal(errDummy().Trace(), "At least one of api key and license must be passed.")
+	}
+
+	_, apiKeySupported := getKeyFromMinIOConfig(alias, "subnet", "api_key")
+	_, licSupported := getKeyFromMinIOConfig(alias, "subnet", "license")
+	if !(apiKeySupported || licSupported) {
+		setSubnetCredsInMcConfig(alias, apiKey, lic)
+		return
+	}
+
+	client, err := newAdminClient(alias)
+	fatalIf(err, "Unable to initialize admin connection.")
+
+	configStr := "subnet"
+	if apiKeySupported && len(apiKey) > 0 {
+		configStr += " api_key=" + apiKey
+	}
+	if licSupported && len(lic) > 0 {
+		configStr += " license=" + lic
+	}
+	_, e := client.SetConfigKV(globalContext, configStr)
+	fatalIf(probe.NewError(e), "Unable to set SUBNET license/api_key config on MinIO")
 }
 
 func getClusterRegInfo(admInfo madmin.InfoMessage, clusterName string) ClusterRegistrationInfo {
@@ -469,10 +489,11 @@ func getSubnetCreds(alias string) (string, string, error) {
 	return apiKey, lic, nil
 }
 
-// extractAndSaveAPIKey - extract api key from response and set it in minio config
-func extractAndSaveAPIKey(alias string, resp string) {
+// extractAndSaveSubnetCreds - extract license / api key from response and set it in minio config
+func extractAndSaveSubnetCreds(alias string, resp string) {
 	subnetAPIKey := gjson.Parse(resp).Get("api_key").String()
-	if len(subnetAPIKey) > 0 {
-		setSubnetAPIKeyConfig(alias, subnetAPIKey)
+	subnetLic := gjson.Parse(resp).Get("license").String()
+	if len(subnetAPIKey) > 0 || len(subnetLic) > 0 {
+		setSubnetCreds(alias, subnetAPIKey, subnetLic)
 	}
 }

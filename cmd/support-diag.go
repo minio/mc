@@ -284,8 +284,6 @@ func uploadDiagReport(alias string, filename string, reqURL string, headers map[
 		return e
 	}
 
-	extractAndSaveAPIKey(alias, resp)
-
 	// Delete the report after successful upload
 	os.Remove(filename)
 
