@@ -167,7 +167,7 @@ func (u ClientURL) String() string {
 			if u.Path != "" && u.Path[0] != '\\' && u.Host != "" && u.Path[0] != '/' {
 				buf.WriteByte('/')
 			}
-			buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
+			buf.WriteString(strings.ReplaceAll(u.Path, "\\", "/"))
 		default:
 			if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
 				buf.WriteByte('/')
