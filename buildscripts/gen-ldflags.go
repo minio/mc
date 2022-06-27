@@ -48,9 +48,9 @@ func releaseTag(version string) (string, time.Time) {
 		relPrefix = prefix
 	}
 
-	relTag := strings.Replace(version, " ", "-", -1)
-	relTag = strings.Replace(relTag, ":", "-", -1)
-	relTag = strings.Replace(relTag, ",", "", -1)
+	relTag := strings.ReplaceAll(version, " ", "-")
+	relTag = strings.ReplaceAll(relTag, ":", "-")
+	relTag = strings.ReplaceAll(relTag, ",", "")
 	t, err := time.Parse("2006-01-02T15-04-05Z", relTag)
 	if err != nil {
 		panic(err)
