@@ -459,6 +459,11 @@ func registerClusterOnSubnet(alias string, clusterRegInfo ClusterRegistrationInf
 		return "", e
 	}
 
+	return registerClusterWithSubnetCreds(clusterRegInfo, apiKey, lic)
+}
+
+// registerClusterOnSubnet - Registers the given cluster on SUBNET
+func registerClusterWithSubnetCreds(clusterRegInfo ClusterRegistrationInfo, apiKey string, lic string) (string, error) {
 	regURL, headers, e := subnetURLWithAuth(subnetRegisterURL(), apiKey, lic)
 	if e != nil {
 		return "", e
