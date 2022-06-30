@@ -42,12 +42,15 @@ EXAMPLES:
 `,
 }
 
+func isSupportLogsEnabled(alias string) bool {
+	return isFeatureEnabled(alias, "logger_webhook", "logger_webhook:subnet")
+}
+
 func mainStatusLogs(ctx *cli.Context) error {
 	setToggleMessageColor()
 	alias := validateLogsToggleCmd(ctx, "status")
-	enabled := isFeatureEnabled(alias, "logger_webhook", "logger_webhook:subnet")
 	printMsg(supportLogsMessage{
-		Logs: featureStatusStr(enabled),
+		Logs: featureStatusStr(isSupportLogsEnabled(alias)),
 	})
 
 	return nil
