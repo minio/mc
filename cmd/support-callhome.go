@@ -77,14 +77,17 @@ func (s supportCallhomeMessage) JSON() string {
 	return string(jsonBytes)
 }
 
+func isSupportCallhomeEnabled(alias string) bool {
+	return isFeatureEnabled(alias, "callhome", "callhome")
+}
+
 func mainCallhome(ctx *cli.Context) error {
 	setToggleMessageColor()
 	alias, arg := checkToggleCmdSyntax(ctx, "callhome")
 
 	if arg == "status" {
-		enabled := isFeatureEnabled(alias, "callhome", "callhome")
 		printMsg(supportCallhomeMessage{
-			Callhome: featureStatusStr(enabled),
+			Callhome: featureStatusStr(isSupportCallhomeEnabled(alias)),
 		})
 		return nil
 	}
