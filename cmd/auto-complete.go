@@ -425,6 +425,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/support/status":       aliasCompleter,
 
 	"/update": nil,
+	"/ready":  nil,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags
