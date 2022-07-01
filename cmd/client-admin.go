@@ -24,9 +24,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/klauspost/compress/gzhttp"
 	"github.com/mattn/go-ieproxy"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/httptracer"
@@ -102,14 +104,9 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 10 * time.Second,
 				TLSClientConfig:       tlsConfig,
-				// Set this value so that the underlying transport round-tripper
-				// doesn't try to auto decode the body of objects with
-				// content-encoding set to `gzip`.
-				//
-				// Refer:
-				//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
-				DisableCompression: true,
+				DisableCompression:    true,
 			}
+			transport = gzhttp.Transport(transport)
 
 			if config.Debug {
 				transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
@@ -151,6 +148,9 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStrFull)
+	}
+	if globalDebug {
+		s3Client.TraceOn(os.Stdout)
 	}
 	return s3Client, nil
 }
