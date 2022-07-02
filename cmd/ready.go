@@ -136,7 +136,6 @@ func mainReady(cliCtx *cli.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-timer.C:
-			timer.Reset(healthCheckInterval)
 			healthResult, hErr := anonClient.Healthy(ctx, healthOpts)
 			fatalIf(probe.NewError(hErr).Trace(aliasedURL), "Couldn't get the health status for `"+aliasedURL+"`.")
 			printMsg(readyMessage{
@@ -148,6 +147,8 @@ func mainReady(cliCtx *cli.Context) error {
 			if healthResult.Healthy {
 				return nil
 			}
+
+			timer.Reset(healthCheckInterval)
 		}
 	}
 }

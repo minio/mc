@@ -147,8 +147,6 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 		case <-globalContext.Done():
 			return globalContext.Err()
 		case <-timer.C:
-			timer.Reset(time.Second)
-
 			ctx, cancel := context.WithTimeout(globalContext, 3*time.Second)
 			// Fetch the service status of the specified MinIO server
 			info, e := client.ServerInfo(ctx)
@@ -168,6 +166,8 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 			default:
 				printProgress()
 			}
+
+			timer.Reset(time.Second)
 		}
 	}
 }
