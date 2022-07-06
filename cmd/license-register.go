@@ -32,7 +32,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var supportRegisterFlags = append([]cli.Flag{
+var licenseRegisterFlags = append([]cli.Flag{
 	cli.StringFlag{
 		Name:  "api-key",
 		Usage: "SUBNET API key",
@@ -43,13 +43,13 @@ var supportRegisterFlags = append([]cli.Flag{
 	},
 }, subnetCommonFlags...)
 
-var supportRegisterCmd = cli.Command{
+var licenseRegisterCmd = cli.Command{
 	Name:         "register",
 	Usage:        "register with MinIO subscription network",
 	OnUsageError: onUsageError,
-	Action:       mainSupportRegister,
+	Action:       mainLicenseRegister,
 	Before:       setGlobalsFromContext,
-	Flags:        append(supportRegisterFlags, globalFlags...),
+	Flags:        append(licenseRegisterFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -68,8 +68,8 @@ EXAMPLES:
 `,
 }
 
-// checkSupportRegisterSyntax - validate arguments passed by a user
-func checkSupportRegisterSyntax(ctx *cli.Context) {
+// checklicenseRegisterSyntax - validate arguments passed by a user
+func checklicenseRegisterSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		cli.ShowCommandHelpAndExit(ctx, "register", 1) // last argument is exit code
 	}
@@ -128,9 +128,9 @@ func validateAPIKey(apiKey string, offline bool) error {
 	return nil
 }
 
-func mainSupportRegister(ctx *cli.Context) error {
+func mainLicenseRegister(ctx *cli.Context) error {
 	console.SetColor("RegisterSuccessMessage", color.New(color.FgGreen, color.Bold))
-	checkSupportRegisterSyntax(ctx)
+	checklicenseRegisterSyntax(ctx)
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)

@@ -36,6 +36,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/licverifier"
 	"github.com/tidwall/gjson"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -43,24 +44,44 @@ import (
 const (
 	subnetRespBodyLimit  = 1 << 20 // 1 MiB
 	minioSubscriptionURL = "https://min.io/subscription"
+	subnetPublicKeyPath  = "/downloads/license-pubkey.pem"
 )
 
-var subnetCommonFlags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "airgap",
-		Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
-	},
-	cli.BoolFlag{
-		Name:   "dev",
-		Usage:  "Development mode - talks to local SUBNET",
-		Hidden: true,
-	},
-	cli.BoolFlag{
-		// Deprecated Oct 2021. Same as airgap, retaining as hidden for backward compatibility
-		Name:   "offline",
-		Usage:  "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
-		Hidden: true,
-	},
+var (
+	subnetPublicKeyProd = `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEaK31xujr6/rZ7ZfXZh3SlwovjC+X8wGq
+qkltaKyTLRENd4w3IRktYYCRgzpDLPn/nrf7snV/ERO5qcI7fkEES34IVEr+2Uff
+JkO2PfyyAYEO/5dBlPh1Undu9WQl6J7B
+-----END PUBLIC KEY-----`  // https://subnet.min.io/downloads/license-pubkey.pem
+	subnetPublicKeyDev = `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEbo+e1wpBY4tBq9AONKww3Kq7m6QP/TBQ
+mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
+9NKlTdQFGF3+aO6jbQ4hX/S5qPyF+a3z
+-----END PUBLIC KEY-----`  // https://localhost:9000/downloads/license-pubkey.pem
+	subnetCommonFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "airgap",
+			Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+		},
+		cli.BoolFlag{
+			Name:   "dev",
+			Usage:  "Development mode - talks to local SUBNET",
+			Hidden: true,
+		},
+		cli.BoolFlag{
+			// Deprecated Oct 2021. Same as airgap, retaining as hidden for backward compatibility
+			Name:   "offline",
+			Usage:  "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+			Hidden: true,
+		},
+	}
+)
+
+func subnetOfflinePublicKey() string {
+	if globalDevMode {
+		return subnetPublicKeyDev
+	}
+	return subnetPublicKeyProd
 }
 
 func subnetBaseURL() string {
@@ -143,12 +164,16 @@ func subnetAuthHeaders(authToken string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + authToken}
 }
 
-func subnetHTTPDo(req *http.Request) (*http.Response, error) {
+func getSubnetClient() *http.Client {
 	client := httpClient(10 * time.Second)
 	if globalSubnetProxyURL != nil {
 		client.Transport.(*http.Transport).Proxy = http.ProxyURL(globalSubnetProxyURL)
 	}
-	return client.Do(req)
+	return client
+}
+
+func subnetHTTPDo(req *http.Request) (*http.Response, error) {
+	return getSubnetClient().Do(req)
 }
 
 func subnetReqDo(r *http.Request, headers map[string]string) (string, error) {
@@ -484,11 +509,11 @@ func getSubnetCreds(alias string) (string, string, error) {
 		return "", "", e
 	}
 
-	apiKey := getSubnetAPIKeyFromConfig(alias)
+	lic := getSubnetLicenseFromConfig(alias)
 
-	lic := ""
-	if len(apiKey) == 0 {
-		lic = getSubnetLicenseFromConfig(alias)
+	apiKey := ""
+	if len(lic) == 0 {
+		apiKey = getSubnetAPIKeyFromConfig(alias)
 	}
 
 	return apiKey, lic, nil
@@ -501,4 +526,47 @@ func extractAndSaveSubnetCreds(alias string, resp string) {
 	if len(subnetAPIKey) > 0 || len(subnetLic) > 0 {
 		setSubnetCreds(alias, subnetAPIKey, subnetLic)
 	}
+}
+
+// downloadSubnetPublicKey will download the current subnet public key.
+func downloadSubnetPublicKey() (string, error) {
+	// Get the public key directly from Subnet
+	url := fmt.Sprintf("%s%s", subnetBaseURL(), subnetPublicKeyPath)
+	resp, err := getSubnetClient().Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), err
+}
+
+// parseLicense parses the license with the bundle public key and return it's information
+func parseLicense(license string, airgap bool) (*licverifier.LicenseInfo, error) {
+	var publicKey string
+
+	if airgap {
+		publicKey = subnetOfflinePublicKey()
+	} else {
+		subnetPubKey, e := downloadSubnetPublicKey()
+		if e != nil {
+			// there was an issue getting the subnet public key
+			// use hardcoded public keys instead
+			publicKey = subnetOfflinePublicKey()
+		} else {
+			publicKey = subnetPubKey
+		}
+	}
+
+	lv, e := licverifier.NewLicenseVerifier([]byte(publicKey))
+	if e != nil {
+		return nil, e
+	}
+
+	li, e := lv.Verify(license)
+	return &li, e
 }
