@@ -1589,9 +1589,9 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	// No object found, start looking for a prefix with the same name
 	// or a directory marker. Add a trailing slash if it is not in the path
-	if !strings.HasSuffix(path, string(c.targetURL.Separator)) {
-		path += string(c.targetURL.Separator)
-	}
+	//if !strings.HasSuffix(path, string(c.targetURL.Separator)) {
+	//	path += string(c.targetURL.Separator)
+	//}
 
 	nonRecursive := false
 	maxKeys := 1
