@@ -37,6 +37,7 @@ var adminCmdSubcommands = []cli.Command{
 	adminGroupCmd,
 	adminPolicyCmd,
 	adminReplicateCmd,
+	adminIDPCmd,
 	adminConfigCmd,
 	adminDecommissionCmd,
 	adminHealCmd,
