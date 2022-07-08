@@ -47,6 +47,14 @@ var catFlags = []cli.Flag{
 		Name:  "zip",
 		Usage: "Extract from remote zip file (MinIO server source only)",
 	},
+	cli.Int64Flag{
+		Name:  "offset",
+		Usage: "Start offset",
+	},
+	cli.Int64Flag{
+		Name:  "tail",
+		Usage: "Tail number of bytes at ending of file",
+	},
 }
 
 // Display contents of a file.
@@ -144,7 +152,7 @@ func (s prettyStdout) Write(input []byte) (int, error) {
 }
 
 // parseCatSyntax performs command-line input validation for cat command.
-func parseCatSyntax(ctx *cli.Context) (args []string, versionID string, timeRef time.Time) {
+func parseCatSyntax(ctx *cli.Context) (args []string, versionID string, timeRef time.Time, startO, tailO int64) {
 	args = ctx.Args()
 
 	versionID = ctx.String("version-id")
@@ -165,11 +173,23 @@ func parseCatSyntax(ctx *cli.Context) (args []string, versionID string, timeRef 
 	}
 
 	timeRef = parseRewindFlag(rewind)
+	isZip := ctx.Bool("zip")
+	startO = ctx.Int64("offset")
+	tailO = ctx.Int64("tail")
+	if tailO != 0 && startO != 0 {
+		fatalIf(errInvalidArgument().Trace(), "You cannot specify both --tail and --offset")
+	}
+	if tailO < 0 || startO < 0 {
+		fatalIf(errInvalidArgument().Trace(), "You cannot specify negative --tail or --offset")
+	}
+	if isZip && (tailO != 0 || startO != 0) {
+		fatalIf(errInvalidArgument().Trace(), "You cannot combine --zip with --tail or --offset")
+	}
 	return
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, isZip bool) *probe.Error {
+func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, isZip bool, startO, tailO int64) *probe.Error {
 	var reader io.ReadCloser
 	size := int64(-1)
 	switch sourceURL {
@@ -188,13 +208,30 @@ func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.T
 			if sourceVersion == "" {
 				versionID = content.VersionID
 			}
+			if tailO > 0 && content.Size > 0 {
+				startO = content.Size - tailO
+				if startO < 0 {
+					// Return all.
+					startO = 0
+				}
+			}
+
 			if client.GetURL().Type == objectStorage {
-				size = content.Size
+				size = content.Size - startO
+				if size < 0 {
+					err := probe.NewError(fmt.Errorf("specified offset (%d) bigger than file (%d)", startO, content.Size))
+					return err.Trace(sourceURL)
+				}
 			}
 		} else {
 			return err.Trace(sourceURL)
 		}
-		if reader, err = getSourceStreamFromURL(ctx, sourceURL, versionID, encKeyDB, isZip); err != nil {
+		gopts := GetOptions{VersionID: versionID, Zip: isZip, RangeStart: startO}
+		if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB, getSourceOpts{
+			GetOptions: gopts,
+			fetchStat:  false,
+			preserve:   false,
+		}); err != nil {
 			return err.Trace(sourceURL)
 		}
 		defer reader.Close()
@@ -257,7 +294,7 @@ func mainCat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
-	args, versionID, rewind := parseCatSyntax(cliCtx)
+	args, versionID, rewind, startO, tailO := parseCatSyntax(cliCtx)
 
 	// Set command flags from context.
 	stdinMode := false
@@ -268,6 +305,9 @@ func mainCat(cliCtx *cli.Context) error {
 
 	// handle std input data.
 	if stdinMode {
+		if isZip || startO != 0 || tailO != 0 {
+			fatalIf(errInvalidArgument().Trace(), "You cannot use --zip --tail or --offset with stdin")
+		}
 		fatalIf(catOut(os.Stdin, -1).Trace(), "Unable to read from standard input.")
 		return nil
 	}
@@ -285,7 +325,7 @@ func mainCat(cliCtx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(ctx, url, versionID, rewind, encKeyDB, isZip).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(catURL(ctx, url, versionID, rewind, encKeyDB, isZip, startO, tailO).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil

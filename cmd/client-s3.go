@@ -829,6 +829,12 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 	if opts.Zip {
 		o.Set("x-minio-extract", "true")
 	}
+	if opts.RangeStart != 0 {
+		err := o.SetRange(opts.RangeStart, 0)
+		if err != nil {
+			return nil, probe.NewError(err)
+		}
+	}
 
 	reader, e := c.api.GetObject(ctx, bucket, object, o)
 	if e != nil {
