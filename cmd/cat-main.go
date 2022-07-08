@@ -151,52 +151,69 @@ func (s prettyStdout) Write(input []byte) (int, error) {
 	return inputLen, nil
 }
 
-// parseCatSyntax performs command-line input validation for cat command.
-func parseCatSyntax(ctx *cli.Context) (args []string, versionID string, timeRef time.Time, startO, tailO int64) {
-	args = ctx.Args()
+type catOpts struct {
+	args      []string
+	versionID string
+	timeRef   time.Time
+	startO    int64
+	tailO     int64
+	isZip     bool
+	stdinMode bool
+}
 
-	versionID = ctx.String("version-id")
+// parseCatSyntax performs command-line input validation for cat command.
+func parseCatSyntax(ctx *cli.Context) catOpts {
+	var o catOpts
+	o.args = ctx.Args()
+
+	o.versionID = ctx.String("version-id")
 	rewind := ctx.String("rewind")
 
-	if versionID != "" && rewind != "" {
+	if o.versionID != "" && rewind != "" {
 		fatalIf(errInvalidArgument().Trace(), "You cannot specify --version-id and --rewind at the same time")
 	}
 
-	if versionID != "" && len(args) != 1 {
+	if o.versionID != "" && len(o.args) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "You need to pass at least one argument if --version-id is specified")
 	}
 
-	for _, arg := range args {
+	for _, arg := range o.args {
 		if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag `%s` passed.", arg))
 		}
 	}
 
-	timeRef = parseRewindFlag(rewind)
-	isZip := ctx.Bool("zip")
-	startO = ctx.Int64("offset")
-	tailO = ctx.Int64("tail")
-	if tailO != 0 && startO != 0 {
+	o.stdinMode = len(o.args) == 0
+
+	o.timeRef = parseRewindFlag(rewind)
+	o.isZip = ctx.Bool("zip")
+	o.startO = ctx.Int64("offset")
+	o.tailO = ctx.Int64("tail")
+	if o.tailO != 0 && o.startO != 0 {
 		fatalIf(errInvalidArgument().Trace(), "You cannot specify both --tail and --offset")
 	}
-	if tailO < 0 || startO < 0 {
+	if o.tailO < 0 || o.startO < 0 {
 		fatalIf(errInvalidArgument().Trace(), "You cannot specify negative --tail or --offset")
 	}
-	if isZip && (tailO != 0 || startO != 0) {
+	if o.isZip && (o.tailO != 0 || o.startO != 0) {
 		fatalIf(errInvalidArgument().Trace(), "You cannot combine --zip with --tail or --offset")
 	}
-	return
+	if o.stdinMode && (o.isZip || o.startO != 0 || o.tailO != 0) {
+		fatalIf(errInvalidArgument().Trace(), "You cannot use --zip --tail or --offset with stdin")
+	}
+
+	return o
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, isZip bool, startO, tailO int64) *probe.Error {
+func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixSSEPair, o catOpts) *probe.Error {
 	var reader io.ReadCloser
 	size := int64(-1)
 	switch sourceURL {
 	case "-":
 		reader = os.Stdin
 	default:
-		versionID := sourceVersion
+		versionID := o.versionID
 		var err *probe.Error
 		// Try to stat the object, the purpose is to:
 		// 1. extract the size of S3 object so we can check if the size of the
@@ -204,29 +221,29 @@ func catURL(ctx context.Context, sourceURL, sourceVersion string, timeRef time.T
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
 		// 2. extract the version ID if rewind flag is passed
-		if client, content, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, timeRef, isZip); err == nil {
-			if sourceVersion == "" {
+		if client, content, err := url2Stat(ctx, sourceURL, o.versionID, false, encKeyDB, o.timeRef, o.isZip); err == nil {
+			if o.versionID == "" {
 				versionID = content.VersionID
 			}
-			if tailO > 0 && content.Size > 0 {
-				startO = content.Size - tailO
-				if startO < 0 {
+			if o.tailO > 0 && content.Size > 0 {
+				o.startO = content.Size - o.tailO
+				if o.startO < 0 {
 					// Return all.
-					startO = 0
+					o.startO = 0
 				}
 			}
 
 			if client.GetURL().Type == objectStorage {
-				size = content.Size - startO
+				size = content.Size - o.startO
 				if size < 0 {
-					err := probe.NewError(fmt.Errorf("specified offset (%d) bigger than file (%d)", startO, content.Size))
+					err := probe.NewError(fmt.Errorf("specified offset (%d) bigger than file (%d)", o.startO, content.Size))
 					return err.Trace(sourceURL)
 				}
 			}
 		} else {
 			return err.Trace(sourceURL)
 		}
-		gopts := GetOptions{VersionID: versionID, Zip: isZip, RangeStart: startO}
+		gopts := GetOptions{VersionID: versionID, Zip: o.isZip, RangeStart: o.startO}
 		if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB, getSourceOpts{
 			GetOptions: gopts,
 			fetchStat:  false,
@@ -294,38 +311,30 @@ func mainCat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
-	args, versionID, rewind, startO, tailO := parseCatSyntax(cliCtx)
+	o := parseCatSyntax(cliCtx)
 
 	// Set command flags from context.
-	stdinMode := false
-	if len(args) == 0 {
-		stdinMode = true
-	}
-	isZip := cliCtx.Bool("zip")
 
 	// handle std input data.
-	if stdinMode {
-		if isZip || startO != 0 || tailO != 0 {
-			fatalIf(errInvalidArgument().Trace(), "You cannot use --zip --tail or --offset with stdin")
-		}
+	if o.stdinMode {
 		fatalIf(catOut(os.Stdin, -1).Trace(), "Unable to read from standard input.")
 		return nil
 	}
 
 	// if Args contain `-`, we need to preserve its order specially.
-	if len(args) > 0 && args[0] == "-" {
+	if len(o.args) > 0 && o.args[0] == "-" {
 		for i, arg := range os.Args {
 			if arg == "cat" {
 				// Overwrite cliCtx.Args with os.Args.
-				args = os.Args[i+1:]
+				o.args = os.Args[i+1:]
 				break
 			}
 		}
 	}
 
 	// Convert arguments to URLs: expand alias, fix format.
-	for _, url := range args {
-		fatalIf(catURL(ctx, url, versionID, rewind, encKeyDB, isZip, startO, tailO).Trace(url), "Unable to read from `"+url+"`.")
+	for _, url := range o.args {
+		fatalIf(catURL(ctx, url, encKeyDB, o).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil

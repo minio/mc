@@ -551,9 +551,10 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		var reader io.ReadCloser
 		// Proceed with regular stream copy.
 		reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), getSourceOpts{
-			GetOptions: GetOptions{VersionID: sourceVersion,
-				SSE: srcSSE,
-				Zip: isZip,
+			GetOptions: GetOptions{
+				VersionID: sourceVersion,
+				SSE:       srcSSE,
+				Zip:       isZip,
 			},
 			fetchStat: true,
 			preserve:  preserve,

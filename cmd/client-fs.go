@@ -435,6 +435,14 @@ func (f *fsClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(f.PathURL.Path)
 	}
+	if opts.RangeStart != 0 {
+		_, e := fileData.Seek(opts.RangeStart, os.SEEK_SET)
+		if e != nil {
+			err := f.toClientError(e, f.PathURL.Path)
+			return nil, err.Trace(f.PathURL.Path)
+		}
+	}
+
 	return fileData, nil
 }
 
