@@ -432,6 +432,7 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/update": nil,
 	"/ready":  nil,
+	"/ping":   nil,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags
