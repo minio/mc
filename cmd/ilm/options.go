@@ -118,7 +118,9 @@ type LifecycleOptions struct {
 
 	ExpiredObjectDeleteMarker               bool
 	NoncurrentVersionExpirationDays         int
+	NewerNoncurrentExpirationVersions       int
 	NoncurrentVersionTransitionDays         int
+	NewerNoncurrentTransitionVersions       int
 	NoncurrentVersionTransitionStorageClass string
 }
 
@@ -156,11 +158,13 @@ func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecyc
 		Expiration: expiry,
 		Transition: transition,
 		NoncurrentVersionExpiration: lifecycle.NoncurrentVersionExpiration{
-			NoncurrentDays: lifecycle.ExpirationDays(opts.NoncurrentVersionExpirationDays),
+			NoncurrentDays:          lifecycle.ExpirationDays(opts.NoncurrentVersionExpirationDays),
+			NewerNoncurrentVersions: opts.NewerNoncurrentExpirationVersions,
 		},
 		NoncurrentVersionTransition: lifecycle.NoncurrentVersionTransition{
-			NoncurrentDays: lifecycle.ExpirationDays(opts.NoncurrentVersionTransitionDays),
-			StorageClass:   opts.NoncurrentVersionTransitionStorageClass,
+			NoncurrentDays:          lifecycle.ExpirationDays(opts.NoncurrentVersionTransitionDays),
+			NewerNoncurrentVersions: opts.NewerNoncurrentTransitionVersions,
+			StorageClass:            opts.NoncurrentVersionTransitionStorageClass,
 		},
 	}
 
@@ -223,7 +227,9 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		StorageClass:                            sc,
 		ExpiredObjectDeleteMarker:               ctx.Bool("expired-object-delete-marker"),
 		NoncurrentVersionExpirationDays:         ctx.Int("noncurrentversion-expiration-days"),
+		NewerNoncurrentExpirationVersions:       ctx.Int("newer-noncurrentversions-expiration"),
 		NoncurrentVersionTransitionDays:         ctx.Int("noncurrentversion-transition-days"),
+		NewerNoncurrentTransitionVersions:       ctx.Int("newer-noncurrentversions-transition"),
 		IsNoncurrentVersionTransitionDaysSet:    ctx.IsSet("noncurrentversion-transition-days"),
 		NoncurrentVersionTransitionStorageClass: noncurrentSC,
 	}, nil
@@ -291,8 +297,16 @@ func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOpti
 		dest.NoncurrentVersionExpiration.NoncurrentDays = src.NoncurrentVersionExpiration.NoncurrentDays
 	}
 
+	if src.NoncurrentVersionExpiration.NewerNoncurrentVersions != dest.NoncurrentVersionExpiration.NewerNoncurrentVersions {
+		dest.NoncurrentVersionExpiration.NewerNoncurrentVersions = src.NoncurrentVersionExpiration.NewerNoncurrentVersions
+	}
+
 	if opts.IsNoncurrentVersionTransitionDaysSet {
 		dest.NoncurrentVersionTransition.NoncurrentDays = src.NoncurrentVersionTransition.NoncurrentDays
+	}
+
+	if src.NoncurrentVersionTransition.NewerNoncurrentVersions != dest.NoncurrentVersionTransition.NewerNoncurrentVersions {
+		dest.NoncurrentVersionTransition.NewerNoncurrentVersions = src.NoncurrentVersionTransition.NewerNoncurrentVersions
 	}
 
 	if src.NoncurrentVersionTransition.StorageClass != "" {
