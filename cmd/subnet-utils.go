@@ -104,6 +104,10 @@ func subnetRegisterURL() string {
 	return subnetBaseURL() + "/api/cluster/register"
 }
 
+func subnetOfflineRegisterURL(regToken string) string {
+	return subnetBaseURL() + "/cluster/register?token=" + regToken
+}
+
 func subnetLoginURL() string {
 	return subnetBaseURL() + "/api/auth/login"
 }
