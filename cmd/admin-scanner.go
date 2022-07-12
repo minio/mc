@@ -27,15 +27,15 @@ var adminScannerSubcommands = []cli.Command{
 var adminScannerCmd = cli.Command{
 	Name:            "scanner",
 	Usage:           "provide MinIO scanner info",
-	Action:          mainAdminScannerInfo,
+	Action:          mainAdminScanner,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	Subcommands:     adminScannerSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainAdminTop is the handle for "mc admin top" command.
-func mainScannerTop(ctx *cli.Context) error {
+// mainAdminScanner is the handle for "mc admin scanner" command.
+func mainAdminScanner(ctx *cli.Context) error {
 	commandNotFound(ctx, adminScannerSubcommands)
 	return nil
 }

@@ -80,7 +80,7 @@ func checkAdminScannerTraceSyntax(ctx *cli.Context) {
 // mainAdminScannerTrace - the entry function of trace command
 func mainAdminScannerTrace(ctx *cli.Context) error {
 	// Check for command syntax
-	checkAdminTraceSyntax(ctx)
+	checkAdminScannerTraceSyntax(ctx)
 
 	verbose := ctx.Bool("verbose")
 	aliasedURL := ctx.Args().Get(0)
