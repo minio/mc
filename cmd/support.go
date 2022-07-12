@@ -30,6 +30,7 @@ import (
 const featureToggleMessageTag = "FeatureToggleMessage"
 
 var supportSubcommands = []cli.Command{
+	supportRegisterCmd,
 	supportCallhomeCmd,
 	supportLogsCmd,
 	supportDiagCmd,
