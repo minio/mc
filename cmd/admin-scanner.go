@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,24 +19,23 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminTopSubcommands = []cli.Command{
-	adminTopAPICmd,
-	adminTopLocksCmd,
+var adminScannerSubcommands = []cli.Command{
+	adminScannerInfo,
+	adminScannerTraceCmd,
 }
 
-var adminTopCmd = cli.Command{
-	Name:            "top",
-	Usage:           "provide top like statistics for MinIO",
-	Action:          mainAdminTop,
+var adminScannerCmd = cli.Command{
+	Name:            "scanner",
+	Usage:           "provide MinIO scanner info",
+	Action:          mainAdminScannerInfo,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminTopSubcommands,
+	Subcommands:     adminScannerSubcommands,
 	HideHelpCommand: true,
 }
 
 // mainAdminTop is the handle for "mc admin top" command.
-func mainAdminTop(ctx *cli.Context) error {
-	commandNotFound(ctx, adminTopSubcommands)
+func mainScannerTop(ctx *cli.Context) error {
+	commandNotFound(ctx, adminScannerSubcommands)
 	return nil
-	// Sub-commands like "locks" have their own main.
 }

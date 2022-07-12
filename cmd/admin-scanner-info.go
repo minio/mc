@@ -39,7 +39,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-var adminTopScannerFlags = []cli.Flag{
+var adminScannerInfoFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "nodes",
 		Usage: "show only on matching servers, comma separate multiple",
@@ -61,13 +61,13 @@ var adminTopScannerFlags = []cli.Flag{
 	},
 }
 
-var adminTopScannerCmd = cli.Command{
-	Name:            "scanner",
+var adminScannerInfo = cli.Command{
+	Name:            "info",
 	Usage:           "summarize scanner events on MinIO server in real-time",
-	Action:          mainAdminTopScanner,
+	Action:          mainAdminScannerInfo,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(adminTopScannerFlags, globalFlags...),
+	Flags:           append(adminScannerInfoFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -85,14 +85,14 @@ EXAMPLES:
 }
 
 // checkAdminTopAPISyntax - validate all the passed arguments
-func checkAdminTopScannerSyntax(ctx *cli.Context) {
+func checkAdminScannerInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "scanner", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
 	}
 }
 
-func mainAdminTopScanner(ctx *cli.Context) error {
-	checkAdminTopScannerSyntax(ctx)
+func mainAdminScannerInfo(ctx *cli.Context) error {
+	checkAdminScannerInfoSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
 
