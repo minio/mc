@@ -45,7 +45,7 @@ var licenseRegisterFlags = append([]cli.Flag{
 
 var licenseRegisterCmd = cli.Command{
 	Name:         "register",
-	Usage:        "register with MinIO subscription network",
+	Usage:        "register with MinIO Subscription Network",
 	OnUsageError: onUsageError,
 	Action:       mainLicenseRegister,
 	Before:       setGlobalsFromContext,

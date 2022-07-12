@@ -32,7 +32,7 @@ import (
 
 var licenseInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "Display license information",
+	Usage:        "display license information",
 	OnUsageError: onUsageError,
 	Action:       mainLicenseInfo,
 	Before:       setGlobalsFromContext,
@@ -61,18 +61,18 @@ const (
 )
 
 type licInfoMessage struct {
-	Status  string   `json:"status"`
-	Info    *licInfo `json:"info,omitempty"`
-	Message string   `json:"message,omitempty"`
-	Error   string   `json:"error,omitempty"`
+	Status string  `json:"status"`
+	Info   licInfo `json:"info,omitempty"`
+	Error  string  `json:"error,omitempty"`
 }
 
 type licInfo struct {
-	Organization string    `json:"org"`           // Subnet organization name
-	Plan         string    `json:"plan"`          // Subnet plan
-	IssuedAt     time.Time `json:"issued_at"`     // Time of license issue
-	ExpiresAt    time.Time `json:"expires_at"`    // Time of license expiry
-	DeploymentID string    `json:"deployment_id"` // Cluster deployment ID
+	Organization string     `json:"org,omitempty"`           // Subnet organization name
+	Plan         string     `json:"plan,omitempty"`          // Subnet plan
+	IssuedAt     *time.Time `json:"issued_at,omitempty"`     // Time of license issue
+	ExpiresAt    *time.Time `json:"expires_at,omitempty"`    // Time of license expiry
+	DeploymentID string     `json:"deployment_id,omitempty"` // Cluster deployment ID
+	Message      string     `json:"message,omitempty"`       // Message to be displayed
 }
 
 func licInfoField(s string) string {
@@ -97,8 +97,8 @@ func (li licInfoMessage) String() string {
 		return licInfoErr(li.Error)
 	}
 
-	if li.Info == nil {
-		return licInfoMsg(li.Message)
+	if len(li.Info.Message) > 0 {
+		return licInfoMsg(li.Info.Message)
 	}
 
 	return licInfoMsg(getLicInfoStr(li.Info))
@@ -112,12 +112,11 @@ func (li licInfoMessage) JSON() string {
 	return string(jsonBytes)
 }
 
-func getLicInfoStr(li *licInfo) string {
+func getLicInfoStr(li licInfo) string {
 	var s strings.Builder
-	s.WriteString(color.WhiteString("\n"))
 
+	s.WriteString(color.WhiteString(""))
 	table := tablewriter.NewWriter(&s)
-
 	table.SetAutoWrapText(false)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -138,7 +137,7 @@ func getLicInfoStr(li *licInfo) string {
 }
 
 func getAGPLMessage() string {
-	return `You are using GNU AFFERO GENERAL PUBLIC LICENSE (https://www.gnu.org/licenses/agpl-3.0.txt)
+	return `You are using GNU AFFERO GENERAL PUBLIC LICENSE Verson 3 (https://www.gnu.org/licenses/agpl-3.0.txt)
 
 If you are building proprietary applications, you may want to choose the commercial license
 included as part of the Standard and Enterprise subscription plans. (https://min.io/signup?ref=mc)
@@ -169,8 +168,11 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	if len(apiKey) == 0 && len(lic) == 0 {
 		// Not registered. Default to AGPLv3
 		printMsg(licInfoMessage{
-			Status:  "success",
-			Message: getAGPLMessage(),
+			Status: "success",
+			Info: licInfo{
+				Plan:    "AGPLv3",
+				Message: getAGPLMessage(),
+			},
 		})
 		return nil
 	}
@@ -190,11 +192,11 @@ func mainLicenseInfo(ctx *cli.Context) error {
 		} else {
 			ssm = licInfoMessage{
 				Status: "success",
-				Info: &licInfo{
+				Info: licInfo{
 					Organization: li.Organization,
 					Plan:         li.Plan,
-					IssuedAt:     li.IssuedAt,
-					ExpiresAt:    li.ExpiresAt,
+					IssuedAt:     &li.IssuedAt,
+					ExpiresAt:    &li.ExpiresAt,
 					DeploymentID: li.DeploymentID,
 				},
 			}
@@ -202,8 +204,10 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	} else {
 		// Only api key is available, no license info
 		ssm = licInfoMessage{
-			Status:  "success",
-			Message: fmt.Sprintf("%s is registered with SUBNET. License info not available.", alias),
+			Status: "success",
+			Info: licInfo{
+				Message: fmt.Sprintf("%s is registered with SUBNET. License info not available.", alias),
+			},
 		}
 	}
 
