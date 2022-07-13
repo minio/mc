@@ -47,10 +47,16 @@ var supportPerfFlags = []cli.Flag{
 		Usage: "number of concurrent requests per server",
 		Value: 32,
 	},
+	cli.StringFlag{
+		Name:   "bucket",
+		Usage:  "provide a custom bucket name to use (NOTE: bucket must be created prior)",
+		Hidden: true, // Hidden for now.
+	},
 	cli.BoolFlag{
 		Name:  "verbose, v",
-		Usage: "Show per-server stats",
+		Usage: "display per-server stats",
 	},
+	// Drive test specific flags.
 	cli.StringFlag{
 		Name:  "filesize",
 		Usage: "total amount of data read/written to each drive",
@@ -167,12 +173,12 @@ func mainSupportPerf(ctx *cli.Context) error {
 		switch args[0] {
 		case "drive":
 			aliasedURL = args[1]
-			return mainAdminSpeedtestDrive(ctx, aliasedURL)
+			return mainAdminSpeedTestDrive(ctx, aliasedURL)
 		case "object":
 			aliasedURL = args[1]
 		case "net":
 			aliasedURL = args[1]
-			return mainAdminSpeedtestNetperf(ctx, aliasedURL)
+			return mainAdminSpeedTestNetperf(ctx, aliasedURL)
 		default:
 			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 		}
@@ -223,6 +229,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 		Duration:    duration,
 		Concurrency: concurrent,
 		Autotune:    autotune,
+		Bucket:      ctx.String("bucket"), // This is a hidden flag.
 	})
 	fatalIf(probe.NewError(err), "Failed to execute performance test")
 

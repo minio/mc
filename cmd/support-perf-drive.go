@@ -30,7 +30,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-func mainAdminSpeedtestDrive(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
