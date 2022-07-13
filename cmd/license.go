@@ -24,6 +24,7 @@ import (
 var licenseSubcommands = []cli.Command{
 	licenseRegisterCmd,
 	licenseInfoCmd,
+	licenseUpdateCmd,
 }
 
 var licenseCmd = cli.Command{
