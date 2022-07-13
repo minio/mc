@@ -27,12 +27,13 @@ var licenseSubcommands = []cli.Command{
 }
 
 var licenseCmd = cli.Command{
-	Name:        "license",
-	Usage:       "license related commands",
-	Action:      mainlicense,
-	Before:      setGlobalsFromContext,
-	Flags:       globalFlags,
-	Subcommands: licenseSubcommands,
+	Name:            "license",
+	Usage:           "license related commands",
+	Action:          mainlicense,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     licenseSubcommands,
+	HideHelpCommand: true,
 }
 
 // mainlicense is the handle for "mc license" command.
