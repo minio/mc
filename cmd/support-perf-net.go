@@ -42,7 +42,7 @@ func (m netperfResult) JSON() string {
 	return string(JSONBytes)
 }
 
-func mainAdminSpeedtestNetperf(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
