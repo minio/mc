@@ -19,31 +19,26 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
 )
 
-var supportRegisterFlags = append([]cli.Flag{
-	cli.StringFlag{
-		Name:  "api-key",
-		Usage: "SUBNET API key",
-	},
-	cli.StringFlag{
-		Name:  "name",
-		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
-	},
-}, subnetCommonFlags...)
-
-var supportRegisterCmd = cli.Command{
-	Name:               "register",
-	Usage:              "register with MinIO subscription network",
-	OnUsageError:       onUsageError,
-	Action:             mainSupportRegister,
-	Before:             setGlobalsFromContext,
-	Flags:              append(supportRegisterFlags, globalFlags...),
-	CustomHelpTemplate: "Please use 'mc license register'",
+var licenseSubcommands = []cli.Command{
+	licenseRegisterCmd,
+	licenseInfoCmd,
 }
 
-func mainSupportRegister(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc license register'")
+var licenseCmd = cli.Command{
+	Name:            "license",
+	Usage:           "license related commands",
+	Action:          mainlicense,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     licenseSubcommands,
+	HideHelpCommand: true,
+}
+
+// mainlicense is the handle for "mc license" command.
+func mainlicense(ctx *cli.Context) error {
+	commandNotFound(ctx, licenseSubcommands)
 	return nil
+	// Sub-commands like "register", "info" have their own main.
 }

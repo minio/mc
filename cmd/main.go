@@ -435,6 +435,7 @@ var appCmds = []cli.Command{
 	retentionCmd,
 	legalHoldCmd,
 	supportCmd,
+	licenseCmd,
 	shareCmd,
 	versionCmd,
 	ilmCmd,

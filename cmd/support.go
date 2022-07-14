@@ -27,10 +27,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-const (
-	featureToggleMessageTag = "FeatureToggleMessage"
-	featureStatusMessageTag = "FeatureStatusMessage"
-)
+const featureToggleMessageTag = "FeatureToggleMessage"
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
@@ -40,7 +37,6 @@ var supportSubcommands = []cli.Command{
 	supportPerfCmd,
 	supportInspectCmd,
 	supportProfileCmd,
-	supportStatusCmd,
 }
 
 var supportCmd = cli.Command{

@@ -430,6 +430,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/support/metrics":      aliasCompleter,
 	"/support/status":       aliasCompleter,
 
+	"/license/register": aliasCompleter,
+	"/license/info":     aliasCompleter,
+
 	"/update": nil,
 	"/ready":  nil,
 	"/ping":   nil,
