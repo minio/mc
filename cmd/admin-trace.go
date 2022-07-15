@@ -217,7 +217,7 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 }
 
 // Calculate tracing options for command line flags
-func tracingOpts(ctx *cli.Context) (opts madmin.ServiceTraceOpts, e error) {
+func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
 	if t := ctx.String("response-threshold"); t != "" {
 		d, e := time.ParseDuration(t)
 		if e != nil {
@@ -237,7 +237,6 @@ func tracingOpts(ctx *cli.Context) (opts madmin.ServiceTraceOpts, e error) {
 		return
 	}
 
-	apis := ctx.StringSlice("call")
 	if len(apis) == 0 {
 		// If api flag is not specified, then we will
 		// trace only S3 requests by default.
@@ -299,7 +298,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
-	opts, e := tracingOpts(ctx)
+	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
 	mopts := matchOpts{

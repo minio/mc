@@ -94,7 +94,7 @@ func mainAdminTopAPI(ctx *cli.Context) error {
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
-	opts, e := tracingOpts(ctx)
+	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
 	mopts := matchOpts{

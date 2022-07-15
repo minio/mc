@@ -49,6 +49,7 @@ var adminCmdSubcommands = []cli.Command{
 	adminTierCmd,
 	adminSpeedtestCmd,
 	adminProfileCmd,
+	adminScannerCmd,
 	adminTopCmd,
 	adminTraceCmd,
 	adminConsoleCmd,
