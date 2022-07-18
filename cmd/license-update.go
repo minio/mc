@@ -128,7 +128,7 @@ func performLicenseUpdate(lic string, alias string, airgap bool) licUpdateMessag
 
 	if li.ExpiresAt.Before(time.Now()) {
 		lum.Status = "error"
-		lum.Error = "License has expired"
+		lum.Error = fmt.Sprintf("License has expired on %s", li.ExpiresAt)
 		return lum
 	}
 
