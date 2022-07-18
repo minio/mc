@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -39,45 +40,28 @@ var licenseUpdateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS LICENSE-TOKEN
+  {{.HelpName}} ALIAS LICENSE-FILE-PATH
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 
 EXAMPLES:
-  1. Update license for cluster with alias 'play'
-     {{.Prompt}} {{.HelpName}} play eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzM4NCJ9.eyJsaWQiOiJjMGRlNDk4OC0wYzA3LTRiYTMtYjY5NS00MDQ2NjllZDQwMWYiLCJzdWIiOiJzaGlyZWVzaCtjMSthZG1pbkBtaW5pby5pbyIsImNhcCI6MjAwMDAsIm9yZyI6IlNoaXJlZXNoLUMxIiwiaXNzIjoic3VibmV0QG1pbi5pbyIsImFpZCI6MSwiaWF0IjoxLjY1NzA4NDEwNDAzNjQxMzQ3MmU5LCJwbGFuIjoiRU5URVJQUklTRSIsImV4cCI6MS42ODg2MjAxMDQwMzY0MTM0NzJlOSwiZGlkIjoiY2Q2NTIwZTctYjg2Ny00YWU2LTkyY2EtNDc5MWI2OWEwY2M3In0.Ya9_HSpog8EhPY1Ckcay5J70_Rms1dNnu4xNlKvwy-8fF6lyF2bqsQMvuDOKaCIYj5w4May8l-1SJ5tC2mQ9Z_ycgCVWpwHGx6h2b7EOAtjGiN6yFEWBLedEScUx34u8
+  1. Update license for cluster with alias 'play' from the file license.key
+     {{.Prompt}} {{.HelpName}} play license.key
 `,
 }
 
-const (
-	licUpdateMsgTag = "licenseUpdateMessage"
-	licUpdateErrTag = "licenseUpdateError"
-)
+const licUpdateMsgTag = "licenseUpdateMessage"
 
 type licUpdateMessage struct {
-	Alias  string `json:"-"`
 	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
-}
-
-func licUpdateMsg(s string) string {
-	return console.Colorize(licUpdateMsgTag, s)
-}
-
-func licUpdateErr(s string) string {
-	return console.Colorize(licUpdateErrTag, s)
+	Alias  string `json:"-"`
 }
 
 // String colorized license update message
 func (li licUpdateMessage) String() string {
-	if len(li.Error) > 0 {
-		return licUpdateErr(li.Error)
-	}
-
-	msg := fmt.Sprint("License updated successfully for", li.Alias)
-	return licUpdateMsg(msg)
+	return console.Colorize(licUpdateMsgTag, "License updated successfully for "+li.Alias)
 }
 
 // JSON jsonified license update message
@@ -88,48 +72,41 @@ func (li licUpdateMessage) JSON() string {
 	return string(jsonBytes)
 }
 
-func initLicUpdateColors() {
-	console.SetColor(licUpdateMsgTag, color.New(color.FgGreen, color.Bold))
-	console.SetColor(licUpdateErrTag, color.New(color.FgRed, color.Bold))
-}
-
 func mainLicenseUpdate(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 
-	initLicUpdateColors()
+	console.SetColor(licUpdateMsgTag, color.New(color.FgGreen, color.Bold))
 
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
 
-	lic := ctx.Args().Get(1)
+	licFile := ctx.Args().Get(1)
 
 	// If set, the subnet public key will not be downloaded from subnet
 	// and the offline key embedded in mc will be used.
 	airgap := ctx.Bool("airgap")
 
-	printMsg(performLicenseUpdate(lic, alias, airgap))
+	printMsg(performLicenseUpdate(licFile, alias, airgap))
 	return nil
 }
 
-func performLicenseUpdate(lic string, alias string, airgap bool) licUpdateMessage {
+func performLicenseUpdate(licFile string, alias string, airgap bool) licUpdateMessage {
 	lum := licUpdateMessage{
 		Alias:  alias,
 		Status: "success",
 	}
 
+	licBytes, e := os.ReadFile(licFile)
+	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to read license file %s", licFile))
+
+	lic := string(licBytes)
 	li, e := parseLicense(lic, airgap)
-	if e != nil {
-		lum.Status = "error"
-		lum.Error = e.Error()
-		return lum
-	}
+	fatalIf(probe.NewError(e), fmt.Sprintf("Error parsing license from %s", licFile))
 
 	if li.ExpiresAt.Before(time.Now()) {
-		lum.Status = "error"
-		lum.Error = fmt.Sprintf("License has expired on %s", li.ExpiresAt)
-		return lum
+		fatalIf(errDummy().Trace(), fmt.Sprintf("License has expired on %s", li.ExpiresAt))
 	}
 
 	setSubnetCreds(alias, "", lic)
