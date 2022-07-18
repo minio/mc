@@ -220,13 +220,17 @@ func registerOnline(clusterRegInfo ClusterRegistrationInfo, alias string, accAPI
 
 	if len(accAPIKey) > 0 {
 		resp, e = registerClusterWithSubnetCreds(clusterRegInfo, accAPIKey, "")
+		if e == nil {
+			// save the api key in config
+			setSubnetAPIKey(alias, accAPIKey)
+		}
 	} else {
 		resp, e = registerClusterOnSubnet(alias, clusterRegInfo)
 	}
 
 	fatalIf(probe.NewError(e), "Could not register cluster with SUBNET:")
 
-	extractAndSaveSubnetCreds(alias, resp)
+	extractAndSaveLicense(alias, resp)
 }
 
 func getAdminInfo(aliasedURL string) madmin.InfoMessage {
