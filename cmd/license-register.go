@@ -24,6 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -62,6 +63,35 @@ EXAMPLES:
   2. Register MinIO cluster at alias 'play' on SUBNET, using the name "play-cluster".
      {{.Prompt}} {{.HelpName}} play --name play-cluster
 `,
+}
+
+type licRegisterMessage struct {
+	Status string `json:"status"`
+	Alias  string `json:"-"`
+	Action string `json:"action,omitempty"`
+	Type   string `json:"type"`
+	URL    string `json:"url,omitempty"`
+}
+
+// String colorized license register message
+func (li licRegisterMessage) String() string {
+	var msg string
+	switch li.Type {
+	case "online":
+		msg = fmt.Sprintf("%s %s successfully.", li.Alias, li.Action)
+	case "offline":
+		msg = fmt.Sprintln("Open the following URL in the browser to register", li.Alias, "on SUBNET:")
+		msg += li.URL
+	}
+	return console.Colorize(licUpdateMsgTag, msg)
+}
+
+// JSON jsonified license register message
+func (li licRegisterMessage) JSON() string {
+	jsonBytes, e := json.MarshalIndent(li, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonBytes)
 }
 
 // checklicenseRegisterSyntax - validate arguments passed by a user
@@ -168,29 +198,26 @@ func mainLicenseRegister(ctx *cli.Context) error {
 		alreadyRegistered = true
 	}
 
+	lrm := licRegisterMessage{Status: "success", Alias: alias}
 	if offline {
-		registerOffline(regInfo, alias)
+		lrm.Type = "offline"
+
+		regToken, e := generateRegToken(regInfo)
+		fatalIf(probe.NewError(e), "Unable to generate registration token")
+
+		lrm.URL = subnetOfflineRegisterURL(regToken)
 	} else {
+		lrm.Type = "online"
 		registerOnline(regInfo, alias, accAPIKey)
 
-		action := "registered"
+		lrm.Action = "registered"
 		if alreadyRegistered {
-			action = "updated"
+			lrm.Action = "updated"
 		}
-
-		msg := console.Colorize("RegisterSuccessMessage", fmt.Sprintf("%s %s successfully.", clusterName, action))
-		fmt.Println(msg)
 	}
 
+	printMsg(lrm)
 	return nil
-}
-
-func registerOffline(clusterRegInfo ClusterRegistrationInfo, alias string) {
-	regToken, e := generateRegToken(clusterRegInfo)
-	fatalIf(probe.NewError(e), "Unable to generate registration token")
-
-	msg := fmt.Sprintf("Open the following URL in the browser to register %s on SUBNET:", alias)
-	fmt.Println(msg, subnetOfflineRegisterURL(regToken))
 }
 
 func registerOnline(clusterRegInfo ClusterRegistrationInfo, alias string, accAPIKey string) {
