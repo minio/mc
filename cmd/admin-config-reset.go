@@ -54,6 +54,11 @@ FLAGS:
 EXAMPLES:
   1. Reset MQTT notifcation target 'name1' settings to default values.
      {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt:name1
+  2. Reset compression's 'extensions' setting to default value.
+     {{.Prompt}} {{.HelpName}} myminio/ compression extensions
+  3. Reset site name and site region to default values.
+     {{.Prompt}} {{.HelpName}} myminio/ site name region
+
 `,
 }
 
