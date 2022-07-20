@@ -58,7 +58,6 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/ compression extensions
   3. Reset site name and site region to default values.
      {{.Prompt}} {{.HelpName}} myminio/ site name region
-
 `,
 }
 
