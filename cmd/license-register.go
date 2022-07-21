@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -172,13 +173,6 @@ func mainLicenseRegister(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e), "unable to parse input values")
 	}
 
-	// Create a new MinIO Admin Client
-	client := getClient(aliasedURL)
-
-	// Fetch info of all servers (cluster or single server)
-	admInfo, e := client.ServerInfo(globalContext)
-	fatalIf(probe.NewError(e), "Unable to fetch cluster info")
-
 	alias, _ := url2Alias(aliasedURL)
 	clusterName := ctx.String("name")
 	if len(clusterName) == 0 {
@@ -189,7 +183,7 @@ func mainLicenseRegister(ctx *cli.Context) error {
 		}
 	}
 
-	regInfo := getClusterRegInfo(admInfo, clusterName)
+	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
 
 	alreadyRegistered := false
 	apiKey, lic, e := getSubnetCreds(alias)
@@ -233,4 +227,15 @@ func registerOnline(clusterRegInfo ClusterRegistrationInfo, alias string, accAPI
 	fatalIf(probe.NewError(e), "Could not register cluster with SUBNET:")
 
 	extractAndSaveSubnetCreds(alias, resp)
+}
+
+func getAdminInfo(aliasedURL string) madmin.InfoMessage {
+	// Create a new MinIO Admin Client
+	client := getClient(aliasedURL)
+
+	// Fetch info of all servers (cluster or single server)
+	admInfo, e := client.ServerInfo(globalContext)
+	fatalIf(probe.NewError(e), "Unable to fetch cluster info")
+
+	return admInfo
 }
