@@ -1,5 +1,7 @@
 module github.com/minio/mc
 
+replace github.com/minio/madmin-go v1.4.5 => github.com/sinhaashish/madmin-go v1.4.7-0.20220722091852-9e4a249da7b5
+
 go 1.17
 
 require (
