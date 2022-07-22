@@ -108,7 +108,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.IntFlag{
 		Name:  "newer-noncurrentversions-transition",
-		Usage: "the number of noncurrent versions to not transition",
+		Usage: "the number of noncurrent versions to retain. If there are this many more recent noncurrent versions they will be transitioned",
 	},
 	cli.StringFlag{
 		Name:  "noncurrentversion-transition-storage-class",
