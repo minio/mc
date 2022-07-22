@@ -100,7 +100,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.IntFlag{
 		Name:  "newer-noncurrentversions-expiration",
-		Usage: "the number of noncurrent versions to not remove",
+		Usage: "the number of noncurrent versions to retain",
 	},
 	cli.IntFlag{
 		Name:  "noncurrentversion-transition-days",
