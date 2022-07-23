@@ -46,7 +46,7 @@ var adminConfigResetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [CONFIG-KEY...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -127,8 +127,16 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Call reset config API
 	input := strings.Join(args.Tail(), " ")
+	// Check if user has attemted to set values
+	for _, k := range args.Tail() {
+		if strings.Contains(k, "=") {
+			e := fmt.Errorf("new settings may not be provided for sub-system keys")
+			fatalIf(probe.NewError(e), "Unable to reset '%s' on the server", args.Tail()[0])
+		}
+	}
+
+	// Call reset config API
 	restart, e := client.DelConfigKV(globalContext, input)
 	fatalIf(probe.NewError(e), "Unable to reset '%s' on the server", input)
 
