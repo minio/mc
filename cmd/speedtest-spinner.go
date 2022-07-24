@@ -146,12 +146,13 @@ func (m *speedTestUI) View() string {
 		table.Render()
 
 		if m.quitting {
-			s.WriteString(fmt.Sprintf("\nSpeedtest: %s", m.result.String()))
+			s.WriteString("\n" + m.result.String())
 			if vstr := m.result.StringVerbose(); vstr != "" {
-				s.WriteString(vstr)
+				s.WriteString(vstr + "\n")
 			} else {
 				s.WriteString("\n")
 			}
+			s.WriteString("Objectperf: ✔\n")
 		}
 	} else if nres != nil {
 		table.SetHeader([]string{"Node", "RX", "TX", ""})
