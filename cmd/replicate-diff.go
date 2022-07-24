@@ -59,10 +59,10 @@ FLAGS:
    {{end}}
 EXAMPLES:
   1. Show unreplicated objects on "myminio" alias for objects in prefix "path/to/prefix" of "mybucket" for a specific remote target
-	   {{.Prompt}} {{.HelpName}} myminio/mybucket/path/to/prefix --arn <remote-arn>
+     {{.Prompt}} {{.HelpName}} myminio/mybucket/path/to/prefix --arn <remote-arn>
 
   2. Show unreplicated objects on "myminio" alias for objects in prefix "path/to/prefix" of "mybucket" for all targets.
-	   {{.Prompt}} {{.HelpName}} myminio/mybucket/path/to/prefix
+     {{.Prompt}} {{.HelpName}} myminio/mybucket/path/to/prefix
 `,
 }
 
