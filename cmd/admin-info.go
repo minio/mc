@@ -32,6 +32,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
 )
 
@@ -55,6 +56,54 @@ EXAMPLES:
   1. Get server information of the 'play' MinIO server.
      {{.Prompt}} {{.HelpName}} play/
 `,
+}
+
+type poolSummary struct {
+	setsCount   int
+	disksPerSet int
+	endpoints   set.StringSet
+}
+
+type clusterInfo map[int]*poolSummary
+
+func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
+	summary := make(clusterInfo)
+	for _, srv := range info.Servers {
+		for _, disk := range srv.Disks {
+			pool := summary[disk.PoolIndex]
+			if pool == nil {
+				pool = &poolSummary{endpoints: set.NewStringSet()}
+			}
+			pool.endpoints.Add(srv.Endpoint)
+			for _, disk := range srv.Disks {
+				if disk.SetIndex > pool.setsCount {
+					pool.setsCount = disk.SetIndex
+				}
+				if disk.DiskIndex > pool.disksPerSet {
+					pool.disksPerSet = disk.DiskIndex
+				}
+
+			}
+			summary[disk.PoolIndex] = pool
+		}
+	}
+	// We calculated max set index and max disk index
+	// increase by one to show the number of sets and disks
+	for _, pool := range summary {
+		pool.setsCount++
+		pool.disksPerSet++
+	}
+	return summary
+}
+
+func endpointToPools(endpoint string, c clusterInfo) (pools []int) {
+	for poolNumber, poolSummary := range c {
+		if poolSummary.endpoints.Contains(endpoint) {
+			pools = append(pools, poolNumber)
+		}
+	}
+	sort.Ints(pools)
+	return
 }
 
 // Wrap "Info" message together with fields "Status" and "Error"
@@ -126,7 +175,8 @@ func (u clusterStruct) String() (msg string) {
 		return u.Info.Servers[i].Endpoint < u.Info.Servers[j].Endpoint
 	})
 
-	poolIdx := -1
+	clusterSummary := clusterSummaryInfo(u.Info)
+
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
 		// Check if MinIO server is offline ("Mode" field),
@@ -200,9 +250,6 @@ func (u clusterStruct) String() (msg string) {
 			var OnDisks int
 			var dispNoOfDisks string
 			for _, disk := range srv.Disks {
-				if poolIdx == -1 {
-					poolIdx = disk.PoolIndex
-				}
 				switch disk.State {
 				case madmin.DriveStateOk, madmin.DriveStateUnformatted:
 					OnDisks++
@@ -220,15 +267,27 @@ func (u clusterStruct) String() (msg string) {
 			}
 			dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
 			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize(clr, "OK "))
+
+			// Print pools belonging to this server
+			var prettyPools []string
+			for _, pool := range endpointToPools(srv.Endpoint, clusterSummary) {
+				prettyPools = append(prettyPools, strconv.Itoa(pool+1))
+			}
+			msg += fmt.Sprintf("   Pool: %s\n", console.Colorize("Info", fmt.Sprintf("%+v", strings.Join(prettyPools, ", "))))
 		}
 
-		if poolIdx != -1 {
-			msg += fmt.Sprintf("   Pool: %s\n", console.Colorize("Info", humanize.Ordinal(poolIdx+1)))
-		}
 		msg += "\n"
-
-		poolIdx = -1
 	}
+
+	if backendType == madmin.Erasure {
+		msg += fmt.Sprintf("Pools:\n")
+		for pool, summary := range clusterSummary {
+			msg += fmt.Sprintf("   %s, Erasure sets: %d, Disks per erasure set: %d\n",
+				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.disksPerSet)
+		}
+	}
+
+	msg += "\n"
 
 	// Summary on used space, total no of buckets and
 	// total no of objects at the Cluster level
