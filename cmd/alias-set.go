@@ -184,11 +184,13 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, pee
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
 		// S3 connection parameters
-		Insecure:  globalInsecure,
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		HostURL:   urlJoinPath(url, probeBucketName),
-		Debug:     globalDebug,
+		Insecure:          globalInsecure,
+		AccessKey:         accessKey,
+		SecretKey:         secretKey,
+		HostURL:           urlJoinPath(url, probeBucketName),
+		Debug:             globalDebug,
+		ConnReadDeadline:  globalConnReadDeadline,
+		ConnWriteDeadline: globalConnWriteDeadline,
 	}
 	if peerCert != nil {
 		configurePeerCertificate(s3Config, peerCert)

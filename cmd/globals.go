@@ -22,6 +22,7 @@ import (
 	"context"
 	"crypto/x509"
 	"net/url"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/pkg/console"
@@ -65,6 +66,9 @@ var (
 	globalDevMode        = false  // dev flag set via command line
 	globalSubnetProxyURL *url.URL // Proxy to be used for communication with subnet
 
+	globalConnReadDeadline  time.Duration
+	globalConnWriteDeadline time.Duration
+
 	globalContext, globalCancel = context.WithCancel(context.Background())
 )
 
@@ -77,7 +81,14 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure, devMode bool) {
+func setGlobalsFromContext(ctx *cli.Context) error {
+	quiet := ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet")
+	debug := ctx.IsSet("debug") || ctx.GlobalIsSet("debug")
+	json := ctx.IsSet("json") || ctx.GlobalIsSet("json")
+	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
+	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
+	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
+
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
 	globalJSONLine = !isTerminal() && json
@@ -90,17 +101,9 @@ func setGlobals(quiet, debug, json, noColor, insecure, devMode bool) {
 	if globalNoColor || globalQuiet {
 		console.SetColorOff()
 	}
-}
 
-// Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobalsFromContext(ctx *cli.Context) error {
-	quiet := ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet")
-	debug := ctx.IsSet("debug") || ctx.GlobalIsSet("debug")
-	json := ctx.IsSet("json") || ctx.GlobalIsSet("json")
-	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
-	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
-	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
+	globalConnReadDeadline = ctx.Duration("conn-read-deadline")
+	globalConnWriteDeadline = ctx.Duration("conn-write-deadline")
 
-	setGlobals(quiet, debug, json, noColor, insecure, devMode)
 	return nil
 }

@@ -38,6 +38,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/minio/mc/pkg/deadlineconn"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
@@ -87,6 +88,29 @@ const (
 	// AmzObjectLockLegalHold sets object lock legal hold
 	AmzObjectLockLegalHold = "X-Amz-Object-Lock-Legal-Hold"
 )
+
+type dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+
+// newCustomDialContext setups a custom dialer for any external communication and proxies.
+func newCustomDialContext(c *Config) dialContext {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := &net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 15 * time.Second,
+		}
+
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		dconn := deadlineconn.New(conn).
+			WithReadDeadline(c.ConnReadDeadline).
+			WithWriteDeadline(c.ConnWriteDeadline)
+
+		return dconn, nil
+	}
+}
 
 var timeSentinel = time.Unix(0, 0).UTC()
 
@@ -145,12 +169,11 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				transport = config.Transport
 			} else {
 				tr := &http.Transport{
-					Proxy: http.ProxyFromEnvironment,
-					DialContext: (&net.Dialer{
-						Timeout:   10 * time.Second,
-						KeepAlive: 15 * time.Second,
-					}).DialContext,
-					MaxIdleConnsPerHost:   256,
+					Proxy:                 http.ProxyFromEnvironment,
+					DialContext:           newCustomDialContext(config),
+					MaxIdleConnsPerHost:   1024,
+					WriteBufferSize:       32 << 10, // 32KiB moving up from 4KiB default
+					ReadBufferSize:        32 << 10, // 32KiB moving up from 4KiB default
 					IdleConnTimeout:       90 * time.Second,
 					TLSHandshakeTimeout:   10 * time.Second,
 					ExpectContinueTimeout: 10 * time.Second,
