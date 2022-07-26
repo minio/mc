@@ -35,6 +35,7 @@ replicate   configure server side bucket replication
 admin       manage MinIO servers
 update      update mc to latest release
 support     supportability tools like  profile, register, callhome, inspect
+ping        perform liveness check
 ```
 
 ## 1.  Download MinIO Client
@@ -325,10 +326,11 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
 | [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
 | [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | [**support** - generate profile data for debugging purposes](#support) |
+| [**ping** - perform liveness check](#ping)                                        |                                                                     |                                                            |                                                    |
 
 
 
-###  Command `ls`
+###  Command `ls`  
 `ls` command lists files, buckets and objects. Use `--incomplete` flag to list partially copied content.
 
 ```
@@ -1964,4 +1966,33 @@ mc support logs show --last 5 --type application myminio node1
 Enable logs for cluster with alias 'play'
 ```
 mc support logs enable play
+```
+
+
+<a name="ping"></a>
+### Command `ping`
+`rb` command to perform liveness check
+
+```
+USAGE:
+   mc ping [FLAGS] TARGET
+
+FLAGS:
+  --count value, -c value        perform liveliness check for count number of times (default: 0)
+  --error-count value, -e value  exit if errors more than consecutive error count (default: 50)
+  --interval value, -i value     wait interval between each request in seconds (default: 1)
+  --distributed, -a              ping all the servers in the cluster
+  --help, -h                    show help
+
+
+```
+
+*Example: Perform liveness check on https://play.min.io.*
+
+
+```
+mc ping play
+1: https://play.min.io:   min=919.538ms   max=919.538ms   average=919.538ms   errors=0   roundtrip=919.538ms
+2: https://play.min.io:   min=278.356ms   max=919.538ms   average=598.947ms   errors=0   roundtrip=278.356ms
+3: https://play.min.io:   min=278.356ms   max=919.538ms   average=504.759ms   errors=0   roundtrip=316.384ms
 ```

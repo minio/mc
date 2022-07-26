@@ -19,10 +19,11 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"text/tabwriter"
+	"text/template"
 	"time"
 
 	"github.com/fatih/color"
@@ -41,7 +42,6 @@ var pingFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "count, c",
 		Usage: "perform liveliness check for count number of times",
-		// Value: 4,
 	},
 	cli.IntFlag{
 		Name:  "error-count, e",
@@ -109,24 +109,35 @@ func (pr PingResult) JSON() string {
 	return string(statusJSONBytes)
 }
 
-func (pr PingResult) String() (msg string) {
+var colorMap = template.FuncMap{
+	"colorWhite": color.New(color.FgWhite).SprintfFunc(),
+	"colorRed":   color.New(color.FgRed).SprintfFunc(),
+}
+
+// PingDist is the template for ping result in distributed mode
+const PingDist = `{{$x := .Counter}}{{range .Endpoints}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
+{{end}}`
+
+// Ping is the template for ping result
+const Ping = `{{$x := .Counter}}{{range .Endpoints}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
+
+// PingTemplateDist - captures ping template
+var PingTemplateDist = template.Must(template.New("ping-list").Funcs(colorMap).Parse(PingDist))
+
+// PingTemplate - captures ping template
+var PingTemplate = template.Must(template.New("ping-list").Funcs(colorMap).Parse(Ping))
+
+// String colorized service status message.
+func (pr PingResult) String() string {
 	var s strings.Builder
-	w := tabwriter.NewWriter(&s, 0, 8, 1, '\t', tabwriter.AlignRight)
-	var ep string
-	for _, p := range pr.Endpoints {
-		if p.Endpoint.Port == "" {
-			ep = p.Endpoint.Scheme + "://" + p.Endpoint.Host
-		} else {
-			ep = p.Endpoint.Scheme + "://" + p.Endpoint.Host + ":" + p.Endpoint.Port
-		}
-		if p.Error == "" {
-			fmt.Fprintf(&s, "%d:  %s\t", pr.Counter, ep)
-			fmt.Fprintf(&s, "   min=%s\t   max=%s\t   average=%s\t   errors=%d\t    roundtrip=%s\t\n", p.Min, p.Max, p.Average, p.CountErr, p.Roundtrip)
-		} else {
-			fmt.Fprintf(&s, console.Colorize("InfoFail", fmt.Sprintf("%d:  %s\t   min=%s\t   max=%s\t   average=%s\t   errors=%d\t    roundtrip=%s\t\n",
-				pr.Counter, ep, p.Min, p.Max, p.Average, p.CountErr, p.Roundtrip)))
-		}
+	w := tabwriter.NewWriter(&s, 1, 8, 3, ' ', 0)
+	var e error
+	if len(pr.Endpoints) > 1 {
+		e = PingTemplateDist.Execute(w, pr)
+	} else {
+		e = PingTemplate.Execute(w, pr)
 	}
+	fatalIf(probe.NewError(e), "Unable to initialize template writer")
 	w.Flush()
 	return s.String()
 }
@@ -140,19 +151,19 @@ type Endpoint struct {
 
 // EndPointStats - container to hold server ping stats
 type EndPointStats struct {
-	Endpoint  Endpoint      `json:"endpoint"`
-	Min       time.Duration `json:"min"`
-	Max       time.Duration `json:"max"`
-	Average   time.Duration `json:"average"`
-	CountErr  int           `json:"error-count,omitempty"`
-	Error     string        `json:"error,omitempty"`
-	Roundtrip time.Duration `json:"roundtrip"`
+	Endpoint  Endpoint `json:"endpoint"`
+	Min       string   `json:"min"`
+	Max       string   `json:"max"`
+	Average   string   `json:"average"`
+	CountErr  string   `json:"error-count,omitempty"`
+	Error     string   `json:"error,omitempty"`
+	Roundtrip string   `json:"roundtrip"`
 }
 
 // PingResult contains ping output
 type PingResult struct {
 	Status    string          `json:"status"`
-	Counter   int             `json:"counter"`
+	Counter   string          `json:"counter"`
 	Endpoints []EndPointStats `json:"servers"`
 }
 
@@ -201,12 +212,12 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		stat := populateData(cliCtx, result, endPointMap)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
-			Min:       time.Duration(stat.min).Round(time.Microsecond),
-			Max:       time.Duration(stat.max).Round(time.Microsecond),
-			Average:   time.Duration(stat.avg).Round(time.Microsecond),
-			CountErr:  stat.errorCount,
+			Min:       time.Duration(stat.min).Round(time.Microsecond).String(),
+			Max:       time.Duration(stat.max).Round(time.Microsecond).String(),
+			Average:   time.Duration(stat.avg).Round(time.Microsecond).String(),
+			CountErr:  strconv.Itoa(stat.errorCount),
 			Error:     stat.err,
-			Roundtrip: result.ResponseTime.Round(time.Microsecond),
+			Roundtrip: result.ResponseTime.Round(time.Microsecond).String(),
 		}
 		endPointStats = append(endPointStats, endPointStat)
 		endPointMap[result.Endpoint.Host] = stat
@@ -214,7 +225,7 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	}
 	printMsg(PingResult{
 		Status:    "success",
-		Counter:   index,
+		Counter:   strconv.Itoa(index),
 		Endpoints: endPointStats,
 	})
 

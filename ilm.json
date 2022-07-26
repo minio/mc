@@ -1,1 +1,0 @@
-{"Rules":[{"Expiration":{"Days":200,"DeleteMarker":false},"ID":"cb5u2njp8fs5d6o803vg","Filter":{"And":{"Tags":[{"Key":"object-type","Value":"non-pdf"}]}},"Status":"Enabled"}]}
