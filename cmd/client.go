@@ -209,17 +209,19 @@ type ClientContent struct {
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
-	AccessKey    string
-	SecretKey    string
-	SessionToken string
-	Signature    string
-	HostURL      string
-	AppName      string
-	AppVersion   string
-	Debug        bool
-	Insecure     bool
-	Lookup       minio.BucketLookupType
-	Transport    *http.Transport
+	AccessKey         string
+	SecretKey         string
+	SessionToken      string
+	Signature         string
+	HostURL           string
+	AppName           string
+	AppVersion        string
+	Debug             bool
+	Insecure          bool
+	Lookup            minio.BucketLookupType
+	ConnReadDeadline  time.Duration
+	ConnWriteDeadline time.Duration
+	Transport         *http.Transport
 }
 
 // SelectObjectOpts - opts entered for select API
