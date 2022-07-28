@@ -109,6 +109,10 @@ func performLicenseUpdate(licFile string, alias string, airgap bool) licUpdateMe
 		fatalIf(errDummy().Trace(), fmt.Sprintf("License has expired on %s", li.ExpiresAt))
 	}
 
+	if li.DeploymentID != getAdminInfo(alias).DeploymentID {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("License is invalid for the deployment %s", alias))
+	}
+
 	setSubnetCreds(alias, "", lic)
 	return lum
 }
