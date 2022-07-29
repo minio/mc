@@ -185,7 +185,7 @@ func urlJoinPath(url1, url2 string) string {
 	return joinURLs(u1, u2).String()
 }
 
-// url2Stat returns stat info for URL.
+// url2Stat returns stat info for URL - supports bucket, object and a prefixe with or without a trailing slash
 func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
@@ -239,18 +239,6 @@ func url2Alias(aliasedURL string) (alias, path string) {
 		return urlParts[0], urlParts[1]
 	}
 	return urlParts[0], ""
-}
-
-// isURLPrefixExists - check if object key prefix exists.
-func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
-	clnt, err := newClient(urlPrefix)
-	if err != nil {
-		return false
-	}
-	for entry := range clnt.List(globalContext, ListOptions{Recursive: false, Incomplete: incomplete, WithMetadata: false, ShowDir: DirNone}) {
-		return entry.Err == nil
-	}
-	return false
 }
 
 // guessURLContentType - guess content-type of the URL.

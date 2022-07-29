@@ -131,9 +131,8 @@ func parseTreeSyntax(ctx context.Context, cliCtx *cli.Context) (args []string, d
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(ctx, url, "", false, nil, timeRef, false); err != nil && !isURLPrefixExists(url, false) {
-			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
-		}
+		_, _, err := url2Stat(ctx, url, "", false, nil, timeRef, false)
+		fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 	}
 	return
 }
