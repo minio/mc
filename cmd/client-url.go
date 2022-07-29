@@ -243,12 +243,14 @@ func url2Alias(aliasedURL string) (alias, path string) {
 
 // isURLPrefixExists - check if object key prefix exists.
 func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
-	clnt, err := newClient(urlPrefix)
-	if err != nil {
-		return false
-	}
-	for entry := range clnt.List(globalContext, ListOptions{Recursive: false, Incomplete: incomplete, WithMetadata: false, ShowDir: DirNone}) {
-		return entry.Err == nil
+	if strings.HasSuffix(urlPrefix, "/") {
+		clnt, err := newClient(urlPrefix)
+		if err != nil {
+			return false
+		}
+		for entry := range clnt.List(globalContext, ListOptions{Recursive: false, Incomplete: incomplete, WithMetadata: false, ShowDir: DirNone}) {
+			return entry.Err == nil
+		}
 	}
 	return false
 }
