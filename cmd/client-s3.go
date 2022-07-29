@@ -1591,8 +1591,8 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	//     - /path/to/existing/object
 	//     - /path/to/existing_directory
 	//     - /path/to/existing_directory/
-	//     - /path/to/empty_directory
-	//     - /path/to/empty_directory/
+	//     - /path/to/directory_marker
+	//     - /path/to/directory_marker/
 
 	// First an HEAD call is issued, this is faster than doing listing even if the object exists
 	// because the list could be very large. At the same time, the HEAD call is avoided if the
