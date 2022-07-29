@@ -355,6 +355,8 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 			}
 			printMsg(msg)
 		}
+	} else {
+		printDryRunMsg(content)
 	}
 	return nil
 }
