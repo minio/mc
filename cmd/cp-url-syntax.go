@@ -183,15 +183,7 @@ func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, 
 
 	for _, srcURL := range srcURLs {
 		c, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef, isZip)
-		// incomplete uploads are not necessary for copy operation, no need to verify for them.
-		isIncomplete := false
-		if err != nil {
-			if !isURLPrefixExists(srcURL, isIncomplete) {
-				fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
-			}
-			// No more check here, continue to the next source url
-			continue
-		}
+		fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 		if srcContent.Type.IsDir() {
 			// Require --recursive flag if we are copying a directory

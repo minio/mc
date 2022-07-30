@@ -180,10 +180,12 @@ type rmMessage struct {
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
-	msg := console.Colorize("Remove", fmt.Sprintf("Removing `%s`", r.Key))
+	msg := "Remove "
+
 	if r.DeleteMarker {
-		msg = console.Colorize("Remove", fmt.Sprintf("Creating delete marker `%s`", r.Key))
+		msg = "Creating delete marker "
 	}
+	msg += console.Colorize("Remove", fmt.Sprintf("`%s`", r.Key))
 	if r.VersionID != "" {
 		msg += fmt.Sprintf(" (versionId=%s)", r.VersionID)
 	}
