@@ -139,10 +139,10 @@ func errorIf(err *probe.Error, msg string, data ...interface{}) {
 				Message: err.ToGoError().Error(),
 				Error:   err.ToGoError(),
 			},
-			SysInfo: err.SysInfo,
 		}
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
+			errorMsg.SysInfo = err.SysInfo
 		}
 		json, e := json.MarshalIndent(struct {
 			Status string       `json:"status"`

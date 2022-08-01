@@ -142,9 +142,7 @@ func mainMakeBucket(cli *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
-				errorIf(err.Trace(targetURL), "Unable to make bucket, please use `mc mb %s/<your-bucket-name>`.", targetURL)
-			case BucketNameTopLevel:
-				errorIf(err.Trace(targetURL), "Unable to make prefix, please use `mc mb %s/`.", targetURL)
+				errorIf(err.Trace(targetURL), "Unable to make bucket, please use `mc mb %s`.", urlJoinPath(targetURL, "your-bucket-name"))
 			default:
 				errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
 			}
