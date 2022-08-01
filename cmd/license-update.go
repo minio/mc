@@ -113,6 +113,6 @@ func performLicenseUpdate(licFile string, alias string, airgap bool) licUpdateMe
 		fatalIf(errDummy().Trace(), fmt.Sprintf("License is invalid for the deployment %s", alias))
 	}
 
-	setSubnetCreds(alias, "", lic)
+	setSubnetLicense(alias, lic)
 	return lum
 }
