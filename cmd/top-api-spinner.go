@@ -162,22 +162,22 @@ func (m *traceUI) View() string {
 			traceSt.addAPIBytesRX(res.Trace.HTTP.CallStats.InputBytes)
 			traceSt.addAPIBytesTX(res.Trace.HTTP.CallStats.OutputBytes)
 		}
-		if res.Trace.HTTP.RespInfo.StatusCode >= 500 {
+		if res.Trace.HTTP.RespInfo.StatusCode >= 499 {
 			traceSt.addAPIErrors(1)
 		}
 		m.apiStatsMap[res.Trace.FuncName] = traceSt
 	}
 
-	table.SetHeader([]string{"API", "CALLS", "ERRORS", "RX", "TX"})
+	table.SetHeader([]string{"API", "RX", "TX", "CALLS", "ERRORS"})
 	data := make([][]string, 0, len(m.apiStatsMap))
 
 	for k, stats := range m.apiStatsMap {
 		data = append(data, []string{
 			k,
-			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
-			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPIErrors())),
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesRX())),
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesTX())),
+			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
+			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPIErrors())),
 		})
 	}
 	sort.Slice(data, func(i, j int) bool {
