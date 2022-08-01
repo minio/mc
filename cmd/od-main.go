@@ -48,7 +48,7 @@ USAGE:
   {{.HelpName}} [OPERANDS]
 
 OPERANDS:
-  if=        Source file to upload
+  if=        Source stream to upload
   of=        Target path to upload to
   size=      Size of each part. If not specified, will be calculated from the source file size.
   parts=     Number of parts to upload. If not specified, will calculated from the source file size.
