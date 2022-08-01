@@ -49,7 +49,7 @@ USAGE:
 
 OPERANDS:
   if=        Source file to upload
-  of=        Target file/directory to upload to
+  of=        Target path to upload to
   size=      Size of each part. If not specified, will be calculated from the source file size.
   parts=     Number of parts to upload. If not specified, will calculated from the source file size.
 
