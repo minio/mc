@@ -37,6 +37,7 @@ type topAPIStats struct {
 	TotalCalls   uint64
 	TotalBytesRX uint64
 	TotalBytesTX uint64
+	TotalErrors  uint64
 }
 
 func (s *topAPIStats) addAPICall(n int) {
@@ -51,6 +52,10 @@ func (s *topAPIStats) addAPIBytesTX(n int) {
 	atomic.AddUint64(&s.TotalBytesTX, uint64(n))
 }
 
+func (s *topAPIStats) addAPIErrors(n int) {
+	atomic.AddUint64(&s.TotalErrors, uint64(n))
+}
+
 func (s *topAPIStats) loadAPICall() uint64 {
 	return atomic.LoadUint64(&s.TotalCalls)
 }
@@ -61,6 +66,10 @@ func (s *topAPIStats) loadAPIBytesRX() uint64 {
 
 func (s *topAPIStats) loadAPIBytesTX() uint64 {
 	return atomic.LoadUint64(&s.TotalBytesTX)
+}
+
+func (s *topAPIStats) loadAPIErrors() uint64 {
+	return atomic.LoadUint64(&s.TotalErrors)
 }
 
 type traceUI struct {
@@ -153,18 +162,22 @@ func (m *traceUI) View() string {
 			traceSt.addAPIBytesRX(res.Trace.HTTP.CallStats.InputBytes)
 			traceSt.addAPIBytesTX(res.Trace.HTTP.CallStats.OutputBytes)
 		}
+		if res.Trace.HTTP.RespInfo.StatusCode >= 499 {
+			traceSt.addAPIErrors(1)
+		}
 		m.apiStatsMap[res.Trace.FuncName] = traceSt
 	}
 
-	table.SetHeader([]string{"API", "CALLS", "RX", "TX"})
+	table.SetHeader([]string{"API", "RX", "TX", "CALLS", "ERRORS"})
 	data := make([][]string, 0, len(m.apiStatsMap))
 
 	for k, stats := range m.apiStatsMap {
 		data = append(data, []string{
 			k,
-			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesRX())),
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesTX())),
+			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
+			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPIErrors())),
 		})
 	}
 	sort.Slice(data, func(i, j int) bool {
