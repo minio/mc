@@ -36,7 +36,7 @@ import (
 // make a bucket.
 var odCmd = cli.Command{
 	Name:         "od",
-	Usage:        "do multipart upload and get time to upload",
+	Usage:        "measure single stream upload and download",
 	Action:       mainOD,
 	Before:       setGlobalsFromContext,
 	OnUsageError: onUsageError,
