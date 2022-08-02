@@ -27,6 +27,7 @@ import (
 	"time"
 
 	json "github.com/minio/colorjson"
+	madmin "github.com/minio/madmin-go"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
@@ -46,18 +47,15 @@ var odCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [OPERANDS]
-
 OPERANDS:
   if=        Source stream to upload
   of=        Target path to upload to
   size=      Size of each part. If not specified, will be calculated from the source stream size.
   parts=     Number of parts to upload. If not specified, will calculated from the source file size.
-
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
-
+  {{end}}{{end}}
 EXAMPLES:
   1. Upload 200MiB of a file to a bucket in 5 parts of size 40MiB.
       {{.HelpName}} if=file.txt of=play/my-bucket/file.txt size=40MiB parts=5
@@ -67,7 +65,6 @@ EXAMPLES:
 
   3. Upload a full file to a bucket in 5 parts.
       {{.HelpName}} if=file.txt of=play/my-bucket/file.txt parts=5
-
 `,
 }
 
@@ -93,9 +90,9 @@ func (o odMessage) JSON() string {
 	return string(copyMessageBytes)
 }
 
-func setOdSizes(args map[string]string, odURLs URLs) (combinedSize int64, partSize uint64, parts int, e error) {
+func setOdSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint64, parts int, e error) {
 	// If parts not specified, set to 0, else scan for integer.
-	p := args["parts"]
+	p := args.Get("parts")
 	if p == "" {
 		parts = 0
 	} else {
@@ -105,7 +102,7 @@ func setOdSizes(args map[string]string, odURLs URLs) (combinedSize int64, partSi
 		}
 	}
 
-	s := args["size"]
+	s := args.Get("size")
 	if parts < 1 && s == "" {
 		if parts == 0 {
 			return 0, 0, 0, fmt.Errorf("either parts or size must be specified")
@@ -140,9 +137,9 @@ func setOdSizes(args map[string]string, odURLs URLs) (combinedSize int64, partSi
 	return combinedSize, partSize, parts, nil
 }
 
-func getOdUrls(args map[string]string, ctx context.Context) (odURLs URLs, e error) {
-	inFile := args["if"]
-	outFile := args["of"]
+func getOdUrls(ctx context.Context, args madmin.KVS) (odURLs URLs, e error) {
+	inFile := args.Get("if")
+	outFile := args.Get("of")
 
 	// Placeholder encryption key database
 	var encKeyDB map[string][]prefixSSEPair
@@ -183,18 +180,21 @@ func mainOD(cliCtx *cli.Context) error {
 	defer cancelCopy()
 
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "mb", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(cliCtx, "od", 1) // last argument is exit code
 	}
 
-	mapArgs, err := parseKVArgs(strings.Join(cliCtx.Args(), ","))
-	fatalIf(err.Trace(), "Unable to parse arguments.")
+	var kvsArgs madmin.KVS
+	for _, arg := range cliCtx.Args() {
+		kv := strings.SplitN(arg, "=", 2)
+		kvsArgs.Set(kv[0], kv[1])
+	}
 
 	// Get content from source.
-	odURLs, e := getOdUrls(mapArgs, ctx)
+	odURLs, e := getOdUrls(ctx, kvsArgs)
 	fatalIf(probe.NewError(e), "Unable to get source and target URLs")
 
 	// Set sizes.
-	combinedSize, partSize, parts, e := setOdSizes(mapArgs, odURLs)
+	combinedSize, partSize, parts, e := setOdSizes(odURLs, kvsArgs)
 	fatalIf(probe.NewError(e), "Unable to set parts size")
 
 	sourcePath := odURLs.SourceContent.URL.Path
