@@ -18,14 +18,19 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/fatih/color"
 	"github.com/klauspost/compress/zip"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -49,7 +54,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Set bucket metadata for 'mybucket' from previously exported metadata zip file.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket /backups/mybucket-metadata.zip
+     {{.Prompt}} {{.HelpName}} myminio /backups/mybucket-metadata.zip
 
   2. Set bucket metadata for all buckets from previously exported metadata zip file.
      {{.Prompt}} {{.HelpName}} myminio /backups/cluster-bucket-metadata.zip
@@ -66,6 +71,13 @@ func checkBucketImportSyntax(ctx *cli.Context) {
 func mainClusterBucketImport(ctx *cli.Context) error {
 	// Check for command syntax
 	checkBucketImportSyntax(ctx)
+	console.SetColor("Name", color.New(color.Bold, color.FgCyan))
+	console.SetColor("success", color.New(color.Bold, color.FgGreen))
+	console.SetColor("warning", color.New(color.Bold, color.FgYellow))
+	console.SetColor("errors", color.New(color.Bold, color.FgRed))
+	console.SetColor("statusMsg", color.New(color.Bold, color.FgHiWhite))
+	console.SetColor("failCell", color.New(color.FgRed))
+	console.SetColor("passCell", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -100,10 +112,123 @@ func mainClusterBucketImport(ctx *cli.Context) error {
 	aliasedURL = filepath.Clean(aliasedURL)
 	_, bucket := url2Alias(aliasedURL)
 
-	ierr := client.ImportBucketMetadata(context.Background(), bucket, f)
+	rpt, ierr := client.ImportBucketMetadata(context.Background(), bucket, f)
 	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to import bucket metadata.")
-	if !globalJSON {
-		console.Infof("Bucket metadata imported to %s from %s\n", bucket, args.Get(1))
-	}
+	printMsg(importMetaMsg{
+		BucketMetaImportErrs: rpt,
+		Status:               "success",
+		URL:                  aliasedURL,
+		Op:                   "import",
+	})
+
 	return nil
+}
+
+type importMetaMsg struct {
+	madmin.BucketMetaImportErrs
+	Op     string
+	URL    string `json:"url"`
+	Status string `json:"status"`
+}
+
+func statusTick(s madmin.MetaStatus) string {
+	switch {
+	case s.Err != "":
+		return console.Colorize("failCell", crossTickCell)
+	case !s.IsSet:
+		return blankCell
+	default:
+		return console.Colorize("passCell", tickCell)
+	}
+}
+
+func (i importMetaMsg) String() string {
+	m := i.BucketMetaImportErrs.Buckets
+	totBuckets := len(m)
+	totErrs := 0
+	for _, st := range m {
+		if st.ObjectLock.Err != "" || st.Versioning.Err != "" ||
+			st.SSEConfig.Err != "" || st.Tagging.Err != "" ||
+			st.Lifecycle.Err != "" || st.Quota.Err != "" ||
+			st.Policy.Err != "" || st.Notification.Err != "" {
+			totErrs++
+		}
+	}
+	var b strings.Builder
+	numSch := "success"
+	if totErrs > 0 {
+		numSch = "warning"
+	}
+	msg := "\n" + console.Colorize(numSch, totBuckets-totErrs) +
+		console.Colorize("statusMsg", "/") +
+		console.Colorize("success", totBuckets) +
+		console.Colorize("statusMsg", " buckets were imported successfully.")
+	fmt.Fprintln(&b, msg)
+	if totErrs > 0 {
+		fmt.Fprintln(&b, console.Colorize("errors", "Errors: \n"))
+		for bucket, st := range m {
+			if st.ObjectLock.Err != "" || st.Versioning.Err != "" ||
+				st.SSEConfig.Err != "" || st.Tagging.Err != "" ||
+				st.Lifecycle.Err != "" || st.Quota.Err != "" ||
+				st.Policy.Err != "" || st.Notification.Err != "" {
+				fmt.Fprintln(&b, printImportErrs(bucket, st))
+			}
+		}
+	}
+	return b.String()
+}
+
+func (i importMetaMsg) JSON() string {
+	i.Status = "success"
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", " ")
+	// Disable escaping special chars to display XML tags correctly
+	enc.SetEscapeHTML(false)
+
+	fatalIf(probe.NewError(enc.Encode(i.BucketMetaImportErrs.Buckets)), "Unable to marshal into JSON.")
+	return buf.String()
+}
+
+// pretty print import errors
+func printImportErrs(bucket string, r madmin.BucketStatus) string {
+	var b strings.Builder
+	placeHolder := ""
+	key := fmt.Sprintf("%-10s: %s", "Name", bucket)
+	fmt.Fprintln(&b, console.Colorize("Name", key))
+
+	if r.ObjectLock.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Object lock: ", statusTick(r.ObjectLock))
+		fmt.Fprintln(&b)
+	}
+	if r.Versioning.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Versioning: ", statusTick(r.Versioning))
+		fmt.Fprintln(&b)
+	}
+
+	if r.SSEConfig.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Encryption: ", statusTick(r.SSEConfig))
+		fmt.Fprintln(&b)
+	}
+	if r.Lifecycle.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Lifecycle: ", statusTick(r.Lifecycle))
+		fmt.Fprintln(&b)
+	}
+	if r.Notification.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Notification: ", statusTick(r.Notification))
+		fmt.Fprintln(&b)
+	}
+	if r.Quota.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Quota: ", statusTick(r.Quota))
+		fmt.Fprintln(&b)
+	}
+	if r.Policy.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Policy: ", statusTick(r.Policy))
+		fmt.Fprintln(&b)
+	}
+	if r.Tagging.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Tagging: ", statusTick(r.Tagging))
+		fmt.Fprintln(&b)
+	}
+	return b.String()
 }
