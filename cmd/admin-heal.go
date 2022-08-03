@@ -70,6 +70,10 @@ var adminHealFlags = []cli.Flag{
 		Usage: "show server/disks failure tolerance with the given storage class",
 	},
 	cli.BoolFlag{
+		Name:  "rewrite",
+		Usage: "rewrite objects from older to newer format",
+	},
+	cli.BoolFlag{
 		Name:  "verbose, v",
 		Usage: "show verbose information",
 	},
@@ -631,6 +635,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 		Remove:    ctx.Bool("remove"),
 		Recursive: ctx.Bool("recursive"),
 		DryRun:    ctx.Bool("dry-run"),
+		Recreate:  ctx.Bool("rewrite"),
 	}
 
 	forceStart := ctx.Bool("force-start")
