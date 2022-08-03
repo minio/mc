@@ -1401,7 +1401,7 @@ func (c *S3Client) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Er
 		return probe.NewError(BucketNameEmpty{})
 	}
 	if object != "" {
-		return errInvalidArgument()
+		return probe.NewError(BucketInvalid{c.joinPath(bucket, object)})
 	}
 
 	opts := minio.BucketOptions{ForceDelete: forceRemove}
@@ -1927,7 +1927,7 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 				content := &ClientContent{}
 				url := c.targetURL.Clone()
 				// Join bucket with - incoming object key.
-				url.Path = c.joinPath(bucket.Name, object.Key)
+				url.Path = c.buildAbsPath(bucket.Name, object.Key)
 				switch {
 				case strings.HasSuffix(object.Key, string(c.targetURL.Separator)):
 					// We need to keep the trailing Separator, do not use filepath.Join().
@@ -1955,7 +1955,7 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 			content := &ClientContent{}
 			url := c.targetURL.Clone()
 			// Join bucket with - incoming object key.
-			url.Path = c.joinPath(b, object.Key)
+			url.Path = c.buildAbsPath(b, object.Key)
 			switch {
 			case strings.HasSuffix(object.Key, string(c.targetURL.Separator)):
 				// We need to keep the trailing Separator, do not use filepath.Join().
@@ -2000,7 +2000,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 					return
 				}
 				url := c.targetURL.Clone()
-				url.Path = c.joinPath(bucket.Name, object.Key)
+				url.Path = c.buildAbsPath(bucket.Name, object.Key)
 				content := &ClientContent{}
 				content.URL = url
 				content.Size = object.Size
@@ -2024,7 +2024,7 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 			}
 			url := c.targetURL.Clone()
 			// Join bucket and incoming object key.
-			url.Path = c.joinPath(b, object.Key)
+			url.Path = c.buildAbsPath(b, object.Key)
 			content := &ClientContent{}
 			content.URL = url
 			content.Size = object.Size
@@ -2035,20 +2035,25 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 	}
 }
 
-// Returns new path by joining path segments with URL path separator.
+// Join bucket and object name, keep the leading slash for directory markers
 func (c *S3Client) joinPath(bucket string, objects ...string) string {
-	p := string(c.targetURL.Separator) + bucket
+	p := bucket
 	for _, o := range objects {
 		p += string(c.targetURL.Separator) + o
 	}
 	return p
 }
 
+// Build new absolute URL path by joining path segments with URL path separator.
+func (c *S3Client) buildAbsPath(bucket string, objects ...string) string {
+	return string(c.targetURL.Separator) + c.joinPath(bucket, objects...)
+}
+
 // Convert objectInfo to ClientContent
 func (c *S3Client) bucketInfo2ClientContent(bucket minio.BucketInfo) *ClientContent {
 	content := &ClientContent{}
 	url := c.targetURL.Clone()
-	url.Path = c.joinPath(bucket.Name)
+	url.Path = c.buildAbsPath(bucket.Name)
 	content.URL = url
 	content.BucketName = bucket.Name
 	content.Size = 0
@@ -2065,7 +2070,7 @@ func (c *S3Client) prefixInfo2ClientContent(bucket string, prefix string) *Clien
 	}
 	content := &ClientContent{}
 	url := c.targetURL.Clone()
-	url.Path = c.joinPath(bucket, prefix)
+	url.Path = c.buildAbsPath(bucket, prefix)
 	content.URL = url
 	content.BucketName = bucket
 	content.Type = os.ModeDir
@@ -2081,7 +2086,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	if bucket == "" {
 		panic("should never happen, bucket cannot be empty")
 	}
-	url.Path = c.joinPath(bucket, entry.Key)
+	url.Path = c.buildAbsPath(bucket, entry.Key)
 	content.URL = url
 	content.BucketName = bucket
 	content.Size = entry.Size

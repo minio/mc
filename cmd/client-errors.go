@@ -73,7 +73,7 @@ type BucketInvalid struct {
 }
 
 func (e BucketInvalid) Error() string {
-	return "Bucket name " + e.Bucket + " not valid."
+	return "Bucket name `" + e.Bucket + "` not valid."
 }
 
 // ObjectAlreadyExists - typed return for MethodNotAllowed
