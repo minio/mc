@@ -522,9 +522,8 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 			}
 			e := deleteFile(f.PathURL.Path, name)
 			if e == nil {
-				_, objectName := url2BucketAndObject(&content.URL)
 				res := RemoveResult{}
-				res.ObjectName = objectName
+				res.ObjectName = content.URL.Path
 				resultCh <- res
 				continue
 			}
