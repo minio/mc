@@ -102,16 +102,20 @@ func setOdSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint
 		}
 	}
 
+	filesize := odURLs.SourceContent.Size
+
 	s := args.Get("size")
-	if parts < 1 && s == "" {
+	if parts <= 1 && s == "" {
 		if parts == 0 {
 			return 0, 0, 0, fmt.Errorf("either parts or size must be specified")
+		}
+		if parts == 1 {
+			return filesize, uint64(filesize), 1, nil
 		}
 		return 0, 0, 0, fmt.Errorf("parts must be at least 1 or size must be specified")
 	}
 
 	// If size is not specified, calculate the size of each part and upload full file.
-	filesize := odURLs.SourceContent.Size
 	if s == "" {
 		combinedSize = filesize
 		partSize = uint64(math.Ceil(float64(combinedSize) / float64(parts)))
@@ -213,10 +217,15 @@ func mainOD(cliCtx *cli.Context) error {
 		md5:           odURLs.MD5,
 		multipartSize: partSize,
 	}
+
+	if parts == 1 {
+		putOpts.disableMultipart = true
+	}
+
 	pg := newAccounter(combinedSize)
 
 	// Upload the file.
-	_, err = putTargetStream(ctx, targetAlias, targetURL.String(), "", "", "",
+	total, err := putTargetStream(ctx, targetAlias, targetURL.String(), "", "", "",
 		reader, combinedSize, pg, putOpts)
 	fatalIf(err, "Unable to put target stream")
 
@@ -227,7 +236,7 @@ func mainOD(cliCtx *cli.Context) error {
 		Source:    sourcePath,
 		Target:    targetPath,
 		PartSize:  partSize,
-		TotalSize: combinedSize,
+		TotalSize: total,
 		Parts:     parts,
 		Elapsed:   elapsed.Round(time.Millisecond).String(),
 	})
