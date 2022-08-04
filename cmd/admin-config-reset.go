@@ -128,7 +128,7 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 	}
 
 	input := strings.Join(args.Tail(), " ")
-	// Check if user has attemted to set values
+	// Check if user has attempted to set values
 	for _, k := range args.Tail() {
 		if strings.Contains(k, "=") {
 			e := fmt.Errorf("new settings may not be provided for sub-system keys")
