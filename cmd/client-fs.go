@@ -1298,3 +1298,11 @@ func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
 		APIType: "filesystem",
 	})
 }
+
+// OD Get - not implemented
+func (f *fsClient) ODGet(ctx context.Context, _ int) (io.ReadCloser, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{
+		API:     "ODGet",
+		APIType: "filesystem",
+	})
+}

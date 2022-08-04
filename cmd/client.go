@@ -173,6 +173,9 @@ type Client interface {
 
 	// Restore an object
 	Restore(ctx context.Context, versionID string, days int) *probe.Error
+
+	// OD operations
+	ODGet(ctx context.Context, part int) (io.ReadCloser, *probe.Error)
 }
 
 // ClientContent - Content container for content metadata

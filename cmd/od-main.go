@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"path/filepath"
 	"strconv"
@@ -68,7 +69,7 @@ EXAMPLES:
 `,
 }
 
-type odMessage struct {
+type odPutMessage struct {
 	Source    string `json:"source"`
 	Target    string `json:"target"`
 	PartSize  uint64 `json:"partSize"`
@@ -77,20 +78,80 @@ type odMessage struct {
 	Elapsed   string `json:"elapsed"`
 }
 
-func (o odMessage) String() string {
+type odGetMessage struct {
+	Source    string `json:"source"`
+	Target    string `json:"target"`
+	TotalSize int64  `json:"totalSize"`
+	Parts     int    `json:"parts"`
+	Elapsed   string `json:"elapsed"`
+}
+
+func (o odPutMessage) String() string {
 	cleanSize := humanize.IBytes(uint64(o.TotalSize))
 	return fmt.Sprintf("`%s` -> `%s`\n Transferred: %s, Parts: %d, Time: %s",
 		o.Source, o.Target, cleanSize, o.Parts, o.Elapsed)
 }
 
-func (o odMessage) JSON() string {
+func (o odPutMessage) JSON() string {
 	copyMessageBytes, e := json.MarshalIndent(o, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(copyMessageBytes)
 }
 
-func setOdSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint64, parts int, e error) {
+func (o odGetMessage) String() string {
+	cleanSize := humanize.IBytes(uint64(o.TotalSize))
+	if o.Parts == 0 {
+		return fmt.Sprintf("`%s` -> `%s`\n Transferred: %s, Full file, Time: %s",
+			o.Source, o.Target, cleanSize, o.Elapsed)
+	}
+	return fmt.Sprintf("`%s` -> `%s`\n Transferred: %s, Parts: %d, Time: %s",
+		o.Source, o.Target, cleanSize, o.Parts, o.Elapsed)
+}
+
+func (o odGetMessage) JSON() string {
+	copyMessageBytes, e := json.MarshalIndent(o, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(copyMessageBytes)
+}
+
+// getOdUrls returns the URLs for the object download.
+func getOdUrls(ctx context.Context, args madmin.KVS) (odURLs URLs, e error) {
+	inFile := args.Get("if")
+	outFile := args.Get("of")
+
+	// Placeholder encryption key database
+	var encKeyDB map[string][]prefixSSEPair
+
+	// Check if outFile is a folder or a file.
+	opts := prepareCopyURLsOpts{
+		sourceURLs: []string{inFile},
+		targetURL:  outFile,
+	}
+	odType, _, err := guessCopyURLType(ctx, opts)
+	fatalIf(err.Trace(), "Unable to guess copy URL type")
+
+	// Get content of inFile, set up URLs.
+	switch odType {
+	case copyURLsTypeA:
+		odURLs = prepareCopyURLsTypeA(ctx, inFile, "", outFile, encKeyDB)
+	case copyURLsTypeB:
+		odURLs = prepareCopyURLsTypeB(ctx, inFile, "", outFile, encKeyDB)
+	default:
+		return URLs{}, fmt.Errorf("invalid source path %s, source cannot be a directory", inFile)
+	}
+
+	// Check if source exists.
+	if odURLs.SourceContent == nil {
+		return URLs{}, fmt.Errorf("invalid source path %s", inFile)
+	}
+
+	return odURLs, nil
+}
+
+// setSizesPut sets necessary values for object upload.
+func setSizesPut(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint64, parts int, e error) {
 	// If parts not specified, set to 0, else scan for integer.
 	p := args.Get("parts")
 	if p == "" {
@@ -141,44 +202,188 @@ func setOdSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint
 	return combinedSize, partSize, parts, nil
 }
 
-func getOdUrls(ctx context.Context, args madmin.KVS) (odURLs URLs, e error) {
-	inFile := args.Get("if")
-	outFile := args.Get("of")
-
-	// Placeholder encryption key database
-	var encKeyDB map[string][]prefixSSEPair
-
-	// Check if outFile is a folder or a file.
-	opts := prepareCopyURLsOpts{
-		sourceURLs: []string{inFile},
-		targetURL:  outFile,
-	}
-	odType, _, err := guessCopyURLType(ctx, opts)
-	fatalIf(err.Trace(), "Unable to guess copy URL type")
-
-	// Get content of inFile, set up URLs.
-	switch odType {
-	case copyURLsTypeA:
-		odURLs = prepareCopyURLsTypeA(ctx, inFile, "", outFile, encKeyDB)
-	case copyURLsTypeB:
-		odURLs = prepareCopyURLsTypeB(ctx, inFile, "", outFile, encKeyDB)
-	default:
-		return URLs{}, fmt.Errorf("invalid source path %s, source cannot be a directory", inFile)
+// setPartsGet sets parts for object download.
+func setPartsGet(odURLs URLs, args madmin.KVS) (parts int, e error) {
+	if args.Get("size") != "" {
+		return 0, fmt.Errorf("size cannot be specified getting from server")
 	}
 
-	// Check if source exists.
-	if odURLs.SourceContent == nil {
-		return URLs{}, fmt.Errorf("invalid source path %s", inFile)
+	p := args.Get("parts")
+	if p == "" {
+		return 0, nil
 	}
-
-	// Check if target alias is valid.
-	if odURLs.TargetAlias == "" {
-		return URLs{}, fmt.Errorf("invalid target path %s", outFile)
+	parts, e = strconv.Atoi(p)
+	if e != nil {
+		return 0, e
 	}
-
-	return odURLs, nil
+	if parts < 1 {
+		return 0, fmt.Errorf("parts must be at least 1")
+	}
+	return parts, nil
 }
 
+// odPutOrGet checks if request is a download or upload and calls the appropriate function
+func odPutOrGet(ctx context.Context, odURLs URLs, args madmin.KVS) (message, error) {
+	if odURLs.SourceAlias != "" && odURLs.TargetAlias == "" {
+		return odGet(ctx, odURLs, args)
+	}
+	if odURLs.SourceAlias == "" && odURLs.TargetAlias != "" {
+		return odPut(ctx, odURLs, args)
+	}
+	return odPutMessage{}, fmt.Errorf("must download or upload, cannot copy locally or on server")
+}
+
+// odPut uploads the object.
+func odPut(ctx context.Context, odURLs URLs, args madmin.KVS) (odPutMessage, error) {
+	// Set sizes.
+	combinedSize, partSize, parts, e := setSizesPut(odURLs, args)
+	if e != nil {
+		return odPutMessage{}, e
+	}
+
+	sourcePath := odURLs.SourceContent.URL.Path
+	targetAlias := odURLs.TargetAlias
+	targetURL := odURLs.TargetContent.URL
+	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
+
+	// Create reader from source.
+	reader, metadata, err := getSourceStream(ctx, "", sourcePath, getSourceOpts{})
+	fatalIf(err, "Unable to get source stream")
+	defer reader.Close()
+
+	putOpts := PutOptions{
+		metadata:      filterMetadata(metadata),
+		storageClass:  odURLs.TargetContent.StorageClass,
+		md5:           odURLs.MD5,
+		multipartSize: partSize,
+	}
+	if parts == 1 {
+		putOpts.disableMultipart = true
+	}
+
+	pg := newAccounter(combinedSize)
+
+	// Upload the file.
+	total, err := putTargetStream(ctx, targetAlias, targetURL.String(), "", "", "",
+		reader, combinedSize, pg, putOpts)
+	fatalIf(err, "Unable to upload file")
+
+	// Get upload time.
+	elapsed := time.Since(pg.startTime)
+
+	message := odPutMessage{
+		Source:    sourcePath,
+		Target:    targetPath,
+		PartSize:  partSize,
+		TotalSize: total,
+		Parts:     parts,
+		Elapsed:   elapsed.Round(time.Millisecond).String(),
+	}
+
+	return message, nil
+}
+
+// odGet downloads the object.
+func odGet(ctx context.Context, odURLs URLs, args madmin.KVS) (odGetMessage, error) {
+	/// Set number of parts to get
+	parts, e := setPartsGet(odURLs, args)
+	if e != nil {
+		return odGetMessage{}, e
+	}
+
+	targetPath := odURLs.TargetContent.URL.Path
+	sourceAlias := odURLs.SourceAlias
+	sourceURL := odURLs.SourceContent.URL
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+
+	cli, err := newClientFromAlias(sourceAlias, sourceURL.String())
+	fatalIf(err, "Unable to initialize client")
+
+	var total int64
+	var elapsed time.Duration
+	if parts == 0 {
+		// Get the file.
+		total, elapsed = singleGet(ctx, cli, sourcePath, targetPath)
+	} else {
+		// Get the file in parts.
+		total, elapsed = multiGet(ctx, cli, sourcePath, targetPath, parts)
+		ext := filepath.Ext(targetPath)
+		targetPath = filepath.ToSlash(filepath.Join(targetPath+"-parts", "part-*"+ext))
+	}
+
+	message := odGetMessage{
+		Source:    sourcePath,
+		Target:    targetPath,
+		TotalSize: total,
+		Parts:     parts,
+		Elapsed:   elapsed.Round(time.Millisecond).String(),
+	}
+
+	return message, nil
+}
+
+// singleGet helps odGet download a single part.
+func singleGet(ctx context.Context, cli Client, sourcePath, targetPath string) (total int64, elapsed time.Duration) {
+	reader, err := cli.ODGet(ctx, 0)
+	fatalIf(err, "Unable to get object reader")
+	defer reader.Close()
+
+	putOpts := PutOptions{
+		disableMultipart: true,
+	}
+
+	pg := newAccounter(-1)
+
+	// Upload the file.
+	total, err = putTargetStream(ctx, "", targetPath, "", "", "",
+		reader, -1, pg, putOpts)
+	fatalIf(err, "Unable to download object")
+
+	// Get upload time.
+	elapsed = time.Since(pg.startTime)
+
+	return total, elapsed
+}
+
+// multiGet helps odGet download multiple parts.
+func multiGet(ctx context.Context, cli Client, sourcePath, targetPath string, parts int) (total int64, elapsed time.Duration) {
+	var readers []io.ReadCloser
+
+	// Get reader for each part.
+	for i := 1; i <= parts; i++ {
+		reader, err := cli.ODGet(ctx, parts)
+		fatalIf(err, "Unable to get object reader")
+		readers = append(readers, reader)
+		defer reader.Close()
+	}
+
+	putOpts := PutOptions{
+		disableMultipart: true,
+	}
+
+	// Unbounded Accounter to get time
+	pg := newAccounter(-1)
+	total = 0
+
+	// Get file extension to use for part names.
+	ext := filepath.Ext(targetPath)
+
+	// Download the file.
+	for n, reader := range readers {
+		partName := fmt.Sprintf("part-%d", n+1)
+		s, err := putTargetStream(ctx, "", filepath.Join(targetPath+"-parts", partName+ext), "", "", "",
+			reader, -1, pg, putOpts)
+		fatalIf(err, "Unable to download object")
+		total += s
+	}
+
+	// Get upload time.
+	elapsed = time.Since(pg.startTime)
+
+	return total, elapsed
+}
+
+// mainOd is the entry point for the od command.
 func mainOD(cliCtx *cli.Context) error {
 	ctx, cancelCopy := context.WithCancel(globalContext)
 	defer cancelCopy()
@@ -197,48 +402,10 @@ func mainOD(cliCtx *cli.Context) error {
 	odURLs, e := getOdUrls(ctx, kvsArgs)
 	fatalIf(probe.NewError(e), "Unable to get source and target URLs")
 
-	// Set sizes.
-	combinedSize, partSize, parts, e := setOdSizes(odURLs, kvsArgs)
-	fatalIf(probe.NewError(e), "Unable to set parts size")
+	message, e := odPutOrGet(ctx, odURLs, kvsArgs)
+	fatalIf(probe.NewError(e), "Unable to transfer object")
 
-	sourcePath := odURLs.SourceContent.URL.Path
-	targetAlias := odURLs.TargetAlias
-	targetURL := odURLs.TargetContent.URL
-	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
-
-	// Create reader from source.
-	reader, metadata, err := getSourceStream(ctx, "", sourcePath, getSourceOpts{})
-	fatalIf(err, "Unable to get source stream")
-	defer reader.Close()
-
-	putOpts := PutOptions{
-		metadata:      filterMetadata(metadata),
-		storageClass:  odURLs.TargetContent.StorageClass,
-		md5:           odURLs.MD5,
-		multipartSize: partSize,
-	}
-
-	if parts == 1 {
-		putOpts.disableMultipart = true
-	}
-
-	pg := newAccounter(combinedSize)
-
-	// Upload the file.
-	total, err := putTargetStream(ctx, targetAlias, targetURL.String(), "", "", "",
-		reader, combinedSize, pg, putOpts)
-	fatalIf(err, "Unable to put target stream")
-
-	// Get upload time.
-	elapsed := time.Since(pg.startTime)
-
-	printMsg(odMessage{
-		Source:    sourcePath,
-		Target:    targetPath,
-		PartSize:  partSize,
-		TotalSize: total,
-		Parts:     parts,
-		Elapsed:   elapsed.Round(time.Millisecond).String(),
-	})
+	// Print message.
+	printMsg(message)
 	return nil
 }

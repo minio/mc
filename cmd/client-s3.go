@@ -2838,3 +2838,23 @@ func (c *S3Client) Restore(ctx context.Context, versionID string, days int) *pro
 	}
 	return nil
 }
+
+// ODGet gets an object in a given number of parts
+func (c *S3Client) ODGet(ctx context.Context, part int) (io.ReadCloser, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return nil, probe.NewError(BucketNameEmpty{})
+	}
+	if object == "" {
+		return nil, probe.NewError(ObjectNameEmpty{})
+	}
+	getOO := minio.GetObjectOptions{}
+	if part > 0 {
+		getOO.PartNumber = part
+	}
+	reader, e := c.api.GetObject(ctx, bucket, object, getOO)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+	return reader, nil
+}
