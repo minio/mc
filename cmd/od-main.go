@@ -70,26 +70,28 @@ EXAMPLES:
 }
 
 type odPutMessage struct {
+	Status    string `json:"status"`
 	Source    string `json:"source"`
 	Target    string `json:"target"`
 	PartSize  uint64 `json:"partSize"`
 	TotalSize int64  `json:"totalSize"`
 	Parts     int    `json:"parts"`
-	Elapsed   string `json:"elapsed"`
+	Elapsed   int64  `json:"elapsed"`
 }
 
 type odGetMessage struct {
+	Status    string `json:"status"`
 	Source    string `json:"source"`
 	Target    string `json:"target"`
 	TotalSize int64  `json:"totalSize"`
 	Parts     int    `json:"parts"`
-	Elapsed   string `json:"elapsed"`
+	Elapsed   int64  `json:"elapsed"`
 }
 
 func (o odPutMessage) String() string {
 	cleanSize := humanize.IBytes(uint64(o.TotalSize))
-	return fmt.Sprintf("`%s` -> `%s`\n Transferred: %s, Parts: %d, Time: %s",
-		o.Source, o.Target, cleanSize, o.Parts, o.Elapsed)
+	elapsed := time.Duration(o.Elapsed) * time.Millisecond
+	return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s", cleanSize, o.Parts, elapsed)
 }
 
 func (o odPutMessage) JSON() string {
@@ -101,12 +103,11 @@ func (o odPutMessage) JSON() string {
 
 func (o odGetMessage) String() string {
 	cleanSize := humanize.IBytes(uint64(o.TotalSize))
+	elapsed := time.Duration(o.Elapsed) * time.Millisecond
 	if o.Parts == 0 {
-		return fmt.Sprintf("`%s` -> `%s`\n Transferred: %s, Full file, Time: %s",
-			o.Source, o.Target, cleanSize, o.Elapsed)
+		return fmt.Sprintf("Transferred: %s, Full file, Time: %s", cleanSize, elapsed)
 	}
-	return fmt.Sprintf("`%s` -> `%s`\n Transferred: %s, Parts: %d, Time: %s",
-		o.Source, o.Target, cleanSize, o.Parts, o.Elapsed)
+	return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s", cleanSize, o.Parts, elapsed)
 }
 
 func (o odGetMessage) JSON() string {
@@ -272,12 +273,13 @@ func odPut(ctx context.Context, odURLs URLs, args madmin.KVS) (odPutMessage, err
 	elapsed := time.Since(pg.startTime)
 
 	message := odPutMessage{
+		Status:    "success",
 		Source:    sourcePath,
 		Target:    targetPath,
 		PartSize:  partSize,
 		TotalSize: total,
 		Parts:     parts,
-		Elapsed:   elapsed.Round(time.Millisecond).String(),
+		Elapsed:   elapsed.Milliseconds(),
 	}
 
 	return message, nil
@@ -307,16 +309,15 @@ func odGet(ctx context.Context, odURLs URLs, args madmin.KVS) (odGetMessage, err
 	} else {
 		// Get the file in parts.
 		total, elapsed = multiGet(ctx, cli, sourcePath, targetPath, parts)
-		ext := filepath.Ext(targetPath)
-		targetPath = filepath.ToSlash(filepath.Join(targetPath+"-parts", "part-*"+ext))
 	}
 
 	message := odGetMessage{
+		Status:    "success",
 		Source:    sourcePath,
 		Target:    targetPath,
 		TotalSize: total,
 		Parts:     parts,
-		Elapsed:   elapsed.Round(time.Millisecond).String(),
+		Elapsed:   elapsed.Milliseconds(),
 	}
 
 	return message, nil
@@ -347,7 +348,7 @@ func singleGet(ctx context.Context, cli Client, sourcePath, targetPath string) (
 
 // multiGet helps odGet download multiple parts.
 func multiGet(ctx context.Context, cli Client, sourcePath, targetPath string, parts int) (total int64, elapsed time.Duration) {
-	var readers []io.ReadCloser
+	var readers []io.Reader
 
 	// Get reader for each part.
 	for i := 1; i <= parts; i++ {
@@ -356,6 +357,7 @@ func multiGet(ctx context.Context, cli Client, sourcePath, targetPath string, pa
 		readers = append(readers, reader)
 		defer reader.Close()
 	}
+	reader := io.MultiReader(readers...)
 
 	putOpts := PutOptions{
 		disableMultipart: true,
@@ -363,19 +365,11 @@ func multiGet(ctx context.Context, cli Client, sourcePath, targetPath string, pa
 
 	// Unbounded Accounter to get time
 	pg := newAccounter(-1)
-	total = 0
-
-	// Get file extension to use for part names.
-	ext := filepath.Ext(targetPath)
 
 	// Download the file.
-	for n, reader := range readers {
-		partName := fmt.Sprintf("part-%d", n+1)
-		s, err := putTargetStream(ctx, "", filepath.Join(targetPath+"-parts", partName+ext), "", "", "",
-			reader, -1, pg, putOpts)
-		fatalIf(err, "Unable to download object")
-		total += s
-	}
+	total, err := putTargetStream(ctx, "", targetPath, "", "", "",
+		reader, -1, pg, putOpts)
+	fatalIf(err, "Unable to download object")
 
 	// Get upload time.
 	elapsed = time.Since(pg.startTime)
