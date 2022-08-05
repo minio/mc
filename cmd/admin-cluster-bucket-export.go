@@ -51,10 +51,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Download all bucket metadata for a bucket into zip file.
-     {{.Prompt}} {{.HelpName}} myminio/bucket
-
-  2. Download metadata of all buckets in cluster into zip file.
+  1. Save metadata of all buckets to a zip file.
      {{.Prompt}} {{.HelpName}} myminio
 `,
 }
@@ -91,8 +88,9 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to export bucket metadata.")
 
 	if bucket == "" {
-		bucket = "allbuckets"
+		bucket = "cluster"
 	}
+
 	// Create bucket metadata zip file
 	tmpFile, e := ioutil.TempFile("", fmt.Sprintf("%s-metadata-", bucket))
 	fatalIf(probe.NewError(e), "Unable to download file data.")

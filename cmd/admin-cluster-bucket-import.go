@@ -53,11 +53,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set bucket metadata for 'mybucket' from previously exported metadata zip file.
-     {{.Prompt}} {{.HelpName}} myminio /backups/mybucket-metadata.zip
-
-  2. Set bucket metadata for all buckets from previously exported metadata zip file.
-     {{.Prompt}} {{.HelpName}} myminio /backups/cluster-bucket-metadata.zip
+  1. Recover bucket metadata for all buckets from previously saved bucket metadata backup.
+     {{.Prompt}} {{.HelpName}} myminio /backups/cluster-metadata.zip
 `,
 }
 
