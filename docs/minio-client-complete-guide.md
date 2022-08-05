@@ -1979,7 +1979,7 @@ USAGE:
 
 FLAGS:
   --count value, -c value        perform liveliness check for count number of times (default: 0)
-  --error-count value, -e value  exit if errors more than consecutive error count (default: 50)
+  --error-count value, -e value  exit after N consecutive ping errors
   --interval value, -i value     wait interval between each request in seconds (default: 1)
   --distributed, -a              ping all the servers in the cluster
   --help, -h                    show help
