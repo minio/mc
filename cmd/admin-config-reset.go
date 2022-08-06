@@ -46,7 +46,7 @@ var adminConfigResetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [CONFIG-KEY...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -54,6 +54,10 @@ FLAGS:
 EXAMPLES:
   1. Reset MQTT notifcation target 'name1' settings to default values.
      {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt:name1
+  2. Reset compression's 'extensions' setting to default value.
+     {{.Prompt}} {{.HelpName}} myminio/ compression extensions
+  3. Reset site name and site region to default values.
+     {{.Prompt}} {{.HelpName}} myminio/ site name region
 `,
 }
 
@@ -123,8 +127,16 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Call reset config API
 	input := strings.Join(args.Tail(), " ")
+	// Check if user has attempted to set values
+	for _, k := range args.Tail() {
+		if strings.Contains(k, "=") {
+			e := fmt.Errorf("new settings may not be provided for sub-system keys")
+			fatalIf(probe.NewError(e), "Unable to reset '%s' on the server", args.Tail()[0])
+		}
+	}
+
+	// Call reset config API
 	restart, e := client.DelConfigKV(globalContext, input)
 	fatalIf(probe.NewError(e), "Unable to reset '%s' on the server", input)
 
