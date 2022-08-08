@@ -434,6 +434,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/support/perf":         aliasCompleter,
 	"/support/metrics":      aliasCompleter,
 	"/support/status":       aliasCompleter,
+	"/support/top/locks":    aliasCompleter,
+	"/support/top/api":      aliasCompleter,
 
 	"/license/register": aliasCompleter,
 	"/license/info":     aliasCompleter,

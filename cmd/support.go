@@ -37,6 +37,7 @@ var supportSubcommands = []cli.Command{
 	supportPerfCmd,
 	supportInspectCmd,
 	supportProfileCmd,
+	supportTopCmd,
 }
 
 var supportCmd = cli.Command{

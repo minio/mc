@@ -1925,6 +1925,7 @@ NAME:
   mc support inspect            upload raw object contents for analysis
   mc support profile            generate profile data for debugging
   mc support logs               configure/display MinIO console logs
+  mc support top                provide top like statistics for MinIO
 
 ```
 
@@ -1966,6 +1967,16 @@ mc support logs show --last 5 --type application myminio node1
 Enable logs for cluster with alias 'play'
 ```
 mc support logs enable play
+```
+
+Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
+```
+mc admin top locks myminio
+```
+
+Display current in-progress all 's3.PutObject' API calls.
+```
+mc support top api --name s3.PutObject myminio/
 ```
 
 
