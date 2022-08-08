@@ -41,6 +41,7 @@ type speedTestUI struct {
 }
 
 type speedTestResult struct {
+	err     error
 	final   bool
 	result  *madmin.SpeedTestResult
 	nresult *madmin.NetperfResult
@@ -87,6 +88,18 @@ func (m *speedTestUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *speedTestUI) View() string {
+	// Quit when there is an error
+	if m.result.err != nil {
+		errMsg := ""
+		errResp := madmin.ToErrorResponse(m.result.err)
+		if errResp.Code == "NotImplemented" {
+			errMsg = "Not implemented"
+		} else {
+			errMsg = m.result.err.Error()
+		}
+		return fmt.Sprintf("\nNetperf: ✗ (Err: %s)\n", errMsg)
+	}
+
 	var s strings.Builder
 	s.WriteString("\n")
 
