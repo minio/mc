@@ -74,20 +74,15 @@ type odMessage struct {
 	PartSize  uint64 `json:"partSize"`
 	TotalSize int64  `json:"totalSize"`
 	Parts     int    `json:"parts"`
+	Skip      int    `json:"skip"`
 	Elapsed   int64  `json:"elapsed"`
 }
 
 func (o odMessage) String() string {
 	cleanSize := humanize.IBytes(uint64(o.TotalSize))
 	elapsed := time.Duration(o.Elapsed) * time.Millisecond
-	switch o.Type {
-	case "FStoS3":
-		return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s", cleanSize, o.Parts, elapsed)
-	case "S3toFS":
-		if o.Parts == 0 {
-			return fmt.Sprintf("Transferred: %s, Full file, Time: %s", cleanSize, elapsed)
-		}
-		return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s", cleanSize, o.Parts, elapsed)
+	if o.Type == "S3toFS" && o.Parts == 0 {
+		return fmt.Sprintf("Transferred: %s, Full file, Time: %s", cleanSize, elapsed)
 	}
 	return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s", cleanSize, o.Parts, elapsed)
 }
@@ -110,7 +105,7 @@ func getOdUrls(ctx context.Context, args madmin.KVS) (odURLs URLs, e error) {
 		targetURL:  outFile,
 	}
 	odType, _, err := guessCopyURLType(ctx, opts)
-	fatalIf(err.Trace(), "Unable to guess copy URL type")
+	fatalIf(err, "Unable to guess copy URL type")
 
 	// Get content of inFile, set up URLs.
 	switch odType {
@@ -137,7 +132,7 @@ func prepareOdUrls(ctx context.Context, sourceURL, sourceVersion string, targetU
 	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{}, false)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
-		return URLs{Error: err.Trace(sourceURL)}
+		return URLs{Error: err}
 	}
 
 	// All OK.. We can proceed. Type A
@@ -147,12 +142,18 @@ func prepareOdUrls(ctx context.Context, sourceURL, sourceVersion string, targetU
 // odCheckType checks if request is a download or upload and calls the appropriate function
 func odCheckType(ctx context.Context, odURLs URLs, args madmin.KVS) (message, error) {
 	if odURLs.SourceAlias != "" && odURLs.TargetAlias == "" {
-		return odS3toFS(ctx, odURLs, args)
+		return odDownload(ctx, odURLs, args)
 	}
+
+	var odType string
 	if odURLs.SourceAlias == "" && odURLs.TargetAlias != "" {
-		return odFStoS3(ctx, odURLs, args)
+		odType = "FStoS3"
+	} else if odURLs.SourceAlias != "" && odURLs.TargetAlias != "" {
+		odType = "S3toS3"
+	} else {
+		odType = "FStoFS"
 	}
-	return odMessage{}, fmt.Errorf("must download or upload, cannot copy locally or on server")
+	return odCopy(ctx, odURLs, args, odType)
 }
 
 // mainOd is the entry point for the od command.

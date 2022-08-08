@@ -176,6 +176,7 @@ type Client interface {
 
 	// OD operations
 	ODGet(ctx context.Context, part int) (io.ReadCloser, *probe.Error)
+	PutN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
 }
 
 // ClientContent - Content container for content metadata

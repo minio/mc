@@ -1114,6 +1114,11 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	return ui.Size, nil
 }
 
+// PutN - upload an object with custom metadata. (Same as Put)
+func (c *S3Client) PutN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, putOpts PutOptions) (int64, *probe.Error) {
+	return c.Put(ctx, reader, size, progress, putOpts)
+}
+
 // Remove incomplete uploads.
 func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, objectsCh <-chan minio.ObjectInfo) <-chan minio.RemoveObjectResult {
 	removeObjectErrorCh := make(chan minio.RemoveObjectResult)
