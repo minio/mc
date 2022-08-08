@@ -63,12 +63,16 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 	}
 
 	resultCh := make(chan madmin.NetperfResult)
+	errorCh := make(chan error)
 	go func() {
-		result, err := client.Netperf(ctxt, duration)
-		fatalIf(probe.NewError(err), "Unable to capture network perf results")
+		defer close(resultCh)
+		defer close(errorCh)
 
+		result, err := client.Netperf(ctxt, duration)
+		if err != nil {
+			errorCh <- err
+		}
 		resultCh <- result
-		close(resultCh)
 	}()
 
 	if globalJSON {
@@ -94,6 +98,12 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 	go func() {
 		for {
 			select {
+			case err := <-errorCh:
+				p.Send(speedTestResult{
+					err:   err,
+					final: true,
+				})
+				return
 			case result := <-resultCh:
 				p.Send(speedTestResult{
 					nresult: &result,
