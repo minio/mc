@@ -157,7 +157,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 		case <-timer.C:
 			healthCtx, healthCancel := context.WithTimeout(ctxt, 3*time.Second)
 			// Fetch the health status of the specified MinIO server
-			healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{ClusterRead: true})
+			healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{})
 			healthCancel()
 			switch {
 			case healthErr == nil && healthResult.Healthy:
