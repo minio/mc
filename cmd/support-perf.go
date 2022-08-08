@@ -92,9 +92,8 @@ FLAGS:
   {{end}}
 
 EXAMPLES:
-  1. Run performance tests on 'myminio' cluster: networking, drive speed and:
+  1. Run object storage, network, and drive performance tests on 'myminio' cluster:
      {{.Prompt}} {{.HelpName}} myminio/
-
 `,
 }
 
