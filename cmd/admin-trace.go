@@ -159,7 +159,7 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 	if len(opts.statusCodes) > 0 {
 		matched := false
 		for _, code := range opts.statusCodes {
-			if traceInfo.Trace.HTTP.RespInfo.StatusCode == code {
+			if traceInfo.Trace.HTTP != nil && traceInfo.Trace.HTTP.RespInfo.StatusCode == code {
 				matched = true
 				break
 			}
@@ -174,7 +174,7 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 	if len(opts.methods) > 0 {
 		matched := false
 		for _, method := range opts.methods {
-			if traceInfo.Trace.HTTP.ReqInfo.Method == method {
+			if traceInfo.Trace.HTTP != nil && traceInfo.Trace.HTTP.ReqInfo.Method == method {
 				matched = true
 				break
 			}
