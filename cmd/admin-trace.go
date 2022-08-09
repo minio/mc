@@ -47,7 +47,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, 'scanner')",
+		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`)",
 	},
 	cli.StringFlag{
 		Name:  "response-threshold",
@@ -234,6 +234,7 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 		opts.Storage = true
 		opts.OS = true
 		opts.Scanner = true
+		opts.Decommission = true
 		return
 	}
 
@@ -256,6 +257,8 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.OS = true
 		case "scanner":
 			opts.Scanner = true
+		case "decom", "decommission":
+			opts.Decommission = true
 		}
 	}
 
