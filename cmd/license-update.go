@@ -84,15 +84,11 @@ func mainLicenseUpdate(ctx *cli.Context) error {
 
 	licFile := ctx.Args().Get(1)
 
-	// If set, the subnet public key will not be downloaded from subnet
-	// and the offline key embedded in mc will be used.
-	airgap := ctx.Bool("airgap")
-
-	printMsg(performLicenseUpdate(licFile, alias, airgap))
+	printMsg(performLicenseUpdate(licFile, alias))
 	return nil
 }
 
-func performLicenseUpdate(licFile string, alias string, airgap bool) licUpdateMessage {
+func performLicenseUpdate(licFile string, alias string) licUpdateMessage {
 	lum := licUpdateMessage{
 		Alias:  alias,
 		Status: "success",
@@ -102,7 +98,7 @@ func performLicenseUpdate(licFile string, alias string, airgap bool) licUpdateMe
 	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to read license file %s", licFile))
 
 	lic := string(licBytes)
-	li, e := parseLicense(lic, airgap)
+	li, e := parseLicense(lic)
 	fatalIf(probe.NewError(e), fmt.Sprintf("Error parsing license from %s", licFile))
 
 	if li.ExpiresAt.Before(time.Now()) {
