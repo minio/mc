@@ -70,6 +70,10 @@ mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 			Usage:  "Development mode - talks to local SUBNET",
 			Hidden: true,
 		},
+		cli.StringFlag{
+			Name:  "api-key",
+			Usage: "API Key of the account on SUBNET",
+		},
 	}
 )
 

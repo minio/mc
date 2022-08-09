@@ -42,10 +42,6 @@ import (
 )
 
 var supportDiagFlags = append([]cli.Flag{
-	cli.StringFlag{
-		Name:  "api-key",
-		Usage: "SUBNET API key",
-	},
 	HealthDataTypeFlag{
 		Name:   "test",
 		Usage:  "choose specific diagnostics to run [" + options.String() + "]",

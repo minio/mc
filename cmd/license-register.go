@@ -32,10 +32,6 @@ const licRegisterMsgTag = "licenseRegisterMessage"
 
 var licenseRegisterFlags = append([]cli.Flag{
 	cli.StringFlag{
-		Name:  "api-key",
-		Usage: "SUBNET API key",
-	},
-	cli.StringFlag{
 		Name:  "name",
 		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},
@@ -170,9 +166,9 @@ func mainLicenseRegister(ctx *cli.Context) error {
 	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
 
 	alreadyRegistered := false
-	apiKey, lic, e := getSubnetCreds(alias)
-	fatalIf(probe.NewError(e), "Error in fetching subnet credentials")
-	if len(apiKey) > 0 || len(lic) > 0 {
+	apiKey, e := getSubnetAPIKey(alias)
+	fatalIf(probe.NewError(e), "Error in fetching subnet API Key")
+	if len(apiKey) > 0 {
 		alreadyRegistered = true
 		if len(accAPIKey) == 0 {
 			accAPIKey = apiKey
