@@ -85,24 +85,41 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	// in all other scenarios keep auto-tuning on.
 	autotune := !ctx.IsSet("concurrent")
 
-	resultCh, err := client.Speedtest(ctxt, madmin.SpeedtestOpts{
+	resultCh, speedTestErr := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
 		Duration:    duration,
 		Concurrency: concurrent,
 		Autotune:    autotune,
 		Bucket:      ctx.String("bucket"), // This is a hidden flag.
 	})
-	fatalIf(probe.NewError(err), "Failed to execute performance test")
 
 	if globalJSON {
-		for result := range resultCh {
+		if speedTestErr != nil {
+			printMsg(speedTestResult{
+				Type:  objectSpeedTest,
+				Err:   speedTestErr.Error(),
+				Final: true,
+			})
+			return nil
+		}
+
+		var result madmin.SpeedTestResult
+		for result = range resultCh {
 			if result.Version == "" {
 				continue
 			}
 			printMsg(speedTestResult{
-				result: &result,
+				Type:         objectSpeedTest,
+				ObjectResult: &result,
 			})
 		}
+
+		printMsg(speedTestResult{
+			Type:         objectSpeedTest,
+			ObjectResult: &result,
+			Final:        true,
+		})
+
 		return nil
 	}
 
@@ -117,15 +134,26 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	go func() {
+		if speedTestErr != nil {
+			p.Send(speedTestResult{
+				Type:  objectSpeedTest,
+				Err:   speedTestErr.Error(),
+				Final: true,
+			})
+			return
+		}
+
 		var result madmin.SpeedTestResult
 		for result = range resultCh {
 			p.Send(speedTestResult{
-				result: &result,
+				Type:         objectSpeedTest,
+				ObjectResult: &result,
 			})
 		}
 		p.Send(speedTestResult{
-			result: &result,
-			final:  true,
+			Type:         objectSpeedTest,
+			ObjectResult: &result,
+			Final:        true,
 		})
 	}()
 
