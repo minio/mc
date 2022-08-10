@@ -18,12 +18,18 @@
 package cmd
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminConfigGetCmd = cli.Command{
@@ -43,6 +49,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
+  The output includes environment variables set on the server. These cannot be overridden from the client.
+
   1. Get the current region setting on MinIO server.
      {{.Prompt}} {{.HelpName}} play/ region
      region name=us-east-1
@@ -66,7 +74,26 @@ type configGetMessage struct {
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	return string(u.value)
+	console.SetColor("EnvVar", color.New(color.FgYellow))
+	bio := bufio.NewReader(bytes.NewReader(u.value))
+	var lines []string
+	for {
+		s, err := bio.ReadString('\n')
+		// Make lines displaying environment variables bold.
+		if strings.HasPrefix(s, "# MINIO_") {
+			s = strings.TrimPrefix(s, "# ")
+			parts := strings.SplitN(s, "=", 2)
+			s = fmt.Sprintf("# %s=%s", console.Colorize("EnvVar", parts[0]), parts[1])
+			lines = append(lines, s)
+		} else {
+			lines = append(lines, s)
+		}
+		if err == io.EOF {
+			break
+		}
+		fatalIf(probe.NewError(err), "Unable to marshal to string.")
+	}
+	return strings.Join(lines, "")
 }
 
 // JSON jsonified service status Message message.
