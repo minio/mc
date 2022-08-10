@@ -81,10 +81,11 @@ type odMessage struct {
 func (o odMessage) String() string {
 	cleanSize := humanize.IBytes(uint64(o.TotalSize))
 	elapsed := time.Duration(o.Elapsed) * time.Millisecond
+	speed := humanize.IBytes(uint64(float64(o.TotalSize) / elapsed.Seconds()))
 	if o.Type == "S3toFS" && o.Parts == 0 {
-		return fmt.Sprintf("Transferred: %s, Full file, Time: %s", cleanSize, elapsed)
+		return fmt.Sprintf("Transferred: %s, Full file, Time: %s, Speed: %s/s", cleanSize, elapsed, speed)
 	}
-	return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s", cleanSize, o.Parts, elapsed)
+	return fmt.Sprintf("Transferred: %s, Parts: %d, Time: %s, Speed: %s/s", cleanSize, o.Parts, elapsed, speed)
 }
 
 func (o odMessage) JSON() string {

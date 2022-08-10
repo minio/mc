@@ -92,14 +92,13 @@ func odSetSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint
 
 	// If source is smaller than part size, upload in 1 part.
 	if partSize > uint64(sourceSize) {
-		return -1, uint64(sourceSize), 1, 0, nil
+		return sourceSize, uint64(sourceSize), 1, 0, nil
 	}
 
 	// If parts is not specified, calculate number of parts and upload full file.
 	if parts < 1 {
-		combinedSize = sourceSize
-		parts = int(math.Ceil(float64(combinedSize)/float64(partSize))) - skipInt
-		return -1, partSize, parts, skip, nil
+		parts = int(math.Ceil(float64(sourceSize)/float64(partSize))) - skipInt
+		return sourceSize, partSize, parts, skip, nil
 	}
 
 	combinedSize = int64(partSize * uint64(parts))
@@ -146,6 +145,11 @@ func odCopy(ctx context.Context, odURLs URLs, args madmin.KVS, odType string) (o
 		storageClass:  odURLs.TargetContent.StorageClass,
 		md5:           odURLs.MD5,
 		multipartSize: partSize,
+	}
+
+	// Disable multipart on files too small for multipart upload.
+	if combinedSize < 5242880 && combinedSize > 0 {
+		putOpts.disableMultipart = true
 	}
 
 	// Used to get transfer time

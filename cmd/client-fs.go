@@ -495,6 +495,9 @@ func (f *fsClient) putN(ctx context.Context, reader io.Reader, size int64, progr
 
 // PutN - create a new file with metadata, reading up to N bytes.
 func (f *fsClient) PutN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+	if size < 0 {
+		return f.put(ctx, reader, size, progress, opts)
+	}
 	return f.putN(ctx, reader, size, progress, opts)
 }
 
