@@ -17,7 +17,6 @@ prometheus           manages prometheus config
 kms                  perform KMS management operations
 bucket               manage buckets defined in the MinIO server
 tier                 manage remote tier targets for ILM transition
-top                  provide top like statistics for MinIO
 trace                show http trace for MinIO server
 console              show console logs for MinIO server
 ```
@@ -647,23 +646,6 @@ mc admin config import myminio < /tmp/my-serverconfig
 Healing is automatic on server side which runs on a continuous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
 
 
-<a name="top"></a>
-### Command `top` - provide top like statistics for MinIO
-NOTE: This command is only applicable for a distributed MinIO setup. It is not supported on single node and gateway deployments.
-
-```
-NAME:
-  mc admin top - provide top like statistics for MinIO
-
-COMMANDS:
-  locks  Get a list of the 10 oldest locks on a MinIO cluster.
-```
-
-*Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
-
-```
-mc admin top locks myminio
-```
 
 <a name="trace"></a>
 ### Command `trace` - Show http trace for MinIO server
