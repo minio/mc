@@ -47,7 +47,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, 'scanner')",
+		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`)",
 	},
 	cli.StringFlag{
 		Name:  "response-threshold",
@@ -234,6 +234,7 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 		opts.Storage = true
 		opts.OS = true
 		opts.Scanner = true
+		opts.Decommission = true
 		return
 	}
 
@@ -256,6 +257,8 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.OS = true
 		case "scanner":
 			opts.Scanner = true
+		case "decom", "decommission":
+			opts.Decommission = true
 		}
 	}
 
@@ -336,8 +339,8 @@ type shortTraceMsg struct {
 	StatusCode int           `json:"statusCode"`
 	StatusMsg  string        `json:"statusMsg"`
 	Type       string        `json:"type"`
-
-	trcType madmin.TraceType
+	Error      string        `json:"error"`
+	trcType    madmin.TraceType
 }
 
 type traceMessage struct {
@@ -372,12 +375,12 @@ type callStats struct {
 type verboseTrace struct {
 	Type string `json:"type"`
 
-	NodeName string        `json:"host"`
-	FuncName string        `json:"api"`
-	Time     time.Time     `json:"time"`
-	Duration time.Duration `json:"duration"`
-	Path     string        `json:"path"`
-
+	NodeName     string        `json:"host"`
+	FuncName     string        `json:"api"`
+	Time         time.Time     `json:"time"`
+	Duration     time.Duration `json:"duration"`
+	Path         string        `json:"path"`
+	Error        string        `json:"error"`
 	RequestInfo  *requestInfo  `json:"request,omitempty"`
 	ResponseInfo *responseInfo `json:"response,omitempty"`
 	CallStats    *callStats    `json:"callStats,omitempty"`
@@ -395,6 +398,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.FuncName = t.FuncName
 	s.Time = t.Time
 	s.Path = t.Path
+	s.Error = t.Error
 	s.Host = t.NodeName
 	s.Duration = t.Duration
 
@@ -436,10 +440,18 @@ func (s shortTraceMsg) String() string {
 	switch s.trcType {
 	case madmin.TraceS3, madmin.TraceInternal:
 	default:
-		fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
-			hostStr,
-			s.Path,
-			console.Colorize("HeaderValue", s.Duration))
+		if s.Error != "" {
+			fmt.Fprintf(b, "[%s] %s %s %s err='%s' %2s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
+				hostStr,
+				s.Path,
+				console.Colorize("ErrStatus", s.Error),
+				console.Colorize("HeaderValue", s.Duration))
+		} else {
+			fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
+				hostStr,
+				s.Path,
+				console.Colorize("HeaderValue", s.Duration))
+		}
 		return b.String()
 	}
 
@@ -491,6 +503,7 @@ func (t traceMessage) JSON() string {
 		Time:     t.Trace.Time,
 		Duration: t.Trace.Duration,
 		Path:     t.Trace.Path,
+		Error:    t.Trace.Error,
 	}
 
 	if t.Trace.HTTP != nil {
@@ -556,7 +569,11 @@ func (t traceMessage) String() string {
 			return ""
 		}
 	default:
-		fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, trc.Duration)
+		if trc.Error != "" {
+			fmt.Fprintf(b, "%s %s [%s] %s err='%s' %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, console.Colorize("ErrStatus", trc.Error), trc.Duration)
+		} else {
+			fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, trc.Duration)
+		}
 		return b.String()
 	}
 
