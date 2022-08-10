@@ -24,23 +24,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
-
-type netperfResult madmin.NetperfResult
-
-func (m netperfResult) String() (msg string) {
-	// string version is handled by banner.
-	return ""
-}
-
-func (m netperfResult) JSON() string {
-	JSONBytes, e := json.MarshalIndent(m, "", "    ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(JSONBytes)
-}
 
 func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 	client, perr := newAdminClient(aliasedURL)
@@ -76,13 +62,21 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	if globalJSON {
-		for {
-			select {
-			case result := <-resultCh:
-				printMsg(netperfResult(result))
-				return nil
-			}
+		select {
+		case err := <-errorCh:
+			printMsg(speedTestResult{
+				Type:  netSpeedTest,
+				Err:   err.Error(),
+				Final: true,
+			})
+		case result := <-resultCh:
+			printMsg(speedTestResult{
+				Type:      netSpeedTest,
+				NetResult: &result,
+				Final:     true,
+			})
 		}
+		return nil
 	}
 
 	done := make(chan struct{})
@@ -100,19 +94,22 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 			select {
 			case err := <-errorCh:
 				p.Send(speedTestResult{
-					err:   err,
-					final: true,
+					Type:  netSpeedTest,
+					Err:   err.Error(),
+					Final: true,
 				})
 				return
 			case result := <-resultCh:
 				p.Send(speedTestResult{
-					nresult: &result,
-					final:   true,
+					Type:      netSpeedTest,
+					NetResult: &result,
+					Final:     true,
 				})
 				return
 			default:
 				p.Send(speedTestResult{
-					nresult: &madmin.NetperfResult{},
+					Type:      netSpeedTest,
+					NetResult: &madmin.NetperfResult{},
 				})
 				time.Sleep(100 * time.Millisecond)
 			}

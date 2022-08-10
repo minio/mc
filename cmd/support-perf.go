@@ -23,6 +23,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -97,34 +98,29 @@ EXAMPLES:
 `,
 }
 
-func (s speedTestResult) StringVerbose() (msg string) {
-	result := s.result
-	if globalPerfTestVerbose {
-		msg += "\n\n"
-		msg += "PUT:\n"
-		for _, node := range result.PUTStats.Servers {
-			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
-			if node.Err != "" {
-				msg += " Err: " + node.Err
-			}
-			msg += "\n"
+func objectTestVerboseResult(result *madmin.SpeedTestResult) (msg string) {
+	msg += "PUT:\n"
+	for _, node := range result.PUTStats.Servers {
+		msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
+		if node.Err != "" {
+			msg += " Err: " + node.Err
 		}
-
-		msg += "GET:\n"
-		for _, node := range result.GETStats.Servers {
-			msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
-			if node.Err != "" {
-				msg += " Err: " + node.Err
-			}
-			msg += "\n"
-		}
-
+		msg += "\n"
 	}
+
+	msg += "GET:\n"
+	for _, node := range result.GETStats.Servers {
+		msg += fmt.Sprintf("   * %s: %s/s %s objs/s", node.Endpoint, humanize.IBytes(node.ThroughputPerSec), humanize.Comma(int64(node.ObjectsPerSec)))
+		if node.Err != "" {
+			msg += " Err: " + node.Err
+		}
+		msg += "\n"
+	}
+
 	return msg
 }
 
-func (s speedTestResult) String() (msg string) {
-	result := s.result
+func objectTestShortResult(result *madmin.SpeedTestResult) (msg string) {
 	msg += fmt.Sprintf("MinIO %s, %d servers, %d drives, %s objects, %d threads",
 		result.Version, result.Servers, result.Disks,
 		humanize.IBytes(uint64(result.Size)), result.Concurrent)
@@ -132,8 +128,12 @@ func (s speedTestResult) String() (msg string) {
 	return msg
 }
 
+func (s speedTestResult) String() string {
+	return ""
+}
+
 func (s speedTestResult) JSON() string {
-	JSONBytes, e := json.MarshalIndent(s.result, "", "    ")
+	JSONBytes, e := json.MarshalIndent(s, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(JSONBytes)
 }
