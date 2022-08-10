@@ -40,11 +40,33 @@ type speedTestUI struct {
 	result   speedTestResult
 }
 
+type speedTestType byte
+
+const (
+	netSpeedTest speedTestType = 1 << iota
+	driveSpeedTest
+	objectSpeedTest
+)
+
+func (s speedTestType) Name() string {
+	switch s {
+	case netSpeedTest:
+		return "NetPerf"
+	case driveSpeedTest:
+		return "DrivePerf"
+	case objectSpeedTest:
+		return "ObjectPerf"
+	}
+	return "<unknown>"
+}
+
 type speedTestResult struct {
-	final   bool
-	result  *madmin.SpeedTestResult
-	nresult *madmin.NetperfResult
-	dresult []madmin.DriveSpeedTestResult
+	Type         speedTestType                 `json:"type"`
+	ObjectResult *madmin.SpeedTestResult       `json:"object,omitempty"`
+	NetResult    *madmin.NetperfResult         `json:"network,omitempty"`
+	DriveResult  []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
+	Err          string                        `json:"err,omitempty"`
+	Final        bool                          `json:"final,omitempty"`
 }
 
 func initSpeedTestUI() *speedTestUI {
@@ -72,7 +94,7 @@ func (m *speedTestUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case speedTestResult:
 		m.result = msg
-		if msg.final {
+		if msg.Final {
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -87,6 +109,11 @@ func (m *speedTestUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *speedTestUI) View() string {
+	// Quit when there is an error
+	if m.result.Err != "" {
+		return fmt.Sprintf("\n%s: ✗ (Err: %s)\n", m.result.Type.Name(), m.result.Err)
+	}
+
 	var s strings.Builder
 	s.WriteString("\n")
 
@@ -104,9 +131,9 @@ func (m *speedTestUI) View() string {
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
 
-	res := m.result.result
-	nres := m.result.nresult
-	dres := m.result.dresult
+	ores := m.result.ObjectResult
+	nres := m.result.NetResult
+	dres := m.result.DriveResult
 
 	trailerIfGreaterThan := func(in string, max int) string {
 		if len(in) < max {
@@ -115,11 +142,11 @@ func (m *speedTestUI) View() string {
 		return in[:max] + "..."
 	}
 
-	if res != nil {
+	if ores != nil {
 		table.SetHeader([]string{"", "Throughput", "IOPS"})
 		data := make([][]string, 2)
 
-		if res.Version == "" {
+		if ores.Version == "" {
 			data[0] = []string{
 				"PUT",
 				whiteStyle.Render("-- KiB/sec"),
@@ -133,26 +160,25 @@ func (m *speedTestUI) View() string {
 		} else {
 			data[0] = []string{
 				"PUT",
-				whiteStyle.Render(humanize.IBytes(res.PUTStats.ThroughputPerSec) + "/s"),
-				whiteStyle.Render(humanize.Comma(int64(res.PUTStats.ObjectsPerSec)) + " objs/s"),
+				whiteStyle.Render(humanize.IBytes(ores.PUTStats.ThroughputPerSec) + "/s"),
+				whiteStyle.Render(humanize.Comma(int64(ores.PUTStats.ObjectsPerSec)) + " objs/s"),
 			}
 			data[1] = []string{
 				"GET",
-				whiteStyle.Render(humanize.IBytes(res.GETStats.ThroughputPerSec) + "/s"),
-				whiteStyle.Render(humanize.Comma(int64(res.GETStats.ObjectsPerSec)) + " objs/s"),
+				whiteStyle.Render(humanize.IBytes(ores.GETStats.ThroughputPerSec) + "/s"),
+				whiteStyle.Render(humanize.Comma(int64(ores.GETStats.ObjectsPerSec)) + " objs/s"),
 			}
 		}
 		table.AppendBulk(data)
 		table.Render()
 
 		if m.quitting {
-			s.WriteString("\n" + m.result.String())
-			if vstr := m.result.StringVerbose(); vstr != "" {
-				s.WriteString(vstr + "\n")
-			} else {
-				s.WriteString("\n")
+			s.WriteString("\n" + objectTestShortResult(ores))
+			if globalPerfTestVerbose {
+				s.WriteString("\n\n")
+				s.WriteString(objectTestVerboseResult(ores))
 			}
-			s.WriteString("Objectperf: ✔\n")
+			s.WriteString("\n")
 		}
 	} else if nres != nil {
 		table.SetHeader([]string{"Node", "RX", "TX", ""})
@@ -191,10 +217,6 @@ func (m *speedTestUI) View() string {
 
 		table.AppendBulk(data)
 		table.Render()
-
-		if m.quitting {
-			s.WriteString("\nNetperf: ✔\n")
-		}
 	} else if dres != nil {
 		table.SetHeader([]string{"Node", "Path", "Read", "Write", ""})
 		data := make([][]string, 0, len(dres))
@@ -232,19 +254,13 @@ func (m *speedTestUI) View() string {
 		}
 		table.AppendBulk(data)
 		table.Render()
-
-		if m.quitting {
-			s.WriteString("\nDriveperf: ✔\n")
-		}
 	}
+
+	// Print the spinner
 	if !m.quitting {
-		if nres != nil {
-			s.WriteString(fmt.Sprintf("\nNetperf: %s", m.spinner.View()))
-		} else if res != nil {
-			s.WriteString(fmt.Sprintf("\nObjectperf: %s", m.spinner.View()))
-		} else if dres != nil {
-			s.WriteString(fmt.Sprintf("\nDriveperf: %s", m.spinner.View()))
-		}
+		s.WriteString(fmt.Sprintf("\n%s: %s", m.result.Type.Name(), m.spinner.View()))
+	} else {
+		s.WriteString(fmt.Sprintf("\n%s: ✔\n", m.result.Type.Name()))
 	}
 	return s.String()
 }
