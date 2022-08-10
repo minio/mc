@@ -44,6 +44,14 @@ var adminTopAPIFlags = []cli.Flag{
 		Name:  "errors, e",
 		Usage: "summarize current API calls throwing only errors",
 	},
+	cli.BoolFlag{
+		Name:  "sort-by-rx",
+		Usage: "sort the output by RX in descending order",
+	},
+	cli.BoolFlag{
+		Name:  "sort-by-tx",
+		Usage: "sort the output by TX in descending order",
+	},
 }
 
 var adminTopAPICmd = cli.Command{
@@ -107,7 +115,14 @@ func mainAdminTopAPI(ctx *cli.Context) error {
 	traceCh := client.ServiceTrace(ctxt, opts)
 	done := make(chan struct{})
 
-	p := tea.NewProgram(initTraceUI())
+	sortRx := ctx.Bool("sort-by-rx")
+	sortTx := ctx.Bool("sort-by-tx")
+
+	if sortRx && sortTx {
+		fatalIf(errInvalidArgument().Trace(aliasedURL), "Sort either by Rx or Tx")
+	}
+
+	p := tea.NewProgram(initTraceUI(sortRx, sortTx))
 	go func() {
 		if e := p.Start(); e != nil {
 			os.Exit(1)

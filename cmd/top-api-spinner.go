@@ -79,6 +79,8 @@ type traceUI struct {
 	result      topAPIResult
 	lastResult  topAPIResult
 	apiStatsMap map[string]*topAPIStats
+	sortByRx    bool
+	sortByTx    bool
 }
 
 type topAPIResult struct {
@@ -86,13 +88,15 @@ type topAPIResult struct {
 	apiCallInfo madmin.ServiceTraceInfo
 }
 
-func initTraceUI() *traceUI {
+func initTraceUI(sortByRx, sortByTx bool) *traceUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	return &traceUI{
 		spinner:     s,
 		apiStatsMap: make(map[string]*topAPIStats),
+		sortByRx:    sortByRx,
+		sortByTx:    sortByTx,
 	}
 }
 
@@ -174,15 +178,23 @@ func (m *traceUI) View() string {
 	for k, stats := range m.apiStatsMap {
 		data = append(data, []string{
 			k,
-			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesRX())),
-			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesTX())),
+			humanize.IBytes(stats.loadAPIBytesRX()),
+			humanize.IBytes(stats.loadAPIBytesTX()),
 			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
 			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPIErrors())),
 		})
 	}
-	sort.Slice(data, func(i, j int) bool {
-		return data[i][0] < data[j][0]
-	})
+
+	switch {
+	case m.sortByRx:
+		sortBy(data, 1)
+	case m.sortByTx:
+		sortBy(data, 2)
+	default:
+		sort.Slice(data, func(i, j int) bool {
+			return data[i][0] < data[j][0]
+		})
+	}
 
 	table.AppendBulk(data)
 	table.Render()
@@ -210,4 +222,12 @@ func (m *traceUI) View() string {
 		s.WriteString("\n")
 	}
 	return s.String()
+}
+
+func sortBy(data [][]string, k int) {
+	sort.Slice(data, func(i, j int) bool {
+		a, _ := humanize.ParseBytes(data[i][k])
+		b, _ := humanize.ParseBytes(data[j][k])
+		return a > b
+	})
 }
