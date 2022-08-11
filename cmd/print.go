@@ -46,5 +46,6 @@ func printMsg(msg message) {
 			}
 		}
 	}
+	msgStr = strings.TrimSuffix(msgStr, "\n")
 	console.Println(msgStr)
 }
