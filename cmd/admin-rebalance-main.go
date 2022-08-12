@@ -27,7 +27,7 @@ var adminRebalanceSubcommands = []cli.Command{
 
 var adminRebalanceCmd = cli.Command{
 	Name:            "rebalance",
-	Usage:           "manage MinIO pool rebalance",
+	Usage:           "Manage MinIO rebalance",
 	Action:          mainAdminRebalance,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

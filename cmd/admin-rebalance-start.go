@@ -30,7 +30,7 @@ import (
 
 var adminRebalanceStartCmd = cli.Command{
 	Name:         "start",
-	Usage:        "start rebalance operation",
+	Usage:        "Start rebalance operation",
 	Action:       mainAdminRebalanceStart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -54,7 +54,7 @@ EXAMPLES:
 type rebalanceStartMsg struct {
 	Status string    `json:"status"`
 	URL    string    `json:"url"`
-	ARN    uuid.UUID `json:"arn"`
+	ID     uuid.UUID `json:"id"`
 }
 
 func (r rebalanceStartMsg) JSON() string {
@@ -86,16 +86,16 @@ func mainAdminRebalanceStart(ctx *cli.Context) error {
 		return pErr.ToGoError()
 	}
 
-	var arn uuid.UUID
+	var id uuid.UUID
 	var err error
-	arn, err = client.RebalanceStart(globalContext)
+	id, err = client.RebalanceStart(globalContext)
 	if err != nil {
 		fatalIf(probe.NewError(err), "Failed to start rebalance")
 		return err
 	}
 	printMsg(rebalanceStartMsg{
 		URL: aliasedURL,
-		ARN: arn,
+		ID:  id,
 	})
 	return nil
 }
