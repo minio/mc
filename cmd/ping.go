@@ -176,6 +176,14 @@ type serverStats struct {
 }
 
 func fetchAdminInfo(admClnt *madmin.AdminClient) (madmin.InfoMessage, error) {
+	ctx, cancel := context.WithTimeout(globalContext, 3*time.Second)
+	// Fetch the service status of the specified MinIO server
+	info, e := admClnt.ServerInfo(ctx)
+	cancel()
+	if e == nil {
+		return info, nil
+	}
+
 	timer := time.NewTimer(time.Second)
 	defer timer.Stop()
 
@@ -185,7 +193,6 @@ func fetchAdminInfo(admClnt *madmin.AdminClient) (madmin.InfoMessage, error) {
 			return madmin.InfoMessage{}, globalContext.Err()
 		case <-timer.C:
 			ctx, cancel := context.WithTimeout(globalContext, 3*time.Second)
-			// Fetch the service status of the specified MinIO server
 			info, e := admClnt.ServerInfo(ctx)
 			cancel()
 			if e == nil {
@@ -354,8 +361,12 @@ func mainPing(cliCtx *cli.Context) error {
 	anonClient, err := newAnonymousClient(aliasedURL)
 	fatalIf(err.Trace(aliasedURL), "Unable to initialize anonymous client for `"+aliasedURL+"`.")
 
-	admInfo, e := fetchAdminInfo(admClient)
-	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to get server info")
+	var admInfo madmin.InfoMessage
+	if cliCtx.Bool("distributed") {
+		var e error
+		admInfo, e = fetchAdminInfo(admClient)
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to get server info")
+	}
 
 	// map to contain server stats for all the servers
 	serverMap := make(map[string]serverStats)
