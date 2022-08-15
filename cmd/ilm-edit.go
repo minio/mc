@@ -55,6 +55,10 @@ EXAMPLES:
   2. Modify the expiration and transition days for an existing rule with id "hGHKijqpo123".
      {{.Prompt}} {{.HelpName}} --id "hGHKijqpo123" --expiry-days "300" \
           --transition-days "200" --storage-class "GLACIER" s3/mybucket
+
+  3. Disable the rule with id "rHTY.a123".
+     {{.Prompt}} {{.HelpName}} --id "rHTY.a123" --disable s3/mybucket
+
 `,
 }
 
@@ -64,6 +68,14 @@ var ilmEditFlags = append(
 		cli.StringFlag{
 			Name:  "id",
 			Usage: "id of the rule to be modified",
+		},
+		cli.BoolFlag{
+			Name:  "disable",
+			Usage: "disable the rule",
+		},
+		cli.BoolFlag{
+			Name:  "enable",
+			Usage: "enable the rule",
 		},
 	},
 	ilmAddFlags...,
@@ -124,7 +136,20 @@ func mainILMEdit(cliCtx *cli.Context) error {
 	opts, err := ilm.GetLifecycleOptions(cliCtx)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
-	lfcCfg, err = opts.ToConfig(lfcCfg)
+	var rule *lifecycle.Rule
+	for i := range lfcCfg.Rules {
+		if lfcCfg.Rules[i].ID != opts.ID {
+			continue
+		}
+		rule = &lfcCfg.Rules[i]
+		break
+	}
+
+	if rule == nil {
+		fatalIf(errDummy(), "Unable to find rule id")
+	}
+
+	err = ilm.ApplyRuleFields(rule, opts)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
 	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")

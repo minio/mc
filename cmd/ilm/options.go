@@ -102,224 +102,337 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 
 // LifecycleOptions is structure to encapsulate
 type LifecycleOptions struct {
-	ID                                   string
-	Prefix                               string
-	Status                               bool
-	IsTagsSet                            bool
-	IsTransitionDaysSet                  bool
-	IsNoncurrentVersionTransitionDaysSet bool
+	ID string
 
-	Tags           string
-	ExpiryDate     string
-	ExpiryDays     string
-	TransitionDate string
-	TransitionDays string
-	StorageClass   string
+	Status *bool
 
-	ExpiredObjectDeleteMarker               bool
-	NoncurrentVersionExpirationDays         int
-	NewerNoncurrentExpirationVersions       int
-	NoncurrentVersionTransitionDays         int
-	NewerNoncurrentTransitionVersions       int
-	NoncurrentVersionTransitionStorageClass string
+	Prefix         *string
+	Tags           *string
+	ExpiryDate     *string
+	ExpiryDays     *string
+	TransitionDate *string
+	TransitionDays *string
+	StorageClass   *string
+
+	ExpiredObjectDeleteMarker               *bool
+	NoncurrentVersionExpirationDays         *int
+	NewerNoncurrentExpirationVersions       *int
+	NoncurrentVersionTransitionDays         *int
+	NewerNoncurrentTransitionVersions       *int
+	NoncurrentVersionTransitionStorageClass *string
 }
 
-// ToConfig create lifecycle.Configuration based on LifecycleOptions
-func (opts LifecycleOptions) ToConfig(config *lifecycle.Configuration) (*lifecycle.Configuration, *probe.Error) {
+// ToILMRule creates lifecycle.Configuration based on LifecycleOptions
+func (opts LifecycleOptions) ToILMRule(config *lifecycle.Configuration) (lifecycle.Rule, *probe.Error) {
+	var (
+		id, status string
+
+		filter lifecycle.Filter
+
+		nonCurrentVersionExpirationDays         lifecycle.ExpirationDays
+		newerNonCurrentExpirationVersions       int
+		nonCurrentVersionTransitionDays         lifecycle.ExpirationDays
+		newerNonCurrentTransitionVersions       int
+		nonCurrentVersionTransitionStorageClass string
+	)
+
+	id = opts.ID
+	status = func() string {
+		if opts.Status != nil && *opts.Status == false {
+			return "Disabled"
+		}
+		// Generating a new ILM rule without explicit status is enabled
+		return "Enabled"
+	}()
+
 	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays, opts.ExpiredObjectDeleteMarker)
 	if err != nil {
-		return nil, err.Trace(opts.ExpiryDate, opts.ExpiryDays)
+		return lifecycle.Rule{}, err
 	}
 
 	transition, err := parseTransition(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
 	if err != nil {
-		return nil, err.Trace(opts.StorageClass, opts.TransitionDate, opts.TransitionDays)
-	}
-	andVal := lifecycle.And{
-		Tags: extractILMTags(opts.Tags),
+		return lifecycle.Rule{}, err
 	}
 
-	filter := lifecycle.Filter{Prefix: opts.Prefix}
+	andVal := lifecycle.And{}
+	if opts.Tags != nil {
+		andVal.Tags = extractILMTags(*opts.Tags)
+	}
+
+	if opts.Prefix != nil {
+		filter.Prefix = *opts.Prefix
+	}
+
 	if len(andVal.Tags) > 0 {
 		filter.And = andVal
-		filter.And.Prefix = opts.Prefix
+		if opts.Prefix != nil {
+			filter.And.Prefix = *opts.Prefix
+		}
 		filter.Prefix = ""
 	}
 
+	if opts.NoncurrentVersionExpirationDays != nil {
+		nonCurrentVersionExpirationDays = lifecycle.ExpirationDays(*opts.NoncurrentVersionExpirationDays)
+	}
+	if opts.NewerNoncurrentExpirationVersions != nil {
+		newerNonCurrentExpirationVersions = *opts.NewerNoncurrentExpirationVersions
+	}
+	if opts.NoncurrentVersionTransitionDays != nil {
+		nonCurrentVersionTransitionDays = lifecycle.ExpirationDays(*opts.NoncurrentVersionTransitionDays)
+	}
+	if opts.NewerNoncurrentTransitionVersions != nil {
+		newerNonCurrentTransitionVersions = *opts.NewerNoncurrentTransitionVersions
+	}
+	if opts.NoncurrentVersionTransitionStorageClass != nil {
+		nonCurrentVersionTransitionStorageClass = *opts.NoncurrentVersionTransitionStorageClass
+	}
+
 	newRule := lifecycle.Rule{
-		ID:         opts.ID,
+		ID:         id,
 		RuleFilter: filter,
-		Status: func() string {
-			if opts.Status {
-				return "Enabled"
-			}
-			return "Disabled"
-		}(),
+		Status:     status,
 		Expiration: expiry,
 		Transition: transition,
 		NoncurrentVersionExpiration: lifecycle.NoncurrentVersionExpiration{
-			NoncurrentDays:          lifecycle.ExpirationDays(opts.NoncurrentVersionExpirationDays),
-			NewerNoncurrentVersions: opts.NewerNoncurrentExpirationVersions,
+			NoncurrentDays:          nonCurrentVersionExpirationDays,
+			NewerNoncurrentVersions: newerNonCurrentExpirationVersions,
 		},
 		NoncurrentVersionTransition: lifecycle.NoncurrentVersionTransition{
-			NoncurrentDays:          lifecycle.ExpirationDays(opts.NoncurrentVersionTransitionDays),
-			NewerNoncurrentVersions: opts.NewerNoncurrentTransitionVersions,
-			StorageClass:            opts.NoncurrentVersionTransitionStorageClass,
+			NoncurrentDays:          nonCurrentVersionTransitionDays,
+			NewerNoncurrentVersions: newerNonCurrentTransitionVersions,
+			StorageClass:            nonCurrentVersionTransitionStorageClass,
 		},
 	}
 
-	ruleFound := false
-	for i, rule := range config.Rules {
-		if rule.ID != newRule.ID {
-			continue
-		}
-		config.Rules[i] = applyRuleFields(newRule, config.Rules[i], opts)
-		if err := validateILMRule(config.Rules[i]); err != nil {
-			return nil, err.Trace(opts.ID)
-		}
-		ruleFound = true
-		break
+	if err := validateILMRule(newRule); err != nil {
+		return lifecycle.Rule{}, err
 	}
 
-	if !ruleFound {
-		if err := validateILMRule(newRule); err != nil {
-			return nil, err.Trace(opts.ID)
-		}
-		config.Rules = append(config.Rules, newRule)
-	}
-	return config, nil
+	return newRule, nil
+}
+
+func strPtr(s string) *string {
+	ptr := s
+	return &ptr
+}
+
+func intPtr(i int) *int {
+	ptr := i
+	return &ptr
+}
+
+func boolPtr(b bool) *bool {
+	ptr := b
+	return &ptr
 }
 
 // GetLifecycleOptions create LifeCycleOptions based on cli inputs
 func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
-	id := ctx.String("id")
+	var (
+		id string
+
+		status *bool
+
+		prefix         *string
+		tags           *string
+		expiryDate     *string
+		expiryDays     *string
+		transitionDate *string
+		transitionDays *string
+		sc             *string
+
+		expiredObjectDeleteMarker         *bool
+		noncurrentVersionExpirationDays   *int
+		newerNoncurrentExpirationVersions *int
+		noncurrentVersionTransitionDays   *int
+		newerNoncurrentTransitionVersions *int
+		noncurrentSC                      *string
+	)
+
+	id = ctx.String("id")
 	if id == "" {
 		id = xid.New().String()
 	}
-	// split the first arg i.e. path into alias, bucket and prefix
-	result := strings.SplitN(ctx.Args().First(), "/", 3)
-	// get the prefix from path
-	var prefix string
-	if len(result) > 2 {
-		prefix = result[len(result)-1]
-	}
-	sc := strings.ToUpper(ctx.String("storage-class"))
-	noncurrentSC := strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class"))
-	if sc != "" && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
-		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
-	}
-	if noncurrentSC != "" && !ctx.IsSet("noncurrentversion-transition-days") {
-		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
-	}
-	// for MinIO transition storage-class is same as label defined on
-	// `mc admin bucket remote add --service ilm --label` command
-	return LifecycleOptions{
-		ID:                                      id,
-		Prefix:                                  prefix,
-		Status:                                  !ctx.Bool("disable"),
-		IsTagsSet:                               ctx.IsSet("tags"),
-		Tags:                                    ctx.String("tags"),
-		ExpiryDate:                              ctx.String("expiry-date"),
-		ExpiryDays:                              ctx.String("expiry-days"),
-		TransitionDate:                          ctx.String("transition-date"),
-		TransitionDays:                          ctx.String("transition-days"),
-		IsTransitionDaysSet:                     ctx.IsSet("transition-days"),
-		StorageClass:                            sc,
-		ExpiredObjectDeleteMarker:               ctx.Bool("expired-object-delete-marker"),
-		NoncurrentVersionExpirationDays:         ctx.Int("noncurrentversion-expiration-days"),
-		NewerNoncurrentExpirationVersions:       ctx.Int("newer-noncurrentversions-expiration"),
-		NoncurrentVersionTransitionDays:         ctx.Int("noncurrentversion-transition-days"),
-		NewerNoncurrentTransitionVersions:       ctx.Int("newer-noncurrentversions-transition"),
-		IsNoncurrentVersionTransitionDaysSet:    ctx.IsSet("noncurrentversion-transition-days"),
-		NoncurrentVersionTransitionStorageClass: noncurrentSC,
-	}, nil
-}
 
-// Applies non empty fields from src to dest Rule and return the dest Rule
-func applyRuleFields(src lifecycle.Rule, dest lifecycle.Rule, opts LifecycleOptions) lifecycle.Rule {
-	// since prefix is a part of command args, it is always present in the src rule and
-	// it should be always set to the destination.
-	dest.RuleFilter.Prefix = src.RuleFilter.Prefix
-
-	// If src has tags, it should override the destination
-	if len(src.RuleFilter.And.Tags) > 0 {
-		dest.RuleFilter.And.Tags = src.RuleFilter.And.Tags
-		dest.RuleFilter.And.Prefix = src.RuleFilter.And.Prefix
-		dest.RuleFilter.Prefix = ""
+	switch {
+	case ctx.IsSet("disable"):
+		status = boolPtr(!ctx.Bool("disable"))
+	case ctx.IsSet("enable"):
+		status = boolPtr(ctx.Bool("enable"))
 	}
 
-	if src.RuleFilter.And.Tags == nil {
-		if opts.IsTagsSet {
-			// If src tags is empty and isTagFlagSet then user provided the --tag flag with "" value
-			// dest tags should be deleted
-			dest.RuleFilter.And.Tags = []lifecycle.Tag{}
-			dest.RuleFilter.And.Prefix = ""
-			dest.RuleFilter.Prefix = src.RuleFilter.Prefix
-		} else {
-			if dest.RuleFilter.And.Tags != nil {
-				// Update prefixes only
-				dest.RuleFilter.And.Prefix = src.RuleFilter.Prefix
-				dest.RuleFilter.Prefix = ""
-			} else {
-				dest.RuleFilter.Prefix = src.RuleFilter.Prefix
-				dest.RuleFilter.And.Prefix = ""
+	if ctx.IsSet("prefix") {
+		prefix = strPtr(ctx.String("prefix"))
+	} else {
+		// Calculating the prefix for the aliased URL is deprecated in Aug 2022
+		// split the first arg i.e. path into alias, bucket and prefix
+		result := strings.SplitN(ctx.Args().First(), "/", 3)
+		// get the prefix from path
+		if len(result) > 2 {
+			p := result[len(result)-1]
+			if len(p) > 0 {
+				prefix = &p
 			}
 		}
 	}
 
+	if ctx.IsSet("storage-class") {
+		sc = strPtr(strings.ToUpper(ctx.String("storage-class")))
+	}
+	if ctx.IsSet("noncurrentversion-transition-storage-class") {
+		noncurrentSC = strPtr(strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class")))
+	}
+	if sc != nil && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
+		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
+	}
+	if noncurrentSC != nil && !ctx.IsSet("noncurrentversion-transition-days") {
+		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
+	}
+	// for MinIO transition storage-class is same as label defined on
+	// `mc admin bucket remote add --service ilm --label` command
+	if ctx.IsSet("tags") {
+		tags = strPtr(ctx.String("tags"))
+	}
+	if ctx.IsSet("expiry-date") {
+		expiryDate = strPtr(ctx.String("expiry-date"))
+	}
+	if ctx.IsSet("expiry-days") {
+		expiryDays = strPtr(ctx.String("expiry-days"))
+	}
+	if ctx.IsSet("transition-date") {
+		transitionDate = strPtr(ctx.String("transition-date"))
+	}
+	if ctx.IsSet("transition-days") {
+		transitionDays = strPtr(ctx.String("transition-days"))
+	}
+	if ctx.IsSet("expired-object-delete-marker") {
+		expiredObjectDeleteMarker = boolPtr(ctx.Bool("expired-object-delete-marker"))
+	}
+	if ctx.IsSet("noncurrentversion-expiration-days") {
+		noncurrentVersionExpirationDays = intPtr(ctx.Int("noncurrentversion-expiration-days"))
+	}
+	if ctx.IsSet("newer-noncurrentversions-expiration") {
+		newerNoncurrentExpirationVersions = intPtr(ctx.Int("newer-noncurrentversions-expiration"))
+	}
+	if ctx.IsSet("noncurrentversion-transition-days") {
+		noncurrentVersionTransitionDays = intPtr(ctx.Int("noncurrentversion-transition-days"))
+	}
+	if ctx.IsSet("newer-noncurrentversions-transition") {
+		newerNoncurrentTransitionVersions = intPtr(ctx.Int("newer-noncurrentversions-transition"))
+	}
+
+	return LifecycleOptions{
+		ID:                                      id,
+		Status:                                  status,
+		Prefix:                                  prefix,
+		Tags:                                    tags,
+		ExpiryDate:                              expiryDate,
+		ExpiryDays:                              expiryDays,
+		TransitionDate:                          transitionDate,
+		TransitionDays:                          transitionDays,
+		StorageClass:                            sc,
+		ExpiredObjectDeleteMarker:               expiredObjectDeleteMarker,
+		NoncurrentVersionExpirationDays:         noncurrentVersionExpirationDays,
+		NewerNoncurrentExpirationVersions:       newerNoncurrentExpirationVersions,
+		NoncurrentVersionTransitionDays:         noncurrentVersionTransitionDays,
+		NewerNoncurrentTransitionVersions:       newerNoncurrentTransitionVersions,
+		NoncurrentVersionTransitionStorageClass: noncurrentSC,
+	}, nil
+}
+
+// ApplyRuleFields applies non nil fields of LifcycleOptions to the existing lifecycle rule
+func ApplyRuleFields(dest *lifecycle.Rule, opts LifecycleOptions) *probe.Error {
+	// If src has tags, it should override the destination
+	if opts.Tags != nil {
+		dest.RuleFilter.And.Tags = extractILMTags(*opts.Tags)
+	}
+
+	// since prefix is a part of command args, it is always present in the src rule and
+	// it should be always set to the destination.
+	if opts.Prefix != nil {
+		if dest.RuleFilter.And.Tags != nil {
+			dest.RuleFilter.And.Prefix = *opts.Prefix
+		} else {
+			dest.RuleFilter.Prefix = *opts.Prefix
+		}
+	}
+
 	// only one of expiration day, date or transition day, date is expected
-	if !src.Expiration.IsDateNull() {
-		dest.Expiration.Date = src.Expiration.Date
+	if opts.ExpiryDate != nil {
+		date, err := parseExpiryDate(*opts.ExpiryDate)
+		if err != nil {
+			return err
+		}
+		dest.Expiration.Date = date
 		// reset everything else
 		dest.Expiration.Days = 0
 		dest.Expiration.DeleteMarker = false
-	} else if !src.Expiration.IsDaysNull() {
-		dest.Expiration.Days = src.Expiration.Days
+	} else if opts.ExpiryDays != nil {
+		days, err := parseExpiryDays(*opts.ExpiryDays)
+		if err != nil {
+			return err
+		}
+		dest.Expiration.Days = days
 		// reset everything else
 		dest.Expiration.Date = lifecycle.ExpirationDate{}
-	} else if src.Expiration.IsDeleteMarkerExpirationEnabled() {
-		dest.Expiration.DeleteMarker = true
+	} else if opts.ExpiredObjectDeleteMarker != nil {
+		dest.Expiration.DeleteMarker = lifecycle.ExpireDeleteMarker(*opts.ExpiredObjectDeleteMarker)
 		dest.Expiration.Days = 0
 		dest.Expiration.Date = lifecycle.ExpirationDate{}
 	}
 
-	if !src.Transition.IsDateNull() {
-		dest.Transition.Date = src.Transition.Date
+	if opts.TransitionDate != nil {
+		date, err := parseTransitionDate(*opts.TransitionDate)
+		if err != nil {
+			return err
+		}
+		dest.Transition.Date = date
 		// reset everything else
 		dest.Transition.Days = 0
-	} else if opts.IsTransitionDaysSet {
-		dest.Transition.Days = src.Transition.Days
+	} else if opts.TransitionDays != nil {
+		days, err := parseTransitionDays(*opts.TransitionDays)
+		if err != nil {
+			return err
+		}
+		dest.Transition.Days = days
 		// reset everything else
 		dest.Transition.Date = lifecycle.ExpirationDate{}
 	}
 
-	if !src.NoncurrentVersionExpiration.IsDaysNull() {
-		dest.NoncurrentVersionExpiration.NoncurrentDays = src.NoncurrentVersionExpiration.NoncurrentDays
+	if opts.NoncurrentVersionExpirationDays != nil {
+		dest.NoncurrentVersionExpiration.NoncurrentDays = lifecycle.ExpirationDays(*opts.NoncurrentVersionExpirationDays)
 	}
 
-	if src.NoncurrentVersionExpiration.NewerNoncurrentVersions != dest.NoncurrentVersionExpiration.NewerNoncurrentVersions {
-		dest.NoncurrentVersionExpiration.NewerNoncurrentVersions = src.NoncurrentVersionExpiration.NewerNoncurrentVersions
+	if opts.NewerNoncurrentExpirationVersions != nil {
+		dest.NoncurrentVersionExpiration.NewerNoncurrentVersions = *opts.NewerNoncurrentExpirationVersions
 	}
 
-	if opts.IsNoncurrentVersionTransitionDaysSet {
-		dest.NoncurrentVersionTransition.NoncurrentDays = src.NoncurrentVersionTransition.NoncurrentDays
+	if opts.NoncurrentVersionTransitionDays != nil {
+		dest.NoncurrentVersionTransition.NoncurrentDays = lifecycle.ExpirationDays(*opts.NoncurrentVersionTransitionDays)
 	}
 
-	if src.NoncurrentVersionTransition.NewerNoncurrentVersions != dest.NoncurrentVersionTransition.NewerNoncurrentVersions {
-		dest.NoncurrentVersionTransition.NewerNoncurrentVersions = src.NoncurrentVersionTransition.NewerNoncurrentVersions
+	if opts.NewerNoncurrentTransitionVersions != nil {
+		dest.NoncurrentVersionTransition.NewerNoncurrentVersions = *opts.NewerNoncurrentTransitionVersions
 	}
 
-	if src.NoncurrentVersionTransition.StorageClass != "" {
-		dest.NoncurrentVersionTransition.StorageClass = src.NoncurrentVersionTransition.StorageClass
+	if opts.NoncurrentVersionTransitionStorageClass != nil {
+		dest.NoncurrentVersionTransition.StorageClass = *opts.NoncurrentVersionTransitionStorageClass
 	}
 
-	if src.Transition.StorageClass != "" {
-		dest.Transition.StorageClass = src.Transition.StorageClass
+	if opts.StorageClass != nil {
+		dest.Transition.StorageClass = *opts.StorageClass
 	}
 
 	// Updated the status
-	if src.Status != "" {
-		dest.Status = src.Status
+	if opts.Status != nil {
+		dest.Status = func() string {
+			if *opts.Status {
+				return "Enabled"
+			}
+			return "Disabled"
+		}()
 	}
-	return dest
+
+	return nil
 }
