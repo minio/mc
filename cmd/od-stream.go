@@ -160,7 +160,7 @@ func odCopy(ctx context.Context, odURLs URLs, args madmin.KVS, odType string) (o
 	fatalIf(err, "Unable to initialize target client")
 
 	// Put object.
-	total, err := targetClnt.PutN(ctx, reader, combinedSize, pg, putOpts)
+	total, err := targetClnt.PutPart(ctx, reader, combinedSize, pg, putOpts)
 	fatalIf(err, "Unable to put object")
 
 	// Get upload time.
@@ -265,7 +265,7 @@ func odDownload(ctx context.Context, odURLs URLs, args madmin.KVS) (odMessage, e
 
 // singleGet helps odDownload download a single part.
 func singleGet(ctx context.Context, cli Client) io.ReadCloser {
-	reader, err := cli.ODGet(ctx, 0)
+	reader, err := cli.GetPart(ctx, 0)
 	fatalIf(err, "Unable to get object reader")
 
 	return reader
@@ -277,7 +277,7 @@ func multiGet(ctx context.Context, cli Client, parts, skip int) io.Reader {
 
 	// Get reader for each part.
 	for i := 1 + skip; i <= parts; i++ {
-		reader, err := cli.ODGet(ctx, parts)
+		reader, err := cli.GetPart(ctx, parts)
 		fatalIf(err, "Unable to get object reader")
 		readers = append(readers, reader)
 	}

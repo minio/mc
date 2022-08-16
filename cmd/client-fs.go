@@ -493,8 +493,8 @@ func (f *fsClient) putN(ctx context.Context, reader io.Reader, size int64, progr
 	return totalWritten, nil
 }
 
-// PutN - create a new file with metadata, reading up to N bytes.
-func (f *fsClient) PutN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+// PutPart - create a new file with metadata, reading up to N bytes.
+func (f *fsClient) PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	if size < 0 {
 		return f.put(ctx, reader, size, progress, opts)
 	}
@@ -1410,9 +1410,9 @@ func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
 }
 
 // OD Get - not implemented
-func (f *fsClient) ODGet(ctx context.Context, _ int) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) GetPart(ctx context.Context, _ int) (io.ReadCloser, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
-		API:     "ODGet",
+		API:     "GetPart",
 		APIType: "filesystem",
 	})
 }

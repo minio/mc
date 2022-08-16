@@ -1114,8 +1114,8 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	return ui.Size, nil
 }
 
-// PutN - upload an object with custom metadata. (Same as Put)
-func (c *S3Client) PutN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, putOpts PutOptions) (int64, *probe.Error) {
+// PutPart - upload an object with custom metadata. (Same as Put)
+func (c *S3Client) PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, putOpts PutOptions) (int64, *probe.Error) {
 	return c.Put(ctx, reader, size, progress, putOpts)
 }
 
@@ -2844,8 +2844,8 @@ func (c *S3Client) Restore(ctx context.Context, versionID string, days int) *pro
 	return nil
 }
 
-// ODGet gets an object in a given number of parts
-func (c *S3Client) ODGet(ctx context.Context, part int) (io.ReadCloser, *probe.Error) {
+// GetPart gets an object in a given number of parts
+func (c *S3Client) GetPart(ctx context.Context, part int) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
