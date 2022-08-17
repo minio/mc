@@ -113,11 +113,11 @@ var colorMap = template.FuncMap{
 }
 
 // PingDist is the template for ping result in distributed mode
-const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
+const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "avg="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "dns="}}{{colorWhite .DNS}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "avg="}}{{colorRed .Average}}{{"\t"}}{{colorRed "dns="}}{{colorRed .DNS}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
 {{end}}`
 
 // Ping is the template for ping result
-const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
+const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "avg="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "dns="}}{{colorWhite .DNS}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "avg="}}{{colorRed .Average}}{{"\t"}}{{colorRed "dns="}}{{colorRed .DNS}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
 
 // PingTemplateDist - captures ping template
 var PingTemplateDist = template.Must(template.New("ping-list").Funcs(colorMap).Parse(PingDist))
@@ -153,6 +153,7 @@ type EndPointStats struct {
 	Min       string   `json:"min"`
 	Max       string   `json:"max"`
 	Average   string   `json:"average"`
+	DNS       string   `json:"dns"`
 	CountErr  string   `json:"error-count,omitempty"`
 	Error     string   `json:"error,omitempty"`
 	Roundtrip string   `json:"roundtrip"`
@@ -170,7 +171,8 @@ type serverStats struct {
 	max        uint64
 	sum        uint64
 	avg        uint64
-	errorCount int // used to keep a track of consecutive errors
+	dns        uint64 // last DNS resolving time
+	errorCount int    // used to keep a track of consecutive errors
 	err        string
 	counter    int // used to find the average, acts as denominator
 }
@@ -219,6 +221,7 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 			Min:       time.Duration(stat.min).Round(time.Microsecond).String(),
 			Max:       time.Duration(stat.max).Round(time.Microsecond).String(),
 			Average:   time.Duration(stat.avg).Round(time.Microsecond).String(),
+			DNS:       time.Duration(stat.dns).Round(time.Microsecond).String(),
 			CountErr:  strconv.Itoa(stat.errorCount),
 			Error:     stat.err,
 			Roundtrip: result.ResponseTime.Round(time.Microsecond).String(),
@@ -238,7 +241,7 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 
 func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
 	var errorString string
-	var sum, avg uint64
+	var sum, avg, dns uint64
 	min := uint64(math.MaxUint64)
 	var max uint64
 	var counter, errorCount int
@@ -283,8 +286,9 @@ func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[s
 			counter = 1
 		}
 		avg = sum / uint64(counter)
+		dns = uint64(result.DNSResolveTime.Nanoseconds())
 	}
-	return serverStats{min, max, sum, avg, errorCount, errorString, counter}
+	return serverStats{min, max, sum, avg, dns, errorCount, errorString, counter}
 }
 
 // extractHostPort - extracts host/port from many address formats
