@@ -20,7 +20,6 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -66,210 +65,10 @@ EXAMPLES:
 `,
 }
 
-var errInvalidEnvVarLine = errors.New("expected env var line of the form `# MINIO_...=...`")
-
-type envOverride struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// configValue represents the value for a configuration parameter including the
-// env value if present.
-type configValue struct {
-	Value       string       `json:"value"`
-	EnvOverride *envOverride `json:"env_override,omitempty"`
-}
-
-type subsysConfig struct {
-	SubSystem string                 `json:"subSystem"`
-	Target    string                 `json:"target,omitempty"`
-	KV        map[string]configValue `json:"kv"`
-}
-
 type configGetMessage struct {
-	Status string         `json:"status"`
-	Config []subsysConfig `json:"config"`
+	Status string                `json:"status"`
+	Config []madmin.SubsysConfig `json:"config"`
 	value  []byte
-}
-
-func parseEnvVarLine(s, subSystem, target string) (envVar, configVar, value string, err error) {
-	s = strings.TrimPrefix(s, madmin.KvComment+madmin.KvSpaceSeparator)
-	ps := strings.SplitN(s, madmin.KvSeparator, 2)
-	if len(ps) != 2 {
-		err = errInvalidEnvVarLine
-		return
-	}
-
-	envVar = ps[0]
-	value = ps[1]
-
-	configVar = strings.TrimPrefix(envVar, madmin.EnvPrefix+strings.ToUpper(subSystem)+madmin.EnvWordDelimiter)
-	if target != madmin.Default {
-		configVar = strings.TrimSuffix(configVar, madmin.EnvWordDelimiter+target)
-	}
-	configVar = strings.ToLower(configVar)
-	return
-}
-
-// Assume validity of input to simplify the parsing.
-func parseConfigLine(s string) (subSys, target string, kvs []madmin.KV) {
-	ps := strings.SplitN(s, madmin.KvSpaceSeparator, 2)
-
-	ws := strings.SplitN(ps[0], madmin.SubSystemSeparator, 2)
-	subSys = ws[0]
-	target = madmin.Default
-	if len(ws) == 2 {
-		target = ws[1]
-	}
-
-	if len(ps) == 1 {
-		return
-	}
-
-	// Parse keys and values
-	text := ps[1]
-	for len(text) > 0 {
-		ts := strings.SplitN(text, madmin.KvSeparator, 2)
-		kv := madmin.KV{Key: ts[0]}
-		text = ts[1]
-
-		// Value may be double quoted.
-		if strings.HasPrefix(text, madmin.KvDoubleQuote) {
-			text = strings.TrimPrefix(text, madmin.KvDoubleQuote)
-			ts := strings.SplitN(text, madmin.KvDoubleQuote, 2)
-			kv.Value = ts[0]
-			text = strings.TrimSpace(ts[1])
-		} else {
-			ts := strings.SplitN(text, madmin.KvSpaceSeparator, 2)
-			kv.Value = ts[0]
-			if len(ts) == 2 {
-				text = ts[1]
-			} else {
-				text = ""
-			}
-		}
-		kvs = append(kvs, kv)
-	}
-	return
-}
-
-func isEnvLine(s string) bool {
-	return strings.HasPrefix(s, madmin.EnvLinePrefix)
-}
-
-func isCommentLine(s string) bool {
-	return strings.HasPrefix(s, madmin.KvComment)
-}
-
-func getConfigLineSubSystemAndTarget(s string) (subSys, target string) {
-	words := strings.SplitN(s, madmin.KvSpaceSeparator, 2)
-	pieces := strings.SplitN(words[0], madmin.SubSystemSeparator, 2)
-	if len(pieces) == 2 {
-		return pieces[0], pieces[1]
-	}
-	// If no target is present, it is the default target.
-	return pieces[0], madmin.Default
-}
-
-func parseServerConfigOutputToJSONObject(s string) ([]subsysConfig, error) {
-	lines := strings.Split(s, "\n")
-
-	// Clean up config lines
-	var configLines []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			configLines = append(configLines, line)
-		}
-	}
-
-	// Parse out config lines into groups corresponding to a single subsystem.
-	//
-	// How does it work? The server output is a list of lines, where each line
-	// may be one of:
-	//
-	//   1. A config line for a single subsystem (and optional target). For
-	//   example, "site region=us-east-1" or "identity_openid:okta k1=v1 k2=v2".
-	//
-	//   2. A comment line showing an environment variable set on the server.
-	//   For example "# MINIO_SITE_NAME=my-cluster".
-	//
-	//   3. Comment lines with other content. These will not start with `#
-	//   MINIO_`.
-	//
-	// For the structured JSON representation, only lines of type 1 and 2 are
-	// required as they correspond to configuration specified by an
-	// administrator.
-	//
-	// Additionally, after ignoring lines of type 3 above:
-	//
-	//   1. environment variable lines for a subsystem (and target if present)
-	//   appear consecutively.
-	//
-	//   2. exactly one config line for a subsystem and target immediately
-	//   follows the env var lines for the same subsystem and target.
-	//
-	// The parsing logic below classifies each line and groups them by
-	// subsystem and target.
-	var configGroups [][]string
-	var subSystems []string
-	var targets []string
-	var currGroup []string
-	for _, line := range configLines {
-		if isEnvLine(line) {
-			currGroup = append(currGroup, line)
-		} else if isCommentLine(line) {
-			continue
-		} else {
-			subSys, target := getConfigLineSubSystemAndTarget(line)
-			currGroup = append(currGroup, line)
-			configGroups = append(configGroups, currGroup)
-			subSystems = append(subSystems, subSys)
-			targets = append(targets, target)
-		}
-	}
-
-	var res []subsysConfig
-	for i, group := range configGroups {
-		sc := subsysConfig{
-			SubSystem: subSystems[i],
-			KV:        make(map[string]configValue),
-		}
-		if targets[i] != madmin.Default {
-			sc.Target = targets[i]
-		}
-		for _, line := range group {
-			if isEnvLine(line) {
-				envVar, configVar, value, err := parseEnvVarLine(line, subSystems[i], targets[i])
-				if err != nil {
-					return nil, err
-				}
-				sc.KV[configVar] = configValue{
-					EnvOverride: &envOverride{
-						Name:  envVar,
-						Value: value,
-					},
-				}
-				continue
-			}
-
-			_, _, kvs := parseConfigLine(line)
-			for _, kv := range kvs {
-				cv, ok := sc.KV[kv.Key]
-				if ok {
-					cv.Value = kv.Value
-					sc.KV[kv.Key] = cv
-				} else {
-					sc.KV[kv.Key] = configValue{Value: kv.Value}
-				}
-			}
-
-		}
-
-		res = append(res, sc)
-	}
-
-	return res, nil
 }
 
 // String colorized service status message.
@@ -300,7 +99,7 @@ func (u configGetMessage) String() string {
 func (u configGetMessage) JSON() string {
 	u.Status = "success"
 	var err error
-	u.Config, err = parseServerConfigOutputToJSONObject(string(u.value))
+	u.Config, err = madmin.ParseServerConfigOutput(string(u.value))
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
