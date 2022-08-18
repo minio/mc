@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net"
 	"net/url"
@@ -28,6 +29,7 @@ import (
 	"text/tabwriter"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -216,12 +218,12 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		stat := getPingInfo(cliCtx, result, endPointMap)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
-			Min:       time.Duration(stat.min).Round(time.Microsecond).String(),
-			Max:       time.Duration(stat.max).Round(time.Microsecond).String(),
-			Average:   time.Duration(stat.avg).Round(time.Microsecond).String(),
+			Min:       trimToTwoDecimal(time.Duration(stat.min).Round(time.Microsecond).String()),
+			Max:       trimToTwoDecimal(time.Duration(stat.max).Round(time.Microsecond).String()),
+			Average:   trimToTwoDecimal(time.Duration(stat.avg).Round(time.Microsecond).String()),
 			CountErr:  strconv.Itoa(stat.errorCount),
 			Error:     stat.err,
-			Roundtrip: result.ResponseTime.Round(time.Microsecond).String(),
+			Roundtrip: trimToTwoDecimal(result.ResponseTime.Round(time.Microsecond).String()),
 		}
 		endPointStats = append(endPointStats, endPointStat)
 		endPointMap[result.Endpoint.Host] = stat
@@ -234,6 +236,27 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	})
 
 	time.Sleep(time.Duration(cliCtx.Int("interval")) * time.Second)
+}
+
+func trimToTwoDecimal(inputString string) string {
+	var index1, index2 int
+	for i, char := range inputString {
+		if unicode.IsNumber(char) {
+			continue
+		} else if char == '.' {
+			index1 = i
+		} else {
+			index2 = i
+			break
+		}
+	}
+
+	if index2-index1 >= 2 {
+		return fmt.Sprintf("%s%s", inputString[:index1+3], inputString[index2:])
+	} else if index2-index1 >= 1 {
+		return fmt.Sprintf("%s%s", inputString[:index1+2], inputString[index2:])
+	}
+	return fmt.Sprintf("%s%s", inputString[:index1+1], inputString[index2:])
 }
 
 func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
