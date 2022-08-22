@@ -170,6 +170,7 @@ const (
 	sortByUtil
 	sortByRead
 	sortByWrite
+	sortByDiscard
 	sortByTps
 )
 
@@ -187,6 +188,8 @@ func (s sortIOStat) String() string {
 		return "read"
 	case sortByWrite:
 		return "write"
+	case sortByDiscard:
+		return "discard"
 	case sortByTps:
 		return "tps"
 	}
@@ -211,7 +214,7 @@ func (m *topDiskUI) View() string {
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
 
-	table.SetHeader([]string{"Disk", "used", "tps", "read", "write", "await", "util"})
+	table.SetHeader([]string{"Disk", "used", "tps", "read", "write", "discard", "await", "util"})
 
 	var data []diskIOStat
 
@@ -239,6 +242,8 @@ func (m *topDiskUI) View() string {
 			return data[i].readMBs < data[j].readMBs
 		case sortByWrite:
 			return data[i].writeMBs < data[j].writeMBs
+		case sortByDiscard:
+			return data[i].discardMBs > data[j].discardMBs
 		case sortByTps:
 			return data[i].tps < data[j].tps
 		}
@@ -266,6 +271,7 @@ func (m *topDiskUI) View() string {
 			whiteStyle.Render(fmt.Sprintf("%v", d.tps)),
 			whiteStyle.Render(fmt.Sprintf("%.2f MiB/s", d.readMBs)),
 			whiteStyle.Render(fmt.Sprintf("%.2f MiB/s", d.writeMBs)),
+			whiteStyle.Render(fmt.Sprintf("%.2f MiB/s", d.discardMBs)),
 			whiteStyle.Render(fmt.Sprintf("%.1f ms", d.await)),
 			whiteStyle.Render(fmt.Sprintf("%.1f%%", d.util)),
 		})
@@ -275,7 +281,7 @@ func (m *topDiskUI) View() string {
 	table.Render()
 
 	if !m.quitting {
-		s.WriteString(fmt.Sprintf("\n%s \u25C0 Pool %d \u25B6 | Sort By: %s (u,t,r,w,A,U)", m.spinner.View(), m.pool+1, m.sortBy))
+		s.WriteString(fmt.Sprintf("\n%s \u25C0 Pool %d \u25B6 | Sort By: %s (u,t,r,w,d,A,U)", m.spinner.View(), m.pool+1, m.sortBy))
 	}
 	return s.String()
 }

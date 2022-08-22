@@ -32,14 +32,14 @@ import (
 var supportTopDiskFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "count, c",
-		Usage: "show the maximum top disks",
+		Usage: "show up to N disks",
 		Value: 10,
 	},
 }
 
 var supportTopDiskCmd = cli.Command{
 	Name:            "disk",
-	Usage:           "Show disk stats in real-time",
+	Usage:           "show current disk statistics",
 	Action:          mainSupportTopDisk,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
