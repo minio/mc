@@ -391,6 +391,116 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, progre
 	return f.put(ctx, reader, size, progress, opts)
 }
 
+func (f *fsClient) putN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+	// ContentType is not handled on purpose.
+	// For filesystem this is a redundant information.
+
+	// Extract dir name.
+	objectDir, objectName := filepath.Split(f.PathURL.Path)
+
+	if objectDir != "" {
+		// Create any missing top level directories.
+		if e := os.MkdirAll(objectDir, 0o777); e != nil {
+			err := f.toClientError(e, f.PathURL.Path)
+			return 0, err.Trace(f.PathURL.Path)
+		}
+
+		// Check if object name is empty, it must be an empty directory
+		if objectName == "" {
+			return 0, nil
+		}
+	}
+
+	objectPath := f.PathURL.Path
+
+	// Write to a temporary file "object.part.minio" before commit.
+	objectPartPath := objectPath + partSuffix
+
+	// We cannot resume this operation, then we
+	// should remove any partial download if any.
+	defer os.Remove(objectPartPath)
+
+	tmpFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0o666)
+	if e != nil {
+		err := f.toClientError(e, f.PathURL.Path)
+		return 0, err.Trace(f.PathURL.Path)
+	}
+
+	attr := make(map[string]string)
+	if _, ok := opts.metadata[metadataKey]; ok && opts.isPreserve {
+		attr, e = parseAttribute(opts.metadata)
+		if e != nil {
+			tmpFile.Close()
+			return 0, probe.NewError(e)
+		}
+		err := preserveAttributes(tmpFile, attr)
+		if err != nil {
+			console.Println(console.Colorize("Error", fmt.Sprintf("unable to preserve attributes, continuing to copy the content %s\n", err.ToGoError())))
+		}
+	}
+
+	totalWritten, e := io.CopyN(tmpFile, hookreader.NewHook(reader, progress), size)
+	if e != nil {
+		tmpFile.Close()
+		return 0, probe.NewError(e)
+	}
+
+	// Close the input reader as well, if possible.
+	closer, ok := reader.(io.Closer)
+	if ok {
+		if e = closer.Close(); e != nil {
+			tmpFile.Close()
+			return totalWritten, probe.NewError(e)
+		}
+	}
+
+	// Close the file before renaming, we need to do this
+	// specifically for windows users - windows explicitly
+	// disallows renames on Open() fd's by default.
+	if e = tmpFile.Close(); e != nil {
+		return totalWritten, probe.NewError(e)
+	}
+
+	// Following verification is needed only for input size greater than '0'.
+	if size > 0 {
+		// Unexpected ExcessRead (more data was written than expected).
+		if totalWritten > size {
+			return totalWritten, probe.NewError(UnexpectedExcessRead{
+				TotalSize:    size,
+				TotalWritten: totalWritten,
+			})
+		}
+	}
+
+	// Safely completed put. Now commit by renaming to actual filename.
+	if e = os.Rename(objectPartPath, objectPath); e != nil {
+		err := f.toClientError(e, objectPath)
+		return totalWritten, err.Trace(objectPartPath, objectPath)
+	}
+
+	if len(attr) != 0 && opts.isPreserve {
+		atime, mtime, err := parseAtimeMtime(attr)
+		if err != nil {
+			return totalWritten, err.Trace()
+		}
+		if !atime.IsZero() && !mtime.IsZero() {
+			if e := os.Chtimes(objectPath, atime, mtime); e != nil {
+				return totalWritten, probe.NewError(e)
+			}
+		}
+	}
+
+	return totalWritten, nil
+}
+
+// PutPart - create a new file with metadata, reading up to N bytes.
+func (f *fsClient) PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+	if size < 0 {
+		return f.put(ctx, reader, size, progress, opts)
+	}
+	return f.putN(ctx, reader, size, progress, opts)
+}
+
 // ShareDownload - share download not implemented for filesystem.
 func (f *fsClient) ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
@@ -1294,6 +1404,14 @@ func (f *fsClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "Restore",
+		APIType: "filesystem",
+	})
+}
+
+// OD Get - not implemented
+func (f *fsClient) GetPart(ctx context.Context, _ int) (io.ReadCloser, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{
+		API:     "GetPart",
 		APIType: "filesystem",
 	})
 }

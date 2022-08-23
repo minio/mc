@@ -1114,6 +1114,11 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	return ui.Size, nil
 }
 
+// PutPart - upload an object with custom metadata. (Same as Put)
+func (c *S3Client) PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, putOpts PutOptions) (int64, *probe.Error) {
+	return c.Put(ctx, reader, size, progress, putOpts)
+}
+
 // Remove incomplete uploads.
 func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, objectsCh <-chan minio.ObjectInfo) <-chan minio.RemoveObjectResult {
 	removeObjectErrorCh := make(chan minio.RemoveObjectResult)
@@ -2842,4 +2847,24 @@ func (c *S3Client) Restore(ctx context.Context, versionID string, days int) *pro
 		return probe.NewError(err)
 	}
 	return nil
+}
+
+// GetPart gets an object in a given number of parts
+func (c *S3Client) GetPart(ctx context.Context, part int) (io.ReadCloser, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return nil, probe.NewError(BucketNameEmpty{})
+	}
+	if object == "" {
+		return nil, probe.NewError(ObjectNameEmpty{})
+	}
+	getOO := minio.GetObjectOptions{}
+	if part > 0 {
+		getOO.PartNumber = part
+	}
+	reader, e := c.api.GetObject(ctx, bucket, object, getOO)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+	return reader, nil
 }
