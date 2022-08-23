@@ -65,6 +65,7 @@ var (
 	globalInsecure       = false  // Insecure flag set via command line
 	globalDevMode        = false  // dev flag set via command line
 	globalSubnetProxyURL *url.URL // Proxy to be used for communication with subnet
+	globalAirgapped      = false  // Airgapped flag set via command line
 
 	globalConnReadDeadline  time.Duration
 	globalConnWriteDeadline time.Duration
@@ -88,6 +89,7 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
 	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
 	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
+	airgapped := ctx.IsSet("airgap") || ctx.GlobalIsSet("airgap")
 
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
@@ -96,6 +98,7 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	globalNoColor = globalNoColor || noColor || globalJSONLine
 	globalInsecure = globalInsecure || insecure
 	globalDevMode = globalDevMode || devMode
+	globalAirgapped = globalAirgapped || airgapped
 
 	// Disable colorified messages if requested.
 	if globalNoColor || globalQuiet {
