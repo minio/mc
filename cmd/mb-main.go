@@ -42,7 +42,7 @@ var mbFlags = []cli.Flag{
 		Usage: "enable object lock",
 	},
 	cli.BoolFlag{
-		Name:  "with-versioning, s",
+		Name:  "with-versioning",
 		Usage: "enable versioned bucket",
 	},
 }

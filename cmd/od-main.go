@@ -24,7 +24,6 @@ import (
 	"time"
 
 	json "github.com/minio/colorjson"
-	madmin "github.com/minio/madmin-go"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
@@ -44,12 +43,13 @@ var odCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [OPERANDS]
+
 OPERANDS:
-  if=        Source stream to upload
-  of=        Target path to upload to
-  size=      Size of each part. If not specified, will be calculated from the source stream size.
-  parts=     Number of parts to upload. If not specified, will calculated from the source file size.
-  skip=      Number of parts to skip.
+  if=        source stream to upload
+  of=        target path to upload to
+  size=      size of each part. If not specified, will be calculated from the source stream size.
+  parts=     number of parts to upload. If not specified, will calculated from the source file size.
+  skip=      number of parts to skip.
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -96,7 +96,7 @@ func (o odMessage) JSON() string {
 }
 
 // getOdUrls returns the URLs for the object download.
-func getOdUrls(ctx context.Context, args madmin.KVS) (odURLs URLs, e error) {
+func getOdUrls(ctx context.Context, args argKVS) (odURLs URLs, e error) {
 	inFile := args.Get("if")
 	outFile := args.Get("of")
 
@@ -141,7 +141,7 @@ func prepareOdUrls(ctx context.Context, sourceURL, sourceVersion string, targetU
 }
 
 // odCheckType checks if request is a download or upload and calls the appropriate function
-func odCheckType(ctx context.Context, odURLs URLs, args madmin.KVS) (message, error) {
+func odCheckType(ctx context.Context, odURLs URLs, args argKVS) (message, error) {
 	if odURLs.SourceAlias != "" && odURLs.TargetAlias == "" {
 		return odDownload(ctx, odURLs, args)
 	}
@@ -166,7 +166,7 @@ func mainOD(cliCtx *cli.Context) error {
 		cli.ShowCommandHelpAndExit(cliCtx, "od", 1) // last argument is exit code
 	}
 
-	var kvsArgs madmin.KVS
+	var kvsArgs argKVS
 	for _, arg := range cliCtx.Args() {
 		kv := strings.SplitN(arg, "=", 2)
 		kvsArgs.Set(kv[0], kv[1])

@@ -26,13 +26,11 @@ import (
 	"strconv"
 	"time"
 
-	madmin "github.com/minio/madmin-go"
-
 	humanize "github.com/dustin/go-humanize"
 )
 
 // odSetSizes sets necessary values for object transfer.
-func odSetSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint64, parts int, skip int64, e error) {
+func odSetSizes(odURLs URLs, args argKVS) (combinedSize int64, partSize uint64, parts int, skip int64, e error) {
 	// If parts not specified, set to 0, else scan for integer.
 	p := args.Get("parts")
 	if p == "" {
@@ -112,7 +110,7 @@ func odSetSizes(odURLs URLs, args madmin.KVS) (combinedSize int64, partSize uint
 }
 
 // odCopy copies a file/object from local to server, server to server, or local to local.
-func odCopy(ctx context.Context, odURLs URLs, args madmin.KVS, odType string) (odMessage, error) {
+func odCopy(ctx context.Context, odURLs URLs, args argKVS, odType string) (odMessage, error) {
 	// Set sizes.
 	combinedSize, partSize, parts, skip, e := odSetSizes(odURLs, args)
 	if e != nil {
@@ -182,7 +180,7 @@ func odCopy(ctx context.Context, odURLs URLs, args madmin.KVS, odType string) (o
 }
 
 // odSetParts sets parts for object download.
-func odSetParts(odURLs URLs, args madmin.KVS) (parts int, skip int, e error) {
+func odSetParts(odURLs URLs, args argKVS) (parts int, skip int, e error) {
 	if args.Get("size") != "" {
 		return 0, 0, fmt.Errorf("size cannot be specified getting from server")
 	}
@@ -213,7 +211,7 @@ func odSetParts(odURLs URLs, args madmin.KVS) (parts int, skip int, e error) {
 }
 
 // odDownload copies an object from server to local.
-func odDownload(ctx context.Context, odURLs URLs, args madmin.KVS) (odMessage, error) {
+func odDownload(ctx context.Context, odURLs URLs, args argKVS) (odMessage, error) {
 	/// Set number of parts to get.
 	parts, skip, e := odSetParts(odURLs, args)
 	if e != nil {
