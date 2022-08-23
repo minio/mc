@@ -443,10 +443,15 @@ var completeCmds = map[string]complete.Predictor{
 	"/license/info":     aliasCompleter,
 	"/license/update":   aliasCompleter,
 
-	"/update": nil,
-	"/ready":  nil,
-	"/ping":   nil,
-	"/od":     nil,
+	"/update":         nil,
+	"/ready":          aliasCompleter,
+	"/ping":           aliasCompleter,
+	"/od":             nil,
+	"/batch/generate": aliasCompleter,
+	"/batch/start":    aliasCompleter,
+	"/batch/list":     aliasCompleter,
+	"/batch/status":   aliasCompleter,
+	"/batch/describe": aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

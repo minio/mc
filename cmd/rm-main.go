@@ -390,9 +390,10 @@ func printDryRunMsg(content *ClientContent) {
 }
 
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
-//   Use cases:
-//      * Remove objects recursively
-//      * Remove all versions of a single object
+//
+//	Use cases:
+//	   * Remove objects recursively
+//	   * Remove all versions of a single object
 func listAndRemove(url string, opts removeOpts) error {
 	ctx, cancelRemove := context.WithCancel(globalContext)
 	defer cancelRemove()

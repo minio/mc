@@ -128,7 +128,7 @@ var (
 	}
 )
 
-//  Mirror folders recursively from a single source to many destinations
+// Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:         "mirror",
 	Usage:        "synchronize object(s) to a remote site",
