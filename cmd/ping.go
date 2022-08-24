@@ -93,6 +93,14 @@ EXAMPLES:
 
 var stop bool
 
+<<<<<<< HEAD
+=======
+const (
+	columnWidthForStat = 8
+	columWidthForError = 3
+)
+
+>>>>>>> align
 // Validate command line arguments.
 func checkPingSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
@@ -217,12 +225,12 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		stat := getPingInfo(cliCtx, result, endPointMap)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
-			Min:       trimToTwoDecimal(time.Duration(stat.min)),
-			Max:       trimToTwoDecimal(time.Duration(stat.max)),
-			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
-			CountErr:  pad(strconv.Itoa(stat.errorCount), " ", 3-len(strconv.Itoa(stat.errorCount)), false), // strconv.Itoa(stat.errorCount),
-			Error:     stat.err,
-			Roundtrip: trimToTwoDecimal(result.ResponseTime),
+			Min:       alignColumns(trimToTwoDecimal(time.Duration(stat.min).Round(time.Microsecond)), "min", columnWidthForStat),
+			Max:       alignColumns(trimToTwoDecimal(time.Duration(stat.max).Round(time.Microsecond)), "min", columnWidthForStat),
+			Average:   alignColumns(trimToTwoDecimal(time.Duration(stat.avg).Round(time.Microsecond)), "min", columnWidthForStat),
+			CountErr:  strconv.Itoa(stat.errorCount),
+			Error:     alignColumns(stat.err, "error", columWidthForError),
+			Roundtrip: trimToTwoDecimal(result.ResponseTime.Round(time.Microsecond)),
 		}
 		endPointStats = append(endPointStats, endPointStat)
 		endPointMap[result.Endpoint.Host] = stat
@@ -230,11 +238,27 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	}
 	printMsg(PingResult{
 		Status:         "success",
-		Counter:        pad(strconv.Itoa(index), " ", 3-len(strconv.Itoa(index)), true),
+		Counter:        alignColumns(strconv.Itoa(index), "counter", columWidthForError),
 		EndPointsStats: endPointStats,
 	})
 
 	time.Sleep(time.Duration(cliCtx.Int("interval")) * time.Second)
+}
+
+func alignColumns(value, columnType string, columnLength int) string {
+	if k := columnLength - len(value); k != 0 {
+		for k > 0 {
+			switch columnType {
+			case "counter":
+				value = " " + value
+			case "min", "max", "average", "error":
+				value = value + " "
+
+			}
+			k--
+		}
+	}
+	return value
 }
 
 func trimToTwoDecimal(d time.Duration) string {
