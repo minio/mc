@@ -217,12 +217,21 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		stat := getPingInfo(cliCtx, result, endPointMap)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
+<<<<<<< HEAD
 			Min:       trimToTwoDecimal(time.Duration(stat.min)),
 			Max:       trimToTwoDecimal(time.Duration(stat.max)),
 			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
 			CountErr:  strconv.Itoa(stat.errorCount),
 			Error:     stat.err,
 			Roundtrip: trimToTwoDecimal(result.ResponseTime),
+=======
+			Min:       trimToTwoDecimal(time.Duration(stat.min).Round(time.Microsecond)),
+			Max:       trimToTwoDecimal(time.Duration(stat.max).Round(time.Microsecond)),
+			Average:   trimToTwoDecimal(time.Duration(stat.avg).Round(time.Microsecond)),
+			CountErr:  strconv.Itoa(stat.errorCount),
+			Error:     stat.err,
+			Roundtrip: trimToTwoDecimal(result.ResponseTime.Round(time.Microsecond)),
+>>>>>>> address review comment
 		}
 		endPointStats = append(endPointStats, endPointStat)
 		endPointMap[result.Endpoint.Host] = stat
