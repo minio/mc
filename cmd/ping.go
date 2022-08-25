@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net"
 	"net/url"
@@ -216,12 +217,12 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		stat := getPingInfo(cliCtx, result, endPointMap)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
-			Min:       time.Duration(stat.min).Round(time.Microsecond).String(),
-			Max:       time.Duration(stat.max).Round(time.Microsecond).String(),
-			Average:   time.Duration(stat.avg).Round(time.Microsecond).String(),
+			Min:       trimToTwoDecimal(time.Duration(stat.min)),
+			Max:       trimToTwoDecimal(time.Duration(stat.max)),
+			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
 			CountErr:  strconv.Itoa(stat.errorCount),
 			Error:     stat.err,
-			Roundtrip: result.ResponseTime.Round(time.Microsecond).String(),
+			Roundtrip: trimToTwoDecimal(result.ResponseTime),
 		}
 		endPointStats = append(endPointStats, endPointStat)
 		endPointMap[result.Endpoint.Host] = stat
@@ -234,6 +235,20 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	})
 
 	time.Sleep(time.Duration(cliCtx.Int("interval")) * time.Second)
+}
+
+func trimToTwoDecimal(d time.Duration) string {
+	var f float64
+	var unit string
+	switch {
+	case d >= time.Second:
+		f = float64(d) / float64(time.Second)
+		unit = "s"
+	default:
+		f = float64(d) / float64(time.Millisecond)
+		unit = "ms"
+	}
+	return fmt.Sprintf("%.02f%s", f, unit)
 }
 
 func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
