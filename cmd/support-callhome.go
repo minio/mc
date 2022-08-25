@@ -20,6 +20,7 @@ package cmd
 import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -78,7 +79,7 @@ func (s supportCallhomeMessage) JSON() string {
 }
 
 func isSupportCallhomeEnabled(alias string) bool {
-	return isFeatureEnabled(alias, "callhome", "callhome")
+	return isFeatureEnabled(alias, "callhome", madmin.Default)
 }
 
 func mainCallhome(ctx *cli.Context) error {
