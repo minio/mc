@@ -43,7 +43,7 @@ EXAMPLES:
 }
 
 func isSupportLogsEnabled(alias string) bool {
-	return isFeatureEnabled(alias, "logger_webhook", "logger_webhook:subnet")
+	return isFeatureEnabled(alias, "logger_webhook", "subnet")
 }
 
 func mainStatusLogs(ctx *cli.Context) error {
