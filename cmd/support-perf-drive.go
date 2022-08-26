@@ -24,10 +24,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
@@ -62,22 +60,34 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 
 	serial := ctx.Bool("serial")
 
-	resultCh, e := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
+	resultCh, speedTestErr := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
 		Serial:    serial,
 		BlockSize: uint64(blocksize),
 		FileSize:  uint64(filesize),
 	})
-	fatalIf(probe.NewError(e), "Failed to execute drive speedtest")
 
 	if globalJSON {
+		if speedTestErr != nil {
+			printMsg(speedTestResult{
+				Type:  driveSpeedTest,
+				Err:   speedTestErr.Error(),
+				Final: true,
+			})
+			return nil
+		}
+
+		var results []madmin.DriveSpeedTestResult
 		for result := range resultCh {
 			if result.Version != "" {
-				jsonBytes, e := json.MarshalIndent(result, "", " ")
-				fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-				console.Println(string(jsonBytes))
+				results = append(results, result)
 			}
 		}
+		printMsg(speedTestResult{
+			Type:        driveSpeedTest,
+			DriveResult: results,
+			Final:       true,
+		})
+
 		return nil
 	}
 
@@ -92,19 +102,29 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	go func() {
+		if speedTestErr != nil {
+			printMsg(speedTestResult{
+				Type: driveSpeedTest,
+				Err:  speedTestErr.Error(),
+			})
+			return
+		}
+
 		var results []madmin.DriveSpeedTestResult
 		for result := range resultCh {
 			if result.Version != "" {
 				results = append(results, result)
 			} else {
 				p.Send(speedTestResult{
-					dresult: []madmin.DriveSpeedTestResult{},
+					Type:        driveSpeedTest,
+					DriveResult: []madmin.DriveSpeedTestResult{},
 				})
 			}
 		}
 		p.Send(speedTestResult{
-			dresult: results,
-			final:   true,
+			Type:        driveSpeedTest,
+			DriveResult: results,
+			Final:       true,
 		})
 	}()
 

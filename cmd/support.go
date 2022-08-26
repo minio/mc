@@ -22,6 +22,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
@@ -37,6 +38,7 @@ var supportSubcommands = []cli.Command{
 	supportPerfCmd,
 	supportInspectCmd,
 	supportProfileCmd,
+	supportTopCmd,
 }
 
 var supportCmd = cli.Command{
@@ -114,7 +116,7 @@ func isFeatureEnabled(alias string, subSys string, target string) bool {
 		return false
 	}
 
-	kvs, e := getSubSysKeyFromMinIOConfig(client, target)
+	scfgs, e := getMinIOSubSysConfig(client, subSys)
 	if e != nil {
 		// Ignore error if the given target doesn't exist
 		// e.g. logger_webhook:subnet doesn't exist when
@@ -126,13 +128,20 @@ func isFeatureEnabled(alias string, subSys string, target string) bool {
 		fatalIf(probe.NewError(e), fmt.Sprintf("Unable to get server config for '%s'", subSys))
 	}
 
-	enable, found := kvs.Lookup("enable")
-	if !found {
-		// if `enable` key is not found, it means that `enable=on`
-		return true
+	if target == madmin.Default {
+		target = ""
 	}
-
-	return enable == "on"
+	for _, scfg := range scfgs {
+		if scfg.Target == target {
+			enable, found := scfg.Lookup(madmin.EnableKey)
+			if !found {
+				// if `enable` key is not found, it means that `enable=on`
+				return true
+			}
+			return enable == madmin.EnableOn
+		}
+	}
+	return false
 }
 
 // mainSupport is the handle for "mc support" command.

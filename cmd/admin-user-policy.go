@@ -74,6 +74,9 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
 	pinfo, e := getPolicyInfo(client, user.PolicyName)
+	if user.PolicyName == "" {
+		e = fmt.Errorf("Policy not found for user %s", args.Get(1))
+	}
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 
 	fmt.Println(string(pinfo.Policy))

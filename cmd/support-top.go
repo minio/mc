@@ -17,36 +17,27 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
-)
+import "github.com/minio/cli"
 
-var topLocksFlag = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "stale",
-		Usage: "list stale locks",
-	},
-	cli.IntFlag{
-		Name:   "count",
-		Usage:  "number of top locks",
-		Hidden: true,
-		Value:  10,
-	},
+var supportTopSubcommands = []cli.Command{
+	supportTopAPICmd,
+	supportTopLocksCmd,
+	supportTopDiskCmd,
 }
 
-var adminTopLocksCmd = cli.Command{
-	Name:         "locks",
-	Usage:        "get a list of the 10 oldest locks on a MinIO cluster.",
-	Before:       setGlobalsFromContext,
-	Action:       mainAdminTopLocks,
-	OnUsageError: onUsageError,
-	Flags:        append(globalFlags, topLocksFlag...),
-	CustomHelpTemplate: `Please use 'mc support top locks'
-`,
+var supportTopCmd = cli.Command{
+	Name:            "top",
+	Usage:           "provide top like statistics for MinIO",
+	Action:          mainSupportTop,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     supportTopSubcommands,
+	HideHelpCommand: true,
 }
 
-func mainAdminTopLocks(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc support top locks'")
+// mainSupportTop is the handle for "mc support top" command.
+func mainSupportTop(ctx *cli.Context) error {
+	commandNotFound(ctx, supportTopSubcommands)
 	return nil
+	// Sub-commands like "locks" have their own main.
 }

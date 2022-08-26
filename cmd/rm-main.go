@@ -180,12 +180,12 @@ type rmMessage struct {
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
-	msg := "Remove "
+	msg := "Removed "
 
 	if r.DeleteMarker {
-		msg = "Creating delete marker "
+		msg = "Created delete marker "
 	}
-	msg += console.Colorize("Remove", fmt.Sprintf("`%s`", r.Key))
+	msg += console.Colorize("Removed", fmt.Sprintf("`%s`", r.Key))
 	if r.VersionID != "" {
 		msg += fmt.Sprintf(" (versionId=%s)", r.VersionID)
 	}
@@ -696,7 +696,7 @@ func mainRm(cliCtx *cli.Context) error {
 	}
 
 	// Set color.
-	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Removed", color.New(color.FgGreen, color.Bold))
 
 	var rerr error
 	var e error

@@ -18,13 +18,8 @@
 package cmd
 
 import (
-	"context"
-	"os"
-
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
-	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminTopAPIFlags = []cli.Flag{
@@ -54,83 +49,11 @@ var adminTopAPICmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminTopAPIFlags, globalFlags...),
 	HideHelpCommand: true,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} [FLAGS] TARGET
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-   1. Display current in-progress all S3 API calls.
-      {{.Prompt}} {{.HelpName}} myminio/
-
-   2. Display current in-progress all 's3.PutObject' API calls.
-      {{.Prompt}} {{.HelpName}} --name s3.PutObject myminio/
+	CustomHelpTemplate: `Please use 'mc support top api' 
 `,
 }
 
-// checkAdminTopAPISyntax - validate all the passed arguments
-func checkAdminTopAPISyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
-	}
-}
-
 func mainAdminTopAPI(ctx *cli.Context) error {
-	checkAdminTopAPISyntax(ctx)
-
-	aliasedURL := ctx.Args().Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-		return nil
-	}
-
-	ctxt, cancel := context.WithCancel(globalContext)
-	defer cancel()
-
-	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
-	fatalIf(probe.NewError(e), "Unable to start tracing")
-
-	mopts := matchOpts{
-		funcNames: ctx.StringSlice("name"),
-		apiPaths:  ctx.StringSlice("path"),
-		nodes:     ctx.StringSlice("node"),
-	}
-
-	// Start listening on all trace activity.
-	traceCh := client.ServiceTrace(ctxt, opts)
-	done := make(chan struct{})
-
-	p := tea.NewProgram(initTraceUI())
-	go func() {
-		if e := p.Start(); e != nil {
-			os.Exit(1)
-		}
-		close(done)
-	}()
-
-	go func() {
-		for apiCallInfo := range traceCh {
-			if apiCallInfo.Err != nil {
-				fatalIf(probe.NewError(apiCallInfo.Err), "Unable to fetch top API events")
-			}
-			if matchTrace(mopts, apiCallInfo) {
-				p.Send(topAPIResult{
-					apiCallInfo: apiCallInfo,
-				})
-			}
-			p.Send(topAPIResult{
-				apiCallInfo: madmin.ServiceTraceInfo{},
-			})
-		}
-	}()
-
-	<-done
+	console.Infoln("Please use 'mc support top api'")
 	return nil
 }

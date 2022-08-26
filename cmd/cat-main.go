@@ -45,15 +45,15 @@ var catFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "zip",
-		Usage: "Extract from remote zip file (MinIO server source only)",
+		Usage: "extract from remote zip file (MinIO server source only)",
 	},
 	cli.Int64Flag{
 		Name:  "offset",
-		Usage: "Start offset",
+		Usage: "start offset",
 	},
 	cli.Int64Flag{
 		Name:  "tail",
-		Usage: "Tail number of bytes at ending of file",
+		Usage: "tail number of bytes at ending of file",
 	},
 }
 

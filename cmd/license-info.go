@@ -160,57 +160,56 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	initLicInfoColors()
 
 	aliasedURL := ctx.Args().Get(0)
-	alias, _ := url2Alias(aliasedURL)
+	alias, _ := initSubnetConnectivity(ctx, aliasedURL)
 
 	apiKey, lic, e := getSubnetCreds(alias)
 	fatalIf(probe.NewError(e), "Error in checking cluster registration status")
 
-	if len(apiKey) == 0 && len(lic) == 0 {
-		// Not registered. Default to AGPLv3
-		printMsg(licInfoMessage{
-			Status: "success",
-			Info: licInfo{
-				Plan:    "AGPLv3",
-				Message: getAGPLMessage(),
-			},
-		})
-		return nil
-	}
-
-	var ssm licInfoMessage
+	var lim licInfoMessage
 	if len(lic) > 0 {
-		// If set, the subnet public key will not be downloaded from subnet
-		// and the offline key embedded in mc will be used.
-		airgap := ctx.Bool("airgap")
-
-		li, e := parseLicense(lic, airgap)
-		if e != nil {
-			ssm = licInfoMessage{
-				Status: "error",
-				Error:  e.Error(),
-			}
-		} else {
-			ssm = licInfoMessage{
-				Status: "success",
-				Info: licInfo{
-					Organization: li.Organization,
-					Plan:         li.Plan,
-					IssuedAt:     &li.IssuedAt,
-					ExpiresAt:    &li.ExpiresAt,
-					DeploymentID: li.DeploymentID,
-				},
-			}
-		}
-	} else {
-		// Only api key is available, no license info
-		ssm = licInfoMessage{
+		lim = getLicInfoMsg(lic)
+	} else if len(apiKey) > 0 {
+		lim = licInfoMessage{
 			Status: "success",
 			Info: licInfo{
 				Message: fmt.Sprintf("%s is registered with SUBNET. License info not available.", alias),
 			},
 		}
+	} else {
+		// Not registered. Default to AGPLv3
+		lim = licInfoMessage{
+			Status: "success",
+			Info: licInfo{
+				Plan:    "AGPLv3",
+				Message: getAGPLMessage(),
+			},
+		}
 	}
 
-	printMsg(ssm)
+	printMsg(lim)
 	return nil
+}
+
+func getLicInfoMsg(lic string) licInfoMessage {
+	li, e := parseLicense(lic)
+	if e != nil {
+		return licErrMsg(e)
+	}
+	return licInfoMessage{
+		Status: "success",
+		Info: licInfo{
+			Organization: li.Organization,
+			Plan:         li.Plan,
+			IssuedAt:     &li.IssuedAt,
+			ExpiresAt:    &li.ExpiresAt,
+			DeploymentID: li.DeploymentID,
+		},
+	}
+}
+
+func licErrMsg(e error) licInfoMessage {
+	return licInfoMessage{
+		Status: "error",
+		Error:  e.Error(),
+	}
 }

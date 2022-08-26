@@ -18,9 +18,17 @@
 package cmd
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
+	"strings"
+
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminConfigExportCmd = cli.Command{
@@ -40,6 +48,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
+  The output includes environment variables set on the server. These cannot be overridden from the client.
+
   1. Export the current config from MinIO server
      {{.Prompt}} {{.HelpName}} play/ > config.txt
 `,
@@ -53,7 +63,26 @@ type configExportMessage struct {
 
 // String colorized service status message.
 func (u configExportMessage) String() string {
-	return string(u.Value)
+	console.SetColor("EnvVar", color.New(color.FgYellow))
+	bio := bufio.NewReader(bytes.NewReader(u.Value))
+	var lines []string
+	for {
+		s, err := bio.ReadString('\n')
+		// Make lines displaying environment variables bold.
+		if strings.HasPrefix(s, "# MINIO_") {
+			s = strings.TrimPrefix(s, "# ")
+			parts := strings.SplitN(s, "=", 2)
+			s = fmt.Sprintf("# %s=%s", console.Colorize("EnvVar", parts[0]), parts[1])
+			lines = append(lines, s)
+		} else {
+			lines = append(lines, s)
+		}
+		if err == io.EOF {
+			break
+		}
+		fatalIf(probe.NewError(err), "Unable to marshal to string.")
+	}
+	return strings.Join(lines, "")
 }
 
 // JSON jsonified service status Message message.

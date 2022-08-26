@@ -73,7 +73,7 @@ type BucketInvalid struct {
 }
 
 func (e BucketInvalid) Error() string {
-	return "Bucket name " + e.Bucket + " not valid."
+	return "Bucket name `" + e.Bucket + "` not valid."
 }
 
 // ObjectAlreadyExists - typed return for MethodNotAllowed
@@ -101,13 +101,6 @@ type ObjectOnGlacier struct {
 
 func (e ObjectOnGlacier) Error() string {
 	return "Object `" + e.Object + "` is on Glacier storage."
-}
-
-// BucketNameTopLevel - generic error
-type BucketNameTopLevel struct{}
-
-func (e BucketNameTopLevel) Error() string {
-	return "Buckets or prefixes can only be created with `/` suffix."
 }
 
 // GenericFileError - generic file error.

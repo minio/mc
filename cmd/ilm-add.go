@@ -53,17 +53,21 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
 
   2. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
-     {{.Prompt}} {{.HelpName}} --transition-days "90" --storage-class "MINIOTIER-1" \
+     {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --storage-class "MINIOTIER-1" \
           --noncurrentversion-transition-days "45" --noncurrentversion-transition-storage-class "MINIOTIER2" \
-          myminio/mybucket/doc
+          myminio/mybucket/
 
   3. Add a lifecycle rule with an expiration and a noncurrent version expiration action for all objects with prefix doc/ in mybucket.
-     {{.Prompt}} {{.HelpName}} --expiry-days "300" --noncurrentversion-expiration-days "100" \
-          myminio/mybucket/doc
+     {{.Prompt}} {{.HelpName}} --prefix "doc/" --expiry-days "300" --noncurrentversion-expiration-days "100" \
+          myminio/mybucket/
 `,
 }
 
 var ilmAddFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "prefix",
+		Usage: "specify the prefix",
+	},
 	cli.StringFlag{
 		Name:  "tags",
 		Usage: "format '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>', multiple values allowed for multiple key/value pairs",
@@ -165,8 +169,10 @@ func mainILMAdd(cliCtx *cli.Context) error {
 	opts, err := ilm.GetLifecycleOptions(cliCtx)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
-	lfcCfg, err = opts.ToConfig(lfcCfg)
+	newRule, err := opts.ToILMRule(lfcCfg)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
+
+	lfcCfg.Rules = append(lfcCfg.Rules, newRule)
 
 	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to add this lifecycle rule")
 

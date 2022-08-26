@@ -18,15 +18,12 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	gojson "encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"mime/multipart"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -45,6 +42,10 @@ import (
 )
 
 var supportDiagFlags = append([]cli.Flag{
+	cli.StringFlag{
+		Name:  "api-key",
+		Usage: "SUBNET API key",
+	},
 	HealthDataTypeFlag{
 		Name:   "test",
 		Usage:  "choose specific diagnostics to run [" + options.String() + "]",
@@ -103,7 +104,7 @@ func checkSupportDiagSyntax(ctx *cli.Context) {
 }
 
 // compress and tar MinIO diagnostics output
-func tarGZ(healthInfo interface{}, version string, filename string, showMessages bool) error {
+func tarGZ(healthInfo interface{}, version string, filename string) error {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o666)
 	if err != nil {
 		return err
@@ -127,7 +128,7 @@ func tarGZ(healthInfo interface{}, version string, filename string, showMessages
 		return err
 	}
 
-	if showMessages {
+	if globalAirgapped {
 		warningMsgBoundary := "*********************************************************************************"
 		warning := warnText("                                   WARNING!!")
 		warningContents := infoText(`     ** THIS FILE MAY CONTAIN SENSITIVE INFORMATION ABOUT YOUR ENVIRONMENT **
@@ -162,64 +163,27 @@ func mainSupportDiag(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, _ := url2Alias(aliasedURL)
-
-	license, offline := fetchSubnetUploadFlags(ctx)
-
-	// license should be provided for us to reach subnet
-	// if `--airgap` is provided do not need to reach out.
-	uploadToSubnet := !offline
-	if uploadToSubnet {
-		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s to upload MinIO diagnostics report, please use --airgap to upload manually", subnetBaseURL())
-	}
-
-	e := validateFlags(uploadToSubnet)
-	fatalIf(probe.NewError(e), "unable to parse input values")
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
 
 	// Main execution
-	execSupportDiag(ctx, client, alias, license, uploadToSubnet)
+	execSupportDiag(ctx, client, alias, apiKey)
 
 	return nil
 }
 
-func fetchSubnetUploadFlags(ctx *cli.Context) (string, bool) {
-	// license info to upload to subnet.
-	license := ctx.String("license")
-
-	// If set, the MinIO diagnostics will not be uploaded
-	// to subnet and will only be saved locally.
-	offline := ctx.Bool("airgap") || ctx.Bool("offline")
-
-	return license, offline
-}
-
-func validateFlags(uploadToSubnet bool) error {
-	if uploadToSubnet {
-		if globalJSON {
-			return errors.New("--json is applicable only when --airgap is also passed")
-		}
-		return nil
-	}
-
-	if globalDevMode {
-		return errors.New("--dev is not applicable in airgap mode")
-	}
-
-	return nil
-}
-
-func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string, license string, uploadToSubnet bool) {
+func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string, apiKey string) {
 	var reqURL string
 	var headers map[string]string
 
 	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), UTCNow().Format("20060102150405"))
-	if uploadToSubnet {
+	if !globalAirgapped {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the health information
-		reqURL, headers = prepareDiagUploadURL(alias, filename, license)
+		uploadURL := subnetUploadURL("health", filename)
+		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, filename, apiKey)
 	}
 
 	healthInfo, version, e := fetchServerDiagInfo(ctx, client)
@@ -229,98 +193,28 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string,
 		switch version {
 		case madmin.HealthInfoVersion0:
 			printMsg(healthInfo.(madmin.HealthInfoV0))
+		case madmin.HealthInfoVersion2:
+			printMsg(healthInfo.(madmin.HealthInfoV2))
 		case madmin.HealthInfoVersion:
 			printMsg(healthInfo.(madmin.HealthInfo))
 		}
 		return
 	}
 
-	e = tarGZ(healthInfo, version, filename, !uploadToSubnet)
+	e = tarGZ(healthInfo, version, filename)
 	fatalIf(probe.NewError(e), "Unable to save MinIO diagnostics report")
 
-	if uploadToSubnet {
-		e = uploadDiagReport(alias, filename, reqURL, headers)
+	if !globalAirgapped {
+		resp, e := uploadFileToSubnet(alias, filename, reqURL, headers)
 		fatalIf(probe.NewError(e), "Unable to upload MinIO diagnostics report to SUBNET portal")
-	}
-}
 
-func prepareDiagUploadURL(alias string, filename string, license string) (string, map[string]string) {
-	apiKey := ""
-	if len(license) == 0 {
-		apiKey = getSubnetAPIKeyFromConfig(alias)
-
-		if len(apiKey) == 0 {
-			license = getSubnetLicenseFromConfig(alias)
-			if len(license) == 0 {
-				// Both api key and license not available. Ask user to register the cluster first
-				e := fmt.Errorf("Please register the cluster first by running 'mc support register %s', or use --airgap flag", alias)
-				fatalIf(probe.NewError(e), "Cluster not registered.")
-			}
+		msg := "MinIO diagnostics report was successfully uploaded to SUBNET."
+		clusterURL, _ := url.PathUnescape(gjson.Get(resp, "cluster_url").String())
+		if len(clusterURL) > 0 {
+			msg += fmt.Sprintf(" Please click here to view our analysis: %s", clusterURL)
 		}
+		console.Infoln(msg)
 	}
-
-	uploadURL := subnetHealthUploadURL()
-
-	reqURL, headers, e := subnetURLWithAuth(uploadURL, apiKey, license)
-	fatalIf(probe.NewError(e).Trace(uploadURL), "Unable to fetch SUBNET authentication")
-
-	reqURL = fmt.Sprintf("%s&filename=%s", reqURL, filename)
-	return reqURL, headers
-}
-
-func uploadDiagReport(alias string, filename string, reqURL string, headers map[string]string) error {
-	e := setSubnetProxyFromConfig(alias)
-	if e != nil {
-		return e
-	}
-
-	req, e := subnetUploadReq(reqURL, filename)
-	if e != nil {
-		return e
-	}
-
-	resp, e := subnetReqDo(req, headers)
-	if e != nil {
-		return e
-	}
-
-	// Delete the report after successful upload
-	os.Remove(filename)
-
-	msg := "MinIO diagnostics report was successfully uploaded to SUBNET."
-	clusterURL, _ := url.PathUnescape(gjson.Get(resp, "cluster_url").String())
-	if len(clusterURL) > 0 {
-		msg += fmt.Sprintf(" Please click here to view our analysis: %s", clusterURL)
-	}
-	console.Infoln(msg)
-	return nil
-}
-
-func subnetUploadReq(url string, filename string) (*http.Request, error) {
-	file, e := os.Open(filename)
-	if e != nil {
-		return nil, e
-	}
-	defer file.Close()
-
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, e := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	if e != nil {
-		return nil, e
-	}
-	if _, e = io.Copy(part, file); e != nil {
-		return nil, e
-	}
-	writer.Close()
-
-	r, e := http.NewRequest(http.MethodPost, url, &body)
-	if e != nil {
-		return nil, e
-	}
-	r.Header.Add("Content-Type", writer.FormDataContentType())
-
-	return r, nil
 }
 
 func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interface{}, string, error) {
