@@ -156,7 +156,7 @@ func mainMakeBucket(cliCtx *cli.Context) error {
 			continue
 		}
 
-		if cliCtx.Bool("s") {
+		if cliCtx.Bool("with-versioning") {
 			fatalIf(clnt.SetVersion(ctx, "enable", []string{}, false), "Unable to enable versioning")
 		}
 
