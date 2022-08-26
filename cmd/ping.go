@@ -93,11 +93,6 @@ EXAMPLES:
 
 var stop bool
 
-const (
-	columnWidthForStat = 8
-	columWidthForError = 3
-)
-
 // Validate command line arguments.
 func checkPingSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
@@ -119,19 +114,11 @@ var colorMap = template.FuncMap{
 }
 
 // PingDist is the template for ping result in distributed mode
-<<<<<<< HEAD
 const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{" "}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{" "}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
 {{end}}`
 
 // Ping is the template for ping result
 const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{" "}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{" "}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
-=======
-const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
-{{end}}`
-
-// Ping is the template for ping result
-const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
->>>>>>> fix the width of each colum
 
 // PingTemplateDist - captures ping template
 var PingTemplateDist = template.Must(template.New("ping-list").Funcs(colorMap).Parse(PingDist))
@@ -230,12 +217,12 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		stat := getPingInfo(cliCtx, result, endPointMap)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
-			Min:       alignColumns(trimToTwoDecimal(time.Duration(stat.min).Round(time.Microsecond)), "min", columnWidthForStat),
-			Max:       alignColumns(trimToTwoDecimal(time.Duration(stat.max).Round(time.Microsecond)), "max", columnWidthForStat),
-			Average:   alignColumns(trimToTwoDecimal(time.Duration(stat.avg).Round(time.Microsecond)), "average", columnWidthForStat),
-			CountErr:  alignColumns(strconv.Itoa(stat.errorCount), "error", columWidthForError),
+			Min:       trimToTwoDecimal(time.Duration(stat.min)),
+			Max:       trimToTwoDecimal(time.Duration(stat.max)),
+			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
+			CountErr:  pad(strconv.Itoa(stat.errorCount), " ", 3-len(strconv.Itoa(stat.errorCount)), false), // strconv.Itoa(stat.errorCount),
 			Error:     stat.err,
-			Roundtrip: trimToTwoDecimal(result.ResponseTime.Round(time.Microsecond)),
+			Roundtrip: trimToTwoDecimal(result.ResponseTime),
 		}
 		endPointStats = append(endPointStats, endPointStat)
 		endPointMap[result.Endpoint.Host] = stat
@@ -243,27 +230,11 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	}
 	printMsg(PingResult{
 		Status:         "success",
-		Counter:        alignColumns(strconv.Itoa(index), "counter", columWidthForError),
+		Counter:        pad(strconv.Itoa(index), " ", 3-len(strconv.Itoa(index)), true),
 		EndPointsStats: endPointStats,
 	})
 
 	time.Sleep(time.Duration(cliCtx.Int("interval")) * time.Second)
-}
-
-func alignColumns(value, columnType string, columnLength int) string {
-	if k := columnLength - len(value); k != 0 {
-		for k > 0 {
-			switch columnType {
-			case "counter":
-				value = " " + value
-			case "min", "max", "average", "error":
-				value = value + " "
-
-			}
-			k--
-		}
-	}
-	return value
 }
 
 func trimToTwoDecimal(d time.Duration) string {
