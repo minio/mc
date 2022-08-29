@@ -28,6 +28,10 @@ import (
 )
 
 var adminScannerTraceFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "verbose, v",
+		Usage: "print verbose trace",
+	},
 	cli.StringFlag{
 		Name:  "response-threshold",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
@@ -39,6 +43,10 @@ var adminScannerTraceFlags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "node",
 		Usage: "trace only matching servers",
+	},
+	cli.StringSliceFlag{
+		Name:  "path",
+		Usage: "trace only matching path",
 	},
 }
 
@@ -73,7 +81,7 @@ EXAMPLES:
 
 func checkAdminScannerTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "trace", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 

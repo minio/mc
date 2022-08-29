@@ -49,7 +49,7 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "call",
 		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`)",
 	},
-	cli.StringFlag{
+	cli.DurationFlag{
 		Name:  "response-threshold",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
@@ -218,15 +218,8 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 
 // Calculate tracing options for command line flags
 func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
-	if t := ctx.String("response-threshold"); t != "" {
-		d, e := time.ParseDuration(t)
-		if e != nil {
-			return opts, fmt.Errorf("Unable to parse threshold argument: %w", e)
-		}
-		opts.Threshold = d
-	}
-
 	opts.OnlyErrors = ctx.Bool("errors")
+	opts.Threshold = ctx.Duration("response-threshold")
 
 	if ctx.Bool("all") {
 		opts.S3 = true
