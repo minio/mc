@@ -47,7 +47,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`)",
+		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
 	},
 	cli.DurationFlag{
 		Name:  "response-threshold",
@@ -228,6 +228,7 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 		opts.OS = true
 		opts.Scanner = true
 		opts.Decommission = true
+		opts.Healing = true
 		return
 	}
 
@@ -250,6 +251,8 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.OS = true
 		case "scanner":
 			opts.Scanner = true
+		case "heal", "healing":
+			opts.Healing = true
 		case "decom", "decommission":
 			opts.Decommission = true
 		}
@@ -368,15 +371,17 @@ type callStats struct {
 type verboseTrace struct {
 	Type string `json:"type"`
 
-	NodeName     string        `json:"host"`
-	FuncName     string        `json:"api"`
-	Time         time.Time     `json:"time"`
-	Duration     time.Duration `json:"duration"`
-	Path         string        `json:"path"`
-	Error        string        `json:"error"`
-	RequestInfo  *requestInfo  `json:"request,omitempty"`
-	ResponseInfo *responseInfo `json:"response,omitempty"`
-	CallStats    *callStats    `json:"callStats,omitempty"`
+	NodeName     string                 `json:"host"`
+	FuncName     string                 `json:"api"`
+	Time         time.Time              `json:"time"`
+	Duration     time.Duration          `json:"duration"`
+	Path         string                 `json:"path"`
+	Error        string                 `json:"error,omitempty"`
+	Message      string                 `json:"message,omitempty"`
+	RequestInfo  *requestInfo           `json:"request,omitempty"`
+	ResponseInfo *responseInfo          `json:"response,omitempty"`
+	CallStats    *callStats             `json:"callStats,omitempty"`
+	HealResult   *madmin.HealResultItem `json:"healResult,omitempty"`
 
 	trcType madmin.TraceType
 }
@@ -394,6 +399,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.Error = t.Error
 	s.Host = t.NodeName
 	s.Duration = t.Duration
+	s.StatusMsg = t.Message
 
 	switch t.TraceType {
 	case madmin.TraceS3, madmin.TraceInternal:
@@ -489,14 +495,16 @@ func (t traceMessage) JSON() string {
 	t.Status = "success"
 
 	trc := verboseTrace{
-		trcType:  t.Trace.TraceType,
-		Type:     t.Trace.TraceType.String(),
-		NodeName: t.Trace.NodeName,
-		FuncName: t.Trace.FuncName,
-		Time:     t.Trace.Time,
-		Duration: t.Trace.Duration,
-		Path:     t.Trace.Path,
-		Error:    t.Trace.Error,
+		trcType:    t.Trace.TraceType,
+		Type:       t.Trace.TraceType.String(),
+		NodeName:   t.Trace.NodeName,
+		FuncName:   t.Trace.FuncName,
+		Time:       t.Trace.Time,
+		Duration:   t.Trace.Duration,
+		Path:       t.Trace.Path,
+		Error:      t.Trace.Error,
+		HealResult: t.Trace.HealResult,
+		Message:    t.Trace.Message,
 	}
 
 	if t.Trace.HTTP != nil {
