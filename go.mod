@@ -19,7 +19,7 @@ require (
 	github.com/minio/cli v1.23.0
 	github.com/minio/colorjson v1.0.2
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.4.25
+	github.com/minio/madmin-go v1.4.26
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.34
 	github.com/minio/pkg v1.3.2
@@ -113,5 +113,3 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 )
-
-replace github.com/minio/madmin-go => github.com/klauspost/madmin-go v1.0.15-0.20220830094240-17a19a73d7b8
