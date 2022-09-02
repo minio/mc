@@ -46,7 +46,7 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 	return nil
 }
 
-func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
@@ -150,11 +150,15 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 				ObjectResult: &result,
 			})
 		}
-		p.Send(PerfTestResult{
+		r := PerfTestResult{
 			Type:         ObjectPerfTest,
 			ObjectResult: &result,
 			Final:        true,
-		})
+		}
+		p.Send(r)
+		if outCh != nil {
+			outCh <- r
+		}
 	}()
 
 	<-done

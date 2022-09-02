@@ -18,16 +18,22 @@
 package cmd
 
 import (
+	"archive/zip"
+	gojson "encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
-var supportPerfFlags = []cli.Flag{
+var supportPerfFlags = append([]cli.Flag{
 	cli.StringFlag{
 		Name:  "duration",
 		Usage: "duration the entire perf tests are run",
@@ -72,7 +78,7 @@ var supportPerfFlags = []cli.Flag{
 		Usage:  "run tests on drive(s) one-by-one",
 		Hidden: true,
 	},
-}
+}, subnetCommonFlags...)
 
 var supportPerfCmd = cli.Command{
 	Name:            "perf",
@@ -146,6 +152,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 
 	// the alias parameter from cli
 	aliasedURL := ""
+	perfType := ""
 	switch len(args) {
 	case 1:
 		// cannot use alias by the name 'drive' or 'net'
@@ -154,24 +161,132 @@ func mainSupportPerf(ctx *cli.Context) error {
 		}
 		aliasedURL = args[0]
 
-		mainAdminSpeedTestNetperf(ctx, aliasedURL)
-		mainAdminSpeedTestDrive(ctx, aliasedURL)
-		mainAdminSpeedTestObject(ctx, aliasedURL)
 	case 2:
-		aliasedURL := args[1]
-		switch args[0] {
-		case "drive":
-			return mainAdminSpeedTestDrive(ctx, aliasedURL)
-		case "object":
-			return mainAdminSpeedTestObject(ctx, aliasedURL)
-		case "net":
-			return mainAdminSpeedTestNetperf(ctx, aliasedURL)
-		default:
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
-		}
+		perfType = args[0]
+		aliasedURL = args[1]
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 	}
 
+	// Main execution
+	execSupportPerf(ctx, aliasedURL, perfType)
+
 	return nil
+}
+
+func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+
+	results := runPerfTests(ctx, aliasedURL, perfType)
+	if globalJSON {
+		// No file to be saved or uploaded to SUBNET in case of `--json`
+		return
+	}
+
+	resultFileNamePfx := fmt.Sprintf("%s-perf_%s", filepath.Clean(alias), UTCNow().Format("20060102150405"))
+	resultFileName := resultFileNamePfx + ".json"
+
+	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), alias)
+	tmpFileName, e := zipPerfResult(results, resultFileName, regInfo)
+	fatalIf(probe.NewError(e), "Error creating zip from perf test results:")
+
+	if globalAirgapped {
+		savePerfResultFile(tmpFileName, resultFileNamePfx, alias)
+		return
+	}
+
+	uploadURL := subnetUploadURL("perf", tmpFileName)
+	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, tmpFileName, apiKey)
+
+	_, e = uploadFileToSubnet(alias, tmpFileName, reqURL, headers)
+	if e != nil {
+		console.Errorln("Unable to upload perf test results to SUBNET portal: " + e.Error())
+		savePerfResultFile(tmpFileName, resultFileNamePfx, alias)
+		return
+	}
+
+	clr := color.New(color.FgGreen, color.Bold)
+	clr.Println("uploaded successfully to SUBNET.")
+
+	if len(apiKey) > 0 {
+		setSubnetAPIKey(alias, apiKey)
+	}
+}
+
+func savePerfResultFile(tmpFileName string, resultFileNamePfx string, alias string) {
+	zipFileName := resultFileNamePfx + ".zip"
+	e := moveFile(tmpFileName, zipFileName)
+	fatalIf(probe.NewError(e), fmt.Sprintf("Error moving temp file %s to %s:", tmpFileName, zipFileName))
+	console.Infoln("MinIO performance report saved at", zipFileName)
+}
+
+func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTestResult {
+	resultCh := make(chan PerfTestResult)
+	results := []PerfTestResult{}
+	defer close(resultCh)
+
+	tests := []string{perfType}
+	if len(perfType) == 0 {
+		// by default run all tests
+		tests = []string{"net", "drive", "object"}
+	}
+
+	for _, t := range tests {
+		switch t {
+		case "drive":
+			mainAdminSpeedTestDrive(ctx, aliasedURL, resultCh)
+		case "object":
+			mainAdminSpeedTestObject(ctx, aliasedURL, resultCh)
+		case "net":
+			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
+		default:
+			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+		}
+
+		if !globalJSON {
+			results = append(results, <-resultCh)
+		}
+	}
+
+	return results
+}
+
+func writeJSONObjToZip(zipWriter *zip.Writer, obj interface{}, filename string) error {
+	writer, e := zipWriter.Create(filename)
+	if e != nil {
+		return e
+	}
+
+	enc := gojson.NewEncoder(writer)
+	if e = enc.Encode(obj); e != nil {
+		return e
+	}
+
+	return nil
+}
+
+// compress MinIO performance output
+func zipPerfResult(perfResult []PerfTestResult, resultFilename string, regInfo ClusterRegistrationInfo) (string, error) {
+	// Create profile zip file
+	tmpArchive, e := os.CreateTemp("", "mc-perf-")
+
+	if e != nil {
+		return "", e
+	}
+	defer tmpArchive.Close()
+
+	zipWriter := zip.NewWriter(tmpArchive)
+	defer zipWriter.Close()
+
+	e = writeJSONObjToZip(zipWriter, perfResult, resultFilename)
+	if e != nil {
+		return "", e
+	}
+
+	e = writeJSONObjToZip(zipWriter, regInfo, "cluster.info")
+	if e != nil {
+		return "", e
+	}
+
+	return tmpArchive.Name(), nil
 }

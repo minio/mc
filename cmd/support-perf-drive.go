@@ -28,7 +28,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
@@ -121,11 +121,15 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 				})
 			}
 		}
-		p.Send(PerfTestResult{
+		r := PerfTestResult{
 			Type:        DrivePerfTest,
 			DriveResult: results,
 			Final:       true,
-		})
+		}
+		p.Send(r)
+		if outCh != nil {
+			outCh <- r
+		}
 	}()
 
 	<-done
