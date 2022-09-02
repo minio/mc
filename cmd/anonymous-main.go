@@ -68,7 +68,7 @@ FILE:
 
 EXAMPLES:
   1. Set bucket to "download" on Amazon S3 cloud storage.
-     {{.Prompt}} {{.HelpName}} set download s3/burningman2011
+     {{.Prompt}} {{.HelpName}} set download s3/mybucket
 
   2. Set bucket to "public" on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} set public s3/shared
