@@ -154,6 +154,7 @@ type EndPointStats struct {
 	Min       string   `json:"min"`
 	Max       string   `json:"max"`
 	Average   string   `json:"average"`
+	DNS       string   `json:"dns"`
 	CountErr  string   `json:"error-count,omitempty"`
 	Error     string   `json:"error,omitempty"`
 	Roundtrip string   `json:"roundtrip"`
@@ -171,7 +172,8 @@ type serverStats struct {
 	max        uint64
 	sum        uint64
 	avg        uint64
-	errorCount int // used to keep a track of consecutive errors
+	dns        uint64 // last DNS resolving time
+	errorCount int    // used to keep a track of consecutive errors
 	err        string
 	counter    int // used to find the average, acts as denominator
 }
@@ -215,12 +217,14 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		host, port, _ := extractHostPort(result.Endpoint.String())
 		endPoint := Endpoint{result.Endpoint.Scheme, host, port}
 		stat := getPingInfo(cliCtx, result, endPointMap)
+		fmt.Printf("%+v\n", stat)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
 			Min:       trimToTwoDecimal(time.Duration(stat.min)),
 			Max:       trimToTwoDecimal(time.Duration(stat.max)),
 			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
-			CountErr:  pad(strconv.Itoa(stat.errorCount), " ", 3-len(strconv.Itoa(stat.errorCount)), false), // strconv.Itoa(stat.errorCount),
+			DNS:       time.Duration(stat.dns).String(),
+			CountErr:  pad(strconv.Itoa(stat.errorCount), " ", 3-len(strconv.Itoa(stat.errorCount)), false),
 			Error:     stat.err,
 			Roundtrip: trimToTwoDecimal(result.ResponseTime),
 		}
@@ -245,13 +249,18 @@ func trimToTwoDecimal(d time.Duration) string {
 		f = float64(d) / float64(time.Second)
 		unit = pad("s", " ", 7-len(fmt.Sprintf("%.02f", f)), false)
 	default:
+		fmt.Println("##########################", d)
 		f = float64(d) / float64(time.Millisecond)
+		fmt.Println("ashishshsh", fmt.Sprintf("%.02f", f))
+		fmt.Println(6 - len(fmt.Sprintf("%.02f", f)))
 		unit = pad("ms", " ", 6-len(fmt.Sprintf("%.02f", f)), false)
 	}
 	return fmt.Sprintf("%.02f%s", f, unit)
 }
 
 func pad(s, p string, count int, left bool) string {
+	fmt.Println(" s ", s)
+	fmt.Println(" count  ", count)
 	ret := make([]byte, len(p)*count+len(s))
 
 	if left {
@@ -276,7 +285,7 @@ func pad(s, p string, count int, left bool) string {
 
 func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
 	var errorString string
-	var sum, avg uint64
+	var sum, avg, dns uint64
 	min := uint64(math.MaxUint64)
 	var max uint64
 	var counter, errorCount int
@@ -315,14 +324,16 @@ func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[s
 			counter = stat.counter + 1
 
 		} else {
-			min = uint64(math.Min(float64(min), float64(uint64(result.ResponseTime))))
-			max = uint64(math.Max(float64(max), float64(uint64(result.ResponseTime))))
-			sum = uint64(result.ResponseTime)
+			t := result.ResponseTime - result.DNSResolveTime
+			min = uint64(math.Min(float64(min), float64(uint64(t))))
+			max = uint64(math.Max(float64(max), float64(uint64(t))))
+			sum = uint64(t)
 			counter = 1
 		}
 		avg = sum / uint64(counter)
+		dns = uint64(result.DNSResolveTime.Nanoseconds())
 	}
-	return serverStats{min, max, sum, avg, errorCount, errorString, counter}
+	return serverStats{min, max, sum, avg, dns, errorCount, errorString, counter}
 }
 
 // extractHostPort - extracts host/port from many address formats
