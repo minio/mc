@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
@@ -71,18 +69,17 @@ func mainAdminGroupEnableDisable(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	group := args.Get(1)
-	var err1 error
 	var status madmin.GroupStatus
-	if ctx.Command.Name == "enable" {
+	switch ctx.Command.Name {
+	case "enable":
 		status = madmin.GroupEnabled
-	} else if ctx.Command.Name == "disable" {
+	case "disable":
 		status = madmin.GroupDisabled
-	} else {
-		err1 = errors.New("cannot happen")
-		fatalIf(probe.NewError(err1).Trace(args...), "Could not get group enable")
+	default:
+		fatalIf(errInvalidArgument().Trace(ctx.Command.Name), "Invalid group status name")
 	}
-	err1 = client.SetGroupStatus(globalContext, group, status)
-	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group enable")
+	e := client.SetGroupStatus(globalContext, group, status)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable set group status")
 
 	printMsg(groupMessage{
 		op:          ctx.Command.Name,

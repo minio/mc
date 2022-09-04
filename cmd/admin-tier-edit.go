@@ -135,9 +135,8 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument().Trace(args.Tail()...), "Insufficient credential information supplied to update remote tier target credentials")
 	}
 
-	if err := client.EditTier(globalContext, tierName, creds); err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to edit remote tier")
-	}
+	e := client.EditTier(globalContext, tierName, creds)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit remote tier")
 
 	printMsg(&tierMessage{
 		op:       "edit",

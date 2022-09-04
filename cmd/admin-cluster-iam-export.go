@@ -78,8 +78,8 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 		return nil
 	}
 
-	r, ierr := client.ExportIAM(context.Background())
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to export IAM info.")
+	r, e := client.ExportIAM(context.Background())
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to export IAM info.")
 
 	// Create iam info zip file
 	tmpFile, e := ioutil.TempFile("", fmt.Sprintf("%s-iam-info", aliasedURL))

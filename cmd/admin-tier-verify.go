@@ -68,9 +68,8 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
-	if err := client.VerifyTier(globalContext, tierName); err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to verify remote tier target")
-	}
+	e := client.VerifyTier(globalContext, tierName)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to verify remote tier target")
 
 	printMsg(&tierMessage{
 		op:       "verify",

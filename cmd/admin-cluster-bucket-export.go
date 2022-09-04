@@ -84,8 +84,8 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 	aliasedURL = filepath.Clean(aliasedURL)
 	_, bucket := url2Alias(aliasedURL)
 
-	r, ierr := client.ExportBucketMetadata(context.Background(), bucket)
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to export bucket metadata.")
+	r, e := client.ExportBucketMetadata(context.Background(), bucket)
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to export bucket metadata.")
 
 	if bucket == "" {
 		bucket = "cluster"

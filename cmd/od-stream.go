@@ -136,7 +136,7 @@ func odCopy(ctx context.Context, odURLs URLs, args argKVS, odType string) (odMes
 
 	// Create reader from source.
 	reader, err := getSourceStreamFromURL(ctx, sourcePath, encKeyDB, getSourceOpts{GetOptions: getOpts})
-	fatalIf(err, "Unable to get source stream")
+	fatalIf(err.Trace(sourcePath), "Unable to get source stream")
 	defer reader.Close()
 
 	putOpts := PutOptions{
@@ -155,11 +155,11 @@ func odCopy(ctx context.Context, odURLs URLs, args argKVS, odType string) (odMes
 
 	// Write to target.
 	targetClnt, err := newClientFromAlias(targetAlias, targetURL.String())
-	fatalIf(err, "Unable to initialize target client")
+	fatalIf(err.Trace(targetURL.String()), "Unable to initialize target client")
 
 	// Put object.
 	total, err := targetClnt.PutPart(ctx, reader, combinedSize, pg, putOpts)
-	fatalIf(err, "Unable to put object")
+	fatalIf(err.Trace(targetURL.String()), "Unable to upload")
 
 	// Get upload time.
 	elapsed := time.Since(pg.startTime)
@@ -242,7 +242,7 @@ func odDownload(ctx context.Context, odURLs URLs, args argKVS) (odMessage, error
 	// Upload the file.
 	total, err := putTargetStream(ctx, "", targetPath, "", "", "",
 		reader, -1, pg, PutOptions{})
-	fatalIf(err, "Unable to download object")
+	fatalIf(err.Trace(targetPath), "Unable to upload an object")
 
 	// Get upload time.
 	elapsed := time.Since(pg.startTime)
@@ -264,7 +264,7 @@ func odDownload(ctx context.Context, odURLs URLs, args argKVS) (odMessage, error
 // singleGet helps odDownload download a single part.
 func singleGet(ctx context.Context, cli Client) io.ReadCloser {
 	reader, err := cli.GetPart(ctx, 0)
-	fatalIf(err, "Unable to get object reader")
+	fatalIf(err, "Unable to download object")
 
 	return reader
 }
@@ -276,7 +276,7 @@ func multiGet(ctx context.Context, cli Client, parts, skip int) io.Reader {
 	// Get reader for each part.
 	for i := 1 + skip; i <= parts; i++ {
 		reader, err := cli.GetPart(ctx, parts)
-		fatalIf(err, "Unable to get object reader")
+		fatalIf(err, "Unable to download part of an object")
 		readers = append(readers, reader)
 	}
 	reader := io.MultiReader(readers...)

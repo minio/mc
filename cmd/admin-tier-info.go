@@ -180,19 +180,18 @@ func mainAdminTierInfo(ctx *cli.Context) error {
 	checkAdminTierInfoSyntax(ctx)
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	var err error
 
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	var msg tierInfoMessage
-	tInfos, err := client.TierStats(globalContext)
-	if err != nil {
+	tInfos, e := client.TierStats(globalContext)
+	if e != nil {
 		msg = tierInfoMessage{
 			Status:  "error",
 			Context: ctx,
-			Error:   err.Error(),
+			Error:   e.Error(),
 		}
 	} else {
 		msg = tierInfoMessage{

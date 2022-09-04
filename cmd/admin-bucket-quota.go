@@ -133,9 +133,12 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 		quotaStr := ctx.String("hard")
 		quota, e := humanize.ParseBytes(quotaStr)
 		fatalIf(probe.NewError(e).Trace(quotaStr), "Unable to parse quota")
-		if e = client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{Quota: quota, Type: qType}); e != nil {
-			fatalIf(probe.NewError(e).Trace(args...), "Unable to set bucket quota")
-		}
+
+		fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{
+			Quota: quota,
+			Type:  qType,
+		})).Trace(args...), "Unable to set bucket quota")
+
 		printMsg(quotaMessage{
 			op:        "set",
 			Bucket:    targetURL,
@@ -144,8 +147,8 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 			Status:    "success",
 		})
 	} else if ctx.Bool("clear") {
-		if err := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Unable to clear bucket quota config")
+		if e := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); e != nil {
+			fatalIf(probe.NewError(e).Trace(args...), "Unable to clear bucket quota config")
 		}
 		printMsg(quotaMessage{
 			op:     "unset",

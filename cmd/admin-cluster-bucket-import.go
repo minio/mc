@@ -109,8 +109,9 @@ func mainClusterBucketImport(ctx *cli.Context) error {
 	aliasedURL = filepath.Clean(aliasedURL)
 	_, bucket := url2Alias(aliasedURL)
 
-	rpt, ierr := client.ImportBucketMetadata(context.Background(), bucket, f)
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to import bucket metadata.")
+	rpt, e := client.ImportBucketMetadata(context.Background(), bucket, f)
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import bucket metadata.")
+
 	printMsg(importMetaMsg{
 		BucketMetaImportErrs: rpt,
 		Status:               "success",
