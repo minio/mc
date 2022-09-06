@@ -85,7 +85,7 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	// in all other scenarios keep auto-tuning on.
 	autotune := !ctx.IsSet("concurrent")
 
-	resultCh, speedTestErr := client.Speedtest(ctxt, madmin.SpeedtestOpts{
+	resultCh, e := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
 		Duration:    duration,
 		Concurrency: concurrent,
@@ -94,10 +94,10 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	})
 
 	if globalJSON {
-		if speedTestErr != nil {
+		if e != nil {
 			printMsg(speedTestResult{
 				Type:  objectSpeedTest,
-				Err:   speedTestErr.Error(),
+				Err:   e.Error(),
 				Final: true,
 			})
 			return nil
@@ -134,10 +134,10 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	go func() {
-		if speedTestErr != nil {
+		if e != nil {
 			p.Send(speedTestResult{
 				Type:  objectSpeedTest,
-				Err:   speedTestErr.Error(),
+				Err:   e.Error(),
 				Final: true,
 			})
 			return

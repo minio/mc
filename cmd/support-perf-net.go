@@ -54,19 +54,19 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 		defer close(resultCh)
 		defer close(errorCh)
 
-		result, err := client.Netperf(ctxt, duration)
-		if err != nil {
-			errorCh <- err
+		result, e := client.Netperf(ctxt, duration)
+		if e != nil {
+			errorCh <- e
 		}
 		resultCh <- result
 	}()
 
 	if globalJSON {
 		select {
-		case err := <-errorCh:
+		case e := <-errorCh:
 			printMsg(speedTestResult{
 				Type:  netSpeedTest,
-				Err:   err.Error(),
+				Err:   e.Error(),
 				Final: true,
 			})
 		case result := <-resultCh:
@@ -92,10 +92,10 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 	go func() {
 		for {
 			select {
-			case err := <-errorCh:
+			case e := <-errorCh:
 				p.Send(speedTestResult{
 					Type:  netSpeedTest,
-					Err:   err.Error(),
+					Err:   e.Error(),
 					Final: true,
 				})
 				return

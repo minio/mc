@@ -363,8 +363,8 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 
 	args := ctx.Args()
 	tierTypeStr := args.Get(0)
-	tierType, err := madmin.NewTierType(tierTypeStr)
-	fatalIf(probe.NewError(err), "Unsupported tier type")
+	tierType, e := madmin.NewTierType(tierTypeStr)
+	fatalIf(probe.NewError(e), "Unsupported tier type")
 
 	aliasedURL := args.Get(1)
 	tierName := args.Get(2)
@@ -377,9 +377,7 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	tCfg := fetchTierConfig(ctx, strings.ToUpper(tierName), tierType)
-	if err = client.AddTier(globalContext, tCfg); err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to configure remote tier target")
-	}
+	fatalIf(probe.NewError(client.AddTier(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
 
 	msg := &tierMessage{
 		op:     "add",

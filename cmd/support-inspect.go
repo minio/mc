@@ -121,11 +121,11 @@ func mainSupportInspect(ctx *cli.Context) error {
 		console.Infoln("Your shell is auto determined as '" + shellName + "', wildcard patterns are only supported with 'bash' SHELL.")
 	}
 
-	key, r, ierr := client.Inspect(context.Background(), madmin.InspectOptions{
+	key, r, e := client.Inspect(context.Background(), madmin.InspectOptions{
 		Volume: bucket,
 		File:   prefix,
 	})
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to inspect file.")
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
 
 	// Create profile zip file
 	tmpFile, e := ioutil.TempFile("", "mc-inspect-")

@@ -68,9 +68,8 @@ func mainAdminTierRm(ctx *cli.Context) error {
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
-	if err := client.RemoveTier(globalContext, tierName); err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to remove remote tier target")
-	}
+	e := client.RemoveTier(globalContext, tierName)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove remote tier target")
 
 	printMsg(&tierMessage{
 		op:       "rm",

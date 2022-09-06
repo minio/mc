@@ -60,17 +60,17 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 
 	serial := ctx.Bool("serial")
 
-	resultCh, speedTestErr := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
+	resultCh, e := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
 		Serial:    serial,
 		BlockSize: uint64(blocksize),
 		FileSize:  uint64(filesize),
 	})
 
 	if globalJSON {
-		if speedTestErr != nil {
+		if e != nil {
 			printMsg(speedTestResult{
 				Type:  driveSpeedTest,
-				Err:   speedTestErr.Error(),
+				Err:   e.Error(),
 				Final: true,
 			})
 			return nil
@@ -102,10 +102,10 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	go func() {
-		if speedTestErr != nil {
+		if e != nil {
 			printMsg(speedTestResult{
 				Type: driveSpeedTest,
-				Err:  speedTestErr.Error(),
+				Err:  e.Error(),
 			})
 			return
 		}

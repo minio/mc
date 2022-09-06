@@ -180,9 +180,9 @@ func mainSupportProfile(ctx *cli.Context) error {
 	}
 
 	console.Infof("Profiling '%s' for %d seconds... ", aliasedURL, duration)
-	data, adminErr := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
+	data, e := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
 
-	fatalIf(probe.NewError(adminErr), "Unable to save profile data")
+	fatalIf(probe.NewError(e), "Unable to save profile data")
 	clr := color.New(color.FgGreen, color.Bold)
 	clr.Printf("saved successfully at '%s'\n", getProfileData(data))
 	return nil

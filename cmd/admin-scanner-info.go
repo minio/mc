@@ -98,10 +98,7 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-		return nil
-	}
+	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
@@ -123,7 +120,7 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 			os.Exit(0)
 		}()
 	}
-	cerr := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+	e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
 		if globalJSON {
 			printMsg(metricsMessage{RealtimeMetrics: metrics})
 			return
@@ -131,8 +128,8 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		ui.Send(metrics)
 	})
 
-	if cerr != nil && !errors.Is(cerr, context.Canceled) {
-		fatalIf(probe.NewError(cerr).Trace(aliasedURL), "Error making request")
+	if e != nil && !errors.Is(e, context.Canceled) {
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
 		return nil
 	}
 
