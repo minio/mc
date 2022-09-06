@@ -230,21 +230,6 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		ListZip:           o.listZip,
 	}) {
 		if content.Err != nil {
-			switch content.Err.ToGoError().(type) {
-			// handle this specifically for filesystem related errors.
-			case BrokenSymlink:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list broken link.")
-				continue
-			case TooManyLevelsSymlink:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list too many levels link.")
-				continue
-			case PathNotFound:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
-				continue
-			case PathInsufficientPermission:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
-				continue
-			}
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
