@@ -217,7 +217,6 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		host, port, _ := extractHostPort(result.Endpoint.String())
 		endPoint := Endpoint{result.Endpoint.Scheme, host, port}
 		stat := getPingInfo(cliCtx, result, endPointMap)
-		fmt.Printf("%+v\n", stat)
 		endPointStat := EndPointStats{
 			Endpoint:  endPoint,
 			Min:       trimToTwoDecimal(time.Duration(stat.min)),
@@ -247,20 +246,19 @@ func trimToTwoDecimal(d time.Duration) string {
 	switch {
 	case d >= time.Second:
 		f = float64(d) / float64(time.Second)
+
 		unit = pad("s", " ", 7-len(fmt.Sprintf("%.02f", f)), false)
 	default:
-		fmt.Println("##########################", d)
 		f = float64(d) / float64(time.Millisecond)
-		fmt.Println("ashishshsh", fmt.Sprintf("%.02f", f))
-		fmt.Println(6 - len(fmt.Sprintf("%.02f", f)))
 		unit = pad("ms", " ", 6-len(fmt.Sprintf("%.02f", f)), false)
 	}
 	return fmt.Sprintf("%.02f%s", f, unit)
 }
 
+// pad adds the `count` number of p string to string s. left true adds to the
+// left and vice-versa. This is done for proper alignment of ping command
+// ex:- padding 2 white space to right '90.18s' - > '90.18s  '
 func pad(s, p string, count int, left bool) string {
-	fmt.Println(" s ", s)
-	fmt.Println(" count  ", count)
 	ret := make([]byte, len(p)*count+len(s))
 
 	if left {
@@ -324,10 +322,9 @@ func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[s
 			counter = stat.counter + 1
 
 		} else {
-			t := result.ResponseTime - result.DNSResolveTime
-			min = uint64(math.Min(float64(min), float64(uint64(t))))
-			max = uint64(math.Max(float64(max), float64(uint64(t))))
-			sum = uint64(t)
+			min = uint64(math.Min(float64(min), float64(uint64(result.ResponseTime))))
+			max = uint64(math.Max(float64(max), float64(uint64(result.ResponseTime))))
+			sum = uint64(result.ResponseTime)
 			counter = 1
 		}
 		avg = sum / uint64(counter)
@@ -339,7 +336,7 @@ func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[s
 // extractHostPort - extracts host/port from many address formats
 // such as, ":9000", "localhost:9000", "http://localhost:9000/"
 func extractHostPort(hostAddr string) (string, string, error) {
-	var addr, scheme string
+	var addr string
 
 	if hostAddr == "" {
 		return "", "", errors.New("unable to process empty address")
@@ -357,15 +354,6 @@ func extractHostPort(hostAddr string) (string, string, error) {
 	}
 
 	addr = u.Host
-	scheme = u.Scheme
-
-	// Use the given parameter again if url.Parse()
-	// didn't return any useful result.
-	if addr == "" {
-		addr = hostAddr
-		scheme = "http"
-	}
-
 	// At this point, addr can be one of the following form:
 	//	":9000"
 	//	"localhost:9000"
@@ -376,17 +364,7 @@ func extractHostPort(hostAddr string) (string, string, error) {
 		if !strings.Contains(err.Error(), "missing port in address") {
 			return "", "", err
 		}
-
 		host = addr
-
-		switch scheme {
-		case "https":
-			port = "443"
-		case "http":
-			port = "80"
-		default:
-			return "", "", errors.New("unable to guess port from scheme")
-		}
 	}
 
 	return host, port, nil
