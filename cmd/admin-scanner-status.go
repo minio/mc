@@ -62,7 +62,8 @@ var adminScannerInfoFlags = []cli.Flag{
 }
 
 var adminScannerInfo = cli.Command{
-	Name:            "info",
+	Name:            "status",
+	Aliases:         []string{"info"},
 	Usage:           "summarize scanner events on MinIO server in real-time",
 	Action:          mainAdminScannerInfo,
 	OnUsageError:    onUsageError,
@@ -87,7 +88,7 @@ EXAMPLES:
 // checkAdminTopAPISyntax - validate all the passed arguments
 func checkAdminScannerInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -111,26 +112,25 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		ByHost:   false,
 	}
 	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
-	if !globalJSON {
-		go func() {
-			if e := ui.Start(); e != nil {
-				cancel()
-				os.Exit(1)
+	go func() {
+		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+			if globalJSON {
+				printMsg(metricsMessage{RealtimeMetrics: metrics})
+				return
 			}
-			os.Exit(0)
-		}()
-	}
-	e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
-		if globalJSON {
-			printMsg(metricsMessage{RealtimeMetrics: metrics})
-			return
-		}
-		ui.Send(metrics)
-	})
+			ui.Send(metrics)
+		})
 
-	if e != nil && !errors.Is(e, context.Canceled) {
-		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
-		return nil
+		if e != nil && !errors.Is(e, context.Canceled) {
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+		}
+	}()
+
+	if !globalJSON {
+		if e := ui.Start(); e != nil {
+			cancel()
+			os.Exit(1)
+		}
 	}
 
 	return nil
@@ -184,10 +184,13 @@ func (m *scannerMetricsUI) Init() tea.Cmd {
 }
 
 func (m *scannerMetricsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.quitting {
+		return m, tea.Quit
+	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c":
+		case "q", "esc", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 		default:
@@ -200,14 +203,11 @@ func (m *scannerMetricsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		return m, nil
-
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
-	default:
-		return m, nil
 	}
+
+	var cmd tea.Cmd
+	m.spinner, cmd = m.spinner.Update(msg)
+	return m, cmd
 }
 
 func (m *scannerMetricsUI) View() string {
