@@ -73,6 +73,10 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "node",
 		Usage: "trace only matching servers",
 	},
+	cli.StringSliceFlag{
+		Name:  "request-header",
+		Usage: "trace only matching request headers",
+	},
 	cli.BoolFlag{
 		Name:  "errors, e",
 		Usage: "trace only failed requests",
@@ -132,12 +136,18 @@ func printTrace(verbose bool, traceInfo madmin.ServiceTraceInfo) {
 	}
 }
 
+type matchString struct {
+	val     string
+	reverse bool
+}
+
 type matchOpts struct {
 	statusCodes []int
 	methods     []string
 	funcNames   []string
 	apiPaths    []string
 	nodes       []string
+	reqHeaders  []matchString
 }
 
 func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
@@ -213,7 +223,46 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
+	if len(opts.reqHeaders) > 0 && traceInfo.Trace.HTTP != nil {
+		matched := false
+		for _, hdr := range opts.reqHeaders {
+			headerFound := false
+			for traceHdr, traceVals := range traceInfo.Trace.HTTP.ReqInfo.Headers {
+				for _, traceVal := range traceVals {
+					if headerMatch(hdr.val, traceHdr+": "+traceVal) {
+						headerFound = true
+						goto exitFindingHeader
+					}
+				}
+			}
+		exitFindingHeader:
+			if !hdr.reverse && headerFound || hdr.reverse && !headerFound {
+				matched = true
+				goto exitMatchingHeader
+			}
+		}
+	exitMatchingHeader:
+		if !matched {
+			return false
+		}
+	}
+
 	return true
+}
+
+func matchingOpts(ctx *cli.Context) (opts matchOpts) {
+	opts.statusCodes = ctx.IntSlice("status-code")
+	opts.methods = ctx.StringSlice("method")
+	opts.funcNames = ctx.StringSlice("funcname")
+	opts.apiPaths = ctx.StringSlice("path")
+	opts.nodes = ctx.StringSlice("node")
+	for _, s := range ctx.StringSlice("request-header") {
+		ms := matchString{}
+		ms.reverse = strings.HasPrefix(s, "!")
+		ms.val = strings.TrimPrefix(s, "!")
+		opts.reqHeaders = append(opts.reqHeaders, ms)
+	}
+	return
 }
 
 // Calculate tracing options for command line flags
@@ -300,13 +349,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
-	mopts := matchOpts{
-		statusCodes: ctx.IntSlice("status-code"),
-		methods:     ctx.StringSlice("method"),
-		funcNames:   ctx.StringSlice("funcname"),
-		apiPaths:    ctx.StringSlice("path"),
-		nodes:       ctx.StringSlice("node"),
-	}
+	mopts := matchingOpts(ctx)
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
@@ -318,6 +361,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 			printTrace(verbose, traceInfo)
 		}
 	}
+
 	return nil
 }
 

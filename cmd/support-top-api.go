@@ -97,11 +97,7 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
-	mopts := matchOpts{
-		funcNames: ctx.StringSlice("name"),
-		apiPaths:  ctx.StringSlice("path"),
-		nodes:     ctx.StringSlice("node"),
-	}
+	mopts := matchingOpts(ctx)
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)

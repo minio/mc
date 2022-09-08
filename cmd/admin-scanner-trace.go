@@ -76,6 +76,10 @@ EXAMPLES:
 
   3. Show trace for only ScanObject operations
     {{.Prompt}} {{.HelpName}} --funcname=scanner.ScanObject myminio
+
+  4. Avoid printing replication related S3 requests
+    {{.Prompt}} {{.HelpName}} --request-header '!X-Minio-Source' myminio
+
 `,
 }
 
@@ -124,11 +128,7 @@ func mainAdminScannerTrace(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx, []string{"scanner"})
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
-	mopts := matchOpts{
-		funcNames: ctx.StringSlice("funcname"),
-		apiPaths:  ctx.StringSlice("path"),
-		nodes:     ctx.StringSlice("node"),
-	}
+	mopts := matchingOpts(ctx)
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
