@@ -333,8 +333,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/top/locks": aliasCompleter,
 	"/admin/top/api":   aliasCompleter,
 
-	"/admin/scanner/info":  aliasCompleter,
-	"/admin/scanner/trace": aliasCompleter,
+	"/admin/scanner/status": aliasCompleter,
+	"/admin/scanner/trace":  aliasCompleter,
 
 	"/admin/service/stop":     aliasCompleter,
 	"/admin/service/restart":  aliasCompleter,
