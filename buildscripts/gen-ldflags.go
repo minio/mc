@@ -48,15 +48,25 @@ func releaseTag(version string) (string, time.Time) {
 		relPrefix = prefix
 	}
 
+	relSuffix := ""
+	if hotfix := os.Getenv("MC_HOTFIX"); hotfix != "" {
+		relSuffix = hotfix
+	}
+
 	relTag := strings.ReplaceAll(version, " ", "-")
 	relTag = strings.ReplaceAll(relTag, ":", "-")
-	relTag = strings.ReplaceAll(relTag, ",", "")
 	t, err := time.Parse("2006-01-02T15-04-05Z", relTag)
 	if err != nil {
 		panic(err)
 	}
 
-	return relPrefix + "." + relTag, t
+	relTag = strings.ReplaceAll(relTag, ",", "")
+	relTag = relPrefix + "." + relTag
+	if relSuffix != "" {
+		relTag += "." + relSuffix
+	}
+
+	return relTag, t
 }
 
 // commitID returns the abbreviated commit-id hash of the last commit.
