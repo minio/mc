@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -53,6 +54,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
 
   2. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
+	 'transition-storage-class' and 'noncurrentversion-transition-storage-class' values are to be selected from configured remote tiers.
      {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --storage-class "MINIOTIER-1" \
           --noncurrentversion-transition-days "45" --noncurrentversion-transition-storage-class "MINIOTIER2" \
           myminio/mybucket/
@@ -174,7 +176,31 @@ func mainILMAdd(cliCtx *cli.Context) error {
 
 	lfcCfg.Rules = append(lfcCfg.Rules, newRule)
 
-	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to add this lifecycle rule")
+	var suggestion string
+	err = client.SetLifecycle(ctx, lfcCfg)
+	if err != nil {
+		if e := err.ToGoError(); minio.ToErrorResponse(e).Code == "InvalidStorageClass" {
+			if admClient, err := newAdminClient(urlStr); err == nil {
+				if tiers, err := admClient.ListTiers(globalContext); err == nil {
+					if len(tiers) > 0 {
+						tierNames := make([]string, 0, len(tiers))
+						for _, tier := range tiers {
+							tierNames = append(tierNames, tier.Name)
+						}
+						suggestion = fmt.Sprintf("Please pick a storage-class from %s", tierNames)
+					} else {
+						suggestion = fmt.Sprintf("There are no remote tiers configured. You can add a remote tier using %s command", "mc admin tier add")
+					}
+				}
+			}
+		}
+
+		errStr := "Unable to add this lifecycle rule."
+		if suggestion != "" {
+			errStr = fmt.Sprintf("%s %s", errStr, suggestion)
+		}
+		fatalIf(err.Trace(urlStr), errStr)
+	}
 
 	printMsg(ilmAddMessage{
 		Status: "success",
