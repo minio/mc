@@ -92,11 +92,7 @@ func (u userPolicyMessage) String() string {
 		fatalIf(probe.NewError(e), "Unable to marshal to JSON.")
 		return string(buf)
 	case "list":
-		policyFieldMaxLen := 20
-		// Create a new pretty table with cols configuration
-		return newPrettyTable("  ",
-			Field{"Policy", policyFieldMaxLen},
-		).buildRow(u.Policy)
+		return console.Colorize("PolicyName", u.Policy)
 	case "remove":
 		return console.Colorize("PolicyMessage", "Removed policy `"+u.Policy+"` successfully.")
 	case "add":

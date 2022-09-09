@@ -57,8 +57,7 @@ func checkAdminPolicyListSyntax(ctx *cli.Context) {
 func mainAdminPolicyList(ctx *cli.Context) error {
 	checkAdminPolicyListSyntax(ctx)
 
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-	console.SetColor("Policy", color.New(color.FgBlue))
+	console.SetColor("PolicyName", color.New(color.FgBlue))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
