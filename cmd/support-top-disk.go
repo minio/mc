@@ -20,7 +20,6 @@ package cmd
 import (
 	"context"
 	"log"
-	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -98,16 +97,7 @@ func mainSupportTopDisk(ctx *cli.Context) error {
 		ByDisk:   true,
 	}
 
-	done := make(chan struct{})
-
 	p := tea.NewProgram(initTopDiskUI(disks, ctx.Int("count")))
-	go func() {
-		if e := p.Start(); e != nil {
-			os.Exit(1)
-		}
-		close(done)
-	}()
-
 	go func() {
 		out := func(m madmin.RealtimeMetrics) {
 			for name, metric := range m.ByDisk {
@@ -124,6 +114,10 @@ func mainSupportTopDisk(ctx *cli.Context) error {
 		}
 	}()
 
-	<-done
+	if e := p.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top disks events")
+	}
+
 	return nil
 }

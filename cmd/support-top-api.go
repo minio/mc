@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
@@ -105,16 +104,8 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
-	done := make(chan struct{})
 
 	p := tea.NewProgram(initTraceUI())
-	go func() {
-		if e := p.Start(); e != nil {
-			os.Exit(1)
-		}
-		close(done)
-	}()
-
 	go func() {
 		for apiCallInfo := range traceCh {
 			if apiCallInfo.Err != nil {
@@ -131,6 +122,10 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 		}
 	}()
 
-	<-done
+	if e := p.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top API events")
+	}
+
 	return nil
 }

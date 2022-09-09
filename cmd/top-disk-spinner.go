@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -40,7 +39,6 @@ type topDiskUI struct {
 
 	disksInfo map[string]madmin.Disk
 
-	mu         sync.Mutex
 	prevTopMap map[string]madmin.DiskIOStats
 	currTopMap map[string]madmin.DiskIOStats
 }
@@ -84,7 +82,7 @@ func (m *topDiskUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c", "q", "esc":
 			m.quitting = true
 			return m, tea.Quit
 		case "right":
@@ -113,10 +111,8 @@ func (m *topDiskUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 	case topDiskResult:
-		m.mu.Lock()
 		m.prevTopMap[msg.diskName] = m.currTopMap[msg.diskName]
 		m.currTopMap[msg.diskName] = msg.stats
-		m.mu.Unlock()
 		if msg.final {
 			m.quitting = true
 			return m, tea.Quit
@@ -218,7 +214,6 @@ func (m *topDiskUI) View() string {
 
 	var data []diskIOStat
 
-	m.mu.Lock()
 	for disk := range m.currTopMap {
 		currDisk, ok := m.disksInfo[disk]
 		if !ok || currDisk.PoolIndex != m.pool {
@@ -226,7 +221,6 @@ func (m *topDiskUI) View() string {
 		}
 		data = append(data, generateDiskStat(m.disksInfo[disk], m.currTopMap[disk], m.prevTopMap[disk], 1000))
 	}
-	m.mu.Unlock()
 
 	sort.Slice(data, func(i, j int) bool {
 		switch m.sortBy {

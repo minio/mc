@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -129,7 +128,7 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 	if !globalJSON {
 		if e := ui.Start(); e != nil {
 			cancel()
-			os.Exit(1)
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
 		}
 	}
 
