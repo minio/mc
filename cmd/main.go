@@ -401,7 +401,7 @@ func checkUpdate(ctx *cli.Context) {
 	// Do not print update messages, if quiet flag is set.
 	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
 		// Its OK to ignore any errors during doUpdate() here.
-		if updateMsg, _, currentReleaseTime, latestReleaseTime, err := getUpdateInfo(2 * time.Second); err == nil {
+		if updateMsg, _, currentReleaseTime, latestReleaseTime, _, err := getUpdateInfo("", 2*time.Second); err == nil {
 			printMsg(updateMessage{
 				Status:  "success",
 				Message: updateMsg,

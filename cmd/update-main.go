@@ -99,19 +99,10 @@ func mcVersionToReleaseTime(version string) (releaseTime time.Time, err *probe.E
 	return releaseTime, probe.NewError(e)
 }
 
-// releaseTimeToReleaseTag - converts a time to a string formatted as
-// an official mc release tag.
-//
-// An official mc release tag looks like:
-// `RELEASE.2017-09-29T19-16-56Z`
-func releaseTimeToReleaseTag(releaseTime time.Time) string {
-	return "RELEASE." + releaseTime.Format(mcReleaseTagTimeLayout)
-}
-
-// releaseTagToReleaseTime - reverse of `releaseTimeToReleaseTag()`
+// releaseTagToReleaseTime - releaseTag to releaseTime
 func releaseTagToReleaseTime(releaseTag string) (releaseTime time.Time, err *probe.Error) {
 	fields := strings.Split(releaseTag, ".")
-	if len(fields) < 2 || len(fields) > 3 {
+	if len(fields) < 2 || len(fields) > 4 {
 		return releaseTime, probe.NewError(fmt.Errorf("%s is not a valid release tag", releaseTag))
 	}
 	if fields[0] != "RELEASE" {
@@ -263,10 +254,13 @@ func downloadReleaseURL(releaseChecksumURL string, timeout time.Duration) (conte
 }
 
 // DownloadReleaseData - downloads release data from mc official server.
-func DownloadReleaseData(timeout time.Duration) (data string, err *probe.Error) {
+func DownloadReleaseData(customReleaseURL string, timeout time.Duration) (data string, err *probe.Error) {
 	releaseURL := mcReleaseInfoURL
 	if runtime.GOOS == "windows" {
 		releaseURL = mcReleaseWindowsInfoURL
+	}
+	if customReleaseURL != "" {
+		releaseURL = customReleaseURL
 	}
 	return func() (data string, err *probe.Error) {
 		data, err = downloadReleaseURL(releaseURL, timeout)
@@ -285,10 +279,10 @@ func DownloadReleaseData(timeout time.Duration) (data string, err *probe.Error) 
 // fbe246edbd382902db9a4035df7dce8cb441357d mc.RELEASE.2016-10-07T01-16-39Z
 //
 // The second word must be `mc.` appended to a standard release tag.
-func parseReleaseData(data string) (sha256Hex string, releaseTime time.Time, err *probe.Error) {
+func parseReleaseData(data string) (sha256Hex string, releaseTime time.Time, releaseTag string, err *probe.Error) {
 	fields := strings.Fields(data)
 	if len(fields) != 2 {
-		return sha256Hex, releaseTime, probe.NewError(fmt.Errorf("Unknown release data `%s`", data))
+		return sha256Hex, releaseTime, "", probe.NewError(fmt.Errorf("Unknown release data `%s`", data))
 	}
 
 	sha256Hex = fields[0]
@@ -296,58 +290,64 @@ func parseReleaseData(data string) (sha256Hex string, releaseTime time.Time, err
 
 	fields = strings.SplitN(releaseInfo, ".", 2)
 	if len(fields) != 2 {
-		return sha256Hex, releaseTime, probe.NewError(fmt.Errorf("Unknown release information `%s`", releaseInfo))
+		return sha256Hex, releaseTime, "", probe.NewError(fmt.Errorf("Unknown release information `%s`", releaseInfo))
 	}
 	if fields[0] != "mc" {
-		return sha256Hex, releaseTime, probe.NewError(fmt.Errorf("Unknown release `%s`", releaseInfo))
+		return sha256Hex, releaseTime, "", probe.NewError(fmt.Errorf("Unknown release `%s`", releaseInfo))
 	}
 
 	releaseTime, err = releaseTagToReleaseTime(fields[1])
 	if err != nil {
-		return sha256Hex, releaseTime, err.Trace(fields...)
+		return sha256Hex, releaseTime, fields[1], err.Trace(fields...)
 	}
 
-	return sha256Hex, releaseTime, nil
+	return sha256Hex, releaseTime, fields[1], nil
 }
 
-func getLatestReleaseTime(timeout time.Duration) (sha256Hex string, releaseTime time.Time, err *probe.Error) {
-	data, err := DownloadReleaseData(timeout)
+func getLatestReleaseTime(customReleaseURL string, timeout time.Duration) (sha256Hex string, releaseTime time.Time, releaseTag string, err *probe.Error) {
+	data, err := DownloadReleaseData(customReleaseURL, timeout)
 	if err != nil {
-		return sha256Hex, releaseTime, err.Trace()
+		return sha256Hex, releaseTime, releaseTag, err.Trace()
 	}
 
 	return parseReleaseData(data)
 }
 
-func getDownloadURL(releaseTag string) (downloadURL string) {
+func getDownloadURL(customReleaseURL string, releaseTag string) (downloadURL string) {
 	// Check if we are docker environment, return docker update command
 	if IsDocker() {
 		// Construct release tag name.
 		return fmt.Sprintf("docker pull minio/mc:%s", releaseTag)
 	}
 
-	return mcReleaseURL + "archive/" + "mc." + releaseTag
-}
-
-func getUpdateInfo(timeout time.Duration) (updateMsg string, sha256Hex string, currentReleaseTime, latestReleaseTime time.Time, err *probe.Error) {
-	currentReleaseTime, err = GetCurrentReleaseTime()
+	u, err := url.Parse(customReleaseURL)
 	if err != nil {
-		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, err.Trace()
+		return mcReleaseURL + "archive/" + "mc." + releaseTag
 	}
 
-	sha256Hex, latestReleaseTime, err = getLatestReleaseTime(timeout)
+	u.Path = path.Dir(u.Path) + "/mc." + releaseTag
+	return u.String()
+}
+
+func getUpdateInfo(customReleaseURL string, timeout time.Duration) (updateMsg string, sha256Hex string, currentReleaseTime, latestReleaseTime time.Time, releaseTag string, err *probe.Error) {
+	currentReleaseTime, err = GetCurrentReleaseTime()
 	if err != nil {
-		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, err.Trace()
+		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, releaseTag, err.Trace()
+	}
+
+	sha256Hex, latestReleaseTime, releaseTag, err = getLatestReleaseTime(customReleaseURL, timeout)
+	if err != nil {
+		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, releaseTag, err.Trace()
 	}
 
 	var older time.Duration
 	var downloadURL string
 	if latestReleaseTime.After(currentReleaseTime) {
 		older = latestReleaseTime.Sub(currentReleaseTime)
-		downloadURL = getDownloadURL(releaseTimeToReleaseTag(latestReleaseTime))
+		downloadURL = getDownloadURL(customReleaseURL, releaseTag)
 	}
 
-	return prepareUpdateMessage(downloadURL, older), sha256Hex, currentReleaseTime, latestReleaseTime, nil
+	return prepareUpdateMessage(downloadURL, older), sha256Hex, currentReleaseTime, latestReleaseTime, releaseTag, nil
 }
 
 var (
@@ -420,11 +420,11 @@ func getUpdateReaderFromURL(u *url.URL, transport http.RoundTripper) (io.ReadClo
 	return newProgressReader(resp.Body, "mc", resp.ContentLength), nil
 }
 
-func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateStatusMsg string, err *probe.Error) {
+func doUpdate(customReleaseURL string, sha256Hex string, latestReleaseTime time.Time, releaseTag string, ok bool) (updateStatusMsg string, err *probe.Error) {
 	fmtReleaseTime := latestReleaseTime.Format(mcReleaseTagTimeLayout)
 	if !ok {
-		updateStatusMsg = colorGreenBold("mc update to version RELEASE.%s canceled.",
-			fmtReleaseTime)
+		updateStatusMsg = colorGreenBold("mc update to version %s canceled.",
+			releaseTag)
 		return updateStatusMsg, nil
 	}
 
@@ -433,9 +433,7 @@ func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateSta
 		return updateStatusMsg, probe.NewError(e)
 	}
 
-	releaseTag := releaseTimeToReleaseTag(latestReleaseTime)
-
-	u, e := url.Parse(getDownloadURL(releaseTag))
+	u, e := url.Parse(getDownloadURL(customReleaseURL, releaseTag))
 	if err != nil {
 		return updateStatusMsg, probe.NewError(e)
 	}
@@ -511,14 +509,16 @@ func (s updateMessage) JSON() string {
 }
 
 func mainUpdate(ctx *cli.Context) {
-	if len(ctx.Args()) != 0 {
-		cli.ShowCommandHelpAndExit(ctx, "update", -1)
+	if len(ctx.Args()) > 1 {
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, -1)
 	}
 
 	globalQuiet = ctx.Bool("quiet") || ctx.GlobalBool("quiet")
 	globalJSON = ctx.Bool("json") || ctx.GlobalBool("json")
 
-	updateMsg, sha256Hex, _, latestReleaseTime, err := getUpdateInfo(10 * time.Second)
+	customReleaseURL := ctx.Args().Get(0)
+
+	updateMsg, sha256Hex, _, latestReleaseTime, releaseTag, err := getUpdateInfo(customReleaseURL, 10*time.Second)
 	if err != nil {
 		errorIf(err, "Unable to update ‘mc’.")
 		os.Exit(-1)
@@ -540,10 +540,10 @@ func mainUpdate(ctx *cli.Context) {
 	})
 
 	// Avoid updating mc development, source builds.
-	if strings.Contains(updateMsg, mcReleaseURL) {
+	if updateMsg != "" {
 		var updateStatusMsg string
 		var err *probe.Error
-		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, true)
+		updateStatusMsg, err = doUpdate(customReleaseURL, sha256Hex, latestReleaseTime, releaseTag, true)
 		if err != nil {
 			errorIf(err, "Unable to update ‘mc’.")
 			os.Exit(-1)
