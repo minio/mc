@@ -166,7 +166,7 @@ func mainLicenseRegister(ctx *cli.Context) error {
 	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
 
 	alreadyRegistered := false
-	apiKey, e := getSubnetAPIKey(alias)
+	apiKey, _, e := getSubnetCreds(alias)
 	fatalIf(probe.NewError(e), "Error in fetching subnet API Key")
 	if len(apiKey) > 0 {
 		alreadyRegistered = true
