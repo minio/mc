@@ -83,7 +83,7 @@ EXAMPLES:
 
 func checkSupportInspectSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
 	}
 
 	if ctx.IsSet("export") && globalJSON {

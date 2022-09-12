@@ -99,7 +99,7 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 		}
 	}
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "profile", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "profile", 1) // last argument is exit code
 	}
 
 	if ctx.Int("duration") < 10 {

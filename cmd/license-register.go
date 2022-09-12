@@ -102,7 +102,7 @@ func (li licRegisterMessage) JSON() string {
 // checkLicenseRegisterSyntax - validate arguments passed by a user
 func checkLicenseRegisterSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "register", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "register", 1) // last argument is exit code
 	}
 }
 

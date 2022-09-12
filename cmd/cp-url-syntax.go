@@ -31,9 +31,9 @@ import (
 func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) {
 	if len(cliCtx.Args()) < 2 {
 		if isMvCmd {
-			cli.ShowCommandHelpAndExit(cliCtx, "mv", 1) // last argument is exit code.
+			showCommandHelpAndExit(cliCtx, "mv", 1) // last argument is exit code.
 		}
-		cli.ShowCommandHelpAndExit(cliCtx, "cp", 1) // last argument is exit code.
+		showCommandHelpAndExit(cliCtx, "cp", 1) // last argument is exit code.
 	}
 
 	// extract URLs.

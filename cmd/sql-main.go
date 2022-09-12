@@ -430,7 +430,7 @@ func getAndValidateArgs(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair, u
 // check sql input arguments.
 func checkSQLSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
-		cli.ShowCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
 	}
 }
 

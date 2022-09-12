@@ -62,7 +62,7 @@ var errBadUserGroupArg = errors.New("Last argument must be of the form user=xx o
 
 func checkAdminPolicySetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
 	}
 }
 

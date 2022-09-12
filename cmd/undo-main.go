@@ -258,7 +258,7 @@ func checkIfBucketIsVersioned(ctx context.Context, aliasedURL string) (versioned
 
 func checkUndoSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "undo", 1)
+		showCommandHelpAndExit(cliCtx, "undo", 1)
 	}
 }
 

@@ -74,7 +74,7 @@ EXAMPLES:
 // checkSupportTopAPISyntax - validate all the passed arguments
 func checkSupportTopAPISyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
 	}
 }
 

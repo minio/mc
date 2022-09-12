@@ -95,7 +95,7 @@ EXAMPLES:
 // checkSupportDiagSyntax - validate arguments passed by a user
 func checkSupportDiagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
 	}
 }
 

@@ -69,7 +69,7 @@ func (s serviceStopMessage) JSON() string {
 // checkAdminServiceStopSyntax - validate all the passed arguments
 func checkAdminServiceStopSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "stop", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "stop", 1) // last argument is exit code
 	}
 }
 

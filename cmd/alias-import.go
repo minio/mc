@@ -70,7 +70,7 @@ func checkAliasImportSyntax(ctx *cli.Context) {
 	argsNr := len(args)
 
 	if argsNr == 0 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1)
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),

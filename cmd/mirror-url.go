@@ -37,7 +37,7 @@ import (
 // checkMirrorSyntax(URLs []string)
 func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) (srcURL, tgtURL string) {
 	if len(cliCtx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(cliCtx, "mirror", 1) // last argument is exit code.
+		showCommandHelpAndExit(cliCtx, "mirror", 1) // last argument is exit code.
 	}
 
 	// extract URLs.

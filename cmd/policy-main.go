@@ -176,11 +176,11 @@ func checkPolicySyntax(ctx *cli.Context) {
 	argsLength := len(ctx.Args())
 	// Always print a help message when we have extra arguments
 	if argsLength > 3 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
 	}
 	// Always print a help message when no arguments specified
 	if argsLength < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		showCommandHelpAndExit(ctx, "policy", 1)
 	}
 
 	firstArg := ctx.Args().Get(0)
@@ -191,7 +191,7 @@ func checkPolicySyntax(ctx *cli.Context) {
 	case "set":
 		// Always expect three arguments when setting a policy permission.
 		if argsLength != 3 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			showCommandHelpAndExit(ctx, "policy", 1)
 		}
 		if accessPerms(secondArg) != accessNone &&
 			accessPerms(secondArg) != accessDownload &&
@@ -204,25 +204,25 @@ func checkPolicySyntax(ctx *cli.Context) {
 	case "set-json":
 		// Always expect three arguments when setting a policy permission.
 		if argsLength != 3 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			showCommandHelpAndExit(ctx, "policy", 1)
 		}
 	case "get", "get-json":
 		// get or get-json always expects two arguments
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			showCommandHelpAndExit(ctx, "policy", 1)
 		}
 	case "list":
 		// Always expect an argument after list cmd
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			showCommandHelpAndExit(ctx, "policy", 1)
 		}
 	case "links":
 		// Always expect an argument after links cmd
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+			showCommandHelpAndExit(ctx, "policy", 1)
 		}
 	default:
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		showCommandHelpAndExit(ctx, "policy", 1)
 	}
 }
 
@@ -387,7 +387,7 @@ func mainPolicy(ctx *cli.Context) error {
 		runPolicyLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
 	default:
 		// Shows command example and exit
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		showCommandHelpAndExit(ctx, "policy", 1)
 	}
 	return nil
 }
