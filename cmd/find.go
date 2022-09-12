@@ -85,6 +85,12 @@ func nameMatch(pattern, path string) bool {
 	return matched
 }
 
+func headerMatch(pattern, header string) bool {
+	pattern = strings.ToLower(pattern)
+	header = strings.ToLower(header)
+	return wildcard.Match(pattern, header)
+}
+
 // pathMatch reports whether path matches the wildcard pattern.
 // supports  '*' and '?' wildcards in the pattern string.
 // unlike path.Match(), considers a path as a flat name space
