@@ -107,6 +107,5 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 
 	globalConnReadDeadline = ctx.Duration("conn-read-deadline")
 	globalConnWriteDeadline = ctx.Duration("conn-write-deadline")
-
 	return nil
 }
