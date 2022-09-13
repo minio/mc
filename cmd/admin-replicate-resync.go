@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,26 +19,23 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminReplicateSubcommands = []cli.Command{
-	adminReplicateAddCmd,
-	adminReplicateEditCmd,
-	adminReplicateRemoveCmd,
-	adminReplicateInfoCmd,
-	adminReplicateStatusCmd,
-	adminReplicateResyncCmd,
+var adminReplicateResyncSubcommands = []cli.Command{
+	adminReplicateResyncStartCmd,
+	adminReplicateResyncStatusCmd,
+	adminReplicateResyncCancelCmd,
 }
 
-var adminReplicateCmd = cli.Command{
-	Name:            "replicate",
-	Usage:           "manage MinIO site replication",
-	Action:          mainAdminReplicate,
+var adminReplicateResyncCmd = cli.Command{
+	Name:            "resync",
+	Usage:           "resync content to site",
+	Action:          mainAdminReplicateResync,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminReplicateSubcommands,
+	Subcommands:     adminReplicateResyncSubcommands,
 	HideHelpCommand: true,
 }
 
-func mainAdminReplicate(ctx *cli.Context) error {
-	commandNotFound(ctx, adminReplicateSubcommands)
+func mainAdminReplicateResync(ctx *cli.Context) error {
+	commandNotFound(ctx, adminReplicateResyncSubcommands)
 	return nil
 }
