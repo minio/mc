@@ -68,8 +68,8 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 
 	if globalJSON {
 		if e != nil {
-			printMsg(speedTestResult{
-				Type:  driveSpeedTest,
+			printMsg(PerfTestResult{
+				Type:  DrivePerfTest,
 				Err:   e.Error(),
 				Final: true,
 			})
@@ -82,8 +82,8 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 				results = append(results, result)
 			}
 		}
-		printMsg(speedTestResult{
-			Type:        driveSpeedTest,
+		printMsg(PerfTestResult{
+			Type:        DrivePerfTest,
 			DriveResult: results,
 			Final:       true,
 		})
@@ -103,8 +103,8 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 
 	go func() {
 		if e != nil {
-			printMsg(speedTestResult{
-				Type: driveSpeedTest,
+			printMsg(PerfTestResult{
+				Type: DrivePerfTest,
 				Err:  e.Error(),
 			})
 			return
@@ -115,14 +115,14 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 			if result.Version != "" {
 				results = append(results, result)
 			} else {
-				p.Send(speedTestResult{
-					Type:        driveSpeedTest,
+				p.Send(PerfTestResult{
+					Type:        DrivePerfTest,
 					DriveResult: []madmin.DriveSpeedTestResult{},
 				})
 			}
 		}
-		p.Send(speedTestResult{
-			Type:        driveSpeedTest,
+		p.Send(PerfTestResult{
+			Type:        DrivePerfTest,
 			DriveResult: results,
 			Final:       true,
 		})

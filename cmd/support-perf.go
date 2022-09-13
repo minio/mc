@@ -128,12 +128,13 @@ func objectTestShortResult(result *madmin.SpeedTestResult) (msg string) {
 	return msg
 }
 
-func (s speedTestResult) String() string {
+func (p PerfTestResult) String() string {
 	return ""
 }
 
-func (s speedTestResult) JSON() string {
-	JSONBytes, e := json.MarshalIndent(s, "", "    ")
+// JSON - jsonified update message.
+func (p PerfTestResult) JSON() string {
+	JSONBytes, e := json.MarshalIndent(p, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(JSONBytes)
 }
