@@ -53,7 +53,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
 
   2. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
-     This requires that the tiers be added first.
+     Tiers must exist in MinIO. Use existing tiers or add new tiers.
      {{.Prompt}} mc tier add minio myminio MINIOTIER-1 --endpoint https://warm-minio-1.com \
          --access-key ACCESSKEY --secret-key SECRETKEY --bucket bucket1 --prefix prefix1
 
@@ -99,12 +99,12 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:   "storage-class",
-		Usage:  "storage class for current version to transition into. MinIO supports tiers configured via `mc-admin-tier-add`",
+		Usage:  "storage class for current version to transition into. MinIO supports tiers configured via `mc-admin-tier-add`.",
 		Hidden: true,
 	},
 	cli.StringFlag{
 		Name:  "tier",
-		Usage: "remote tier where current versions will transition to",
+		Usage: "remote tier where current versions transition to",
 	},
 	cli.BoolFlag{
 		Name:  "expired-object-delete-marker",
@@ -133,7 +133,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "noncurrentversion-tier",
-		Usage: "remote tier where noncurrent versions will transition to",
+		Usage: "remote tier where noncurrent versions transition to",
 	},
 }
 
