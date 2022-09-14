@@ -53,8 +53,15 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
 
   2. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
-     {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --storage-class "MINIOTIER-1" \
-          --noncurrentversion-transition-days "45" --noncurrentversion-transition-storage-class "MINIOTIER2" \
+     Tiers must exist in MinIO. Use existing tiers or add new tiers.
+     {{.Prompt}} mc tier add minio myminio MINIOTIER-1 --endpoint https://warm-minio-1.com \
+         --access-key ACCESSKEY --secret-key SECRETKEY --bucket bucket1 --prefix prefix1
+
+     {{.Prompt}} mc tier add minio myminio MINIOTIER-2 --endpoint https://warm-minio-2.com \
+         --access-key ACCESSKEY --secret-key SECRETKEY --bucket bucket2 --prefix prefix2
+
+     {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --tier "MINIOTIER-1" \
+          --noncurrentversion-transition-days "45" --noncurrentversion-tier "MINIOTIER-2" \
           myminio/mybucket/
 
   3. Add a lifecycle rule with an expiration and a noncurrent version expiration action for all objects with prefix doc/ in mybucket.
@@ -91,8 +98,13 @@ var ilmAddFlags = []cli.Flag{
 		Usage: "the number of days to transition",
 	},
 	cli.StringFlag{
-		Name:  "storage-class",
-		Usage: "storage class for current version to transition into. MinIO supports any warm tier configured via `mc-admin-tier-add`",
+		Name:   "storage-class",
+		Usage:  "storage class for current version to transition into. MinIO supports tiers configured via `mc-admin-tier-add`.",
+		Hidden: true,
+	},
+	cli.StringFlag{
+		Name:  "tier",
+		Usage: "remote tier where current versions transition to",
 	},
 	cli.BoolFlag{
 		Name:  "expired-object-delete-marker",
@@ -115,8 +127,13 @@ var ilmAddFlags = []cli.Flag{
 		Usage: "the number of noncurrent versions to retain. If there are this many more recent noncurrent versions they will be transitioned",
 	},
 	cli.StringFlag{
-		Name:  "noncurrentversion-transition-storage-class",
-		Usage: "storage class for noncurrent versions to transition into",
+		Name:   "noncurrentversion-transition-storage-class",
+		Usage:  "storage class for noncurrent versions to transition into",
+		Hidden: true,
+	},
+	cli.StringFlag{
+		Name:  "noncurrentversion-tier",
+		Usage: "remote tier where noncurrent versions transition to",
 	},
 }
 
