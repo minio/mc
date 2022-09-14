@@ -103,9 +103,8 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.StringFlag{
-		Name:   "tier",
-		Usage:  "remote tier where current versions will transition to",
-		Hidden: true,
+		Name:  "tier",
+		Usage: "remote tier where current versions will transition to",
 	},
 	cli.BoolFlag{
 		Name:  "expired-object-delete-marker",
@@ -133,9 +132,8 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.StringFlag{
-		Name:   "noncurrentversion-tier",
-		Usage:  "remote tier where noncurrent versions will transition to",
-		Hidden: true,
+		Name:  "noncurrentversion-tier",
+		Usage: "remote tier where noncurrent versions will transition to",
 	},
 }
 
