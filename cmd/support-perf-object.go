@@ -95,8 +95,8 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 
 	if globalJSON {
 		if e != nil {
-			printMsg(speedTestResult{
-				Type:  objectSpeedTest,
+			printMsg(PerfTestResult{
+				Type:  ObjectPerfTest,
 				Err:   e.Error(),
 				Final: true,
 			})
@@ -108,14 +108,14 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 			if result.Version == "" {
 				continue
 			}
-			printMsg(speedTestResult{
-				Type:         objectSpeedTest,
+			printMsg(PerfTestResult{
+				Type:         ObjectPerfTest,
 				ObjectResult: &result,
 			})
 		}
 
-		printMsg(speedTestResult{
-			Type:         objectSpeedTest,
+		printMsg(PerfTestResult{
+			Type:         ObjectPerfTest,
 			ObjectResult: &result,
 			Final:        true,
 		})
@@ -135,8 +135,8 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 
 	go func() {
 		if e != nil {
-			p.Send(speedTestResult{
-				Type:  objectSpeedTest,
+			p.Send(PerfTestResult{
+				Type:  ObjectPerfTest,
 				Err:   e.Error(),
 				Final: true,
 			})
@@ -145,13 +145,13 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 
 		var result madmin.SpeedTestResult
 		for result = range resultCh {
-			p.Send(speedTestResult{
-				Type:         objectSpeedTest,
+			p.Send(PerfTestResult{
+				Type:         ObjectPerfTest,
 				ObjectResult: &result,
 			})
 		}
-		p.Send(speedTestResult{
-			Type:         objectSpeedTest,
+		p.Send(PerfTestResult{
+			Type:         ObjectPerfTest,
 			ObjectResult: &result,
 			Final:        true,
 		})
