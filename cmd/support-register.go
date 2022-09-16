@@ -24,10 +24,6 @@ import (
 
 var supportRegisterFlags = append([]cli.Flag{
 	cli.StringFlag{
-		Name:  "api-key",
-		Usage: "SUBNET API key",
-	},
-	cli.StringFlag{
 		Name:  "name",
 		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},

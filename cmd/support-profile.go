@@ -34,7 +34,7 @@ import (
 
 // profile command flags.
 var (
-	profileFlags = []cli.Flag{
+	profileFlags = append([]cli.Flag{
 		cli.IntFlag{
 			Name:  "duration",
 			Usage: "start profiling for the specified duration in seconds",
@@ -45,8 +45,10 @@ var (
 			Usage: "profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
 			Value: "cpu,mem,block,mutex,threads,goroutines",
 		},
-	}
+	}, subnetCommonFlags...)
 )
+
+const profileFile = "profile.zip"
 
 var supportProfileCmd = cli.Command{
 	Name:            "profile",
@@ -132,7 +134,7 @@ func moveFile(sourcePath, destPath string) error {
 	return os.Remove(sourcePath)
 }
 
-func getProfileData(data io.ReadCloser) string {
+func saveProfileFile(data io.ReadCloser) {
 	// Create profile zip file
 	tmpFile, e := ioutil.TempFile("", "mc-profile-")
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
@@ -145,45 +147,70 @@ func getProfileData(data io.ReadCloser) string {
 	data.Close()
 	tmpFile.Close()
 
-	downloadPath := "profile.zip"
-	downloadedFile := downloadPath + "." + time.Now().Format(dateTimeFormatFilename)
+	downloadedFile := profileFile + "." + time.Now().Format(dateTimeFormatFilename)
 
-	fi, e := os.Stat(downloadPath)
+	fi, e := os.Stat(profileFile)
 	if e == nil && !fi.IsDir() {
-		e = moveFile(downloadPath, downloadedFile)
+		e = moveFile(profileFile, downloadedFile)
 		fatalIf(probe.NewError(e), "Unable to create a backup of profile.zip")
 	} else {
 		if !os.IsNotExist(e) {
 			fatal(probe.NewError(e), "Unable to save profile data")
 		}
 	}
-	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to save profile data")
-	return downloadPath
+	fatalIf(probe.NewError(moveFile(tmpFile.Name(), profileFile)), "Unable to save profile data")
 }
 
 // mainSupportProfile is the handle for "mc support profile" command.
 func mainSupportProfile(ctx *cli.Context) error {
 	// Check for command syntax
 	checkAdminProfileSyntax(ctx)
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
 
+	// Get the alias parameter from cli
+	aliasedURL := ctx.Args().Get(0)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+
+	// if `--airgap` is provided do not try to upload to SUBNET.
+	if !globalAirgapped {
+		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s to upload MinIO profile file, please use --airgap to upload manually", subnetBaseURL())
+	}
+
+	// Create a new MinIO Admin Client
+	client := getClient(aliasedURL)
+
+	// Main execution
+	execSupportProfile(ctx, client, alias, apiKey)
+	return nil
+}
+
+func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias string, apiKey string) {
+	var reqURL string
+	var headers map[string]string
 	profilers := ctx.String("type")
 	duration := ctx.Int("duration")
 
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client")
-		return nil
+	if !globalAirgapped {
+		// Retrieve subnet credentials (login/license) beforehand as
+		// it can take a long time to fetch the profile data
+		uploadURL := subnetUploadURL("profile", profileFile)
+		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, profileFile, apiKey)
 	}
 
-	console.Infof("Profiling '%s' for %d seconds... ", aliasedURL, duration)
+	console.Infof("Profiling '%s' for %d seconds... ", alias, duration)
 	data, e := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
-
 	fatalIf(probe.NewError(e), "Unable to save profile data")
+
+	saveProfileFile(data)
+
 	clr := color.New(color.FgGreen, color.Bold)
-	clr.Printf("saved successfully at '%s'\n", getProfileData(data))
-	return nil
+	if !globalAirgapped {
+		_, e := uploadFileToSubnet(alias, profileFile, reqURL, headers)
+		fatalIf(probe.NewError(e), "Unable to upload profile file to SUBNET portal")
+		if len(apiKey) > 0 {
+			setSubnetAPIKey(alias, apiKey)
+		}
+		clr.Println("uploaded successfully to SUBNET.")
+	} else {
+		clr.Printf("saved successfully at '%s'\n", profileFile)
+	}
 }
