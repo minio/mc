@@ -59,28 +59,33 @@ EXAMPLES:
 }
 
 type poolSummary struct {
-	setsCount   int
-	disksPerSet int
-	endpoints   set.StringSet
+	setsCount      int
+	drivesPerSet   int
+	driveTolerance int
+	endpoints      set.StringSet
 }
 
 type clusterInfo map[int]*poolSummary
 
 func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 	summary := make(clusterInfo)
+
 	for _, srv := range info.Servers {
 		for _, disk := range srv.Disks {
 			pool := summary[disk.PoolIndex]
 			if pool == nil {
-				pool = &poolSummary{endpoints: set.NewStringSet()}
+				pool = &poolSummary{
+					endpoints:      set.NewStringSet(),
+					driveTolerance: info.StandardParity(),
+				}
 			}
 			pool.endpoints.Add(srv.Endpoint)
 			for _, disk := range srv.Disks {
 				if disk.SetIndex > pool.setsCount {
 					pool.setsCount = disk.SetIndex
 				}
-				if disk.DiskIndex > pool.disksPerSet {
-					pool.disksPerSet = disk.DiskIndex
+				if disk.DiskIndex > pool.drivesPerSet {
+					pool.drivesPerSet = disk.DiskIndex
 				}
 
 			}
@@ -88,10 +93,10 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 		}
 	}
 	// We calculated max set index and max disk index
-	// increase by one to show the number of sets and disks
+	// increase by one to show the number of sets and drives
 	for _, pool := range summary {
 		pool.setsCount++
-		pool.disksPerSet++
+		pool.drivesPerSet++
 	}
 	return summary
 }
@@ -138,33 +143,15 @@ func (u clusterStruct) String() (msg string) {
 	}
 
 	// Initialization
-	var totalOnlineDisksCluster int
-	var totalOfflineDisksCluster int
+	var totalOnlineDrivesCluster int
+	var totalOfflineDrivesCluster int
 
 	// Color palette initialization
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
 	console.SetColor("InfoFail", color.New(color.FgRed, color.Bold))
 	console.SetColor("InfoWarning", color.New(color.FgYellow, color.Bold))
 
-	// MinIO server type default
-	backendType := madmin.Unknown
-
-	// Set the type of MinIO server ("FS", "Erasure", "Unknown")
-	switch v := u.Info.Backend.(type) {
-	case madmin.FSBackend:
-		backendType = madmin.FS
-	case madmin.ErasureBackend:
-		backendType = madmin.Erasure
-	case map[string]interface{}:
-		vt, ok := v["backendType"]
-		if ok {
-			backendTypeS, _ := vt.(string)
-			switch backendTypeS {
-			case "Erasure":
-				backendType = madmin.Erasure
-			}
-		}
-	}
+	backendType := u.Info.BackendType()
 
 	coloredDot := console.Colorize("Info", dot)
 	if madmin.ItemState(u.Info.Mode) == madmin.ItemInitializing {
@@ -188,24 +175,24 @@ func (u clusterStruct) String() (msg string) {
 
 			if backendType == madmin.Erasure {
 				// Info about drives on a server, only available for non-FS types
-				var OffDisks int
-				var OnDisks int
-				var dispNoOfDisks string
+				var OffDrives int
+				var OnDrives int
+				var dispNoOfDrives string
 				for _, disk := range srv.Disks {
 					switch disk.State {
 					case madmin.DriveStateOk, madmin.DriveStateUnformatted:
-						OnDisks++
+						OnDrives++
 					default:
-						OffDisks++
+						OffDrives++
 					}
 				}
 
-				totalDisksPerServer := OnDisks + OffDisks
-				totalOnlineDisksCluster += OnDisks
-				totalOfflineDisksCluster += OffDisks
+				totalDrivesPerServer := OnDrives + OffDrives
+				totalOnlineDrivesCluster += OnDrives
+				totalOfflineDrivesCluster += OffDrives
 
-				dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
-				msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize("InfoFail", "OK "))
+				dispNoOfDrives = strconv.Itoa(OnDrives) + "/" + strconv.Itoa(totalDrivesPerServer)
+				msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDrives, console.Colorize("InfoFail", "OK "))
 			}
 
 			msg += "\n"
@@ -246,27 +233,27 @@ func (u clusterStruct) String() (msg string) {
 
 		if backendType == madmin.Erasure {
 			// Info about drives on a server, only available for non-FS types
-			var OffDisks int
-			var OnDisks int
-			var dispNoOfDisks string
+			var OffDrives int
+			var OnDrives int
+			var dispNoOfDrives string
 			for _, disk := range srv.Disks {
 				switch disk.State {
 				case madmin.DriveStateOk, madmin.DriveStateUnformatted:
-					OnDisks++
+					OnDrives++
 				default:
-					OffDisks++
+					OffDrives++
 				}
 			}
 
-			totalDisksPerServer := OnDisks + OffDisks
-			totalOnlineDisksCluster += OnDisks
-			totalOfflineDisksCluster += OffDisks
+			totalDrivesPerServer := OnDrives + OffDrives
+			totalOnlineDrivesCluster += OnDrives
+			totalOfflineDrivesCluster += OffDrives
 			clr := "Info"
-			if OnDisks != totalDisksPerServer {
+			if OnDrives != totalDrivesPerServer {
 				clr = "InfoWarning"
 			}
-			dispNoOfDisks = strconv.Itoa(OnDisks) + "/" + strconv.Itoa(totalDisksPerServer)
-			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDisks, console.Colorize(clr, "OK "))
+			dispNoOfDrives = strconv.Itoa(OnDrives) + "/" + strconv.Itoa(totalDrivesPerServer)
+			msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDrives, console.Colorize(clr, "OK "))
 
 			// Print pools belonging to this server
 			var prettyPools []string
@@ -283,7 +270,7 @@ func (u clusterStruct) String() (msg string) {
 		msg += fmt.Sprintf("Pools:\n")
 		for pool, summary := range clusterSummary {
 			msg += fmt.Sprintf("   %s, Erasure sets: %d, Disks per erasure set: %d\n",
-				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.disksPerSet)
+				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.drivesPerSet)
 		}
 	}
 
@@ -303,7 +290,7 @@ func (u clusterStruct) String() (msg string) {
 	}
 	if backendType == madmin.Erasure {
 		// Summary on total no of online and total
-		// number of offline disks at the Cluster level
+		// number of offline drives at the Cluster level
 		bkInfo, ok := u.Info.Backend.(madmin.ErasureBackend)
 		if ok {
 			msg += fmt.Sprintf("%s online, %s offline\n",
@@ -311,8 +298,8 @@ func (u clusterStruct) String() (msg string) {
 				english.Plural(bkInfo.OfflineDisks, "drive", ""))
 		} else {
 			msg += fmt.Sprintf("%s online, %s offline\n",
-				english.Plural(totalOnlineDisksCluster, "drive", ""),
-				english.Plural(totalOfflineDisksCluster, "drive", ""))
+				english.Plural(totalOnlineDrivesCluster, "drive", ""),
+				english.Plural(totalOfflineDrivesCluster, "drive", ""))
 		}
 	}
 
