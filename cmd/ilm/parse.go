@@ -27,6 +27,12 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
+// Used in tags. Ex: --tags "key1=value1&key2=value2&key3=value3"
+const (
+	tagSeperator    string = "&"
+	keyValSeperator string = "="
+)
+
 // Extracts the tags provided by user. The tagfilter array will be put in lifecycleRule structure.
 func extractILMTags(tagLabelVal string) []lifecycle.Tag {
 	var ilmTagKVList []lifecycle.Tag
