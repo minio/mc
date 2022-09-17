@@ -21,8 +21,8 @@ import "github.com/minio/cli"
 
 var supportTopSubcommands = []cli.Command{
 	supportTopAPICmd,
+	supportTopDriveCmd,
 	supportTopLocksCmd,
-	supportTopDiskCmd,
 }
 
 var supportTopCmd = cli.Command{

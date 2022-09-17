@@ -262,10 +262,10 @@ func (m *scannerMetricsUI) View() string {
 	}
 	if sc.CurrentCycle > 0 {
 		addRowF(title("Current cycle:")+"         %s; Started: %v", ui(sc.CurrentCycle), console.Colorize("metrics-date", sc.CurrentStarted))
-		addRowF(title("Active disks:")+"          %s", ui(uint64(len(sc.ActivePaths))))
+		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
 	} else {
 		addRowF(title("Current cycle:") + "         (between cycles)")
-		addRowF(title("Active disks:")+"          %s", ui(uint64(len(sc.ActivePaths))))
+		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
 	}
 	addRow("-------------------------------------- Last Minute Statistics ---------------------------------------")
 	objs := uint64(0)

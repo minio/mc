@@ -269,7 +269,7 @@ func (u clusterStruct) String() (msg string) {
 	if backendType == madmin.Erasure {
 		msg += fmt.Sprintf("Pools:\n")
 		for pool, summary := range clusterSummary {
-			msg += fmt.Sprintf("   %s, Erasure sets: %d, Disks per erasure set: %d\n",
+			msg += fmt.Sprintf("   %s, Erasure sets: %d, Drives per erasure set: %d\n",
 				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.drivesPerSet)
 		}
 	}
