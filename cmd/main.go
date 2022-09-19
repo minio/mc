@@ -184,11 +184,12 @@ func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 
 	// Do the good-looking printing now
 	fmt.Fprintln(&errMsg, "Invalid command usage,", err.Error())
-	fmt.Fprintln(&errMsg, "")
-	fmt.Fprintln(&errMsg, "SUPPORTED FLAGS:")
-	for _, h := range help {
-		spaces := string(bytes.Repeat([]byte{' '}, maxWidth-len(h.flagName)))
-		fmt.Fprintf(&errMsg, "   %s%s%s\n", h.flagName, spaces, h.usage)
+	if len(help) > 0 {
+		fmt.Fprintln(&errMsg, "\nSUPPORTED FLAGS:")
+		for _, h := range help {
+			spaces := string(bytes.Repeat([]byte{' '}, maxWidth-len(h.flagName)))
+			fmt.Fprintf(&errMsg, "   %s%s%s\n", h.flagName, spaces, h.usage)
+		}
 	}
 	console.Fatal(errMsg.String())
 	return err
