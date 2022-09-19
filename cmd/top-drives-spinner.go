@@ -29,7 +29,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-type topDiskUI struct {
+type topDriveUI struct {
 	spinner  spinner.Model
 	quitting bool
 
@@ -37,23 +37,23 @@ type topDiskUI struct {
 	count         int
 	pool, maxPool int
 
-	disksInfo map[string]madmin.Disk
+	drivesInfo map[string]madmin.Disk
 
 	prevTopMap map[string]madmin.DiskIOStats
 	currTopMap map[string]madmin.DiskIOStats
 }
 
-type topDiskResult struct {
+type topDriveResult struct {
 	final    bool
 	diskName string
 	stats    madmin.DiskIOStats
 }
 
-func initTopDiskUI(disks []madmin.Disk, count int) *topDiskUI {
+func initTopDriveUI(disks []madmin.Disk, count int) *topDriveUI {
 	maxPool := 0
-	disksInfo := make(map[string]madmin.Disk)
+	drivesInfo := make(map[string]madmin.Disk)
 	for i := range disks {
-		disksInfo[disks[i].Endpoint] = disks[i]
+		drivesInfo[disks[i].Endpoint] = disks[i]
 		if disks[i].PoolIndex > maxPool {
 			maxPool = disks[i].PoolIndex
 		}
@@ -62,23 +62,23 @@ func initTopDiskUI(disks []madmin.Disk, count int) *topDiskUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	return &topDiskUI{
+	return &topDriveUI{
 		count:      count,
 		sortBy:     sortByName,
 		pool:       0,
 		maxPool:    maxPool,
-		disksInfo:  disksInfo,
+		drivesInfo: drivesInfo,
 		spinner:    s,
 		prevTopMap: make(map[string]madmin.DiskIOStats),
 		currTopMap: make(map[string]madmin.DiskIOStats),
 	}
 }
 
-func (m *topDiskUI) Init() tea.Cmd {
+func (m *topDriveUI) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-func (m *topDiskUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *topDriveUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -110,7 +110,7 @@ func (m *topDiskUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, nil
-	case topDiskResult:
+	case topDriveResult:
 		m.prevTopMap[msg.diskName] = m.currTopMap[msg.diskName]
 		m.currTopMap[msg.diskName] = msg.stats
 		if msg.final {
@@ -128,7 +128,7 @@ func (m *topDiskUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-type diskIOStat struct {
+type driveIOStat struct {
 	endpoint   string
 	util       float64
 	await      float64
@@ -139,7 +139,7 @@ type diskIOStat struct {
 	used       uint64
 }
 
-func generateDiskStat(disk madmin.Disk, curr, prev madmin.DiskIOStats, interval uint64) (d diskIOStat) {
+func generateDriveStat(disk madmin.Disk, curr, prev madmin.DiskIOStats, interval uint64) (d driveIOStat) {
 	d.endpoint = disk.Endpoint
 	d.used = 100 * disk.UsedSpace / disk.TotalSpace
 	d.util = 100 * float64(curr.TotalTicks-prev.TotalTicks) / float64(interval)
@@ -192,7 +192,7 @@ func (s sortIOStat) String() string {
 	return "unknown"
 }
 
-func (m *topDiskUI) View() string {
+func (m *topDriveUI) View() string {
 	var s strings.Builder
 	s.WriteString("\n")
 
@@ -210,16 +210,16 @@ func (m *topDiskUI) View() string {
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
 
-	table.SetHeader([]string{"Disk", "used", "tps", "read", "write", "discard", "await", "util"})
+	table.SetHeader([]string{"Drive", "used", "tps", "read", "write", "discard", "await", "util"})
 
-	var data []diskIOStat
+	var data []driveIOStat
 
 	for disk := range m.currTopMap {
-		currDisk, ok := m.disksInfo[disk]
+		currDisk, ok := m.drivesInfo[disk]
 		if !ok || currDisk.PoolIndex != m.pool {
 			continue
 		}
-		data = append(data, generateDiskStat(m.disksInfo[disk], m.currTopMap[disk], m.prevTopMap[disk], 1000))
+		data = append(data, generateDriveStat(m.drivesInfo[disk], m.currTopMap[disk], m.prevTopMap[disk], 1000))
 	}
 
 	sort.Slice(data, func(i, j int) bool {
@@ -251,7 +251,7 @@ func (m *topDiskUI) View() string {
 	dataRender := make([][]string, 0, len(data))
 	for _, d := range data {
 		endpoint := d.endpoint
-		diskInfo := m.disksInfo[endpoint]
+		diskInfo := m.drivesInfo[endpoint]
 		if diskInfo.Healing {
 			endpoint += "!"
 		}
