@@ -177,6 +177,17 @@ func mainSupportPerf(ctx *cli.Context) error {
 func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
 
+	if len(apiKey) == 0 {
+		// api key not passed as flag. check if it's available in the config
+		var e error
+		apiKey, e = getSubnetAPIKey(alias)
+
+		// Non-registered execution allowed only in debug+airgapped mode
+		if !(globalDebug && globalAirgapped) {
+			fatalIf(probe.NewError(e), "Unable to retrieve SUBNET API key")
+		}
+	}
+
 	results := runPerfTests(ctx, aliasedURL, perfType)
 	if globalJSON {
 		// No file to be saved or uploaded to SUBNET in case of `--json`
