@@ -135,11 +135,15 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- 
 
 	go func() {
 		if e != nil {
-			p.Send(PerfTestResult{
+			r := PerfTestResult{
 				Type:  ObjectPerfTest,
 				Err:   e.Error(),
 				Final: true,
-			})
+			}
+			p.Send(r)
+			if outCh != nil {
+				outCh <- r
+			}
 			return
 		}
 

@@ -93,11 +93,15 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 		for {
 			select {
 			case e := <-errorCh:
-				p.Send(PerfTestResult{
+				r := PerfTestResult{
 					Type:  NetPerfTest,
 					Err:   e.Error(),
 					Final: true,
-				})
+				}
+				p.Send(r)
+				if outCh != nil {
+					outCh <- r
+				}
 				return
 			case result := <-resultCh:
 				r := PerfTestResult{

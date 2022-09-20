@@ -103,10 +103,15 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- P
 
 	go func() {
 		if e != nil {
-			printMsg(PerfTestResult{
-				Type: DrivePerfTest,
-				Err:  e.Error(),
-			})
+			r := PerfTestResult{
+				Type:  DrivePerfTest,
+				Err:   e.Error(),
+				Final: true,
+			}
+			p.Send(r)
+			if outCh != nil {
+				outCh <- r
+			}
 			return
 		}
 
