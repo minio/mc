@@ -85,7 +85,7 @@ This file keeps previous config file version details.
 ``share`` directory keeps metadata information of all upload and download URL for objects which is used by  MinIO client ``mc share`` command. 
 
 ## Explore Further
-* [MinIO Client Complete Guide](https://docs.min.io/docs/minio-client-complete-guide)
+* [MinIO Client Complete Guide](https://min.io/docs/minio/linux/reference/minio-mc.html?ref=gh)
 
 
 
