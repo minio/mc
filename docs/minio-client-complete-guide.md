@@ -1531,7 +1531,7 @@ mc tag set --versions --rewind 7d play/testbucket/testobject "status=old"
 
 <a name="admin"></a>
 ### Command `admin`
-Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
+Please visit [here](https://min.io/docs/minio/linux/reference/minio-mc-admin.html?ref=gh) for a more comprehensive admin guide.
 
 <a name="alias"></a>
 ### Command `alias`
