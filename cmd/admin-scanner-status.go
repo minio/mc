@@ -111,12 +111,19 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		ByHost:   false,
 	}
 	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
+	if globalJSON {
+		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+			printMsg(metricsMessage{RealtimeMetrics: metrics})
+		})
+
+		if e != nil && !errors.Is(e, context.Canceled) {
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+		}
+		return nil
+	}
+
 	go func() {
 		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
-			if globalJSON {
-				printMsg(metricsMessage{RealtimeMetrics: metrics})
-				return
-			}
 			ui.Send(metrics)
 		})
 
@@ -125,11 +132,9 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		}
 	}()
 
-	if !globalJSON {
-		if e := ui.Start(); e != nil {
-			cancel()
-			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
-		}
+	if e := ui.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
 	}
 
 	return nil
