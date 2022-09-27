@@ -494,15 +494,15 @@ func getSubnetCreds(alias string) (string, string, error) {
 // getSubnetAPIKey - returns the SUBNET API key.
 // Returns error if the cluster is not registered with SUBNET.
 func getSubnetAPIKey(alias string) (string, error) {
-	apiKey, _, e := getSubnetCreds(alias)
+	apiKey, lic, e := getSubnetCreds(alias)
 	if e != nil {
 		return "", e
 	}
-	if len(apiKey) > 0 {
-		return apiKey, nil
+	if len(apiKey) == 0 && len(lic) == 0 {
+		e = fmt.Errorf("Please register the cluster first by running 'mc license register %s'", alias)
+		return "", e
 	}
-	e = fmt.Errorf("Please register the cluster first by running 'mc support register %s'", alias)
-	return "", e
+	return apiKey, nil
 }
 
 func getSubnetAPIKeyUsingLicense(lic string) (string, error) {
