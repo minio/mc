@@ -110,5 +110,9 @@ func performLicenseUpdate(licFile string, alias string) licUpdateMessage {
 	}
 
 	setSubnetLicense(alias, lic)
+	if len(li.APIKey) > 0 {
+		setSubnetAPIKey(alias, li.APIKey)
+	}
+
 	return lum
 }
