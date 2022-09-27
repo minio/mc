@@ -170,11 +170,6 @@ func mainSupportProfile(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
 
-	// if `--airgap` is provided do not try to upload to SUBNET.
-	if !globalAirgapped {
-		fatalIf(checkURLReachable(subnetBaseURL()).Trace(aliasedURL), "Unable to reach %s to upload MinIO profile file, please use --airgap to upload manually", subnetBaseURL())
-	}
-
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
 
