@@ -501,7 +501,7 @@ func getSubnetAPIKey(alias string) (string, error) {
 	if len(apiKey) > 0 {
 		return apiKey, nil
 	}
-	e = fmt.Errorf("Please register the cluster first by running 'mc support register %s', or use --airgap flag", alias)
+	e = fmt.Errorf("Please register the cluster first by running 'mc support register %s'", alias)
 	return "", e
 }
 
