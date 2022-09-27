@@ -28,7 +28,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
@@ -93,18 +93,26 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string) error {
 		for {
 			select {
 			case e := <-errorCh:
-				p.Send(PerfTestResult{
+				r := PerfTestResult{
 					Type:  NetPerfTest,
 					Err:   e.Error(),
 					Final: true,
-				})
+				}
+				p.Send(r)
+				if outCh != nil {
+					outCh <- r
+				}
 				return
 			case result := <-resultCh:
-				p.Send(PerfTestResult{
+				r := PerfTestResult{
 					Type:      NetPerfTest,
 					NetResult: &result,
 					Final:     true,
-				})
+				}
+				p.Send(r)
+				if outCh != nil {
+					outCh <- r
+				}
 				return
 			default:
 				p.Send(PerfTestResult{
