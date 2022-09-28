@@ -43,7 +43,7 @@ var licenseRegisterCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainLicenseRegister,
 	Before:       setGlobalsFromContext,
-	Flags:        append(licenseRegisterFlags, globalFlags...),
+	Flags:        append(licenseRegisterFlags, supportGlobalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

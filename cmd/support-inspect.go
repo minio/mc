@@ -58,7 +58,7 @@ var supportInspectCmd = cli.Command{
 	Action:          mainSupportInspect,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportInspectFlags, globalFlags...),
+	Flags:           append(supportInspectFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -100,6 +100,9 @@ func mainSupportInspect(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 	encrypt := ctx.Bool("encrypt")
+
+	alias, _ := url2Alias(aliasedURL)
+	validateClusterRegistered(alias, false)
 
 	console.SetColor("File", color.New(color.FgWhite, color.Bold))
 	console.SetColor("Key", color.New(color.FgHiRed, color.Bold))
