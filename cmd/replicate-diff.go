@@ -69,7 +69,7 @@ EXAMPLES:
 // checkReplicateDiffSyntax - validate all the passed arguments
 func checkReplicateDiffSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
 }
 

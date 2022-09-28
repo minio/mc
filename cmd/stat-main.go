@@ -97,7 +97,7 @@ EXAMPLES:
 // parseAndCheckStatSyntax - parse and validate all the passed arguments
 func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
 	}
 
 	args := cliCtx.Args()

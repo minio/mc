@@ -257,7 +257,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	}
 	if !cliCtx.Args().Present() && !isStdin {
 		exitCode := 1
-		cli.ShowCommandHelpAndExit(cliCtx, "rm", exitCode)
+		showCommandHelpAndExit(cliCtx, "rm", exitCode)
 	}
 
 	// For all recursive or versions bulk deletion operations make sure to check for 'force' flag.

@@ -98,7 +98,7 @@ func (s removeBucketMessage) JSON() string {
 func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
 		exitCode := 1
-		cli.ShowCommandHelpAndExit(cliCtx, "rb", exitCode)
+		showCommandHelpAndExit(cliCtx, "rb", exitCode)
 	}
 	// Set command flags from context.
 	isForce := cliCtx.Bool("force")

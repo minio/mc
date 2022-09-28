@@ -57,7 +57,7 @@ EXAMPLES:
 // checkReplicateImportSyntax - validate all the passed arguments
 func checkReplicateImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
 	}
 }
 

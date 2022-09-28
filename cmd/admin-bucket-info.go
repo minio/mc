@@ -142,7 +142,7 @@ EXAMPLES:
 // checkAdminBucketInfoSyntax - validate all the passed arguments
 func checkAdminBucketInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 

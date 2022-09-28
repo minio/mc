@@ -120,7 +120,7 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass st
 // check pipe input arguments.
 func checkPipeSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code.
 	}
 }
 

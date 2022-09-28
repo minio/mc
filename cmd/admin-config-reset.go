@@ -92,7 +92,7 @@ func (u configResetMessage) JSON() string {
 // checkAdminConfigResetSyntax - validate all the passed arguments
 func checkAdminConfigResetSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "reset", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "reset", 1) // last argument is exit code
 	}
 }
 

@@ -57,7 +57,7 @@ EXAMPLES:
 
 func checkIAMExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
 	}
 }
 

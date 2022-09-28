@@ -157,7 +157,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 	case 1:
 		// cannot use alias by the name 'drive' or 'net'
 		if args[0] == "drive" || args[0] == "net" || args[0] == "object" {
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
+			showCommandHelpAndExit(ctx, "perf", 1)
 		}
 		aliasedURL = args[0]
 
@@ -165,7 +165,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 		perfType = args[0]
 		aliasedURL = args[1]
 	default:
-		cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 	}
 
 	// Main execution

@@ -97,7 +97,7 @@ func configureSubnetWebhook(alias string, enable bool) {
 
 func validateLogsToggleCmd(ctx *cli.Context, cmdName string) string {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, cmdName, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, cmdName, 1) // last argument is exit code
 	}
 	alias, _ := url2Alias(ctx.Args().Get(0))
 	return alias

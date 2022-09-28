@@ -111,7 +111,7 @@ func (u configGetMessage) JSON() string {
 // checkAdminConfigGetSyntax - validate all the passed arguments
 func checkAdminConfigGetSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
 	}
 }
 
