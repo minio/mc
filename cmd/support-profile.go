@@ -43,7 +43,7 @@ var (
 		cli.StringFlag{
 			Name:  "type",
 			Usage: "profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
-			Value: "cpu,mem,block,mutex,threads,goroutines",
+			Value: "cpu,mem,block,mutex,goroutines",
 		},
 	}, subnetCommonFlags...)
 )
