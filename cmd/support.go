@@ -30,6 +30,12 @@ import (
 
 const featureToggleMessageTag = "FeatureToggleMessage"
 
+var supportGlobalFlags = append(globalFlags, cli.BoolFlag{
+	Name:   "dev",
+	Usage:  "Development mode",
+	Hidden: true,
+})
+
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
 	supportCallhomeCmd,
@@ -88,12 +94,20 @@ func featureStatusStr(enabled bool) string {
 	return "disabled"
 }
 
-func validateClusterRegistered(alias string) string {
-	apiKey := getSubnetAPIKeyFromConfig(alias)
-	if len(apiKey) == 0 {
-		e := fmt.Errorf("Please register the cluster first by running 'mc support register %s'", alias)
-		fatalIf(probe.NewError(e), "Cluster not registered.")
+func validateClusterRegistered(alias string, cmdTalksToSubnet bool) string {
+	// Non-registered execution allowed only in following scenarios
+	// command doesn't talk to subnet: dev mode (`--dev` passed)
+	// command talks to subnet: dev+airgapped mode (both `--dev` and `--airgap` passed)
+	requireRegistration := !globalDevMode
+	if cmdTalksToSubnet {
+		requireRegistration = !(globalDevMode && globalAirgapped)
 	}
+
+	apiKey, e := getSubnetAPIKey(alias)
+	if requireRegistration {
+		fatalIf(probe.NewError(e), "")
+	}
+
 	return apiKey
 }
 

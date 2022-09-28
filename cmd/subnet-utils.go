@@ -65,11 +65,6 @@ mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 			Name:  "airgap",
 			Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		},
-		cli.BoolFlag{
-			Name:   "dev",
-			Usage:  "Development mode - talks to local SUBNET",
-			Hidden: true,
-		},
 		cli.StringFlag{
 			Name:  "api-key",
 			Usage: "API Key of the account on SUBNET",
@@ -725,10 +720,6 @@ func validateSubnetFlags(ctx *cli.Context) error {
 			return errors.New("--json is applicable only when --airgap is also passed")
 		}
 		return nil
-	}
-
-	if globalDevMode {
-		return errors.New("--dev is not applicable in airgap mode")
 	}
 
 	if len(ctx.String("api-key")) > 0 {

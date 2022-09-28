@@ -33,12 +33,6 @@ var supportLogsSubcommands = []cli.Command{
 	supportLogsShowCmd,
 }
 
-var logsConfigureFlags = append(globalFlags, cli.BoolFlag{
-	Name:   "dev",
-	Usage:  "development mode - talks to local SUBNET",
-	Hidden: true,
-})
-
 var supportLogsCmd = cli.Command{
 	Name:            "logs",
 	Usage:           "configure/display MinIO console logs",
@@ -75,15 +69,14 @@ func configureSubnetWebhook(alias string, enable bool) {
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	apiKey := validateClusterRegistered(alias)
-
-	enableStr := "off"
+	var input string
 	if enable {
-		enableStr = "on"
+		apiKey := validateClusterRegistered(alias, true)
+		input = fmt.Sprintf("logger_webhook:subnet endpoint=%s auth_token=%s enable=on",
+			subnetLogWebhookURL(), apiKey)
+	} else {
+		input = "logger_webhook:subnet enable=off"
 	}
-
-	input := fmt.Sprintf("logger_webhook:subnet endpoint=%s auth_token=%s enable=%s",
-		subnetLogWebhookURL(), apiKey, enableStr)
 
 	// Call set config API
 	_, e := client.SetConfigKV(globalContext, input)

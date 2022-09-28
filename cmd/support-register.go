@@ -35,7 +35,7 @@ var supportRegisterCmd = cli.Command{
 	OnUsageError:       onUsageError,
 	Action:             mainSupportRegister,
 	Before:             setGlobalsFromContext,
-	Flags:              append(supportRegisterFlags, globalFlags...),
+	Flags:              append(supportRegisterFlags, supportGlobalFlags...),
 	CustomHelpTemplate: "Please use 'mc license register'",
 }
 
