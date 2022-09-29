@@ -29,10 +29,10 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminPolicyAddCmd = cli.Command{
-	Name:         "add",
-	Usage:        "add new policy",
-	Action:       mainAdminPolicyAdd,
+var adminPolicyCreateCmd = cli.Command{
+	Name:         "create",
+	Usage:        "create a new IAM policy",
+	Action:       mainAdminPolicyCreate,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
@@ -52,15 +52,15 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Add a new canned policy 'writeonly'.
+  1. Create a new canned policy 'writeonly'.
      {{.Prompt}} {{.HelpName}} myminio writeonly /tmp/writeonly.json
  `,
 }
 
-// checkAdminPolicyAddSyntax - validate all the passed arguments
-func checkAdminPolicyAddSyntax(ctx *cli.Context) {
+// checkAdminPolicyCreateSyntax - validate all the passed arguments
+func checkAdminPolicyCreateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "create", 1) // last argument is exit code
 	}
 }
 
@@ -95,8 +95,8 @@ func (u userPolicyMessage) String() string {
 		return console.Colorize("PolicyName", u.Policy)
 	case "remove":
 		return console.Colorize("PolicyMessage", "Removed policy `"+u.Policy+"` successfully.")
-	case "add":
-		return console.Colorize("PolicyMessage", "Added policy `"+u.Policy+"` successfully.")
+	case "create":
+		return console.Colorize("PolicyMessage", "Created policy `"+u.Policy+"` successfully.")
 	case "set", "unset":
 		return console.Colorize("PolicyMessage",
 			fmt.Sprintf("Policy `%s` is %s on %s `%s`", u.Policy, u.op, u.accountType(), u.UserOrGroup))
@@ -116,9 +116,9 @@ func (u userPolicyMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// mainAdminPolicyAdd is the handle for "mc admin policy add" command.
-func mainAdminPolicyAdd(ctx *cli.Context) error {
-	checkAdminPolicyAddSyntax(ctx)
+// mainAdminPolicyCreate is the handle for "mc admin policy add" command.
+func mainAdminPolicyCreate(ctx *cli.Context) error {
+	checkAdminPolicyCreateSyntax(ctx)
 
 	console.SetColor("PolicyMessage", color.New(color.FgGreen))
 
@@ -133,10 +133,10 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), policy)).Trace(args...), "Unable to add new policy")
+	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), policy)).Trace(args...), "Unable to create new policy")
 
 	printMsg(userPolicyMessage{
-		op:     "add",
+		op:     "create",
 		Policy: args.Get(1),
 	})
 
