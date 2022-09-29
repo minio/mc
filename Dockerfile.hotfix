@@ -1,0 +1,17 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6
+
+ARG RELEASE
+
+LABEL maintainer="MinIO Inc <dev@min.io>"
+
+COPY CREDITS /licenses/CREDITS
+COPY LICENSE /licenses/LICENSE
+
+RUN \
+    microdnf update --nodocs && \
+    microdnf install curl ca-certificates shadow-utils --nodocs && \
+    microdnf clean all && \
+    curl -s -q https://dl.min.io/client/mc/hotfixes/linux-amd64/archive/mc.${RELEASE} -o /usr/bin/mc && \
+    chmod +x /usr/bin/mc
+
+ENTRYPOINT ["mc"]

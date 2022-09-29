@@ -96,7 +96,7 @@ var stop bool
 // Validate command line arguments.
 func checkPingSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "ping", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "ping", 1) // last argument is exit code
 	}
 }
 
@@ -114,11 +114,11 @@ var colorMap = template.FuncMap{
 }
 
 // PingDist is the template for ping result in distributed mode
-const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
+const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{" "}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{" "}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
 {{end}}`
 
 // Ping is the template for ping result
-const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0" .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{"\t"}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{"\t"}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
+const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorWhite ":"}}{{colorWhite .Endpoint.Port}}{{end}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{" "}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{" "}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
 
 // PingTemplateDist - captures ping template
 var PingTemplateDist = template.Must(template.New("ping-list").Funcs(colorMap).Parse(PingDist))
@@ -154,6 +154,7 @@ type EndPointStats struct {
 	Min       string   `json:"min"`
 	Max       string   `json:"max"`
 	Average   string   `json:"average"`
+	DNS       string   `json:"dns"`
 	CountErr  string   `json:"error-count,omitempty"`
 	Error     string   `json:"error,omitempty"`
 	Roundtrip string   `json:"roundtrip"`
@@ -171,7 +172,8 @@ type serverStats struct {
 	max        uint64
 	sum        uint64
 	avg        uint64
-	errorCount int // used to keep a track of consecutive errors
+	dns        uint64 // last DNS resolving time
+	errorCount int    // used to keep a track of consecutive errors
 	err        string
 	counter    int // used to find the average, acts as denominator
 }
@@ -220,7 +222,8 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 			Min:       trimToTwoDecimal(time.Duration(stat.min)),
 			Max:       trimToTwoDecimal(time.Duration(stat.max)),
 			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
-			CountErr:  strconv.Itoa(stat.errorCount),
+			DNS:       time.Duration(stat.dns).String(),
+			CountErr:  pad(strconv.Itoa(stat.errorCount), " ", 3-len(strconv.Itoa(stat.errorCount)), false),
 			Error:     stat.err,
 			Roundtrip: trimToTwoDecimal(result.ResponseTime),
 		}
@@ -230,7 +233,7 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	}
 	printMsg(PingResult{
 		Status:         "success",
-		Counter:        strconv.Itoa(index),
+		Counter:        pad(strconv.Itoa(index), " ", 3-len(strconv.Itoa(index)), true),
 		EndPointsStats: endPointStats,
 	})
 
@@ -243,17 +246,44 @@ func trimToTwoDecimal(d time.Duration) string {
 	switch {
 	case d >= time.Second:
 		f = float64(d) / float64(time.Second)
-		unit = "s"
+
+		unit = pad("s", " ", 7-len(fmt.Sprintf("%.02f", f)), false)
 	default:
 		f = float64(d) / float64(time.Millisecond)
-		unit = "ms"
+		unit = pad("ms", " ", 6-len(fmt.Sprintf("%.02f", f)), false)
 	}
 	return fmt.Sprintf("%.02f%s", f, unit)
 }
 
+// pad adds the `count` number of p string to string s. left true adds to the
+// left and vice-versa. This is done for proper alignment of ping command
+// ex:- padding 2 white space to right '90.18s' - > '90.18s  '
+func pad(s, p string, count int, left bool) string {
+	ret := make([]byte, len(p)*count+len(s))
+
+	if left {
+		b := ret[:len(p)*count]
+		bp := copy(b, p)
+		for bp < len(b) {
+			copy(b[bp:], b[:bp])
+			bp *= 2
+		}
+		copy(ret[len(b):], s)
+	} else {
+		b := ret[len(s) : len(p)*count+len(s)]
+		bp := copy(b, p)
+		for bp < len(b) {
+			copy(b[bp:], b[:bp])
+			bp *= 2
+		}
+		copy(ret[:len(s)], s)
+	}
+	return string(ret)
+}
+
 func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
 	var errorString string
-	var sum, avg uint64
+	var sum, avg, dns uint64
 	min := uint64(math.MaxUint64)
 	var max uint64
 	var counter, errorCount int
@@ -298,14 +328,15 @@ func getPingInfo(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[s
 			counter = 1
 		}
 		avg = sum / uint64(counter)
+		dns = uint64(result.DNSResolveTime.Nanoseconds())
 	}
-	return serverStats{min, max, sum, avg, errorCount, errorString, counter}
+	return serverStats{min, max, sum, avg, dns, errorCount, errorString, counter}
 }
 
 // extractHostPort - extracts host/port from many address formats
 // such as, ":9000", "localhost:9000", "http://localhost:9000/"
 func extractHostPort(hostAddr string) (string, string, error) {
-	var addr, scheme string
+	var addr string
 
 	if hostAddr == "" {
 		return "", "", errors.New("unable to process empty address")
@@ -323,15 +354,6 @@ func extractHostPort(hostAddr string) (string, string, error) {
 	}
 
 	addr = u.Host
-	scheme = u.Scheme
-
-	// Use the given parameter again if url.Parse()
-	// didn't return any useful result.
-	if addr == "" {
-		addr = hostAddr
-		scheme = "http"
-	}
-
 	// At this point, addr can be one of the following form:
 	//	":9000"
 	//	"localhost:9000"
@@ -342,17 +364,7 @@ func extractHostPort(hostAddr string) (string, string, error) {
 		if !strings.Contains(err.Error(), "missing port in address") {
 			return "", "", err
 		}
-
 		host = addr
-
-		switch scheme {
-		case "https":
-			port = "443"
-		case "http":
-			port = "80"
-		default:
-			return "", "", errors.New("unable to guess port from scheme")
-		}
 	}
 
 	return host, port, nil

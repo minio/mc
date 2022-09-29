@@ -37,31 +37,35 @@ var whiteStyle = lipgloss.NewStyle().
 type speedTestUI struct {
 	spinner  spinner.Model
 	quitting bool
-	result   speedTestResult
+	result   PerfTestResult
 }
 
-type speedTestType byte
+// PerfTestType - The type of performance test (net/drive/object)
+type PerfTestType byte
 
+// Constants for performance test type
 const (
-	netSpeedTest speedTestType = 1 << iota
-	driveSpeedTest
-	objectSpeedTest
+	NetPerfTest PerfTestType = 1 << iota
+	DrivePerfTest
+	ObjectPerfTest
 )
 
-func (s speedTestType) Name() string {
-	switch s {
-	case netSpeedTest:
+// Name - returns name of the performance test
+func (p PerfTestType) Name() string {
+	switch p {
+	case NetPerfTest:
 		return "NetPerf"
-	case driveSpeedTest:
+	case DrivePerfTest:
 		return "DrivePerf"
-	case objectSpeedTest:
+	case ObjectPerfTest:
 		return "ObjectPerf"
 	}
 	return "<unknown>"
 }
 
-type speedTestResult struct {
-	Type         speedTestType                 `json:"type"`
+// PerfTestResult - stores the result of a performance test
+type PerfTestResult struct {
+	Type         PerfTestType                  `json:"type"`
 	ObjectResult *madmin.SpeedTestResult       `json:"object,omitempty"`
 	NetResult    *madmin.NetperfResult         `json:"network,omitempty"`
 	DriveResult  []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
@@ -86,36 +90,33 @@ func (m *speedTestUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c":
+		case "q", "esc", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 		default:
 			return m, nil
 		}
-	case speedTestResult:
+	case PerfTestResult:
 		m.result = msg
 		if msg.Final {
 			m.quitting = true
 			return m, tea.Quit
 		}
 		return m, nil
-	case spinner.TickMsg:
+	default:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
-	default:
-		return m, nil
 	}
 }
 
 func (m *speedTestUI) View() string {
 	// Quit when there is an error
 	if m.result.Err != "" {
-		return fmt.Sprintf("\n%s: ✗ (Err: %s)\n", m.result.Type.Name(), m.result.Err)
+		return fmt.Sprintf("\n%s: %s (Err: %s)\n", m.result.Type.Name(), crossTickCell, m.result.Err)
 	}
 
 	var s strings.Builder
-	s.WriteString("\n")
 
 	// Set table header
 	table := tablewriter.NewWriter(&s)
@@ -140,6 +141,13 @@ func (m *speedTestUI) View() string {
 			return in
 		}
 		return in[:max] + "..."
+	}
+
+	// Print the spinner
+	if !m.quitting {
+		s.WriteString(fmt.Sprintf("\n%s: %s\n\n", m.result.Type.Name(), m.spinner.View()))
+	} else {
+		s.WriteString(fmt.Sprintf("\n%s: %s\n\n", m.result.Type.Name(), m.spinner.Style.Render(tickCell)))
 	}
 
 	if ores != nil {
@@ -196,8 +204,8 @@ func (m *speedTestUI) View() string {
 				if nodeResult.Error != "" {
 					data = append(data, []string{
 						trailerIfGreaterThan(nodeResult.Endpoint, 64),
-						"✗",
-						"✗",
+						crossTickCell,
+						crossTickCell,
 						"Err: " + nodeResult.Error,
 					})
 				} else {
@@ -236,8 +244,8 @@ func (m *speedTestUI) View() string {
 						data = append(data, []string{
 							trailerIfGreaterThan(driveResult.Endpoint, 64),
 							result.Path,
-							"✗",
-							"✗",
+							crossTickCell,
+							crossTickCell,
 							"Err: " + result.Error,
 						})
 					} else {
@@ -256,11 +264,5 @@ func (m *speedTestUI) View() string {
 		table.Render()
 	}
 
-	// Print the spinner
-	if !m.quitting {
-		s.WriteString(fmt.Sprintf("\n%s: %s", m.result.Type.Name(), m.spinner.View()))
-	} else {
-		s.WriteString(fmt.Sprintf("\n%s: ✔\n", m.result.Type.Name()))
-	}
 	return s.String()
 }

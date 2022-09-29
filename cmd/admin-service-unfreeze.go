@@ -69,7 +69,7 @@ func (s serviceUnfreezeCommand) JSON() string {
 // checkAdminServiceUnfreezeSyntax - validate all the passed arguments
 func checkAdminServiceUnfreezeSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "unfreeze", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "unfreeze", 1) // last argument is exit code
 	}
 }
 

@@ -65,10 +65,9 @@ mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 			Name:  "airgap",
 			Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		},
-		cli.BoolFlag{
-			Name:   "dev",
-			Usage:  "Development mode - talks to local SUBNET",
-			Hidden: true,
+		cli.StringFlag{
+			Name:  "api-key",
+			Usage: "API Key of the account on SUBNET",
 		},
 	}
 )
@@ -490,15 +489,15 @@ func getSubnetCreds(alias string) (string, string, error) {
 // getSubnetAPIKey - returns the SUBNET API key.
 // Returns error if the cluster is not registered with SUBNET.
 func getSubnetAPIKey(alias string) (string, error) {
-	apiKey, _, e := getSubnetCreds(alias)
+	apiKey, lic, e := getSubnetCreds(alias)
 	if e != nil {
 		return "", e
 	}
-	if len(apiKey) > 0 {
-		return apiKey, nil
+	if len(apiKey) == 0 && len(lic) == 0 {
+		e = fmt.Errorf("Please register the cluster first by running 'mc license register %s'", alias)
+		return "", e
 	}
-	e = fmt.Errorf("Please register the cluster first by running 'mc support register %s', or use --airgap flag", alias)
-	return "", e
+	return apiKey, nil
 }
 
 func getSubnetAPIKeyUsingLicense(lic string) (string, error) {
@@ -721,10 +720,6 @@ func validateSubnetFlags(ctx *cli.Context) error {
 			return errors.New("--json is applicable only when --airgap is also passed")
 		}
 		return nil
-	}
-
-	if globalDevMode {
-		return errors.New("--dev is not applicable in airgap mode")
 	}
 
 	if len(ctx.String("api-key")) > 0 {

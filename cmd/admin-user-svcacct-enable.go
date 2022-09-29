@@ -50,7 +50,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctEnableSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctEnableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "enable", 1)
+		showCommandHelpAndExit(ctx, "enable", 1)
 	}
 }
 

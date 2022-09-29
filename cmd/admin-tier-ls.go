@@ -53,7 +53,7 @@ EXAMPLES:
 func checkAdminTierListSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 1 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -178,10 +178,8 @@ func mainAdminTierList(ctx *cli.Context) error {
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
-	tiers, err := client.ListTiers(globalContext)
-	if err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to list configured remote tier targets")
-	}
+	tiers, e := client.ListTiers(globalContext)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list configured remote tier targets")
 
 	printMsg(&tierListMessage{
 		Status:  "success",

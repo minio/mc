@@ -28,6 +28,10 @@ import (
 )
 
 var adminScannerTraceFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "verbose, v",
+		Usage: "print verbose trace",
+	},
 	cli.StringFlag{
 		Name:  "response-threshold",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
@@ -39,6 +43,10 @@ var adminScannerTraceFlags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "node",
 		Usage: "trace only matching servers",
+	},
+	cli.StringSliceFlag{
+		Name:  "path",
+		Usage: "trace only matching path",
 	},
 }
 
@@ -68,12 +76,16 @@ EXAMPLES:
 
   3. Show trace for only ScanObject operations
     {{.Prompt}} {{.HelpName}} --funcname=scanner.ScanObject myminio
+
+  4. Avoid printing replication related S3 requests
+    {{.Prompt}} {{.HelpName}} --request-header '!X-Minio-Source' myminio
+
 `,
 }
 
 func checkAdminScannerTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "trace", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -116,11 +128,7 @@ func mainAdminScannerTrace(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx, []string{"scanner"})
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
-	mopts := matchOpts{
-		funcNames: ctx.StringSlice("funcname"),
-		apiPaths:  ctx.StringSlice("path"),
-		nodes:     ctx.StringSlice("node"),
-	}
+	mopts := matchingOpts(ctx)
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)

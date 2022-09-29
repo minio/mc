@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -40,6 +41,41 @@ type adminBucketInfoMessage struct {
 	Props     BucketInfo             `json:"props"`
 }
 
+type histogramDef struct {
+	start, end uint64
+	text       string
+}
+
+var histogramTagsDesc = map[string]histogramDef{
+	"LESS_THAN_1024_B":          {0, 1024, "less than 1024 bytes"},
+	"BETWEEN_1024_B_AND_1_MB":   {1024, 1024 * 1024, "between 1024 bytes and 1 MB"},
+	"BETWEEN_1_MB_AND_10_MB":    {1024 * 1024, 10 * 1024 * 1024, "between 1 MB and 10 MB"},
+	"BETWEEN_10_MB_AND_64_MB":   {10 * 1024 * 1024, 64 * 1024 * 1024, "between 10 MB and 64 MB"},
+	"BETWEEN_64_MB_AND_128_MB":  {64 * 1024 * 1024, 128 * 1024 * 1024, "between 64 MB and 128 MB"},
+	"BETWEEN_128_MB_AND_512_MB": {128 * 1024 * 1024, 512 * 1024 * 1024, "between 128 MB and 512 MB"},
+	"GREATER_THAN_512_MB":       {512 * 1024 * 1024, 0, "greater than 512 MB"},
+}
+
+// Return a sorted list of histograms
+func sortHistogramTags() (orderedTags []string) {
+	orderedTags = make([]string, 0, len(histogramTagsDesc))
+	for tag := range histogramTagsDesc {
+		orderedTags = append(orderedTags, tag)
+	}
+	sort.Slice(orderedTags, func(i, j int) bool {
+		return histogramTagsDesc[orderedTags[i]].start < histogramTagsDesc[orderedTags[j]].start
+	})
+	return
+}
+
+func countDigits(num uint64) (count uint) {
+	for num > 0 {
+		num /= 10
+		count++
+	}
+	return
+}
+
 func (bi adminBucketInfoMessage) String() string {
 	var b strings.Builder
 
@@ -52,6 +88,25 @@ func (bi adminBucketInfoMessage) String() string {
 
 	fmt.Fprintf(&b, console.Colorize("Title", "Properties:\n"))
 	fmt.Fprintf(&b, prettyPrintBucketMetadata(bi.Props))
+
+	fmt.Fprintf(&b, "\n")
+	fmt.Fprintf(&b, console.Colorize("Title", "Object sizes histogram:\n"))
+
+	var maxDigits uint
+	for _, val := range bi.UsageInfo.ObjectSizesHistogram {
+		if d := countDigits(val); d > maxDigits {
+			maxDigits = d
+		}
+	}
+
+	sortedTags := sortHistogramTags()
+	for _, tagName := range sortedTags {
+		val, ok := bi.UsageInfo.ObjectSizesHistogram[tagName]
+		if ok {
+			fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, histogramTagsDesc[tagName].text)
+		}
+	}
+
 	return b.String()
 }
 
@@ -87,7 +142,7 @@ EXAMPLES:
 // checkAdminBucketInfoSyntax - validate all the passed arguments
 func checkAdminBucketInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 

@@ -114,7 +114,7 @@ EXAMPLES:
 func checkAdminBucketRemoteAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 2 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),

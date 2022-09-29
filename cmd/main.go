@@ -94,12 +94,12 @@ func init() {
 }
 
 // Main starts mc application
-func Main(args []string) {
+func Main(args []string) error {
 	if len(args) > 1 {
 		switch args[1] {
 		case "mc", filepath.Base(args[0]):
 			mainComplete()
-			return
+			return nil
 		}
 	}
 
@@ -133,10 +133,12 @@ func Main(args []string) {
 	// Monitor OS exit signals and cancel the global context in such case
 	go trapSignals(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
-	// Run the app - exit on error.
-	if err := registerApp(appName).Run(args); err != nil {
-		os.Exit(1)
-	}
+	globalHelpPager = newTermPager()
+	// Wait until the user quits the pager
+	defer globalHelpPager.WaitForExit()
+
+	// Run the app
+	return registerApp(appName).Run(args)
 }
 
 func flagValue(f cli.Flag) reflect.Value {
@@ -184,11 +186,12 @@ func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 
 	// Do the good-looking printing now
 	fmt.Fprintln(&errMsg, "Invalid command usage,", err.Error())
-	fmt.Fprintln(&errMsg, "")
-	fmt.Fprintln(&errMsg, "SUPPORTED FLAGS:")
-	for _, h := range help {
-		spaces := string(bytes.Repeat([]byte{' '}, maxWidth-len(h.flagName)))
-		fmt.Fprintf(&errMsg, "   %s%s%s\n", h.flagName, spaces, h.usage)
+	if len(help) > 0 {
+		fmt.Fprintln(&errMsg, "\nSUPPORTED FLAGS:")
+		for _, h := range help {
+			spaces := string(bytes.Repeat([]byte{' '}, maxWidth-len(h.flagName)))
+			fmt.Fprintf(&errMsg, "   %s%s%s\n", h.flagName, spaces, h.usage)
+		}
 	}
 	console.Fatal(errMsg.String())
 	return err
@@ -401,7 +404,7 @@ func checkUpdate(ctx *cli.Context) {
 	// Do not print update messages, if quiet flag is set.
 	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
 		// Its OK to ignore any errors during doUpdate() here.
-		if updateMsg, _, currentReleaseTime, latestReleaseTime, err := getUpdateInfo(2 * time.Second); err == nil {
+		if updateMsg, _, currentReleaseTime, latestReleaseTime, _, err := getUpdateInfo("", 2*time.Second); err == nil {
 			printMsg(updateMessage{
 				Status:  "success",
 				Message: updateMsg,
@@ -486,12 +489,11 @@ func registerApp(name string) *cli.App {
 			return nil
 		}
 
-		if ctx.Args().First() != "" {
-			commandNotFound(ctx, app.Commands)
-		} else {
-			cli.ShowAppHelp(ctx)
+		if ctx.Args().First() == "" {
+			showAppHelpAndExit(ctx)
 		}
 
+		commandNotFound(ctx, app.Commands)
 		return exitStatus(globalErrorExitStatus)
 	}
 
@@ -505,6 +507,9 @@ func registerApp(name string) *cli.App {
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
+	if isTerminal() {
+		app.HelpWriter = globalHelpPager
+	}
 
 	return app
 }
@@ -512,4 +517,18 @@ func registerApp(name string) *cli.App {
 // mustGetProfilePath must get location that the profile will be written to.
 func mustGetProfileDir() string {
 	return filepath.Join(mustGetMcConfigDir(), globalProfileDir)
+}
+
+func showCommandHelpAndExit(cliCtx *cli.Context, cmd string, code int) {
+	cli.ShowCommandHelp(cliCtx, cmd)
+	// Wait until the user quits the pager
+	globalHelpPager.WaitForExit()
+	os.Exit(code)
+}
+
+func showAppHelpAndExit(cliCtx *cli.Context) {
+	cli.ShowAppHelp(cliCtx)
+	// Wait until the user quits the pager
+	globalHelpPager.WaitForExit()
+	os.Exit(globalErrorExitStatus)
 }

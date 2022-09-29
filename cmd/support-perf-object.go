@@ -46,7 +46,7 @@ func mainAdminSpeedtest(ctx *cli.Context) error {
 	return nil
 }
 
-func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
@@ -85,7 +85,7 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	// in all other scenarios keep auto-tuning on.
 	autotune := !ctx.IsSet("concurrent")
 
-	resultCh, speedTestErr := client.Speedtest(ctxt, madmin.SpeedtestOpts{
+	resultCh, e := client.Speedtest(ctxt, madmin.SpeedtestOpts{
 		Size:        int(size),
 		Duration:    duration,
 		Concurrency: concurrent,
@@ -94,10 +94,10 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	})
 
 	if globalJSON {
-		if speedTestErr != nil {
-			printMsg(speedTestResult{
-				Type:  objectSpeedTest,
-				Err:   speedTestErr.Error(),
+		if e != nil {
+			printMsg(PerfTestResult{
+				Type:  ObjectPerfTest,
+				Err:   e.Error(),
 				Final: true,
 			})
 			return nil
@@ -108,14 +108,14 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 			if result.Version == "" {
 				continue
 			}
-			printMsg(speedTestResult{
-				Type:         objectSpeedTest,
+			printMsg(PerfTestResult{
+				Type:         ObjectPerfTest,
 				ObjectResult: &result,
 			})
 		}
 
-		printMsg(speedTestResult{
-			Type:         objectSpeedTest,
+		printMsg(PerfTestResult{
+			Type:         ObjectPerfTest,
 			ObjectResult: &result,
 			Final:        true,
 		})
@@ -134,27 +134,35 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	go func() {
-		if speedTestErr != nil {
-			p.Send(speedTestResult{
-				Type:  objectSpeedTest,
-				Err:   speedTestErr.Error(),
+		if e != nil {
+			r := PerfTestResult{
+				Type:  ObjectPerfTest,
+				Err:   e.Error(),
 				Final: true,
-			})
+			}
+			p.Send(r)
+			if outCh != nil {
+				outCh <- r
+			}
 			return
 		}
 
 		var result madmin.SpeedTestResult
 		for result = range resultCh {
-			p.Send(speedTestResult{
-				Type:         objectSpeedTest,
+			p.Send(PerfTestResult{
+				Type:         ObjectPerfTest,
 				ObjectResult: &result,
 			})
 		}
-		p.Send(speedTestResult{
-			Type:         objectSpeedTest,
+		r := PerfTestResult{
+			Type:         ObjectPerfTest,
 			ObjectResult: &result,
 			Final:        true,
-		})
+		}
+		p.Send(r)
+		if outCh != nil {
+			outCh <- r
+		}
 	}()
 
 	<-done

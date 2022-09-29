@@ -76,7 +76,7 @@ EXAMPLES:
 // checkEventRemoveSyntax - validate all the passed arguments
 func checkEventRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
 	}
 	if len(ctx.Args()) == 1 && !ctx.Bool("force") {
 		fatalIf(probe.NewError(errors.New("")), "--force flag needs to be passed to remove all bucket notifications.")

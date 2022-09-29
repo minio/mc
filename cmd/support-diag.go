@@ -42,10 +42,6 @@ import (
 )
 
 var supportDiagFlags = append([]cli.Flag{
-	cli.StringFlag{
-		Name:  "api-key",
-		Usage: "SUBNET API key",
-	},
 	HealthDataTypeFlag{
 		Name:   "test",
 		Usage:  "choose specific diagnostics to run [" + options.String() + "]",
@@ -77,7 +73,7 @@ var supportDiagCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainSupportDiag,
 	Before:       setGlobalsFromContext,
-	Flags:        append(supportDiagFlags, globalFlags...),
+	Flags:        append(supportDiagFlags, supportGlobalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -99,15 +95,15 @@ EXAMPLES:
 // checkSupportDiagSyntax - validate arguments passed by a user
 func checkSupportDiagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
 	}
 }
 
 // compress and tar MinIO diagnostics output
 func tarGZ(healthInfo interface{}, version string, filename string) error {
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o666)
-	if err != nil {
-		return err
+	f, e := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o666)
+	if e != nil {
+		return e
 	}
 	defer f.Close()
 
@@ -120,12 +116,12 @@ func tarGZ(healthInfo interface{}, version string, filename string) error {
 		Version string `json:"version"`
 	}{Version: version}
 
-	if err := enc.Encode(header); err != nil {
-		return err
+	if e := enc.Encode(header); e != nil {
+		return e
 	}
 
-	if err := enc.Encode(healthInfo); err != nil {
-		return err
+	if e := enc.Encode(healthInfo); e != nil {
+		return e
 	}
 
 	if globalAirgapped {
@@ -164,6 +160,10 @@ func mainSupportDiag(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	if len(apiKey) == 0 {
+		// api key not passed as flag. Check that the cluster is registered.
+		apiKey = validateClusterRegistered(alias, true)
+	}
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)
@@ -355,12 +355,11 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 			admin(len(info.Minio.Info.Servers) > 0)
 	}
 
-	var err error
 	// Fetch info of all servers (cluster or single server)
-	resp, version, err := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"))
-	if err != nil {
+	resp, version, e := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"))
+	if e != nil {
 		cancel()
-		return nil, "", err
+		return nil, "", e
 	}
 
 	var healthInfo interface{}
@@ -370,9 +369,9 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	case madmin.HealthInfoVersion0:
 		info := madmin.HealthInfoV0{}
 		for {
-			if err = decoder.Decode(&info); err != nil {
-				if errors.Is(err, io.EOF) {
-					err = nil
+			if e = decoder.Decode(&info); e != nil {
+				if errors.Is(e, io.EOF) {
+					e = nil
 				}
 
 				break
@@ -383,9 +382,9 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 
 		// Old minio versions don't return the MinIO info in
 		// response of the healthinfo api. So fetch it separately
-		minioInfo, err := client.ServerInfo(globalContext)
-		if err != nil {
-			info.Minio.Error = err.Error()
+		minioInfo, e := client.ServerInfo(globalContext)
+		if e != nil {
+			info.Minio.Error = e.Error()
 		} else {
 			info.Minio.Info = minioInfo
 		}
@@ -395,9 +394,9 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	case madmin.HealthInfoVersion2:
 		info := madmin.HealthInfoV2{}
 		for {
-			if err = decoder.Decode(&info); err != nil {
-				if errors.Is(err, io.EOF) {
-					err = nil
+			if e = decoder.Decode(&info); e != nil {
+				if errors.Is(e, io.EOF) {
+					e = nil
 				}
 
 				break
@@ -409,9 +408,9 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	case madmin.HealthInfoVersion:
 		info := madmin.HealthInfo{}
 		for {
-			if err = decoder.Decode(&info); err != nil {
-				if errors.Is(err, io.EOF) {
-					err = nil
+			if e = decoder.Decode(&info); e != nil {
+				if errors.Is(e, io.EOF) {
+					e = nil
 				}
 
 				break
@@ -422,9 +421,9 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 		healthInfo = info
 	}
 
-	// cancel the context if obdChan has returned.
+	// cancel the context if supportDiagChan has returned.
 	cancel()
-	return healthInfo, version, err
+	return healthInfo, version, e
 }
 
 // HealthDataTypeSlice is a typed list of health tests
@@ -433,8 +432,8 @@ type HealthDataTypeSlice []madmin.HealthDataType
 // Set - sets the flag to the given value
 func (d *HealthDataTypeSlice) Set(value string) error {
 	for _, v := range strings.Split(value, ",") {
-		if obdData, ok := madmin.HealthDataTypesMap[strings.Trim(v, " ")]; ok {
-			*d = append(*d, obdData)
+		if supportDiagData, ok := madmin.HealthDataTypesMap[strings.Trim(v, " ")]; ok {
+			*d = append(*d, supportDiagData)
 		} else {
 			return fmt.Errorf("valid options include %s", options.String())
 		}
@@ -445,14 +444,14 @@ func (d *HealthDataTypeSlice) Set(value string) error {
 // String - returns the string representation of the health datatypes
 func (d *HealthDataTypeSlice) String() string {
 	val := ""
-	for _, obdData := range *d {
+	for _, supportDiagData := range *d {
 		formatStr := "%s"
 		if val != "" {
 			formatStr = fmt.Sprintf("%s,%%s", formatStr)
 		} else {
 			formatStr = fmt.Sprintf("%s%%s", formatStr)
 		}
-		val = fmt.Sprintf(formatStr, val, string(obdData))
+		val = fmt.Sprintf(formatStr, val, string(supportDiagData))
 	}
 	return val
 }
@@ -518,8 +517,8 @@ func (f HealthDataTypeFlag) ApplyWithError(set *flag.FlagSet) error {
 				newVal := &HealthDataTypeSlice{}
 				for _, s := range strings.Split(envVal, ",") {
 					s = strings.TrimSpace(s)
-					if err := newVal.Set(s); err != nil {
-						return fmt.Errorf("could not parse %s as health datatype value for flag %s: %s", envVal, f.Name, err)
+					if e := newVal.Set(s); e != nil {
+						return fmt.Errorf("could not parse %s as health datatype value for flag %s: %s", envVal, f.Name, e)
 					}
 				}
 				f.Value = newVal

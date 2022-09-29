@@ -67,7 +67,7 @@ var adminHealFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "storage-class",
-		Usage: "show server/disks failure tolerance with the given storage class",
+		Usage: "show server/drives failure tolerance with the given storage class",
 	},
 	cli.BoolFlag{
 		Name:  "rewrite",
@@ -81,7 +81,7 @@ var adminHealFlags = []cli.Flag{
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "heal disks, buckets and objects on MinIO server",
+	Usage:           "heal bucket(s) and object(s) on MinIO server",
 	Action:          mainAdminHeal,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -104,14 +104,14 @@ EXAMPLES:
 
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
 
 	// Check for scan argument
 	scanArg := ctx.String("scan")
 	scanArg = strings.ToLower(scanArg)
 	if scanArg != scanNormalMode && scanArg != scanDeepMode {
-		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
 }
 
@@ -177,7 +177,7 @@ func (s serverInfo) onlineDisksForSet(index setIndex) (setFound bool, count int)
 	return
 }
 
-// Get all disks from set statuses
+// Get all drives from set statuses
 func getAllDisks(sets []madmin.SetStatus) []madmin.Disk {
 	var disks []madmin.Disk
 	for _, set := range sets {
@@ -186,7 +186,7 @@ func getAllDisks(sets []madmin.SetStatus) []madmin.Disk {
 	return disks
 }
 
-// Get all pools id from all disks
+// Get all pools id from all drives
 func getPoolsIndexes(disks []madmin.Disk) []int {
 	m := make(map[int]struct{})
 	for _, d := range disks {
@@ -413,7 +413,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 				}
 				fmt.Fprintf(&msg, "  |__  Capacity: %s/%s\n", humanize.IBytes(d.usedSpace), humanize.IBytes(d.totalSpace))
 				if showTolerance {
-					fmt.Fprintf(&msg, "  |__ Tolerance: %d disk(s)\n", parity-setsStatus[d.set].incapableDisks)
+					fmt.Fprintf(&msg, "  |__ Tolerance: %d drive(s)\n", parity-setsStatus[d.set].incapableDisks)
 				}
 			}
 
@@ -475,7 +475,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		// this is needed to calculate the rate of healing
 		accumulatedElapsedTime time.Duration
 
-		// ETA of healing - it is the latest ETA of all disks currently healing
+		// ETA of healing - it is the latest ETA of all drives currently healing
 		healingRemaining time.Duration
 	)
 

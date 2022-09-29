@@ -257,7 +257,7 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 
 	if progressReader, ok := pg.(*progressBar); ok {
-		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
+		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ":")
 	} else {
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{

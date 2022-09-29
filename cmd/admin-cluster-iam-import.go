@@ -55,7 +55,7 @@ EXAMPLES:
 
 func checkIAMImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
 	}
 }
 
@@ -92,8 +92,9 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 		return nil
 	}
 
-	ierr := client.ImportIAM(context.Background(), f)
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to import IAM info.")
+	e = client.ImportIAM(context.Background(), f)
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
+
 	if !globalJSON {
 		console.Infof("IAM info imported to %s from %s\n", aliasedURL, args.Get(1))
 	}

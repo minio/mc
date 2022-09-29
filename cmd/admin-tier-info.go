@@ -61,7 +61,7 @@ EXAMPLES:
 func checkAdminTierInfoSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -180,19 +180,18 @@ func mainAdminTierInfo(ctx *cli.Context) error {
 	checkAdminTierInfoSyntax(ctx)
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	var err error
 
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	var msg tierInfoMessage
-	tInfos, err := client.TierStats(globalContext)
-	if err != nil {
+	tInfos, e := client.TierStats(globalContext)
+	if e != nil {
 		msg = tierInfoMessage{
 			Status:  "error",
 			Context: ctx,
-			Error:   err.Error(),
+			Error:   e.Error(),
 		}
 	} else {
 		msg = tierInfoMessage{

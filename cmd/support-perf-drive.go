@@ -28,7 +28,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
+func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
@@ -60,17 +60,17 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 
 	serial := ctx.Bool("serial")
 
-	resultCh, speedTestErr := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
+	resultCh, e := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
 		Serial:    serial,
 		BlockSize: uint64(blocksize),
 		FileSize:  uint64(filesize),
 	})
 
 	if globalJSON {
-		if speedTestErr != nil {
-			printMsg(speedTestResult{
-				Type:  driveSpeedTest,
-				Err:   speedTestErr.Error(),
+		if e != nil {
+			printMsg(PerfTestResult{
+				Type:  DrivePerfTest,
+				Err:   e.Error(),
 				Final: true,
 			})
 			return nil
@@ -82,8 +82,8 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 				results = append(results, result)
 			}
 		}
-		printMsg(speedTestResult{
-			Type:        driveSpeedTest,
+		printMsg(PerfTestResult{
+			Type:        DrivePerfTest,
 			DriveResult: results,
 			Final:       true,
 		})
@@ -102,11 +102,16 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 	}()
 
 	go func() {
-		if speedTestErr != nil {
-			printMsg(speedTestResult{
-				Type: driveSpeedTest,
-				Err:  speedTestErr.Error(),
-			})
+		if e != nil {
+			r := PerfTestResult{
+				Type:  DrivePerfTest,
+				Err:   e.Error(),
+				Final: true,
+			}
+			p.Send(r)
+			if outCh != nil {
+				outCh <- r
+			}
 			return
 		}
 
@@ -115,17 +120,21 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string) error {
 			if result.Version != "" {
 				results = append(results, result)
 			} else {
-				p.Send(speedTestResult{
-					Type:        driveSpeedTest,
+				p.Send(PerfTestResult{
+					Type:        DrivePerfTest,
 					DriveResult: []madmin.DriveSpeedTestResult{},
 				})
 			}
 		}
-		p.Send(speedTestResult{
-			Type:        driveSpeedTest,
+		r := PerfTestResult{
+			Type:        DrivePerfTest,
 			DriveResult: results,
 			Final:       true,
-		})
+		}
+		p.Send(r)
+		if outCh != nil {
+			outCh <- r
+		}
 	}()
 
 	<-done

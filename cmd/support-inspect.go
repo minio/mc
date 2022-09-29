@@ -58,7 +58,7 @@ var supportInspectCmd = cli.Command{
 	Action:          mainSupportInspect,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportInspectFlags, globalFlags...),
+	Flags:           append(supportInspectFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -83,7 +83,7 @@ EXAMPLES:
 
 func checkSupportInspectSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
 	}
 
 	if ctx.IsSet("export") && globalJSON {
@@ -100,6 +100,9 @@ func mainSupportInspect(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 	encrypt := ctx.Bool("encrypt")
+
+	alias, _ := url2Alias(aliasedURL)
+	validateClusterRegistered(alias, false)
 
 	console.SetColor("File", color.New(color.FgWhite, color.Bold))
 	console.SetColor("Key", color.New(color.FgHiRed, color.Bold))
@@ -121,11 +124,11 @@ func mainSupportInspect(ctx *cli.Context) error {
 		console.Infoln("Your shell is auto determined as '" + shellName + "', wildcard patterns are only supported with 'bash' SHELL.")
 	}
 
-	key, r, ierr := client.Inspect(context.Background(), madmin.InspectOptions{
+	key, r, e := client.Inspect(context.Background(), madmin.InspectOptions{
 		Volume: bucket,
 		File:   prefix,
 	})
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to inspect file.")
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
 
 	// Create profile zip file
 	tmpFile, e := ioutil.TempFile("", "mc-inspect-")

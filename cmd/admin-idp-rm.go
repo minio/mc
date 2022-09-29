@@ -48,7 +48,7 @@ EXAMPLES:
 
 func mainAdminIDPRemove(ctx *cli.Context) error {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "rm", 1)
+		showCommandHelpAndExit(ctx, "rm", 1)
 	}
 
 	args := ctx.Args()

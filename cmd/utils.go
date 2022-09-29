@@ -87,6 +87,13 @@ func newRandomID(n int) string {
 	return string(sid)
 }
 
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // randString generates random names and prepends them with a known prefix.
 func randString(n int, src rand.Source, prefix string) string {
 	b := make([]byte, n)
@@ -144,6 +151,8 @@ func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 	s3Config.AppVersion = ReleaseTag
 	s3Config.Debug = globalDebug
 	s3Config.Insecure = globalInsecure
+	s3Config.ConnReadDeadline = globalConnReadDeadline
+	s3Config.ConnWriteDeadline = globalConnWriteDeadline
 
 	s3Config.HostURL = urlStr
 	if aliasCfg != nil {

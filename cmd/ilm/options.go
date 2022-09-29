@@ -240,14 +240,14 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		expiryDays     *string
 		transitionDate *string
 		transitionDays *string
-		sc             *string
+		tier           *string
 
 		expiredObjectDeleteMarker         *bool
 		noncurrentVersionExpirationDays   *int
 		newerNoncurrentExpirationVersions *int
 		noncurrentVersionTransitionDays   *int
 		newerNoncurrentTransitionVersions *int
-		noncurrentSC                      *string
+		noncurrentTier                    *string
 	)
 
 	id = ctx.String("id")
@@ -277,16 +277,23 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		}
 	}
 
+	// For backward-compatibility
 	if ctx.IsSet("storage-class") {
-		sc = strPtr(strings.ToUpper(ctx.String("storage-class")))
+		tier = strPtr(strings.ToUpper(ctx.String("storage-class")))
 	}
 	if ctx.IsSet("noncurrentversion-transition-storage-class") {
-		noncurrentSC = strPtr(strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class")))
+		noncurrentTier = strPtr(strings.ToUpper(ctx.String("noncurrentversion-transition-storage-class")))
 	}
-	if sc != nil && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
+	if ctx.IsSet("tier") {
+		tier = strPtr(strings.ToUpper(ctx.String("tier")))
+	}
+	if ctx.IsSet("noncurrentversion-tier") {
+		noncurrentTier = strPtr(strings.ToUpper(ctx.String("noncurrentversion-tier")))
+	}
+	if tier != nil && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
 		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
 	}
-	if noncurrentSC != nil && !ctx.IsSet("noncurrentversion-transition-days") {
+	if noncurrentTier != nil && !ctx.IsSet("noncurrentversion-transition-days") {
 		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
 	}
 	// for MinIO transition storage-class is same as label defined on
@@ -331,13 +338,13 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		ExpiryDays:                              expiryDays,
 		TransitionDate:                          transitionDate,
 		TransitionDays:                          transitionDays,
-		StorageClass:                            sc,
+		StorageClass:                            tier,
 		ExpiredObjectDeleteMarker:               expiredObjectDeleteMarker,
 		NoncurrentVersionExpirationDays:         noncurrentVersionExpirationDays,
 		NewerNoncurrentExpirationVersions:       newerNoncurrentExpirationVersions,
 		NoncurrentVersionTransitionDays:         noncurrentVersionTransitionDays,
 		NewerNoncurrentTransitionVersions:       newerNoncurrentTransitionVersions,
-		NoncurrentVersionTransitionStorageClass: noncurrentSC,
+		NoncurrentVersionTransitionStorageClass: noncurrentTier,
 	}, nil
 }
 

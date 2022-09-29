@@ -109,7 +109,7 @@ EXAMPLES:
 func checkAdminBucketRemoteEditSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr > 2 || argsNr == 0 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if !ctx.IsSet("arn") {
 		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "--arn flag needs to be set")

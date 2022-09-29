@@ -432,7 +432,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	targetURL := sURLs.TargetContent.URL
 	length := sURLs.SourceContent.Size
 
-	mj.status.SetCaption(sourceURL.String() + ": ")
+	mj.status.SetCaption(sourceURL.String() + ":")
 
 	// Initialize target metadata.
 	sURLs.TargetContent.Metadata = make(map[string]string)

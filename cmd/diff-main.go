@@ -116,7 +116,7 @@ func (d diffMessage) JSON() string {
 
 func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if len(cliCtx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(cliCtx, "diff", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "diff", 1) // last argument is exit code
 	}
 	for _, arg := range cliCtx.Args() {
 		if strings.TrimSpace(arg) == "" {

@@ -47,9 +47,9 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`)",
+		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
 	},
-	cli.StringFlag{
+	cli.DurationFlag{
 		Name:  "response-threshold",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
@@ -72,6 +72,10 @@ var adminTraceFlags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "node",
 		Usage: "trace only matching servers",
+	},
+	cli.StringSliceFlag{
+		Name:  "request-header",
+		Usage: "trace only matching request headers",
 	},
 	cli.BoolFlag{
 		Name:  "errors, e",
@@ -120,7 +124,7 @@ var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, colo
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "trace", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "trace", 1) // last argument is exit code
 	}
 }
 
@@ -132,12 +136,18 @@ func printTrace(verbose bool, traceInfo madmin.ServiceTraceInfo) {
 	}
 }
 
+type matchString struct {
+	val     string
+	reverse bool
+}
+
 type matchOpts struct {
 	statusCodes []int
 	methods     []string
 	funcNames   []string
 	apiPaths    []string
 	nodes       []string
+	reqHeaders  []matchString
 }
 
 func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
@@ -213,20 +223,52 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
+	if len(opts.reqHeaders) > 0 && traceInfo.Trace.HTTP != nil {
+		matched := false
+		for _, hdr := range opts.reqHeaders {
+			headerFound := false
+			for traceHdr, traceVals := range traceInfo.Trace.HTTP.ReqInfo.Headers {
+				for _, traceVal := range traceVals {
+					if headerMatch(hdr.val, traceHdr+": "+traceVal) {
+						headerFound = true
+						goto exitFindingHeader
+					}
+				}
+			}
+		exitFindingHeader:
+			if !hdr.reverse && headerFound || hdr.reverse && !headerFound {
+				matched = true
+				goto exitMatchingHeader
+			}
+		}
+	exitMatchingHeader:
+		if !matched {
+			return false
+		}
+	}
+
 	return true
+}
+
+func matchingOpts(ctx *cli.Context) (opts matchOpts) {
+	opts.statusCodes = ctx.IntSlice("status-code")
+	opts.methods = ctx.StringSlice("method")
+	opts.funcNames = ctx.StringSlice("funcname")
+	opts.apiPaths = ctx.StringSlice("path")
+	opts.nodes = ctx.StringSlice("node")
+	for _, s := range ctx.StringSlice("request-header") {
+		ms := matchString{}
+		ms.reverse = strings.HasPrefix(s, "!")
+		ms.val = strings.TrimPrefix(s, "!")
+		opts.reqHeaders = append(opts.reqHeaders, ms)
+	}
+	return
 }
 
 // Calculate tracing options for command line flags
 func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
-	if t := ctx.String("response-threshold"); t != "" {
-		d, e := time.ParseDuration(t)
-		if e != nil {
-			return opts, fmt.Errorf("Unable to parse threshold argument: %w", e)
-		}
-		opts.Threshold = d
-	}
-
 	opts.OnlyErrors = ctx.Bool("errors")
+	opts.Threshold = ctx.Duration("response-threshold")
 
 	if ctx.Bool("all") {
 		opts.S3 = true
@@ -235,6 +277,7 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 		opts.OS = true
 		opts.Scanner = true
 		opts.Decommission = true
+		opts.Healing = true
 		return
 	}
 
@@ -257,6 +300,8 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.OS = true
 		case "scanner":
 			opts.Scanner = true
+		case "heal", "healing":
+			opts.Healing = true
 		case "decom", "decommission":
 			opts.Decommission = true
 		}
@@ -304,13 +349,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
-	mopts := matchOpts{
-		statusCodes: ctx.IntSlice("status-code"),
-		methods:     ctx.StringSlice("method"),
-		funcNames:   ctx.StringSlice("funcname"),
-		apiPaths:    ctx.StringSlice("path"),
-		nodes:       ctx.StringSlice("node"),
-	}
+	mopts := matchingOpts(ctx)
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
@@ -322,6 +361,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 			printTrace(verbose, traceInfo)
 		}
 	}
+
 	return nil
 }
 
@@ -375,15 +415,17 @@ type callStats struct {
 type verboseTrace struct {
 	Type string `json:"type"`
 
-	NodeName     string        `json:"host"`
-	FuncName     string        `json:"api"`
-	Time         time.Time     `json:"time"`
-	Duration     time.Duration `json:"duration"`
-	Path         string        `json:"path"`
-	Error        string        `json:"error"`
-	RequestInfo  *requestInfo  `json:"request,omitempty"`
-	ResponseInfo *responseInfo `json:"response,omitempty"`
-	CallStats    *callStats    `json:"callStats,omitempty"`
+	NodeName     string                 `json:"host"`
+	FuncName     string                 `json:"api"`
+	Time         time.Time              `json:"time"`
+	Duration     time.Duration          `json:"duration"`
+	Path         string                 `json:"path"`
+	Error        string                 `json:"error,omitempty"`
+	Message      string                 `json:"message,omitempty"`
+	RequestInfo  *requestInfo           `json:"request,omitempty"`
+	ResponseInfo *responseInfo          `json:"response,omitempty"`
+	CallStats    *callStats             `json:"callStats,omitempty"`
+	HealResult   *madmin.HealResultItem `json:"healResult,omitempty"`
 
 	trcType madmin.TraceType
 }
@@ -401,6 +443,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.Error = t.Error
 	s.Host = t.NodeName
 	s.Duration = t.Duration
+	s.StatusMsg = t.Message
 
 	switch t.TraceType {
 	case madmin.TraceS3, madmin.TraceInternal:
@@ -496,14 +539,16 @@ func (t traceMessage) JSON() string {
 	t.Status = "success"
 
 	trc := verboseTrace{
-		trcType:  t.Trace.TraceType,
-		Type:     t.Trace.TraceType.String(),
-		NodeName: t.Trace.NodeName,
-		FuncName: t.Trace.FuncName,
-		Time:     t.Trace.Time,
-		Duration: t.Trace.Duration,
-		Path:     t.Trace.Path,
-		Error:    t.Trace.Error,
+		trcType:    t.Trace.TraceType,
+		Type:       t.Trace.TraceType.String(),
+		NodeName:   t.Trace.NodeName,
+		FuncName:   t.Trace.FuncName,
+		Time:       t.Trace.Time,
+		Duration:   t.Trace.Duration,
+		Path:       t.Trace.Path,
+		Error:      t.Trace.Error,
+		HealResult: t.Trace.HealResult,
+		Message:    t.Trace.Message,
 	}
 
 	if t.Trace.HTTP != nil {

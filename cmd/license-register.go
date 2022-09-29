@@ -32,10 +32,6 @@ const licRegisterMsgTag = "licenseRegisterMessage"
 
 var licenseRegisterFlags = append([]cli.Flag{
 	cli.StringFlag{
-		Name:  "api-key",
-		Usage: "SUBNET API key",
-	},
-	cli.StringFlag{
 		Name:  "name",
 		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},
@@ -47,7 +43,7 @@ var licenseRegisterCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainLicenseRegister,
 	Before:       setGlobalsFromContext,
-	Flags:        append(licenseRegisterFlags, globalFlags...),
+	Flags:        append(licenseRegisterFlags, supportGlobalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -106,7 +102,7 @@ func (li licRegisterMessage) JSON() string {
 // checkLicenseRegisterSyntax - validate arguments passed by a user
 func checkLicenseRegisterSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "register", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "register", 1) // last argument is exit code
 	}
 }
 
@@ -170,9 +166,9 @@ func mainLicenseRegister(ctx *cli.Context) error {
 	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
 
 	alreadyRegistered := false
-	apiKey, lic, e := getSubnetCreds(alias)
-	fatalIf(probe.NewError(e), "Error in fetching subnet credentials")
-	if len(apiKey) > 0 || len(lic) > 0 {
+	apiKey, _, e := getSubnetCreds(alias)
+	fatalIf(probe.NewError(e), "Error in fetching subnet API Key")
+	if len(apiKey) > 0 {
 		alreadyRegistered = true
 		if len(accAPIKey) == 0 {
 			accAPIKey = apiKey

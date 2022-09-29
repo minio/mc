@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -62,7 +61,8 @@ var adminScannerInfoFlags = []cli.Flag{
 }
 
 var adminScannerInfo = cli.Command{
-	Name:            "info",
+	Name:            "status",
+	Aliases:         []string{"info"},
 	Usage:           "summarize scanner events on MinIO server in real-time",
 	Action:          mainAdminScannerInfo,
 	OnUsageError:    onUsageError,
@@ -87,7 +87,7 @@ EXAMPLES:
 // checkAdminTopAPISyntax - validate all the passed arguments
 func checkAdminScannerInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -98,10 +98,7 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-		return nil
-	}
+	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
@@ -114,26 +111,30 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		ByHost:   false,
 	}
 	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
-	if !globalJSON {
-		go func() {
-			if e := ui.Start(); e != nil {
-				cancel()
-				os.Exit(1)
-			}
-			os.Exit(0)
-		}()
-	}
-	cerr := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
-		if globalJSON {
+	if globalJSON {
+		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
 			printMsg(metricsMessage{RealtimeMetrics: metrics})
-			return
-		}
-		ui.Send(metrics)
-	})
+		})
 
-	if cerr != nil && !errors.Is(cerr, context.Canceled) {
-		fatalIf(probe.NewError(cerr).Trace(aliasedURL), "Error making request")
+		if e != nil && !errors.Is(e, context.Canceled) {
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+		}
 		return nil
+	}
+
+	go func() {
+		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+			ui.Send(metrics)
+		})
+
+		if e != nil && !errors.Is(e, context.Canceled) {
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+		}
+	}()
+
+	if e := ui.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
 	}
 
 	return nil
@@ -187,10 +188,13 @@ func (m *scannerMetricsUI) Init() tea.Cmd {
 }
 
 func (m *scannerMetricsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.quitting {
+		return m, tea.Quit
+	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c":
+		case "q", "esc", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 		default:
@@ -203,14 +207,11 @@ func (m *scannerMetricsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		return m, nil
-
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
-	default:
-		return m, nil
 	}
+
+	var cmd tea.Cmd
+	m.spinner, cmd = m.spinner.Update(msg)
+	return m, cmd
 }
 
 func (m *scannerMetricsUI) View() string {
@@ -266,10 +267,10 @@ func (m *scannerMetricsUI) View() string {
 	}
 	if sc.CurrentCycle > 0 {
 		addRowF(title("Current cycle:")+"         %s; Started: %v", ui(sc.CurrentCycle), console.Colorize("metrics-date", sc.CurrentStarted))
-		addRowF(title("Active disks:")+"          %s", ui(uint64(len(sc.ActivePaths))))
+		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
 	} else {
 		addRowF(title("Current cycle:") + "         (between cycles)")
-		addRowF(title("Active disks:")+"          %s", ui(uint64(len(sc.ActivePaths))))
+		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
 	}
 	addRow("-------------------------------------- Last Minute Statistics ---------------------------------------")
 	objs := uint64(0)

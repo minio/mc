@@ -77,6 +77,8 @@ var (
 	// Terminal width
 	globalTermWidth int
 
+	globalHelpPager *termPager
+
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool
 )
@@ -107,6 +109,5 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 
 	globalConnReadDeadline = ctx.Duration("conn-read-deadline")
 	globalConnWriteDeadline = ctx.Duration("conn-write-deadline")
-
 	return nil
 }

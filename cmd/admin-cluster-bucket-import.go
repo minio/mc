@@ -60,7 +60,7 @@ EXAMPLES:
 
 func checkBucketImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
 	}
 }
 
@@ -109,8 +109,9 @@ func mainClusterBucketImport(ctx *cli.Context) error {
 	aliasedURL = filepath.Clean(aliasedURL)
 	_, bucket := url2Alias(aliasedURL)
 
-	rpt, ierr := client.ImportBucketMetadata(context.Background(), bucket, f)
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to import bucket metadata.")
+	rpt, e := client.ImportBucketMetadata(context.Background(), bucket, f)
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import bucket metadata.")
+
 	printMsg(importMetaMsg{
 		BucketMetaImportErrs: rpt,
 		Status:               "success",

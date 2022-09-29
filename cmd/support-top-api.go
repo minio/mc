@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
@@ -52,7 +51,7 @@ var supportTopAPICmd = cli.Command{
 	Action:          mainSupportTopAPI,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportTopAPIFlags, globalFlags...),
+	Flags:           append(supportTopAPIFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -75,7 +74,7 @@ EXAMPLES:
 // checkSupportTopAPISyntax - validate all the passed arguments
 func checkSupportTopAPISyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
 	}
 }
 
@@ -83,6 +82,8 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 	checkSupportTopAPISyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
+	alias, _ := url2Alias(aliasedURL)
+	validateClusterRegistered(alias, false)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -97,24 +98,12 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
 	fatalIf(probe.NewError(e), "Unable to start tracing")
 
-	mopts := matchOpts{
-		funcNames: ctx.StringSlice("name"),
-		apiPaths:  ctx.StringSlice("path"),
-		nodes:     ctx.StringSlice("node"),
-	}
+	mopts := matchingOpts(ctx)
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
-	done := make(chan struct{})
 
 	p := tea.NewProgram(initTraceUI())
-	go func() {
-		if e := p.Start(); e != nil {
-			os.Exit(1)
-		}
-		close(done)
-	}()
-
 	go func() {
 		for apiCallInfo := range traceCh {
 			if apiCallInfo.Err != nil {
@@ -131,6 +120,10 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 		}
 	}()
 
-	<-done
+	if e := p.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top API events")
+	}
+
 	return nil
 }

@@ -89,7 +89,7 @@ EXAMPLES:
 func checkAdminTierEditSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 2 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -135,9 +135,8 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument().Trace(args.Tail()...), "Insufficient credential information supplied to update remote tier target credentials")
 	}
 
-	if err := client.EditTier(globalContext, tierName, creds); err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to edit remote tier")
-	}
+	e := client.EditTier(globalContext, tierName, creds)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit remote tier")
 
 	printMsg(&tierMessage{
 		op:       "edit",

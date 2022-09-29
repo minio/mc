@@ -20,6 +20,7 @@ package cmd
 import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -30,7 +31,7 @@ var supportCallhomeCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainCallhome,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        supportGlobalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -78,7 +79,7 @@ func (s supportCallhomeMessage) JSON() string {
 }
 
 func isSupportCallhomeEnabled(alias string) bool {
-	return isFeatureEnabled(alias, "callhome", "callhome")
+	return isFeatureEnabled(alias, "callhome", madmin.Default)
 }
 
 func mainCallhome(ctx *cli.Context) error {
@@ -92,7 +93,11 @@ func mainCallhome(ctx *cli.Context) error {
 		return nil
 	}
 
-	setCallhomeConfig(alias, arg == "enable")
+	enable := arg == "enable"
+	if enable {
+		validateClusterRegistered(alias, true)
+	}
+	setCallhomeConfig(alias, enable)
 
 	return nil
 }
@@ -108,7 +113,6 @@ func setCallhomeConfig(alias string, enableCallhome bool) {
 
 	enableStr := "off"
 	if enableCallhome {
-		validateClusterRegistered(alias)
 		enableStr = "on"
 	}
 	configStr := "callhome enable=" + enableStr

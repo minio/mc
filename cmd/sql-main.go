@@ -95,7 +95,7 @@ ENVIRONMENT VARIABLES:
   MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 SERIALIZATION OPTIONS:
-  For query serialization options, refer to https://docs.min.io/docs/minio-client-complete-guide#sql
+  For query serialization options, refer to https://min.io/docs/minio/linux/reference/minio-mc/mc-sql.html#command-mc.sql
 
 EXAMPLES:
   1. Run a query on a set of objects recursively on AWS S3.
@@ -430,7 +430,7 @@ func getAndValidateArgs(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair, u
 // check sql input arguments.
 func checkSQLSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
-		cli.ShowCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
 	}
 }
 

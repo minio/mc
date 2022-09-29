@@ -21,8 +21,11 @@ import (
 	"os"
 
 	mc "github.com/minio/mc/cmd"
+	"github.com/minio/pkg/console"
 )
 
 func main() {
-	mc.Main(os.Args)
+	if e := mc.Main(os.Args); e != nil {
+		console.Fatalln(e)
+	}
 }

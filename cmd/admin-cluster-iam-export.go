@@ -57,7 +57,7 @@ EXAMPLES:
 
 func checkIAMExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
 	}
 }
 
@@ -78,8 +78,8 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 		return nil
 	}
 
-	r, ierr := client.ExportIAM(context.Background())
-	fatalIf(probe.NewError(ierr).Trace(aliasedURL), "Unable to export IAM info.")
+	r, e := client.ExportIAM(context.Background())
+	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to export IAM info.")
 
 	// Create iam info zip file
 	tmpFile, e := ioutil.TempFile("", fmt.Sprintf("%s-iam-info", aliasedURL))

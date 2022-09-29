@@ -114,7 +114,7 @@ func (s makeBucketMessage) JSON() string {
 // Validate command line arguments.
 func checkMakeBucketSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "mb", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "mb", 1) // last argument is exit code
 	}
 }
 
@@ -156,7 +156,7 @@ func mainMakeBucket(cliCtx *cli.Context) error {
 			continue
 		}
 
-		if cliCtx.Bool("s") {
+		if cliCtx.Bool("with-versioning") {
 			fatalIf(clnt.SetVersion(ctx, "enable", []string{}, false), "Unable to enable versioning")
 		}
 

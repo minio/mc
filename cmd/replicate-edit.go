@@ -105,7 +105,7 @@ EXAMPLES:
 // checkReplicateEditSyntax - validate all the passed arguments
 func checkReplicateEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "edit", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "edit", 1) // last argument is exit code
 	}
 }
 

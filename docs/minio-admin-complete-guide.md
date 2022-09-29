@@ -12,7 +12,7 @@ policy               manage policies defined in the MinIO server
 replicate            manage MinIO site replication
 config               manage MinIO server configuration
 decommission, decom  manage MinIO server pool decommissioning
-heal                 heal disks, buckets and objects on MinIO server
+heal                 heal bucket(s) and object(s) on MinIO server
 prometheus           manages prometheus config
 kms                  perform KMS management operations
 bucket               manage buckets defined in the MinIO server
@@ -300,7 +300,7 @@ Skip SSL certificate verification.
 | [**group** - manage groups](#group)                                    |
 | [**policy** - manage canned policies](#policy)                         |
 | [**config** - manage server configuration file](#config)               |
-| [**heal** - heal disks, buckets and objects on MinIO server](#heal)    |
+| [**heal** - heal bucket(s) and object(s) on MinIO server](#heal)    |
 | [**top** - provide top like statistics for MinIO](#top)                |
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
@@ -642,10 +642,8 @@ mc admin config import myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
-### Command `heal` - Heal disks, buckets and objects on MinIO server
-Healing is automatic on server side which runs on a continuous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
-
-
+### Command `heal` - heal bucket(s) and object(s) on MinIO server
+Healing is automatic on server side which runs on a continuous basis on a low priority thread.
 
 <a name="trace"></a>
 ### Command `trace` - Show http trace for MinIO server

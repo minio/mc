@@ -235,9 +235,9 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 ```
 
 ## Explore Further
-- [MinIO Client Complete Guide](https://docs.min.io/docs/minio-client-complete-guide)
-- [MinIO Quickstart Guide](https://docs.min.io/docs/minio-quickstart-guide)
-- [The MinIO documentation website](https://docs.min.io)
+- [MinIO Client Complete Guide](https://min.io/docs/minio/linux/reference/minio-mc.html?ref=gh)
+- [MinIO Quickstart Guide](https://min.io/docs/minio/linux/index.html#quickstart-for-linux?ref=gh)
+- [The MinIO documentation website](https://min.io/docs/minio/linux/index.html?ref=gh)
 
 ## Contribute to MinIO Project
 Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)

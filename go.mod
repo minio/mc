@@ -16,13 +16,13 @@ require (
 	github.com/klauspost/compress v1.15.9
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.14
-	github.com/minio/cli v1.23.0
+	github.com/minio/cli v1.24.0
 	github.com/minio/colorjson v1.0.2
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.4.25
+	github.com/minio/madmin-go v1.4.29
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.34
-	github.com/minio/pkg v1.3.2
+	github.com/minio/minio-go/v7 v7.0.38
+	github.com/minio/pkg v1.4.1
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -48,6 +48,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.2.0
@@ -85,7 +86,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
-	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.11.1-0.20220204035834-5ac8409525e0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/philhofer/fwd v1.1.2-0.20210722190033-5c56ac6d0bb9 // indirect

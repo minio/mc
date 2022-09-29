@@ -19,8 +19,6 @@ package cmd
 
 import (
 	"context"
-	"log"
-	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -29,21 +27,22 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var supportTopDiskFlags = []cli.Flag{
+var supportTopDriveFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "count, c",
-		Usage: "show up to N disks",
+		Usage: "show up to N drives",
 		Value: 10,
 	},
 }
 
-var supportTopDiskCmd = cli.Command{
-	Name:            "disk",
-	Usage:           "show current disk statistics",
-	Action:          mainSupportTopDisk,
+var supportTopDriveCmd = cli.Command{
+	Name:            "drive",
+	Aliases:         []string{"disk"},
+	Usage:           "show real-time drive metrics",
+	Action:          mainSupportTopDrive,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportTopDiskFlags, globalFlags...),
+	Flags:           append(supportTopDriveFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -55,23 +54,24 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Display disks metrics
+   1. Display drive metrics
       {{.Prompt}} {{.HelpName}} myminio/
-
 `,
 }
 
-// checkSupportTopDiskSyntax - validate all the passed arguments
-func checkSupportTopDiskSyntax(ctx *cli.Context) {
+// checkSupportTopDriveSyntax - validate all the passed arguments
+func checkSupportTopDriveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "disk", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
-func mainSupportTopDisk(ctx *cli.Context) error {
-	checkSupportTopDiskSyntax(ctx)
+func mainSupportTopDrive(ctx *cli.Context) error {
+	checkSupportTopDriveSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
+	alias, _ := url2Alias(aliasedURL)
+	validateClusterRegistered(alias, false)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -98,20 +98,11 @@ func mainSupportTopDisk(ctx *cli.Context) error {
 		ByDisk:   true,
 	}
 
-	done := make(chan struct{})
-
-	p := tea.NewProgram(initTopDiskUI(disks, ctx.Int("count")))
-	go func() {
-		if e := p.Start(); e != nil {
-			os.Exit(1)
-		}
-		close(done)
-	}()
-
+	p := tea.NewProgram(initTopDriveUI(disks, ctx.Int("count")))
 	go func() {
 		out := func(m madmin.RealtimeMetrics) {
 			for name, metric := range m.ByDisk {
-				p.Send(topDiskResult{
+				p.Send(topDriveResult{
 					diskName: name,
 					stats:    metric.IOStats,
 				})
@@ -120,10 +111,14 @@ func mainSupportTopDisk(ctx *cli.Context) error {
 
 		e := client.Metrics(ctxt, opts, out)
 		if e != nil {
-			log.Fatalln(probe.NewError(e), "Unable to fetch top disks")
+			fatalIf(probe.NewError(e), "Unable to fetch top drives events")
 		}
 	}()
 
-	<-done
+	if e := p.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top drive events")
+	}
+
 	return nil
 }
