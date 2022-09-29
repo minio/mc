@@ -73,7 +73,7 @@ var supportDiagCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainSupportDiag,
 	Before:       setGlobalsFromContext,
-	Flags:        append(supportDiagFlags, globalFlags...),
+	Flags:        append(supportDiagFlags, supportGlobalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -95,7 +95,7 @@ EXAMPLES:
 // checkSupportDiagSyntax - validate arguments passed by a user
 func checkSupportDiagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "diag", 1) // last argument is exit code
 	}
 }
 
@@ -160,6 +160,10 @@ func mainSupportDiag(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	if len(apiKey) == 0 {
+		// api key not passed as flag. Check that the cluster is registered.
+		apiKey = validateClusterRegistered(alias, true)
+	}
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)

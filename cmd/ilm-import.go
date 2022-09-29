@@ -85,7 +85,7 @@ func readILMConfig() (*lifecycle.Configuration, *probe.Error) {
 // checkILMImportSyntax - validate arguments passed by user
 func checkILMImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "import", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, "import", globalErrorExitStatus)
 	}
 }
 

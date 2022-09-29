@@ -42,7 +42,7 @@ var supportTopDriveCmd = cli.Command{
 	Action:          mainSupportTopDrive,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportTopDriveFlags, globalFlags...),
+	Flags:           append(supportTopDriveFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -62,7 +62,7 @@ EXAMPLES:
 // checkSupportTopDriveSyntax - validate all the passed arguments
 func checkSupportTopDriveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -70,6 +70,8 @@ func mainSupportTopDrive(ctx *cli.Context) error {
 	checkSupportTopDriveSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
+	alias, _ := url2Alias(aliasedURL)
+	validateClusterRegistered(alias, false)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)

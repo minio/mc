@@ -154,7 +154,7 @@ func initLicInfoColors() {
 
 func mainLicenseInfo(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
 	}
 
 	initLicInfoColors()

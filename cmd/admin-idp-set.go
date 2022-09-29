@@ -63,7 +63,7 @@ EXAMPLES:
 
 func mainAdminIDPSet(ctx *cli.Context) error {
 	if len(ctx.Args()) < 3 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1)
+		showCommandHelpAndExit(ctx, "set", 1)
 	}
 
 	args := ctx.Args()

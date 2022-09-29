@@ -51,7 +51,7 @@ var supportTopAPICmd = cli.Command{
 	Action:          mainSupportTopAPI,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportTopAPIFlags, globalFlags...),
+	Flags:           append(supportTopAPIFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -74,7 +74,7 @@ EXAMPLES:
 // checkSupportTopAPISyntax - validate all the passed arguments
 func checkSupportTopAPISyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "api", 1) // last argument is exit code
 	}
 }
 
@@ -82,6 +82,8 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 	checkSupportTopAPISyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
+	alias, _ := url2Alias(aliasedURL)
+	validateClusterRegistered(alias, false)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)

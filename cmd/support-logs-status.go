@@ -27,7 +27,7 @@ var supportLogsStatusCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainStatusLogs,
 	Before:       setGlobalsFromContext,
-	Flags:        logsConfigureFlags,
+	Flags:        supportGlobalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 USAGE:

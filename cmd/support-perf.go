@@ -86,7 +86,7 @@ var supportPerfCmd = cli.Command{
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportPerfFlags, globalFlags...),
+	Flags:           append(supportPerfFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -157,7 +157,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 	case 1:
 		// cannot use alias by the name 'drive' or 'net'
 		if args[0] == "drive" || args[0] == "net" || args[0] == "object" {
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1)
+			showCommandHelpAndExit(ctx, "perf", 1)
 		}
 		aliasedURL = args[0]
 
@@ -165,7 +165,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 		perfType = args[0]
 		aliasedURL = args[1]
 	default:
-		cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 	}
 
 	// Main execution
@@ -176,16 +176,9 @@ func mainSupportPerf(ctx *cli.Context) error {
 
 func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
-
 	if len(apiKey) == 0 {
-		// api key not passed as flag. check if it's available in the config
-		var e error
-		apiKey, e = getSubnetAPIKey(alias)
-
-		// Non-registered execution allowed only in debug+airgapped mode
-		if !(globalDebug && globalAirgapped) {
-			fatalIf(probe.NewError(e), "Unable to retrieve SUBNET API key")
-		}
+		// api key not passed as flag. Check that the cluster is registered.
+		apiKey = validateClusterRegistered(alias, true)
 	}
 
 	results := runPerfTests(ctx, aliasedURL, perfType)
@@ -218,10 +211,6 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 
 	clr := color.New(color.FgGreen, color.Bold)
 	clr.Println("uploaded successfully to SUBNET.")
-
-	if len(apiKey) > 0 {
-		setSubnetAPIKey(alias, apiKey)
-	}
 }
 
 func savePerfResultFile(tmpFileName string, resultFileNamePfx string, alias string) {

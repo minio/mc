@@ -85,7 +85,7 @@ func checkAdminReplicateEditSyntax(ctx *cli.Context) {
 	// Check argument count
 	argsNr := len(ctx.Args())
 	if argsNr < 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr != 1 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),

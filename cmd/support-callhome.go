@@ -31,7 +31,7 @@ var supportCallhomeCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainCallhome,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        supportGlobalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -93,7 +93,11 @@ func mainCallhome(ctx *cli.Context) error {
 		return nil
 	}
 
-	setCallhomeConfig(alias, arg == "enable")
+	enable := arg == "enable"
+	if enable {
+		validateClusterRegistered(alias, true)
+	}
+	setCallhomeConfig(alias, enable)
 
 	return nil
 }
@@ -109,7 +113,6 @@ func setCallhomeConfig(alias string, enableCallhome bool) {
 
 	enableStr := "off"
 	if enableCallhome {
-		validateClusterRegistered(alias)
 		enableStr = "on"
 	}
 	configStr := "callhome enable=" + enableStr

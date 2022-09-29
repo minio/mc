@@ -97,7 +97,7 @@ func (u configExportMessage) JSON() string {
 // checkAdminConfigExportSyntax - validate all the passed arguments
 func checkAdminConfigExportSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
 	}
 }
 

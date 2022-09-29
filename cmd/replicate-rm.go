@@ -72,7 +72,7 @@ EXAMPLES:
 // checkReplicateRemoveSyntax - validate all the passed arguments
 func checkReplicateRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "rm", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "rm", 1) // last argument is exit code
 	}
 	rmAll := ctx.Bool("all")
 	rmForce := ctx.Bool("force")

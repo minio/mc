@@ -52,7 +52,7 @@ EXAMPLES:
 // checkAdminDecommissionStartSyntax - validate all the passed arguments
 func checkAdminDecommissionStartSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 

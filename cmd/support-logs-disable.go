@@ -27,7 +27,7 @@ var supportLogsDisableCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainDisableLogs,
 	Before:       setGlobalsFromContext,
-	Flags:        logsConfigureFlags,
+	Flags:        supportGlobalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 USAGE:

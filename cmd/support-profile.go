@@ -56,7 +56,7 @@ var supportProfileCmd = cli.Command{
 	Action:          mainSupportProfile,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(profileFlags, globalFlags...),
+	Flags:           append(profileFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -99,7 +99,7 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 		}
 	}
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "profile", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "profile", 1) // last argument is exit code
 	}
 
 	if ctx.Int("duration") < 10 {
@@ -169,6 +169,10 @@ func mainSupportProfile(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	if len(apiKey) == 0 {
+		// api key not passed as flag. Check that the cluster is registered.
+		apiKey = validateClusterRegistered(alias, true)
+	}
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)

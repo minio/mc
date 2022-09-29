@@ -109,7 +109,7 @@ func (u configHistoryMessage) JSON() string {
 // checkAdminConfigHistorySyntax - validate all the passed arguments
 func checkAdminConfigHistorySyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "history", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "history", 1) // last argument is exit code
 	}
 }
 
