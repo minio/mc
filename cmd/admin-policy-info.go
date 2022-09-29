@@ -36,7 +36,7 @@ var policyInfoFlags = []cli.Flag{
 
 var adminPolicyInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "show info on a policy",
+	Usage:        "show info on an IAM policy",
 	Action:       mainAdminPolicyInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
