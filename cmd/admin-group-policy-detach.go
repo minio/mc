@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -28,29 +28,41 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminPolicyUnsetCmd = cli.Command{
-	Name:               "unset",
-	Usage:              "unset an IAM policy for a user or group",
-	Action:             mainAdminPolicyUnset,
-	OnUsageError:       onUsageError,
-	Before:             setGlobalsFromContext,
-	HideHelpCommand:    true,
-	Hidden:             true,
-	CustomHelpTemplate: `"Please use 'mc admin user policy detach' or 'mc admin group policy detach'"`,
+var adminGroupPolicyDetachCmd = cli.Command{
+	Name:         "detach",
+	Usage:        "detach an IAM policy from a group",
+	Action:       mainAdminGroupPolicyDetach,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} TARGET POLICYNAME GROUPNAME
+
+POLICYNAME:
+  Name of the policy on the MinIO server.
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Unset the "diagnostics" policy for user "james".
+     {{.Prompt}} {{.HelpName}} myminio diagnostics user=james
+
+  2. Set the "diagnostics" policy for group "auditors".
+     {{.Prompt}} {{.HelpName}} myminio diagnostics group=auditors
+`,
 }
 
-func mainAdminPolicyUnsetErr(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc admin user policy detach' or 'mc admin group policy detach'")
-	return nil
-}
-
-func checkAdminPolicyUnsetSyntax(ctx *cli.Context) {
+func checkAdminGroupPolicyDetachSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "unset", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "detach", 1) // last argument is exit code
 	}
 }
 
-func removeCannedPolicies(existingPolicies, policiesToRemove string) (string, error) {
+func detachCannedPolicies(existingPolicies, policiesToRemove string) (string, error) {
 	policiesToRemove = strings.TrimSpace(policiesToRemove)
 	if policiesToRemove == "" {
 		return "", errors.New("empty policy name is not supported")
@@ -73,9 +85,9 @@ func removeCannedPolicies(existingPolicies, policiesToRemove string) (string, er
 	return strings.Join(filteredPolicies, ","), nil
 }
 
-// mainAdminPolicyUnset is the handler for "mc admin policy unset" command.
-func mainAdminPolicyUnset(ctx *cli.Context) error {
-	checkAdminPolicyUnsetSyntax(ctx)
+// mainAdminUserPolicyDetach is the handler for "mc admin group policy detach" command.
+func mainAdminGroupPolicyDetach(ctx *cli.Context) error {
+	checkAdminGroupPolicyDetachSyntax(ctx)
 
 	console.SetColor("PolicyMessage", color.New(color.FgGreen))
 	console.SetColor("Policy", color.New(color.FgBlue))
@@ -83,11 +95,8 @@ func mainAdminPolicyUnset(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	policiesToUnset := args.Get(1)
-	entityArg := args.Get(2)
-
-	userOrGroup, isGroup, e1 := parseEntityArg(entityArg)
-	fatalIf(probe.NewError(e1).Trace(args...), "Bad last argument")
+	policiesToDetach := args.Get(1)
+	group := args.Get(2)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -95,31 +104,25 @@ func mainAdminPolicyUnset(ctx *cli.Context) error {
 
 	var existingPolicies string
 
-	if !isGroup {
-		userInfo, e := client.GetUserInfo(globalContext, userOrGroup)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to get user policy info")
-		existingPolicies = userInfo.PolicyName
-	} else {
-		groupInfo, e := client.GetGroupDescription(globalContext, userOrGroup)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to get group policy info")
-		existingPolicies = groupInfo.Policy
-	}
+	groupInfo, e := client.GetGroupDescription(globalContext, group)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to get group policy info")
+	existingPolicies = groupInfo.Policy
 
-	newPolicies, e := removeCannedPolicies(existingPolicies, policiesToUnset)
+	newPolicies, e := removeCannedPolicies(existingPolicies, policiesToDetach)
 	if e != nil {
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to unset the policy")
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to detach the policy")
 	}
 
-	e = client.SetPolicy(globalContext, newPolicies, userOrGroup, isGroup)
+	e = client.SetPolicy(globalContext, newPolicies, group, true)
 	if e == nil {
 		printMsg(userPolicyMessage{
-			op:          "unset",
-			Policy:      policiesToUnset,
-			UserOrGroup: userOrGroup,
-			IsGroup:     isGroup,
+			op:          "detach",
+			Policy:      policiesToDetach,
+			UserOrGroup: group,
+			IsGroup:     true,
 		})
 	} else {
-		fatalIf(probe.NewError(e), "Unable to unset the policy")
+		fatalIf(probe.NewError(e), "Unable to detach the policy")
 	}
 	return nil
 }

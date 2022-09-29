@@ -28,34 +28,19 @@ import (
 )
 
 var adminPolicySetCmd = cli.Command{
-	Name:         "set",
-	Usage:        "set IAM policy on a user or group",
-	Action:       mainAdminPolicySet,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
+	Name:               "set",
+	Usage:              "set IAM policy on a user or group",
+	Action:             mainAdminPolicySetErr,
+	OnUsageError:       onUsageError,
+	Before:             setGlobalsFromContext,
+	HideHelpCommand:    true,
+	Hidden:             true,
+	CustomHelpTemplate: `Please use 'mc admin user policy attach' or 'mc admin group policy attach'`,
+}
 
-USAGE:
-  {{.HelpName}} TARGET POLICYNAME [ user=username1 | group=groupname1 ]
-
-POLICYNAME:
-  Name of the policy on the MinIO server. To set multiple policies, separate names with a comma (,).
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Set the "readwrite" policy for user "james".
-     {{.Prompt}} {{.HelpName}} myminio readwrite user=james
-
-  2. Set the "readonly" policy for group "auditors".
-     {{.Prompt}} {{.HelpName}} myminio readonly group=auditors
-
-  3. Set the "readonly" and the "diagnostics" policies for user "alice"
-     {{.Prompt}} {{.HelpName}} myminio readonly,diagnostics user=alice
-`,
+func mainAdminPolicySetErr(ctx *cli.Context) error {
+	console.Infoln("Please use 'mc admin user policy attach' or 'mc admin group policy attach'")
+	return nil
 }
 
 var errBadUserGroupArg = errors.New("Last argument must be of the form user=xx or group=xx")

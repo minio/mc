@@ -29,31 +29,19 @@ import (
 )
 
 var adminPolicyUpdateCmd = cli.Command{
-	Name:         "update",
-	Usage:        "attach a new IAM policy to user or group",
-	Action:       mainAdminPolicyUpdate,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
+	Name:               "update",
+	Usage:              "attach a new IAM policy to user or group",
+	Action:             mainAdminPolicyUpdateErr,
+	OnUsageError:       onUsageError,
+	Before:             setGlobalsFromContext,
+	HideHelpCommand:    true,
+	Hidden:             true,
+	CustomHelpTemplate: `Please use 'mc admin user policy attach' or 'mc admin group policy attach'`,
+}
 
-USAGE:
-  {{.HelpName}} TARGET POLICYNAME [ user=username1 | group=groupname1 ]
-
-POLICYNAME:
-  Name of the policy on the MinIO server.
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Add the "diagnostics" policy for user "james".
-     {{.Prompt}} {{.HelpName}} myminio diagnostics user=james
-
-  2. Add the "diagnostics" policy for group "auditors".
-     {{.Prompt}} {{.HelpName}} myminio diagnostics group=auditors
-`,
+func mainAdminPolicyUpdateErr(ctx *cli.Context) error {
+	console.Infoln("Please use 'mc admin user policy attach' or 'mc admin group policy attach'")
+	return nil
 }
 
 func checkAdminPolicyUpdateSyntax(ctx *cli.Context) {

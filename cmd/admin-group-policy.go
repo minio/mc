@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,29 +19,25 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminGroupSubcommands = []cli.Command{
-	adminGroupAddCmd,
-	adminGroupRemoveCmd,
-	adminGroupInfoCmd,
-	adminGroupListCmd,
-	adminGroupEnableCmd,
-	adminGroupDisableCmd,
-	adminGroupPolicyCmd,
+var adminGroupPolicySubcommands = []cli.Command{
+	adminGroupPolicyAttachCmd,
+	adminGroupPolicyDetachCmd,
+	adminGroupPolicyListCmd,
 }
 
-var adminGroupCmd = cli.Command{
-	Name:            "group",
-	Usage:           "manage groups",
-	Action:          mainAdminGroup,
+var adminGroupPolicyCmd = cli.Command{
+	Name:            "policy",
+	Usage:           "manage policies relating to groups",
+	Action:          mainAdminGroupPolicy,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminGroupSubcommands,
+	Subcommands:     adminGroupPolicySubcommands,
 	HideHelpCommand: true,
 }
 
-// mainAdminGroup is the handle for "mc admin config" command.
-func mainAdminGroup(ctx *cli.Context) error {
-	commandNotFound(ctx, adminGroupSubcommands)
+// mainAdminGroupPolicy is the handle for "mc admin group policy" command.
+func mainAdminGroupPolicy(ctx *cli.Context) error {
+	commandNotFound(ctx, adminPolicySubcommands)
 	return nil
-	// Sub-commands like "get", "set" have their own main.
+	// Sub-commands like "attach", "list" have their own main.
 }

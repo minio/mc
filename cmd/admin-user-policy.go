@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,69 +17,27 @@
 
 package cmd
 
-import (
-	"fmt"
+import "github.com/minio/cli"
 
-	"github.com/fatih/color"
-	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
-)
+var adminUserPolicySubcommands = []cli.Command{
+	adminUserPolicyAttachCmd,
+	adminUserPolicyDetachCmd,
+	adminUserPolicyListCmd,
+}
 
 var adminUserPolicyCmd = cli.Command{
-	Name:         "policy",
-	Usage:        "export user policies in JSON format",
-	Action:       mainAdminUserPolicy,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET USERNAME
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Display the policy document of a user "foobar" in JSON format.
-     {{.Prompt}} {{.HelpName}} myminio foobar
-
-`,
+	Name:            "policy",
+	Usage:           "manage policies relating to users",
+	Action:          mainAdminUserPolicy,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     adminUserPolicySubcommands,
+	HideHelpCommand: true,
 }
 
-// checkAdminUserPolicySyntax - validate all the passed arguments
-func checkAdminUserPolicySyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code
-	}
-}
-
-// mainAdminUserPolicy is the handler for "mc admin user policy" command.
+// mainAdminGroupPolicy is the handle for "mc admin group policy" command.
 func mainAdminUserPolicy(ctx *cli.Context) error {
-	checkAdminUserPolicySyntax(ctx)
-
-	console.SetColor("UserMessage", color.New(color.FgGreen))
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	user, e := client.GetUserInfo(globalContext, args.Get(1))
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
-
-	pinfo, e := getPolicyInfo(client, user.PolicyName)
-	if user.PolicyName == "" {
-		e = fmt.Errorf("Policy not found for user %s", args.Get(1))
-	}
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
-
-	fmt.Println(string(pinfo.Policy))
-
+	commandNotFound(ctx, adminPolicySubcommands)
 	return nil
+	// Sub-commands like "attach", "list" have their own main.
 }
