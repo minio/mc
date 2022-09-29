@@ -37,10 +37,10 @@ var replicateExportCmd = cli.Command{
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-	 
+
 USAGE:
   {{.HelpName}} TARGET
-	 
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}

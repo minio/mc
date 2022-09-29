@@ -49,7 +49,7 @@ FLAGS:
    {{end}}
 EXAMPLES:
   1. Get server side replication metrics for bucket "mybucket" for alias "myminio".
-	   {{.Prompt}} {{.HelpName}} myminio/mybucket
+       {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 

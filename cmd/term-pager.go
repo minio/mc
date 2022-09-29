@@ -53,7 +53,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.content += msg
 		m.viewport.SetContent(wordwrap.String(m.content, m.viewport.Width-2))
 	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+		switch msg.String() {
+		case "ctrl+c", "q", "esc":
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
@@ -93,12 +94,14 @@ func (m model) View() string {
 }
 
 func (m model) headerView() string {
-	return ""
+	info := " (q)uit/esc"
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
+	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
 func (m model) footerView() string {
 	percent := percentStyle.Render(fmt.Sprintf("%d%%", int(m.viewport.ScrollPercent()*100)))
-	info := fmt.Sprintf(" (q)uit | %s", percent)
+	info := fmt.Sprintf(" %s", percent)
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
