@@ -37,7 +37,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Show current status of MinIO logs with alias 'play', whether
-  	 it is uploading to SUBNET or not
+     it is uploading to SUBNET or not
      {{.Prompt}} {{.HelpName}} play
 `,
 }

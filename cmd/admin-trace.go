@@ -47,7 +47,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
+		Usage: "trace only matching call types (e.g. `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
 	},
 	cli.DurationFlag{
 		Name:  "response-threshold",
