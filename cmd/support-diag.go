@@ -308,9 +308,6 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	mem := spinner("Mem Info", madmin.HealthDataTypeSysMem)
 	process := spinner("Process Info", madmin.HealthDataTypeSysLoad)
 	config := spinner("Server Config", madmin.HealthDataTypeMinioConfig)
-	drive := spinner("Drive Test", madmin.HealthDataTypePerfDrive)
-	net := spinner("Network Test", madmin.HealthDataTypePerfNet)
-	obj := spinner("Objects Test", madmin.HealthDataTypePerfObj)
 	syserr := spinner("System Errors", madmin.HealthDataTypeSysErrors)
 	syssrv := spinner("System Services", madmin.HealthDataTypeSysServices)
 	sysconfig := spinner("System Config", madmin.HealthDataTypeSysConfig)
@@ -339,16 +336,12 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	}
 
 	progress := func(info madmin.HealthInfo) {
-		noOfServers := len(info.Sys.CPUInfo)
 		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.Partitions) > 0) &&
 			osInfo(len(info.Sys.OSInfo) > 0) &&
 			mem(len(info.Sys.MemInfo) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config.Config != nil) &&
-			drive(len(info.Perf.DrivePerf) > 0) &&
-			obj(len(info.Perf.ObjPerf) > 0) &&
-			net(noOfServers == 1 || len(info.Perf.NetPerf) > 0) &&
 			syserr(len(info.Sys.SysErrs) > 0) &&
 			syssrv(len(info.Sys.SysServices) > 0) &&
 			sysconfig(len(info.Sys.SysConfig) > 0) &&
