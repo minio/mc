@@ -43,8 +43,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List all policies attached to user 'james'.
-     {{.Prompt}} {{.HelpName}} myminio james
+  1. List all IAM policies attached to group 'staff'.
+     {{.Prompt}} {{.HelpName}} myminio staff
 `,
 }
 

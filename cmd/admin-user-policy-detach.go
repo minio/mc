@@ -44,11 +44,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Unset the "diagnostics" policy for user "james".
-     {{.Prompt}} {{.HelpName}} myminio diagnostics user=james
-
-  2. Set the "diagnostics" policy for group "auditors".
-     {{.Prompt}} {{.HelpName}} myminio diagnostics group=auditors
+  1. Detach the "diagnostics" policy from user "james".
+     {{.Prompt}} {{.HelpName}} myminio diagnostics james
 `,
 }
 

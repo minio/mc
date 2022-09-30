@@ -44,9 +44,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Add the "diagnostics" policy for user "james".
-     {{.Prompt}} {{.HelpName}} myminio diagnostics james
+  1. Attach the "readonly" policy to user "james".
+     {{.Prompt}} {{.HelpName}} myminio readonly james
 
+  2. Create a new user "jerry", then attach the "readwrite" policy to that user.
+     {{.Prompt}} mc admin user add myminio jerry
+     {{.Prompt}} {{.HelpName}} myminio readwrite jerry
 `,
 }
 

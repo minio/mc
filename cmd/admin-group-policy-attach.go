@@ -50,6 +50,10 @@ FLAGS:
 EXAMPLES:
   1. Attach the "diagnostics" policy to the group "auditors".
      {{.Prompt}} {{.HelpName}} myminio diagnostics auditors
+
+  2. Add user "james" to group "staff", then add the "readwrite" policy to the group "staff".
+     {{.Prompt}} mc admin group add myminio staff james
+     {{.Prompt}} {{.HelpName}} myminio readwrite staff
 `,
 }
 
