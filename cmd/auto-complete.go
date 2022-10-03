@@ -353,12 +353,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/idp/rm":   aliasCompleter,
 
 	"/admin/policy/info":   aliasCompleter,
-	"/admin/policy/set":    aliasCompleter,
-	"/admin/policy/unset":  aliasCompleter,
-	"/admin/policy/update": aliasCompleter,
-	"/admin/policy/add":    aliasCompleter,
+	"/admin/policy/create": aliasCompleter,
 	"/admin/policy/list":   aliasCompleter,
-	"/admin/policy/remove": aliasCompleter,
 
 	"/admin/user/add":     aliasCompleter,
 	"/admin/user/disable": aliasCompleter,
@@ -366,7 +362,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/user/list":    aliasCompleter,
 	"/admin/user/remove":  aliasCompleter,
 	"/admin/user/info":    aliasCompleter,
-	"/admin/user/policy":  aliasCompleter,
+
+	"/admin/user/policy/attach": aliasCompleter,
+	"/admin/user/policy/detach": aliasCompleter,
+	"/admin/user/policy/list":   aliasCompleter,
 
 	"/admin/user/svcacct/add":     aliasCompleter,
 	"/admin/user/svcacct/list":    aliasCompleter,
@@ -384,6 +383,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/list":    aliasCompleter,
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
+
+	"/admin/group/policy/attach": aliasCompleter,
+	"/admin/group/policy/detach": aliasCompleter,
+	"/admin/group/policy/list":   aliasCompleter,
 
 	"/admin/bucket/remote/add":       aliasCompleter,
 	"/admin/bucket/remote/edit":      aliasCompleter,
