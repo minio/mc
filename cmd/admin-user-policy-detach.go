@@ -76,7 +76,7 @@ func mainAdminUserPolicyDetach(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user policy info")
 	existingPolicies := userInfo.PolicyName
 
-	newPolicies, e := removeCannedPolicies(existingPolicies, policiesToDetach)
+	newPolicies, e := detachCannedPolicies(existingPolicies, policiesToDetach)
 	if e != nil {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to detach the policy")
 	}
