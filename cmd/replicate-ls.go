@@ -47,10 +47,10 @@ var replicateListCmd = cli.Command{
 	Flags:        append(globalFlags, replicateListFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-	 
+
 USAGE:
   {{.HelpName}} TARGET
-	 
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}

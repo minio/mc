@@ -98,13 +98,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set a new remote replication target "targetbucket" in region "us-west-1" on https://minio.siteb.example.com for bucket 'sourcebucket'.
+  1. Set a new replication target "targetbucket" in region "us-west-1" on https://minio.siteb.example.com for
+     bucket 'sourcebucket'.
      {{.Prompt}} {{.HelpName}} sitea/sourcebucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
          --service "replication" --region "us-west-1"
 
-  2. Set a new remote replication target 'targetbucket' in region "us-west-1" on https://minio.siteb.example.com for
-	 bucket 'sourcebucket' with bandwidth set to 2 gigabits per second. Enable synchronous replication to the target
-	 and perform health check of target every 100 seconds
+  2. Set a new synchronous replication target 'targetbucket' in region "us-west-1" on https://minio.siteb.example.com for
+     bucket 'sourcebucket' with bandwidth set to 2 gigabits per second.
      {{.Prompt}} {{.HelpName}} sitea/sourcebucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
          --service "replication" --region "us-west-1 --bandwidth "2G" --sync
 `,

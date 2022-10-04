@@ -53,10 +53,10 @@ var replicateRemoveCmd = cli.Command{
 	Flags:        append(globalFlags, replicateRemoveFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-   
+
 USAGE:
   {{.HelpName}} TARGET
-	   
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}

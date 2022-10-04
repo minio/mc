@@ -320,9 +320,13 @@ func getDownloadURL(customReleaseURL string, releaseTag string) (downloadURL str
 		return fmt.Sprintf("docker pull minio/mc:%s", releaseTag)
 	}
 
+	if customReleaseURL == "" {
+		return mcReleaseURL + "archive/mc." + releaseTag
+	}
+
 	u, err := url.Parse(customReleaseURL)
 	if err != nil {
-		return mcReleaseURL + "archive/" + "mc." + releaseTag
+		return mcReleaseURL + "archive/mc." + releaseTag
 	}
 
 	u.Path = path.Dir(u.Path) + "/mc." + releaseTag
