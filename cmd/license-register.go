@@ -28,7 +28,10 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-const licRegisterMsgTag = "licenseRegisterMessage"
+const (
+	licRegisterMsgTag  = "licenseRegisterMessage"
+	licRegisterLinkTag = "licenseRegisterLink"
+)
 
 var licenseRegisterFlags = append([]cli.Flag{
 	cli.StringFlag{
@@ -83,12 +86,12 @@ func (li licRegisterMessage) String() string {
 	var msg string
 	switch li.Type {
 	case "online":
-		msg = fmt.Sprintf("%s %s successfully.", li.Alias, li.Action)
+		msg = console.Colorize(licRegisterMsgTag, fmt.Sprintf("%s %s successfully.", li.Alias, li.Action))
 	case "offline":
 		msg = fmt.Sprintln("Open the following URL in the browser to register", li.Alias, "on SUBNET:")
-		msg += li.URL
+		msg = console.Colorize(licRegisterMsgTag, msg) + console.Colorize(licRegisterLinkTag, li.URL)
 	}
-	return console.Colorize(licRegisterMsgTag, msg)
+	return msg
 }
 
 // JSON jsonified license register message
@@ -148,6 +151,7 @@ type SubnetMFAReq struct {
 
 func mainLicenseRegister(ctx *cli.Context) error {
 	console.SetColor(licRegisterMsgTag, color.New(color.FgGreen, color.Bold))
+	console.SetColor(licRegisterLinkTag, color.New(color.FgWhite, color.Bold))
 	checkLicenseRegisterSyntax(ctx)
 
 	// Get the alias parameter from cli
