@@ -123,7 +123,6 @@ func (tp *termPager) init() {
 	go func() {
 		tp.teaPager = tea.NewProgram(
 			tp.model,
-			tea.WithAltScreen(),
 		)
 
 		go func() {
