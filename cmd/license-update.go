@@ -35,7 +35,7 @@ var licenseUpdateCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainLicenseUpdate,
 	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, subnetCommonFlags...),
+	Flags:        append(supportGlobalFlags, subnetCommonFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
