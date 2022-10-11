@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -42,6 +41,8 @@ var adminIDPInfoCmd = cli.Command{
 USAGE:
   {{.HelpName}} TARGET ID_TYPE [CFG_NAME]
 
+  ID_TYPE must be one of 'ldap' or 'openid'.
+
 FLAGS:
    {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -50,6 +51,8 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} play/ openid
   2. Show configuration info for openid configuration named "dex_test".
      {{.Prompt}} {{.HelpName}} play/ openid dex_test
+  3. Show configuration info for ldap.
+     {{.Prompt}} {{.HelpName}} play/ ldap
 `,
 }
 
@@ -66,10 +69,7 @@ func mainAdminIDPGet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	idpType := args.Get(1)
-
-	if idpType != "openid" {
-		fatalIf(probe.NewError(errors.New("not implemented")), "This feature is not yet available")
-	}
+	validateIDType(idpType)
 
 	var cfgName string
 	if len(args) == 3 {

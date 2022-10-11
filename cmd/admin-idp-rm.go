@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -43,6 +41,8 @@ FLAGS:
 EXAMPLES:
   1. Remove an OpenID configuration from the server.
      {{.Prompt}} {{.HelpName}} play/ openid myidp
+  2. Remove default LDAP configuration from the server.
+     {{.Prompt}} {{.HelpName}} play/ ldap _
 `,
 }
 
@@ -59,10 +59,7 @@ func mainAdminIDPRemove(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	idpType := args.Get(1)
-
-	if idpType != "openid" {
-		fatalIf(probe.NewError(errors.New("not implemented")), "This feature is not yet available")
-	}
+	validateIDType(idpType)
 
 	cfgName := args.Get(2)
 
