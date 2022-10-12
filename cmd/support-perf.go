@@ -240,7 +240,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
 		default:
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+			showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 		}
 
 		if !globalJSON {
