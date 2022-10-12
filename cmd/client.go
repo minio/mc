@@ -222,6 +222,7 @@ type Config struct {
 	AppVersion        string
 	Debug             bool
 	Insecure          bool
+	TrailingHeaders   bool
 	Lookup            minio.BucketLookupType
 	ConnReadDeadline  time.Duration
 	ConnWriteDeadline time.Duration

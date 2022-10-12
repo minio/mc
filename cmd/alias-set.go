@@ -51,6 +51,10 @@ var aliasSetFlags = []cli.Flag{
 		Name:  "api",
 		Usage: "API signature. Valid options are '[S3v4, S3v2]'",
 	},
+	cli.StringFlag{
+		Name:  "trailing",
+		Usage: "Server supports trailing header signatures used for checksums",
+	},
 }
 
 var aliasSetCmd = cli.Command{
@@ -168,12 +172,13 @@ func setAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 	fatalIf(err.Trace(alias), "Unable to update hosts in config version `"+mustGetMcConfigPath()+"`.")
 
 	return aliasMessage{
-		Alias:     alias,
-		URL:       aliasCfgV10.URL,
-		AccessKey: aliasCfgV10.AccessKey,
-		SecretKey: aliasCfgV10.SecretKey,
-		API:       aliasCfgV10.API,
-		Path:      aliasCfgV10.Path,
+		Alias:        alias,
+		URL:          aliasCfgV10.URL,
+		AccessKey:    aliasCfgV10.AccessKey,
+		SecretKey:    aliasCfgV10.SecretKey,
+		API:          aliasCfgV10.API,
+		Path:         aliasCfgV10.Path,
+		TrailingHdrs: aliasCfgV10.TrailingHdrs,
 	}
 }
 
@@ -303,11 +308,12 @@ func fetchAliasKeys(args cli.Args) (string, string) {
 func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	console.SetColor("AliasMessage", color.New(color.FgGreen))
 	var (
-		args  = cli.Args()
-		alias = cleanAlias(args.Get(0))
-		url   = trimTrailingSeparator(args.Get(1))
-		api   = cli.String("api")
-		path  = cli.String("path")
+		args     = cli.Args()
+		alias    = cleanAlias(args.Get(0))
+		url      = trimTrailingSeparator(args.Get(1))
+		api      = cli.String("api")
+		path     = cli.String("path")
+		trailing = cli.Bool("trailing")
 
 		peerCert *x509.Certificate
 		err      *probe.Error
@@ -342,11 +348,12 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
 
 	msg := setAlias(alias, aliasConfigV10{
-		URL:       s3Config.HostURL,
-		AccessKey: s3Config.AccessKey,
-		SecretKey: s3Config.SecretKey,
-		API:       s3Config.Signature,
-		Path:      path,
+		URL:          s3Config.HostURL,
+		AccessKey:    s3Config.AccessKey,
+		SecretKey:    s3Config.SecretKey,
+		API:          s3Config.Signature,
+		Path:         path,
+		TrailingHdrs: trailing,
 	}) // Add an alias with specified credentials.
 
 	msg.op = "set"
