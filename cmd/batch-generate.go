@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
@@ -38,6 +39,8 @@ var batchGenerateCmd = cli.Command{
 USAGE:
   {{.HelpName}} TARGET JOBTYPE
 
+JOBTYPE:
+` + supportedJobTypes() + `
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -45,6 +48,16 @@ EXAMPLES:
   1. Generate a new batch 'replication' job definition:
      {{.Prompt}} {{.HelpName}} myminio replicate > replication.yaml
 `,
+}
+
+func supportedJobTypes() string {
+	var builder strings.Builder
+	for _, jobType := range madmin.SupportedJobTypes {
+		builder.WriteString("  - ")
+		builder.WriteString(string(jobType))
+		builder.WriteString("\n")
+	}
+	return builder.String()
 }
 
 // checkBatchGenerateSyntax - validate all the passed arguments
