@@ -111,6 +111,8 @@ func (l replicateListMessage) String() string {
 	scFieldMaxLen := 15
 	destBucketFieldMaxLen := 20
 	r := l.Rule
+	splitArn := strings.Split(r.Destination.Bucket, ":")
+	bucketName := splitArn[len(splitArn) - 1]
 	return console.Colorize("replicateListMessage", newPrettyTable(" | ",
 		Field{"ID", idFieldMaxLen},
 		Field{"Priority", priorityFieldMaxLen},
@@ -119,7 +121,7 @@ func (l replicateListMessage) String() string {
 		Field{"Tags", tagsFieldMaxLen},
 		Field{"DestBucket", destBucketFieldMaxLen},
 		Field{"StorageClass", scFieldMaxLen},
-	).buildRow(r.ID, strconv.Itoa(r.Priority), string(r.Status), r.Filter.And.Prefix, r.Tags(), r.Destination.Bucket, r.Destination.StorageClass))
+	).buildRow(r.ID, strconv.Itoa(r.Priority), string(r.Status), r.Filter.And.Prefix, r.Tags(), bucketName, r.Destination.StorageClass))
 }
 
 func mainReplicateList(cliCtx *cli.Context) error {
