@@ -24,9 +24,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/klauspost/compress/gzhttp"
 	"github.com/mattn/go-ieproxy"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/httptracer"
@@ -92,24 +94,16 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			}
 
 			var transport http.RoundTripper = &http.Transport{
-				Proxy: ieproxy.GetProxyFunc(),
-				DialContext: (&net.Dialer{
-					Timeout:   10 * time.Second,
-					KeepAlive: 15 * time.Second,
-				}).DialContext,
+				Proxy:                 ieproxy.GetProxyFunc(),
+				DialContext:           newCustomDialContext(config),
 				MaxIdleConnsPerHost:   256,
 				IdleConnTimeout:       90 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 10 * time.Second,
 				TLSClientConfig:       tlsConfig,
-				// Set this value so that the underlying transport round-tripper
-				// doesn't try to auto decode the body of objects with
-				// content-encoding set to `gzip`.
-				//
-				// Refer:
-				//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
-				DisableCompression: true,
+				DisableCompression:    true,
 			}
+			transport = gzhttp.Transport(transport)
 
 			if config.Debug {
 				transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
@@ -152,7 +146,81 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(alias, urlStrFull)
 	}
+	if globalDebug {
+		s3Client.TraceOn(os.Stdout)
+	}
 	return s3Client, nil
+}
+
+func newAnonymousClient(aliasedURL string) (*madmin.AnonymousClient, *probe.Error) {
+	_, urlStrFull, aliasCfg, err := expandAlias(aliasedURL)
+	if err != nil {
+		return nil, err.Trace(aliasedURL)
+	}
+	// Verify if the aliasedURL is a real URL, fail in those cases
+	// indicating the user to add alias.
+	if aliasCfg == nil && urlRgx.MatchString(aliasedURL) {
+		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
+	}
+	if aliasCfg == nil {
+		return nil, probe.NewError(fmt.Errorf("No valid configuration found for '%s' host alias", urlStrFull))
+	}
+
+	// Creates a parsed URL.
+	targetURL, e := url.Parse(urlStrFull)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	// By default enable HTTPs.
+	useTLS := true
+	if targetURL.Scheme == "http" {
+		useTLS = false
+	}
+
+	// Construct an anonymous client
+	anonClient, e := madmin.NewAnonymousClient(targetURL.Host, useTLS)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	// Keep TLS config.
+	tlsConfig := &tls.Config{
+		RootCAs: globalRootCAs,
+		// Can't use SSLv3 because of POODLE and BEAST
+		// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+		// Can't use TLSv1.1 because of RC4 cipher usage
+		MinVersion: tls.VersionTLS12,
+	}
+	if globalInsecure {
+		tlsConfig.InsecureSkipVerify = true
+	}
+	// Set custom transport
+	var transport http.RoundTripper = &http.Transport{
+		Proxy: ieproxy.GetProxyFunc(),
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 15 * time.Second,
+		}).DialContext,
+		MaxIdleConnsPerHost:   256,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 10 * time.Second,
+		TLSClientConfig:       tlsConfig,
+		// Set this value so that the underlying transport round-tripper
+		// doesn't try to auto decode the body of objects with
+		// content-encoding set to `gzip`.
+		//
+		// Refer:
+		//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
+		DisableCompression: true,
+	}
+	if globalDebug {
+		transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
+	}
+	anonClient.SetCustomTransport(transport)
+
+	return anonClient, nil
 }
 
 // s3AdminNew returns an initialized minioAdmin structure. If debug is enabled,

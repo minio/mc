@@ -98,35 +98,34 @@ var adminTierAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TIER_TYPE TARGET NAME [TIER_FLAGS]
+  {{.HelpName}} TYPE ALIAS NAME [FLAGS]
+
+TYPE:
+  Transition objects to supported cloud storage backend tier. Supported values are minio, s3, azure and gcs.
 
 NAME:
-  Name of remote tier target. e.g WARM-TIER
-
-TIER_TYPE:
-  Cloud storage backend where objects specified by bucket lifecycle configuration can be transitioned to.
-  Supported values are s3, azure and gcs.
-
-TIER_FLAGS:
-  Tier type specific flags.
+  Name of the remote tier target. e.g WARM-TIER
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage.
-     {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name foobar --account-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/
+  1. Configure a new remote tier which transitions objects to a bucket in a MinIO deployment:
+     {{.Prompt}} {{.HelpName}} minio myminio WARM-MINIO-TIER --endpoint https://warm-minio.com \
+        --access-key ACCESSKEY --secret-key SECRETKEY --bucket mybucket --prefix myprefix/
 
-  2. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class.
-     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --access-key foobar \
-        --secret-key foobar123 --region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
+  2. Configure a new remote tier which transitions objects to a bucket in Azure Blob Storage:
+     {{.Prompt}} {{.HelpName}} azure myminio AZTIER --account-name ACCOUNT-NAME --account-key ACCOUNT-KEY \
+        --bucket myazurebucket --prefix myazureprefix/
 
-  3. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage.
-     {{.Prompt}} {{.HelpName}} s3 myminio GCSTIER --credentials-file /path/to/credentials.json --region us-east-1 --bucket testbucket --prefix testprefix/
+  3. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class:
+     {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com \
+        --access-key ACCESSKEY --secret-key SECRETKEY --bucket mys3bucket --prefix mys3prefix/ \
+        --storage-class "STANDARD" --region us-west-2
 
-  4. Configure a new remote tier which transitions objects to a bucket in AWS S3 with STANDARD storage class using aws role.
-	 {{.Prompt}} {{.HelpName}} s3 myminio S3TIER --endpoint https://s3.amazonaws.com --use-aws-role \
-	 	--region us-east-1 --bucket testbucket --prefix testprefix/ --storage-class "STANDARD"
+  4. Configure a new remote tier which transitions objects to a bucket in Google Cloud Storage:
+     {{.Prompt}} {{.HelpName}} gcs myminio GCSTIER --credentials-file /path/to/credentials.json \
+        --bucket mygcsbucket  --prefix mygcsprefix/
 `,
 }
 
@@ -134,7 +133,7 @@ EXAMPLES:
 func checkAdminTierAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 3 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 3 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -152,6 +151,40 @@ const (
 // the flags contain invalid values.
 func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType) *madmin.TierConfig {
 	switch tierType {
+	case madmin.MinIO:
+		accessKey := ctx.String("access-key")
+		secretKey := ctx.String("secret-key")
+		if accessKey == "" || secretKey == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials", tierType))
+		}
+		bucket := ctx.String("bucket")
+		if bucket == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target bucket", tierType))
+		}
+
+		endpoint := ctx.String("endpoint")
+		if endpoint == "" {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target endpoint", tierType))
+		}
+
+		minioOpts := []madmin.MinIOOptions{}
+		prefix := ctx.String("prefix")
+		if prefix != "" {
+			minioOpts = append(minioOpts, madmin.MinIOPrefix(prefix))
+		}
+
+		region := ctx.String("region")
+		if region != "" {
+			minioOpts = append(minioOpts, madmin.MinIORegion(region))
+		}
+
+		minioCfg, err := madmin.NewTierMinIO(tierName, endpoint, accessKey, secretKey, bucket, minioOpts...)
+		if err != nil {
+			fatalIf(probe.NewError(err), "Invalid configuration for MinIO tier")
+		}
+
+		return minioCfg
+
 	case madmin.S3:
 		accessKey := ctx.String("access-key")
 		secretKey := ctx.String("secret-key")
@@ -286,11 +319,12 @@ func (msg *tierMessage) String() string {
 	case "add":
 		addMsg := fmt.Sprintf("Added remote tier %s of type %s", msg.TierName, msg.TierType)
 		return console.Colorize("TierMessage", addMsg)
-	case "ls":
-		// nothing to do here; ls has its own type to use with printMsg
 	case "rm":
 		rmMsg := fmt.Sprintf("Removed remote tier %s", msg.TierName)
 		return console.Colorize("TierMessage", rmMsg)
+	case "verify":
+		verifyMsg := fmt.Sprintf("Verified remote tier %s", msg.TierName)
+		return console.Colorize("TierMessage", verifyMsg)
 	case "edit":
 		editMsg := fmt.Sprintf("Updated remote tier %s", msg.TierName)
 		return console.Colorize("TierMessage", editMsg)
@@ -329,8 +363,8 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 
 	args := ctx.Args()
 	tierTypeStr := args.Get(0)
-	tierType, err := madmin.NewTierType(tierTypeStr)
-	fatalIf(probe.NewError(err), "Unsupported tier type")
+	tierType, e := madmin.NewTierType(tierTypeStr)
+	fatalIf(probe.NewError(e), "Unsupported tier type")
 
 	aliasedURL := args.Get(1)
 	tierName := args.Get(2)
@@ -343,9 +377,7 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	tCfg := fetchTierConfig(ctx, strings.ToUpper(tierName), tierType)
-	if err = client.AddTier(globalContext, tCfg); err != nil {
-		fatalIf(probe.NewError(err).Trace(args...), "Unable to configure remote tier target")
-	}
+	fatalIf(probe.NewError(client.AddTier(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
 
 	msg := &tierMessage{
 		op:     "add",

@@ -121,7 +121,8 @@ func TestParseAttribute(t *testing.T) {
 		//  When "atime:" is passed.
 		{"atime:", map[string]string{"atime": ""}, nil, true},
 		// Passing a valid value
-		{"atime:1/gid:1/gname:a/md:/mode:3/mtime:1/uid:1/uname:a",
+		{
+			"atime:1/gid:1/gname:a/md:/mode:3/mtime:1/uid:1/uname:a",
 			map[string]string{
 				"atime": "1",
 				"gid":   "1",
@@ -131,7 +132,9 @@ func TestParseAttribute(t *testing.T) {
 				"mtime": "1",
 				"uid":   "1",
 				"uname": "a",
-			}, nil, true},
+			},
+			nil, true,
+		},
 	}
 
 	for idx, testCase := range metaDataCases {

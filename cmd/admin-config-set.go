@@ -88,13 +88,12 @@ func (u configSetMessage) JSON() string {
 // checkAdminConfigSetSyntax - validate all the passed arguments
 func checkAdminConfigSetSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() && len(ctx.Args()) < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
 	}
 }
 
 // main config set function
 func mainAdminConfigSet(ctx *cli.Context) error {
-
 	// Check command arguments
 	checkAdminConfigSetSyntax(ctx)
 

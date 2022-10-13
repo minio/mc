@@ -25,9 +25,9 @@ import (
 )
 
 var adminUserSvcAcctListCmd = cli.Command{
-	Name:         "list",
-	Aliases:      []string{"ls"},
-	Usage:        "List services accounts",
+	Name:         "ls",
+	Aliases:      []string{"list"},
+	Usage:        "list services accounts",
 	Action:       mainAdminUserSvcAcctList,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -39,7 +39,7 @@ USAGE:
   {{.HelpName}} ALIAS TARGET-ACCOUNT
 
 TARGET-ACCOUNT:
-  Could be a MinIO user, STS or LDAP account.
+  Is either a MinIO user, LDAP account.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -53,8 +53,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctListSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct ls command.")
+		showCommandHelpAndExit(ctx, "ls", 1)
 	}
 }
 
@@ -75,7 +74,7 @@ func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	svcList, e := client.ListServiceAccounts(globalContext, user)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list service accounts")
 
 	for _, svc := range svcList.Accounts {
 		printMsg(svcAcctMessage{

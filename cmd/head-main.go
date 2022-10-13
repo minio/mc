@@ -33,23 +33,25 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	headFlags = []cli.Flag{
-		cli.Int64Flag{
-			Name:  "n,lines",
-			Usage: "print the first 'n' lines",
-			Value: 10,
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "select an object version at specified time",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "select an object version to display",
-		},
-	}
-)
+var headFlags = []cli.Flag{
+	cli.Int64Flag{
+		Name:  "n,lines",
+		Usage: "print the first 'n' lines",
+		Value: 10,
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "select an object version at specified time",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "select an object version to display",
+	},
+	cli.BoolFlag{
+		Name:  "zip",
+		Usage: "extract from remote zip file (MinIO server source only)",
+	},
+}
 
 // Display contents of a file.
 var headCmd = cli.Command{
@@ -63,7 +65,7 @@ var headCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -91,7 +93,7 @@ EXAMPLES:
 }
 
 // headURL displays contents of a URL to stdout.
-func headURL(sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, nlines int64) *probe.Error {
+func headURL(sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, nlines int64, zip bool) *probe.Error {
 	var reader io.ReadCloser
 	switch sourceURL {
 	case "-":
@@ -99,7 +101,7 @@ func headURL(sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[st
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if reader, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, sourceVersion, timeRef, encKeyDB); err != nil {
+		if reader, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, sourceVersion, timeRef, encKeyDB, zip); err != nil {
 			return err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]
@@ -201,7 +203,7 @@ func mainHead(ctx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range ctx.Args() {
-		fatalIf(headURL(url, versionID, timeRef, encKeyDB, ctx.Int64("lines")).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(headURL(url, versionID, timeRef, encKeyDB, ctx.Int64("lines"), ctx.Bool("zip")).Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil

@@ -47,7 +47,7 @@ var diffCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] FIRST SECOND
+  {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -103,7 +103,6 @@ func (d diffMessage) String() string {
 			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
 	}
 	return msg
-
 }
 
 // JSON jsonified diff message
@@ -117,7 +116,7 @@ func (d diffMessage) JSON() string {
 
 func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if len(cliCtx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(cliCtx, "diff", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "diff", 1) // last argument is exit code
 	}
 	for _, arg := range cliCtx.Args() {
 		if strings.TrimSpace(arg) == "" {
@@ -131,7 +130,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	// Diff only works between two directories, verify them below.
 
 	// Verify if firstURL is accessible.
-	_, firstContent, err := url2Stat(ctx, firstURL, "", false, encKeyDB, time.Time{})
+	_, firstContent, err := url2Stat(ctx, firstURL, "", false, encKeyDB, time.Time{}, false)
 	if err != nil {
 		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
@@ -142,7 +141,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	}
 
 	// Verify if secondURL is accessible.
-	_, secondContent, err := url2Stat(ctx, secondURL, "", false, encKeyDB, time.Time{})
+	_, secondContent, err := url2Stat(ctx, secondURL, "", false, encKeyDB, time.Time{}, false)
 	if err != nil {
 		// Destination doesn't exist is okay.
 		if _, ok := err.ToGoError().(ObjectMissing); !ok {
@@ -185,7 +184,7 @@ func doDiffMain(ctx context.Context, firstURL, secondURL string) error {
 	}
 
 	// Diff first and second urls.
-	for diffMsg := range objectDifference(ctx, firstClient, secondClient, firstURL, secondURL, true) {
+	for diffMsg := range objectDifference(ctx, firstClient, secondClient, true) {
 		if diffMsg.Error != nil {
 			errorIf(diffMsg.Error, "Unable to calculate objects difference.")
 			// Ignore error and proceed to next object.

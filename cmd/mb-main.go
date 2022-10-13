@@ -27,23 +27,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	mbFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "region",
-			Value: "us-east-1",
-			Usage: "specify bucket region; defaults to 'us-east-1'",
-		},
-		cli.BoolFlag{
-			Name:  "ignore-existing, p",
-			Usage: "ignore if bucket/directory already exists",
-		},
-		cli.BoolFlag{
-			Name:  "with-lock, l",
-			Usage: "enable object lock",
-		},
-	}
-)
+var mbFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "region",
+		Value: "us-east-1",
+		Usage: "specify bucket region; defaults to 'us-east-1'",
+	},
+	cli.BoolFlag{
+		Name:  "ignore-existing, p",
+		Usage: "ignore if bucket/directory already exists",
+	},
+	cli.BoolFlag{
+		Name:  "with-lock, l",
+		Usage: "enable object lock",
+	},
+	cli.BoolFlag{
+		Name:  "with-versioning",
+		Usage: "enable versioned bucket",
+	},
+}
 
 // make a bucket.
 var mbCmd = cli.Command{
@@ -83,6 +85,9 @@ EXAMPLES:
 
   7. Create a new bucket on Amazon S3 cloud storage in region 'us-west-2' with object lock enabled.
      {{.Prompt}} {{.HelpName}} --with-lock --region=us-west-2 s3/myregionbucket
+
+  8. Create a new bucket on MinIO with versioning enabled.
+     {{.Prompt}} {{.HelpName}} --with-versioning myminio/myversionedbucket
 `,
 }
 
@@ -109,26 +114,25 @@ func (s makeBucketMessage) JSON() string {
 // Validate command line arguments.
 func checkMakeBucketSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "mb", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "mb", 1) // last argument is exit code
 	}
 }
 
 // mainMakeBucket is entry point for mb command.
-func mainMakeBucket(cli *cli.Context) error {
-
+func mainMakeBucket(cliCtx *cli.Context) error {
 	// check 'mb' cli arguments.
-	checkMakeBucketSyntax(cli)
+	checkMakeBucketSyntax(cliCtx)
 
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
 
 	// Save region.
-	region := cli.String("region")
-	ignoreExisting := cli.Bool("p")
-	withLock := cli.Bool("l")
+	region := cliCtx.String("region")
+	ignoreExisting := cliCtx.Bool("p")
+	withLock := cliCtx.Bool("l")
 
 	var cErr error
-	for _, targetURL := range cli.Args() {
+	for _, targetURL := range cliCtx.Args() {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
@@ -141,18 +145,19 @@ func mainMakeBucket(cli *cli.Context) error {
 		defer cancelMakeBucket()
 
 		// Make bucket.
-		err = clnt.MakeBucket(ctx, region, ignoreExisting, withLock)
-		if err != nil {
+		if err = clnt.MakeBucket(ctx, region, ignoreExisting, withLock); err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
-				errorIf(err.Trace(targetURL), "Unable to make bucket, please use `mc mb %s/<your-bucket-name>`.", targetURL)
-			case BucketNameTopLevel:
-				errorIf(err.Trace(targetURL), "Unable to make prefix, please use `mc mb %s/`.", targetURL)
+				errorIf(err.Trace(targetURL), "Unable to make bucket, please use `mc mb %s`.", urlJoinPath(targetURL, "your-bucket-name"))
 			default:
 				errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
 			}
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
+		}
+
+		if cliCtx.Bool("with-versioning") {
+			fatalIf(clnt.SetVersion(ctx, "enable", []string{}, false), "Unable to enable versioning")
 		}
 
 		// Successfully created a bucket.

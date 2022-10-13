@@ -46,11 +46,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "match all objects newer than L days, M hours and N minutes",
+			Usage: "match all objects newer than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "match all objects older than L days, M hours and N minutes",
+			Usage: "match all objects older than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "path",
@@ -94,7 +94,7 @@ var findCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} PATH [FLAGS]
+  {{.HelpName}} [FLAGS] TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -174,8 +174,8 @@ func checkFindSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	// Extract input URLs and validate.
 	for _, url := range args {
-		_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{})
-		if err != nil && !isURLPrefixExists(url, false) {
+		_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}, false)
+		if err != nil {
 			// Bucket name empty is a valid error for 'find myminio' unless we are using watch, treat it as such.
 			if _, ok := err.ToGoError().(BucketNameEmpty); ok && !cliCtx.Bool("watch") {
 				continue

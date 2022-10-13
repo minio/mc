@@ -38,11 +38,11 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "move objects older than L days, M hours and N minutes",
+			Usage: "move objects older than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "move objects newer than L days, M hours and N minutes",
+			Usage: "move objects newer than value in duration string (e.g. 7d10h31s)",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
@@ -147,7 +147,7 @@ EXAMPLES:
 type removeClientInfo struct {
 	client    Client
 	contentCh chan *ClientContent
-	errorCh   <-chan *probe.Error
+	resultCh  <-chan RemoveResult
 }
 
 type removeManager struct {
@@ -156,12 +156,14 @@ type removeManager struct {
 	wg             sync.WaitGroup
 }
 
-func (rm *removeManager) readErrors(errorCh <-chan *probe.Error, targetURL string) {
+func (rm *removeManager) readErrors(resultCh <-chan RemoveResult, targetURL string) {
 	rm.wg.Add(1)
 	go func() {
 		defer rm.wg.Done()
-		for pErr := range errorCh {
-			errorIf(pErr.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
+		for result := range resultCh {
+			if result.Err != nil {
+				errorIf(result.Err.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
+			}
 		}
 	}()
 }
@@ -179,13 +181,13 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 		}
 
 		contentCh := make(chan *ClientContent, 10000)
-		errorCh := client.Remove(ctx, false, false, false, contentCh)
-		rm.readErrors(errorCh, targetURL)
+		resultCh := client.Remove(ctx, false, false, false, false, contentCh)
+		rm.readErrors(resultCh, targetURL)
 
 		clientInfo = &removeClientInfo{
 			client:    client,
 			contentCh: contentCh,
-			errorCh:   errorCh,
+			resultCh:  resultCh,
 		}
 
 		rm.removeMap[targetAlias] = clientInfo
@@ -239,18 +241,12 @@ func mainMove(cliCtx *cli.Context) error {
 	// Check if source URLs does not have object locking enabled
 	// since we cannot move them (remove them from the source)
 	for _, urlStr := range cliCtx.Args()[:cliCtx.NArg()-1] {
-		client, err := newClient(urlStr)
+		enabled, err := isBucketLockEnabled(ctx, urlStr)
 		if err != nil {
-			fatalIf(err.Trace(), "Unable to parse the provided url.")
+			fatalIf(err.Trace(), "Unable to get bucket lock configuration of `%s`", urlStr)
 		}
-		if _, ok := client.(*S3Client); ok {
-			enabled, err := isBucketLockEnabled(ctx, urlStr)
-			if err != nil {
-				fatalIf(err.Trace(), "Unable to get bucket lock configuration of `%s`", urlStr)
-			}
-			if enabled {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
-			}
+		if enabled {
+			fatalIf(errDummy().Trace(), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 		}
 	}
 

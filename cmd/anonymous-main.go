@@ -32,14 +32,12 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	anonymousFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "list recursively",
-		},
-	}
-)
+var anonymousFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "list recursively",
+	},
+}
 
 // Manage anonymous access to buckets and objects.
 var anonymousCmd = cli.Command{
@@ -180,11 +178,11 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 	argsLength := len(ctx.Args())
 	// Always print a help message when we have extra arguments
 	if argsLength > 3 {
-		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "anonymous", 1) // last argument is exit code.
 	}
 	// Always print a help message when no arguments specified
 	if argsLength < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+		showCommandHelpAndExit(ctx, "anonymous", 1)
 	}
 
 	firstArg := ctx.Args().Get(0)
@@ -195,7 +193,7 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 	case "set":
 		// Always expect three arguments when setting a anonymous permission.
 		if argsLength != 3 {
-			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 		if accessPerms(secondArg) != accessNone &&
 			accessPerms(secondArg) != accessDownload &&
@@ -209,25 +207,25 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 	case "set-json":
 		// Always expect three arguments when setting a anonymous permission.
 		if argsLength != 3 {
-			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	case "get", "get-json":
 		// get or get-json always expects two arguments
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	case "list":
 		// Always expect an argument after list cmd
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	case "links":
 		// Always expect an argument after links cmd
 		if argsLength != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, "anonymous", 1)
 		}
 	default:
-		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+		showCommandHelpAndExit(ctx, "anonymous", 1)
 	}
 }
 
@@ -495,7 +493,7 @@ func mainAnonymous(ctx *cli.Context) error {
 		runAnonymousLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
 	default:
 		// Shows command example and exit
-		cli.ShowCommandHelpAndExit(ctx, "anonymous", 1)
+		showCommandHelpAndExit(ctx, "anonymous", 1)
 	}
 	return nil
 }

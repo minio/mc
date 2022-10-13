@@ -38,6 +38,10 @@ func trapSignals(sig ...os.Signal) {
 	// Once signal has been received stop signal Notify handler.
 	signal.Stop(sigCh)
 
+	// Stop profiling if enabled, this needs to be before canceling the
+	// global context to check for any unusual cpu/mem/goroutines usage
+	stopProfiling()
+
 	// Cancel the global context
 	globalCancel()
 

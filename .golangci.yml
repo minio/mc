@@ -1,10 +1,3 @@
-linters-settings:
-  golint:
-    min-confidence: 0
-
-  misspell:
-    locale: US
-
 linters:
   disable-all: true
   enable:
@@ -14,7 +7,6 @@ linters:
     - govet
     - revive
     - ineffassign
-    - gosimple
     - deadcode
     - structcheck
     - gomodguard
@@ -22,6 +14,21 @@ linters:
     - unused
     - structcheck
     - varcheck
+    - gofumpt
+
+linters-settings:
+  golint:
+    min-confidence: 0
+
+  misspell:
+    locale: US
+
+  gofumpt:
+    lang-version: "1.17"
+
+    # Choose whether or not to use the extra rules that are disabled
+    # by default
+    extra-rules: false
 
 issues:
   exclude-use-default: false
@@ -29,6 +36,6 @@ issues:
     - instead of using struct literal
     - should have a package comment
     - error strings should not be capitalized or end with punctuation or a newline
-      
+
 service:
-  golangci-lint-version: 1.20.0 # use the fixed version to not introduce new linters unexpectedly
+  golangci-lint-version: 1.43.0 # use the fixed version to not introduce new linters unexpectedly

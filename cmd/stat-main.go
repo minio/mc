@@ -97,7 +97,7 @@ EXAMPLES:
 // parseAndCheckStatSyntax - parse and validate all the passed arguments
 func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
 	}
 
 	args := cliCtx.Args()
@@ -114,7 +114,6 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 
 	// extract URLs.
 	URLs := cliCtx.Args()
-	isIncomplete := false
 
 	if versionID != "" && len(args) > 1 {
 		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --version-id with multiple arguments.")
@@ -125,8 +124,8 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	}
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url, versionID, false, encKeyDB, rewind)
-		if err != nil && !isURLPrefixExists(url, isIncomplete) {
+		_, _, err := url2Stat(ctx, url, versionID, false, encKeyDB, rewind, false)
+		if err != nil {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
 	}
@@ -183,5 +182,4 @@ func mainStat(cliCtx *cli.Context) error {
 
 	}
 	return cErr
-
 }

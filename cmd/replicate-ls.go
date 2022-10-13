@@ -47,10 +47,10 @@ var replicateListCmd = cli.Command{
 	Flags:        append(globalFlags, replicateListFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-	 
+
 USAGE:
   {{.HelpName}} TARGET
-	 
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -63,9 +63,10 @@ EXAMPLES:
 // checkReplicateListSyntax - validate all the passed arguments
 func checkReplicateListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 }
+
 func printReplicateListHeader() {
 	if globalJSON {
 		return

@@ -20,8 +20,12 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"math/rand"
+	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -32,6 +36,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/pkg/console"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const cred = "YellowItalics"
@@ -73,24 +78,20 @@ EXAMPLES:
      {{.DisableHistory}}
      {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123
      {{.EnableHistory}}
-
   2. Add MinIO service under "myminio" alias, to use dns style bucket lookup. For security reasons
      turn off bash history momentarily.
      {{.DisableHistory}}
      {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --path "off"
      {{.EnableHistory}}
-
   3. Add Amazon S3 storage service under "mys3" alias. For security reasons turn off bash history momentarily.
      {{.DisableHistory}}
      {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com \
                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
      {{.EnableHistory}}
-
   4. Add Amazon S3 storage service under "mys3" alias, prompting for keys.
      {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com --api "s3v4" --path "off"
      Enter Access Key: BKIKJAA5BMMU2RHO6IBB
      Enter Secret Key: V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
-
   5. Add Amazon S3 storage service under "mys3" alias using piped keys.
      {{.DisableHistory}}
      {{.Prompt}} echo -e "BKIKJAA5BMMU2RHO6IBB\nV8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
@@ -103,6 +104,11 @@ EXAMPLES:
 func checkAliasSetSyntax(ctx *cli.Context, accessKey string, secretKey string, deprecated bool) {
 	args := ctx.Args()
 	argsNr := len(args)
+
+	if argsNr == 0 {
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+	}
+
 	if argsNr > 4 || argsNr < 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for alias set command.")
@@ -173,16 +179,21 @@ func setAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
 // using v4 signature then v2 in case of failure.
-func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (string, *probe.Error) {
+func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, peerCert *x509.Certificate) (string, *probe.Error) {
 	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bucket-sign-")
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
 		// S3 connection parameters
-		Insecure:  globalInsecure,
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		HostURL:   urlJoinPath(url, probeBucketName),
-		Debug:     globalDebug,
+		Insecure:          globalInsecure,
+		AccessKey:         accessKey,
+		SecretKey:         secretKey,
+		HostURL:           urlJoinPath(url, probeBucketName),
+		Debug:             globalDebug,
+		ConnReadDeadline:  globalConnReadDeadline,
+		ConnWriteDeadline: globalConnWriteDeadline,
+	}
+	if peerCert != nil {
+		configurePeerCertificate(s3Config, peerCert)
 	}
 
 	probeSignatureType := func(stype string) (string, *probe.Error) {
@@ -223,13 +234,17 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string) (st
 
 // BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path string) (*Config, *probe.Error) {
+func BuildS3Config(ctx context.Context, url, alias, accessKey, secretKey, api, path string, peerCert *x509.Certificate) (*Config, *probe.Error) {
 	s3Config := NewS3Config(url, &aliasConfigV10{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
 		Path:      path,
 	})
+
+	if peerCert != nil {
+		configurePeerCertificate(s3Config, peerCert)
+	}
 
 	// If api is provided we do not auto probe signature, this is
 	// required in situations when signature type is provided by the user.
@@ -238,7 +253,7 @@ func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path str
 		return s3Config, nil
 	}
 	// Probe S3 signature version
-	api, err := probeS3Signature(ctx, accessKey, secretKey, url)
+	api, err := probeS3Signature(ctx, accessKey, secretKey, url, peerCert)
 	if err != nil {
 		return nil, err.Trace(url, accessKey, secretKey, api, path)
 	}
@@ -293,6 +308,9 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 		url   = trimTrailingSeparator(args.Get(1))
 		api   = cli.String("api")
 		path  = cli.String("path")
+
+		peerCert *x509.Certificate
+		err      *probe.Error
 	)
 
 	// Support deprecated lookup flag
@@ -315,7 +333,12 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	ctx, cancelAliasAdd := context.WithCancel(globalContext)
 	defer cancelAliasAdd()
 
-	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, path)
+	if !globalInsecure && !globalJSON && term.IsTerminal(int(os.Stdout.Fd())) {
+		peerCert, err = promptTrustSelfSignedCert(ctx, url, alias)
+		fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+	}
+
+	s3Config, err := BuildS3Config(ctx, url, alias, accessKey, secretKey, api, path, peerCert)
 	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
 
 	msg := setAlias(alias, aliasConfigV10{
@@ -333,4 +356,36 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 
 	printMsg(msg)
 	return nil
+}
+
+// configurePeerCertificate adds the peer certificate to the
+// TLS root CAs of s3Config. Once configured, any client
+// initialized with this config trusts the given peer certificate.
+func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
+	switch {
+	case s3Config.Transport == nil:
+		if globalRootCAs != nil {
+			globalRootCAs.AddCert(peerCert)
+		}
+		s3Config.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 15 * time.Second,
+			}).DialContext,
+			MaxIdleConnsPerHost:   256,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
+			DisableCompression:    true,
+			TLSClientConfig:       &tls.Config{RootCAs: globalRootCAs},
+		}
+	case s3Config.Transport.TLSClientConfig == nil || s3Config.Transport.TLSClientConfig.RootCAs == nil:
+		if globalRootCAs != nil {
+			globalRootCAs.AddCert(peerCert)
+		}
+		s3Config.Transport.TLSClientConfig = &tls.Config{RootCAs: globalRootCAs}
+	default:
+		s3Config.Transport.TLSClientConfig.RootCAs.AddCert(peerCert)
+	}
 }

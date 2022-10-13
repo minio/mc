@@ -75,8 +75,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctAddSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct add command.")
+		showCommandHelpAndExit(ctx, "add", 1)
 	}
 }
 

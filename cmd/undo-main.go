@@ -31,27 +31,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	undoFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "undo last S3 put/delete operations",
-		},
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force recursive operation",
-		},
-		cli.IntFlag{
-			Name:  "last",
-			Usage: "undo N last changes",
-			Value: 1,
-		},
-		cli.BoolFlag{
-			Name:  "dry-run",
-			Usage: "fake an undo operation",
-		},
-	}
-)
+var undoFlags = []cli.Flag{
+	cli.IntFlag{
+		Name:  "last",
+		Usage: "undo N last changes",
+		Value: 1,
+	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "undo last S3 PUT/DELETE operations recursively",
+	},
+	cli.BoolFlag{
+		Name:  "force",
+		Usage: "force recursive operation",
+	},
+	cli.BoolFlag{
+		Name:  "dry-run",
+		Usage: "fake an undo operation",
+	},
+}
 
 var undoCmd = cli.Command{
 	Name:         "undo",
@@ -64,18 +62,17 @@ var undoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
-{{if .VisibleFlags}}
+  {{.HelpName}} [FLAGS] TARGET
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}{{end}}
-
+  {{end}}
 EXAMPLES:
   1. Undo the last 3 uploads and/or removals of a particular object
      {{.Prompt}} {{.HelpName}} s3/backups/file.zip --last 3
 
   2. Undo the last upload/removal change of all objects under a prefix
-     {{.Prompt}} {{.HelpName}} --recursive --force s3/backups/prefix/
+     {{.Prompt}} {{.HelpName}} s3/backups/prefix/ --recursive --force
 `,
 }
 
@@ -145,7 +142,7 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 	}
 
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+	resultCh := clnt.Remove(ctx, false, false, false, false, contentCh)
 
 	prefixPath := clnt.GetURL().Path
 	prefixPath = filepath.ToSlash(prefixPath)
@@ -177,9 +174,9 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 		close(contentCh)
 	}()
 
-	for err := range errorCh {
-		if err != nil {
-			errorIf(err.Trace(), "Unable to undo")
+	for result := range resultCh {
+		if result.Err != nil {
+			errorIf(result.Err.Trace(), "Unable to undo")
 			exitErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 		}
 	}
@@ -259,8 +256,16 @@ func checkIfBucketIsVersioned(ctx context.Context, aliasedURL string) (versioned
 	return false
 }
 
+func checkUndoSyntax(cliCtx *cli.Context) {
+	if !cliCtx.Args().Present() {
+		showCommandHelpAndExit(cliCtx, "undo", 1)
+	}
+}
+
 // mainUndo is the main entry point for undo command.
 func mainUndo(cliCtx *cli.Context) error {
+	checkUndoSyntax(cliCtx)
+
 	ctx, cancelCat := context.WithCancel(globalContext)
 	defer cancelCat()
 

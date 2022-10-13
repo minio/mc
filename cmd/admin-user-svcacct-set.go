@@ -37,7 +37,8 @@ var adminUserSvcAcctSetFlags = []cli.Flag{
 }
 
 var adminUserSvcAcctSetCmd = cli.Command{
-	Name:         "set",
+	Name:         "edit",
+	Aliases:      []string{"set"},
 	Usage:        "edit an existing service account",
 	Action:       mainAdminUserSvcAcctSet,
 	OnUsageError: onUsageError,
@@ -61,8 +62,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctSetSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctSetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct set command.")
+		showCommandHelpAndExit(ctx, "edit", 1)
 	}
 }
 
@@ -95,7 +95,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	}
 
 	e := client.UpdateServiceAccount(globalContext, svcAccount, opts)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit the specified service account")
 
 	printMsg(svcAcctMessage{
 		op:        "set",
