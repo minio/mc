@@ -19,15 +19,14 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
-	"github.com/olekukonko/tablewriter"
 )
 
 var licenseInfoCmd = cli.Command{
@@ -101,7 +100,7 @@ func (li licInfoMessage) String() string {
 		return licInfoMsg(li.Info.Message)
 	}
 
-	return licInfoMsg(getLicInfoStr(li.Info))
+	return getLicInfoStr(li.Info)
 }
 
 // JSON jsonified license info
@@ -113,27 +112,19 @@ func (li licInfoMessage) JSON() string {
 }
 
 func getLicInfoStr(li licInfo) string {
-	var s strings.Builder
+	t := table.NewWriter()
+	t.SetStyle(table.StyleRounded)
 
-	s.WriteString(color.WhiteString(""))
-	table := tablewriter.NewWriter(&s)
-	table.SetAutoWrapText(false)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetBorder(true)
-	table.SetRowLine(false)
-
-	data := [][]string{
+	data := []table.Row{
 		{licInfoField("Organization"), licInfoVal(li.Organization)},
 		{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)},
 		{licInfoField("Plan"), licInfoVal(li.Plan)},
 		{licInfoField("Issued at"), licInfoVal(li.IssuedAt.String())},
 		{licInfoField("Expires at"), licInfoVal(li.ExpiresAt.String())},
 	}
-	table.AppendBulk(data)
-	table.Render()
+	t.AppendRows(data)
 
-	return s.String()
+	return t.Render()
 }
 
 func getAGPLMessage() string {
@@ -160,7 +151,7 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	initLicInfoColors()
 
 	aliasedURL := ctx.Args().Get(0)
-	alias, _ := initSubnetConnectivity(ctx, aliasedURL)
+	alias, _ := initSubnetConnectivity(ctx, aliasedURL, false)
 
 	apiKey, lic, e := getSubnetCreds(alias)
 	fatalIf(probe.NewError(e), "Error in checking cluster registration status")

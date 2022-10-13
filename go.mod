@@ -48,6 +48,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.4.1-0.20220204041308-bf2912e703f6
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/jedib0t/go-pretty/v6 v6.4.0
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5

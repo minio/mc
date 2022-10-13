@@ -693,8 +693,8 @@ func getAPIKeyFlag(ctx *cli.Context) (string, error) {
 	return apiKey, nil
 }
 
-func initSubnetConnectivity(ctx *cli.Context, aliasedURL string) (string, string) {
-	e := validateSubnetFlags(ctx)
+func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool) (string, string) {
+	e := validateSubnetFlags(ctx, forUpload)
 	fatalIf(probe.NewError(e), "Invalid flags:")
 
 	alias, _ := url2Alias(aliasedURL)
@@ -714,9 +714,9 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string) (string, string
 	return alias, apiKey
 }
 
-func validateSubnetFlags(ctx *cli.Context) error {
+func validateSubnetFlags(ctx *cli.Context, forUpload bool) error {
 	if !globalAirgapped {
-		if globalJSON {
+		if globalJSON && forUpload {
 			return errors.New("--json is applicable only when --airgap is also passed")
 		}
 		return nil
