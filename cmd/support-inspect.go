@@ -145,9 +145,13 @@ func mainSupportInspect(ctx *cli.Context) error {
 	}
 
 	var publicKey []byte
-	publicKey, e := os.ReadFile(filepath.Join(mustGetMcConfigDir(), "support.pk"))
+	publicKey, e := os.ReadFile(filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
 	if e != nil && !os.IsNotExist(e) {
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
+	} else if len(publicKey) > 0 {
+		if !globalJSON && !globalQuiet {
+			console.Infoln("Using public key from ", filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
+		}
 	}
 
 	// Fall back to MinIO public key.
@@ -174,13 +178,13 @@ func mainSupportInspect(ctx *cli.Context) error {
 	var keyHex string
 
 	// Choose a name and move the inspect data to its final destination
-	downloadPath := fmt.Sprintf("inspect.zip")
+	downloadPath := fmt.Sprintf("inspect-data.enc")
 	if key != nil {
 		// Create an id that is also crc.
 		var id [4]byte
 		binary.LittleEndian.PutUint32(id[:], crc32.ChecksumIEEE(key[:]))
 		// We use 4 bytes of the 32 bytes to identify they file.
-		downloadPath = fmt.Sprintf("inspect.%s.zip", hex.EncodeToString(id[:]))
+		downloadPath = fmt.Sprintf("inspect-data.%s.enc", hex.EncodeToString(id[:]))
 		keyHex = hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
 	}
 
