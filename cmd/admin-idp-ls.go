@@ -18,13 +18,8 @@
 package cmd
 
 import (
-	"encoding/json"
-	"strings"
-
-	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
-	"github.com/minio/mc/pkg/probe"
 )
 
 var adminIDPLsCmd = cli.Command{
@@ -33,12 +28,16 @@ var adminIDPLsCmd = cli.Command{
 	Before:       setGlobalsFromContext,
 	Action:       mainAdminIDPList,
 	OnUsageError: onUsageError,
+	Hidden:       true,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
   {{.HelpName}} TARGET ID_TYPE
+
+  **DEPRECATED**: This command will be removed in a future version. Please use
+  "mc admin idp ldap|openid" instead.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -57,113 +56,13 @@ func mainAdminIDPList(ctx *cli.Context) error {
 	}
 
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
 	idpType := args.Get(1)
 	validateIDType(idpType)
 
-	result, e := client.ListIDPConfig(globalContext, idpType)
-	fatalIf(probe.NewError(e), "Unable to list IDP config for '%s'", idpType)
-
-	printMsg(idpCfgList(result))
-
-	return nil
-}
-
-type idpCfgList []madmin.IDPListItem
-
-func (i idpCfgList) JSON() string {
-	bs, e := json.MarshalIndent(i, "", "  ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(bs)
-}
-
-func (i idpCfgList) String() string {
-	maxNameWidth := len("Name")
-	maxRoleARNWidth := len("RoleArn")
-	for _, item := range i {
-		name := item.Name
-		if name == "_" {
-			name = "(default)" // for the un-named config, don't show `_`
-		}
-		if maxNameWidth < len(name) {
-			maxNameWidth = len(name)
-		}
-		if maxRoleARNWidth < len(item.RoleARN) {
-			maxRoleARNWidth = len(item.RoleARN)
-		}
-	}
-	enabledWidth := 5
-	// Add 2 for padding
-	maxNameWidth += 2
-	maxRoleARNWidth += 2
-
-	enabledColStyle := lipgloss.NewStyle().
-		Align(lipgloss.Center).
-		PaddingLeft(1).
-		PaddingRight(1).
-		Width(enabledWidth)
-	nameColStyle := lipgloss.NewStyle().
-		Align(lipgloss.Right).
-		PaddingLeft(1).
-		PaddingRight(1).
-		Width(maxNameWidth)
-	arnColStyle := lipgloss.NewStyle().
-		Align(lipgloss.Left).
-		PaddingLeft(1).
-		PaddingRight(1).
-		Foreground(lipgloss.Color("#04B575")). // green
-		Width(maxRoleARNWidth)
-
-	styles := []lipgloss.Style{enabledColStyle, nameColStyle, arnColStyle}
-
-	headers := []string{"On?", "Name", "RoleARN"}
-	headerRow := []string{}
-
-	// Override some style settings for the header
-	for ii, hdr := range headers {
-		headerRow = append(headerRow,
-			styles[ii].Copy().
-				Bold(true).
-				Foreground(lipgloss.Color("#6495ed")). // green
-				Align(lipgloss.Center).
-				Render(hdr),
-		)
+	isOpenID := false
+	if idpType == madmin.OpenidIDPCfg {
+		isOpenID = true
 	}
 
-	lines := []string{strings.Join(headerRow, "")}
-
-	enabledOff := "🔴"
-	enabledOn := "🟢"
-
-	for _, item := range i {
-		enabled := enabledOff
-		if item.Enabled {
-			enabled = enabledOn
-		}
-
-		line := []string{
-			styles[0].Render(enabled),
-			styles[1].Render(item.Name),
-			styles[2].Render(item.RoleARN),
-		}
-		if item.Name == "_" {
-			// For default config, don't display `_` and make it look faint.
-			line[1] = styles[1].Copy().
-				Faint(true).
-				Render("(default)")
-		}
-		lines = append(lines, strings.Join(line, ""))
-	}
-
-	boxContent := strings.Join(lines, "\n")
-	boxStyle := lipgloss.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder())
-
-	return boxStyle.Render(boxContent)
+	return adminIDPListCommon(ctx, isOpenID)
 }
