@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -145,9 +144,15 @@ func mainSupportInspect(ctx *cli.Context) error {
 	}
 
 	var publicKey []byte
-	publicKey, e := ioutil.ReadFile(filepath.Join(mustGetMcConfigDir(), "support.pk"))
+	publicKey, e := os.ReadFile(filepath.Join(mustGetMcConfigDir(), "support.pk"))
 	if e != nil && !os.IsNotExist(e) {
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
+	}
+
+	// Fall back to MinIO public key.
+	if len(publicKey) == 0 {
+		// Public key for MinIO confidential information.
+		publicKey = []byte("MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB")
 	}
 
 	key, r, e := client.Inspect(context.Background(), madmin.InspectOptions{
@@ -158,7 +163,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
 
 	// Download the inspect data in a temporary file first
-	tmpFile, e := ioutil.TempFile("", "mc-inspect-")
+	tmpFile, e := os.CreateTemp("", "mc-inspect-")
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 	_, e = io.Copy(tmpFile, r)
 	fatalIf(probe.NewError(e), "Unable to download file data.")
