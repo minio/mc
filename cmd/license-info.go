@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -58,6 +60,24 @@ const (
 	licInfoFieldTag = "licenseInfoField"
 	licInfoValTag   = "licenseValueField"
 )
+
+type liTableModel struct {
+	table table.Model
+}
+
+func (m liTableModel) Init() tea.Cmd { return nil }
+
+func (m liTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
+}
+
+func (m liTableModel) View() string {
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).Render(m.table.View())
+}
 
 type licInfoMessage struct {
 	Status string  `json:"status"`
@@ -112,19 +132,41 @@ func (li licInfoMessage) JSON() string {
 }
 
 func getLicInfoStr(li licInfo) string {
-	t := table.NewWriter()
-	t.SetStyle(table.StyleRounded)
+	columns := []table.Column{
+		{Title: "Field", Width: 20},
+		{Title: "Value", Width: 45},
+	}
 
-	data := []table.Row{
+	rows := []table.Row{
 		{licInfoField("Organization"), licInfoVal(li.Organization)},
 		{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)},
 		{licInfoField("Plan"), licInfoVal(li.Plan)},
 		{licInfoField("Issued at"), licInfoVal(li.IssuedAt.String())},
 		{licInfoField("Expires at"), licInfoVal(li.ExpiresAt.String())},
 	}
-	t.AppendRows(data)
 
-	return t.Render()
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(true),
+		table.WithHeight(len(rows)),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = s.Selected.Bold(false)
+
+	t.SetStyles(s)
+	p := tea.NewProgram(liTableModel{t})
+	go p.Start()
+	time.Sleep(time.Second) // allow time for the table to be rendered
+	p.Quit()
+
+	return ""
 }
 
 func getAGPLMessage() string {
