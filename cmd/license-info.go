@@ -170,12 +170,8 @@ func getLicInfoStr(li licInfo) string {
 }
 
 func getAGPLMessage() string {
-	return `You are using GNU AFFERO GENERAL PUBLIC LICENSE Verson 3 (https://www.gnu.org/licenses/agpl-3.0.txt)
-
-If you are building proprietary applications, you may want to choose the commercial license
-included as part of the Standard and Enterprise subscription plans. (https://min.io/signup?ref=mc)
-
-Applications must otherwise comply with all the GNU AGPLv3 License & Trademark obligations.`
+	return `License: GNU AGPL v3 <https://www.gnu.org/licenses/agpl-3.0.txt>
+If you are distributing or hosting MinIO along with your proprietary application as combined works, you may require a commercial license included in the Standard and Enterprise subscription plans. (https://min.io/signup?ref=mc)`
 }
 
 func initLicInfoColors() {
