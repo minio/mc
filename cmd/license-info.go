@@ -19,15 +19,17 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
+	"net/http"
 	"time"
 
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
-	"github.com/olekukonko/tablewriter"
 )
 
 var licenseInfoCmd = cli.Command{
@@ -60,6 +62,24 @@ const (
 	licInfoValTag   = "licenseValueField"
 )
 
+type liTableModel struct {
+	table table.Model
+}
+
+func (m liTableModel) Init() tea.Cmd { return nil }
+
+func (m liTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
+}
+
+func (m liTableModel) View() string {
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).Render(m.table.View())
+}
+
 type licInfoMessage struct {
 	Status string  `json:"status"`
 	Info   licInfo `json:"info,omitempty"`
@@ -67,12 +87,14 @@ type licInfoMessage struct {
 }
 
 type licInfo struct {
+	LicenseID    string     `json:"license_id,omitempty"`    // Unique ID of the license
 	Organization string     `json:"org,omitempty"`           // Subnet organization name
 	Plan         string     `json:"plan,omitempty"`          // Subnet plan
 	IssuedAt     *time.Time `json:"issued_at,omitempty"`     // Time of license issue
 	ExpiresAt    *time.Time `json:"expires_at,omitempty"`    // Time of license expiry
 	DeploymentID string     `json:"deployment_id,omitempty"` // Cluster deployment ID
 	Message      string     `json:"message,omitempty"`       // Message to be displayed
+	APIKey       string     `json:"api_key,omitempty"`       // API Key of the org account
 }
 
 func licInfoField(s string) string {
@@ -101,7 +123,7 @@ func (li licInfoMessage) String() string {
 		return licInfoMsg(li.Info.Message)
 	}
 
-	return licInfoMsg(getLicInfoStr(li.Info))
+	return getLicInfoStr(li.Info)
 }
 
 // JSON jsonified license info
@@ -113,36 +135,55 @@ func (li licInfoMessage) JSON() string {
 }
 
 func getLicInfoStr(li licInfo) string {
-	var s strings.Builder
-
-	s.WriteString(color.WhiteString(""))
-	table := tablewriter.NewWriter(&s)
-	table.SetAutoWrapText(false)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetBorder(true)
-	table.SetRowLine(false)
-
-	data := [][]string{
-		{licInfoField("Organization"), licInfoVal(li.Organization)},
-		{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)},
-		{licInfoField("Plan"), licInfoVal(li.Plan)},
-		{licInfoField("Issued at"), licInfoVal(li.IssuedAt.String())},
-		{licInfoField("Expires at"), licInfoVal(li.ExpiresAt.String())},
+	columns := []table.Column{
+		{Title: "License", Width: 20},
+		{Title: "", Width: 45},
 	}
-	table.AppendBulk(data)
-	table.Render()
 
-	return s.String()
+	rows := []table.Row{
+		{licInfoField("Organization"), licInfoVal(li.Organization)},
+		{licInfoField("Plan"), licInfoVal(li.Plan)},
+		{licInfoField("Issued"), licInfoVal(li.IssuedAt.Format(http.TimeFormat))},
+		{licInfoField("Expires"), licInfoVal(li.ExpiresAt.Format(http.TimeFormat))},
+	}
+
+	if len(li.LicenseID) > 0 {
+		rows = append(rows, table.Row{licInfoField("License ID"), licInfoVal(li.LicenseID)})
+	}
+	if len(li.DeploymentID) > 0 {
+		rows = append(rows, table.Row{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)})
+	}
+	if len(li.APIKey) > 0 {
+		rows = append(rows, table.Row{licInfoField("API Key"), licInfoVal(li.APIKey)})
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(true),
+		table.WithHeight(len(rows)),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = s.Selected.Bold(false)
+
+	t.SetStyles(s)
+	p := tea.NewProgram(liTableModel{t})
+	go p.Start()
+	time.Sleep(time.Second) // allow time for the table to be rendered
+	p.Quit()
+
+	return ""
 }
 
 func getAGPLMessage() string {
-	return `You are using GNU AFFERO GENERAL PUBLIC LICENSE Verson 3 (https://www.gnu.org/licenses/agpl-3.0.txt)
-
-If you are building proprietary applications, you may want to choose the commercial license
-included as part of the Standard and Enterprise subscription plans. (https://min.io/signup?ref=mc)
-
-Applications must otherwise comply with all the GNU AGPLv3 License & Trademark obligations.`
+	return `License: GNU AGPL v3 <https://www.gnu.org/licenses/agpl-3.0.txt>
+If you are distributing or hosting MinIO along with your proprietary application as combined works, you may require a commercial license included in the Standard and Enterprise subscription plans. (https://min.io/signup?ref=mc)`
 }
 
 func initLicInfoColors() {
@@ -160,7 +201,7 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	initLicInfoColors()
 
 	aliasedURL := ctx.Args().Get(0)
-	alias, _ := initSubnetConnectivity(ctx, aliasedURL)
+	alias, _ := initSubnetConnectivity(ctx, aliasedURL, false)
 
 	apiKey, lic, e := getSubnetCreds(alias)
 	fatalIf(probe.NewError(e), "Error in checking cluster registration status")
@@ -198,11 +239,13 @@ func getLicInfoMsg(lic string) licInfoMessage {
 	return licInfoMessage{
 		Status: "success",
 		Info: licInfo{
+			LicenseID:    li.LicenseID,
 			Organization: li.Organization,
 			Plan:         li.Plan,
 			IssuedAt:     &li.IssuedAt,
 			ExpiresAt:    &li.ExpiresAt,
 			DeploymentID: li.DeploymentID,
+			APIKey:       li.APIKey,
 		},
 	}
 }

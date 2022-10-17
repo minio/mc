@@ -156,7 +156,7 @@ func mainLicenseRegister(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, accAPIKey := initSubnetConnectivity(ctx, aliasedURL)
+	alias, accAPIKey := initSubnetConnectivity(ctx, aliasedURL, true)
 
 	clusterName := ctx.String("name")
 	if len(clusterName) == 0 {
