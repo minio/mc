@@ -24,7 +24,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 	"time"
 
@@ -145,9 +144,6 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStrFull)
-	}
-	if globalDebug {
-		s3Client.TraceOn(os.Stdout)
 	}
 	return s3Client, nil
 }
