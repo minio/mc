@@ -479,11 +479,21 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		healingRemaining time.Duration
 	)
 
+	var problematicDisks int
+
 	dedup := make(map[setIndex]struct{})
 
 	for _, set := range s.HealInfo.Sets {
 		setsStatus := generateSetsStatus(set.Disks)
 		for _, disk := range set.Disks {
+			// Ignore disk with non 'ok' status
+			if disk.State != madmin.DriveStateOk {
+				if disk.State != madmin.DriveStateUnformatted {
+					problematicDisks++
+				}
+				continue
+			}
+
 			if disk.HealInfo != nil {
 				// Avoid counting two disks beloning to the same pool/set
 				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
@@ -519,7 +529,12 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	}
 
 	if startedAt.IsZero() && itemsHealed == 0 {
-		healPrettyMsg += "No active healing in progress."
+		healPrettyMsg += "No active healing is detected among disks"
+		if problematicDisks > 0 {
+			healPrettyMsg += fmt.Sprintf(", though %d offline/corrupted disk(s) found.", problematicDisks)
+		} else {
+			healPrettyMsg += "."
+		}
 		return healPrettyMsg
 	}
 
@@ -544,6 +559,11 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	// Estimation completion
 	now := time.Now()
 	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, now.Add(healingRemaining), "", ""))
+
+	if problematicDisks > 0 {
+		healPrettyMsg += "\n"
+		healPrettyMsg += fmt.Sprintf("%d offline or corrupted disk(s) found.", problematicDisks)
+	}
 
 	return healPrettyMsg
 }
