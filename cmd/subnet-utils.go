@@ -229,12 +229,23 @@ func getMinIOSubSysConfig(client *madmin.AdminClient, subSys string) ([]madmin.S
 	return madmin.ParseServerConfigOutput(string(buf))
 }
 
-func getKeyFromMinIOConfig(alias string, subSys string, key string) (string, bool) {
+func getMinIOSubnetConfig(alias string) []madmin.SubsysConfig {
+	if globalSubnetConfig != nil {
+		return globalSubnetConfig
+	}
+
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	scfg, e := getMinIOSubSysConfig(client, subSys)
+	var e error
+	globalSubnetConfig, e = getMinIOSubSysConfig(client, madmin.SubnetSubSys)
 	fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+
+	return globalSubnetConfig
+}
+
+func getKeyFromSubnetConfig(alias string, key string) (string, bool) {
+	scfg := getMinIOSubnetConfig(alias)
 
 	// This function only works for fetch config from single target sub-systems
 	// in the server config and is enough for now.
@@ -247,7 +258,7 @@ func getKeyFromMinIOConfig(alias string, subSys string, key string) (string, boo
 
 func getSubnetAPIKeyFromConfig(alias string) string {
 	// get the subnet api_key config from MinIO if available
-	apiKey, supported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "api_key")
+	apiKey, supported := getKeyFromSubnetConfig(alias, "api_key")
 	if supported {
 		return apiKey
 	}
@@ -263,7 +274,7 @@ func setGlobalSubnetProxyFromConfig(alias string) error {
 	}
 
 	// get the subnet proxy config from MinIO if available
-	proxy, supported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "proxy")
+	proxy, supported := getKeyFromSubnetConfig(alias, "proxy")
 	if supported && len(proxy) > 0 {
 		proxyURL, e := url.Parse(proxy)
 		if e != nil {
@@ -276,7 +287,7 @@ func setGlobalSubnetProxyFromConfig(alias string) error {
 
 func getSubnetLicenseFromConfig(alias string) string {
 	// get the subnet license config from MinIO if available
-	lic, supported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "license")
+	lic, supported := getKeyFromSubnetConfig(alias, "license")
 	if supported {
 		return lic
 	}
@@ -336,7 +347,7 @@ func setSubnetAPIKey(alias string, apiKey string) {
 		fatal(errDummy().Trace(), "API Key must not be empty.")
 	}
 
-	_, apiKeySupported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "api_key")
+	_, apiKeySupported := getKeyFromSubnetConfig(alias, "api_key")
 	if !apiKeySupported {
 		setSubnetAPIKeyInMcConfig(alias, apiKey)
 		return
@@ -350,7 +361,7 @@ func setSubnetLicense(alias string, lic string) {
 		fatal(errDummy().Trace(), "License must not be empty.")
 	}
 
-	_, licSupported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "license")
+	_, licSupported := getKeyFromSubnetConfig(alias, "license")
 	if !licSupported {
 		setSubnetLicenseInMcConfig(alias, lic)
 		return
