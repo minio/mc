@@ -22,7 +22,7 @@ require (
 	github.com/minio/madmin-go v1.6.4
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.40-0.20220928095841-8848d8affe8a
-	github.com/minio/pkg v1.4.5
+	github.com/minio/pkg v1.5.3
 	github.com/minio/selfupdate v0.4.0
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0

@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -86,12 +87,14 @@ type licInfoMessage struct {
 }
 
 type licInfo struct {
+	LicenseID    string     `json:"license_id,omitempty"`    // Unique ID of the license
 	Organization string     `json:"org,omitempty"`           // Subnet organization name
 	Plan         string     `json:"plan,omitempty"`          // Subnet plan
 	IssuedAt     *time.Time `json:"issued_at,omitempty"`     // Time of license issue
 	ExpiresAt    *time.Time `json:"expires_at,omitempty"`    // Time of license expiry
 	DeploymentID string     `json:"deployment_id,omitempty"` // Cluster deployment ID
 	Message      string     `json:"message,omitempty"`       // Message to be displayed
+	APIKey       string     `json:"api_key,omitempty"`       // API Key of the org account
 }
 
 func licInfoField(s string) string {
@@ -133,16 +136,25 @@ func (li licInfoMessage) JSON() string {
 
 func getLicInfoStr(li licInfo) string {
 	columns := []table.Column{
-		{Title: "Field", Width: 20},
-		{Title: "Value", Width: 45},
+		{Title: "License", Width: 20},
+		{Title: "", Width: 45},
 	}
 
 	rows := []table.Row{
 		{licInfoField("Organization"), licInfoVal(li.Organization)},
-		{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)},
 		{licInfoField("Plan"), licInfoVal(li.Plan)},
-		{licInfoField("Issued at"), licInfoVal(li.IssuedAt.String())},
-		{licInfoField("Expires at"), licInfoVal(li.ExpiresAt.String())},
+		{licInfoField("Issued"), licInfoVal(li.IssuedAt.Format(http.TimeFormat))},
+		{licInfoField("Expires"), licInfoVal(li.ExpiresAt.Format(http.TimeFormat))},
+	}
+
+	if len(li.LicenseID) > 0 {
+		rows = append(rows, table.Row{licInfoField("License ID"), licInfoVal(li.LicenseID)})
+	}
+	if len(li.DeploymentID) > 0 {
+		rows = append(rows, table.Row{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)})
+	}
+	if len(li.APIKey) > 0 {
+		rows = append(rows, table.Row{licInfoField("API Key"), licInfoVal(li.APIKey)})
 	}
 
 	t := table.New(
@@ -227,11 +239,13 @@ func getLicInfoMsg(lic string) licInfoMessage {
 	return licInfoMessage{
 		Status: "success",
 		Info: licInfo{
+			LicenseID:    li.LicenseID,
 			Organization: li.Organization,
 			Plan:         li.Plan,
 			IssuedAt:     &li.IssuedAt,
 			ExpiresAt:    &li.ExpiresAt,
 			DeploymentID: li.DeploymentID,
+			APIKey:       li.APIKey,
 		},
 	}
 }
