@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -61,24 +60,6 @@ const (
 	licInfoFieldTag = "licenseInfoField"
 	licInfoValTag   = "licenseValueField"
 )
-
-type liTableModel struct {
-	table table.Model
-}
-
-func (m liTableModel) Init() tea.Cmd { return nil }
-
-func (m liTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.table, cmd = m.table.Update(msg)
-	return m, cmd
-}
-
-func (m liTableModel) View() string {
-	return lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).Render(m.table.View())
-}
 
 type licInfoMessage struct {
 	Status string  `json:"status"`
@@ -171,14 +152,11 @@ func getLicInfoStr(li licInfo) string {
 		BorderBottom(true).
 		Bold(false)
 	s.Selected = s.Selected.Bold(false)
-
 	t.SetStyles(s)
-	p := tea.NewProgram(liTableModel{t})
-	go p.Start()
-	time.Sleep(time.Second) // allow time for the table to be rendered
-	p.Quit()
 
-	return ""
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).Render(t.View())
 }
 
 func getAGPLMessage() string {
