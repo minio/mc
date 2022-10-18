@@ -85,7 +85,7 @@ var mvCmd = cli.Command{
 USAGE:
   {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
 
-myfolderFLAGS:
+FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
@@ -97,7 +97,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} Music/*.ogg s3/jukebox/
 
   02. Move a folder recursively from MinIO cloud storage to Amazon S3 cloud storage.
-      {{.Prompt}} {{.HelpName}} --recursive play/mybucket// s3/mybucket/
+      {{.Prompt}} {{.HelpName}} --recursive play/mybucket/ s3/mybucket/
 
   03. Move multiple local folders recursively to MinIO cloud storage.
       {{.Prompt}} {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
