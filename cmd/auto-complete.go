@@ -372,6 +372,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/idp/ldap/enable":  aliasCompleter,
 	"/admin/idp/ldap/disable": aliasCompleter,
 
+	"/admin/idp/ldap/policy/entities": aliasCompleter,
+
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
 	"/admin/policy/unset":  aliasCompleter,
