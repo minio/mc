@@ -175,7 +175,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 }
 
 func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
@@ -240,7 +240,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
 		default:
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+			showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 		}
 
 		if !globalJSON {

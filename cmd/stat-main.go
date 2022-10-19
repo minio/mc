@@ -77,7 +77,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} s3\mybucket\
 
   3. Stat files recursively on a local filesystem on Microsoft Windows.
-     {{.Prompt}} {{.HelpName}} --recursive C:\Users\Worf\
+     {{.Prompt}} {{.HelpName}} --recursive C:\Users\mydocuments\
 
   4. Stat encrypted files on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx

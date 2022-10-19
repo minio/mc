@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
@@ -38,6 +39,8 @@ var batchGenerateCmd = cli.Command{
 USAGE:
   {{.HelpName}} TARGET JOBTYPE
 
+JOBTYPE:
+` + supportedJobTypes() + `
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -47,10 +50,20 @@ EXAMPLES:
 `,
 }
 
+func supportedJobTypes() string {
+	var builder strings.Builder
+	for _, jobType := range madmin.SupportedJobTypes {
+		builder.WriteString("  - ")
+		builder.WriteString(string(jobType))
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
 // checkBatchGenerateSyntax - validate all the passed arguments
 func checkBatchGenerateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
