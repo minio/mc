@@ -37,7 +37,7 @@ var (
 	profileFlags = append([]cli.Flag{
 		cli.IntFlag{
 			Name:  "duration",
-			Usage: "start profiling for the specified duration in seconds",
+			Usage: "profile for the specified duration in seconds",
 			Value: 10,
 		},
 		cli.StringFlag{
@@ -52,7 +52,7 @@ const profileFile = "profile.zip"
 
 var supportProfileCmd = cli.Command{
 	Name:            "profile",
-	Usage:           "generate profile data for debugging",
+	Usage:           "upload profile data for debugging",
 	Action:          mainSupportProfile,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -68,14 +68,17 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Profile CPU for 10 seconds.
-     {{.Prompt}} {{.HelpName}} --type cpu myminio/
+  1. Profile CPU for 10 seconds on 'play' (https://play.min.io by default) and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu play
 
-  2. Profile CPU, Memory, Goroutines for 10 seconds.
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines myminio/
+  2. Profile CPU, Memory, Goroutines for 10 seconds on 'play' (https://play.min.io by default) and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines play
 
-  3. Profile CPU, Memory, Goroutines for 10 minutes.
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 myminio/
+  3. Profile CPU, Memory, Goroutines for 10 minutes on 'play' (https://play.min.io by default) and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 play
+
+  4. Profile CPU for 10 seconds on 'play' (https://play.min.io by default), save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} --type cpu --airgap play
 `,
 }
 

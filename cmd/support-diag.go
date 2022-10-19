@@ -87,7 +87,7 @@ EXAMPLES:
   1. Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
      {{.Prompt}} {{.HelpName}} play
 
-  2. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
+  2. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default), save and upload to SUBNET manually
      {{.Prompt}} {{.HelpName}} play --airgap
 `,
 }

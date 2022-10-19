@@ -82,7 +82,7 @@ var supportPerfFlags = append([]cli.Flag{
 
 var supportPerfCmd = cli.Command{
 	Name:            "perf",
-	Usage:           "analyze object, network and drive performance",
+	Usage:           "upload object, network and drive performance analysis",
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -99,8 +99,10 @@ FLAGS:
   {{end}}
 
 EXAMPLES:
-  1. Run object storage, network, and drive performance tests on 'myminio' cluster:
-     {{.Prompt}} {{.HelpName}} myminio/
+  1. Upload object storage, network, and drive performance analysis for 'play' (https://play.min.io by default) to SUBNET
+     {{.Prompt}} {{.HelpName}} play
+  2. Run object storage, network, and drive performance tests on 'play' (https://play.min.io by default), save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} --airgap play
 `,
 }
 
