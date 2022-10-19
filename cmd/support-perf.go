@@ -99,10 +99,10 @@ FLAGS:
   {{end}}
 
 EXAMPLES:
-  1. Upload object storage, network, and drive performance analysis for 'play' (https://play.min.io by default) to SUBNET
-     {{.Prompt}} {{.HelpName}} play
-  2. Run object storage, network, and drive performance tests on 'play' (https://play.min.io by default), save and upload to SUBNET manually
-     {{.Prompt}} {{.HelpName}} --airgap play
+  1. Upload object storage, network, and drive performance analysis for cluster with alias 'myminio' to SUBNET
+     {{.Prompt}} {{.HelpName}} myminio
+  2. Run object storage, network, and drive performance tests on cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} --airgap myminio
 `,
 }
 

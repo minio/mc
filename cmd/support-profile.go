@@ -68,17 +68,17 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Profile CPU for 10 seconds on 'play' (https://play.min.io by default) and upload results to SUBNET
-     {{.Prompt}} {{.HelpName}} --type cpu play
+  1. Profile CPU for 10 seconds on cluster with alias 'myminio' and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu myminio
 
-  2. Profile CPU, Memory, Goroutines for 10 seconds on 'play' (https://play.min.io by default) and upload results to SUBNET
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines play
+  2. Profile CPU, Memory, Goroutines for 10 seconds on cluster with alias 'myminio' and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines myminio
 
-  3. Profile CPU, Memory, Goroutines for 10 minutes on 'play' (https://play.min.io by default) and upload results to SUBNET
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 play
+  3. Profile CPU, Memory, Goroutines for 10 minutes on cluster with alias 'myminio' and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 myminio
 
-  4. Profile CPU for 10 seconds on 'play' (https://play.min.io by default), save and upload to SUBNET manually
-     {{.Prompt}} {{.HelpName}} --type cpu --airgap play
+  4. Profile CPU for 10 seconds on cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} --type cpu --airgap myminio
 `,
 }
 

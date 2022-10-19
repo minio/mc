@@ -84,11 +84,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
-     {{.Prompt}} {{.HelpName}} play
+  1. Upload MinIO diagnostics report for cluster with alias 'myminio' to SUBNET
+     {{.Prompt}} {{.HelpName}} myminio
 
-  2. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default), save and upload to SUBNET manually
-     {{.Prompt}} {{.HelpName}} play --airgap
+  2. Generate MinIO diagnostics report for cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} myminio --airgap
 `,
 }
 
