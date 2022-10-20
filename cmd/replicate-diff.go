@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
 	"github.com/fatih/color"
@@ -88,14 +87,78 @@ func (r replicateDiffMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
+const (
+	repAttemptFieldMaxLen = 23
+	mtimeFieldMaxLen      = 23
+	statusFieldMaxLen     = 9
+	vIDFieldMaxLen        = 36
+	opFieldMaxLen         = 3
+	objectFieldMaxLen     = -1
+)
+
+func printReplicateDiffHeader() {
+	if globalJSON {
+		return
+	}
+	console.Println(console.Colorize("Headers", newPrettyTable(" | ",
+		Field{"LastReplicated", repAttemptFieldMaxLen},
+		Field{"Created", mtimeFieldMaxLen},
+		Field{"Status", statusFieldMaxLen},
+		Field{"VID", vIDFieldMaxLen},
+		Field{"Op", opFieldMaxLen},
+		Field{"Object", objectFieldMaxLen},
+	).buildRow("Attempted At", "Created", "Status", "VersionID", "Op", "Object")))
+}
+
 func (r replicateDiffMessage) String() string {
-	message := console.Colorize("Time", fmt.Sprintf("[%s]", r.ReplicationTimestamp.Format(printDate))) + " "
-	message += console.Colorize("MTime", fmt.Sprintf("[%s]", r.LastModified.Format(printDate))) + " "
+	op := ""
+	if r.VersionID != "" {
+		switch r.IsDeleteMarker {
+		case true:
+			op = "DEL"
+		default:
+			op = "PUT"
+		}
+	}
+	st := r.replStatus()
+	replTimeStamp := r.ReplicationTimestamp.Format(printDate)
+	switch {
+	case st == "PENDING":
+		replTimeStamp = ""
+	case op == "DEL":
+		replTimeStamp = ""
+	}
+
+	return console.Colorize("diffMsg", newPrettyTable(" | ",
+		Field{"Time", repAttemptFieldMaxLen},
+		Field{"MTime", mtimeFieldMaxLen},
+		Field{statusTheme(st), statusFieldMaxLen},
+		Field{"VersionID", vIDFieldMaxLen},
+		Field{op, opFieldMaxLen},
+		Field{"Obj", objectFieldMaxLen},
+	).buildRow(replTimeStamp, r.LastModified.Format(printDate), st, r.VersionID, op, r.Object))
+}
+
+func statusTheme(st string) string {
+	switch st {
+	case "PENDING":
+		return "PStatus"
+	case "FAILED":
+		return "FStatus"
+	case "COMPLETED", "COMPLETE":
+		return "CStatus"
+	default:
+		return "Status"
+	}
+}
+
+func (r replicateDiffMessage) replStatus() string {
+	var st string
 	if r.arn == "" { // report overall replication status
 		if r.DeleteReplicationStatus != "" {
-			message += r.colorizeReplStatus(r.DeleteReplicationStatus) + " "
+			st = r.DeleteReplicationStatus
 		} else {
-			message += r.colorizeReplStatus(r.ReplicationStatus) + " "
+			st = r.ReplicationStatus
 		}
 	} else { // report target replication diff
 		for arn, t := range r.Targets {
@@ -103,47 +166,16 @@ func (r replicateDiffMessage) String() string {
 				continue
 			}
 			if t.DeleteReplicationStatus != "" {
-				message += r.colorizeReplStatus(t.DeleteReplicationStatus) + " "
+				st = t.DeleteReplicationStatus
 			} else {
-				message += r.colorizeReplStatus(t.ReplicationStatus) + " "
+				st = t.ReplicationStatus
 			}
 		}
 		if len(r.Targets) == 0 {
-			message += r.colorizeReplStatus("") + " "
+			st = ""
 		}
 	}
-
-	fileDesc := ""
-
-	if r.VersionID != "" {
-		fileDesc += console.Colorize("VersionID", " "+r.VersionID)
-		if r.IsDeleteMarker {
-			fileDesc += console.Colorize("DEL", " DEL")
-		} else {
-			fileDesc += console.Colorize("PUT", " PUT")
-		}
-		message += fileDesc + " "
-	}
-
-	message += console.Colorize("Obj", r.Object)
-	return message
-}
-
-func (r replicateDiffMessage) colorizeReplStatus(st string) string {
-	maxLen := 7
-	if r.verbose {
-		maxLen = 9
-	}
-	switch st {
-	case "PENDING":
-		return console.Colorize("PStatus", fmt.Sprintf("%-*.*s", maxLen, maxLen, st))
-	case "FAILED":
-		return console.Colorize("FStatus", fmt.Sprintf("%-*.*s", maxLen, maxLen, st))
-	case "COMPLETED", "COMPLETE":
-		return console.Colorize("CStatus", fmt.Sprintf("%-*.*s", maxLen, maxLen, st))
-	default:
-		return fmt.Sprintf("%-*.*s", maxLen, maxLen, st)
-	}
+	return st
 }
 
 func mainReplicateDiff(cliCtx *cli.Context) error {
@@ -159,6 +191,7 @@ func mainReplicateDiff(cliCtx *cli.Context) error {
 	console.SetColor("PStatus", color.New(color.Bold, color.FgHiYellow))
 	console.SetColor("FStatus", color.New(color.Bold, color.FgHiRed))
 	console.SetColor("CStatus", color.New(color.Bold, color.FgHiGreen))
+	console.SetColor("Headers", color.New(color.Bold, color.FgHiGreen))
 
 	checkReplicateDiffSyntax(cliCtx)
 
@@ -177,6 +210,7 @@ func mainReplicateDiff(cliCtx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 	verbose := cliCtx.Bool("verbose")
 	arn := cliCtx.String("arn")
+	showHdr := true
 	// Start listening to replication diff.
 	diffCh := client.BucketReplicationDiff(ctx, bucket, madmin.ReplDiffOpts{
 		Verbose: verbose,
@@ -187,12 +221,16 @@ func mainReplicateDiff(cliCtx *cli.Context) error {
 		if oi.Err != nil {
 			fatalIf(probe.NewError(oi.Err), "Unable to fetch replicate diff")
 		}
-		printDiff(oi, arn, verbose)
+		printDiff(oi, arn, verbose, showHdr)
+		showHdr = false
 	}
 	return nil
 }
 
-func printDiff(di madmin.DiffInfo, arn string, verbose bool) {
+func printDiff(di madmin.DiffInfo, arn string, verbose, showHdr bool) {
+	if showHdr {
+		printReplicateDiffHeader()
+	}
 	printMsg(replicateDiffMessage{
 		DiffInfo: di,
 		arn:      arn,
