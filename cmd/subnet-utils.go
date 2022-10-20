@@ -63,7 +63,7 @@ mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 	subnetCommonFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "airgap",
-			Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+			Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		},
 		cli.StringFlag{
 			Name:  "api-key",
