@@ -36,9 +36,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show current status of MinIO logs with alias 'play', whether
-     it is uploading to SUBNET or not
-     {{.Prompt}} {{.HelpName}} play
+  1. Show current status of MinIO logs for cluster with alias 'myminio', whether it is uploading to SUBNET or not
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 
