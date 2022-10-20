@@ -173,51 +173,86 @@ func validateILMRule(rule lifecycle.Rule) *probe.Error {
 	return nil
 }
 
-// Returns valid lifecycleTransition to be included in lifecycleRule
-func parseTransition(storageClass, transitionDateStr, transitionDayStr string) (transition lifecycle.Transition, err *probe.Error) {
-	if transitionDateStr != "" {
-		transitionDate, e := time.Parse(defaultILMDateFormat, transitionDateStr)
-		if e != nil {
-			return lifecycle.Transition{}, probe.NewError(e)
-		}
-		transition.Date = lifecycle.ExpirationDate{Time: transitionDate}
-	} else if transitionDayStr != "" {
-		transitionDay, e := strconv.Atoi(transitionDayStr)
-		if e != nil {
-			return lifecycle.Transition{}, probe.NewError(e)
-		}
-		transition.Days = lifecycle.ExpirationDays(transitionDay)
+func parseTransitionDate(transitionDateStr string) (lifecycle.ExpirationDate, *probe.Error) {
+	transitionDate, e := time.Parse(defaultILMDateFormat, transitionDateStr)
+	if e != nil {
+		return lifecycle.ExpirationDate{}, probe.NewError(e)
 	}
-	transition.StorageClass = storageClass
+	return lifecycle.ExpirationDate{Time: transitionDate}, nil
+}
+
+func parseTransitionDays(transitionDaysStr string) (lifecycle.ExpirationDays, *probe.Error) {
+	transitionDays, e := strconv.Atoi(transitionDaysStr)
+	if e != nil {
+		return lifecycle.ExpirationDays(0), probe.NewError(e)
+	}
+	return lifecycle.ExpirationDays(transitionDays), nil
+}
+
+// Returns valid lifecycleTransition to be included in lifecycleRule
+func parseTransition(storageClass, transitionDateStr, transitionDaysStr *string) (lifecycle.Transition, *probe.Error) {
+	var transition lifecycle.Transition
+	if transitionDateStr != nil {
+		transitionDate, err := parseTransitionDate(*transitionDateStr)
+		if err != nil {
+			return lifecycle.Transition{}, err
+		}
+		transition.Date = transitionDate
+	} else if transitionDaysStr != nil {
+		transitionDays, err := parseTransitionDays(*transitionDaysStr)
+		if err != nil {
+			return lifecycle.Transition{}, err
+		}
+		transition.Days = transitionDays
+	}
+	if storageClass != nil {
+		transition.StorageClass = *storageClass
+	}
 	return transition, nil
 }
 
+func parseExpiryDate(expiryDateStr string) (lifecycle.ExpirationDate, *probe.Error) {
+	date, e := time.Parse(defaultILMDateFormat, expiryDateStr)
+	if e != nil {
+		return lifecycle.ExpirationDate{}, probe.NewError(e)
+	}
+	if date.IsZero() {
+		return lifecycle.ExpirationDate{}, probe.NewError(errors.New("expiration date cannot be set to zero"))
+	}
+	return lifecycle.ExpirationDate{Time: date}, nil
+}
+
+func parseExpiryDays(expiryDayStr string) (lifecycle.ExpirationDays, *probe.Error) {
+	days, e := strconv.Atoi(expiryDayStr)
+	if e != nil {
+		return lifecycle.ExpirationDays(0), probe.NewError(e)
+	}
+	if days == 0 {
+		return lifecycle.ExpirationDays(0), probe.NewError(errors.New("expiration days cannot be set to zero"))
+	}
+	return lifecycle.ExpirationDays(days), nil
+}
+
 // Returns lifecycleExpiration to be included in lifecycleRule
-func parseExpiry(expiryDateStr, expiryDayStr string, expiredDeleteMarker bool) (lfcExp lifecycle.Expiration, err *probe.Error) {
-	if expiryDateStr != "" {
-		date, e := time.Parse(defaultILMDateFormat, expiryDateStr)
-		if e != nil {
-			return lifecycle.Expiration{}, probe.NewError(e)
+func parseExpiry(expiryDate, expiryDays *string, expiredDeleteMarker *bool) (lfcExp lifecycle.Expiration, err *probe.Error) {
+	if expiryDate != nil {
+		date, err := parseExpiryDate(*expiryDate)
+		if err != nil {
+			return lifecycle.Expiration{}, err
 		}
-		if date.IsZero() {
-			return lifecycle.Expiration{}, probe.NewError(errors.New("expiration date cannot be set to zero"))
-		}
-		lfcExp.Date = lifecycle.ExpirationDate{Time: date}
+		lfcExp.Date = date
 	}
 
-	if expiryDayStr != "" {
-		days, e := strconv.Atoi(expiryDayStr)
-		if e != nil {
-			return lfcExp, probe.NewError(e)
+	if expiryDays != nil {
+		days, err := parseExpiryDays(*expiryDays)
+		if err != nil {
+			return lifecycle.Expiration{}, err
 		}
-		if days == 0 {
-			return lifecycle.Expiration{}, probe.NewError(errors.New("expiration days cannot be set to zero"))
-		}
-		lfcExp.Days = lifecycle.ExpirationDays(days)
+		lfcExp.Days = days
 	}
 
-	if expiredDeleteMarker {
-		lfcExp.DeleteMarker = true
+	if expiredDeleteMarker != nil {
+		lfcExp.DeleteMarker = lifecycle.ExpireDeleteMarker(*expiredDeleteMarker)
 	}
 
 	return lfcExp, nil

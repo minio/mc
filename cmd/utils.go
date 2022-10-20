@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -39,8 +38,8 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"maze.io/x/duration"
 
+	jwtgo "github.com/golang-jwt/jwt/v4"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -86,6 +85,13 @@ func newRandomID(n int) string {
 		sid[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(sid)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // randString generates random names and prepends them with a known prefix.
@@ -145,6 +151,8 @@ func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 	s3Config.AppVersion = ReleaseTag
 	s3Config.Debug = globalDebug
 	s3Config.Insecure = globalInsecure
+	s3Config.ConnReadDeadline = globalConnReadDeadline
+	s3Config.ConnWriteDeadline = globalConnWriteDeadline
 
 	s3Config.HostURL = urlStr
 	if aliasCfg != nil {
@@ -152,8 +160,8 @@ func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 		s3Config.SecretKey = aliasCfg.SecretKey
 		s3Config.SessionToken = aliasCfg.SessionToken
 		s3Config.Signature = aliasCfg.API
+		s3Config.Lookup = getLookupType(aliasCfg.Path)
 	}
-	s3Config.Lookup = getLookupType(aliasCfg.Path)
 	return s3Config
 }
 
@@ -177,7 +185,7 @@ func isOlder(ti time.Time, olderRef string) bool {
 		return false
 	}
 	objectAge := time.Since(ti)
-	olderThan, e := duration.ParseDuration(olderRef)
+	olderThan, e := ParseDuration(olderRef)
 	fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`.")
 	return objectAge < time.Duration(olderThan)
 }
@@ -189,7 +197,7 @@ func isNewer(ti time.Time, newerRef string) bool {
 	}
 
 	objectAge := time.Since(ti)
-	newerThan, e := duration.ParseDuration(newerRef)
+	newerThan, e := ParseDuration(newerRef)
 	fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`.")
 	return objectAge >= time.Duration(newerThan)
 }
@@ -407,23 +415,6 @@ func parseAttribute(meta map[string]string) (map[string]string, error) {
 	return attribute, nil
 }
 
-// Returns true if "s3" is entirely in sub-domain and false otherwise.
-// true for s3.amazonaws.com, false for ams3.digitaloceanspaces.com, 192.168.1.12
-func matchS3InHost(urlHost string) bool {
-	if strings.Contains(urlHost, ":") {
-		if host, _, err := net.SplitHostPort(urlHost); err == nil {
-			urlHost = host
-		}
-	}
-	fqdnParts := strings.Split(urlHost, ".")
-	for _, fqdn := range fqdnParts {
-		if fqdn == "s3" {
-			return true
-		}
-	}
-	return false
-}
-
 const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
 
 var reAnsi = regexp.MustCompile(ansi)
@@ -466,4 +457,18 @@ func httpClient(timeout time.Duration) *http.Client {
 			},
 		},
 	}
+}
+
+func getPrometheusToken(hostConfig *aliasConfigV10) (string, error) {
+	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
+		ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
+		Subject:   hostConfig.AccessKey,
+		Issuer:    "prometheus",
+	})
+
+	token, e := jwt.SignedString([]byte(hostConfig.SecretKey))
+	if e != nil {
+		return "", e
+	}
+	return token, nil
 }

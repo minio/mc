@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"net/url"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/env"
 
 	"github.com/mitchellh/go-homedir"
 )
@@ -80,7 +82,7 @@ func createMcConfigDir() *probe.Error {
 	if err != nil {
 		return err.Trace()
 	}
-	if e := os.MkdirAll(p, 0700); e != nil {
+	if e := os.MkdirAll(p, 0o700); e != nil {
 		return probe.NewError(e)
 	}
 	return nil
@@ -196,15 +198,10 @@ func mustGetHostConfig(alias string) *aliasConfigV10 {
 	// If alias is not found,
 	// look for it in the environment variable.
 	if aliasCfg == nil {
-		if envConfig, ok := os.LookupEnv(mcEnvHostPrefix + alias); ok {
-			aliasCfg, _ = expandAliasFromEnv(envConfig)
-		}
+		aliasCfg, _ = expandAliasFromEnv(env.Get(mcEnvHostPrefix+alias, ""))
 	}
 	if aliasCfg == nil {
-		if envConfig, ok := os.LookupEnv(mcEnvHostsDeprecatedPrefix + alias); ok {
-			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias), "`MC_HOSTS_<alias>` environment variable is deprecated. Please use `MC_HOST_<alias>` instead for the same functionality.")
-			aliasCfg, _ = expandAliasFromEnv(envConfig)
-		}
+		aliasCfg = aliasToConfigMap[alias]
 	}
 	return aliasCfg
 }
@@ -262,9 +259,40 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, string, *probe.Err
 }
 
 const (
-	mcEnvHostPrefix            = "MC_HOST_"
-	mcEnvHostsDeprecatedPrefix = "MC_HOSTS_"
+	mcEnvHostPrefix = "MC_HOST_"
+	mcEnvConfigFile = "MC_CONFIG_ENV_FILE"
 )
+
+var aliasToConfigMap = make(map[string]*aliasConfigV10)
+
+func readAliasesFromFile(envConfigFile string) *probe.Error {
+	r, e := os.Open(envConfigFile)
+	if e != nil {
+		return probe.NewError(e).Trace(envConfigFile)
+	}
+	defer r.Close()
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		envLine := scanner.Text()
+		strs := strings.SplitN(envLine, "=", 2)
+		if len(strs) != 2 {
+			return probe.NewError(fmt.Errorf("parsing error at %s", envLine)).Trace(envConfigFile)
+		}
+		alias := strings.TrimPrefix(strs[0], mcEnvHostPrefix)
+		if len(alias) == 0 {
+			return probe.NewError(fmt.Errorf("parsing error at %s", envLine)).Trace(envConfigFile)
+		}
+		aliasConfig, err := expandAliasFromEnv(strs[1])
+		if err != nil {
+			return err.Trace(envLine)
+		}
+		aliasToConfigMap[alias] = aliasConfig
+	}
+	if e := scanner.Err(); e != nil {
+		return probe.NewError(e).Trace(envConfigFile)
+	}
+	return nil
+}
 
 func expandAliasFromEnv(envURL string) (*aliasConfigV10, *probe.Error) {
 	u, accessKey, secretKey, sessionToken, err := parseEnvURLStr(envURL)
@@ -286,21 +314,16 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *alia
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
 
-	var envConfig string
-	var ok bool
-
-	if envConfig, ok = os.LookupEnv(mcEnvHostPrefix + alias); !ok {
-		envConfig, ok = os.LookupEnv(mcEnvHostsDeprecatedPrefix + alias)
-		if ok {
-			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias), "`MC_HOSTS_<alias>` environment variable is deprecated. Please use `MC_HOST_<alias>` instead for the same functionality.")
-		}
-	}
-
-	if ok {
-		aliasCfg, err = expandAliasFromEnv(envConfig)
+	if env.IsSet(mcEnvHostPrefix + alias) {
+		aliasCfg, err = expandAliasFromEnv(env.Get(mcEnvHostPrefix+alias, ""))
 		if err != nil {
 			return "", "", nil, err.Trace(aliasedURL)
 		}
+		return alias, urlJoinPath(aliasCfg.URL, path), aliasCfg, nil
+	}
+
+	aliasCfg = aliasToConfigMap[alias]
+	if aliasCfg != nil {
 		return alias, urlJoinPath(aliasCfg.URL, path), aliasCfg, nil
 	}
 
@@ -308,6 +331,7 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *alia
 	if aliasCfg = mustGetHostConfig(alias); aliasCfg != nil {
 		return alias, urlJoinPath(aliasCfg.URL, path), aliasCfg, nil
 	}
+
 	return "", aliasedURL, nil, nil // No matching entry found. Return original URL as is.
 }
 

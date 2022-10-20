@@ -52,7 +52,7 @@ EXAMPLES:
 // checkAdminUserPolicySyntax - validate all the passed arguments
 func checkAdminUserPolicySyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code
 	}
 }
 
@@ -73,10 +73,13 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	user, e := client.GetUserInfo(globalContext, args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
-	buf, e := client.InfoCannedPolicy(globalContext, user.PolicyName)
+	pinfo, e := getPolicyInfo(client, user.PolicyName)
+	if user.PolicyName == "" {
+		e = fmt.Errorf("Policy not found for user %s", args.Get(1))
+	}
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 
-	fmt.Println(string(buf))
+	fmt.Println(string(pinfo.Policy))
 
 	return nil
 }

@@ -55,7 +55,6 @@ func newPrettyRecord(indent int, rows ...Row) PrettyRecord {
 // buildRecord - creates a string which represents a record table given
 // some fields contents.
 func (t PrettyRecord) buildRecord(contents ...string) (line string) {
-
 	// totalRows is the minimum of the number of fields config
 	// and the number of contents elements.
 	totalRows := len(contents)

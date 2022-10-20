@@ -30,7 +30,7 @@ import (
 
 var adminPolicyUpdateCmd = cli.Command{
 	Name:         "update",
-	Usage:        "Attach new IAM policy to a user or group",
+	Usage:        "attach a new IAM policy to user or group",
 	Action:       mainAdminPolicyUpdate,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -51,14 +51,14 @@ EXAMPLES:
   1. Add the "diagnostics" policy for user "james".
      {{.Prompt}} {{.HelpName}} myminio diagnostics user=james
 
-  2. add the "diagnostics" policy for group "auditors".
+  2. Add the "diagnostics" policy for group "auditors".
      {{.Prompt}} {{.HelpName}} myminio diagnostics group=auditors
 `,
 }
 
 func checkAdminPolicyUpdateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 }
 
@@ -123,7 +123,7 @@ func mainAdminPolicyUpdate(ctx *cli.Context) error {
 	}
 
 	updatedPolicies, e := updateCannedPolicies(existingPolicies, policiesToAdd)
-	if err != nil {
+	if e != nil {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to update the policy")
 	}
 

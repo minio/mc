@@ -28,9 +28,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	eventListFlags = []cli.Flag{}
-)
+var eventListFlags = []cli.Flag{}
 
 var eventListCmd = cli.Command{
 	Name:         "list",
@@ -60,7 +58,7 @@ EXAMPLES:
 // checkEventListSyntax - validate all the passed arguments
 func checkEventListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 && len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
 	}
 }
 
@@ -135,7 +133,8 @@ func mainEventList(cliCtx *cli.Context) error {
 			Prefix: config.Prefix,
 			Suffix: config.Suffix,
 			Arn:    config.Arn,
-			ID:     config.ID})
+			ID:     config.ID,
+		})
 	}
 
 	return nil

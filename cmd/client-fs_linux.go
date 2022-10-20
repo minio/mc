@@ -23,11 +23,10 @@ package cmd
 import (
 	"encoding/hex"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
-
-	"unicode/utf8"
 )
 
 var (

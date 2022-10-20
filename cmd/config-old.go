@@ -17,7 +17,7 @@
 
 package cmd
 
-/////////////////// Config V1 ///////////////////
+// ///////////////// Config V1 ///////////////////
 type hostConfigV1 struct {
 	AccessKeyID     string
 	SecretAccessKey string
@@ -40,7 +40,7 @@ func newConfigV1() *configV1 {
 	return conf
 }
 
-/////////////////// Config V101 ///////////////////
+// ///////////////// Config V101 ///////////////////
 type hostConfigV101 hostConfigV1
 
 type configV101 struct {
@@ -58,7 +58,7 @@ func newConfigV101() *configV101 {
 	return conf
 }
 
-/////////////////// Config V2 ///////////////////
+// ///////////////// Config V2 ///////////////////
 type hostConfigV2 hostConfigV1
 
 type configV2 struct {
@@ -76,7 +76,7 @@ func newConfigV2() *configV2 {
 	return conf
 }
 
-/////////////////// Config V3 ///////////////////
+// ///////////////// Config V3 ///////////////////
 type hostConfigV3 struct {
 	AccessKeyID     string `json:"access-key-id"`
 	SecretAccessKey string `json:"secret-access-key"`
@@ -97,7 +97,7 @@ func newConfigV3() *configV3 {
 	return conf
 }
 
-/////////////////// Config V4 ///////////////////
+// ///////////////// Config V4 ///////////////////
 type hostConfigV4 struct {
 	AccessKeyID     string `json:"accessKeyId"`
 	SecretAccessKey string `json:"secretAccessKey"`
@@ -118,7 +118,7 @@ func newConfigV4() *configV4 {
 	return conf
 }
 
-/////////////////// Config V5 ///////////////////
+// ///////////////// Config V5 ///////////////////
 type hostConfigV5 struct {
 	AccessKeyID     string `json:"accessKeyId"`
 	SecretAccessKey string `json:"secretAccessKey"`
@@ -139,7 +139,7 @@ func newConfigV5() *configV5 {
 	return conf
 }
 
-/////////////////// Config V6 ///////////////////
+// ///////////////// Config V6 ///////////////////
 type hostConfigV6 struct {
 	AccessKeyID     string `json:"accessKeyId"`
 	SecretAccessKey string `json:"secretAccessKey"`
@@ -161,7 +161,7 @@ func newConfigV6() *configV6 {
 	return conf
 }
 
-/////////////////// Config V6 ///////////////////
+// ///////////////// Config V6 ///////////////////
 // hostConfig configuration of a host - version '7'.
 type hostConfigV7 struct {
 	URL       string `json:"url"`
@@ -241,7 +241,7 @@ func (c *configV7) setHost(alias string, cfg hostConfigV7) {
 	}
 }
 
-/////////////////// Config V8 ///////////////////
+// ///////////////// Config V8 ///////////////////
 // configV8 config version.
 // hostConfig configuration of a host.
 type hostConfigV8 struct {
@@ -250,6 +250,7 @@ type hostConfigV8 struct {
 	SecretKey string `json:"secretKey"`
 	API       string `json:"api"`
 }
+
 type configV8 struct {
 	Version string                  `json:"version"`
 	Hosts   map[string]hostConfigV8 `json:"hosts"`

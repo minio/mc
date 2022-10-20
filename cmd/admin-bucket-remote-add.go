@@ -65,6 +65,7 @@ var adminBucketRemoteAddFlags = []cli.Flag{
 		Usage: "disable proxying in active-active replication. If unset, default behavior is to proxy",
 	},
 }
+
 var adminBucketRemoteAddCmd = cli.Command{
 	Name:         "add",
 	Usage:        "add a new remote target",
@@ -97,13 +98,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set a new remote replication target "targetbucket" in region "us-west-1" on https://minio.siteb.example.com for bucket 'sourcebucket'.
+  1. Set a new replication target "targetbucket" in region "us-west-1" on https://minio.siteb.example.com for
+     bucket 'sourcebucket'.
      {{.Prompt}} {{.HelpName}} sitea/sourcebucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
          --service "replication" --region "us-west-1"
 
-  2. Set a new remote replication target 'targetbucket' in region "us-west-1" on https://minio.siteb.example.com for
-	 bucket 'sourcebucket' with bandwidth set to 2 gigabits per second. Enable synchronous replication to the target
-	 and perform health check of target every 100 seconds
+  2. Set a new synchronous replication target 'targetbucket' in region "us-west-1" on https://minio.siteb.example.com for
+     bucket 'sourcebucket' with bandwidth set to 2 gigabits per second.
      {{.Prompt}} {{.HelpName}} sitea/sourcebucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
          --service "replication" --region "us-west-1 --bandwidth "2G" --sync
 `,
@@ -113,7 +114,7 @@ EXAMPLES:
 func checkAdminBucketRemoteAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 2 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
