@@ -108,7 +108,7 @@ EXAMPLES:
 
   3. Run a query on an encrypted object with customer provided keys.
      {{.Prompt}} {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
-           --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
+           --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio-encrypted.csv
 
   4. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
