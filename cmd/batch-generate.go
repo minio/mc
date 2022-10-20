@@ -86,7 +86,9 @@ func mainBatchGenerate(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument().Trace(jobType), "Unable to generate a job template for the specified job type")
 	}
 
-	out, e := adminClient.GenerateBatchJob(globalContext, madmin.GenerateBatchJobOpts{})
+	out, e := adminClient.GenerateBatchJob(globalContext, madmin.GenerateBatchJobOpts{
+		Type: madmin.BatchJobType(jobType),
+	})
 	fatalIf(probe.NewError(e), "Unable to generate %s", args.Get(1))
 
 	fmt.Println(string(out))
