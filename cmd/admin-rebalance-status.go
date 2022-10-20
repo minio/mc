@@ -79,6 +79,7 @@ func mainAdminRebalanceStatus(ctx *cli.Context) error {
 		return nil
 	}
 
+	console.Println("Per-pool usage:")
 	// col-headers
 	colHeaders := make([]string, len(rInfo.Pools))
 	for i := range rInfo.Pools {

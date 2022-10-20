@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/google/uuid"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -52,9 +51,9 @@ EXAMPLES:
 }
 
 type rebalanceStartMsg struct {
-	Status string    `json:"status"`
-	URL    string    `json:"url"`
-	ID     uuid.UUID `json:"id"`
+	Status string `json:"status"`
+	URL    string `json:"url"`
+	ID     string `json:"id"`
 }
 
 func (r rebalanceStartMsg) JSON() string {
@@ -86,7 +85,7 @@ func mainAdminRebalanceStart(ctx *cli.Context) error {
 		return pErr.ToGoError()
 	}
 
-	var id uuid.UUID
+	var id string
 	var err error
 	id, err = client.RebalanceStart(globalContext)
 	if err != nil {
