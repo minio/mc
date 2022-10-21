@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminPolicyListSyntax - validate all the passed arguments
 func checkAdminPolicyListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
 	}
 }
 
@@ -57,8 +57,7 @@ func checkAdminPolicyListSyntax(ctx *cli.Context) {
 func mainAdminPolicyList(ctx *cli.Context) error {
 	checkAdminPolicyListSyntax(ctx)
 
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-	console.SetColor("Policy", color.New(color.FgBlue))
+	console.SetColor("PolicyName", color.New(color.FgBlue))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

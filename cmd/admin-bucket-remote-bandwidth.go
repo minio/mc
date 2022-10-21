@@ -132,6 +132,7 @@ func printTable(report madmin.Report, bits bool, iec bool) {
 		}
 	}
 }
+
 func checkAdminBwInfoSyntax(ctx *cli.Context) {
 	u := ctx.String("unit")
 	if u != "bi" &&
@@ -139,10 +140,10 @@ func checkAdminBwInfoSyntax(ctx *cli.Context) {
 		u != "Bi" &&
 		u != "B" &&
 		u != "" {
-		cli.ShowCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
 	}
 	if len(ctx.Args()) > 1 || len(ctx.Args()) == 0 {
-		cli.ShowCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
 	}
 }
 

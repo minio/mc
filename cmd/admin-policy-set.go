@@ -41,7 +41,7 @@ USAGE:
   {{.HelpName}} TARGET POLICYNAME [ user=username1 | group=groupname1 ]
 
 POLICYNAME:
-  Name of the policy on the MinIO server.
+  Name of the policy on the MinIO server. To set multiple policies, separate names with a comma (,).
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -52,16 +52,17 @@ EXAMPLES:
 
   2. Set the "readonly" policy for group "auditors".
      {{.Prompt}} {{.HelpName}} myminio readonly group=auditors
+
+  3. Set the "readonly" and the "diagnostics" policies for user "alice"
+     {{.Prompt}} {{.HelpName}} myminio readonly,diagnostics user=alice
 `,
 }
 
-var (
-	errBadUserGroupArg = errors.New("Last argument must be of the form user=xx or group=xx")
-)
+var errBadUserGroupArg = errors.New("Last argument must be of the form user=xx or group=xx")
 
 func checkAdminPolicySetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
 	}
 }
 

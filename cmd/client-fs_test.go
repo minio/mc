@@ -286,7 +286,8 @@ func (s *TestSuite) TestGet(c *C) {
 	n, err := fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
 		metadata: map[string]string{
 			"Content-Type": "application/octet-stream",
-		}})
+		},
+	})
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
@@ -296,7 +297,6 @@ func (s *TestSuite) TestGet(c *C) {
 	_, e = io.Copy(&results, reader)
 	c.Assert(e, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
-
 }
 
 // Test get range in a file.

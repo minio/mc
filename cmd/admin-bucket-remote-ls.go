@@ -66,7 +66,7 @@ EXAMPLES:
 // checkAdminBucketRemoteListSyntax - validate all the passed arguments
 func checkAdminBucketRemoteListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -100,7 +100,6 @@ func mainAdminBucketRemoteList(ctx *cli.Context) error {
 }
 
 func printRemotes(ctx *cli.Context, urlStr string, targets []madmin.BucketTarget) {
-
 	maxURLLen := 10
 	maxTgtLen := 6
 	maxSrcLen := 6

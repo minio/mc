@@ -36,7 +36,6 @@ import "github.com/rjeczalik/notify"
 
 // PipeChan builds a new dynamically sized channel
 func PipeChan(capacity int) (inputCh chan notify.EventInfo, outputCh chan notify.EventInfo) {
-
 	// A set of channels which store all elements received from input
 	channels := make(chan chan notify.EventInfo, 1000)
 

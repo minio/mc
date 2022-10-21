@@ -26,19 +26,17 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	shareDownloadFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "share all objects recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "share a particular object version",
-		},
-		shareFlagExpire,
-	}
-)
+var shareDownloadFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "share all objects recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "share a particular object version",
+	},
+	shareFlagExpire,
+}
 
 // Share documents via URL.
 var shareDownload = cli.Command{
@@ -76,7 +74,7 @@ EXAMPLES:
 func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	args := cliCtx.Args()
 	if !args.Present() {
-		cli.ShowCommandHelpAndExit(cliCtx, "download", 1) // last argument is exit code.
+		showCommandHelpAndExit(cliCtx, "download", 1) // last argument is exit code.
 	}
 
 	// Parse expiry.
@@ -106,7 +104,7 @@ func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB
 	// Validate if object exists only if the `--recursive` flag was NOT specified
 	if !isRecursive {
 		for _, url := range cliCtx.Args() {
-			_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{})
+			_, _, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}, false)
 			if err != nil {
 				fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 			}

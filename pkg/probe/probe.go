@@ -52,8 +52,9 @@ func Init() {
 
 // SetAppInfo sets app speific key:value to report additionally during call trace dump.
 // Eg. SetAppInfo("ReleaseTag", "RELEASE_42_0")
-//     SetAppInfo("Version", "42.0")
-//     SetAppInfo("Commit", "00611fb")
+//
+//	SetAppInfo("Version", "42.0")
+//	SetAppInfo("Commit", "00611fb")
 func SetAppInfo(key, value string) {
 	appInfo[key] = value
 }
@@ -96,23 +97,22 @@ type Error struct {
 }
 
 // NewError function instantiates an error probe for tracing.
-// Default ``error`` (golang's error interface) is injected in
+// Default “error“ (golang's error interface) is injected in
 // only once. Rest of the time, you trace the return path with
-// ``probe.Trace`` and finally handling them at top level
+// “probe.Trace“ and finally handling them at top level
 //
 // Following dummy code talks about how one can pass up the
 // errors and put them in CallTrace.
 //
-//     func sendError() *probe.Error {
-//          return probe.NewError(errors.New("Help Needed"))
-//     }
-//     func recvError() *probe.Error {
-//          return sendError().Trace()
-//     }
-//     if err := recvError(); err != nil {
-//           log.Fatalln(err.Trace())
-//     }
-//
+//	func sendError() *probe.Error {
+//	     return probe.NewError(errors.New("Help Needed"))
+//	}
+//	func recvError() *probe.Error {
+//	     return sendError().Trace()
+//	}
+//	if err := recvError(); err != nil {
+//	      log.Fatalln(err.Trace())
+//	}
 func NewError(e error) *Error {
 	if e == nil {
 		return nil

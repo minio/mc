@@ -38,10 +38,10 @@ var replicateImportCmd = cli.Command{
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-	  
+
 USAGE:
   {{.HelpName}} TARGET
-	  
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -57,7 +57,7 @@ EXAMPLES:
 // checkReplicateImportSyntax - validate all the passed arguments
 func checkReplicateImportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
 	}
 }
 
@@ -82,7 +82,7 @@ func (r replicateImportMessage) String() string {
 // readReplicationConfig read from stdin, returns XML.
 func readReplicationConfig() (*replication.Config, *probe.Error) {
 	// User is expected to enter the replication configuration in JSON format
-	var cfg = replication.Config{}
+	cfg := replication.Config{}
 
 	// Consume json from STDIN
 	dec := json.NewDecoder(os.Stdin)

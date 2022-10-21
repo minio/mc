@@ -22,6 +22,7 @@ import "github.com/minio/cli"
 var adminBucketSubcommands = []cli.Command{
 	adminBucketRemoteCmd,
 	adminBucketQuotaCmd,
+	adminBucketInfoCmd,
 }
 
 var adminBucketCmd = cli.Command{

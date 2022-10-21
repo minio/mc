@@ -19,9 +19,7 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	eventFlags = []cli.Flag{}
-)
+var eventFlags = []cli.Flag{}
 
 var eventSubcommands = []cli.Command{
 	eventAddCmd,

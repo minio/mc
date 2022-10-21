@@ -25,9 +25,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	shareListFlags = []cli.Flag{}
-)
+var shareListFlags = []cli.Flag{}
 
 // Share documents via URL.
 var shareList = cli.Command{
@@ -60,7 +58,7 @@ EXAMPLES:
 func checkShareListSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !args.Present() || (args.First() != "upload" && args.First() != "download") {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code.
 	}
 }
 
@@ -105,7 +103,6 @@ func doShareList(cmd string) *probe.Error {
 
 // main entry point for share list.
 func mainShareList(ctx *cli.Context) error {
-
 	// validate command-line args.
 	checkShareListSyntax(ctx)
 

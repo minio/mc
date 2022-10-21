@@ -103,13 +103,11 @@ func (w *Watcher) Events() chan []EventInfo {
 	return w.EventInfoChan
 }
 
-// Watching returns if the watcher is watching for notifications
-func (w *Watcher) Watching() bool {
-	return (len(w.o) > 0)
-}
-
-// Wait for watcher to wait
-func (w *Watcher) Wait() {
+// Stop all watchers
+func (w *Watcher) Stop() {
+	for _, w := range w.o {
+		close(w.DoneChan)
+	}
 	w.wg.Wait()
 }
 
@@ -135,6 +133,8 @@ func (w *Watcher) Join(ctx context.Context, client Client, recursive bool) *prob
 
 		for {
 			select {
+			case <-wo.DoneChan:
+				return
 			case events, ok := <-wo.Events():
 				if !ok {
 					return

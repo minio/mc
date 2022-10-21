@@ -21,8 +21,10 @@ import "github.com/minio/cli"
 
 var adminReplicateSubcommands = []cli.Command{
 	adminReplicateAddCmd,
-	// adminReplicateDisableCmd,
+	adminReplicateEditCmd,
+	adminReplicateRemoveCmd,
 	adminReplicateInfoCmd,
+	adminReplicateStatusCmd,
 }
 
 var adminReplicateCmd = cli.Command{
