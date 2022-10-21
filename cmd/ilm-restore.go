@@ -65,7 +65,12 @@ USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Create a restored copy of one or more archived objects.
+  Create a restored copy of one or more objects archived on a remote tier. The copy automatically expires 
+  after the specified number of days (Default 1 day). 
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 
 EXAMPLES:
   1. Restore one specific object
@@ -86,7 +91,7 @@ EXAMPLES:
 // checkILMRestoreSyntax - validate arguments passed by user
 func checkILMRestoreSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "restore", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, "restore", globalErrorExitStatus)
 	}
 
 	if ctx.Int("days") <= 0 {
@@ -306,10 +311,10 @@ func mainILMRestore(cliCtx *cli.Context) (cErr error) {
 		fatalIf(errDummy().Trace(), "Unable to restore the given URL")
 	}
 
-	var restoreReqStatus = make(chan *probe.Error)
-	var restoreStatus = make(chan *probe.Error)
+	restoreReqStatus := make(chan *probe.Error)
+	restoreStatus := make(chan *probe.Error)
 
-	var done = make(chan struct{})
+	done := make(chan struct{})
 
 	go func() {
 		showRestoreStatus(restoreReqStatus, restoreStatus, done)

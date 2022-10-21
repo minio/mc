@@ -61,55 +61,64 @@ var testParseSerializationCases = []struct {
 	parsedOpts    map[string]string
 	errMsg        string
 }{
-	{"rd=\n,fd=;,qc=\"",
+	{
+		"rd=\n,fd=;,qc=\"",
 		append(validCSVCommonKeys, validCSVInputKeys...),
 		validCSVInputAbbrKeys,
 		map[string]string{"recorddelimiter": "\n", "fielddelimiter": ";", "quotechar": "\""},
 		"<nil>",
 	},
-	{"rd=\n,fd=;,qc=\"",
+	{
+		"rd=\n,fd=;,qc=\"",
 		validCSVInputKeys,
 		validCSVInputAbbrKeys,
 		map[string]string{},
 		"Options should be key-value pairs in the form key=value,... where valid key(s) are ",
 	},
-	{"nokey=\n,fd=;,qc=\"",
+	{
+		"nokey=\n,fd=;,qc=\"",
 		validCSVInputKeys,
 		validCSVInputAbbrKeys,
 		map[string]string{},
 		"Options should be key-value pairs in the form key=value,... where valid key(s) are ",
 	},
-	{"rd=\n\n,fd=|,qc=\",qc='",
+	{
+		"rd=\n\n,fd=|,qc=\",qc='",
 		validCSVInputKeys,
 		validCSVInputAbbrKeys,
 		map[string]string{},
 		"More than one key=value found for ",
 	},
-	{"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChAR=\"",
+	{
+		"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChAR=\"",
 		append(validCSVCommonKeys, validCSVInputKeys...),
 		validCSVInputAbbrKeys,
 		map[string]string{"recorddelimiter": "\n\n", "fielddelimiter": "|", "quotechar": "\""},
 		"<nil>",
 	},
-	{"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChAR=\",fh=use,qrd=;",
+	{
+		"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChAR=\",fh=use,qrd=;",
 		append(validCSVCommonKeys, validCSVInputKeys...),
 		validCSVInputAbbrKeys,
 		map[string]string{"recorddelimiter": "\n\n", "fielddelimiter": "|", "quotechar": "\"", "quotedrecorddelimiter": ";", "fileheader": "use"},
 		"<nil>",
 	},
-	{"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChar=\",qf=;,qec='",
+	{
+		"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChar=\",qf=;,qec='",
 		append(validCSVCommonKeys, validCSVOutputKeys...),
 		validCSVOutputAbbrKeys,
 		map[string]string{},
 		"Options should be key-value pairs in the form key=value,... where valid key(s) are ",
 	},
-	{"FieldDelimiter=|,QuoteChar=\",qf=;,qec='",
+	{
+		"FieldDelimiter=|,QuoteChar=\",qf=;,qec='",
 		append(validCSVCommonKeys, validCSVOutputKeys...),
 		validCSVOutputAbbrKeys,
 		map[string]string{"fielddelimiter": "|", "quotechar": "\"", "quotefields": ";", "quoteescchar": "'"},
 		"<nil>",
 	},
-	{"type=lines",
+	{
+		"type=lines",
 		validJSONInputKeys,
 		nil,
 		map[string]string{"type": "lines"},
@@ -118,7 +127,6 @@ var testParseSerializationCases = []struct {
 }
 
 func TestParseSerializationOpts(t *testing.T) {
-
 	for i, test := range testParseSerializationCases {
 		optsMap, err := parseSerializationOpts(test.inp, test.validKeys, test.validAbbrKeys)
 		gerr := err.ToGoError()

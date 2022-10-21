@@ -21,7 +21,6 @@ import "testing"
 
 // TestPrettyTable - testing the behavior of the pretty table module
 func TestPrettyTable(t *testing.T) {
-
 	testCases := []struct {
 		sep         string
 		tf          []Field

@@ -24,17 +24,18 @@ retention   set retention for object(s)
 legalhold   set legal hold for object(s)
 diff        list differences in object name, size, and date between two buckets
 rm          remove objects
-encrypt    manage bucket encryption config
+encrypt     manage bucket encryption config
 event       manage object notifications
 watch       listen for object notification events
 undo        undo PUT/DELETE operations
-policy      manage anonymous access to buckets and objects
+anonymous   manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
 ilm         manage bucket lifecycle
 version     manage bucket versioning
 replicate   configure server side bucket replication
 admin       manage MinIO servers
 update      update mc to latest release
+ping        perform liveness check
 ```
 
 ## Docker Container
@@ -56,10 +57,10 @@ docker run minio/mc:edge ls play
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
-then use the [`mc config` command](#add-a-cloud-storage-service).
+then use the [`mc alias` command](#add-a-cloud-storage-service).
 
 ### GitLab CI
-When using the Docker container in GitLab CI, you must [set the entrypoint to an empty string](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#overriding-the-entrypoint-of-an-image).
+When using the Docker container in GitLab CI, you must [set the entrypoint to an empty string](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image).
 
 ```
 deploy:
@@ -106,10 +107,10 @@ mc.exe --help
 ```
 
 ## Install from Source
-Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.13](https://golang.org/dl/#stable)
+Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.17](https://golang.org/dl/#stable)
 
 ```sh
-GO111MODULE=on go get github.com/minio/mc
+go install github.com/minio/mc@latest
 ```
 
 ## Add a Cloud Storage Service
@@ -173,6 +174,9 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 mc alias set gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
+### Example - IBM Cloud Object Storage
+See [the complete guide](docs/minio-client-complete-guide.md) for IBM instructions.
+
 ## Test Your Setup
 `mc` is pre-configured with https://play.min.io, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
@@ -231,9 +235,9 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 ```
 
 ## Explore Further
-- [MinIO Client Complete Guide](https://docs.min.io/docs/minio-client-complete-guide)
-- [MinIO Quickstart Guide](https://docs.min.io/docs/minio-quickstart-guide)
-- [The MinIO documentation website](https://docs.min.io)
+- [MinIO Client Complete Guide](https://min.io/docs/minio/linux/reference/minio-mc.html?ref=gh)
+- [MinIO Quickstart Guide](https://min.io/docs/minio/linux/index.html#quickstart-for-linux?ref=gh)
+- [The MinIO documentation website](https://min.io/docs/minio/linux/index.html?ref=gh)
 
 ## Contribute to MinIO Project
 Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)

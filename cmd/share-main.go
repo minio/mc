@@ -26,9 +26,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	shareFlags = []cli.Flag{}
-)
+var shareFlags = []cli.Flag{}
 
 var shareSubcommands = []cli.Command{
 	shareDownload,

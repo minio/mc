@@ -38,43 +38,41 @@ import (
 	"github.com/minio/pkg/mimedb"
 )
 
-var (
-	sqlFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "query, e",
-			Usage: "sql query expression",
-			Value: "select * from s3object",
-		},
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "sql query recursively",
-		},
-		cli.StringFlag{
-			Name:  "csv-input",
-			Usage: "csv input serialization option",
-		},
-		cli.StringFlag{
-			Name:  "json-input",
-			Usage: "json input serialization option",
-		},
-		cli.StringFlag{
-			Name:  "compression",
-			Usage: "input compression type",
-		},
-		cli.StringFlag{
-			Name:  "csv-output",
-			Usage: "csv output serialization option",
-		},
-		cli.StringFlag{
-			Name:  "csv-output-header",
-			Usage: "optional csv output header ",
-		},
-		cli.StringFlag{
-			Name:  "json-output",
-			Usage: "json output serialization option",
-		},
-	}
-)
+var sqlFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "query, e",
+		Usage: "sql query expression",
+		Value: "select * from s3object",
+	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "sql query recursively",
+	},
+	cli.StringFlag{
+		Name:  "csv-input",
+		Usage: "csv input serialization option",
+	},
+	cli.StringFlag{
+		Name:  "json-input",
+		Usage: "json input serialization option",
+	},
+	cli.StringFlag{
+		Name:  "compression",
+		Usage: "input compression type",
+	},
+	cli.StringFlag{
+		Name:  "csv-output",
+		Usage: "csv output serialization option",
+	},
+	cli.StringFlag{
+		Name:  "csv-output-header",
+		Usage: "optional csv output header ",
+	},
+	cli.StringFlag{
+		Name:  "json-output",
+		Usage: "json output serialization option",
+	},
+}
 
 // Display contents of a file.
 var sqlCmd = cli.Command{
@@ -89,7 +87,7 @@ var sqlCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS] TARGET [TARGET...]
-{{if .VisibleFlags}}	       
+{{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
@@ -97,7 +95,7 @@ ENVIRONMENT VARIABLES:
   MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 SERIALIZATION OPTIONS:
-  For query serialization options, refer to https://docs.min.io/docs/minio-client-complete-guide#sql
+  For query serialization options, refer to https://min.io/docs/minio/linux/reference/minio-mc/mc-sql.html#command-mc.sql
 
 EXAMPLES:
   1. Run a query on a set of objects recursively on AWS S3.
@@ -108,23 +106,23 @@ EXAMPLES:
 
   3. Run a query on an encrypted object with customer provided keys.
      {{.Prompt}} {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
-           --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
+         --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
 
   4. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
      {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-           --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio.csv.gz
+         --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio.csv.gz
 
   5. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
      {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-           --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
+         --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
 
   6. Run same query as in 5., but specify csv output headers. If --csv-output-headers is
      specified as "", first row of csv is interpreted as header
      {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-           --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
-           --query "select * from S3Object" myminio/iot-devices/data.csv
+         --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
+         --query "select * from S3Object" myminio/iot-devices/data.csv
 `,
 }
 
@@ -174,7 +172,7 @@ func parseKVArgs(is string) (map[string]string, *probe.Error) {
 					e++
 				}
 			}
-			var vEnd = len(is)
+			vEnd := len(is)
 			if e != -1 {
 				vEnd = s + e
 			}
@@ -312,7 +310,7 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 	default:
 		var err *probe.Error
 		var metadata map[string]string
-		if r, metadata, err = getSourceStreamMetadataFromURL(globalContext, sourceURL, "", time.Time{}, encKeyDB); err != nil {
+		if r, metadata, err = getSourceStreamMetadataFromURL(globalContext, sourceURL, "", time.Time{}, encKeyDB, false); err != nil {
 			return nil, err.Trace(sourceURL)
 		}
 		ctype := metadata["Content-Type"]
@@ -432,7 +430,7 @@ func getAndValidateArgs(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair, u
 // check sql input arguments.
 func checkSQLSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
-		cli.ShowCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
 	}
 }
 
@@ -456,7 +454,7 @@ func mainSQL(cliCtx *cli.Context) error {
 	URLs := cliCtx.Args()
 	writeHdr := true
 	for _, url := range URLs {
-		if _, targetContent, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}); err != nil {
+		if _, targetContent, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}, false); err != nil {
 			errorIf(err.Trace(url), "Unable to run sql for "+url+".")
 			continue
 		} else if !targetContent.Type.IsDir() {

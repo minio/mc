@@ -21,6 +21,7 @@ import "github.com/minio/cli"
 
 var adminPrometheusSubcommands = []cli.Command{
 	adminPrometheusGenerateCmd,
+	adminPrometheusMetricsCmd,
 }
 
 var adminPrometheusCmd = cli.Command{

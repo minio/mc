@@ -27,26 +27,24 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	lhClearFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "clear legal hold recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "clear legal hold of a specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "clear legal hold on an object version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "clear legal hold on multiple versions of object(s)",
-		},
-	}
-)
+var lhClearFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "clear legal hold recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "clear legal hold of a specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "clear legal hold on an object version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "clear legal hold on multiple versions of object(s)",
+	},
+}
 
 var legalHoldClearCmd = cli.Command{
 	Name:         "clear",

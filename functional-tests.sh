@@ -297,6 +297,25 @@ function teardown()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${BUCKET_NAME}"
 }
 
+# Test mc ls on a S3 prefix where a lower similar prefix exists as well e.g. dir-foo/ and dir/
+function test_list_dir()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir-foo/object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir/object2"
+    diff -bB <(echo "object2")  <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${BUCKET_NAME}/dir" |  jq -r '.key')  >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unexpected listing dir"
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir-foo/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+
 function test_put_object()
 {
     show "${FUNCNAME[0]}"
@@ -770,6 +789,43 @@ function test_copy_object_preserve_filesystem_attr()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+# Test "mc mv" command
+function test_mv_object()
+{
+    show "${FUNCNAME[0]}"
+
+    random_dir="dir-$RANDOM-$RANDOM"
+    tmpdir="$(mktemp -d)"
+
+    # Test mv command locally
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${tmpdir}/file.tmp"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mv "${tmpdir}/file.tmp" "${tmpdir}/file"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${tmpdir}/file.tmp"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/file"
+
+    # Test mv command from filesystem to S3
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mv "${tmpdir}/file" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-1"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${tmpdir}/file"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-1"
+
+   # Test mv command from S3 to S3
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mv "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-1" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-2"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-2"
+
+    # Test mv command from S3 to filesystem
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mv "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-2" "${tmpdir}/file"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/object-2"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${tmpdir}/file"
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm -r --force "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+
 function test_copy_object_with_sse_rewrite()
 {
     # test server side copy and remove operation - target is unencrypted while source is encrypted
@@ -987,6 +1043,7 @@ function run_test()
     test_rb
 
     setup
+    test_list_dir
     test_put_object
     test_put_object_error
     test_put_object_0byte
@@ -996,6 +1053,7 @@ function run_test()
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
+    test_mv_object
     test_presigned_post_policy_error
     test_presigned_put_object
     test_presigned_get_object
