@@ -82,8 +82,8 @@ func (l legalHoldCmdMessage) JSON() string {
 }
 
 var (
-	errBucketLockConfigNotFound = errors.New("bucket lock config not found")
-	errBucketLockNotSupported   = errors.New("bucket lock not supported")
+	errObjectLockConfigNotFound = errors.New("object locking is not configured")
+	errObjectLockNotSupported   = errors.New("object locking is not supported")
 )
 
 // Return true if this an S3 bucket with locking enabled
@@ -92,13 +92,14 @@ var (
 // Otherwise return unexpected errors
 func isBucketLockEnabled(ctx context.Context, aliasedURL string) (bool, *probe.Error) {
 	st, err := getBucketLockStatus(ctx, aliasedURL)
-	if err == nil {
-		return st == "Enabled", nil
+	if err != nil {
+		switch err.ToGoError() {
+		case errObjectLockConfigNotFound, errObjectLockNotSupported:
+			return false, nil
+		}
+		return false, err
 	}
-	if err.ToGoError() == errBucketLockConfigNotFound || err.ToGoError() == errBucketLockNotSupported {
-		return false, nil
-	}
-	return false, err
+	return st == "Enabled", nil
 }
 
 // Check if the bucket corresponding to the target url has object locking enabled
@@ -116,7 +117,7 @@ func getBucketLockStatus(ctx context.Context, aliasedURL string) (status string,
 			clnt, _ = newClient(strings.TrimSuffix(aliasedURL, object))
 		}
 	default:
-		return "", probe.NewError(errBucketLockNotSupported)
+		return "", probe.NewError(errObjectLockNotSupported)
 	}
 
 	status, _, _, _, err = clnt.GetObjectLockConfig(ctx)
@@ -124,9 +125,9 @@ func getBucketLockStatus(ctx context.Context, aliasedURL string) (status string,
 		errResp := minio.ToErrorResponse(err.ToGoError())
 		switch {
 		case errResp.Code == "ObjectLockConfigurationNotFoundError":
-			return "", probe.NewError(errBucketLockConfigNotFound)
+			return "", probe.NewError(errObjectLockConfigNotFound)
 		case errResp.StatusCode == http.StatusNotImplemented:
-			return "", probe.NewError(errBucketLockNotSupported)
+			return "", probe.NewError(errObjectLockNotSupported)
 		}
 		return "", err
 	}
