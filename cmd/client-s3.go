@@ -212,7 +212,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 			isSigV4 := strings.HasPrefix(strings.ToLower(config.Signature), "s3v4")
 			if config.Debug {
-				if strings.EqualFold(config.Signature, "S3v4") {
+				if isSigV4 {
 					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
 				} else if strings.EqualFold(config.Signature, "S3v2") {
 					transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
