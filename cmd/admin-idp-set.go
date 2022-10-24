@@ -19,9 +19,11 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -37,6 +39,8 @@ var adminIDPSetCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} TARGET ID_TYPE [CFG_NAME] [CFG_PARAMS...]
+
+  ID_TYPE must be one of 'ldap' or 'openid'.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -58,7 +62,24 @@ EXAMPLES:
           scopes="openid,groups" \
           redirect_uri="http://127.0.0.1:10000/oauth_callback" \
           role_policy="consoleAdmin"
+  3. Create/Update the LDAP IDP configuration (CFG_NAME must be empty for LDAP).
+     {{.Prompt}} {{.HelpName}} play/ ldap \
+          server_addr=ldap.corp.min.io:686 \
+          lookup_bind_dn=cn=readonly,ou=service_account,dc=min,dc=io \
+          lookup_bind_password=mysecretpassword \
+          user_dn_search_base_dn=dc=min,dc=io \
+          user_dn_search_filter="(uid=%s)" \
+          group_search_base_dn=ou=swengg,dc=min,dc=io \
+          group_search_filter="(&(objectclass=groupofnames)(member=%d))"
+
 `,
+}
+
+func validateIDType(idpType string) {
+	if !madmin.ValidIDPConfigTypes.Contains(idpType) {
+		fatalIf(probe.NewError(errors.New("invalid IDP type")),
+			fmt.Sprintf("IDP type must be one of %v", madmin.ValidIDPConfigTypes))
+	}
 }
 
 func mainAdminIDPSet(ctx *cli.Context) error {
@@ -75,10 +96,7 @@ func mainAdminIDPSet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	idpType := args.Get(1)
-
-	if idpType != "openid" {
-		fatalIf(probe.NewError(errors.New("not implemented")), "This feature is not yet available")
-	}
+	validateIDType(idpType)
 
 	var cfgName string
 	input := args[2:]

@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -47,6 +46,8 @@ FLAGS:
 EXAMPLES:
   1. List the available openid configurations.
      {{.Prompt}} {{.HelpName}} play/ openid
+  2. List the available ldap configurations.
+     {{.Prompt}} {{.HelpName}} play/ ldap
 `,
 }
 
@@ -63,10 +64,7 @@ func mainAdminIDPList(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	idpType := args.Get(1)
-
-	if idpType != "openid" {
-		fatalIf(probe.NewError(errors.New("not implemented")), "This feature is not yet available")
-	}
+	validateIDType(idpType)
 
 	result, e := client.ListIDPConfig(globalContext, idpType)
 	fatalIf(probe.NewError(e), "Unable to list IDP config for '%s'", idpType)
