@@ -39,7 +39,14 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var supportInspectFlags = []cli.Flag{}
+const defaultPublicKey = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
+
+var supportInspectFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "legacy",
+		Usage: "use the older inspect format",
+	},
+}
 
 var supportInspectCmd = cli.Command{
 	Name:            "inspect",
@@ -98,18 +105,6 @@ func checkSupportInspectSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
 	}
-
-	if ctx.IsSet("export") {
-		if globalJSON {
-			fatalIf(errInvalidArgument(), "--export=type cannot be specified with --json flag")
-		}
-		switch v := ctx.String("export"); {
-		case v == "json":
-		case v == "djson":
-		default:
-			fatalIf(errInvalidArgument().Trace("export="+v), "Unable to export inspect data")
-		}
-	}
 }
 
 // mainSupportInspect - the entry function of inspect command
@@ -145,19 +140,22 @@ func mainSupportInspect(ctx *cli.Context) error {
 	}
 
 	var publicKey []byte
-	publicKey, e := os.ReadFile(filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
-	if e != nil && !os.IsNotExist(e) {
-		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
-	} else if len(publicKey) > 0 {
-		if !globalJSON && !globalQuiet {
-			console.Infoln("Using public key from ", filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
+	if !ctx.Bool("legacy") {
+		var e error
+		publicKey, e = os.ReadFile(filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
+		if e != nil && !os.IsNotExist(e) {
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
+		} else if len(publicKey) > 0 {
+			if !globalJSON && !globalQuiet {
+				console.Infoln("Using public key from ", filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
+			}
 		}
-	}
 
-	// Fall back to MinIO public key.
-	if len(publicKey) == 0 {
-		// Public key for MinIO confidential information.
-		publicKey, _ = base64.StdEncoding.DecodeString("MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB")
+		// Fall back to MinIO public key.
+		if len(publicKey) == 0 {
+			// Public key for MinIO confidential information.
+			publicKey, _ = base64.StdEncoding.DecodeString(defaultPublicKey)
+		}
 	}
 
 	key, r, e := client.Inspect(context.Background(), madmin.InspectOptions{
