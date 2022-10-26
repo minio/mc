@@ -32,7 +32,6 @@ require (
 	github.com/prometheus/prom2json v1.3.2
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.4.0
-	github.com/secure-io/sio-go v0.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/tidwall/gjson v1.14.3
 	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a
@@ -96,6 +95,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
+	github.com/secure-io/sio-go v0.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
