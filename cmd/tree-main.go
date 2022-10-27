@@ -131,16 +131,14 @@ func parseTreeSyntax(ctx context.Context, cliCtx *cli.Context) (args []string, d
 	}
 
 	for _, url := range args {
-		if _, _, err := url2Stat(ctx, url, "", false, nil, timeRef); err != nil && !isURLPrefixExists(url, false) {
-			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
-		}
+		_, _, err := url2Stat(ctx, url, "", false, nil, timeRef, false)
+		fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 	}
 	return
 }
 
 // doTree - list all entities inside a folder in a tree format.
 func doTree(ctx context.Context, url string, timeRef time.Time, level int, leaf bool, branchString string, depth int, includeFiles bool) error {
-
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
@@ -285,7 +283,16 @@ func mainTree(cliCtx *cli.Context) error {
 			}
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			if e := doList(ctx, clnt, true, false, false, timeRef, false); e != nil {
+			opts := doListOptions{
+				timeRef:           timeRef,
+				isRecursive:       true,
+				isIncomplete:      false,
+				isSummary:         false,
+				withOlderVersions: false,
+				listZip:           false,
+				filter:            "*",
+			}
+			if e := doList(ctx, clnt, opts); e != nil {
 				cErr = e
 			}
 		}

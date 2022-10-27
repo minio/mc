@@ -262,7 +262,7 @@ func (s *sessionV8) isModified(sessionFile string) (bool, *probe.Error) {
 		return false, probe.NewError(e).Trace(s.SessionID)
 	}
 
-	var currentHeader = &sessionV8Header{}
+	currentHeader := &sessionV8Header{}
 	currentQS, e := quick.LoadConfig(sessionFile, nil, currentHeader)
 	if e != nil {
 		// If session does not exist for the first, return modified to

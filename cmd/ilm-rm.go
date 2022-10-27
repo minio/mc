@@ -95,7 +95,7 @@ func (i ilmRmMessage) JSON() string {
 
 func checkILMRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "rm", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, "rm", globalErrorExitStatus)
 	}
 
 	ilmAll := ctx.Bool("all")

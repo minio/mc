@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -27,16 +28,14 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	shareUploadFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "recursively upload any object matching the prefix",
-		},
-		shareFlagExpire,
-		shareFlagContentType,
-	}
-)
+var shareUploadFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "recursively upload any object matching the prefix",
+	},
+	shareFlagExpire,
+	shareFlagContentType,
+}
 
 // Share documents via URL.
 var shareUpload = cli.Command{
@@ -70,11 +69,17 @@ EXAMPLES:
 `,
 }
 
+var shellQuoteRegex = regexp.MustCompile("([&;#$` \t\n<>()|'\"])")
+
+func shellQuote(s string) string {
+	return shellQuoteRegex.ReplaceAllString(s, "\\$1")
+}
+
 // checkShareUploadSyntax - validate command-line args.
 func checkShareUploadSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !args.Present() {
-		cli.ShowCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code.
 	}
 
 	// Set command flags from context.
@@ -121,9 +126,9 @@ func makeCurlCmd(key, postURL string, isRecursive bool, uploadInfo map[string]st
 	}
 	// If key starts with is enabled prefix it with the output.
 	if isRecursive {
-		curlCommand += fmt.Sprintf("-F key=%s<NAME> ", key) // Object name.
+		curlCommand += fmt.Sprintf("-F key=%s<NAME> ", shellQuote(key)) // Object name.
 	} else {
-		curlCommand += fmt.Sprintf("-F key=%s ", key) // Object name.
+		curlCommand += fmt.Sprintf("-F key=%s ", shellQuote(key)) // Object name.
 	}
 	curlCommand += "-F file=@<FILE>" // File to upload.
 	return curlCommand, nil

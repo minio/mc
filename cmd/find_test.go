@@ -31,7 +31,7 @@ import (
 func TestMatchFind(t *testing.T) {
 	// List of various contexts used in each tests,
 	// tests are run in the same order as this list.
-	var listFindContexts = []*findContext{
+	listFindContexts := []*findContext{
 		{
 			clnt: &S3Client{
 				targetURL: &ClientURL{},
@@ -93,7 +93,7 @@ func TestMatchFind(t *testing.T) {
 		},
 	}
 
-	var testCases = []struct {
+	testCases := []struct {
 		content       contentMessage
 		expectedMatch bool
 	}{
@@ -178,7 +178,7 @@ func TestMatchFind(t *testing.T) {
 
 // Tests suffix strings trimmed off correctly at maxdepth.
 func TestSuffixTrimmingAtMaxDepth(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		startPrefix     string
 		path            string
 		separator       string
@@ -268,7 +268,7 @@ func TestFindMatch(t *testing.T) {
 		match                       bool
 	}
 
-	var basicTests = []testFind{
+	basicTests := []testFind{
 		// Name match tests - success cases.
 		{"*.jpg", "carter.jpg", "name", true},
 		{"console", "pkg/console/console.go", "name", true},
@@ -285,8 +285,10 @@ func TestFindMatch(t *testing.T) {
 		{"*test/*", "bob/likes/test/cake", "name", false},
 		{"*/test/*", "bob/likes/cake/test", "name", false},
 		{"*.jpg", ".jpg/elves/are/evil", "name", false},
-		{"wq3YgNiB2ILYg9iE2IXYnNud3I/hoI7igIvigIzigI3igI7igI/igKrigKvigKzigK3igK7igaDi",
-			"An/Even/Bigger/String/wq3YgNiB2ILYg9iE2IXYnNud3I/hoI7igIvigIzigI3igI7igI/igKrigKvigKzigK3igK7igaDi", "name", false},
+		{
+			"wq3YgNiB2ILYg9iE2IXYnNud3I/hoI7igIvigIzigI3igI7igI/igKrigKvigKzigK3igK7igaDi",
+			"An/Even/Bigger/String/wq3YgNiB2ILYg9iE2IXYnNud3I/hoI7igIvigIzigI3igI7igI/igKrigKvigKzigK3igK7igaDi", "name", false,
+		},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/THE", "name", false},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/The", "name", false},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/𝓣𝓱𝓮", "name", false},

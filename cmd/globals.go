@@ -22,8 +22,10 @@ import (
 	"context"
 	"crypto/x509"
 	"net/url"
+	"time"
 
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/pkg/console"
 )
 
@@ -56,14 +58,19 @@ const (
 )
 
 var (
-	globalQuiet          = false  // Quiet flag set via command line
-	globalJSON           = false  // Json flag set via command line
-	globalJSONLine       = false  // Print json as single line.
-	globalDebug          = false  // Debug flag set via command line
-	globalNoColor        = false  // No Color flag set via command line
-	globalInsecure       = false  // Insecure flag set via command line
-	globalDevMode        = false  // dev flag set via command line
-	globalSubnetProxyURL *url.URL // Proxy to be used for communication with subnet
+	globalQuiet          = false               // Quiet flag set via command line
+	globalJSON           = false               // Json flag set via command line
+	globalJSONLine       = false               // Print json as single line.
+	globalDebug          = false               // Debug flag set via command line
+	globalNoColor        = false               // No Color flag set via command line
+	globalInsecure       = false               // Insecure flag set via command line
+	globalDevMode        = false               // dev flag set via command line
+	globalAirgapped      = false               // Airgapped flag set via command line
+	globalSubnetProxyURL *url.URL              // Proxy to be used for communication with subnet
+	globalSubnetConfig   []madmin.SubsysConfig // Subnet config
+
+	globalConnReadDeadline  time.Duration
+	globalConnWriteDeadline time.Duration
 
 	globalContext, globalCancel = context.WithCancel(context.Background())
 )
@@ -72,26 +79,11 @@ var (
 	// Terminal width
 	globalTermWidth int
 
+	globalHelpPager *termPager
+
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool
 )
-
-// Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure, devMode bool, subnetProxyURL *url.URL) {
-	globalQuiet = globalQuiet || quiet
-	globalDebug = globalDebug || debug
-	globalJSONLine = !isTerminal() && json
-	globalJSON = globalJSON || json
-	globalNoColor = globalNoColor || noColor || globalJSONLine
-	globalInsecure = globalInsecure || insecure
-	globalDevMode = globalDevMode || devMode
-	globalSubnetProxyURL = subnetProxyURL
-
-	// Disable colorified messages if requested.
-	if globalNoColor || globalQuiet {
-		console.SetColorOff()
-	}
-}
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
 func setGlobalsFromContext(ctx *cli.Context) error {
@@ -101,18 +93,23 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
 	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
 	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
+	airgapped := ctx.IsSet("airgap") || ctx.GlobalIsSet("airgap")
 
-	subnetProxy := ctx.String("subnet-proxy")
+	globalQuiet = globalQuiet || quiet
+	globalDebug = globalDebug || debug
+	globalJSONLine = !isTerminal() && json
+	globalJSON = globalJSON || json
+	globalNoColor = globalNoColor || noColor || globalJSONLine
+	globalInsecure = globalInsecure || insecure
+	globalDevMode = globalDevMode || devMode
+	globalAirgapped = globalAirgapped || airgapped
 
-	var proxyURL *url.URL
-	var e error
-	if value := ctx.String("subnet-proxy"); value != "" {
-		proxyURL, e = url.Parse(subnetProxy)
-		if e != nil {
-			return e
-		}
+	// Disable colorified messages if requested.
+	if globalNoColor || globalQuiet {
+		console.SetColorOff()
 	}
 
-	setGlobals(quiet, debug, json, noColor, insecure, devMode, proxyURL)
+	globalConnReadDeadline = ctx.Duration("conn-read-deadline")
+	globalConnWriteDeadline = ctx.Duration("conn-write-deadline")
 	return nil
 }

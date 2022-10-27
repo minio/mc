@@ -32,26 +32,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	lhInfoFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "show legal hold status recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "show legal hold status of a specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "show legal hold status of an object version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "show legal hold status of multiple versions of object(s)",
-		},
-	}
-)
+var lhInfoFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "show legal hold status recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "show legal hold status of a specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "show legal hold status of an object version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "show legal hold status of multiple versions of object(s)",
+	},
+}
+
 var legalHoldInfoCmd = cli.Command{
 	Name:         "info",
 	Usage:        "show legal hold info for object(s)",

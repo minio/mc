@@ -18,25 +18,27 @@
 package cmd
 
 import (
-	"fmt"
+	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
+	iampolicy "github.com/minio/pkg/iam/policy"
 )
 
 var adminUserSvcAcctInfoFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "policy",
-		Usage: "print policy is JSON format",
+		Usage: "print policy in JSON format",
 	},
 }
 
 var adminUserSvcAcctInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "Get a service account info",
+	Usage:        "display service account info",
 	Action:       mainAdminUserSvcAcctInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -51,7 +53,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get information of service account 'J123C4ZXEQN8RK6ND35I'
+  1. Display information for service account 'J123C4ZXEQN8RK6ND35I'
      {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
 `,
 }
@@ -59,8 +61,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctInfoSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct info command.")
+		showCommandHelpAndExit(ctx, "info", 1)
 	}
 }
 
@@ -86,7 +87,11 @@ func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 		if svcInfo.Policy == "" {
 			fatalIf(errDummy().Trace(args...), "No policy found associated to the specified service account. Check the policy of its parent user.")
 		}
-		fmt.Println(svcInfo.Policy)
+		p, e := iampolicy.ParseConfig(strings.NewReader(svcInfo.Policy))
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to parse policy.")
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", " ")
+		fatalIf(probe.NewError(enc.Encode(p)).Trace(args...), "Unable to write policy to stdout.")
 		return nil
 	}
 

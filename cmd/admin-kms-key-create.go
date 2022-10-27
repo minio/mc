@@ -53,7 +53,7 @@ EXAMPLES:
 // adminKMSCreateKeyCmd is the handler for the "mc admin kms key create" command.
 func mainAdminKMSCreateKey(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "create", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "create", 1) // last argument is exit code
 	}
 
 	client, err := newAdminClient(ctx.Args().Get(0))

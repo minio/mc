@@ -31,19 +31,15 @@ type Status interface {
 	AddCounts(int64)
 	SetCounts(int64)
 	GetCounts() int64
-
 	Add(int64) Status
 	Get() int64
 	Start()
 	Finish()
-
 	PrintMsg(msg message)
-
 	Update()
 	Total() int64
 	SetTotal(int64) Status
 	SetCaption(string)
-
 	Read(p []byte) (n int, err error)
 
 	errorIf(err *probe.Error, msg string)
