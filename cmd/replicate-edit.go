@@ -73,7 +73,7 @@ var replicateEditCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]	
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
