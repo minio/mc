@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/fatih/color"
@@ -31,7 +32,7 @@ import (
 
 var adminServiceRestartCmd = cli.Command{
 	Name:         "restart",
-	Usage:        "restart all MinIO servers",
+	Usage:        "restart a MinIO cluster",
 	Action:       mainAdminServiceRestart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -72,15 +73,16 @@ func (s serviceRestartCommand) JSON() string {
 
 // serviceRestartMessage is container for service restart success and failure messages.
 type serviceRestartMessage struct {
-	Status    string `json:"status"`
-	ServerURL string `json:"serverURL"`
-	Err       error  `json:"error,omitempty"`
+	Status    string        `json:"status"`
+	ServerURL string        `json:"serverURL"`
+	TimeTaken time.Duration `json:"timeTaken"`
+	Err       error         `json:"error,omitempty"`
 }
 
 // String colorized service restart message.
 func (s serviceRestartMessage) String() string {
 	if s.Err == nil {
-		return console.Colorize("ServiceRestart", "\nRestarted `"+s.ServerURL+"` successfully.")
+		return console.Colorize("ServiceRestart", fmt.Sprintf("\nRestarted `%s` successfully in %s", s.ServerURL, timeDurationToHumanizedDuration(s.TimeTaken).StringShort()))
 	}
 	return console.Colorize("FailedServiceRestart", "Failed to restart `"+s.ServerURL+"`. error: "+s.Err.Error())
 }
@@ -96,14 +98,16 @@ func (s serviceRestartMessage) JSON() string {
 // checkAdminServiceRestartSyntax - validate all the passed arguments
 func checkAdminServiceRestartSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "restart", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "restart", 1) // last argument is exit code
 	}
 }
 
 func mainAdminServiceRestart(ctx *cli.Context) error {
-
 	// Validate serivce restart syntax.
 	checkAdminServiceRestartSyntax(ctx)
+
+	ctxt, cancel := context.WithCancel(globalContext)
+	defer cancel()
 
 	// Set color.
 	console.SetColor("ServiceOffline", color.New(color.FgRed, color.Bold))
@@ -119,10 +123,15 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Restart the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceRestart(globalContext)), "Unable to restart the server.")
+	fatalIf(probe.NewError(client.ServiceRestart(ctxt)), "Unable to restart the server.")
 
 	// Success..
 	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
+
+	// Start pinging the service until it is ready
+
+	anonClient, err := newAnonymousClient(aliasedURL)
+	fatalIf(err.Trace(aliasedURL), "Could not ping `"+aliasedURL+"`.")
 
 	coloring := color.New(color.FgRed)
 	mark := "..."
@@ -137,26 +146,36 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	printProgress()
 	mark = "."
 
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
+
+	t := time.Now()
 	for {
 		select {
-		case <-globalContext.Done():
-			return globalContext.Err()
-		case <-time.NewTimer(3 * time.Second).C:
-			ctx, cancel := context.WithTimeout(globalContext, 1*time.Second)
-			// Fetch the service status of the specified MinIO server
-			info, e := client.ServerInfo(ctx)
-			cancel()
+		case <-ctxt.Done():
+			return ctxt.Err()
+		case <-timer.C:
+			healthCtx, healthCancel := context.WithTimeout(ctxt, 3*time.Second)
+			// Fetch the health status of the specified MinIO server
+			healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{})
+			healthCancel()
 			switch {
-			case e == nil && info.Mode == string(madmin.ItemOnline):
-				printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+			case healthErr == nil && healthResult.Healthy:
+				printMsg(serviceRestartMessage{
+					Status:    "success",
+					ServerURL: aliasedURL,
+					TimeTaken: time.Since(t),
+				})
 				return nil
-			case err == nil && info.Mode == string(madmin.ItemInitializing):
+			case healthErr == nil && !healthResult.Healthy:
 				coloring = color.New(color.FgYellow)
 				mark = "!"
 				fallthrough
 			default:
 				printProgress()
 			}
+
+			timer.Reset(time.Second)
 		}
 	}
 }

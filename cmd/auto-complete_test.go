@@ -25,7 +25,6 @@ import (
 )
 
 func TestAutoCompletionCompletness(t *testing.T) {
-
 	var checkCompletion func(cmd cli.Command, cmdPath string) error
 
 	checkCompletion = func(cmd cli.Command, cmdPath string) error {

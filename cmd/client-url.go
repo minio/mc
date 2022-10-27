@@ -167,7 +167,7 @@ func (u ClientURL) String() string {
 			if u.Path != "" && u.Path[0] != '\\' && u.Host != "" && u.Path[0] != '/' {
 				buf.WriteByte('/')
 			}
-			buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
+			buf.WriteString(strings.ReplaceAll(u.Path, "\\", "/"))
 		default:
 			if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
 				buf.WriteByte('/')
@@ -185,8 +185,8 @@ func urlJoinPath(url1, url2 string) string {
 	return joinURLs(u1, u2).String()
 }
 
-// url2Stat returns stat info for URL.
-func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time) (client Client, content *ClientContent, err *probe.Error) {
+// url2Stat returns stat info for URL - supports bucket, object and a prefixe with or without a trailing slash
+func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -194,7 +194,7 @@ func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encK
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID})
+	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID, isZip: isZip})
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
@@ -202,12 +202,12 @@ func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encK
 }
 
 // firstURL2Stat returns the stat info of the first object having the specified prefix
-func firstURL2Stat(ctx context.Context, prefix string, timeRef time.Time) (client Client, content *ClientContent, err *probe.Error) {
+func firstURL2Stat(ctx context.Context, prefix string, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(prefix)
 	if err != nil {
 		return nil, nil, err.Trace(prefix)
 	}
-	content = <-client.List(ctx, ListOptions{Recursive: true, TimeRef: timeRef, Count: 1})
+	content = <-client.List(ctx, ListOptions{Recursive: true, TimeRef: timeRef, Count: 1, ListZip: isZip})
 	if content == nil {
 		return nil, nil, probe.NewError(ObjectMissing{timeRef: timeRef}).Trace(prefix)
 	}
@@ -239,18 +239,6 @@ func url2Alias(aliasedURL string) (alias, path string) {
 		return urlParts[0], urlParts[1]
 	}
 	return urlParts[0], ""
-}
-
-// isURLPrefixExists - check if object key prefix exists.
-func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
-	clnt, err := newClient(urlPrefix)
-	if err != nil {
-		return false
-	}
-	for entry := range clnt.List(globalContext, ListOptions{Recursive: false, Incomplete: incomplete, WithMetadata: false, ShowDir: DirNone}) {
-		return entry.Err == nil
-	}
-	return false
 }
 
 // guessURLContentType - guess content-type of the URL.

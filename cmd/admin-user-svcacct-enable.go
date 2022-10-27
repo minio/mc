@@ -27,7 +27,7 @@ import (
 
 var adminUserSvcAcctEnableCmd = cli.Command{
 	Name:         "enable",
-	Usage:        "Enable a service account",
+	Usage:        "enable a service account",
 	Action:       mainAdminUserSvcAcctEnable,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
+  1. Enable a service account 'J123C4ZXEQN8RK6ND35I' on MinIO server.
      {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
 `,
 }
@@ -50,8 +50,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctEnableSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctEnableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user svcacct enable command.")
+		showCommandHelpAndExit(ctx, "enable", 1)
 	}
 }
 
@@ -75,7 +74,7 @@ func mainAdminUserSvcAcctEnable(ctx *cli.Context) error {
 	}
 
 	e := client.UpdateServiceAccount(globalContext, svcAccount, opts)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get enable the specified service account")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable the specified service account")
 
 	printMsg(svcAcctMessage{
 		op:        "enable",

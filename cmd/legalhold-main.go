@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -80,18 +81,25 @@ func (l legalHoldCmdMessage) JSON() string {
 	return string(msgBytes)
 }
 
-var errBucketLockConfigNotFound = errors.New("bucket lock config not found")
-var errBucketLockNotSupported = errors.New("bucket lock not supported")
+var (
+	errObjectLockConfigNotFound = errors.New("object locking is not configured")
+	errObjectLockNotSupported   = errors.New("object locking is not supported")
+)
 
+// Return true if this an S3 bucket with locking enabled
+// Return false if this an S3 bucket with no locking enabled
+// Return false if this is a filesystem URL
+// Otherwise return unexpected errors
 func isBucketLockEnabled(ctx context.Context, aliasedURL string) (bool, *probe.Error) {
 	st, err := getBucketLockStatus(ctx, aliasedURL)
-	if err == nil {
-		return st == "Enabled", nil
+	if err != nil {
+		switch err.ToGoError() {
+		case errObjectLockConfigNotFound, errObjectLockNotSupported:
+			return false, nil
+		}
+		return false, err
 	}
-	if err.ToGoError() == errBucketLockConfigNotFound || err.ToGoError() == errBucketLockNotSupported {
-		return false, nil
-	}
-	return false, err
+	return st == "Enabled", nil
 }
 
 // Check if the bucket corresponding to the target url has object locking enabled
@@ -101,13 +109,25 @@ func getBucketLockStatus(ctx context.Context, aliasedURL string) (status string,
 		return "", err
 	}
 
+	// Remove the prefix/object from the aliased url and reconstruct the client
+	switch c := clnt.(type) {
+	case *S3Client:
+		_, object := c.url2BucketAndObject()
+		if object != "" {
+			clnt, _ = newClient(strings.TrimSuffix(aliasedURL, object))
+		}
+	default:
+		return "", probe.NewError(errObjectLockNotSupported)
+	}
+
 	status, _, _, _, err = clnt.GetObjectLockConfig(ctx)
 	if err != nil {
 		errResp := minio.ToErrorResponse(err.ToGoError())
-		if errResp.StatusCode == http.StatusNotFound {
-			return "", probe.NewError(errBucketLockConfigNotFound)
-		} else if errResp.StatusCode == http.StatusNotImplemented {
-			return "", probe.NewError(errBucketLockNotSupported)
+		switch {
+		case errResp.Code == "ObjectLockConfigurationNotFoundError":
+			return "", probe.NewError(errObjectLockConfigNotFound)
+		case errResp.StatusCode == http.StatusNotImplemented:
+			return "", probe.NewError(errObjectLockNotSupported)
 		}
 		return "", err
 	}

@@ -32,27 +32,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	watchFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "events",
-			Value: "put,delete,get",
-			Usage: "filter specific types of events; defaults to all events by default",
-		},
-		cli.StringFlag{
-			Name:  "prefix",
-			Usage: "filter events for a prefix",
-		},
-		cli.StringFlag{
-			Name:  "suffix",
-			Usage: "filter events for a suffix",
-		},
-		cli.BoolFlag{
-			Name:  "recursive",
-			Usage: "recursively watch for events",
-		},
-	}
-)
+var watchFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "events",
+		Value: "put,delete,get",
+		Usage: "filter specific types of events; defaults to all events by default",
+	},
+	cli.StringFlag{
+		Name:  "prefix",
+		Usage: "filter events for a prefix",
+	},
+	cli.StringFlag{
+		Name:  "suffix",
+		Usage: "filter events for a suffix",
+	},
+	cli.BoolFlag{
+		Name:  "recursive",
+		Usage: "recursively watch for events",
+	},
+}
 
 var watchCmd = cli.Command{
 	Name:         "watch",
@@ -65,11 +63,11 @@ var watchCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] PATH
-{{if .VisibleFlags}}
+  {{.HelpName}} [FLAGS] TARGET
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}{{end}}
+  {{end}}
 EXAMPLES:
   1. Watch new S3 operations on a MinIO server
      {{.Prompt}} {{.HelpName}} play/testbucket
@@ -94,7 +92,7 @@ EXAMPLES:
 // checkWatchSyntax - validate all the passed arguments
 func checkWatchSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "watch", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "watch", 1) // last argument is exit code
 	}
 }
 

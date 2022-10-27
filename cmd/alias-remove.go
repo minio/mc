@@ -80,10 +80,22 @@ func mainAliasRemove(ctx *cli.Context, deprecated bool) error {
 	return nil
 }
 
+// aliasMustExist confirms that a given alias is present in Aliases array, returns error if not found
+
+func aliasMustExist(alias string) {
+	hostConfig := mustGetHostConfig(alias)
+	if hostConfig == nil {
+		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
+	}
+}
+
 // removeAlias - removes an alias.
 func removeAlias(alias string) aliasMessage {
 	conf, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
+
+	// check if alias is valid
+	aliasMustExist(alias)
 
 	// Remove the alias from the config.
 	delete(conf.Aliases, alias)

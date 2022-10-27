@@ -27,34 +27,32 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	retentionClearFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "clear retention recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "clear retention of a specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "roll back object(s) to current version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "clear retention of object(s) and all its versions",
-		},
-		cli.BoolFlag{
-			Name:  "default",
-			Usage: "set default bucket locking",
-		},
-	}
-)
+var retentionClearFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "clear retention recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "clear retention of a specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "roll back object(s) to current version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "clear retention of object(s) and all its versions",
+	},
+	cli.BoolFlag{
+		Name:  "default",
+		Usage: "set default bucket locking",
+	},
+}
 
 var retentionClearCmd = cli.Command{
 	Name:         "clear",
-	Usage:        "clear retention for object(s)",
+	Usage:        "clear all retention settings on object(s)",
 	Action:       mainRetentionClear,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -92,6 +90,11 @@ EXAMPLES:
 
 func parseClearRetentionArgs(cliCtx *cli.Context) (target, versionID string, timeRef time.Time, withVersions, recursive, bucketMode bool) {
 	args := cliCtx.Args()
+
+	if len(args) != 1 {
+		showCommandHelpAndExit(cliCtx, "clear", 1)
+	}
+
 	target = args[0]
 	if target == "" {
 		fatalIf(errInvalidArgument().Trace(), "invalid target url '%v'", target)
@@ -102,6 +105,11 @@ func parseClearRetentionArgs(cliCtx *cli.Context) (target, versionID string, tim
 	withVersions = cliCtx.Bool("versions")
 	recursive = cliCtx.Bool("recursive")
 	bucketMode = cliCtx.Bool("default")
+
+	if bucketMode && (versionID != "" || !timeRef.IsZero() || withVersions || recursive) {
+		fatalIf(errDummy(), "--default cannot be specified with any of --version-id, --rewind, --versions or --recursive.")
+	}
+
 	return
 }
 
@@ -122,13 +130,9 @@ func mainRetentionClear(cliCtx *cli.Context) error {
 	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("RetentionFailure", color.New(color.FgYellow))
 
-	if len(cliCtx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(cliCtx, "clear", 1)
-	}
-
 	target, versionID, rewind, withVersions, recursive, bucketMode := parseClearRetentionArgs(cliCtx)
 
-	checkObjectLockSupport(ctx, target)
+	fatalIfBucketLockNotEnabled(ctx, target)
 
 	if bucketMode {
 		return clearBucketLock(target)

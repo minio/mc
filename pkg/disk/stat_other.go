@@ -30,7 +30,6 @@ import (
 // GetFileSystemAttrs return the file system attribute as string; containing mode,
 // uid, gid, uname, Gname, atime, mtime, ctime and md5
 func GetFileSystemAttrs(file string) (string, error) {
-
 	st := syscall.Stat_t{}
 	err := syscall.Stat(file, &st)
 	if err != nil {

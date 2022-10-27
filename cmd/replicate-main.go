@@ -24,10 +24,11 @@ var replicateSubcommands = []cli.Command{
 	replicateEditCmd,
 	replicateListCmd,
 	replicateStatusCmd,
-	replicateResetCmd,
+	replicateResyncCmd,
 	replicateExportCmd,
 	replicateImportCmd,
 	replicateRemoveCmd,
+	replicateDiffCmd,
 }
 
 var replicateCmd = cli.Command{

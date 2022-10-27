@@ -18,12 +18,18 @@
 package cmd
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminConfigGetCmd = cli.Command{
@@ -43,6 +49,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
+  The output includes environment variables set on the server. These cannot be overridden from the client.
+
   1. Get the current region setting on MinIO server.
      {{.Prompt}} {{.HelpName}} play/ region
      region name=us-east-1
@@ -57,21 +65,43 @@ EXAMPLES:
 `,
 }
 
-// configGetMessage container to hold locks information.
 type configGetMessage struct {
-	Status string         `json:"status"`
-	Value  *madmin.Target `json:"value"`
+	Status string                `json:"status"`
+	Config []madmin.SubsysConfig `json:"config"`
 	value  []byte
 }
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	return string(u.value)
+	console.SetColor("EnvVar", color.New(color.FgYellow))
+	bio := bufio.NewReader(bytes.NewReader(u.value))
+	var lines []string
+	for {
+		s, err := bio.ReadString('\n')
+		// Make lines displaying environment variables bold.
+		if strings.HasPrefix(s, "# MINIO_") {
+			s = strings.TrimPrefix(s, "# ")
+			parts := strings.SplitN(s, "=", 2)
+			s = fmt.Sprintf("# %s=%s", console.Colorize("EnvVar", parts[0]), parts[1])
+			lines = append(lines, s)
+		} else {
+			lines = append(lines, s)
+		}
+		if err == io.EOF {
+			break
+		}
+		fatalIf(probe.NewError(err), "Unable to marshal to string.")
+	}
+	return strings.Join(lines, "")
 }
 
 // JSON jsonified service status Message message.
 func (u configGetMessage) JSON() string {
 	u.Status = "success"
+	var err error
+	u.Config, err = madmin.ParseServerConfigOutput(string(u.value))
+	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -81,12 +111,11 @@ func (u configGetMessage) JSON() string {
 // checkAdminConfigGetSyntax - validate all the passed arguments
 func checkAdminConfigGetSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
 	}
 }
 
 func mainAdminConfigGet(ctx *cli.Context) error {
-
 	checkAdminConfigGetSyntax(ctx)
 
 	// Get the alias parameter from cli
@@ -118,14 +147,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Unable to get server '%s' config", args.Tail())
 
 	if globalJSON {
-		hr, e := client.HelpConfigKV(globalContext, subSys, "", false)
-		fatalIf(probe.NewError(e), "Unable to get help for "+subSys+" the sub-system")
-
-		tgt, e := madmin.ParseSubSysTarget(buf, hr)
-		fatalIf(probe.NewError(e), "Unable to parse sub-system target "+subSys)
-
 		printMsg(configGetMessage{
-			Value: tgt,
 			value: buf,
 		})
 	} else {

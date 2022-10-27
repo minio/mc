@@ -34,6 +34,8 @@ tag         manage tags for bucket(s) and object(s)
 replicate   configure server side bucket replication
 admin       manage MinIO servers
 update      update mc to latest release
+support     supportability tools like  profile, register, callhome, inspect
+ping        perform liveness check
 ```
 
 ## 1.  Download MinIO Client
@@ -154,6 +156,17 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 ```
 mc alias set gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
+
+### Example - IBM Cloud Object Storage
+Get your AccessKeyID and SecretAccessKey by creating a service account [with HMAC credentials](https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-uhc-hmac-credentials-main).  This option is only available from **Resources > Cloud Object Storage > Service credentials** (not from Manage > Access (IAM) > Service IDs). Once created, the values you will use for `accessKey` and `secretKey` are found in the `cos_hmac_keys` field of the service credentials.
+
+Finally, the url will be the **public endpoint specific to the region/resiliency** that you chose when setting up your bucket. There is no single, global url for all buckets. Find your bucket's URL in the console by going to Cloud Object Storage > Buckets > [your-bucket] > Configuration > Endpoints > public. Remember to prepend `https://` to the URL provided.
+
+```
+mc alias set ibm https://s3.us-east.cloud-object-storage.appdomain.cloud BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v4
+```
+
+**Note**: The service ID you create must have an access policy granting it access to your Object Storage instance(s). 
 
 ### Example - Specify keys using standard input
 
@@ -312,11 +325,12 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
 | [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
 | [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
-| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | |
+| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | [**support** - generate profile data for debugging purposes](#support) |
+| [**ping** - perform liveness check](#ping)                                        |                                                                     |                                                            |                                                    |
 
 
 
-###  Command `ls`
+###  Command `ls`  
 `ls` command lists files, buckets and objects. Use `--incomplete` flag to list partially copied content.
 
 ```
@@ -818,8 +832,8 @@ FLAGS:
   --rewind value                     roll back object(s) to current version at specified time
   --version-id value, --vid value    select an object version to copy
   --recursive, -r                    copy recursively
-  --older-than value                 copy object(s) older than N days (default: 0)
-  --newer-than value                 copy object(s) newer than N days (default: 0)
+  --older-than value                 copy object(s) older than value in duration string (e.g. 7d10h31s)
+  --newer-than value                 copy object(s) newer than value in duration string (e.g. 7d10h31s)
   --storage-class value, --sc value  set storage class for new object(s) on target
   --preserve,-a                      preserve file system attributes and bucket policy rules on target bucket(s)
   --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
@@ -906,8 +920,8 @@ USAGE:
 
 FLAGS:
   --recursive, -r                    move recursively
-  --older-than value                 move object(s) older than N days (default: 0)
-  --newer-than value                 move object(s) newer than N days (default: 0)
+  --older-than value                 move object(s) older than value in duration string (e.g. 7d10h31s)
+  --newer-than value                 move object(s) newer than value in duration string (e.g. 7d10h31s)
   --storage-class value, --sc value  set storage class for new object(s) on target
   --preserve,-a                      preserve file system attributes and bucket policy rules on target bucket(s)
   --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
@@ -1001,10 +1015,10 @@ FLAGS:
   --force                          allow a recursive remove operation
   --dangerous                      allow site-wide removal of objects
   --incomplete, -I                 remove incomplete uploads
-  --fake                           perform a fake remove operation
+  --dry-run                        perform a fake remove operation
   --stdin                          read object names from STDIN
-  --older-than value               remove objects older than L days, M hours and N minutes
-  --newer-than value               remove objects newer than L days, M hours and N minutes
+  --older-than value               remove objects older than value in duration string (e.g. 7d10h31s)
+  --newer-than value               remove objects newer than value in duration string (e.g. 7d10h31s)
   --bypass                         bypass governance
   --encrypt-key value              encrypt/decrypt objects (using server-side encryption with customer provided keys)
   --help, -h                       show help
@@ -1161,14 +1175,14 @@ USAGE:
 
 FLAGS:
   --overwrite                        overwrite object(s) on target if it differs from source
-  --fake                             perform a fake mirror operation
+  --dry-run                          perform a fake mirror operation
   --watch, -w                        watch and synchronize changes
   --remove                           remove extraneous object(s) on target
   --region value                     specify region when creating new bucket(s) on target (default: "us-east-1")
   --preserve, -a                     preserve file system attributes and bucket policy rules on target bucket(s)
   --exclude value                    exclude object(s) that match specified object name pattern
-  --older-than value                 filter object(s) older than N days (default: 0)
-  --newer-than value                 filter object(s) newer than N days (default: 0)
+  --older-than value                 filter object(s) older than value in duration string (e.g. 7d10h31s)
+  --newer-than value                 filter object(s) newer than value in duration string (e.g. 7d10h31s)
   --storage-class value, --sc value  specify storage class for new object(s) on target
   --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
@@ -1205,8 +1219,8 @@ FLAGS:
   --exec value                  spawn an external process for each matching object (see FORMAT)
   --ignore value                exclude objects matching the wildcard pattern
   --name value                  find object names matching wildcard pattern
-  --newer value                 match all objects newer than specified time L days, M hours and N minutes
-  --older value                 match all objects older than specified time L days, M hours and N minutes
+  --newer value                 match all objects newer than value in duration string (e.g. 7d10h31s)
+  --older value                 match all objects older than value in duration string (e.g. 7d10h31s)
   --path value                  match directory names matching wildcard pattern
   --print value                 print in custom format to STDOUT (see FORMAT)
   --regex value                 match directory and object name with PCRE regex pattern
@@ -1517,7 +1531,7 @@ mc tag set --versions --rewind 7d play/testbucket/testobject "status=old"
 
 <a name="admin"></a>
 ### Command `admin`
-Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
+Please visit [here](https://min.io/docs/minio/linux/reference/minio-mc-admin.html?ref=gh) for a more comprehensive admin guide.
 
 <a name="alias"></a>
 ### Command `alias`
@@ -1886,8 +1900,110 @@ mc replicate export myminio/mybucket > /data/replicate/config
 mc replicate status myminio/mybucket
 ```
 
-*Example: Resync replication of previously replicated objects from `mybucket` on alias `myminio` to configured remote target in replication configuration.
+*Example: Resync replication of previously replicated objects from `mybucket` on alias `myminio` to remote target "arn:minio:replication::xxx:mybucket".
 
 ```
-mc replicate resync myminio/mybucket
+mc replicate resync start myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
+```
+
+*Example: Show status of replication resync of target "arn:minio:replication::xxx:mybucket" for `mybucket` on alias `myminio`.
+
+```
+mc replicate resync status myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
+```
+
+
+<a name="support"></a>
+### Command `support` - support related commands
+
+```
+NAME:
+  mc support register           register with MinIO subscription network
+  mc support callhome           configure callhome settings
+  mc support diag, diagnostics  upload health data for diagnostics
+  mc support perf               analyze object, network and drive performance
+  mc support inspect            upload raw object contents for analysis
+  mc support profile            generate profile data for debugging
+  mc support logs               configure/display MinIO console logs
+  mc support top                provide top like statistics for MinIO
+
+```
+
+Register MinIO cluster at alias 'play' on SUBNET, using the name "play-cluster".
+```
+mc support register play --name play-cluster
+```
+
+Enable logs callhome for cluster with alias 'play'.
+```
+mc support callhome set play logs=on
+```
+
+Download 'xl.meta' for a specific object from all the drives in a zip file.
+```
+mc support inspect myminio/bucket/test*/xl.meta
+```
+
+Run object speed measurement with autotuning the concurrency to obtain maximum throughput and IOPs.
+```
+mc support perf object myminio/
+```
+
+Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
+```
+mc support diag play
+```
+
+Get CPU profiling for 2 minutes
+```
+mc support profile  --type cpu --duration 120 myminio/
+```
+
+Print last 5 application error logs entries for node 'node1' on MinIO server with alias 'myminio'
+```
+mc support logs show --last 5 --type application myminio node1
+```
+
+Enable logs for cluster with alias 'play'
+```
+mc support logs enable play
+```
+
+Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
+```
+mc admin top locks myminio
+```
+
+Display current in-progress all 's3.PutObject' API calls.
+```
+mc support top api --name s3.PutObject myminio/
+```
+
+
+<a name="ping"></a>
+### Command `ping`
+`rb` command to perform liveness check
+
+```
+USAGE:
+   mc ping [FLAGS] TARGET
+
+FLAGS:
+  --count value, -c value        perform liveliness check for count number of times (default: 0)
+  --error-count value, -e value  exit after N consecutive ping errors
+  --interval value, -i value     wait interval between each request in seconds (default: 1)
+  --distributed, -a              ping all the servers in the cluster, use it when you have direct access to nodes/pods
+  --help, -h                     show help
+
+
+```
+
+*Example: Perform liveness check on https://play.min.io.*
+
+
+```
+mc ping play
+1: https://play.min.io:   min=919.538ms   max=919.538ms   average=919.538ms   errors=0   roundtrip=919.538ms
+2: https://play.min.io:   min=278.356ms   max=919.538ms   average=598.947ms   errors=0   roundtrip=278.356ms
+3: https://play.min.io:   min=278.356ms   max=919.538ms   average=504.759ms   errors=0   roundtrip=316.384ms
 ```

@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -65,15 +64,26 @@ func (i srInfo) String() string {
 	info := madmin.SiteReplicationInfo(i)
 	if info.Enabled {
 		messages = []string{
-			"SiteReplication: on",
-			fmt.Sprintf("ServiceAccountAccessKey: %s", info.ServiceAccountAccessKey),
-			"SiteReplicationMembers:",
+			"SiteReplication enabled for:\n",
 		}
+		r := console.Colorize("THeaders", newPrettyTable(" | ",
+			Field{"Deployment ID", 36},
+
+			Field{"Name", 15},
+			Field{"Endpoint", 50},
+		).buildRow("Deployment ID", "Site Name", "Endpoint"))
+		messages = append(messages, r)
 		for _, peer := range info.Sites {
-			messages = append(messages, fmt.Sprintf("  Name: %s, Endpoint: %s, DeploymentID: %s", peer.Name, peer.Endpoint, peer.DeploymentID))
+			r := console.Colorize("TDetail", newPrettyTable(" | ",
+				Field{"Deployment ID", 36},
+
+				Field{"Name", 15},
+				Field{"Endpoint", 50},
+			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint))
+			messages = append(messages, r)
 		}
 	} else {
-		messages = []string{"SiteReplication: off"}
+		messages = []string{"SiteReplication is not enabled"}
 	}
 
 	return console.Colorize("UserMessage", strings.Join(messages, "\n"))
@@ -90,6 +100,8 @@ func mainAdminReplicationInfo(ctx *cli.Context) error {
 	}
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
+	console.SetColor("THeaders", color.New(color.Bold, color.FgHiWhite))
+	console.SetColor("TDetail", color.New(color.Bold, color.FgCyan))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

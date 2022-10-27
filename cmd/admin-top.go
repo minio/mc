@@ -20,6 +20,7 @@ package cmd
 import "github.com/minio/cli"
 
 var adminTopSubcommands = []cli.Command{
+	adminTopAPICmd,
 	adminTopLocksCmd,
 }
 

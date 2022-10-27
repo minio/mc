@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/replication"
@@ -45,8 +45,10 @@ const (
 
 // GetOptions holds options of the GET operation
 type GetOptions struct {
-	SSE       encrypt.ServerSide
-	VersionID string
+	SSE        encrypt.ServerSide
+	VersionID  string
+	Zip        bool
+	RangeStart int64
 }
 
 // PutOptions holds options for PUT operation
@@ -67,6 +69,7 @@ type StatOptions struct {
 	sse        encrypt.ServerSide
 	timeRef    time.Time
 	versionID  string
+	isZip      bool
 }
 
 // ListOptions holds options for listing operation
@@ -76,6 +79,7 @@ type ListOptions struct {
 	WithMetadata      bool
 	WithOlderVersions bool
 	WithDeleteMarkers bool
+	ListZip           bool
 	TimeRef           time.Time
 	ShowDir           DirOpt
 	Count             int
@@ -96,7 +100,6 @@ type CopyOptions struct {
 type Client interface {
 	// Common operations
 	Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error)
-
 	List(ctx context.Context, opts ListOptions) <-chan *ClientContent
 
 	// Bucket operations
@@ -120,7 +123,6 @@ type Client interface {
 
 	// I/O operations with metadata.
 	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, err *probe.Error)
-
 	Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
 
 	// Object Locking related API
@@ -137,10 +139,9 @@ type Client interface {
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
 
 	// Delete operations
-	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass bool, contentCh <-chan *ClientContent) (errorCh <-chan *probe.Error)
+	Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass, isForceDel bool, contentCh <-chan *ClientContent) (errorCh <-chan RemoveResult)
 	// GetURL returns back internal url
 	GetURL() ClientURL
-
 	AddUserAgent(app, version string)
 
 	// Tagging operations
@@ -154,13 +155,15 @@ type Client interface {
 
 	// Versioning operations
 	GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
-	SetVersion(ctx context.Context, status string) *probe.Error
+	SetVersion(ctx context.Context, status string, prefixes []string, excludeFolders bool) *probe.Error
 	// Replication operations
 	GetReplication(ctx context.Context) (replication.Config, *probe.Error)
 	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error
 	RemoveReplication(ctx context.Context) *probe.Error
 	GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error)
 	ResetReplication(ctx context.Context, before time.Duration, arn string) (replication.ResyncTargetsInfo, *probe.Error)
+	ReplicationResyncStatus(ctx context.Context, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error)
+
 	// Encryption operations
 	GetEncryption(ctx context.Context) (string, string, *probe.Error)
 	SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error
@@ -170,11 +173,16 @@ type Client interface {
 
 	// Restore an object
 	Restore(ctx context.Context, versionID string, days int) *probe.Error
+
+	// OD operations
+	GetPart(ctx context.Context, part int) (io.ReadCloser, *probe.Error)
+	PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
 }
 
 // ClientContent - Content container for content metadata
 type ClientContent struct {
 	URL          ClientURL
+	BucketName   string // only valid and set for client-type objectStorage
 	Time         time.Time
 	Size         int64
 	Type         os.FileMode
@@ -205,17 +213,19 @@ type ClientContent struct {
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
-	AccessKey    string
-	SecretKey    string
-	SessionToken string
-	Signature    string
-	HostURL      string
-	AppName      string
-	AppVersion   string
-	Debug        bool
-	Insecure     bool
-	Lookup       minio.BucketLookupType
-	Transport    *http.Transport
+	AccessKey         string
+	SecretKey         string
+	SessionToken      string
+	Signature         string
+	HostURL           string
+	AppName           string
+	AppVersion        string
+	Debug             bool
+	Insecure          bool
+	Lookup            minio.BucketLookupType
+	ConnReadDeadline  time.Duration
+	ConnWriteDeadline time.Duration
+	Transport         *http.Transport
 }
 
 // SelectObjectOpts - opts entered for select API

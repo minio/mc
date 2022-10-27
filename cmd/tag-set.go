@@ -103,7 +103,7 @@ func (t tagSetMessage) JSON() string {
 
 func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
-		cli.ShowCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, "set", globalErrorExitStatus)
 	}
 
 	targetURL = ctx.Args().Get(0)
@@ -137,7 +137,6 @@ func setTags(ctx context.Context, clnt Client, versionID, tags string, verbose b
 		Name:      clnt.GetURL().String(),
 		VersionID: versionID,
 	})
-
 }
 
 func mainSetTag(cliCtx *cli.Context) error {
