@@ -68,11 +68,12 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- P
 
 	if globalJSON {
 		if e != nil {
-			printMsg(PerfTestResult{
+			printMsg(convertPerfResult(PerfTestResult{
 				Type:  DrivePerfTest,
 				Err:   e.Error(),
 				Final: true,
-			})
+			}))
+
 			return nil
 		}
 
@@ -82,11 +83,11 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- P
 				results = append(results, result)
 			}
 		}
-		printMsg(PerfTestResult{
+		printMsg(convertPerfResult(PerfTestResult{
 			Type:        DrivePerfTest,
 			DriveResult: results,
 			Final:       true,
-		})
+		}))
 
 		return nil
 	}
