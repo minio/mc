@@ -290,7 +290,7 @@ func (x xlMetaInlineData) json() ([]byte, error) {
 
 const (
 	xlHeaderVersion = 2
-	xlMetaVersion   = 1
+	xlMetaVersion   = 2
 )
 
 func decodeXLHeaders(buf []byte) (versions int, b []byte, e error) {
