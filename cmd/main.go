@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -36,23 +37,22 @@ import (
 	"github.com/inconshreveable/mousetrap"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/env"
 	"github.com/minio/pkg/trie"
 	"github.com/minio/pkg/words"
-	"github.com/pkg/profile"
 
 	completeinstall "github.com/posener/complete/cmd/install"
 )
 
-var (
-	// global flags for mc.
-	mcFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "autocompletion",
-			Usage: "install auto-completion for your shell",
-		},
-	}
-)
+// global flags for mc.
+var mcFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "autocompletion",
+		Usage: "install auto-completion for your shell",
+	},
+}
 
 // Help template for mc
 var mcHelpTemplate = `NAME:
@@ -70,14 +70,18 @@ GLOBAL FLAGS:
 TIP:
   Use '{{.Name}} --autocompletion' to enable shell autocompletion
 
-VERSION:
-  ` + ReleaseTag +
-	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
-{{$key}}:
-  {{$value}}
-{{end}}`
+COPYRIGHT:
+  Copyright (c) 2015-` + CopyrightYear + ` MinIO, Inc.
+
+LICENSE:
+  GNU AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>
+`
 
 func init() {
+	if env.IsSet(mcEnvConfigFile) {
+		configFile := env.Get(mcEnvConfigFile, "")
+		fatalIf(readAliasesFromFile(configFile).Trace(configFile), "Unable to parse "+configFile)
+	}
 	if runtime.GOOS == "windows" {
 		if mousetrap.StartedByExplorer() {
 			fmt.Printf("Don't double-click %s\n", os.Args[0])
@@ -90,25 +94,21 @@ func init() {
 }
 
 // Main starts mc application
-func Main(args []string) {
-
+func Main(args []string) error {
 	if len(args) > 1 {
 		switch args[1] {
 		case "mc", filepath.Base(args[0]):
 			mainComplete()
-			return
+			return nil
 		}
 	}
 
-	// Enable profiling supported modes are [cpu, mem, block].
-	// ``MC_PROFILER`` supported options are [cpu, mem, block].
-	switch os.Getenv("MC_PROFILER") {
-	case "cpu":
-		defer profile.Start(profile.CPUProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	case "mem":
-		defer profile.Start(profile.MemProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	case "block":
-		defer profile.Start(profile.BlockProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
+	// ``MC_PROFILER`` supported options are [cpu, mem, block, goroutine].
+	if p := os.Getenv("MC_PROFILER"); p != "" {
+		profilers := strings.Split(p, ",")
+		if e := enableProfilers(mustGetProfileDir(), profilers); e != nil {
+			console.Fatal(e)
+		}
 	}
 
 	probe.Init() // Set project's root source path.
@@ -133,10 +133,31 @@ func Main(args []string) {
 	// Monitor OS exit signals and cancel the global context in such case
 	go trapSignals(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
-	// Run the app - exit on error.
-	if err := registerApp(appName).Run(args); err != nil {
-		os.Exit(1)
+	globalHelpPager = newTermPager()
+	// Wait until the user quits the pager
+	defer globalHelpPager.WaitForExit()
+
+	// Run the app
+	return registerApp(appName).Run(args)
+}
+
+func flagValue(f cli.Flag) reflect.Value {
+	fv := reflect.ValueOf(f)
+	for fv.Kind() == reflect.Ptr {
+		fv = reflect.Indirect(fv)
 	}
+	return fv
+}
+
+func visibleFlags(fl []cli.Flag) []cli.Flag {
+	visible := []cli.Flag{}
+	for _, flag := range fl {
+		field := flagValue(flag).FieldByName("Hidden")
+		if !field.IsValid() || !field.Bool() {
+			visible = append(visible, flag)
+		}
+	}
+	return visible
 }
 
 // Function invoked when invalid flag is passed
@@ -148,9 +169,10 @@ func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 
 	// Calculate the maximum width of the flag name field
 	// for a good looking printing
-	var help = make([]subCommandHelp, len(ctx.Command.Flags))
+	vflags := visibleFlags(ctx.Command.Flags)
+	help := make([]subCommandHelp, len(vflags))
 	maxWidth := 0
-	for i, f := range ctx.Command.Flags {
+	for i, f := range vflags {
 		s := strings.Split(f.String(), "\t")
 		if len(s[0]) > maxWidth {
 			maxWidth = len(s[0])
@@ -164,11 +186,12 @@ func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
 
 	// Do the good-looking printing now
 	fmt.Fprintln(&errMsg, "Invalid command usage,", err.Error())
-	fmt.Fprintln(&errMsg, "")
-	fmt.Fprintln(&errMsg, "SUPPORTED FLAGS:")
-	for _, h := range help {
-		spaces := string(bytes.Repeat([]byte{' '}, maxWidth-len(h.flagName)))
-		fmt.Fprintf(&errMsg, "   %s%s%s\n", h.flagName, spaces, h.usage)
+	if len(help) > 0 {
+		fmt.Fprintln(&errMsg, "\nSUPPORTED FLAGS:")
+		for _, h := range help {
+			spaces := string(bytes.Repeat([]byte{' '}, maxWidth-len(h.flagName)))
+			fmt.Fprintf(&errMsg, "   %s%s%s\n", h.flagName, spaces, h.usage)
+		}
 	}
 	console.Fatal(errMsg.String())
 	return err
@@ -182,7 +205,7 @@ func commandNotFound(ctx *cli.Context, cmds []cli.Command) {
 		return
 	}
 	msg := fmt.Sprintf("`%s` is not a recognized command. Get help using `--help` flag.", command)
-	var commandsTree = trie.NewTrie()
+	commandsTree := trie.NewTrie()
 	for _, cmd := range cmds {
 		commandsTree.Insert(cmd.Name)
 	}
@@ -239,28 +262,6 @@ func migrate() {
 	migrateShare()
 }
 
-// Get os/arch/platform specific information.
-// Returns a map of current os/arch/platform/memstats.
-func getSystemData() map[string]string {
-	host, e := os.Hostname()
-	fatalIf(probe.NewError(e), "Unable to determine the hostname.")
-
-	memstats := &runtime.MemStats{}
-	runtime.ReadMemStats(memstats)
-	mem := fmt.Sprintf("Used: %s | Allocated: %s | UsedHeap: %s | AllocatedHeap: %s",
-		pb.Format(int64(memstats.Alloc)).To(pb.U_BYTES),
-		pb.Format(int64(memstats.TotalAlloc)).To(pb.U_BYTES),
-		pb.Format(int64(memstats.HeapAlloc)).To(pb.U_BYTES),
-		pb.Format(int64(memstats.HeapSys)).To(pb.U_BYTES))
-	platform := fmt.Sprintf("Host: %s | OS: %s | Arch: %s", host, runtime.GOOS, runtime.GOARCH)
-	goruntime := fmt.Sprintf("Version: %s | CPUs: %s", runtime.Version(), strconv.Itoa(runtime.NumCPU()))
-	return map[string]string{
-		"PLATFORM": platform,
-		"RUNTIME":  goruntime,
-		"MEM":      mem,
-	}
-}
-
 // initMC - initialize 'mc'.
 func initMC() {
 	// Check if mc config exists.
@@ -295,7 +296,23 @@ func initMC() {
 
 	// Load all authority certificates present in CAs dir
 	loadRootCAs()
+}
 
+func getShellName() (string, bool) {
+	shellName := os.Getenv("SHELL")
+	if shellName != "" || runtime.GOOS == "windows" {
+		return strings.ToLower(filepath.Base(shellName)), true
+	}
+
+	ppid := os.Getppid()
+	cmd := exec.Command("ps", "-p", strconv.Itoa(ppid), "-o", "comm=")
+	ppName, err := cmd.Output()
+	if err != nil {
+		fatalIf(probe.NewError(err), "Failed to enable autocompletion. Cannot determine shell type and "+
+			"no SHELL environment variable found")
+	}
+	shellName = strings.TrimSpace(string(ppName))
+	return strings.ToLower(filepath.Base(shellName)), false
 }
 
 func installAutoCompletion() {
@@ -304,29 +321,15 @@ func installAutoCompletion() {
 		return
 	}
 
-	shellName := os.Getenv("SHELL")
-	if shellName == "" {
-		ppid := os.Getppid()
-		cmd := exec.Command("ps", "-p", strconv.Itoa(ppid), "-o", "comm=")
-		ppName, err := cmd.Output()
-		if err != nil {
-			fatalIf(probe.NewError(err), "Failed to enable autocompletion. Cannot determine shell type and"+
-				"no SHELL environment variable found")
-		}
-		shellName = strings.TrimSpace(string(ppName))
+	shellName, ok := getShellName()
+	if !ok {
 		console.Infoln("No 'SHELL' env var. Your shell is auto determined as '" + shellName + "'.")
 	} else {
 		console.Infoln("Your shell is set to '" + shellName + "', by env var 'SHELL'.")
 	}
-	shellName = strings.ToLower(filepath.Base(shellName))
 
-	supportedShells := map[string]bool{
-		"bash": true,
-		"zsh":  true,
-		"fish": true,
-	}
-
-	if !supportedShells[shellName] {
+	supportedShellsSet := set.CreateStringSet("bash", "zsh", "fish")
+	if !supportedShellsSet.Contains(shellName) {
 		fatalIf(probe.NewError(errors.New("")),
 			"'"+shellName+"' is not a supported shell. "+
 				"Supported shells are: bash, zsh, fish")
@@ -401,7 +404,7 @@ func checkUpdate(ctx *cli.Context) {
 	// Do not print update messages, if quiet flag is set.
 	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
 		// Its OK to ignore any errors during doUpdate() here.
-		if updateMsg, _, currentReleaseTime, latestReleaseTime, err := getUpdateInfo(2 * time.Second); err == nil {
+		if updateMsg, _, currentReleaseTime, latestReleaseTime, _, err := getUpdateInfo("", 2*time.Second); err == nil {
 			printMsg(updateMessage{
 				Status:  "success",
 				Message: updateMsg,
@@ -421,21 +424,22 @@ var appCmds = []cli.Command{
 	mbCmd,
 	rbCmd,
 	cpCmd,
+	mvCmd,
+	rmCmd,
 	mirrorCmd,
 	catCmd,
 	headCmd,
 	pipeCmd,
-	shareCmd,
 	findCmd,
 	sqlCmd,
 	statCmd,
-	mvCmd,
 	treeCmd,
 	duCmd,
 	retentionCmd,
 	legalHoldCmd,
-	diffCmd,
-	rmCmd,
+	supportCmd,
+	licenseCmd,
+	shareCmd,
 	versionCmd,
 	ilmCmd,
 	encryptCmd,
@@ -445,10 +449,22 @@ var appCmds = []cli.Command{
 	anonymousCmd,
 	policyCmd,
 	tagCmd,
+	diffCmd,
 	replicateCmd,
 	adminCmd,
 	configCmd,
 	updateCmd,
+	readyCmd,
+	pingCmd,
+	odCmd,
+	batchCmd,
+}
+
+func printMCVersion(c *cli.Context) {
+	fmt.Fprintf(c.App.Writer, "%s version %s (commit-id=%s)\n", c.App.Name, c.App.Version, CommitID)
+	fmt.Fprintf(c.App.Writer, "Runtime: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(c.App.Writer, "Copyright (c) 2015-%s MinIO, Inc.\n", CopyrightYear)
+	fmt.Fprintf(c.App.Writer, "License GNU AGPLv3 <https://www.gnu.org/licenses/agpl-3.0.html>\n")
 }
 
 func registerApp(name string) *cli.App {
@@ -456,6 +472,9 @@ func registerApp(name string) *cli.App {
 		Name:  "help, h",
 		Usage: "show help",
 	}
+
+	// Override default cli version printer
+	cli.VersionPrinter = printMCVersion
 
 	app := cli.NewApp()
 	app.Name = name
@@ -471,25 +490,17 @@ func registerApp(name string) *cli.App {
 			return nil
 		}
 
-		if ctx.Args().First() != "" {
-			commandNotFound(ctx, app.Commands)
-		} else {
-			cli.ShowAppHelp(ctx)
+		if ctx.Args().First() == "" {
+			showAppHelpAndExit(ctx)
 		}
 
+		commandNotFound(ctx, app.Commands)
 		return exitStatus(globalErrorExitStatus)
 	}
 
 	app.Before = registerBefore
-	app.ExtraInfo = func() map[string]string {
-		if globalDebug {
-			return getSystemData()
-		}
-		return make(map[string]string)
-	}
-
 	app.HideHelpCommand = true
-	app.Usage = "MinIO Client for cloud storage and filesystems."
+	app.Usage = "MinIO Client for object storage and filesystems."
 	app.Commands = appCmds
 	app.Author = "MinIO, Inc."
 	app.Version = ReleaseTag
@@ -497,6 +508,9 @@ func registerApp(name string) *cli.App {
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
+	if isTerminal() {
+		app.HelpWriter = globalHelpPager
+	}
 
 	return app
 }
@@ -504,4 +518,18 @@ func registerApp(name string) *cli.App {
 // mustGetProfilePath must get location that the profile will be written to.
 func mustGetProfileDir() string {
 	return filepath.Join(mustGetMcConfigDir(), globalProfileDir)
+}
+
+func showCommandHelpAndExit(cliCtx *cli.Context, cmd string, code int) {
+	cli.ShowCommandHelp(cliCtx, cmd)
+	// Wait until the user quits the pager
+	globalHelpPager.WaitForExit()
+	os.Exit(code)
+}
+
+func showAppHelpAndExit(cliCtx *cli.Context) {
+	cli.ShowAppHelp(cliCtx)
+	// Wait until the user quits the pager
+	globalHelpPager.WaitForExit()
+	os.Exit(globalErrorExitStatus)
 }

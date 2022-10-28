@@ -24,6 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -59,18 +60,18 @@ EXAMPLES:
 // checkAdminPolicyAddSyntax - validate all the passed arguments
 func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
 }
 
 // userPolicyMessage container for content message structure
 type userPolicyMessage struct {
 	op          string
-	Status      string          `json:"status"`
-	Policy      string          `json:"policy,omitempty"`
-	PolicyJSON  json.RawMessage `json:"policyJSON,omitempty"`
-	UserOrGroup string          `json:"userOrGroup,omitempty"`
-	IsGroup     bool            `json:"isGroup"`
+	Status      string            `json:"status"`
+	Policy      string            `json:"policy,omitempty"`
+	PolicyInfo  madmin.PolicyInfo `json:"policyInfo,omitempty"`
+	UserOrGroup string            `json:"userOrGroup,omitempty"`
+	IsGroup     bool              `json:"isGroup"`
 }
 
 func (u userPolicyMessage) accountType() string {
@@ -87,13 +88,11 @@ func (u userPolicyMessage) accountType() string {
 func (u userPolicyMessage) String() string {
 	switch u.op {
 	case "info":
-		return string(u.PolicyJSON)
+		buf, e := json.MarshalIndent(u.PolicyInfo, "", " ")
+		fatalIf(probe.NewError(e), "Unable to marshal to JSON.")
+		return string(buf)
 	case "list":
-		policyFieldMaxLen := 20
-		// Create a new pretty table with cols configuration
-		return newPrettyTable("  ",
-			Field{"Policy", policyFieldMaxLen},
-		).buildRow(u.Policy)
+		return console.Colorize("PolicyName", u.Policy)
 	case "remove":
 		return console.Colorize("PolicyMessage", "Removed policy `"+u.Policy+"` successfully.")
 	case "add":

@@ -42,7 +42,7 @@ type errorMessage struct {
 	Cause     causeMessage       `json:"cause"`
 	Type      string             `json:"type"`
 	CallTrace []probe.TracePoint `json:"trace,omitempty"`
-	SysInfo   map[string]string  `json:"sysinfo"`
+	SysInfo   map[string]string  `json:"sysinfo,omitempty"`
 }
 
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
@@ -62,10 +62,10 @@ func fatal(err *probe.Error, msg string, data ...interface{}) {
 				Message: err.ToGoError().Error(),
 				Error:   err.ToGoError(),
 			},
-			SysInfo: err.SysInfo,
 		}
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
+			errorMsg.SysInfo = err.SysInfo
 		}
 		json, e := json.MarshalIndent(struct {
 			Status string       `json:"status"`
@@ -139,10 +139,10 @@ func errorIf(err *probe.Error, msg string, data ...interface{}) {
 				Message: err.ToGoError().Error(),
 				Error:   err.ToGoError(),
 			},
-			SysInfo: err.SysInfo,
 		}
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
+			errorMsg.SysInfo = err.SysInfo
 		}
 		json, e := json.MarshalIndent(struct {
 			Status string       `json:"status"`

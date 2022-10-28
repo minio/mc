@@ -27,7 +27,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 
-	jwtgo "github.com/golang-jwt/jwt"
 	json "github.com/minio/colorjson"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -140,7 +139,7 @@ var defaultConfig = PrometheusConfig{
 // checkAdminPrometheusSyntax - validate all the passed arguments
 func checkAdminPrometheusSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "generate", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "generate", 1) // last argument is exit code
 	}
 }
 
@@ -165,17 +164,10 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 	}
 
 	if !ctx.Bool("public") {
-		jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
-			ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
-			Subject:   hostConfig.AccessKey,
-			Issuer:    "prometheus",
-		})
-
-		token, e := jwt.SignedString([]byte(hostConfig.SecretKey))
+		token, e := getPrometheusToken(hostConfig)
 		if e != nil {
 			return e
 		}
-
 		// Setting the values
 		defaultConfig.ScrapeConfigs[0].BearerToken = token
 	}
@@ -189,7 +181,6 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 
 // mainAdminPrometheus is the handle for "mc admin prometheus generate" sub-command.
 func mainAdminPrometheusGenerate(ctx *cli.Context) error {
-
 	console.SetColor("yaml", color.New(color.FgGreen))
 
 	checkAdminPrometheusSyntax(ctx)

@@ -42,7 +42,7 @@ var replicateEditFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "storage-class",
-		Usage: "storage class for destination (STANDARD_IA,REDUCED_REDUNDANCY etc)",
+		Usage: `storage class for destination, valid values are either "STANDARD" or "REDUCED_REDUNDANCY"`,
 	},
 	cli.StringFlag{
 		Name:  "state",
@@ -58,7 +58,7 @@ var replicateEditFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "replicate",
-		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and syncing replica metadata modifications.Valid options are \"delete-marker\", \"delete\",\"replica-metadata-sync\", \"existing-objects\" and \"\"",
+		Usage: `comma separated list to enable replication of soft deletes, permanent deletes, existing objects and metadata sync. Valid options are "delete-marker","delete","existing-objects","metadata-sync" and ""'`,
 	},
 }
 
@@ -71,23 +71,23 @@ var replicateEditCmd = cli.Command{
 	Flags:        append(globalFlags, replicateEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-   
+
 USAGE:
-  {{.HelpName}} TARGET
-	   
+  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]	
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg"  --priority 3
- 
+
   2. Disable a replication configuration rule with rule ID "bsibgh8t874dnjst8hkg" on target myminio/bucket
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg" --state disable
 
   3. Set tags and storage class on a replication configuration with rule ID "kMYD.491" on target myminio/bucket/prefix.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags "key1=value1&key2=value2" \
-								  --storage-class "STANDARD" --priority 2
+				  --storage-class "STANDARD" --priority 2
   4. Clear tags for replication configuration rule with ID "kMYD.491" on a target myminio/bucket.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags ""
 
@@ -105,7 +105,7 @@ EXAMPLES:
 // checkReplicateEditSyntax - validate all the passed arguments
 func checkReplicateEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "edit", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "edit", 1) // last argument is exit code
 	}
 }
 
@@ -171,13 +171,13 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 				dmReplicate = enableStatus
 			case "delete":
 				vDeleteReplicate = enableStatus
-			case "replica-metadata-sync":
+			case "metadata-sync", "replica-metadata-sync":
 				replicasync = enableStatus
 			case "existing-objects":
 				existingReplState = enableStatus
 			default:
 				if opt != "" {
-					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\" or \"\"")
+					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), `--replicate flag takes one or more comma separated string with values "delete", "delete-marker", "metadata-sync", "existing-objects" or "" to disable these settings`)
 				}
 			}
 		}

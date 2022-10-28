@@ -30,26 +30,25 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	lhSetFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "apply legal hold recursively",
-		},
-		cli.StringFlag{
-			Name:  "version-id, vid",
-			Usage: "apply legal hold to a specific object version",
-		},
-		cli.StringFlag{
-			Name:  "rewind",
-			Usage: "apply legal hold on an object version at specified time",
-		},
-		cli.BoolFlag{
-			Name:  "versions",
-			Usage: "apply legal hold on multiple versions of an object",
-		},
-	}
-)
+var lhSetFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "apply legal hold recursively",
+	},
+	cli.StringFlag{
+		Name:  "version-id, vid",
+		Usage: "apply legal hold to a specific object version",
+	},
+	cli.StringFlag{
+		Name:  "rewind",
+		Usage: "apply legal hold on an object version at specified time",
+	},
+	cli.BoolFlag{
+		Name:  "versions",
+		Usage: "apply legal hold on multiple versions of an object",
+	},
+}
+
 var legalHoldSetCmd = cli.Command{
 	Name:         "set",
 	Usage:        "set legal hold for object(s)",
@@ -84,7 +83,6 @@ EXAMPLES:
 
 // setLegalHold - Set legalhold for all objects within a given prefix.
 func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool, lhold minio.LegalHoldStatus) error {
-
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -175,7 +173,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 func parseLegalHoldArgs(cliCtx *cli.Context) (targetURL, versionID string, timeRef time.Time, recursive, withVersions bool) {
 	args := cliCtx.Args()
 	if len(args) != 1 {
-		cli.ShowCommandHelpAndExit(cliCtx, cliCtx.Command.Name, 1)
+		showCommandHelpAndExit(cliCtx, cliCtx.Command.Name, 1)
 	}
 
 	targetURL = args[0]

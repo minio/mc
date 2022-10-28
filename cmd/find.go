@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/google/shlex"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 
@@ -57,19 +58,23 @@ func (f findMessage) JSON() string {
 // also proceed to look for similar strings alone and print it.
 //
 // pattern:
-// 	{ term }
-// term:
-// 	'*'         matches any sequence of non-Separator characters
-// 	'?'         matches any single non-Separator character
-// 	'[' [ '^' ] { character-range } ']'
-// 	            character class (must be non-empty)
-// 	c           matches character c (c != '*', '?', '\\', '[')
-// 	'\\' c      matches character c
-// character-range:
-// 	c           matches character c (c != '\\', '-', ']')
-// 	'\\' c      matches character c
-// 	lo '-' hi   matches character c for lo <= c <= hi
 //
+//	{ term }
+//
+// term:
+//
+//	'*'         matches any sequence of non-Separator characters
+//	'?'         matches any single non-Separator character
+//	'[' [ '^' ] { character-range } ']'
+//	            character class (must be non-empty)
+//	c           matches character c (c != '*', '?', '\\', '[')
+//	'\\' c      matches character c
+//
+// character-range:
+//
+//	c           matches character c (c != '\\', '-', ']')
+//	'\\' c      matches character c
+//	lo '-' hi   matches character c for lo <= c <= hi
 func nameMatch(pattern, path string) bool {
 	matched, e := filepath.Match(pattern, filepath.Base(path))
 	errorIf(probe.NewError(e).Trace(pattern, path), "Unable to match with input pattern.")
@@ -82,6 +87,12 @@ func nameMatch(pattern, path string) bool {
 		}
 	}
 	return matched
+}
+
+func headerMatch(pattern, header string) bool {
+	pattern = strings.ToLower(pattern)
+	header = strings.ToLower(header)
+	return wildcard.Match(pattern, header)
 }
 
 // pathMatch reports whether path matches the wildcard pattern.
@@ -114,16 +125,28 @@ func getExitStatus(err error) int {
 
 // execFind executes the input command line, additionally formats input
 // for the command line in accordance with subsititution arguments.
-func execFind(command string) {
-	commandArgs := strings.Split(command, " ")
-
-	cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
+func execFind(ctx context.Context, args string, fileContent contentMessage) {
+	split, err := shlex.Split(args)
+	if err != nil {
+		console.Println(console.Colorize("FindExecErr", "Unable to parse --exec: "+err.Error()))
+		os.Exit(getExitStatus(err))
+	}
+	if len(split) == 0 {
+		return
+	}
+	for i, arg := range split {
+		split[i] = stringsReplace(ctx, arg, fileContent)
+	}
+	cmd := exec.Command(split[0], split[1:]...)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		console.Print(console.Colorize("FindExecErr", stderr.String()))
+		if stderr.Len() > 0 {
+			console.Println(console.Colorize("FindExecErr", strings.TrimSpace(stderr.String())))
+		}
+		console.Println(console.Colorize("FindExecErr", err.Error()))
 		// Return exit status of the command run
 		os.Exit(getExitStatus(err))
 	}
@@ -230,7 +253,7 @@ func find(ctxCtx context.Context, ctx *findContext, fileContent contentMessage) 
 
 	// proceed to either exec, format the output string.
 	if ctx.execCmd != "" {
-		execFind(stringsReplace(ctxCtx, ctx.execCmd, fileContent))
+		execFind(ctxCtx, ctx.execCmd, fileContent)
 		return
 	}
 	if ctx.printFmt != "" {
@@ -290,7 +313,7 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 
 		// proceed to either exec, format the output string.
 		if ctx.execCmd != "" {
-			execFind(stringsReplace(ctxCtx, ctx.execCmd, fileContent))
+			execFind(ctxCtx, ctx.execCmd, fileContent)
 			continue
 		}
 		if ctx.printFmt != "" {
@@ -311,62 +334,62 @@ func stringsReplace(ctx context.Context, args string, fileContent contentMessage
 	// replace all instances of {}
 	str := args
 	if strings.Contains(str, "{}") {
-		str = strings.Replace(str, "{}", fileContent.Key, -1)
+		str = strings.ReplaceAll(str, "{}", fileContent.Key)
 	}
 
 	// replace all instances of {""}
 	if strings.Contains(str, `{""}`) {
-		str = strings.Replace(str, `{""}`, strconv.Quote(fileContent.Key), -1)
+		str = strings.ReplaceAll(str, `{""}`, strconv.Quote(fileContent.Key))
 	}
 
 	// replace all instances of {base}
 	if strings.Contains(str, "{base}") {
-		str = strings.Replace(str, "{base}", filepath.Base(fileContent.Key), -1)
+		str = strings.ReplaceAll(str, "{base}", filepath.Base(fileContent.Key))
 	}
 
 	// replace all instances of {"base"}
 	if strings.Contains(str, `{"base"}`) {
-		str = strings.Replace(str, `{"base"}`, strconv.Quote(filepath.Base(fileContent.Key)), -1)
+		str = strings.ReplaceAll(str, `{"base"}`, strconv.Quote(filepath.Base(fileContent.Key)))
 	}
 
 	// replace all instances of {dir}
 	if strings.Contains(str, "{dir}") {
-		str = strings.Replace(str, "{dir}", filepath.Dir(fileContent.Key), -1)
+		str = strings.ReplaceAll(str, "{dir}", filepath.Dir(fileContent.Key))
 	}
 
 	// replace all instances of {"dir"}
 	if strings.Contains(str, `{"dir"}`) {
-		str = strings.Replace(str, `{"dir"}`, strconv.Quote(filepath.Dir(fileContent.Key)), -1)
+		str = strings.ReplaceAll(str, `{"dir"}`, strconv.Quote(filepath.Dir(fileContent.Key)))
 	}
 
 	// replace all instances of {size}
 	if strings.Contains(str, "{size}") {
-		str = strings.Replace(str, "{size}", humanize.IBytes(uint64(fileContent.Size)), -1)
+		str = strings.ReplaceAll(str, "{size}", humanize.IBytes(uint64(fileContent.Size)))
 	}
 
 	// replace all instances of {"size"}
 	if strings.Contains(str, `{"size"}`) {
-		str = strings.Replace(str, `{"size"}`, strconv.Quote(humanize.IBytes(uint64(fileContent.Size))), -1)
+		str = strings.ReplaceAll(str, `{"size"}`, strconv.Quote(humanize.IBytes(uint64(fileContent.Size))))
 	}
 
 	// replace all instances of {time}
 	if strings.Contains(str, "{time}") {
-		str = strings.Replace(str, "{time}", fileContent.Time.Format(printDate), -1)
+		str = strings.ReplaceAll(str, "{time}", fileContent.Time.Format(printDate))
 	}
 
 	// replace all instances of {"time"}
 	if strings.Contains(str, `{"time"}`) {
-		str = strings.Replace(str, `{"time"}`, strconv.Quote(fileContent.Time.Format(printDate)), -1)
+		str = strings.ReplaceAll(str, `{"time"}`, strconv.Quote(fileContent.Time.Format(printDate)))
 	}
 
 	// replace all instances of {url}
 	if strings.Contains(str, "{url}") {
-		str = strings.Replace(str, "{url}", getShareURL(ctx, fileContent.Key), -1)
+		str = strings.ReplaceAll(str, "{url}", getShareURL(ctx, fileContent.Key))
 	}
 
 	// replace all instances of {"url"}
 	if strings.Contains(str, `{"url"}`) {
-		str = strings.Replace(str, `{"url"}`, strconv.Quote(getShareURL(ctx, fileContent.Key)), -1)
+		str = strings.ReplaceAll(str, `{"url"}`, strconv.Quote(getShareURL(ctx, fileContent.Key)))
 	}
 
 	return str

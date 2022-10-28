@@ -25,26 +25,24 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var (
-	pipeFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "encrypt",
-			Usage: "encrypt objects (using server-side encryption with server managed keys)",
-		},
-		cli.StringFlag{
-			Name:  "storage-class, sc",
-			Usage: "set storage class for new object(s) on target",
-		},
-		cli.StringFlag{
-			Name:  "attr",
-			Usage: "add custom metadata for the object",
-		},
-		cli.StringFlag{
-			Name:  "tags",
-			Usage: "apply tags to the uploaded objects",
-		},
-	}
-)
+var pipeFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "encrypt",
+		Usage: "encrypt objects (using server-side encryption with server managed keys)",
+	},
+	cli.StringFlag{
+		Name:  "storage-class, sc",
+		Usage: "set storage class for new object(s) on target",
+	},
+	cli.StringFlag{
+		Name:  "attr",
+		Usage: "add custom metadata for the object",
+	},
+	cli.StringFlag{
+		Name:  "tags",
+		Usage: "apply one or more tags to the uploaded objects",
+	},
+}
 
 // Display contents of a file.
 var pipeCmd = cli.Command{
@@ -87,7 +85,7 @@ EXAMPLES:
       {{.Prompt}} cat music.mp3 | {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000;Artist=Unknown" play/mybucket/music.mp3
 
   7. Set tags to the uploaded objects
-      {{.Prompt}} tar cvf - . | {{.HelpName}} --tags "category=backup" play/mybucket/backup.tar
+      {{.Prompt}} tar cvf - . | {{.HelpName}} --tags "category=prod&type=backup" play/mybucket/backup.tar
 `,
 }
 
@@ -122,7 +120,7 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass st
 // check pipe input arguments.
 func checkPipeSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code.
 	}
 }
 
@@ -135,7 +133,7 @@ func mainPipe(ctx *cli.Context) error {
 	// validate pipe input arguments.
 	checkPipeSyntax(ctx)
 
-	var meta = map[string]string{}
+	meta := map[string]string{}
 	if attr := ctx.String("attr"); attr != "" {
 		meta, err = getMetaDataEntry(attr)
 		fatalIf(err.Trace(attr), "Unable to parse --attr value")

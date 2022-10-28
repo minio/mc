@@ -31,10 +31,6 @@ import (
 
 var adminQuotaFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "fifo",
-		Usage: "set fifo quota, allowing automatic deletion of older content",
-	},
-	cli.StringFlag{
 		Name:  "hard",
 		Usage: "set a hard quota, disallowing writes after quota is reached",
 	},
@@ -85,7 +81,7 @@ var adminBucketQuotaCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [--fifo QUOTA | --hard QUOTA | --clear]
+  {{.HelpName}} TARGET [--hard QUOTA | --clear]
 
 QUOTA
   quota accepts human-readable case-insensitive number
@@ -101,9 +97,6 @@ EXAMPLES:
   1. Display bucket quota configured for "mybucket" on MinIO.
      {{.Prompt}} {{.HelpName}} myminio/mybucket
 
-  2. Set FIFO quota for a bucket "mybucket" on MinIO.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket --fifo 10GB
-
   3. Set hard quota of 1gb for a bucket "mybucket" on MinIO.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --hard 1GB
 
@@ -115,17 +108,7 @@ EXAMPLES:
 // checkAdminBucketQuotaSyntax - validate all the passed arguments
 func checkAdminBucketQuotaSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
-	}
-
-	if ctx.IsSet("hard") && ctx.IsSet("fifo") {
-		fatalIf(errInvalidArgument(), "Only one of --hard or --fifo flags can be set")
-	}
-	if (ctx.IsSet("hard") || ctx.IsSet("fifo")) && len(ctx.Args()) == 0 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "please specify bucket and quota")
-	}
-	if ctx.IsSet("clear") && len(ctx.Args()) == 0 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "clear flag must be passed with target alone")
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
@@ -143,21 +126,19 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
-	quotaStr := ctx.String("fifo")
-	if ctx.IsSet("hard") {
-		quotaStr = ctx.String("hard")
-	}
+
 	_, targetURL := url2Alias(args[0])
-	if ctx.IsSet("fifo") || ctx.IsSet("hard") && len(args) == 1 {
-		qType := madmin.FIFOQuota
-		if ctx.IsSet("hard") {
-			qType = madmin.HardQuota
-		}
+	if ctx.IsSet("hard") {
+		qType := madmin.HardQuota
+		quotaStr := ctx.String("hard")
 		quota, e := humanize.ParseBytes(quotaStr)
 		fatalIf(probe.NewError(e).Trace(quotaStr), "Unable to parse quota")
-		if e = client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{Quota: quota, Type: qType}); e != nil {
-			fatalIf(probe.NewError(e).Trace(args...), "Unable to set bucket quota")
-		}
+
+		fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{
+			Quota: quota,
+			Type:  qType,
+		})).Trace(args...), "Unable to set bucket quota")
+
 		printMsg(quotaMessage{
 			op:        "set",
 			Bucket:    targetURL,
@@ -165,9 +146,9 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 			QuotaType: string(qType),
 			Status:    "success",
 		})
-	} else if ctx.Bool("clear") && len(args) == 1 {
-		if err := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Unable to clear bucket quota config")
+	} else if ctx.Bool("clear") {
+		if e := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); e != nil {
+			fatalIf(probe.NewError(e).Trace(args...), "Unable to clear bucket quota config")
 		}
 		printMsg(quotaMessage{
 			op:     "unset",

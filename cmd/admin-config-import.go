@@ -78,12 +78,11 @@ func (u configImportMessage) JSON() string {
 // checkAdminConfigImportSyntax - validate all the passed arguments
 func checkAdminConfigImportSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) > 1 {
-		cli.ShowCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "import", 1) // last argument is exit code
 	}
 }
 
 func mainAdminConfigImport(ctx *cli.Context) error {
-
 	checkAdminConfigImportSyntax(ctx)
 
 	// Set color preference of command outputs

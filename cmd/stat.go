@@ -45,8 +45,8 @@ type statMessage struct {
 	Size              int64             `json:"size"`
 	ETag              string            `json:"etag"`
 	Type              string            `json:"type,omitempty"`
-	Expires           time.Time         `json:"expires,omitempty"`
-	Expiration        time.Time         `json:"expiration,omitempty"`
+	Expires           *time.Time        `json:"expires,omitempty"`
+	Expiration        *time.Time        `json:"expiration,omitempty"`
 	ExpirationRuleID  string            `json:"expirationRuleID,omitempty"`
 	ReplicationStatus string            `json:"replicationStatus,omitempty"`
 	Metadata          map[string]string `json:"metadata,omitempty"`
@@ -73,15 +73,15 @@ func (stat statMessage) String() (msg string) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField) + "\n")
 	}
 	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Type", stat.Type) + "\n")
-	if !stat.Expires.IsZero() {
+	if stat.Expires != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)) + "\n")
 	}
-	if !stat.Expiration.IsZero() {
+	if stat.Expiration != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
 	}
-	var maxKeyMetadata = 0
-	var maxKeyEncrypted = 0
+	maxKeyMetadata := 0
+	maxKeyEncrypted := 0
 	for k := range stat.Metadata {
 		// Skip encryption headers, we print them later.
 		if !strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
@@ -145,8 +145,12 @@ func parseStat(c *ClientContent) statMessage {
 	content.Metadata = c.Metadata
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
-	content.Expires = c.Expires
-	content.Expiration = c.Expiration
+	if !c.Expires.IsZero() {
+		content.Expires = &c.Expires
+	}
+	if !c.Expiration.IsZero() {
+		content.Expiration = &c.Expiration
+	}
 	content.ExpirationRuleID = c.ExpirationRuleID
 	content.ReplicationStatus = c.ReplicationStatus
 	return content
@@ -225,7 +229,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef)
+		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef, false)
 		if err != nil {
 			continue
 		}
@@ -330,7 +334,6 @@ func (v bucketInfoMessage) JSON() string {
 
 	fatalIf(probe.NewError(enc.Encode(v)), "Unable to marshal into JSON.")
 	return buf.String()
-
 }
 
 func (v bucketInfoMessage) String() string {
@@ -349,6 +352,14 @@ func (v bucketInfoMessage) String() string {
 	}()
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Type", fType))
 	fmt.Fprintf(&b, fmt.Sprintf("%-10s:\n", "Metadata"))
+
+	fmt.Fprintf(&b, prettyPrintBucketMetadata(info))
+	return b.String()
+}
+
+// Pretty print bucket configuration - used by stat and admin bucket info as well
+func prettyPrintBucketMetadata(info BucketInfo) string {
+	var b strings.Builder
 	placeHolder := ""
 	if info.Encryption.Algorithm != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
@@ -367,7 +378,7 @@ func (v bucketInfoMessage) String() string {
 	fmt.Fprintln(&b)
 
 	if info.Locking.Mode != "" {
-		fmt.Fprintf(&b, "%2s%s", placeHolder, "LockConfiguration: ")
+		fmt.Fprintf(&b, "%2s%s\n", placeHolder, "LockConfiguration: ")
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "RetentionMode: ")
 		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Mode))
 		fmt.Fprintln(&b)

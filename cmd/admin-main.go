@@ -19,9 +19,7 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	adminFlags = []cli.Flag{}
-)
+var adminFlags = []cli.Flag{}
 
 const (
 	// dot represents a list item, for eg. server status - online (green) or offline (red)
@@ -39,12 +37,10 @@ var adminCmdSubcommands = []cli.Command{
 	adminGroupCmd,
 	adminPolicyCmd,
 	adminReplicateCmd,
+	adminIDPCmd,
 	adminConfigCmd,
+	adminDecommissionCmd,
 	adminHealCmd,
-	adminProfileCmd,
-	adminTopCmd,
-	adminTraceCmd,
-	adminConsoleCmd,
 	adminPrometheusCmd,
 	adminKMSCmd,
 	adminHealthCmd(),
@@ -52,6 +48,12 @@ var adminCmdSubcommands = []cli.Command{
 	adminBucketCmd,
 	adminTierCmd,
 	adminSpeedtestCmd,
+	adminProfileCmd,
+	adminScannerCmd,
+	adminTopCmd,
+	adminTraceCmd,
+	adminConsoleCmd,
+	adminClusterCmd,
 }
 
 var adminCmd = cli.Command{

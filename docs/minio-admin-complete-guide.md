@@ -3,22 +3,22 @@
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```
-service     restart and stop all MinIO servers
-update      update all MinIO servers
-info        display MinIO server information
-user        manage users
-group       manage groups
-policy      manage policies defined in the MinIO server
-config      manage MinIO server configuration
-heal        heal disks, buckets and objects on MinIO server
-profile     generate profile data for debugging purposes
-top         provide top like statistics for MinIO
-trace       show http trace for MinIO server
-console     show console logs for MinIO server
-prometheus  manages prometheus config
-kms         perform KMS management operations
-bucket      manage buckets defined in the MinIO server
-
+service              restart and stop all MinIO servers
+update               update all MinIO servers
+info                 display MinIO server information
+user                 manage users
+group                manage groups
+policy               manage policies defined in the MinIO server
+replicate            manage MinIO site replication
+config               manage MinIO server configuration
+decommission, decom  manage MinIO server pool decommissioning
+heal                 heal bucket(s) and object(s) on MinIO server
+prometheus           manages prometheus config
+kms                  perform KMS management operations
+bucket               manage buckets defined in the MinIO server
+tier                 manage remote tier targets for ILM transition
+trace                show http trace for MinIO server
+console              show console logs for MinIO server
 ```
 
 ## 1.  Download MinIO Client
@@ -300,8 +300,7 @@ Skip SSL certificate verification.
 | [**group** - manage groups](#group)                                    |
 | [**policy** - manage canned policies](#policy)                         |
 | [**config** - manage server configuration file](#config)               |
-| [**heal** - heal disks, buckets and objects on MinIO server](#heal)    |
-| [**profile** - generate profile data for debugging purposes](#profile) |
+| [**heal** - heal bucket(s) and object(s) on MinIO server](#heal)    |
 | [**top** - provide top like statistics for MinIO](#top)                |
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
@@ -643,43 +642,8 @@ mc admin config import myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
-### Command `heal` - Heal disks, buckets and objects on MinIO server
-Healing is automatic on server side which runs on a continuous basis on a low priority thread, `mc admin heal` is deprecated and will be removed in future.
-
-<a name="profile"></a>
-### Command `profile` - generate profile data for debugging purposes
-
-```
-NAME:
-  mc admin profile - generate profile data for debugging purposes
-
-COMMANDS:
-  start  start recording profile data
-  stop   stop and download profile data
-```
-
-Start CPU profiling
-```
-mc admin profile start --type cpu myminio/
-```
-
-<a name="top"></a>
-### Command `top` - provide top like statistics for MinIO
-NOTE: This command is only applicable for a distributed MinIO setup. It is not supported on single node and gateway deployments.
-
-```
-NAME:
-  mc admin top - provide top like statistics for MinIO
-
-COMMANDS:
-  locks  Get a list of the 10 oldest locks on a MinIO cluster.
-```
-
-*Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
-
-```
-mc admin top locks myminio
-```
+### Command `heal` - heal bucket(s) and object(s) on MinIO server
+Healing is automatic on server side which runs on a continuous basis on a low priority thread.
 
 <a name="trace"></a>
 ### Command `trace` - Show http trace for MinIO server
@@ -724,34 +688,7 @@ mc admin trace myminio
 
 <a name="console"></a>
 ### Command `console` - show console logs for MinIO server
-`console` command displays server logs of one or all MinIO servers (under distributed cluster)
-
-```sh
-NAME:
-  mc admin console - show console logs for MinIO server
-
-FLAGS:
-  --limit value, -l value       show last n log entries (default: 10)
-  --help, -h                    show help
-```
-
-*Example: Display MinIO server http trace.*
-
-```sh
-mc admin console myminio
-
- API: SYSTEM(bucket=images)
- Time: 22:48:06 PDT 09/05/2019
- DeploymentID: 6faeded5-5cf3-4133-8a37-07c5d500207c
- RequestID: <none>
- RemoteHost: <none>
- UserAgent: <none>
- Error: ARN 'arn:minio:sqs:us-east-1:1:webhook' not found
-        4: cmd/notification.go:1189:cmd.readNotificationConfig()
-        3: cmd/notification.go:780:cmd.(*NotificationSys).refresh()
-        2: cmd/notification.go:815:cmd.(*NotificationSys).Init()
-        1: cmd/server-main.go:375:cmd.serverMain()
-```
+This command is deprecated and will be removed in a future release. Use 'mc support logs show' instead.
 
 <a name="prometheus"></a>
 
@@ -842,7 +779,7 @@ NAME:
   mc admin bucket quota - manage bucket quota
 
 USAGE:
-  mc admin bucket quota TARGET [--fifo QUOTA | --hard QUOTA | --clear]
+  mc admin bucket quota TARGET [--hard QUOTA | --clear]
 
 QUOTA
   quota accepts human-readable case-insensitive number

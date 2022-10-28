@@ -27,7 +27,7 @@ import (
 
 var adminServiceStopCmd = cli.Command{
 	Name:         "stop",
-	Usage:        "stop MinIO server",
+	Usage:        "stop a MinIO cluster",
 	Action:       mainAdminServiceStop,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -69,12 +69,11 @@ func (s serviceStopMessage) JSON() string {
 // checkAdminServiceStopSyntax - validate all the passed arguments
 func checkAdminServiceStopSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "stop", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "stop", 1) // last argument is exit code
 	}
 }
 
 func mainAdminServiceStop(ctx *cli.Context) error {
-
 	// Validate serivce stop syntax.
 	checkAdminServiceStopSyntax(ctx)
 

@@ -32,18 +32,16 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var (
-	rbFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force a recursive remove operation on all object versions",
-		},
-		cli.BoolFlag{
-			Name:  "dangerous",
-			Usage: "allow site-wide removal of objects",
-		},
-	}
-)
+var rbFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "force",
+		Usage: "force a recursive remove operation on all object versions",
+	},
+	cli.BoolFlag{
+		Name:  "dangerous",
+		Usage: "allow site-wide removal of objects",
+	},
+}
 
 // remove a bucket.
 var rbCmd = cli.Command{
@@ -100,7 +98,7 @@ func (s removeBucketMessage) JSON() string {
 func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
 		exitCode := 1
-		cli.ShowCommandHelpAndExit(cliCtx, "rb", exitCode)
+		showCommandHelpAndExit(cliCtx, "rb", exitCode)
 	}
 	// Set command flags from context.
 	isForce := cliCtx.Bool("force")
@@ -159,7 +157,7 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 		return pErr
 	}
 	contentCh := make(chan *ClientContent)
-	errorCh := clnt.Remove(ctx, false, false, false, contentCh)
+	resultCh := clnt.Remove(ctx, false, false, false, false, contentCh)
 
 	go func() {
 		defer close(contentCh)
@@ -196,8 +194,10 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 	}()
 
 	// Give up on the first error.
-	for perr := range errorCh {
-		return perr
+	for result := range resultCh {
+		if result.Err != nil {
+			return result.Err.Trace(url)
+		}
 	}
 
 	// Remove a bucket without force flag first because force
@@ -217,7 +217,7 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 // is not qualified by bucket
 func isS3NamespaceRemoval(ctx context.Context, url string) bool {
 	// clean path for aliases like s3/.
-	//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
+	// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 	url = filepath.ToSlash(filepath.Clean(url))
 	// namespace removal applies only for non FS. So filter out if passed url represents a directory
 	_, path := url2Alias(url)

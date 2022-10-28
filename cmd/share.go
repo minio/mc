@@ -131,7 +131,7 @@ func isShareDirExists() bool {
 
 // Create config share dir.
 func createShareDir() *probe.Error {
-	if e := os.MkdirAll(mustGetShareDir(), 0700); e != nil {
+	if e := os.MkdirAll(mustGetShareDir(), 0o700); e != nil {
 		return probe.NewError(e)
 	}
 	return nil

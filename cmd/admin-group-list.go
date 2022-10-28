@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminGroupListSyntax - validate all the passed arguments
 func checkAdminGroupListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
 	}
 }
 
@@ -67,8 +67,8 @@ func mainAdminGroupList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	gs, err1 := client.ListGroups(globalContext)
-	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group list")
+	gs, e := client.ListGroups(globalContext)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to list groups")
 
 	printMsg(groupMessage{
 		op:     "list",
