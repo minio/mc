@@ -19,7 +19,7 @@ require (
 	github.com/minio/cli v1.24.0
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.6.6
+	github.com/minio/madmin-go v1.7.1
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.41
 	github.com/minio/pkg v1.5.4
@@ -32,7 +32,6 @@ require (
 	github.com/prometheus/prom2json v1.3.2
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.4.0
-	github.com/secure-io/sio-go v0.3.1
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/tidwall/gjson v1.14.3
 	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a
@@ -52,8 +51,7 @@ require (
 	github.com/navidys/tvxwidgets v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.3.0
-	github.com/rivo/tview v0.0.0-20220916081518-2e69b7385a37
-	github.com/tinylib/msgp v1.1.7-0.20211026165309-e818a1881b0e
+	github.com/rivo/tview v0.0.0-20211202162923-2a6de950f73b
 	golang.org/x/term v0.0.0-20221017184919-83659145692c
 )
 
@@ -97,9 +95,11 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
+	github.com/secure-io/sio-go v0.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tinylib/msgp v1.1.7-0.20211026165309-e818a1881b0e // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
