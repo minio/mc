@@ -18,9 +18,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/fatih/color"
-	"github.com/google/uuid"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -49,9 +51,19 @@ EXAMPLES:
 }
 
 type rebalanceStopMsg struct {
-	Status string    `json:"status"`
-	URL    string    `json:"url"`
-	ARN    uuid.UUID `json:"arn"`
+	Status string `json:"status"`
+	Target string `json:"url"`
+}
+
+func (r rebalanceStopMsg) JSON() string {
+	r.Status = "success"
+	b, err := json.MarshalIndent(r, "", " ")
+	fatalIf(probe.NewError(err), "Unable to marshal to JSON")
+	return string(b)
+}
+
+func (r rebalanceStopMsg) String() string {
+	return console.Colorize("rebalanceStopMsg", fmt.Sprintf("Rebalance started for %s", r.Target))
 }
 
 func mainAdminRebalanceStop(ctx *cli.Context) error {
@@ -76,6 +88,10 @@ func mainAdminRebalanceStop(ctx *cli.Context) error {
 	if err != nil {
 		fatalIf(probe.NewError(err), "Failed to stop rebalance operation	")
 	}
+
+	printMsg(rebalanceStopMsg{
+		Target: aliasedURL,
+	})
 
 	return nil
 }

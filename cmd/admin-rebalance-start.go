@@ -52,7 +52,7 @@ EXAMPLES:
 
 type rebalanceStartMsg struct {
 	Status string `json:"status"`
-	URL    string `json:"url"`
+	Target string `json:"url"`
 	ID     string `json:"id"`
 }
 
@@ -64,7 +64,7 @@ func (r rebalanceStartMsg) JSON() string {
 }
 
 func (r rebalanceStartMsg) String() string {
-	return console.Colorize("rebalanceStartMsg", fmt.Sprintf("Rebalance started for %s", r.URL))
+	return console.Colorize("rebalanceStartMsg", fmt.Sprintf("Rebalance started for %s", r.Target))
 }
 
 func mainAdminRebalanceStart(ctx *cli.Context) error {
@@ -93,8 +93,8 @@ func mainAdminRebalanceStart(ctx *cli.Context) error {
 		return err
 	}
 	printMsg(rebalanceStartMsg{
-		URL: aliasedURL,
-		ID:  id,
+		Target: aliasedURL,
+		ID:     id,
 	})
 	return nil
 }
