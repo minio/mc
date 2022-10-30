@@ -307,9 +307,10 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.Decommission = true
 		case "batch-replication":
 			opts.BatchReplication = true
+		case "rebalance":
+			opts.Rebalance = true
 		}
 	}
-
 	return
 }
 

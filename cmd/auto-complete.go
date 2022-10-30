@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -324,6 +324,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/decommission/start":  aliasCompleter,
 	"/admin/decommission/status": aliasCompleter,
 	"/admin/decommission/cancel": aliasCompleter,
+
+	"/admin/rebalance/start":  aliasCompleter,
+	"/admin/rebalance/status": aliasCompleter,
+	"/admin/rebalance/stop":   aliasCompleter,
 
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
