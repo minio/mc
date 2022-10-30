@@ -32,7 +32,7 @@ import (
 
 var adminRebalanceStatusCmd = cli.Command{
 	Name:         "status",
-	Usage:        "Show status of an ongoing rebalance operation",
+	Usage:        "summarize an ongoing rebalance operation",
 	Action:       mainAdminRebalanceStatus,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -46,35 +46,32 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 EXAMPLES:
-  1. Fetch status of an ongoing rebalance on a MinIO deployment with alias myminio
+  1. Summarize ongoing rebalance on a MinIO deployment with alias myminio
      {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 
 func mainAdminRebalanceStatus(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "rebalance", 1)
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
 	}
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	var pErr *probe.Error
-	client, pErr := newAdminClient(aliasedURL)
-	if pErr != nil {
-		fatalIf(pErr.Trace(aliasedURL), "Unable to initialize admin client")
-		return pErr.ToGoError()
+	client, err := newAdminClient(aliasedURL)
+	if err != nil {
+		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client")
+		return err.ToGoError()
 	}
 
-	rInfo, err := client.RebalanceStatus(globalContext)
-	if err != nil {
-		fatalIf(probe.NewError(err), "Failed to get rebalance status")
-	}
+	rInfo, e := client.RebalanceStatus(globalContext)
+	fatalIf(probe.NewError(e), "Unable to get rebalance status")
+
 	if globalJSON {
-		b, err := json.Marshal(rInfo)
-		fatalIf(probe.NewError(err), "Failed to marshal json")
+		b, e := json.Marshal(rInfo)
+		fatalIf(probe.NewError(e), "Unable to marshal json")
 		console.Println(string(b))
 		return nil
 	}
@@ -116,10 +113,9 @@ func mainAdminRebalanceStatus(ctx *cli.Context) error {
 	}
 	alignRights := make([]bool, len(rInfo.Pools))
 	tbl := console.NewTable(printColors, alignRights, 0)
-	err = tbl.DisplayTable([][]string{colHeaders, row})
-	if err != nil {
-		return err
-	}
+
+	e = tbl.DisplayTable([][]string{colHeaders, row})
+	fatalIf(probe.NewError(e), "Unable to render table view")
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "Summary: \n")

@@ -29,7 +29,7 @@ import (
 
 var adminRebalanceStopCmd = cli.Command{
 	Name:         "stop",
-	Usage:        "Stop an ongoing rebalance operation",
+	Usage:        "stop an ongoing rebalance operation",
 	Action:       mainAdminRebalanceStop,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -43,7 +43,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 EXAMPLES:
   1. Stop an ongoing rebalance on a MinIO deployment with alias myminio
      {{.Prompt}} {{.HelpName}} myminio
@@ -68,7 +67,7 @@ func (r rebalanceStopMsg) String() string {
 
 func mainAdminRebalanceStop(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "rebalance", 1)
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
 	}
 
 	console.SetColor("rebalanceStopMsg", color.New(color.FgGreen))
@@ -77,17 +76,10 @@ func mainAdminRebalanceStop(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	// Create a new MinIO Admin Client
-	var pErr *probe.Error
-	client, pErr := newAdminClient(aliasedURL)
-	if pErr != nil {
-		fatalIf(pErr.Trace(aliasedURL), "Unable to initialize admin client")
-		return pErr.ToGoError()
-	}
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client")
 
-	err := client.RebalanceStop(globalContext)
-	if err != nil {
-		fatalIf(probe.NewError(err), "Failed to stop rebalance operation	")
-	}
+	fatalIf(probe.NewError(client.RebalanceStop(globalContext)), "Unable to stop rebalance operation")
 
 	printMsg(rebalanceStopMsg{
 		Target: aliasedURL,
