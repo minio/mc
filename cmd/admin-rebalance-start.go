@@ -29,7 +29,7 @@ import (
 
 var adminRebalanceStartCmd = cli.Command{
 	Name:         "start",
-	Usage:        "Start rebalance operation",
+	Usage:        "start rebalance operation",
 	Action:       mainAdminRebalanceStart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -43,7 +43,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 EXAMPLES:
   1. Start rebalance on a MinIO deployment with alias myminio
      {{.Prompt}} {{.HelpName}} myminio
@@ -69,7 +68,7 @@ func (r rebalanceStartMsg) String() string {
 
 func mainAdminRebalanceStart(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "rebalance", 1)
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
 	}
 
 	console.SetColor("rebalanceStartMsg", color.New(color.FgGreen))
@@ -78,23 +77,16 @@ func mainAdminRebalanceStart(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	// Create a new MinIO Admin Client
-	var pErr *probe.Error
-	client, pErr := newAdminClient(aliasedURL)
-	if pErr != nil {
-		fatalIf(pErr.Trace(aliasedURL), "Unable to initialize admin client")
-		return pErr.ToGoError()
-	}
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client")
 
-	var id string
-	var err error
-	id, err = client.RebalanceStart(globalContext)
-	if err != nil {
-		fatalIf(probe.NewError(err), "Failed to start rebalance")
-		return err
-	}
+	id, e := client.RebalanceStart(globalContext)
+	fatalIf(probe.NewError(e), "Unable to start rebalance")
+
 	printMsg(rebalanceStartMsg{
 		Target: aliasedURL,
 		ID:     id,
 	})
+
 	return nil
 }
