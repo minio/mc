@@ -42,7 +42,7 @@ var replicateUpdateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "storage-class",
-		Usage: "storage class for destination (STANDARD_IA,REDUCED_REDUNDANCY etc)",
+		Usage: `storage class for destination, valid values are either "STANDARD" or "REDUCED_REDUNDANCY"`,
 	},
 	cli.StringFlag{
 		Name:  "state",
@@ -58,13 +58,13 @@ var replicateUpdateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "replicate",
-		Usage: "comma separated list to enable replication of delete markers, deletion of versioned objects and syncing replica metadata modifications.Valid options are \"delete-marker\", \"delete\",\"replica-metadata-sync\", \"existing-objects\" and \"\"",
+		Usage: `comma separated list to enable replication of soft deletes, permanent deletes, existing objects and metadata sync. Valid options are "delete-marker","delete","existing-objects","metadata-sync" and ""'`,
 	},
 }
 
 var replicateUpdateCmd = cli.Command{
 	Name:         "update",
-	Aliases:      []string{"edit"},
+	Aliases:        []string{"edit"},
 	Usage:        "modify an existing server side replication configuration rule",
 	Action:       mainReplicateUpdate,
 	OnUsageError: onUsageError,
@@ -178,7 +178,7 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 				existingReplState = enableStatus
 			default:
 				if opt != "" {
-					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), "--replicate flag takes one or more comma separated string with values \"delete, delete-marker, replica-metadata-sync\" or \"\"")
+					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), `--replicate flag takes one or more comma separated string with values "delete", "delete-marker", "metadata-sync", "existing-objects" or "" to disable these settings`)
 				}
 			}
 		}
