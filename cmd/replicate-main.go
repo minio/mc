@@ -21,7 +21,6 @@ import "github.com/minio/cli"
 
 var replicateSubcommands = []cli.Command{
 	replicateAddCmd,
-	replicateEditCmd,
 	replicateUpdateCmd,
 	replicateListCmd,
 	replicateStatusCmd,
