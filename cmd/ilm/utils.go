@@ -92,7 +92,6 @@ func ToTables(cfg *lifecycle.Configuration) []Table {
 			expCur = append(expCur, expirationCurrentRow{
 				ID:              rule.ID,
 				Status:          rule.Status,
-				Action:          expiration,
 				Prefix:          getPrefix(rule),
 				Tags:            getTags(rule),
 				Days:            getExpirationDays(rule),
@@ -103,7 +102,6 @@ func ToTables(cfg *lifecycle.Configuration) []Table {
 			expNoncur = append(expNoncur, expirationNoncurrentRow{
 				ID:           rule.ID,
 				Status:       rule.Status,
-				Action:       noncurrentExpiration,
 				Prefix:       getPrefix(rule),
 				Tags:         getTags(rule),
 				Days:         int(rule.NoncurrentVersionExpiration.NoncurrentDays),
@@ -114,7 +112,6 @@ func ToTables(cfg *lifecycle.Configuration) []Table {
 			tierCur = append(tierCur, tierCurrentRow{
 				ID:     rule.ID,
 				Status: rule.Status,
-				Action: transition,
 				Prefix: getPrefix(rule),
 				Tags:   getTags(rule),
 				Days:   getTransitionDays(rule),
@@ -125,7 +122,6 @@ func ToTables(cfg *lifecycle.Configuration) []Table {
 			tierNoncur = append(tierNoncur, tierNoncurrentRow{
 				ID:     rule.ID,
 				Status: rule.Status,
-				Action: noncurrentTransition,
 				Prefix: getPrefix(rule),
 				Tags:   getTags(rule),
 				Days:   int(rule.NoncurrentVersionTransition.NoncurrentDays),

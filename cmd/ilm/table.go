@@ -19,13 +19,6 @@ package ilm
 
 import "github.com/jedib0t/go-pretty/v6/table"
 
-const (
-	expiration           = "Expiration"
-	noncurrentExpiration = "NoncurrentVersionExpiration"
-	transition           = "Transition"
-	noncurrentTransition = "NoncurrentVersionTransition"
-)
-
 // Table interface provides methods when implemented allows a []T to be rendered
 // as a table.
 type Table interface {
@@ -37,7 +30,6 @@ type Table interface {
 type expirationCurrentRow struct {
 	ID              string
 	Status          string
-	Action          string
 	Prefix          string
 	Tags            string
 	Days            int
@@ -58,13 +50,13 @@ func (e expirationCurrentTable) Rows() (rows []table.Row) {
 		if row.Tags == "" {
 			row.Tags = "-"
 		}
-		rows = append(rows, table.Row{row.ID, row.Status /* row.Action, */, row.Prefix, row.Tags, row.Days, row.ExpireDelMarker})
+		rows = append(rows, table.Row{row.ID, row.Status, row.Prefix, row.Tags, row.Days, row.ExpireDelMarker})
 	}
 	return rows
 }
 
 func (e expirationCurrentTable) ColumnHeaders() (headers table.Row) {
-	return table.Row{"ID", "Status" /* "Action", */, "Prefix", "Tags", "Days to Expire", "Expire DeleteMarker"}
+	return table.Row{"ID", "Status", "Prefix", "Tags", "Days to Expire", "Expire DeleteMarker"}
 }
 
 type expirationNoncurrentTable []expirationNoncurrentRow
@@ -72,7 +64,6 @@ type expirationNoncurrentTable []expirationNoncurrentRow
 type expirationNoncurrentRow struct {
 	ID           string
 	Status       string
-	Action       string
 	Prefix       string
 	Tags         string
 	Days         int
@@ -91,13 +82,13 @@ func (e expirationNoncurrentTable) Rows() (rows []table.Row) {
 		if row.Tags == "" {
 			row.Tags = "-"
 		}
-		rows = append(rows, table.Row{row.ID, row.Status /* row.Action ,*/, row.Prefix, row.Tags, row.Days, row.KeepVersions})
+		rows = append(rows, table.Row{row.ID, row.Status, row.Prefix, row.Tags, row.Days, row.KeepVersions})
 	}
 	return rows
 }
 
 func (e expirationNoncurrentTable) ColumnHeaders() (headers table.Row) {
-	return table.Row{"ID", "Status" /* "Action", */, "Prefix", "Tags", "Days to Expire", "Keep Versions"}
+	return table.Row{"ID", "Status", "Prefix", "Tags", "Days to Expire", "Keep Versions"}
 }
 
 type tierCurrentTable []tierCurrentRow
@@ -105,7 +96,6 @@ type tierCurrentTable []tierCurrentRow
 type tierCurrentRow struct {
 	ID     string
 	Status string
-	Action string
 	Prefix string
 	Tags   string
 	Days   int
@@ -117,7 +107,7 @@ func (t tierCurrentTable) Title() string {
 }
 
 func (t tierCurrentTable) ColumnHeaders() (headers table.Row) {
-	return table.Row{"ID", "Status" /* "Action", */, "Prefix", "Tags", "Days to Tier", "Tier"}
+	return table.Row{"ID", "Status", "Prefix", "Tags", "Days to Tier", "Tier"}
 }
 
 func (t tierCurrentTable) Rows() (rows []table.Row) {
@@ -128,7 +118,7 @@ func (t tierCurrentTable) Rows() (rows []table.Row) {
 		if row.Tags == "" {
 			row.Tags = "-"
 		}
-		rows = append(rows, table.Row{row.ID, row.Status /* row.Action ,*/, row.Prefix, row.Tags, row.Days, row.Tier})
+		rows = append(rows, table.Row{row.ID, row.Status, row.Prefix, row.Tags, row.Days, row.Tier})
 	}
 	return rows
 }
@@ -143,7 +133,7 @@ func (t tierNoncurrentTable) Title() string {
 }
 
 func (t tierNoncurrentTable) ColumnHeaders() table.Row {
-	return table.Row{"ID", "Status" /* "Action", */, "Prefix", "Tags", "Days to Tier", "Tier"}
+	return table.Row{"ID", "Status", "Prefix", "Tags", "Days to Tier", "Tier"}
 }
 
 func (t tierNoncurrentTable) Rows() (rows []table.Row) {
@@ -154,7 +144,7 @@ func (t tierNoncurrentTable) Rows() (rows []table.Row) {
 		if row.Tags == "" {
 			row.Tags = "-"
 		}
-		rows = append(rows, table.Row{row.ID, row.Status /* row.Action, */, row.Prefix, row.Tags, row.Days, row.Tier})
+		rows = append(rows, table.Row{row.ID, row.Status, row.Prefix, row.Tags, row.Days, row.Tier})
 	}
 	return rows
 }
