@@ -20,6 +20,8 @@ package cmd
 import "github.com/minio/cli"
 
 var adminIDPLdapPolicySubcommands = []cli.Command{
+	adminIDPLdapPolicyAttachCmd,
+	adminIDPLdapPolicyDetachCmd,
 	adminIDPLdapPolicyEntitiesCmd,
 }
 
