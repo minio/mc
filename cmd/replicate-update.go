@@ -64,7 +64,7 @@ var replicateUpdateFlags = []cli.Flag{
 
 var replicateUpdateCmd = cli.Command{
 	Name:         "update",
-	Aliases:        []string{"edit"},
+	Aliases:      []string{"edit"},
 	Usage:        "modify an existing server side replication configuration rule",
 	Action:       mainReplicateUpdate,
 	OnUsageError: onUsageError,
