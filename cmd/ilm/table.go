@@ -26,6 +26,8 @@ const (
 	noncurrentTransition = "NoncurrentVersionTransition"
 )
 
+// Table interface provides methods when implemented allows a []T to be rendered
+// as a table.
 type Table interface {
 	Title() string
 	Rows() []table.Row
@@ -131,8 +133,10 @@ func (t tierCurrentTable) Rows() (rows []table.Row) {
 	return rows
 }
 
-type tierNoncurrentTable []tierNoncurrentRow
-type tierNoncurrentRow tierCurrentRow
+type (
+	tierNoncurrentTable []tierNoncurrentRow
+	tierNoncurrentRow   tierCurrentRow
+)
 
 func (t tierNoncurrentTable) Title() string {
 	return "Transition for older versions"

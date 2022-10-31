@@ -81,6 +81,7 @@ func getTransitionDays(rule lifecycle.Rule) int {
 	return int(rule.Transition.Days)
 }
 
+// ToTables converts a lifecycle.Configuration into its tabular representation.
 func ToTables(cfg *lifecycle.Configuration) []Table {
 	var tierCur tierCurrentTable
 	var tierNoncur tierNoncurrentTable
