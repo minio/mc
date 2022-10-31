@@ -54,6 +54,7 @@ var adminCmdSubcommands = []cli.Command{
 	adminTraceCmd,
 	adminConsoleCmd,
 	adminClusterCmd,
+	adminRebalanceCmd,
 }
 
 var adminCmd = cli.Command{
