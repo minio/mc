@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -84,7 +84,6 @@ func completeAdminConfigKeys(aliasPath string, keyPrefix string) (prediction []s
 // then recursively scans it. This is needed to satisfy posener/complete
 // (look at posener/complete.PredictFiles)
 func completeS3Path(s3Path string) (prediction []string) {
-
 	// Convert alias/bucket/incompl to alias/bucket/ to list its contents
 	parentDirPath := filepath.Dir(s3Path) + "/"
 	clnt, err := newClient(parentDirPath)
@@ -220,10 +219,12 @@ func (al aliasComplete) Predict(a complete.Args) (prediction []string) {
 	return
 }
 
-var adminConfigCompleter = adminConfigComplete{}
-var s3Completer = s3Complete{}
-var aliasCompleter = aliasComplete{}
-var fsCompleter = fsComplete{}
+var (
+	adminConfigCompleter = adminConfigComplete{}
+	s3Completer          = s3Complete{}
+	aliasCompleter       = aliasComplete{}
+	fsCompleter          = fsComplete{}
+)
 
 // The list of all commands supported by mc with their mapping
 // with their bash completer function
@@ -267,12 +268,16 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/replicate/add":    s3Complete{deepLevel: 2},
 	"/replicate/edit":   s3Complete{deepLevel: 2},
+	"/replicate/update": s3Complete{deepLevel: 2},
 	"/replicate/ls":     s3Complete{deepLevel: 2},
 	"/replicate/rm":     s3Complete{deepLevel: 2},
-	"/replicate/export": s3Complete{deepLevel: 2},
-	"/replicate/import": s3Complete{deepLevel: 2},
-	"/replicate/status": s3Complete{deepLevel: 2},
-	"/replicate/resync": s3Complete{deepLevel: 2},
+	"/replicate/diff":   s3Complete{deepLevel: 2},
+
+	"/replicate/export":        s3Complete{deepLevel: 2},
+	"/replicate/import":        s3Complete{deepLevel: 2},
+	"/replicate/status":        s3Complete{deepLevel: 2},
+	"/replicate/resync/start":  s3Complete{deepLevel: 3},
+	"/replicate/resync/status": s3Complete{deepLevel: 3},
 
 	"/tag/list":   s3Completer,
 	"/tag/remove": s3Completer,
@@ -314,20 +319,43 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/config/history": aliasCompleter,
 	"/admin/config/restore": aliasCompleter,
 
+	"/admin/decom/start":         aliasCompleter,
+	"/admin/decom/status":        aliasCompleter,
+	"/admin/decom/cancel":        aliasCompleter,
+	"/admin/decommission/start":  aliasCompleter,
+	"/admin/decommission/status": aliasCompleter,
+	"/admin/decommission/cancel": aliasCompleter,
+
+	"/admin/rebalance/start":  aliasCompleter,
+	"/admin/rebalance/status": aliasCompleter,
+	"/admin/rebalance/stop":   aliasCompleter,
+
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
 	"/admin/console":   aliasCompleter,
 	"/admin/update":    aliasCompleter,
 	"/admin/inspect":   s3Completer,
 	"/admin/top/locks": aliasCompleter,
+	"/admin/top/api":   aliasCompleter,
 
-	"/admin/service/stop":    aliasCompleter,
-	"/admin/service/restart": aliasCompleter,
+	"/admin/scanner/status": aliasCompleter,
+	"/admin/scanner/trace":  aliasCompleter,
+
+	"/admin/service/stop":     aliasCompleter,
+	"/admin/service/restart":  aliasCompleter,
+	"/admin/service/freeze":   aliasCompleter,
+	"/admin/service/unfreeze": aliasCompleter,
 
 	"/admin/prometheus/generate": aliasCompleter,
+	"/admin/prometheus/metrics":  aliasCompleter,
 
 	"/admin/profile/start": aliasCompleter,
 	"/admin/profile/stop":  aliasCompleter,
+
+	"/admin/idp/set":  aliasCompleter,
+	"/admin/idp/info": aliasCompleter,
+	"/admin/idp/ls":   aliasCompleter,
+	"/admin/idp/rm":   aliasCompleter,
 
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
@@ -347,8 +375,10 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/user/svcacct/add":     aliasCompleter,
 	"/admin/user/svcacct/list":    aliasCompleter,
+	"/admin/user/svcacct/ls":      aliasCompleter,
 	"/admin/user/svcacct/rm":      aliasCompleter,
 	"/admin/user/svcacct/info":    aliasCompleter,
+	"/admin/user/svcacct/edit":    aliasCompleter,
 	"/admin/user/svcacct/set":     aliasCompleter,
 	"/admin/user/svcacct/enable":  aliasCompleter,
 	"/admin/user/svcacct/disable": aliasCompleter,
@@ -366,6 +396,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/bucket/remote/rm":        aliasCompleter,
 	"/admin/bucket/remote/bandwidth": aliasCompleter,
 	"/admin/bucket/quota":            aliasCompleter,
+	"/admin/bucket/info":             s3Complete{deepLevel: 2},
 
 	"/admin/kms/key/create": aliasCompleter,
 	"/admin/kms/key/status": aliasCompleter,
@@ -373,25 +404,65 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/subnet/health":   aliasCompleter,
 	"/admin/subnet/register": aliasCompleter,
 
-	"/admin/tier/add":  nil,
-	"/admin/tier/edit": nil,
-	"/admin/tier/ls":   nil,
-	"/admin/tier/info": nil,
+	"/admin/tier/add":    nil,
+	"/admin/tier/edit":   nil,
+	"/admin/tier/ls":     nil,
+	"/admin/tier/info":   nil,
+	"/admin/tier/rm":     nil,
+	"/admin/tier/verify": nil,
 
-	"/admin/replicate/add":  aliasCompleter,
-	"/admin/replicate/info": aliasCompleter,
+	"/admin/replicate/add":    aliasCompleter,
+	"/admin/replicate/edit":   aliasCompleter,
+	"/admin/replicate/info":   aliasCompleter,
+	"/admin/replicate/status": aliasCompleter,
+	"/admin/replicate/remove": aliasCompleter,
+
+	"/admin/cluster/bucket/export": aliasCompleter,
+	"/admin/cluster/bucket/import": aliasCompleter,
+	"/admin/cluster/iam/export":    aliasCompleter,
+	"/admin/cluster/iam/import":    aliasCompleter,
 
 	"/alias/set":    nil,
 	"/alias/list":   aliasCompleter,
 	"/alias/remove": aliasCompleter,
+	"/alias/import": nil,
 
-	"/update": nil,
+	"/support/callhome":     aliasCompleter,
+	"/support/logs/enable":  aliasCompleter,
+	"/support/logs/disable": aliasCompleter,
+	"/support/logs/status":  aliasCompleter,
+	"/support/logs/show":    aliasCompleter,
+	"/support/register":     aliasCompleter,
+	"/support/diag":         aliasCompleter,
+	"/support/profile":      aliasCompleter,
+	"/support/inspect":      aliasCompleter,
+	"/support/perf":         aliasCompleter,
+	"/support/metrics":      aliasCompleter,
+	"/support/status":       aliasCompleter,
+	"/support/top/locks":    aliasCompleter,
+	"/support/top/api":      aliasCompleter,
+	"/support/top/drive":    aliasCompleter,
+	"/support/top/disk":     aliasCompleter,
+
+	"/license/register": aliasCompleter,
+	"/license/info":     aliasCompleter,
+	"/license/update":   aliasCompleter,
+
+	"/update":         nil,
+	"/ready":          aliasCompleter,
+	"/ping":           aliasCompleter,
+	"/od":             nil,
+	"/batch/generate": aliasCompleter,
+	"/batch/start":    aliasCompleter,
+	"/batch/list":     aliasCompleter,
+	"/batch/status":   aliasCompleter,
+	"/batch/describe": aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags
 // understood by posener/complete library.
 func flagsToCompleteFlags(flags []cli.Flag) complete.Flags {
-	var complFlags = make(complete.Flags)
+	complFlags := make(complete.Flags)
 	for _, f := range flags {
 		for _, s := range strings.Split(f.GetName(), ",") {
 			var flagName string
@@ -418,6 +489,9 @@ func cmdToCompleteCmd(cmd cli.Command, parentPath string) complete.Command {
 			continue
 		}
 		complCmd.Sub[subCmd.Name] = cmdToCompleteCmd(subCmd, parentPath+"/"+cmd.Name)
+		for _, alias := range subCmd.Aliases {
+			complCmd.Sub[alias] = cmdToCompleteCmd(subCmd, parentPath+"/"+cmd.Name)
+		}
 	}
 
 	complCmd.Flags = flagsToCompleteFlags(cmd.Flags)
@@ -429,12 +503,15 @@ func cmdToCompleteCmd(cmd cli.Command, parentPath string) complete.Command {
 func mainComplete() error {
 	// Recursively register all commands and subcommands
 	// along with global and local flags
-	var complCmds = make(complete.Commands)
+	complCmds := make(complete.Commands)
 	for _, cmd := range appCmds {
 		if cmd.Hidden {
 			continue
 		}
 		complCmds[cmd.Name] = cmdToCompleteCmd(cmd, "")
+		for _, alias := range cmd.Aliases {
+			complCmds[alias] = cmdToCompleteCmd(cmd, "")
+		}
 	}
 	complFlags := flagsToCompleteFlags(globalFlags)
 	mcComplete := complete.Command{
