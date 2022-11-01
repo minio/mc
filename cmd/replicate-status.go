@@ -56,7 +56,7 @@ EXAMPLES:
 // checkReplicateStatusSyntax - validate all the passed arguments
 func checkReplicateStatusSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "status", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

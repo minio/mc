@@ -79,7 +79,7 @@ func shellQuote(s string) string {
 func checkShareUploadSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !args.Present() {
-		showCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code.
 	}
 
 	// Set command flags from context.

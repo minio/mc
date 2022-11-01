@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminUserRemoveSyntax - validate all the passed arguments
 func checkAdminUserRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

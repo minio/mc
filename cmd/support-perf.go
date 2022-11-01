@@ -207,7 +207,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 	case 1:
 		// cannot use alias by the name 'drive' or 'net'
 		if args[0] == "drive" || args[0] == "net" || args[0] == "object" {
-			showCommandHelpAndExit(ctx, "perf", 1)
+			showCommandHelpAndExit(ctx, 1)
 		}
 		aliasedURL = args[0]
 
@@ -215,7 +215,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 		perfType = args[0]
 		aliasedURL = args[1]
 	default:
-		showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	// Main execution
@@ -378,7 +378,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
 		default:
-			showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+			showCommandHelpAndExit(ctx, 1) // last argument is exit code
 		}
 
 		if !globalJSON {
