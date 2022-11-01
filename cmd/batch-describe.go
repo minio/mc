@@ -18,58 +18,61 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminIDPRmCmd = cli.Command{
-	Name:         "rm",
-	Usage:        "Remove an IDP configuration",
-	Before:       setGlobalsFromContext,
-	Action:       mainAdminIDPRemove,
+var batchDescribeCmd = cli.Command{
+	Name:         "describe",
+	Usage:        "describe job definition for a job",
+	Action:       mainBatchDescribe,
 	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET IDP_TYPE CFG_NAME
+  {{.HelpName}} TARGET JOBID
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove an OpenID configuration from the server.
-     {{.Prompt}} {{.HelpName}} play/ openid myidp
-  2. Remove default LDAP configuration from the server.
-     {{.Prompt}} {{.HelpName}} play/ ldap _
+  1. Describe current batch job definition:
+     {{.Prompt}} {{.HelpName}} myminio KwSysDpxcBU9FNhGkn2dCf
 `,
 }
 
-func mainAdminIDPRemove(ctx *cli.Context) error {
-	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "rm", 1)
+// checkBatchDescribeSyntax - validate all the passed arguments
+func checkBatchDescribeSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 {
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
+}
 
+// mainBatchDescribe is the handle for "mc batch create" command.
+func mainBatchDescribe(ctx *cli.Context) error {
+	checkBatchDescribeSyntax(ctx)
+
+	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	jobID := args.Get(1)
 
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
+	// Start a new MinIO Admin Client
+	adminClient, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	idpType := args.Get(1)
-	validateIDType(idpType)
+	ctxt, cancel := context.WithCancel(globalContext)
+	defer cancel()
 
-	cfgName := args.Get(2)
+	job, e := adminClient.DescribeBatchJob(ctxt, jobID)
+	fatalIf(probe.NewError(e), "Unable to fetch the job definition")
 
-	restart, e := client.DeleteIDPConfig(globalContext, idpType, cfgName)
-	fatalIf(probe.NewError(e), "Unable to remove %s IDP config '%s'", idpType, cfgName)
-
-	printMsg(configSetMessage{
-		targetAlias: aliasedURL,
-		restart:     restart,
-	})
-
+	fmt.Println(job)
 	return nil
 }

@@ -119,18 +119,20 @@ type clusterStruct struct {
 }
 
 // String provides colorized info messages depending on the type of a server
-//        FS server                          non-FS server
+//
+//	FS server                          non-FS server
+//
 // ==============================  ===================================
 // ● <ip>:<port>                   ● <ip>:<port>
-//   Uptime: xxx                     Uptime: xxx
-//   Version: xxx                    Version: xxx
-//   Network: X/Y OK                 Network: X/Y OK
+//
+//	Uptime: xxx                     Uptime: xxx
+//	Version: xxx                    Version: xxx
+//	Network: X/Y OK                 Network: X/Y OK
 //
 // U Used, B Buckets, O Objects    Drives: N/N OK
 //
-//                                   U Used, B Buckets, O Objects
-//                                   N drives online, K drives offline
-//
+//	U Used, B Buckets, O Objects
+//	N drives online, K drives offline
 func (u clusterStruct) String() (msg string) {
 	// Check cluster level "Status" field for error
 	if u.Status == "error" {

@@ -52,7 +52,7 @@ var retentionClearFlags = []cli.Flag{
 
 var retentionClearCmd = cli.Command{
 	Name:         "clear",
-	Usage:        "clear retention for object(s)",
+	Usage:        "clear all retention settings on object(s)",
 	Action:       mainRetentionClear,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

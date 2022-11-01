@@ -58,7 +58,7 @@ var retentionSetFlags = []cli.Flag{
 
 var retentionSetCmd = cli.Command{
 	Name:         "set",
-	Usage:        "set retention for object(s)",
+	Usage:        "apply retention settings on object(s)",
 	Action:       mainRetentionSet,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

@@ -84,11 +84,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
-     {{.Prompt}} {{.HelpName}} play
+  1. Upload MinIO diagnostics report for cluster with alias 'myminio' to SUBNET
+     {{.Prompt}} {{.HelpName}} myminio
 
-  2. Generate MinIO diagnostics report for alias 'play' (https://play.min.io by default) save and upload to SUBNET manually
-     {{.Prompt}} {{.HelpName}} play --airgap
+  2. Generate MinIO diagnostics report for cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} myminio --airgap
 `,
 }
 
@@ -159,7 +159,7 @@ func mainSupportDiag(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
@@ -308,9 +308,6 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	mem := spinner("Mem Info", madmin.HealthDataTypeSysMem)
 	process := spinner("Process Info", madmin.HealthDataTypeSysLoad)
 	config := spinner("Server Config", madmin.HealthDataTypeMinioConfig)
-	drive := spinner("Drive Test", madmin.HealthDataTypePerfDrive)
-	net := spinner("Network Test", madmin.HealthDataTypePerfNet)
-	obj := spinner("Objects Test", madmin.HealthDataTypePerfObj)
 	syserr := spinner("System Errors", madmin.HealthDataTypeSysErrors)
 	syssrv := spinner("System Services", madmin.HealthDataTypeSysServices)
 	sysconfig := spinner("System Config", madmin.HealthDataTypeSysConfig)
@@ -339,16 +336,12 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	}
 
 	progress := func(info madmin.HealthInfo) {
-		noOfServers := len(info.Sys.CPUInfo)
 		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.Partitions) > 0) &&
 			osInfo(len(info.Sys.OSInfo) > 0) &&
 			mem(len(info.Sys.MemInfo) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
 			config(info.Minio.Config.Config != nil) &&
-			drive(len(info.Perf.DrivePerf) > 0) &&
-			obj(len(info.Perf.ObjPerf) > 0) &&
-			net(noOfServers == 1 || len(info.Perf.NetPerf) > 0) &&
 			syserr(len(info.Sys.SysErrs) > 0) &&
 			syssrv(len(info.Sys.SysServices) > 0) &&
 			sysconfig(len(info.Sys.SysConfig) > 0) &&

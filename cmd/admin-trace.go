@@ -47,7 +47,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching Call types (values: `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
+		Usage: "trace only matching call types (e.g. `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
 	},
 	cli.DurationFlag{
 		Name:  "response-threshold",
@@ -267,8 +267,8 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 
 // Calculate tracing options for command line flags
 func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
-	opts.OnlyErrors = ctx.Bool("errors")
 	opts.Threshold = ctx.Duration("response-threshold")
+	opts.OnlyErrors = ctx.Bool("errors")
 
 	if ctx.Bool("all") {
 		opts.S3 = true
@@ -278,6 +278,7 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 		opts.Scanner = true
 		opts.Decommission = true
 		opts.Healing = true
+		opts.BatchReplication = true
 		return
 	}
 
@@ -304,9 +305,12 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.Healing = true
 		case "decom", "decommission":
 			opts.Decommission = true
+		case "batch-replication":
+			opts.BatchReplication = true
+		case "rebalance":
+			opts.Rebalance = true
 		}
 	}
-
 	return
 }
 

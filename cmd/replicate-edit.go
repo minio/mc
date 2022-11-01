@@ -71,23 +71,23 @@ var replicateEditCmd = cli.Command{
 	Flags:        append(globalFlags, replicateEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-   
+
 USAGE:
-  {{.HelpName}} TARGET
-	   
+  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]	
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg"  --priority 3
- 
+
   2. Disable a replication configuration rule with rule ID "bsibgh8t874dnjst8hkg" on target myminio/bucket
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg" --state disable
 
   3. Set tags and storage class on a replication configuration with rule ID "kMYD.491" on target myminio/bucket/prefix.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags "key1=value1&key2=value2" \
-								  --storage-class "STANDARD" --priority 2
+				  --storage-class "STANDARD" --priority 2
   4. Clear tags for replication configuration rule with ID "kMYD.491" on a target myminio/bucket.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags ""
 

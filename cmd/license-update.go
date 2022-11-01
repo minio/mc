@@ -35,7 +35,7 @@ var licenseUpdateCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainLicenseUpdate,
 	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, subnetCommonFlags...),
+	Flags:        append(supportGlobalFlags, subnetCommonFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -80,7 +80,7 @@ func mainLicenseUpdate(ctx *cli.Context) error {
 	console.SetColor(licUpdateMsgTag, color.New(color.FgGreen, color.Bold))
 
 	aliasedURL := ctx.Args().Get(0)
-	alias, _ := url2Alias(aliasedURL)
+	alias, _ := initSubnetConnectivity(ctx, aliasedURL, false)
 
 	licFile := ctx.Args().Get(1)
 

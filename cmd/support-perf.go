@@ -82,7 +82,7 @@ var supportPerfFlags = append([]cli.Flag{
 
 var supportPerfCmd = cli.Command{
 	Name:            "perf",
-	Usage:           "analyze object, network and drive performance",
+	Usage:           "upload object, network and drive performance analysis",
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -99,9 +99,58 @@ FLAGS:
   {{end}}
 
 EXAMPLES:
-  1. Run object storage, network, and drive performance tests on 'myminio' cluster:
-     {{.Prompt}} {{.HelpName}} myminio/
+  1. Upload object storage, network, and drive performance analysis for cluster with alias 'myminio' to SUBNET
+     {{.Prompt}} {{.HelpName}} myminio
+  2. Run object storage, network, and drive performance tests on cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} --airgap myminio
 `,
+}
+
+// PerfTestOutput - stores the final output of performance test(s)
+type PerfTestOutput struct {
+	ObjectResult *ObjTestResult        `json:"object,omitempty"`
+	NetResult    *madmin.NetperfResult `json:"network,omitempty"`
+	DriveResult  []DriveTestResult     `json:"drive,omitempty"`
+	Error        string                `json:"error,omitempty"`
+}
+
+// DriveTestResult - result of the drive performance test
+type DriveTestResult struct {
+	Endpoint  string             `json:"endpoint"`
+	DrivePerf []madmin.DrivePerf `json:"drivePerf,omitempty"`
+	Error     string             `json:"error,omitempty"`
+}
+
+// ObjTestResult - result of the object performance test
+type ObjTestResult struct {
+	Servers    int         `json:"servers"`
+	Drives     int         `json:"drives"`
+	Size       int         `json:"size"`
+	Concurrent int         `json:"concurrent"`
+	PUTStats   ObjPUTStats `json:"PUTStats"`
+	GETStats   ObjGETStats `json:"GETStats"`
+}
+
+// ObjStatServer - Server level object performance stats
+type ObjStatServer struct {
+	Endpoint      string `json:"endpoint"`
+	Throughput    uint64 `json:"throughput"`
+	ObjectsPerSec uint64 `json:"objectsPerSec"`
+	Error         string `json:"error,omitempty"`
+}
+
+// ObjPUTStats - PUT stats of all the servers
+type ObjPUTStats struct {
+	Throughput    uint64          `json:"throughput"`
+	ObjectsPerSec uint64          `json:"objectsPerSec"`
+	Response      madmin.Timings  `json:"responseTime"`
+	Servers       []ObjStatServer `json:"servers"`
+}
+
+// ObjGETStats - GET stats of all the servers
+type ObjGETStats struct {
+	ObjPUTStats
+	TTFB madmin.Timings `json:"ttfb,omitempty"`
 }
 
 func objectTestVerboseResult(result *madmin.SpeedTestResult) (msg string) {
@@ -134,12 +183,13 @@ func objectTestShortResult(result *madmin.SpeedTestResult) (msg string) {
 	return msg
 }
 
-func (p PerfTestResult) String() string {
+// String - dummy function to confirm to the 'message' interface. Not used.
+func (p PerfTestOutput) String() string {
 	return ""
 }
 
-// JSON - jsonified update message.
-func (p PerfTestResult) JSON() string {
+// JSON - jsonified output of the perf tests
+func (p PerfTestOutput) JSON() string {
 	JSONBytes, e := json.MarshalIndent(p, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(JSONBytes)
@@ -174,8 +224,96 @@ func mainSupportPerf(ctx *cli.Context) error {
 	return nil
 }
 
+func convertDriveTestResult(dr madmin.DriveSpeedTestResult) DriveTestResult {
+	return DriveTestResult{
+		Endpoint:  dr.Endpoint,
+		DrivePerf: dr.DrivePerf,
+		Error:     dr.Error,
+	}
+}
+
+func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) []DriveTestResult {
+	results := []DriveTestResult{}
+	for _, dr := range driveResults {
+		results = append(results, convertDriveTestResult(dr))
+	}
+	return results
+}
+
+func convertObjStatServers(ss []madmin.SpeedTestStatServer) []ObjStatServer {
+	out := []ObjStatServer{}
+	for _, s := range ss {
+		out = append(out, ObjStatServer{
+			Endpoint:      s.Endpoint,
+			Throughput:    s.ThroughputPerSec,
+			ObjectsPerSec: s.ObjectsPerSec,
+			Error:         s.Err,
+		})
+	}
+	return out
+}
+
+func convertPUTStats(stats madmin.SpeedTestStats) ObjPUTStats {
+	return ObjPUTStats{
+		Throughput:    stats.ThroughputPerSec,
+		ObjectsPerSec: stats.ObjectsPerSec,
+		Response:      stats.Response,
+		Servers:       convertObjStatServers(stats.Servers),
+	}
+}
+
+func convertGETStats(stats madmin.SpeedTestStats) ObjGETStats {
+	return ObjGETStats{
+		ObjPUTStats: convertPUTStats(stats),
+		TTFB:        stats.TTFB,
+	}
+}
+
+func convertObjTestResult(objResult *madmin.SpeedTestResult) ObjTestResult {
+	if objResult == nil {
+		return ObjTestResult{}
+	}
+	result := ObjTestResult{
+		Servers:    objResult.Servers,
+		Drives:     objResult.Disks,
+		Size:       objResult.Size,
+		Concurrent: objResult.Concurrent,
+	}
+	result.PUTStats = convertPUTStats(objResult.PUTStats)
+	result.GETStats = convertGETStats(objResult.GETStats)
+	return result
+}
+
+func updatePerfOutput(r PerfTestResult, out *PerfTestOutput) {
+	switch r.Type {
+	case DrivePerfTest:
+		out.DriveResult = convertDriveTestResults(r.DriveResult)
+	case ObjectPerfTest:
+		or := convertObjTestResult(r.ObjectResult)
+		out.ObjectResult = &or
+	case NetPerfTest:
+		out.NetResult = r.NetResult
+	default:
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid test type %d", r.Type))
+	}
+}
+
+func convertPerfResult(r PerfTestResult) PerfTestOutput {
+	out := PerfTestOutput{}
+	updatePerfOutput(r, &out)
+	return out
+}
+
+func convertPerfResults(results []PerfTestResult) PerfTestOutput {
+	out := PerfTestOutput{}
+	for _, r := range results {
+		updatePerfOutput(r, &out)
+	}
+	return out
+}
+
 func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
@@ -191,7 +329,7 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	resultFileName := resultFileNamePfx + ".json"
 
 	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), alias)
-	tmpFileName, e := zipPerfResult(results, resultFileName, regInfo)
+	tmpFileName, e := zipPerfResult(convertPerfResults(results), resultFileName, regInfo)
 	fatalIf(probe.NewError(e), "Error creating zip from perf test results:")
 
 	if globalAirgapped {
@@ -240,7 +378,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
 		default:
-			cli.ShowCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
+			showCommandHelpAndExit(ctx, "perf", 1) // last argument is exit code
 		}
 
 		if !globalJSON {
@@ -266,7 +404,7 @@ func writeJSONObjToZip(zipWriter *zip.Writer, obj interface{}, filename string) 
 }
 
 // compress MinIO performance output
-func zipPerfResult(perfResult []PerfTestResult, resultFilename string, regInfo ClusterRegistrationInfo) (string, error) {
+func zipPerfResult(perfOutput PerfTestOutput, resultFilename string, regInfo ClusterRegistrationInfo) (string, error) {
 	// Create profile zip file
 	tmpArchive, e := os.CreateTemp("", "mc-perf-")
 
@@ -278,7 +416,7 @@ func zipPerfResult(perfResult []PerfTestResult, resultFilename string, regInfo C
 	zipWriter := zip.NewWriter(tmpArchive)
 	defer zipWriter.Close()
 
-	e = writeJSONObjToZip(zipWriter, perfResult, resultFilename)
+	e = writeJSONObjToZip(zipWriter, perfOutput, resultFilename)
 	if e != nil {
 		return "", e
 	}

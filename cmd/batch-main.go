@@ -17,30 +17,31 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var licenseSubcommands = []cli.Command{
-	licenseRegisterCmd,
-	licenseInfoCmd,
-	licenseUpdateCmd,
-	licenseUnregisterCmd,
+var batchSubcommands = []cli.Command{
+	batchGenerateCmd,
+	batchStartCmd,
+	batchListCmd,
+	batchStatusCmd,
+	batchDescribeCmd,
+	// batchSuspendResumeCmd,
+	// batchStopCmd,
 }
 
-var licenseCmd = cli.Command{
-	Name:            "license",
-	Usage:           "license related commands",
-	Action:          mainlicense,
+var batchCmd = cli.Command{
+	Name:            "batch",
+	Usage:           "manage batch jobs",
+	Action:          mainBatch,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     licenseSubcommands,
+	Subcommands:     batchSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainlicense is the handle for "mc license" command.
-func mainlicense(ctx *cli.Context) error {
-	commandNotFound(ctx, licenseSubcommands)
+// mainBatch is the handle for "mc batch" command.
+func mainBatch(ctx *cli.Context) error {
+	commandNotFound(ctx, batchSubcommands)
 	return nil
-	// Sub-commands like "register", "info" have their own main.
+	// Sub-commands like "generate", "list", "info" have their own main.
 }

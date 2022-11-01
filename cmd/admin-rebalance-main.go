@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,30 +17,25 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var licenseSubcommands = []cli.Command{
-	licenseRegisterCmd,
-	licenseInfoCmd,
-	licenseUpdateCmd,
-	licenseUnregisterCmd,
+var adminRebalanceSubcommands = []cli.Command{
+	adminRebalanceStartCmd,
+	adminRebalanceStatusCmd,
+	adminRebalanceStopCmd,
 }
 
-var licenseCmd = cli.Command{
-	Name:            "license",
-	Usage:           "license related commands",
-	Action:          mainlicense,
+var adminRebalanceCmd = cli.Command{
+	Name:            "rebalance",
+	Usage:           "Manage MinIO rebalance",
+	Action:          mainAdminRebalance,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     licenseSubcommands,
+	Subcommands:     adminRebalanceSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainlicense is the handle for "mc license" command.
-func mainlicense(ctx *cli.Context) error {
-	commandNotFound(ctx, licenseSubcommands)
+func mainAdminRebalance(ctx *cli.Context) error {
+	commandNotFound(ctx, adminRebalanceSubcommands)
 	return nil
-	// Sub-commands like "register", "info" have their own main.
 }

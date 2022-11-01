@@ -49,7 +49,7 @@ type ConfigAnyVersion struct {
 	Version string
 }
 
-/////////////////// Broken Config V3 ///////////////////
+// ///////////////// Broken Config V3 ///////////////////
 type brokenHostConfigV3 struct {
 	AccessKeyID     string
 	SecretAccessKey string

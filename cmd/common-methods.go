@@ -128,7 +128,7 @@ func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefi
 	//   *) If alias format is specified, return false
 	//   *) If alias/bucket is specified, return true
 	//   *) If alias/bucket/prefix, check if prefix has
-	//	     has a trailing slash.
+	//       has a trailing slash.
 	pathURL := filepath.ToSlash(aliasURL)
 	fields := strings.Split(pathURL, "/")
 	switch len(fields) {
