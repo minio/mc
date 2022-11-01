@@ -62,7 +62,7 @@ func (r rebalanceStopMsg) JSON() string {
 }
 
 func (r rebalanceStopMsg) String() string {
-	return console.Colorize("rebalanceStopMsg", fmt.Sprintf("Rebalance started for %s", r.Target))
+	return console.Colorize("rebalanceStopMsg", fmt.Sprintf("Rebalance stopped for %s", r.Target))
 }
 
 func mainAdminRebalanceStop(ctx *cli.Context) error {
