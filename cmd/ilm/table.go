@@ -39,7 +39,7 @@ type expirationCurrentRow struct {
 type expirationCurrentTable []expirationCurrentRow
 
 func (e expirationCurrentTable) Title() string {
-	return "Expiration for latest version"
+	return "Expiration for latest version (Expiration)"
 }
 
 func (e expirationCurrentTable) Rows() (rows []table.Row) {
@@ -71,7 +71,7 @@ type expirationNoncurrentRow struct {
 }
 
 func (e expirationNoncurrentTable) Title() string {
-	return "Expiration for older versions"
+	return "Expiration for older versions (NoncurrentVersionExpiration)"
 }
 
 func (e expirationNoncurrentTable) Rows() (rows []table.Row) {
@@ -103,7 +103,7 @@ type tierCurrentRow struct {
 }
 
 func (t tierCurrentTable) Title() string {
-	return "Transition for latest version"
+	return "Transition for latest version (Transition)"
 }
 
 func (t tierCurrentTable) ColumnHeaders() (headers table.Row) {
@@ -129,7 +129,7 @@ type (
 )
 
 func (t tierNoncurrentTable) Title() string {
-	return "Transition for older versions"
+	return "Transition for older versions (NoncurrentVersionTransition)"
 }
 
 func (t tierNoncurrentTable) ColumnHeaders() table.Row {
