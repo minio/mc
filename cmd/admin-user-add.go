@@ -75,8 +75,7 @@ EXAMPLES:
 func checkAdminUserAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr > 3 || argsNr < 1 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"Incorrect number of arguments for user add command.")
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
