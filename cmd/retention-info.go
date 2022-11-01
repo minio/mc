@@ -93,7 +93,7 @@ func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recu
 	args := cliCtx.Args()
 
 	if len(args) != 1 {
-		showCommandHelpAndExit(cliCtx, "info", 1)
+		showCommandHelpAndExit(cliCtx, cliCtx.Command.Name, 1)
 	}
 
 	target = args[0]

@@ -75,7 +75,7 @@ func (i ilmExportMessage) JSON() string {
 // checkILMExportSyntax - validate arguments passed by user
 func checkILMExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "export", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, ctx.Command.Name, globalErrorExitStatus)
 	}
 }
 

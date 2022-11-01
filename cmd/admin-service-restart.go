@@ -98,7 +98,7 @@ func (s serviceRestartMessage) JSON() string {
 // checkAdminServiceRestartSyntax - validate all the passed arguments
 func checkAdminServiceRestartSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "restart", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
