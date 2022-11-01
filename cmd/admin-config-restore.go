@@ -77,7 +77,7 @@ func (u configRestoreMessage) JSON() string {
 // checkAdminConfigRestoreSyntax - validate all the passed arguments
 func checkAdminConfigRestoreSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) > 2 {
-		showCommandHelpAndExit(ctx, "restore", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

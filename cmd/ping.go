@@ -96,7 +96,7 @@ var stop bool
 // Validate command line arguments.
 func checkPingSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, "ping", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
 }
 

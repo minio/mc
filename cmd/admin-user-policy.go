@@ -52,7 +52,7 @@ EXAMPLES:
 // checkAdminUserPolicySyntax - validate all the passed arguments
 func checkAdminUserPolicySyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

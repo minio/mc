@@ -67,7 +67,7 @@ func (r rebalanceStopMsg) String() string {
 
 func mainAdminRebalanceStop(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	console.SetColor("rebalanceStopMsg", color.New(color.FgGreen))
