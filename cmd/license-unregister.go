@@ -74,7 +74,7 @@ func (li licUnregisterMessage) JSON() string {
 // checkLicenseUnregisterSyntax - validate arguments passed by a user
 func checkLicenseUnregisterSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "unregister", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

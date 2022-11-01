@@ -74,7 +74,7 @@ func (li licUpdateMessage) JSON() string {
 
 func mainLicenseUpdate(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	console.SetColor(licUpdateMsgTag, color.New(color.FgGreen, color.Bold))
