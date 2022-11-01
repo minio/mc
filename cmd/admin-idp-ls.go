@@ -53,7 +53,7 @@ EXAMPLES:
 
 func mainAdminIDPList(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
+		showCommandHelpAndExit(ctx, "ls", 1)
 	}
 
 	args := ctx.Args()

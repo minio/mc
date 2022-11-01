@@ -57,7 +57,7 @@ EXAMPLES:
 // checkEncryptSetSyntax - validate all the passed arguments
 func checkEncryptSetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
 	}
 }
 

@@ -83,7 +83,7 @@ func (s serverUpdateMessage) JSON() string {
 // checkAdminServerUpdateSyntax - validate all the passed arguments
 func checkAdminServerUpdateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 }
 

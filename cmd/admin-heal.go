@@ -105,14 +105,14 @@ EXAMPLES:
 
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
 
 	// Check for scan argument
 	scanArg := ctx.String("scan")
 	scanArg = strings.ToLower(scanArg)
 	if scanArg != scanNormalMode && scanArg != scanDeepMode {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
 }
 
