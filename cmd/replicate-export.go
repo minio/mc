@@ -56,7 +56,7 @@ EXAMPLES:
 // checkReplicateExportSyntax - validate all the passed arguments
 func checkReplicateExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 

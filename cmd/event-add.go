@@ -82,7 +82,7 @@ EXAMPLES:
 // checkEventAddSyntax - validate all the passed arguments
 func checkEventAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
