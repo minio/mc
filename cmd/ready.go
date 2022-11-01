@@ -97,7 +97,7 @@ func (r readyMessage) JSON() string {
 func mainReady(cliCtx *cli.Context) error {
 	if !cliCtx.Args().Present() {
 		exitCode := 1
-		showCommandHelpAndExit(cliCtx, "ready", exitCode)
+		showCommandHelpAndExit(cliCtx, exitCode)
 	}
 
 	// Set command flags from context.

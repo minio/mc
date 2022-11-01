@@ -74,7 +74,7 @@ EXAMPLES:
 func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	args := cliCtx.Args()
 	if !args.Present() {
-		showCommandHelpAndExit(cliCtx, "download", 1) // last argument is exit code.
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
 
 	// Parse expiry.

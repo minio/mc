@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminGroupInfoSyntax - validate all the passed arguments
 func checkAdminGroupInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

@@ -106,7 +106,7 @@ EXAMPLES:
 // checkReplicateUpdateSyntax - validate all the passed arguments
 func checkReplicateUpdateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

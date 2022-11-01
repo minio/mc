@@ -50,7 +50,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctRemoveSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "rm", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 

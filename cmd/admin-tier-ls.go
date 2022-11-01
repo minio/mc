@@ -53,7 +53,7 @@ EXAMPLES:
 func checkAdminTierListSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	if argsNr > 1 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),

@@ -54,7 +54,7 @@ EXAMPLES:
 
 func mainAdminRebalanceStatus(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
