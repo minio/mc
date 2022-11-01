@@ -207,7 +207,7 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
 	printMsg(replicateEditMessage{
-		Op:  "set",
+		Op:  cliCtx.Command.Name,
 		URL: aliasedURL,
 		ID:  opts.ID,
 	})

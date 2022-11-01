@@ -118,7 +118,7 @@ func mainAdminPolicyInfo(ctx *cli.Context) error {
 	}
 
 	printMsg(userPolicyMessage{
-		op:         "info",
+		op:         ctx.Command.Name,
 		Policy:     policyName,
 		PolicyInfo: *pinfo,
 	})

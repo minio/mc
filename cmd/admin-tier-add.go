@@ -380,7 +380,7 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.AddTier(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
 
 	msg := &tierMessage{
-		op:     "add",
+		op:     ctx.Command.Name,
 		Status: "success",
 	}
 	msg.SetTierConfig(tCfg)

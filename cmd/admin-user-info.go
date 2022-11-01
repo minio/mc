@@ -71,7 +71,7 @@ func mainAdminUserInfo(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
 	printMsg(userMessage{
-		op:         "info",
+		op:         ctx.Command.Name,
 		AccessKey:  args.Get(1),
 		PolicyName: user.PolicyName,
 		UserStatus: string(user.Status),

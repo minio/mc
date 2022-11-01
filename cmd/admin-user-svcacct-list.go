@@ -78,7 +78,7 @@ func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 
 	for _, svc := range svcList.Accounts {
 		printMsg(svcAcctMessage{
-			op:        "list",
+			op:        ctx.Command.Name,
 			AccessKey: svc,
 		})
 	}

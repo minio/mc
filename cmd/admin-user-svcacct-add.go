@@ -183,7 +183,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
 
 	printMsg(svcAcctMessage{
-		op:            "add",
+		op:            ctx.Command.Name,
 		AccessKey:     creds.AccessKey,
 		SecretKey:     creds.SecretKey,
 		AccountStatus: "enabled",

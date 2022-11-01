@@ -90,7 +90,7 @@ func mainEncryptClear(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize connection.")
 	fatalIf(client.DeleteEncryption(ctx), "Unable to clear auto encryption configuration")
 	printMsg(encryptClearMessage{
-		Op:     "clear",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	})

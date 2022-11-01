@@ -116,7 +116,7 @@ func mainClusterBucketImport(ctx *cli.Context) error {
 		BucketMetaImportErrs: rpt,
 		Status:               "success",
 		URL:                  aliasedURL,
-		Op:                   "import",
+		Op:                   ctx.Command.Name,
 	})
 
 	return nil

@@ -85,7 +85,7 @@ func mainAdminGroupRemove(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Could not perform remove operation")
 
 	printMsg(groupMessage{
-		op:        "remove",
+		op:        ctx.Command.Name,
 		GroupName: args.Get(1),
 		Members:   members,
 	})

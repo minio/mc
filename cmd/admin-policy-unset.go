@@ -125,7 +125,7 @@ func mainAdminPolicyUnset(ctx *cli.Context) error {
 	e = client.SetPolicy(globalContext, newPolicies, userOrGroup, isGroup)
 	if e == nil {
 		printMsg(userPolicyMessage{
-			op:          "unset",
+			op:          ctx.Command.Name,
 			Policy:      policiesToUnset,
 			UserOrGroup: userOrGroup,
 			IsGroup:     isGroup,

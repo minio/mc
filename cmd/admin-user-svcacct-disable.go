@@ -77,7 +77,7 @@ func mainAdminUserSvcAcctDisable(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to disable the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        "disable",
+		op:        ctx.Command.Name,
 		AccessKey: svcAccount,
 	})
 

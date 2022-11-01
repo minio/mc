@@ -101,7 +101,7 @@ func mainReplicateExport(cliCtx *cli.Context) error {
 	rCfg, err := client.GetReplication(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication configuration")
 	printMsg(replicateExportMessage{
-		Op:                "export",
+		Op:                cliCtx.Command.Name,
 		Status:            "success",
 		URL:               aliasedURL,
 		ReplicationConfig: rCfg,

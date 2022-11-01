@@ -130,7 +130,7 @@ func mainAdminPolicyUpdate(ctx *cli.Context) error {
 	e = client.SetPolicy(globalContext, updatedPolicies, userOrGroup, isGroup)
 	if e == nil {
 		printMsg(userPolicyMessage{
-			op:          "update",
+			op:          ctx.Command.Name,
 			Policy:      policiesToAdd,
 			UserOrGroup: userOrGroup,
 			IsGroup:     isGroup,

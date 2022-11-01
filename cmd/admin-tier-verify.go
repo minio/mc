@@ -72,7 +72,7 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to verify remote tier target")
 
 	printMsg(&tierMessage{
-		op:       "verify",
+		op:       ctx.Command.Name,
 		Status:   "success",
 		TierName: tierName,
 	})

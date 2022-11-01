@@ -132,7 +132,7 @@ func mainReplicateResyncStart(cliCtx *cli.Context) error {
 	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to reset replication")
 	printMsg(replicateResyncMessage{
-		Op:                "start",
+		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ResyncTargetsInfo: rinfo,
 	})

@@ -136,7 +136,7 @@ func mainAdminGroupAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.UpdateGroupMembers(globalContext, gAddRemove)).Trace(args...), "Unable to add new group")
 
 	printMsg(groupMessage{
-		op:        "add",
+		op:        ctx.Command.Name,
 		GroupName: args.Get(1),
 		Members:   members,
 	})

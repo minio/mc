@@ -199,7 +199,7 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	fatalIf(err.Trace(args...), "Unable to get replication status")
 
 	printMsg(replicateStatusMessage{
-		Op:                "status",
+		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ReplicationStatus: replicateStatus,
 	})

@@ -72,7 +72,7 @@ func mainAdminUserDisable(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to disable user")
 
 	printMsg(userMessage{
-		op:        "disable",
+		op:        ctx.Command.Name,
 		AccessKey: args.Get(1),
 	})
 

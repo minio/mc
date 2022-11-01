@@ -76,7 +76,7 @@ func mainAdminUserList(ctx *cli.Context) error {
 
 	for k, v := range users {
 		printMsg(userMessage{
-			op:         "list",
+			op:         ctx.Command.Name,
 			AccessKey:  k,
 			PolicyName: v.PolicyName,
 			UserStatus: string(v.Status),

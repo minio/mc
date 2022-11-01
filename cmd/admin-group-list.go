@@ -71,7 +71,7 @@ func mainAdminGroupList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list groups")
 
 	printMsg(groupMessage{
-		op:     "list",
+		op:     ctx.Command.Name,
 		Groups: gs,
 	})
 

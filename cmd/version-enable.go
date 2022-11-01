@@ -123,7 +123,7 @@ func mainVersionEnable(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize connection.")
 	fatalIf(client.SetVersion(ctx, "enable", excludedPrefixes, excludeFolders), "Unable to enable versioning")
 	printMsg(versionEnableMessage{
-		Op:     "enable",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	})

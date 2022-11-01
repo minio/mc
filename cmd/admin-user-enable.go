@@ -72,7 +72,7 @@ func mainAdminUserEnable(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable user")
 
 	printMsg(userMessage{
-		op:        "enable",
+		op:        ctx.Command.Name,
 		AccessKey: args.Get(1),
 	})
 
