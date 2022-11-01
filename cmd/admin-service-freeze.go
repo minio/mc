@@ -70,7 +70,7 @@ func (s serviceFreezeCommand) JSON() string {
 // checkAdminServiceFreezeSyntax - validate all the passed arguments
 func checkAdminServiceFreezeSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "freeze", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

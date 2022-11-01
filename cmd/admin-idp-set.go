@@ -84,7 +84,7 @@ func validateIDType(idpType string) {
 
 func mainAdminIDPSet(ctx *cli.Context) error {
 	if len(ctx.Args()) < 3 {
-		showCommandHelpAndExit(ctx, "set", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
