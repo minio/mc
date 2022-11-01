@@ -136,7 +136,7 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), policy)).Trace(args...), "Unable to add new policy")
 
 	printMsg(userPolicyMessage{
-		op:     "add",
+		op:     ctx.Command.Name,
 		Policy: args.Get(1),
 	})
 

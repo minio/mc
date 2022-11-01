@@ -187,7 +187,7 @@ func mainAdminUserAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.AddUser(globalContext, accessKey, secretKey)).Trace(args...), "Unable to add new user")
 
 	printMsg(userMessage{
-		op:         "add",
+		op:         ctx.Command.Name,
 		AccessKey:  accessKey,
 		SecretKey:  secretKey,
 		UserStatus: "enabled",

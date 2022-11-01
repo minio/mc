@@ -111,7 +111,7 @@ func mainReplicateImport(cliCtx *cli.Context) error {
 
 	fatalIf(client.SetReplication(ctx, rCfg, replication.Options{Op: replication.ImportOption}).Trace(aliasedURL), "Unable to set replication configuration")
 	printMsg(replicateImportMessage{
-		Op:     "import",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	})

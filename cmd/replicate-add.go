@@ -199,7 +199,7 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not add replication rule")
 	printMsg(replicateAddMessage{
-		Op:  "add",
+		Op:  cliCtx.Command.Name,
 		URL: aliasedURL,
 		ID:  opts.ID,
 	})

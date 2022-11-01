@@ -147,7 +147,7 @@ func mainReplicateRemove(cliCtx *cli.Context) error {
 		fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not remove replication rule")
 	}
 	printMsg(replicateRemoveMessage{
-		Op:     "rm",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 		ID:     ruleID,
