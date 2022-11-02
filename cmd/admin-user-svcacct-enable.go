@@ -77,7 +77,7 @@ func mainAdminUserSvcAcctEnable(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        "enable",
+		op:        ctx.Command.Name,
 		AccessKey: svcAccount,
 	})
 

@@ -72,7 +72,7 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 
 	for k := range policies {
 		printMsg(userPolicyMessage{
-			op:     "list",
+			op:     ctx.Command.Name,
 			Policy: k,
 		})
 	}
