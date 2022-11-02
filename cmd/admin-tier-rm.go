@@ -72,7 +72,7 @@ func mainAdminTierRm(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove remote tier target")
 
 	printMsg(&tierMessage{
-		op:       "rm",
+		op:       ctx.Command.Name,
 		Status:   "success",
 		TierName: tierName,
 	})

@@ -73,7 +73,7 @@ func mainAdminPolicyRemove(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.RemoveCannedPolicy(globalContext, args.Get(1))).Trace(args...), "Unable to remove policy")
 
 	printMsg(userPolicyMessage{
-		op:     "remove",
+		op:     ctx.Command.Name,
 		Policy: args.Get(1),
 	})
 

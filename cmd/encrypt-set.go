@@ -109,7 +109,7 @@ func mainEncryptSet(cliCtx *cli.Context) error {
 	}
 	fatalIf(client.SetEncryption(ctx, algorithm, keyID), "Unable to enable auto encryption")
 	msg := encryptSetMessage{
-		Op:     "set",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	}

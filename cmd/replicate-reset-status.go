@@ -152,7 +152,7 @@ func mainreplicateResyncStatus(cliCtx *cli.Context) error {
 	rinfo, err := client.ReplicationResyncStatus(ctx, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to get replication resync status")
 	printMsg(replicateResyncStatusMessage{
-		Op:                "status",
+		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ResyncTargetsInfo: rinfo,
 		TargetArn:         cliCtx.String("remote-bucket"),
