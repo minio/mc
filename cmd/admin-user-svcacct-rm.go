@@ -73,7 +73,7 @@ func mainAdminUserSvcAcctRemove(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        "rm",
+		op:        ctx.Command.Name,
 		AccessKey: svcAccount,
 	})
 
