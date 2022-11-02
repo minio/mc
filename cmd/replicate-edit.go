@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2021 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -31,7 +31,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var replicateUpdateFlags = []cli.Flag{
+var replicateEditFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "id",
 		Usage: "id for the rule, should be a unique value",
@@ -62,33 +62,32 @@ var replicateUpdateFlags = []cli.Flag{
 	},
 }
 
-var replicateUpdateCmd = cli.Command{
-	Name:         "update",
-	Aliases:      []string{"edit"},
+var replicateEditCmd = cli.Command{
+	Name:         "edit",
 	Usage:        "modify an existing server side replication configuration rule",
-	Action:       mainReplicateUpdate,
+	Action:       mainReplicateEdit,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, replicateUpdateFlags...),
+	Flags:        append(globalFlags, replicateEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-   
+
 USAGE:
-  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]
-	   
+  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]	
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg"  --priority 3
- 
+
   2. Disable a replication configuration rule with rule ID "bsibgh8t874dnjst8hkg" on target myminio/bucket
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "bsibgh8t874dnjst8hkg" --state disable
 
   3. Set tags and storage class on a replication configuration with rule ID "kMYD.491" on target myminio/bucket/prefix.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags "key1=value1&key2=value2" \
-								  --storage-class "STANDARD" --priority 2
+				  --storage-class "STANDARD" --priority 2
   4. Clear tags for replication configuration rule with ID "kMYD.491" on a target myminio/bucket.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kMYD.491" --tags ""
 
@@ -103,41 +102,41 @@ EXAMPLES:
 `,
 }
 
-// checkReplicateUpdateSyntax - validate all the passed arguments
-func checkReplicateUpdateSyntax(ctx *cli.Context) {
+// checkReplicateEditSyntax - validate all the passed arguments
+func checkReplicateEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
-type replicateUpdateMessage struct {
+type replicateEditMessage struct {
 	Op     string `json:"op"`
 	Status string `json:"status"`
 	URL    string `json:"url"`
 	ID     string `json:"id"`
 }
 
-func (l replicateUpdateMessage) JSON() string {
+func (l replicateEditMessage) JSON() string {
 	l.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(l, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (l replicateUpdateMessage) String() string {
+func (l replicateEditMessage) String() string {
 	if l.ID != "" {
-		return console.Colorize("replicateUpdateMessage", "Replication configuration rule with ID `"+l.ID+"` applied to "+l.URL+".")
+		return console.Colorize("replicateEditMessage", "Replication configuration rule with ID `"+l.ID+"` applied to "+l.URL+".")
 	}
-	return console.Colorize("replicateUpdateMessage", "Replication configuration rule applied to "+l.URL+" successfully.")
+	return console.Colorize("replicateEditMessage", "Replication configuration rule applied to "+l.URL+" successfully.")
 }
 
-func mainReplicateUpdate(cliCtx *cli.Context) error {
-	ctx, cancelReplicateUpdate := context.WithCancel(globalContext)
-	defer cancelReplicateUpdate()
+func mainReplicateEdit(cliCtx *cli.Context) error {
+	ctx, cancelReplicateEdit := context.WithCancel(globalContext)
+	defer cancelReplicateEdit()
 
-	console.SetColor("replicateUpdateMessage", color.New(color.FgGreen))
+	console.SetColor("replicateEditMessage", color.New(color.FgGreen))
 
-	checkReplicateUpdateSyntax(cliCtx)
+	checkReplicateEditSyntax(cliCtx)
 
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
@@ -172,7 +171,7 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 				dmReplicate = enableStatus
 			case "delete":
 				vDeleteReplicate = enableStatus
-			case "replica-metadata-sync":
+			case "metadata-sync", "replica-metadata-sync":
 				replicasync = enableStatus
 			case "existing-objects":
 				existingReplState = enableStatus
@@ -207,7 +206,7 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 	}
 
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
-	printMsg(replicateUpdateMessage{
+	printMsg(replicateEditMessage{
 		Op:  "set",
 		URL: aliasedURL,
 		ID:  opts.ID,
