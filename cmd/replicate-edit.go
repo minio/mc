@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -31,7 +31,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var replicateEditFlags = []cli.Flag{
+var replicateUpdateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "id",
 		Usage: "id for the rule, should be a unique value",
@@ -62,13 +62,14 @@ var replicateEditFlags = []cli.Flag{
 	},
 }
 
-var replicateEditCmd = cli.Command{
-	Name:         "edit",
+var replicateUpdateCmd = cli.Command{
+	Name:         "update",
+	Aliases:      []string{"edit"},
 	Usage:        "modify an existing server side replication configuration rule",
-	Action:       mainReplicateEdit,
+	Action:       mainReplicateUpdate,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, replicateEditFlags...),
+	Flags:        append(globalFlags, replicateUpdateFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -102,41 +103,41 @@ EXAMPLES:
 `,
 }
 
-// checkReplicateEditSyntax - validate all the passed arguments
-func checkReplicateEditSyntax(ctx *cli.Context) {
+// checkReplicateUpdateSyntax - validate all the passed arguments
+func checkReplicateUpdateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
-type replicateEditMessage struct {
+type replicateUpdateMessage struct {
 	Op     string `json:"op"`
 	Status string `json:"status"`
 	URL    string `json:"url"`
 	ID     string `json:"id"`
 }
 
-func (l replicateEditMessage) JSON() string {
+func (l replicateUpdateMessage) JSON() string {
 	l.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(l, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (l replicateEditMessage) String() string {
+func (l replicateUpdateMessage) String() string {
 	if l.ID != "" {
-		return console.Colorize("replicateEditMessage", "Replication configuration rule with ID `"+l.ID+"` applied to "+l.URL+".")
+		return console.Colorize("replicateUpdateMessage", "Replication configuration rule with ID `"+l.ID+"` applied to "+l.URL+".")
 	}
-	return console.Colorize("replicateEditMessage", "Replication configuration rule applied to "+l.URL+" successfully.")
+	return console.Colorize("replicateUpdateMessage", "Replication configuration rule applied to "+l.URL+" successfully.")
 }
 
-func mainReplicateEdit(cliCtx *cli.Context) error {
-	ctx, cancelReplicateEdit := context.WithCancel(globalContext)
-	defer cancelReplicateEdit()
+func mainReplicateUpdate(cliCtx *cli.Context) error {
+	ctx, cancelReplicateUpdate := context.WithCancel(globalContext)
+	defer cancelReplicateUpdate()
 
-	console.SetColor("replicateEditMessage", color.New(color.FgGreen))
+	console.SetColor("replicateUpdateMessage", color.New(color.FgGreen))
 
-	checkReplicateEditSyntax(cliCtx)
+	checkReplicateUpdateSyntax(cliCtx)
 
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
@@ -206,7 +207,7 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 	}
 
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
-	printMsg(replicateEditMessage{
+	printMsg(replicateUpdateMessage{
 		Op:  "set",
 		URL: aliasedURL,
 		ID:  opts.ID,
