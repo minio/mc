@@ -58,7 +58,7 @@ EXAMPLES:
 
 func mainAdminIDPGet(ctx *cli.Context) error {
 	if len(ctx.Args()) < 2 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, "get", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()

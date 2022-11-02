@@ -61,7 +61,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctInfoSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "info", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 

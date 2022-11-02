@@ -100,7 +100,7 @@ func (i ilmEditMessage) JSON() string {
 // Validate user given arguments
 func checkILMEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "edit", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 	id := ctx.String("id")
 	if id == "" {

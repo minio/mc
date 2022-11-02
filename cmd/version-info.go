@@ -54,7 +54,7 @@ EXAMPLES:
 // checkVersionInfoSyntax - validate all the passed arguments
 func checkVersionInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
