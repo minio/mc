@@ -107,7 +107,7 @@ func mainAdminIDPSet(ctx *cli.Context) error {
 
 	inputCfg := strings.Join(input, " ")
 
-	restart, e := client.SetIDPConfig(globalContext, idpType, cfgName, inputCfg)
+	restart, e := client.AddOrUpdateIDPConfig(globalContext, idpType, cfgName, inputCfg, false)
 	fatalIf(probe.NewError(e), "Unable to set IDP config for '%s' to server", idpType)
 
 	// Print set config result
