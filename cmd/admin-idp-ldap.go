@@ -19,26 +19,29 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminIDPSubcommands = []cli.Command{
-	adminIDPOpenidCmd,
-	adminIDPLdapCmd,
-	adminIDPSetCmd,
-	adminIDPInfoCmd,
-	adminIDPLsCmd,
-	adminIDPRmCmd,
-}
+var (
+	adminIDPLdapSubcommands = []cli.Command{
+		adminIDPLdapAddCmd,
+		adminIDPLdapUpdateCmd,
+		adminIDPLdapRemoveCmd,
+		adminIDPLdapListCmd,
+		adminIDPLdapInfoCmd,
+		adminIDPLdapEnableCmd,
+		adminIDPLdapDisableCmd,
+		// TODO: adminIDPLdapPolicyCmd,
+	}
+	adminIDPLdapCmd = cli.Command{
+		Name:            "ldap",
+		Usage:           "manage Ldap IDP server configuration",
+		Action:          mainAdminIDPLdap,
+		Before:          setGlobalsFromContext,
+		Flags:           globalFlags,
+		Subcommands:     adminIDPLdapSubcommands,
+		HideHelpCommand: true,
+	}
+)
 
-var adminIDPCmd = cli.Command{
-	Name:            "idp",
-	Usage:           "manage MinIO IDentity Provider server configuration",
-	Action:          mainAdminIDP,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	Subcommands:     adminIDPSubcommands,
-	HideHelpCommand: true,
-}
-
-func mainAdminIDP(ctx *cli.Context) error {
-	commandNotFound(ctx, adminIDPSubcommands)
+func mainAdminIDPLdap(ctx *cli.Context) error {
+	commandNotFound(ctx, adminIDPLdapSubcommands)
 	return nil
 }
