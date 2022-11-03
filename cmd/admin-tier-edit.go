@@ -139,7 +139,7 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit remote tier")
 
 	printMsg(&tierMessage{
-		op:       "edit",
+		op:       ctx.Command.Name,
 		Status:   "success",
 		TierName: tierName,
 	})

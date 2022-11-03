@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,49 +18,50 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
-var adminUserEnableCmd = cli.Command{
-	Name:         "enable",
-	Usage:        "enable user",
-	Action:       mainAdminUserEnable,
-	OnUsageError: onUsageError,
+var adminIDPOpenidRemoveCmd = cli.Command{
+	Name:         "remove",
+	Usage:        "remove OpenID IDP server configuration",
+	Action:       mainAdminIDPOpenIDRemove,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
+	OnUsageError: onUsageError,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET USERNAME
+  {{.HelpName}} TARGET [CFG_NAME]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable a disabled user 'foobar' on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio foobar
+  1. Remove the default OpenID IDP configuration (CFG_NAME is omitted).
+     {{.Prompt}} {{.HelpName}} play/
+  2. Remove OpenID IDP configuration named "dex_test".
+     {{.Prompt}} {{.HelpName}} play/ dex_test
 `,
 }
 
-// checkAdminUserEnableSyntax - validate all the passed arguments
-func checkAdminUserEnableSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+func mainAdminIDPOpenIDRemove(ctx *cli.Context) error {
+	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+		showCommandHelpAndExit(ctx, 1)
 	}
+
+	args := ctx.Args()
+
+	var cfgName string
+	if len(args) == 2 {
+		cfgName = args.Get(2)
+	}
+	return adminIDPRemove(ctx, true, cfgName)
 }
 
-// mainAdminUserEnable is the handle for "mc admin user enable" command.
-func mainAdminUserEnable(ctx *cli.Context) error {
-	checkAdminUserEnableSyntax(ctx)
-
-	console.SetColor("UserMessage", color.New(color.FgGreen))
-
-	// Get the alias parameter from cli
+func adminIDPRemove(ctx *cli.Context, isOpenID bool, cfgName string) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
@@ -68,12 +69,17 @@ func mainAdminUserEnable(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	e := client.SetUserStatus(globalContext, args.Get(1), madmin.AccountEnabled)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable user")
+	idpType := madmin.LDAPIDPCfg
+	if isOpenID {
+		idpType = madmin.OpenidIDPCfg
+	}
 
-	printMsg(userMessage{
-		op:        ctx.Command.Name,
-		AccessKey: args.Get(1),
+	restart, e := client.DeleteIDPConfig(globalContext, idpType, cfgName)
+	fatalIf(probe.NewError(e), "Unable to remove %s IDP config '%s'", idpType, cfgName)
+
+	printMsg(configSetMessage{
+		targetAlias: aliasedURL,
+		restart:     restart,
 	})
 
 	return nil

@@ -2192,12 +2192,6 @@ func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientCont
 				}
 				return
 			}
-
-			// Avoid sending an empty directory when we are specifically listing it
-			if strings.HasSuffix(object.Key, string(c.targetURL.Separator)) && o == object.Key {
-				continue
-			}
-
 			contentCh <- c.objectInfo2ClientContent(b, object)
 		}
 	}

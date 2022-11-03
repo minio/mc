@@ -105,7 +105,7 @@ func mainVersionInfo(cliCtx *cli.Context) error {
 	vConfig, e := client.GetVersion(ctx)
 	fatalIf(e, "Unable to get versioning info")
 	vMsg := versioningInfoMessage{
-		Op:     "info",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	}

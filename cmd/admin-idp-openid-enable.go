@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,62 +18,72 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
-var adminUserEnableCmd = cli.Command{
+var adminIDPOpenidEnableCmd = cli.Command{
 	Name:         "enable",
-	Usage:        "enable user",
-	Action:       mainAdminUserEnable,
-	OnUsageError: onUsageError,
+	Usage:        "enable an OpenID IDP server configuration",
+	Action:       mainAdminIDPOpenIDEnable,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
+	OnUsageError: onUsageError,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET USERNAME
+  {{.HelpName}} TARGET [CFG_NAME]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable a disabled user 'foobar' on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio foobar
+  1. Enable the default OpenID IDP configuration (CFG_NAME is omitted).
+     {{.Prompt}} {{.HelpName}} play/
+  2. Enable OpenID IDP configuration named "dex_test".
+     {{.Prompt}} {{.HelpName}} play/ dex_test
 `,
 }
 
-// checkAdminUserEnableSyntax - validate all the passed arguments
-func checkAdminUserEnableSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
+func mainAdminIDPOpenIDEnable(ctx *cli.Context) error {
+	isOpenID, enable := true, true
+	return adminIDPEnableDisable(ctx, isOpenID, enable)
 }
 
-// mainAdminUserEnable is the handle for "mc admin user enable" command.
-func mainAdminUserEnable(ctx *cli.Context) error {
-	checkAdminUserEnableSyntax(ctx)
+func adminIDPEnableDisable(ctx *cli.Context, isOpenID bool, enable bool) error {
+	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+		showCommandHelpAndExit(ctx, 1)
+	}
 
-	console.SetColor("UserMessage", color.New(color.FgGreen))
-
-	// Get the alias parameter from cli
 	args := ctx.Args()
+	cfgName := madmin.Default
+	if len(args) == 2 {
+		cfgName = args.Get(2)
+	}
 	aliasedURL := args.Get(0)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	e := client.SetUserStatus(globalContext, args.Get(1), madmin.AccountEnabled)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable user")
+	idpType := madmin.LDAPIDPCfg
+	if isOpenID {
+		idpType = madmin.OpenidIDPCfg
+	}
 
-	printMsg(userMessage{
-		op:        ctx.Command.Name,
-		AccessKey: args.Get(1),
+	configBody := "enable=on"
+	if !enable {
+		configBody = "enable=off"
+	}
+
+	restart, e := client.AddOrUpdateIDPConfig(globalContext, idpType, cfgName, configBody, true)
+	fatalIf(probe.NewError(e), "Unable to remove %s IDP config '%s'", idpType, cfgName)
+
+	printMsg(configSetMessage{
+		targetAlias: aliasedURL,
+		restart:     restart,
 	})
 
 	return nil
