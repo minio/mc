@@ -76,22 +76,12 @@ func mainAdminUserPolicyAttach(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	userInfo, e := client.GetUserInfo(globalContext, user)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user policy info")
-	existingPolicies := userInfo.PolicyName
-
-	updatedPolicies, e := attachCannedPolicies(existingPolicies, policiesToAttach)
-	if e != nil {
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to attach the policy")
-	}
-
-	e = client.SetPolicy(globalContext, updatedPolicies, user, false)
+	e := client.AttachPoliciesToUser(globalContext, policiesToAttach, user)
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "attach",
 			Policy:      policiesToAttach,
 			UserOrGroup: user,
-			IsGroup:     false,
 		})
 	} else {
 		fatalIf(probe.NewError(e), "Unable to attach the policy")

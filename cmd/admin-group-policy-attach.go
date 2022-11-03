@@ -18,10 +18,6 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -63,34 +59,6 @@ func checkAdminGroupPolicyAttachSyntax(ctx *cli.Context) {
 	}
 }
 
-func attachCannedPolicies(existingPolicies, policiesToAdd string) (string, error) {
-	policiesToAdd = strings.TrimSpace(policiesToAdd)
-	if policiesToAdd == "" {
-		return "", errors.New("empty policy name is unsupported")
-	}
-	var updatedPolicies []string
-	if existingPolicies != "" {
-		updatedPolicies = strings.Split(existingPolicies, ",")
-	}
-
-	for _, p1 := range strings.Split(policiesToAdd, ",") {
-		found := false
-		p1 = strings.TrimSpace(p1)
-		for _, p2 := range updatedPolicies {
-			if p1 == p2 {
-				found = true
-				break
-			}
-		}
-		if found {
-			return "", fmt.Errorf("policy `%s` already exists", p1)
-		}
-		updatedPolicies = append(updatedPolicies, p1)
-	}
-
-	return strings.Join(updatedPolicies, ","), nil
-}
-
 // mainAdminGroupPolicyAttach is the handler for "mc admin group policy attach" command.
 func mainAdminGroupPolicyAttach(ctx *cli.Context) error {
 	checkAdminGroupPolicyAttachSyntax(ctx)
@@ -108,16 +76,7 @@ func mainAdminGroupPolicyAttach(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	groupInfo, e := client.GetGroupDescription(globalContext, group)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get group policy info")
-	existingPolicies := groupInfo.Policy
-
-	updatedPolicies, e := attachCannedPolicies(existingPolicies, policiesToAttach)
-	if e != nil {
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to attach the policy")
-	}
-
-	e = client.SetPolicy(globalContext, updatedPolicies, group, true)
+	e := client.AttachPoliciesToGroup(globalContext, policiesToAttach, group)
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "attach",

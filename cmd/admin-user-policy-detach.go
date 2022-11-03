@@ -72,16 +72,7 @@ func mainAdminUserPolicyDetach(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	userInfo, e := client.GetUserInfo(globalContext, user)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user policy info")
-	existingPolicies := userInfo.PolicyName
-
-	newPolicies, e := detachCannedPolicies(existingPolicies, policiesToDetach)
-	if e != nil {
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to detach the policy")
-	}
-
-	e = client.SetPolicy(globalContext, newPolicies, user, false)
+	e := client.DetachPoliciesFromUser(globalContext, policiesToDetach, user)
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "detach",

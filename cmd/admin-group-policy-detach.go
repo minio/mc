@@ -18,10 +18,6 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -60,29 +56,6 @@ func checkAdminGroupPolicyDetachSyntax(ctx *cli.Context) {
 	}
 }
 
-func detachCannedPolicies(existingPolicies, policiesToRemove string) (string, error) {
-	policiesToRemove = strings.TrimSpace(policiesToRemove)
-	if policiesToRemove == "" {
-		return "", errors.New("empty policy name is not supported")
-	}
-	filteredPolicies := strings.Split(existingPolicies, ",")
-	for _, p1 := range strings.Split(policiesToRemove, ",") {
-		found := false
-		for i, p2 := range filteredPolicies {
-			if p1 == p2 {
-				found = true
-				filteredPolicies = append(filteredPolicies[:i], filteredPolicies[i+1:]...)
-				break
-			}
-		}
-		if !found {
-			return "", fmt.Errorf("policy `%s` not found", p1)
-		}
-
-	}
-	return strings.Join(filteredPolicies, ","), nil
-}
-
 // mainAdminUserPolicyDetach is the handler for "mc admin group policy detach" command.
 func mainAdminGroupPolicyDetach(ctx *cli.Context) error {
 	checkAdminGroupPolicyDetachSyntax(ctx)
@@ -100,18 +73,7 @@ func mainAdminGroupPolicyDetach(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var existingPolicies string
-
-	groupInfo, e := client.GetGroupDescription(globalContext, group)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get group policy info")
-	existingPolicies = groupInfo.Policy
-
-	newPolicies, e := detachCannedPolicies(existingPolicies, policiesToDetach)
-	if e != nil {
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to detach the policy")
-	}
-
-	e = client.SetPolicy(globalContext, newPolicies, group, true)
+	e := client.DetachPoliciesFromGroup(globalContext, policiesToDetach, group)
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "detach",

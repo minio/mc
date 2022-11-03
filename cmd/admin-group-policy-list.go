@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -70,11 +68,8 @@ func mainAdminGroupPolicyList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	groupInfo, e := client.GetGroupDescription(globalContext, group)
+	policies, e := client.GetGroupPolicies(globalContext, group)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get group policy info")
-	policiesStr := groupInfo.Policy
-
-	policies := strings.Split(policiesStr, ",")
 
 	for _, k := range policies {
 		printMsg(userPolicyMessage{
