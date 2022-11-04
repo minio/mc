@@ -19,46 +19,42 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
 )
 
-var adminIDPRmCmd = cli.Command{
-	Name:         "rm",
-	Usage:        "Remove an IDP configuration",
+var adminIDPLdapInfoCmd = cli.Command{
+	Name:         "info",
+	Usage:        "get LDAP IDP server configuration info",
+	Action:       mainAdminIDPLDAPInfo,
 	Before:       setGlobalsFromContext,
-	Action:       mainAdminIDPRemove,
-	Hidden:       true,
-	OnUsageError: onUsageError,
 	Flags:        globalFlags,
+	OnUsageError: onUsageError,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET IDP_TYPE CFG_NAME
-
-  **DEPRECATED**: This command will be removed in a future version. Please use
-  "mc admin idp ldap|openid" instead.
+  {{.HelpName}} TARGET [CFG_NAME]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove an OpenID configuration from the server.
-     {{.Prompt}} {{.HelpName}} play/ openid myidp
-  2. Remove default LDAP configuration from the server.
-     {{.Prompt}} {{.HelpName}} play/ ldap _
+  1. Get configuration info on the default LDAP IDP configuration (CFG_NAME is omitted).
+     {{.Prompt}} {{.HelpName}} play/
+  2. Get configuration info on LDAP IDP configuration named "dex_test".
+     {{.Prompt}} {{.HelpName}} play/ dex_test
 `,
 }
 
-func mainAdminIDPRemove(ctx *cli.Context) error {
-	if len(ctx.Args()) != 3 {
+func mainAdminIDPLDAPInfo(ctx *cli.Context) error {
+	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
-	idpType := args.Get(1)
-	validateIDType(idpType)
+	var cfgName string
+	if len(args) == 2 {
+		cfgName = args.Get(1)
+	}
 
-	cfgName := args.Get(2)
-	return adminIDPRemove(ctx, idpType == madmin.OpenidIDPCfg, cfgName)
+	return adminIDPInfo(ctx, false, cfgName)
 }
