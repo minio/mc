@@ -75,7 +75,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctAddSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "add", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -183,7 +183,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
 
 	printMsg(svcAcctMessage{
-		op:            "add",
+		op:            ctx.Command.Name,
 		AccessKey:     creds.AccessKey,
 		SecretKey:     creds.SecretKey,
 		AccountStatus: "enabled",

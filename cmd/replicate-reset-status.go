@@ -65,7 +65,7 @@ EXAMPLES:
 // checkreplicateResyncStatusSyntax - validate all the passed arguments
 func checkreplicateResyncStatusSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "status", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -152,7 +152,7 @@ func mainreplicateResyncStatus(cliCtx *cli.Context) error {
 	rinfo, err := client.ReplicationResyncStatus(ctx, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to get replication resync status")
 	printMsg(replicateResyncStatusMessage{
-		Op:                "status",
+		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ResyncTargetsInfo: rinfo,
 		TargetArn:         cliCtx.String("remote-bucket"),

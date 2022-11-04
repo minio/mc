@@ -53,7 +53,7 @@ EXAMPLES:
 // checkAdminGroupRemoveSyntax - validate all the passed arguments
 func checkAdminGroupRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
-		showCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -85,7 +85,7 @@ func mainAdminGroupRemove(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Could not perform remove operation")
 
 	printMsg(groupMessage{
-		op:        "remove",
+		op:        ctx.Command.Name,
 		GroupName: args.Get(1),
 		Members:   members,
 	})

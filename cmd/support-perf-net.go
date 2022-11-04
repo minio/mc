@@ -64,17 +64,17 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 	if globalJSON {
 		select {
 		case e := <-errorCh:
-			printMsg(PerfTestResult{
+			printMsg(convertPerfResult(PerfTestResult{
 				Type:  NetPerfTest,
 				Err:   e.Error(),
 				Final: true,
-			})
+			}))
 		case result := <-resultCh:
-			printMsg(PerfTestResult{
+			printMsg(convertPerfResult(PerfTestResult{
 				Type:      NetPerfTest,
 				NetResult: &result,
 				Final:     true,
-			})
+			}))
 		}
 		return nil
 	}

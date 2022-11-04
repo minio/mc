@@ -105,7 +105,7 @@ func (li licRegisterMessage) JSON() string {
 // checkLicenseRegisterSyntax - validate arguments passed by a user
 func checkLicenseRegisterSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, "register", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -156,7 +156,7 @@ func mainLicenseRegister(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, accAPIKey := initSubnetConnectivity(ctx, aliasedURL)
+	alias, accAPIKey := initSubnetConnectivity(ctx, aliasedURL, true)
 
 	clusterName := ctx.String("name")
 	if len(clusterName) == 0 {

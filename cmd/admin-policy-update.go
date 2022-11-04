@@ -58,7 +58,7 @@ EXAMPLES:
 
 func checkAdminPolicyUpdateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -130,7 +130,7 @@ func mainAdminPolicyUpdate(ctx *cli.Context) error {
 	e = client.SetPolicy(globalContext, updatedPolicies, userOrGroup, isGroup)
 	if e == nil {
 		printMsg(userPolicyMessage{
-			op:          "update",
+			op:          ctx.Command.Name,
 			Policy:      policiesToAdd,
 			UserOrGroup: userOrGroup,
 			IsGroup:     isGroup,

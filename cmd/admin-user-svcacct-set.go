@@ -62,7 +62,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctSetSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctSetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "edit", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -98,7 +98,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        "set",
+		op:        ctx.Command.Name,
 		AccessKey: svcAccount,
 	})
 

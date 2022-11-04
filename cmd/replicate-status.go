@@ -56,7 +56,7 @@ EXAMPLES:
 // checkReplicateStatusSyntax - validate all the passed arguments
 func checkReplicateStatusSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "status", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -199,7 +199,7 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	fatalIf(err.Trace(args...), "Unable to get replication status")
 
 	printMsg(replicateStatusMessage{
-		Op:                "status",
+		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ReplicationStatus: replicateStatus,
 	})

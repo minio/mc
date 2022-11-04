@@ -124,7 +124,7 @@ var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, colo
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "trace", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -307,9 +307,10 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.Decommission = true
 		case "batch-replication":
 			opts.BatchReplication = true
+		case "rebalance":
+			opts.Rebalance = true
 		}
 	}
-
 	return
 }
 

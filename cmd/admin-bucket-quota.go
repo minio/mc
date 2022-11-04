@@ -108,7 +108,7 @@ EXAMPLES:
 // checkAdminBucketQuotaSyntax - validate all the passed arguments
 func checkAdminBucketQuotaSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -140,7 +140,7 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 		})).Trace(args...), "Unable to set bucket quota")
 
 		printMsg(quotaMessage{
-			op:        "set",
+			op:        ctx.Command.Name,
 			Bucket:    targetURL,
 			Quota:     quota,
 			QuotaType: string(qType),
@@ -151,7 +151,7 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 			fatalIf(probe.NewError(e).Trace(args...), "Unable to clear bucket quota config")
 		}
 		printMsg(quotaMessage{
-			op:     "unset",
+			op:     ctx.Command.Name,
 			Bucket: targetURL,
 			Status: "success",
 		})
@@ -160,7 +160,7 @@ func mainAdminBucketQuota(ctx *cli.Context) error {
 		qCfg, e := client.GetBucketQuota(globalContext, targetURL)
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to get bucket quota")
 		printMsg(quotaMessage{
-			op:        "get",
+			op:        ctx.Command.Name,
 			Bucket:    targetURL,
 			Quota:     qCfg.Quota,
 			QuotaType: string(qCfg.Type),

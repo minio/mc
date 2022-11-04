@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -325,6 +325,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/decommission/status": aliasCompleter,
 	"/admin/decommission/cancel": aliasCompleter,
 
+	"/admin/rebalance/start":  aliasCompleter,
+	"/admin/rebalance/status": aliasCompleter,
+	"/admin/rebalance/stop":   aliasCompleter,
+
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
 	"/admin/console":   aliasCompleter,
@@ -351,6 +355,22 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/idp/info": aliasCompleter,
 	"/admin/idp/ls":   aliasCompleter,
 	"/admin/idp/rm":   aliasCompleter,
+
+	"/admin/idp/openid/add":     aliasCompleter,
+	"/admin/idp/openid/update":  aliasCompleter,
+	"/admin/idp/openid/remove":  aliasCompleter,
+	"/admin/idp/openid/list":    aliasCompleter,
+	"/admin/idp/openid/info":    aliasCompleter,
+	"/admin/idp/openid/enable":  aliasCompleter,
+	"/admin/idp/openid/disable": aliasCompleter,
+
+	"/admin/idp/ldap/add":     aliasCompleter,
+	"/admin/idp/ldap/update":  aliasCompleter,
+	"/admin/idp/ldap/remove":  aliasCompleter,
+	"/admin/idp/ldap/list":    aliasCompleter,
+	"/admin/idp/ldap/info":    aliasCompleter,
+	"/admin/idp/ldap/enable":  aliasCompleter,
+	"/admin/idp/ldap/disable": aliasCompleter,
 
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,

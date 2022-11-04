@@ -57,7 +57,7 @@ EXAMPLES:
 // checkEncryptSetSyntax - validate all the passed arguments
 func checkEncryptSetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -109,7 +109,7 @@ func mainEncryptSet(cliCtx *cli.Context) error {
 	}
 	fatalIf(client.SetEncryption(ctx, algorithm, keyID), "Unable to enable auto encryption")
 	msg := encryptSetMessage{
-		Op:     "set",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	}

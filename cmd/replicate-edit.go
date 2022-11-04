@@ -73,7 +73,7 @@ var replicateEditCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]	
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -105,7 +105,7 @@ EXAMPLES:
 // checkReplicateEditSyntax - validate all the passed arguments
 func checkReplicateEditSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "edit", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -207,7 +207,7 @@ func mainReplicateEdit(cliCtx *cli.Context) error {
 
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
 	printMsg(replicateEditMessage{
-		Op:  "set",
+		Op:  cliCtx.Command.Name,
 		URL: aliasedURL,
 		ID:  opts.ID,
 	})

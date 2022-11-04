@@ -68,7 +68,7 @@ FILE:
 
 EXAMPLES:
   1. Set bucket to "download" on Amazon S3 cloud storage.
-     {{.Prompt}} {{.HelpName}} set download s3/burningman2011
+     {{.Prompt}} {{.HelpName}} set download s3/mybucket
 
   2. Set bucket to "public" on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} set public s3/shared
@@ -178,11 +178,11 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 	argsLength := len(ctx.Args())
 	// Always print a help message when we have extra arguments
 	if argsLength > 3 {
-		showCommandHelpAndExit(ctx, "anonymous", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code.
 	}
 	// Always print a help message when no arguments specified
 	if argsLength < 1 {
-		showCommandHelpAndExit(ctx, "anonymous", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	firstArg := ctx.Args().Get(0)
@@ -193,7 +193,7 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 	case "set":
 		// Always expect three arguments when setting a anonymous permission.
 		if argsLength != 3 {
-			showCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, 1)
 		}
 		if accessPerms(secondArg) != accessNone &&
 			accessPerms(secondArg) != accessDownload &&
@@ -207,25 +207,25 @@ func checkAnonymousSyntax(ctx *cli.Context) {
 	case "set-json":
 		// Always expect three arguments when setting a anonymous permission.
 		if argsLength != 3 {
-			showCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, 1)
 		}
 	case "get", "get-json":
 		// get or get-json always expects two arguments
 		if argsLength != 2 {
-			showCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, 1)
 		}
 	case "list":
 		// Always expect an argument after list cmd
 		if argsLength != 2 {
-			showCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, 1)
 		}
 	case "links":
 		// Always expect an argument after links cmd
 		if argsLength != 2 {
-			showCommandHelpAndExit(ctx, "anonymous", 1)
+			showCommandHelpAndExit(ctx, 1)
 		}
 	default:
-		showCommandHelpAndExit(ctx, "anonymous", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -493,7 +493,7 @@ func mainAnonymous(ctx *cli.Context) error {
 		runAnonymousLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
 	default:
 		// Shows command example and exit
-		showCommandHelpAndExit(ctx, "anonymous", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 	return nil
 }

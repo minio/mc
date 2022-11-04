@@ -62,7 +62,7 @@ var errBadUserGroupArg = errors.New("Last argument must be of the form user=xx o
 
 func checkAdminPolicySetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -107,7 +107,7 @@ func mainAdminPolicySet(ctx *cli.Context) error {
 	e := client.SetPolicy(globalContext, policyName, userOrGroup, isGroup)
 	if e == nil {
 		printMsg(userPolicyMessage{
-			op:          "set",
+			op:          ctx.Command.Name,
 			Policy:      policyName,
 			UserOrGroup: userOrGroup,
 			IsGroup:     isGroup,
