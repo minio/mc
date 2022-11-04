@@ -108,49 +108,86 @@ EXAMPLES:
 
 // PerfTestOutput - stores the final output of performance test(s)
 type PerfTestOutput struct {
-	ObjectResult *ObjTestResult        `json:"object,omitempty"`
-	NetResult    *madmin.NetperfResult `json:"network,omitempty"`
-	DriveResult  []DriveTestResult     `json:"drive,omitempty"`
-	Error        string                `json:"error,omitempty"`
+	ObjectResults *ObjTestResults   `json:"object,omitempty"`
+	NetResults    *NetTestResults   `json:"network,omitempty"`
+	DriveResults  *DriveTestResults `json:"drive,omitempty"`
+	Error         string            `json:"error,omitempty"`
 }
 
-// DriveTestResult - result of the drive performance test
+// DriveTestResult - result of the drive performance test on a given endpoint
 type DriveTestResult struct {
-	Endpoint  string             `json:"endpoint"`
-	DrivePerf []madmin.DrivePerf `json:"drivePerf,omitempty"`
-	Error     string             `json:"error,omitempty"`
+	Endpoint string             `json:"endpoint"`
+	Perf     []madmin.DrivePerf `json:"perf,omitempty"`
+	Error    string             `json:"error,omitempty"`
 }
 
-// ObjTestResult - result of the object performance test
-type ObjTestResult struct {
-	Servers    int         `json:"servers"`
-	Drives     int         `json:"drives"`
-	Size       int         `json:"size"`
-	Concurrent int         `json:"concurrent"`
-	PUTStats   ObjPUTStats `json:"PUTStats"`
-	GETStats   ObjGETStats `json:"GETStats"`
+// DriveTestResults - results of drive performance test across all endpoints
+type DriveTestResults struct {
+	Results []DriveTestResult `json:"servers"`
+}
+
+// ObjTestResults - result of the object performance test
+type ObjTestResults struct {
+	ObjectSize int               `json:"objectSize"`
+	Threads    int               `json:"threads"`
+	PUTResults ObjPUTPerfResults `json:"PUT"`
+	GETResults ObjGETPerfResults `json:"GET"`
+}
+
+// ObjStats - Object performance stats
+type ObjStats struct {
+	Throughput    uint64 `json:"throughput"`
+	ObjectsPerSec uint64 `json:"objectsPerSec"`
 }
 
 // ObjStatServer - Server level object performance stats
 type ObjStatServer struct {
-	Endpoint      string `json:"endpoint"`
-	Throughput    uint64 `json:"throughput"`
-	ObjectsPerSec uint64 `json:"objectsPerSec"`
-	Error         string `json:"error,omitempty"`
+	Endpoint string   `json:"endpoint"`
+	Perf     ObjStats `json:"perf"`
+	Error    string   `json:"error,omitempty"`
+}
+
+// ObjPUTPerfResults - Object PUT performance results
+type ObjPUTPerfResults struct {
+	Perf    ObjPUTStats     `json:"perf"`
+	Servers []ObjStatServer `json:"servers"`
 }
 
 // ObjPUTStats - PUT stats of all the servers
 type ObjPUTStats struct {
-	Throughput    uint64          `json:"throughput"`
-	ObjectsPerSec uint64          `json:"objectsPerSec"`
-	Response      madmin.Timings  `json:"responseTime"`
-	Servers       []ObjStatServer `json:"servers"`
+	Throughput    uint64         `json:"throughput"`
+	ObjectsPerSec uint64         `json:"objectsPerSec"`
+	Response      madmin.Timings `json:"responseTime"`
+}
+
+// ObjGETPerfResults - Object GET performance results
+type ObjGETPerfResults struct {
+	Perf    ObjGETStats     `json:"perf"`
+	Servers []ObjStatServer `json:"servers"`
 }
 
 // ObjGETStats - GET stats of all the servers
 type ObjGETStats struct {
 	ObjPUTStats
 	TTFB madmin.Timings `json:"ttfb,omitempty"`
+}
+
+// NetStats - Network performance stats
+type NetStats struct {
+	TX uint64 `json:"tx"`
+	RX uint64 `json:"rx"`
+}
+
+// NetTestResult - result of the network performance test for given endpoint
+type NetTestResult struct {
+	Endpoint string   `json:"endpoint"`
+	Perf     NetStats `json:"perf"`
+	Error    string   `json:"error,omitempty"`
+}
+
+// NetTestResults - result of the network performance test across all endpoints
+type NetTestResults struct {
+	Results []NetTestResult `json:"servers"`
 }
 
 func objectTestVerboseResult(result *madmin.SpeedTestResult) (msg string) {
@@ -226,28 +263,57 @@ func mainSupportPerf(ctx *cli.Context) error {
 
 func convertDriveTestResult(dr madmin.DriveSpeedTestResult) DriveTestResult {
 	return DriveTestResult{
-		Endpoint:  dr.Endpoint,
-		DrivePerf: dr.DrivePerf,
-		Error:     dr.Error,
+		Endpoint: dr.Endpoint,
+		Perf:     dr.DrivePerf,
+		Error:    dr.Error,
 	}
 }
 
-func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) []DriveTestResult {
+func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) *DriveTestResults {
+	if driveResults == nil {
+		return nil
+	}
 	results := []DriveTestResult{}
 	for _, dr := range driveResults {
 		results = append(results, convertDriveTestResult(dr))
 	}
-	return results
+	r := DriveTestResults{
+		Results: results,
+	}
+	return &r
+}
+
+func convertNetTestResults(netResults *madmin.NetperfResult) *NetTestResults {
+	if netResults == nil {
+		return nil
+	}
+	results := []NetTestResult{}
+	for _, nr := range netResults.NodeResults {
+		results = append(results, NetTestResult{
+			Endpoint: nr.Endpoint,
+			Error:    nr.Error,
+			Perf: NetStats{
+				TX: nr.TX,
+				RX: nr.RX,
+			},
+		})
+	}
+	r := NetTestResults{
+		Results: results,
+	}
+	return &r
 }
 
 func convertObjStatServers(ss []madmin.SpeedTestStatServer) []ObjStatServer {
 	out := []ObjStatServer{}
 	for _, s := range ss {
 		out = append(out, ObjStatServer{
-			Endpoint:      s.Endpoint,
-			Throughput:    s.ThroughputPerSec,
-			ObjectsPerSec: s.ObjectsPerSec,
-			Error:         s.Err,
+			Endpoint: s.Endpoint,
+			Perf: ObjStats{
+				Throughput:    s.ThroughputPerSec,
+				ObjectsPerSec: s.ObjectsPerSec,
+			},
+			Error: s.Err,
 		})
 	}
 	return out
@@ -258,41 +324,47 @@ func convertPUTStats(stats madmin.SpeedTestStats) ObjPUTStats {
 		Throughput:    stats.ThroughputPerSec,
 		ObjectsPerSec: stats.ObjectsPerSec,
 		Response:      stats.Response,
-		Servers:       convertObjStatServers(stats.Servers),
 	}
 }
 
-func convertGETStats(stats madmin.SpeedTestStats) ObjGETStats {
-	return ObjGETStats{
-		ObjPUTStats: convertPUTStats(stats),
-		TTFB:        stats.TTFB,
+func convertPUTResults(stats madmin.SpeedTestStats) ObjPUTPerfResults {
+	return ObjPUTPerfResults{
+		Perf:    convertPUTStats(stats),
+		Servers: convertObjStatServers(stats.Servers),
 	}
 }
 
-func convertObjTestResult(objResult *madmin.SpeedTestResult) ObjTestResult {
+func convertGETResults(stats madmin.SpeedTestStats) ObjGETPerfResults {
+	return ObjGETPerfResults{
+		Perf: ObjGETStats{
+			ObjPUTStats: convertPUTStats(stats),
+			TTFB:        stats.TTFB,
+		},
+		Servers: convertObjStatServers(stats.Servers),
+	}
+}
+
+func convertObjTestResults(objResult *madmin.SpeedTestResult) *ObjTestResults {
 	if objResult == nil {
-		return ObjTestResult{}
+		return nil
 	}
-	result := ObjTestResult{
-		Servers:    objResult.Servers,
-		Drives:     objResult.Disks,
-		Size:       objResult.Size,
-		Concurrent: objResult.Concurrent,
+	result := ObjTestResults{
+		ObjectSize: objResult.Size,
+		Threads:    objResult.Concurrent,
 	}
-	result.PUTStats = convertPUTStats(objResult.PUTStats)
-	result.GETStats = convertGETStats(objResult.GETStats)
-	return result
+	result.PUTResults = convertPUTResults(objResult.PUTStats)
+	result.GETResults = convertGETResults(objResult.GETStats)
+	return &result
 }
 
 func updatePerfOutput(r PerfTestResult, out *PerfTestOutput) {
 	switch r.Type {
 	case DrivePerfTest:
-		out.DriveResult = convertDriveTestResults(r.DriveResult)
+		out.DriveResults = convertDriveTestResults(r.DriveResult)
 	case ObjectPerfTest:
-		or := convertObjTestResult(r.ObjectResult)
-		out.ObjectResult = &or
+		out.ObjectResults = convertObjTestResults(r.ObjectResult)
 	case NetPerfTest:
-		out.NetResult = r.NetResult
+		out.NetResults = convertNetTestResults(r.NetResult)
 	default:
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid test type %d", r.Type))
 	}
