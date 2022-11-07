@@ -19,9 +19,18 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/fatih/color"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
@@ -87,30 +96,10 @@ func (r replicateDiffMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-const (
-	repAttemptFieldMaxLen = 23
-	mtimeFieldMaxLen      = 23
-	statusFieldMaxLen     = 9
-	vIDFieldMaxLen        = 36
-	opFieldMaxLen         = 3
-	objectFieldMaxLen     = -1
-)
-
-func printReplicateDiffHeader() {
-	if globalJSON {
+func (r replicateDiffMessage) toRow() (row table.Row) {
+	if r.Object == "" {
 		return
 	}
-	console.Println(console.Colorize("Headers", newPrettyTable(" | ",
-		Field{"LastReplicated", repAttemptFieldMaxLen},
-		Field{"Created", mtimeFieldMaxLen},
-		Field{"Status", statusFieldMaxLen},
-		Field{"VID", vIDFieldMaxLen},
-		Field{"Op", opFieldMaxLen},
-		Field{"Object", objectFieldMaxLen},
-	).buildRow("Attempted At", "Created", "Status", "VersionID", "Op", "Object")))
-}
-
-func (r replicateDiffMessage) String() string {
 	op := ""
 	if r.VersionID != "" {
 		switch r.IsDeleteMarker {
@@ -128,31 +117,12 @@ func (r replicateDiffMessage) String() string {
 	case op == "DEL":
 		replTimeStamp = ""
 	}
-
-	return console.Colorize("diffMsg", newPrettyTable(" | ",
-		Field{"Time", repAttemptFieldMaxLen},
-		Field{"MTime", mtimeFieldMaxLen},
-		Field{statusTheme(st), statusFieldMaxLen},
-		Field{"VersionID", vIDFieldMaxLen},
-		Field{op, opFieldMaxLen},
-		Field{"Obj", objectFieldMaxLen},
-	).buildRow(replTimeStamp, r.LastModified.Format(printDate), st, r.VersionID, op, r.Object))
-}
-
-func statusTheme(st string) string {
-	switch st {
-	case "PENDING":
-		return "PStatus"
-	case "FAILED":
-		return "FStatus"
-	case "COMPLETED", "COMPLETE":
-		return "CStatus"
-	default:
-		return "Status"
+	return table.Row{
+		replTimeStamp, r.LastModified.Format(printDate), st, r.VersionID, op, r.Object,
 	}
 }
 
-func (r replicateDiffMessage) replStatus() string {
+func (r *replicateDiffMessage) replStatus() string {
 	var st string
 	if r.arn == "" { // report overall replication status
 		if r.DeleteReplicationStatus != "" {
@@ -178,23 +148,236 @@ func (r replicateDiffMessage) replStatus() string {
 	return st
 }
 
+const rowLimit = 10000
+
+type replicateDiffUI struct {
+	spinner  spinner.Model
+	sub      <-chan madmin.DiffInfo
+	arn      string
+	quitting bool
+	table    table.Model
+	rows     []table.Row
+	help     help.Model
+	keymap   keyMap
+	count    int
+}
+type keyMap struct {
+	quit  key.Binding
+	up    key.Binding
+	down  key.Binding
+	enter key.Binding
+}
+
+func newKeyMap() keyMap {
+	return keyMap{
+		up: key.NewBinding(
+			key.WithKeys("k", "up", "left", "shift+tab"),
+			key.WithHelp("↑/k", "Move up"),
+		),
+		down: key.NewBinding(
+			key.WithKeys("j", "down", "right", "tab"),
+			key.WithHelp("↓/j", "Move down"),
+		),
+		enter: key.NewBinding(
+			key.WithKeys("enter", " "),
+			key.WithHelp("enter/spacebar", ""),
+		),
+		quit: key.NewBinding(
+			key.WithKeys("ctrl+c", "q"),
+			key.WithHelp("q", "quit"),
+		),
+	}
+}
+
+func initReplicateDiffUI(arn string, diffCh <-chan madmin.DiffInfo) *replicateDiffUI {
+	s := spinner.New()
+	s.Spinner = spinner.Points
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	columns := getDiffHeader()
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithFocused(true),
+		table.WithHeight(7),
+	)
+
+	ts := getDiffStyles()
+	t.SetStyles(ts)
+
+	return &replicateDiffUI{
+		spinner: s,
+		sub:     diffCh,
+		arn:     arn,
+		table:   t,
+		help:    help.NewModel(),
+		keymap:  newKeyMap(),
+	}
+}
+
+func (m *replicateDiffUI) Init() tea.Cmd {
+	return tea.Batch(
+		m.spinner.Tick,
+		waitForActivity(m.sub), // wait for activity
+	)
+}
+
+// A command that waits for the activity on a channel.
+func waitForActivity(sub <-chan madmin.DiffInfo) tea.Cmd {
+	return func() tea.Msg {
+		msg := <-sub
+		return msg
+	}
+}
+
+func getDiffHeader() []table.Column {
+	return []table.Column{
+		{Title: "Attempted At", Width: 23},
+		{Title: "Created", Width: 23},
+		{Title: "Status", Width: 9},
+		{Title: "VersionID", Width: 36},
+		{Title: "Op", Width: 3},
+		{Title: "Object", Width: 60},
+	}
+}
+
+func getDiffStyles() table.Styles {
+	ts := table.DefaultStyles()
+	ts.Header = ts.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	ts.Selected = ts.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("300")).
+		Bold(false)
+	return ts
+}
+
+func (m *replicateDiffUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			if m.table.Focused() {
+				m.table.Blur()
+			} else {
+				m.table.Focus()
+			}
+		case "ctrl+c", "q":
+			m.quitting = true
+			return m, tea.Quit
+		case "enter":
+			columns := getDiffHeader()
+			ts := getDiffStyles()
+			m.table = table.New(
+				table.WithColumns(columns),
+				table.WithRows(m.rows),
+				table.WithFocused(true),
+				table.WithHeight(10),
+			)
+			m.table.SetStyles(ts)
+		default:
+		}
+	case madmin.DiffInfo:
+		if msg.Object != "" {
+			m.count++
+			if m.count <= rowLimit { // don't buffer more than 10k entries
+				rdif := replicateDiffMessage{
+					DiffInfo: msg,
+					arn:      m.arn,
+				}
+				m.rows = append(m.rows, rdif.toRow())
+			}
+			return m, waitForActivity(m.sub)
+		}
+		m.quitting = true
+		columns := getDiffHeader()
+		ts := getDiffStyles()
+		m.table = table.New(
+			table.WithColumns(columns),
+			table.WithRows(m.rows),
+			table.WithFocused(true),
+			table.WithHeight(10),
+		)
+		m.table.SetStyles(ts)
+		return m, nil
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		if !m.quitting {
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
+	}
+
+	m.table, cmd = m.table.Update(msg)
+
+	return m, cmd
+}
+
+var baseStyle = lipgloss.NewStyle().
+	BorderStyle(lipgloss.NormalBorder()).
+	BorderForeground(lipgloss.Color("240"))
+
+var descStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+	Light: "#B2B2B2",
+	Dark:  "#4A4A4A",
+})
+
+var (
+	subtle  = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
+	special = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
+
+	divider = lipgloss.NewStyle().
+		SetString("•").
+		Padding(0, 1).
+		Foreground(subtle).
+		String()
+
+	advisory  = lipgloss.NewStyle().Foreground(special).Render
+	infoStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderTop(true).
+			BorderForeground(subtle)
+)
+
+func (m *replicateDiffUI) helpView() string {
+	return "\n" + m.help.ShortHelpView([]key.Binding{
+		m.keymap.enter,
+		m.keymap.down,
+		m.keymap.up,
+		m.keymap.quit,
+	})
+}
+
+func (m *replicateDiffUI) View() string {
+	var sb strings.Builder
+	if !m.quitting {
+		sb.WriteString(fmt.Sprintf("%s\n", m.spinner.View()))
+	}
+
+	if m.count > 0 {
+		advisoryStr := ""
+		if m.count > rowLimit {
+			advisoryStr = "[ use --json flag for full listing]"
+		}
+		desc := lipgloss.JoinVertical(lipgloss.Left,
+			descStyle.Render("Unreplicated versions summary"),
+			infoStyle.Render(fmt.Sprintf("Total Unreplicated: %d", m.count)+divider+advisory(advisoryStr+"\n")))
+		row := lipgloss.JoinHorizontal(lipgloss.Top, desc)
+		sb.WriteString(row + "\n\n")
+		sb.WriteString(baseStyle.Render(m.table.View()))
+	}
+	sb.WriteString(m.helpView())
+
+	return sb.String()
+}
+
 func mainReplicateDiff(cliCtx *cli.Context) error {
-	ctx, cancelReplicateDiff := context.WithCancel(globalContext)
-	defer cancelReplicateDiff()
-
-	console.SetColor("Obj", color.New(color.Bold))
-	console.SetColor("DEL", color.New(color.FgRed))
-	console.SetColor("PUT", color.New(color.FgGreen))
-	console.SetColor("VersionID", color.New(color.FgHiBlue))
-	console.SetColor("Time", color.New(color.FgYellow))
-	console.SetColor("MTime", color.New(color.FgWhite))
-	console.SetColor("PStatus", color.New(color.Bold, color.FgHiYellow))
-	console.SetColor("FStatus", color.New(color.Bold, color.FgHiRed))
-	console.SetColor("CStatus", color.New(color.Bold, color.FgHiGreen))
-	console.SetColor("Headers", color.New(color.Bold, color.FgHiGreen))
-
 	checkReplicateDiffSyntax(cliCtx)
-
+	console.SetColor("diff-msg", color.New(color.FgHiCyan, color.Bold))
 	// Get the alias parameter from cli
 	args := cliCtx.Args()
 	aliasedURL := args.Get(0)
@@ -204,36 +387,36 @@ func mainReplicateDiff(cliCtx *cli.Context) error {
 	if bucket == "" {
 		fatalIf(errInvalidArgument(), "bucket not specified in `"+aliasedURL+"`.")
 	}
+	ctx, cancel := context.WithCancel(globalContext)
+	defer cancel()
 
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 	verbose := cliCtx.Bool("verbose")
 	arn := cliCtx.String("arn")
-	showHdr := true
-	// Start listening to replication diff.
 	diffCh := client.BucketReplicationDiff(ctx, bucket, madmin.ReplDiffOpts{
 		Verbose: verbose,
 		ARN:     arn,
 		Prefix:  prefix,
 	})
-	for oi := range diffCh {
-		if oi.Err != nil {
-			fatalIf(probe.NewError(oi.Err), "Unable to fetch replicate diff")
+	if globalJSON {
+		for di := range diffCh {
+			console.Println(replicateDiffMessage{
+				Op:       "diff",
+				DiffInfo: di,
+				arn:      arn,
+				verbose:  verbose,
+			}.JSON())
 		}
-		printDiff(oi, arn, verbose, showHdr)
-		showHdr = false
+		return nil
+	}
+
+	ui := tea.NewProgram(initReplicateDiffUI(arn, diffCh))
+
+	if e := ui.Start(); e != nil {
+		cancel()
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch replication diff")
 	}
 	return nil
-}
-
-func printDiff(di madmin.DiffInfo, arn string, verbose, showHdr bool) {
-	if showHdr {
-		printReplicateDiffHeader()
-	}
-	printMsg(replicateDiffMessage{
-		DiffInfo: di,
-		arn:      arn,
-		verbose:  verbose,
-	})
 }
