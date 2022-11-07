@@ -331,7 +331,6 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 // Calculate tracing options for command line flags
 func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
 	if ctx.Bool("filter-duration") && ctx.String("filter-size") != "" {
-		println(ctx.String("filter-size"))
 		opts.Threshold = ctx.Duration("filter-size")
 	}
 	opts.OnlyErrors = ctx.Bool("errors")
