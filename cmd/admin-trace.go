@@ -81,6 +81,14 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "errors, e",
 		Usage: "trace only failed requests",
 	},
+	cli.StringFlag{
+		Name:  "input-threshold",
+		Usage: "trace calls only with input greater than this threshold (e.g. `1MB`)",
+	},
+	cli.StringFlag{
+		Name:  "output-threshold",
+		Usage: "trace calls only with output greater than this threshold (e.g. `1MB`)",
+	},
 }
 
 var adminTraceCmd = cli.Command{
@@ -100,6 +108,14 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+UNITS
+  --smaller, --larger flags accept human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
+
 EXAMPLES:
   1. Show verbose console trace for MinIO server
      {{.Prompt}} {{.HelpName}} -v -a myminio
@@ -115,6 +131,12 @@ EXAMPLES:
 
   5. Show console trace for requests with '404' and '503' status code
     {{.Prompt}} {{.HelpName}} --status-code 404 --status-code 503 myminio
+  
+  6. Show trace only for requests input greater than 1MB
+    {{.Prompt}} {{.HelpName}} --input-threshold 1MB myminio
+
+  7. Show trace only for requests output greater than 1MB
+    {{.Prompt}} {{.HelpName}} --output-threshold 1MB myminio
 `,
 }
 
@@ -148,6 +170,8 @@ type matchOpts struct {
 	apiPaths    []string
 	nodes       []string
 	reqHeaders  []matchString
+	inputSize   uint64
+	outputSize  uint64
 }
 
 func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
@@ -247,6 +271,14 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
+	if opts.inputSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.inputSize) {
+		return false
+	}
+
+	if opts.outputSize > 0 && traceInfo.Trace.HTTP.CallStats.OutputBytes < int(opts.outputSize) {
+		return false
+	}
+
 	return true
 }
 
@@ -262,6 +294,19 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 		ms.val = strings.TrimPrefix(s, "!")
 		opts.reqHeaders = append(opts.reqHeaders, ms)
 	}
+	var e error
+	var inputSize, outputSize uint64
+	if ctx.String("input-threshold") != "" {
+		inputSize, e = humanize.ParseBytes(ctx.String("input-threshold"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("input-threshold")), "Unable to parse input bytes.")
+	}
+
+	if ctx.String("output-threshold") != "" {
+		outputSize, e = humanize.ParseBytes(ctx.String("output-threshold"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("output-threshold")), "Unable to parse input bytes.")
+	}
+	opts.inputSize = inputSize
+	opts.outputSize = outputSize
 	return
 }
 
