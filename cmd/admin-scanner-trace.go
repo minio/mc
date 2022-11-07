@@ -53,8 +53,8 @@ var adminScannerTraceFlags = []cli.Flag{
 		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
 	},
 	cli.BoolFlag{
-		Name:  "filter-duration",
-		Usage: "trace calls only with response duration greater than threshold, use with filter-size",
+		Name:  "response-duration",
+		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
 	cli.StringFlag{
 		Name:  "filter-size",
@@ -87,12 +87,6 @@ UNITS
   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
   also accepted. Without suffixes the unit is bytes.
 
-  --filter-size flags use with --filter-duration accept a duration string.
-  A duration string is a possibly signed sequence of decimal numbers,
-  each with optional fraction and a unit suffix,such as "300ms",
-  "-1.5h" or "2h45m".Valid time units are "ns", "us" (or "µs"), 
-  "ms", "s", "m", "h".
-
 EXAMPLES:
   1. Show scanner trace for MinIO server
      {{.Prompt}} {{.HelpName}} myminio
@@ -112,8 +106,8 @@ EXAMPLES:
   6. Show trace only for ScanObject operations response bytes greater than 1MB
     {{.Prompt}} {{.HelpName}} --filter-response --filter-size 1MB myminio
   
-  7. Show trace only for ScanObject operations duration greater than 5ms
-    {{.Prompt}} {{.HelpName}} --filter-duration --filter-size 5ms myminio
+  7. Show trace only for requests operations duration greater than 5ms
+    {{.Prompt}} {{.HelpName}} --response-duration 5ms myminio
 `,
 }
 
@@ -121,7 +115,7 @@ func checkAdminScannerTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
-	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response") || ctx.Bool("filter-duration")
+	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response")
 	if filterFlag && ctx.String("filter-size") == "" {
 		// filter must use with filter-size flags
 		showCommandHelpAndExit(ctx, 1)
