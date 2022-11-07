@@ -49,10 +49,6 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "call",
 		Usage: "trace only matching call types (e.g. `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
 	},
-	cli.DurationFlag{
-		Name:  "response-threshold",
-		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
-	},
 	cli.IntSliceFlag{
 		Name:  "status-code",
 		Usage: "trace only matching status code",
@@ -81,13 +77,21 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "errors, e",
 		Usage: "trace only failed requests",
 	},
-	cli.StringFlag{
-		Name:  "input-threshold",
-		Usage: "trace calls only with input greater than this threshold (e.g. `1MB`)",
+	cli.BoolFlag{
+		Name:  "filter-request",
+		Usage: "trace calls only with request bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "filter-response",
+		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "filter-duration",
+		Usage: "trace calls only with response duration greater than threshold, use with filter-size",
 	},
 	cli.StringFlag{
-		Name:  "output-threshold",
-		Usage: "trace calls only with output greater than this threshold (e.g. `1MB`)",
+		Name:  "filter-size",
+		Usage: "filter size, use with filter (see UNITS)",
 	},
 }
 
@@ -110,11 +114,17 @@ FLAGS:
   {{end}}
 
 UNITS
-  --smaller, --larger flags accept human-readable case-insensitive number
+  --filter-size flags use with --filter-response or --filter-request accept human-readable case-insensitive number
   suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
   also accepted. Without suffixes the unit is bytes.
+
+  --filter-size flags use with --filter-duration accept a duration string.
+  A duration string is a possibly signed sequence of decimal numbers,
+  each with optional fraction and a unit suffix,such as "300ms",
+  "-1.5h" or "2h45m".Valid time units are "ns", "us" (or "µs"), 
+  "ms", "s", "m", "h".
 
 EXAMPLES:
   1. Show verbose console trace for MinIO server
@@ -132,11 +142,14 @@ EXAMPLES:
   5. Show console trace for requests with '404' and '503' status code
     {{.Prompt}} {{.HelpName}} --status-code 404 --status-code 503 myminio
   
-  6. Show trace only for requests input greater than 1MB
-    {{.Prompt}} {{.HelpName}} --input-threshold 1MB myminio
+  6. Show trace only for requests bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-request --filter-size 1MB myminio
 
-  7. Show trace only for requests output greater than 1MB
-    {{.Prompt}} {{.HelpName}} --output-threshold 1MB myminio
+  7. Show trace only for response bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-response --filter-size 1MB myminio
+  
+  8. Show trace only for requests operations duration greater than 5ms
+     {{.Prompt}} {{.HelpName}} --filter-duration --filter-size 5ms myminio
 `,
 }
 
@@ -147,6 +160,11 @@ var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, colo
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response") || ctx.Bool("filter-duration")
+	if filterFlag && ctx.String("filter-size") == "" {
+		// filter must use with filter-size flags
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -164,14 +182,14 @@ type matchString struct {
 }
 
 type matchOpts struct {
-	statusCodes []int
-	methods     []string
-	funcNames   []string
-	apiPaths    []string
-	nodes       []string
-	reqHeaders  []matchString
-	inputSize   uint64
-	outputSize  uint64
+	statusCodes  []int
+	methods      []string
+	funcNames    []string
+	apiPaths     []string
+	nodes        []string
+	reqHeaders   []matchString
+	requestSize  uint64
+	responseSize uint64
 }
 
 func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
@@ -271,11 +289,11 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
-	if opts.inputSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.inputSize) {
+	if opts.requestSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.requestSize) {
 		return false
 	}
 
-	if opts.outputSize > 0 && traceInfo.Trace.HTTP.CallStats.OutputBytes < int(opts.outputSize) {
+	if opts.responseSize > 0 && traceInfo.Trace.HTTP.CallStats.OutputBytes < int(opts.responseSize) {
 		return false
 	}
 
@@ -295,24 +313,27 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 		opts.reqHeaders = append(opts.reqHeaders, ms)
 	}
 	var e error
-	var inputSize, outputSize uint64
-	if ctx.String("input-threshold") != "" {
-		inputSize, e = humanize.ParseBytes(ctx.String("input-threshold"))
-		fatalIf(probe.NewError(e).Trace(ctx.String("input-threshold")), "Unable to parse input bytes.")
+	var requestSize, responseSize uint64
+	if ctx.Bool("filter-request") && ctx.String("filter-size") != "" {
+		requestSize, e = humanize.ParseBytes(ctx.String("filter-size"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("filter-size")), "Unable to parse input bytes.")
 	}
 
-	if ctx.String("output-threshold") != "" {
-		outputSize, e = humanize.ParseBytes(ctx.String("output-threshold"))
-		fatalIf(probe.NewError(e).Trace(ctx.String("output-threshold")), "Unable to parse input bytes.")
+	if ctx.Bool("filter-response") && ctx.String("filter-size") != "" {
+		responseSize, e = humanize.ParseBytes(ctx.String("filter-size"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("filter-size")), "Unable to parse input bytes.")
 	}
-	opts.inputSize = inputSize
-	opts.outputSize = outputSize
+	opts.requestSize = requestSize
+	opts.responseSize = responseSize
 	return
 }
 
 // Calculate tracing options for command line flags
 func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
-	opts.Threshold = ctx.Duration("response-threshold")
+	if ctx.Bool("filter-duration") && ctx.String("filter-size") != "" {
+		println(ctx.String("filter-size"))
+		opts.Threshold = ctx.Duration("filter-size")
+	}
 	opts.OnlyErrors = ctx.Bool("errors")
 
 	if ctx.Bool("all") {

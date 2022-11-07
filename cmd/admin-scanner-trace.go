@@ -32,10 +32,6 @@ var adminScannerTraceFlags = []cli.Flag{
 		Name:  "verbose, v",
 		Usage: "print verbose trace",
 	},
-	cli.StringFlag{
-		Name:  "response-threshold",
-		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
-	},
 	cli.StringSliceFlag{
 		Name:  "funcname",
 		Usage: "trace only matching func name (eg 'scanner.ScanObject')",
@@ -48,13 +44,21 @@ var adminScannerTraceFlags = []cli.Flag{
 		Name:  "path",
 		Usage: "trace only matching path",
 	},
-	cli.StringFlag{
-		Name:  "input-threshold",
-		Usage: "trace calls only with input greater than this threshold (e.g. `1MB`)",
+	cli.BoolFlag{
+		Name:  "filter-request",
+		Usage: "trace calls only with request bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "filter-response",
+		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "filter-duration",
+		Usage: "trace calls only with response duration greater than threshold, use with filter-size",
 	},
 	cli.StringFlag{
-		Name:  "output-threshold",
-		Usage: "trace calls only with output greater than this threshold (e.g. `1MB`)",
+		Name:  "filter-size",
+		Usage: "filter size, use with filter (see UNITS)",
 	},
 }
 
@@ -77,11 +81,17 @@ FLAGS:
   {{end}}
 
 UNITS
-  --smaller, --larger flags accept human-readable case-insensitive number
+  --filter-size flags use with --filter-response or --filter-request accept human-readable case-insensitive number
   suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
   also accepted. Without suffixes the unit is bytes.
+
+  --filter-size flags use with --filter-duration accept a duration string.
+  A duration string is a possibly signed sequence of decimal numbers,
+  each with optional fraction and a unit suffix,such as "300ms",
+  "-1.5h" or "2h45m".Valid time units are "ns", "us" (or "µs"), 
+  "ms", "s", "m", "h".
 
 EXAMPLES:
   1. Show scanner trace for MinIO server
@@ -96,17 +106,25 @@ EXAMPLES:
   4. Avoid printing replication related S3 requests
     {{.Prompt}} {{.HelpName}} --request-header '!X-Minio-Source' myminio
 
-  5. Show trace only for ScanObject operations input greater than 1MB
-    {{.Prompt}} {{.HelpName}} --input-threshold 1MB myminio
+  5. Show trace only for ScanObject operations request bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-request --filter-size 1MB myminio
 
-  6. Show trace only for ScanObject operations output greater than 1MB
-    {{.Prompt}} {{.HelpName}} --output-threshold 1MB myminio
+  6. Show trace only for ScanObject operations response bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-response --filter-size 1MB myminio
+  
+  7. Show trace only for ScanObject operations duration greater than 5ms
+    {{.Prompt}} {{.HelpName}} --filter-duration --filter-size 5ms myminio
 `,
 }
 
 func checkAdminScannerTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response") || ctx.Bool("filter-duration")
+	if filterFlag && ctx.String("filter-size") == "" {
+		// filter must use with filter-size flags
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
