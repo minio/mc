@@ -27,6 +27,18 @@ type Table interface {
 	ColumnHeaders() table.Row
 }
 
+// LsFilter enumerates the 3 possible ilm-ls filter options.
+type LsFilter uint8
+
+const (
+	// None - no filter
+	None LsFilter = iota
+	// ExpiryOnly - filter expiration actions across rules
+	ExpiryOnly
+	// TransitionOnly - filter transition actions across rules
+	TransitionOnly
+)
+
 type expirationCurrentRow struct {
 	ID              string
 	Status          string

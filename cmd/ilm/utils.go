@@ -82,7 +82,7 @@ func getTransitionDays(rule lifecycle.Rule) int {
 }
 
 // ToTables converts a lifecycle.Configuration into its tabular representation.
-func ToTables(cfg *lifecycle.Configuration) []Table {
+func ToTables(cfg *lifecycle.Configuration, filter LsFilter) []Table {
 	var tierCur tierCurrentTable
 	var tierNoncur tierNoncurrentTable
 	var expCur expirationCurrentTable
@@ -129,5 +129,13 @@ func ToTables(cfg *lifecycle.Configuration) []Table {
 			})
 		}
 	}
-	return []Table{tierCur, tierNoncur, expCur, expNoncur}
+
+	switch filter {
+	case ExpiryOnly:
+		return []Table{expCur, expNoncur}
+	case TransitionOnly:
+		return []Table{tierCur, tierNoncur}
+	default:
+		return []Table{tierCur, tierNoncur, expCur, expNoncur}
+	}
 }

@@ -130,6 +130,15 @@ func mainILMList(cliCtx *cli.Context) error {
 	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
+	// Note: validateILMListFlagsSet ensures we deal with only valid
+	// combinations here.
+	var filter ilm.LsFilter
+	if v := cliCtx.Bool("expiry"); v {
+		filter = ilm.ExpiryOnly
+	}
+	if v := cliCtx.Bool("transition"); v {
+		filter = ilm.TransitionOnly
+	}
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
 
@@ -151,7 +160,7 @@ func mainILMList(cliCtx *cli.Context) error {
 		return nil
 	}
 
-	for _, tbl := range ilm.ToTables(ilmCfg) {
+	for _, tbl := range ilm.ToTables(ilmCfg, filter) {
 		rows := tbl.Rows()
 		if len(rows) == 0 {
 			continue
