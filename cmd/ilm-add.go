@@ -50,7 +50,7 @@ DESCRIPTION:
 
 EXAMPLES:
   1. Add a lifecycle rule with an expiration action for all objects in mybucket.
-     {{.Prompt}} {{.HelpName}} --expiry-days "200" myminio/mybucket
+     {{.Prompt}} {{.HelpName}} --expire-days "200" myminio/mybucket
 
   2. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
      Tiers must exist in MinIO. Use existing tiers or add new tiers.
@@ -60,12 +60,12 @@ EXAMPLES:
      {{.Prompt}} mc tier add minio myminio MINIOTIER-2 --endpoint https://warm-minio-2.com \
          --access-key ACCESSKEY --secret-key SECRETKEY --bucket bucket2 --prefix prefix2
 
-     {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --tier "MINIOTIER-1" \
-          --noncurrentversion-transition-days "45" --noncurrentversion-tier "MINIOTIER-2" \
+     {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --transition-tier "MINIOTIER-1" \
+          --noncurrent-transition-days "45" --noncurrent-transition-tier "MINIOTIER-2" \
           myminio/mybucket/
 
   3. Add a lifecycle rule with an expiration and a noncurrent version expiration action for all objects with prefix doc/ in mybucket.
-     {{.Prompt}} {{.HelpName}} --prefix "doc/" --expiry-days "300" --noncurrentversion-expiration-days "100" \
+     {{.Prompt}} {{.HelpName}} --prefix "doc/" --expire-days "300" --noncurrent-expire-days "100" \
           myminio/mybucket/
 `,
 }
@@ -73,11 +73,11 @@ EXAMPLES:
 var ilmAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "prefix",
-		Usage: "specify the prefix",
+		Usage: "object prefix",
 	},
 	cli.StringFlag{
 		Name:  "tags",
-		Usage: "format '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>', multiple values allowed for multiple key/value pairs",
+		Usage: "key value pairs of the form '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>'",
 	},
 	cli.StringFlag{
 		Name:   "expiry-date",
@@ -85,8 +85,22 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.StringFlag{
-		Name:  "expiry-days",
-		Usage: "the number of days to expiration",
+		Name:   "expiry-days",
+		Usage:  "the number of days to expiration",
+		Hidden: true,
+	},
+	cli.StringFlag{
+		Name:  "expire-days",
+		Usage: "number of days to expire",
+	},
+	cli.BoolFlag{
+		Name:   "expired-object-delete-marker",
+		Usage:  "remove delete markers with no parallel versions",
+		Hidden: true,
+	},
+	cli.BoolFlag{
+		Name:  "expire-delete-marker",
+		Usage: "expire zombie delete markers",
 	},
 	cli.StringFlag{
 		Name:   "transition-date",
@@ -95,7 +109,7 @@ var ilmAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "transition-days",
-		Usage: "the number of days to transition",
+		Usage: "number of days to transition",
 	},
 	cli.StringFlag{
 		Name:   "storage-class",
@@ -103,28 +117,49 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.StringFlag{
-		Name:  "tier",
-		Usage: "remote tier where current versions transition to",
+		Name:   "tier",
+		Usage:  "remote tier where current versions transition to",
+		Hidden: true,
 	},
-	cli.BoolFlag{
-		Name:  "expired-object-delete-marker",
-		Usage: "remove delete markers with no parallel versions",
-	},
-	cli.IntFlag{
-		Name:  "noncurrentversion-expiration-days",
-		Usage: "the number of days to remove noncurrent versions",
+	cli.StringFlag{
+		Name:  "transition-tier",
+		Usage: "remote tier name to transition",
 	},
 	cli.IntFlag{
-		Name:  "newer-noncurrentversions-expiration",
-		Usage: "the number of noncurrent versions to retain",
+		Name:   "noncurrentversion-expiration-days",
+		Usage:  "the number of days to remove noncurrent versions",
+		Hidden: true,
+	},
+	cli.StringFlag{
+		Name:  "noncurrent-expire-days",
+		Usage: "number of days to expire noncurrent versions",
 	},
 	cli.IntFlag{
-		Name:  "noncurrentversion-transition-days",
-		Usage: "the number of days to transition noncurrent versions",
+		Name:   "newer-noncurrentversions-expiration",
+		Usage:  "the number of noncurrent versions to retain",
+		Hidden: true,
 	},
 	cli.IntFlag{
-		Name:  "newer-noncurrentversions-transition",
-		Usage: "the number of noncurrent versions to retain. If there are this many more recent noncurrent versions they will be transitioned",
+		Name:  "noncurrent-expire-newer",
+		Usage: "number of newer noncurrent versions to retain",
+	},
+	cli.IntFlag{
+		Name:   "noncurrentversion-transition-days",
+		Usage:  "the number of days to transition noncurrent versions",
+		Hidden: true,
+	},
+	cli.IntFlag{
+		Name:  "noncurrent-transition-days",
+		Usage: "number of days to transition noncurrent versions",
+	},
+	cli.IntFlag{
+		Name:   "newer-noncurrentversions-transition",
+		Usage:  "the number of noncurrent versions to retain. If there are this many more recent noncurrent versions they will be transitioned",
+		Hidden: true,
+	},
+	cli.IntFlag{
+		Name:  "noncurrent-transition-newer",
+		Usage: "number of noncurrent versions to retain in hot tier",
 	},
 	cli.StringFlag{
 		Name:   "noncurrentversion-transition-storage-class",
@@ -132,8 +167,13 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.StringFlag{
-		Name:  "noncurrentversion-tier",
-		Usage: "remote tier where noncurrent versions transition to",
+		Name:   "noncurrentversion-tier",
+		Usage:  "remote tier where noncurrent versions transition to",
+		Hidden: true,
+	},
+	cli.StringFlag{
+		Name:  "noncurrent-transition-tier",
+		Usage: "remote tier name to transition",
 	},
 }
 
