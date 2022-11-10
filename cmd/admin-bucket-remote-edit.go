@@ -94,14 +94,14 @@ FLAGS:
 EXAMPLES:
   1. Edit credentials for existing remote target with arn where a remote target has been configured between sourcebucket on sitea to targetbucket on siteb.
     {{.DisableHistory}}
-  	{{.Prompt}} {{.HelpName}} sitea/sourcebucket \
+    {{.Prompt}} {{.HelpName}} sitea/sourcebucket \
                  https://foobar:newpassword@minio.siteb.example.com/targetbucket \
-				 --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
+                 --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
     {{.EnableHistory}}
 
   2. Edit remote target for sourceBucket on sitea with specified ARN to disable proxying and enable synchronous replication
-	   {{.Prompt}} {{.HelpName}} sitea/sourcebucket --sync "enable" --proxy "disable"
-				--arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
+     {{.Prompt}} {{.HelpName}} sitea/sourcebucket --sync "enable" --proxy "disable"
+                 --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
 `,
 }
 
@@ -109,7 +109,7 @@ EXAMPLES:
 func checkAdminBucketRemoteEditSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr > 2 || argsNr == 0 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	if !ctx.IsSet("arn") {
 		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "--arn flag needs to be set")

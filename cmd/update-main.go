@@ -155,8 +155,7 @@ func GetCurrentReleaseTime() (releaseTime time.Time, err *probe.Error) {
 //
 // https://github.com/moby/moby/blob/master/daemon/initlayer/setup_unix.go#L25
 //
-//     "/.dockerenv":      "file",
-//
+//	"/.dockerenv":      "file",
 func IsDocker() bool {
 	_, e := os.Stat("/.dockerenv")
 	if os.IsNotExist(e) {
@@ -192,7 +191,7 @@ func IsSourceBuild() bool {
 // DO NOT CHANGE USER AGENT STYLE.
 // The style should be
 //
-//   mc (<OS>; <ARCH>[; dcos][; kubernetes][; docker][; source]) mc/<VERSION> mc/<RELEASE-TAG> mc/<COMMIT-ID>
+//	mc (<OS>; <ARCH>[; dcos][; kubernetes][; docker][; source]) mc/<VERSION> mc/<RELEASE-TAG> mc/<COMMIT-ID>
 //
 // Any change here should be discussed by opening an issue at
 // https://github.com/minio/mc/issues.
@@ -320,9 +319,13 @@ func getDownloadURL(customReleaseURL string, releaseTag string) (downloadURL str
 		return fmt.Sprintf("docker pull minio/mc:%s", releaseTag)
 	}
 
+	if customReleaseURL == "" {
+		return mcReleaseURL + "archive/mc." + releaseTag
+	}
+
 	u, err := url.Parse(customReleaseURL)
 	if err != nil {
-		return mcReleaseURL + "archive/" + "mc." + releaseTag
+		return mcReleaseURL + "archive/mc." + releaseTag
 	}
 
 	u.Path = path.Dir(u.Path) + "/mc." + releaseTag
@@ -510,7 +513,7 @@ func (s updateMessage) JSON() string {
 
 func mainUpdate(ctx *cli.Context) {
 	if len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, -1)
+		showCommandHelpAndExit(ctx, -1)
 	}
 
 	globalQuiet = ctx.Bool("quiet") || ctx.GlobalBool("quiet")

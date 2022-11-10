@@ -24,11 +24,11 @@ retention   set retention for object(s)
 legalhold   set legal hold for object(s)
 diff        list differences in object name, size, and date between two buckets
 rm          remove objects
-encrypt    manage bucket encryption config
+encrypt     manage bucket encryption config
 event       manage object notifications
 watch       listen for object notification events
 undo        undo PUT/DELETE operations
-policy      manage anonymous access to buckets and objects
+anonymous   manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
 ilm         manage bucket lifecycle
 version     manage bucket versioning

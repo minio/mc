@@ -53,7 +53,7 @@ EXAMPLES:
 // checkVersionSuspendSyntax - validate all the passed arguments
 func checkVersionSuspendSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "suspend", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -95,7 +95,7 @@ func mainVersionSuspend(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize connection.")
 	fatalIf(client.SetVersion(ctx, "suspend", nil, false), "Unable to suspend versioning")
 	printMsg(versionSuspendMessage{
-		Op:     "suspend",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	})

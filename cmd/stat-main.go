@@ -77,7 +77,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} s3\mybucket\
 
   3. Stat files recursively on a local filesystem on Microsoft Windows.
-     {{.Prompt}} {{.HelpName}} --recursive C:\Users\Worf\
+     {{.Prompt}} {{.HelpName}} --recursive C:\Users\mydocuments\
 
   4. Stat encrypted files on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx
@@ -97,7 +97,7 @@ EXAMPLES:
 // parseAndCheckStatSyntax - parse and validate all the passed arguments
 func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
 
 	args := cliCtx.Args()

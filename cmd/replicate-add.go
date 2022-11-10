@@ -110,7 +110,7 @@ EXAMPLES:
 // checkReplicateAddSyntax - validate all the passed arguments
 func checkReplicateAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	if ctx.String("remote-bucket") == "" {
 		fatal(errDummy().Trace(), "--remote-bucket flag needs to be specified.")
@@ -199,7 +199,7 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	}
 	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not add replication rule")
 	printMsg(replicateAddMessage{
-		Op:  "add",
+		Op:  cliCtx.Command.Name,
 		URL: aliasedURL,
 		ID:  opts.ID,
 	})

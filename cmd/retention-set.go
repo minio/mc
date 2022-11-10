@@ -58,7 +58,7 @@ var retentionSetFlags = []cli.Flag{
 
 var retentionSetCmd = cli.Command{
 	Name:         "set",
-	Usage:        "set retention for object(s)",
+	Usage:        "apply retention settings on object(s)",
 	Action:       mainRetentionSet,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -96,7 +96,7 @@ EXAMPLES:
 func parseSetRetentionArgs(cliCtx *cli.Context) (target, versionID string, recursive bool, timeRef time.Time, withVersions bool, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypass, bucketMode bool) {
 	args := cliCtx.Args()
 	if len(args) != 3 {
-		showCommandHelpAndExit(cliCtx, "set", 1)
+		showCommandHelpAndExit(cliCtx, 1)
 	}
 
 	mode = minio.RetentionMode(strings.ToUpper(args[0]))

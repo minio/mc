@@ -140,10 +140,10 @@ func checkAdminBwInfoSyntax(ctx *cli.Context) {
 		u != "Bi" &&
 		u != "B" &&
 		u != "" {
-		showCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 	if len(ctx.Args()) > 1 || len(ctx.Args()) == 0 {
-		showCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 }
 

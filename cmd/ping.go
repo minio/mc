@@ -87,7 +87,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --interval 30 myminio
 
   4. Stop pinging when error count > 20.
-  	 {{.Prompt}} {{.HelpName}} --error-count 20 myminio	 
+     {{.Prompt}} {{.HelpName}} --error-count 20 myminio
 `,
 }
 
@@ -96,7 +96,7 @@ var stop bool
 // Validate command line arguments.
 func checkPingSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, "ping", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
 }
 
@@ -355,9 +355,9 @@ func extractHostPort(hostAddr string) (string, string, error) {
 
 	addr = u.Host
 	// At this point, addr can be one of the following form:
-	//	":9000"
-	//	"localhost:9000"
-	//	"localhost" <- in this case, we check for scheme
+	//  ":9000"
+	//  "localhost:9000"
+	//  "localhost" <- in this case, we check for scheme
 
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {

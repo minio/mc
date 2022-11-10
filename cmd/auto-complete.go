@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -266,11 +266,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/encrypt/info":  s3Complete{deepLevel: 2},
 	"/encrypt/clear": s3Complete{deepLevel: 2},
 
-	"/replicate/add":  s3Complete{deepLevel: 2},
-	"/replicate/edit": s3Complete{deepLevel: 2},
-	"/replicate/ls":   s3Complete{deepLevel: 2},
-	"/replicate/rm":   s3Complete{deepLevel: 2},
-	"/replicate/diff": s3Complete{deepLevel: 2},
+	"/replicate/add":    s3Complete{deepLevel: 2},
+	"/replicate/edit":   s3Complete{deepLevel: 2},
+	"/replicate/update": s3Complete{deepLevel: 2},
+	"/replicate/ls":     s3Complete{deepLevel: 2},
+	"/replicate/rm":     s3Complete{deepLevel: 2},
+	"/replicate/diff":   s3Complete{deepLevel: 2},
 
 	"/replicate/export":        s3Complete{deepLevel: 2},
 	"/replicate/import":        s3Complete{deepLevel: 2},
@@ -325,6 +326,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/decommission/status": aliasCompleter,
 	"/admin/decommission/cancel": aliasCompleter,
 
+	"/admin/rebalance/start":  aliasCompleter,
+	"/admin/rebalance/status": aliasCompleter,
+	"/admin/rebalance/stop":   aliasCompleter,
+
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
 	"/admin/console":   aliasCompleter,
@@ -351,6 +356,24 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/idp/info": aliasCompleter,
 	"/admin/idp/ls":   aliasCompleter,
 	"/admin/idp/rm":   aliasCompleter,
+
+	"/admin/idp/openid/add":     aliasCompleter,
+	"/admin/idp/openid/update":  aliasCompleter,
+	"/admin/idp/openid/remove":  aliasCompleter,
+	"/admin/idp/openid/list":    aliasCompleter,
+	"/admin/idp/openid/info":    aliasCompleter,
+	"/admin/idp/openid/enable":  aliasCompleter,
+	"/admin/idp/openid/disable": aliasCompleter,
+
+	"/admin/idp/ldap/add":     aliasCompleter,
+	"/admin/idp/ldap/update":  aliasCompleter,
+	"/admin/idp/ldap/remove":  aliasCompleter,
+	"/admin/idp/ldap/list":    aliasCompleter,
+	"/admin/idp/ldap/info":    aliasCompleter,
+	"/admin/idp/ldap/enable":  aliasCompleter,
+	"/admin/idp/ldap/disable": aliasCompleter,
+
+	"/admin/idp/ldap/policy/entities": aliasCompleter,
 
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
@@ -443,10 +466,15 @@ var completeCmds = map[string]complete.Predictor{
 	"/license/info":     aliasCompleter,
 	"/license/update":   aliasCompleter,
 
-	"/update": nil,
-	"/ready":  nil,
-	"/ping":   nil,
-	"/od":     nil,
+	"/update":         nil,
+	"/ready":          aliasCompleter,
+	"/ping":           aliasCompleter,
+	"/od":             nil,
+	"/batch/generate": aliasCompleter,
+	"/batch/start":    aliasCompleter,
+	"/batch/list":     aliasCompleter,
+	"/batch/status":   aliasCompleter,
+	"/batch/describe": aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

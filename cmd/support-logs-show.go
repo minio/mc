@@ -62,18 +62,18 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show logs for a MinIO server with alias 'play'
-     {{.Prompt}} {{.HelpName}} play
+  1. Show logs for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} myminio
   2. Show last 5 log entries for node 'node1' for a MinIO server with alias 'myminio'
      {{.Prompt}} {{.HelpName}} --last 5 myminio node1
-  3. Show application errors in logs for a MinIO server with alias 'play'
-     {{.Prompt}} {{.HelpName}} --type application play
+  3. Show application errors in logs for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} --type application myminio
 `,
 }
 
 func checkLogsShowSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, "show", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

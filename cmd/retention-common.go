@@ -96,9 +96,9 @@ func (m retentionBucketMessage) String() string {
 	}
 	// info/set command
 	if m.Mode == "" {
-		return console.Colorize("RetentionNotFound", "No locking mode is enabled.")
+		return console.Colorize("RetentionNotFound", "Object locking configuration is not enabled.")
 	}
-	return console.Colorize("RetentionSuccess", fmt.Sprintf("%s mode is enabled for %s.",
+	return console.Colorize("RetentionSuccess", fmt.Sprintf("Object locking configuration '%s' is enabled for %s.",
 		console.Colorize("Mode", m.Mode), console.Colorize("Validity", m.Validity)))
 }
 

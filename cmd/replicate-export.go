@@ -37,10 +37,10 @@ var replicateExportCmd = cli.Command{
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-	 
+
 USAGE:
   {{.HelpName}} TARGET
-	 
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -56,7 +56,7 @@ EXAMPLES:
 // checkReplicateExportSyntax - validate all the passed arguments
 func checkReplicateExportSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -101,7 +101,7 @@ func mainReplicateExport(cliCtx *cli.Context) error {
 	rCfg, err := client.GetReplication(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication configuration")
 	printMsg(replicateExportMessage{
-		Op:                "export",
+		Op:                cliCtx.Command.Name,
 		Status:            "success",
 		URL:               aliasedURL,
 		ReplicationConfig: rCfg,

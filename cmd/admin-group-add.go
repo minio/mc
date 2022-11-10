@@ -54,7 +54,7 @@ EXAMPLES:
 // checkAdminGroupAddSyntax - validate all the passed arguments
 func checkAdminGroupAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 3 {
-		showCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -136,7 +136,7 @@ func mainAdminGroupAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.UpdateGroupMembers(globalContext, gAddRemove)).Trace(args...), "Unable to add new group")
 
 	printMsg(groupMessage{
-		op:        "add",
+		op:        ctx.Command.Name,
 		GroupName: args.Get(1),
 		Members:   members,
 	})

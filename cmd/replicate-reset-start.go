@@ -70,7 +70,7 @@ EXAMPLES:
 // checkReplicateResyncStartSyntax - validate all the passed arguments
 func checkReplicateResyncStartSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "start", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	if ctx.String("remote-bucket") == "" {
 		fatal(errDummy().Trace(), "--remote-bucket flag needs to be specified.")
@@ -132,7 +132,7 @@ func mainReplicateResyncStart(cliCtx *cli.Context) error {
 	rinfo, err := client.ResetReplication(ctx, olderThan, cliCtx.String("remote-bucket"))
 	fatalIf(err.Trace(args...), "Unable to reset replication")
 	printMsg(replicateResyncMessage{
-		Op:                "start",
+		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ResyncTargetsInfo: rinfo,
 	})

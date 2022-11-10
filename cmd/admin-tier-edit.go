@@ -89,7 +89,7 @@ EXAMPLES:
 func checkAdminTierEditSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 2 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -139,7 +139,7 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit remote tier")
 
 	printMsg(&tierMessage{
-		op:       "edit",
+		op:       ctx.Command.Name,
 		Status:   "success",
 		TierName: tierName,
 	})

@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminUserAddSyntax - validate all the passed arguments
 func checkAdminUserInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -71,7 +71,7 @@ func mainAdminUserInfo(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
 	printMsg(userMessage{
-		op:         "info",
+		op:         ctx.Command.Name,
 		AccessKey:  args.Get(1),
 		PolicyName: user.PolicyName,
 		UserStatus: string(user.Status),

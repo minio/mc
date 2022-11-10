@@ -50,7 +50,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctRemoveSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "rm", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -73,7 +73,7 @@ func mainAdminUserSvcAcctRemove(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        "rm",
+		op:        ctx.Command.Name,
 		AccessKey: svcAccount,
 	})
 

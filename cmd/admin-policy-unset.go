@@ -58,7 +58,7 @@ EXAMPLES:
 
 func checkAdminPolicyUnsetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "unset", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -125,7 +125,7 @@ func mainAdminPolicyUnset(ctx *cli.Context) error {
 	e = client.SetPolicy(globalContext, newPolicies, userOrGroup, isGroup)
 	if e == nil {
 		printMsg(userPolicyMessage{
-			op:          "unset",
+			op:          ctx.Command.Name,
 			Policy:      policiesToUnset,
 			UserOrGroup: userOrGroup,
 			IsGroup:     isGroup,

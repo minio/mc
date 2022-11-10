@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/pkg/console"
 )
 
@@ -57,15 +58,16 @@ const (
 )
 
 var (
-	globalQuiet          = false  // Quiet flag set via command line
-	globalJSON           = false  // Json flag set via command line
-	globalJSONLine       = false  // Print json as single line.
-	globalDebug          = false  // Debug flag set via command line
-	globalNoColor        = false  // No Color flag set via command line
-	globalInsecure       = false  // Insecure flag set via command line
-	globalDevMode        = false  // dev flag set via command line
-	globalSubnetProxyURL *url.URL // Proxy to be used for communication with subnet
-	globalAirgapped      = false  // Airgapped flag set via command line
+	globalQuiet          = false               // Quiet flag set via command line
+	globalJSON           = false               // Json flag set via command line
+	globalJSONLine       = false               // Print json as single line.
+	globalDebug          = false               // Debug flag set via command line
+	globalNoColor        = false               // No Color flag set via command line
+	globalInsecure       = false               // Insecure flag set via command line
+	globalDevMode        = false               // dev flag set via command line
+	globalAirgapped      = false               // Airgapped flag set via command line
+	globalSubnetProxyURL *url.URL              // Proxy to be used for communication with subnet
+	globalSubnetConfig   []madmin.SubsysConfig // Subnet config
 
 	globalConnReadDeadline  time.Duration
 	globalConnWriteDeadline time.Duration

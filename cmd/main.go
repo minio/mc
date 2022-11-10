@@ -457,6 +457,7 @@ var appCmds = []cli.Command{
 	readyCmd,
 	pingCmd,
 	odCmd,
+	batchCmd,
 }
 
 func printMCVersion(c *cli.Context) {
@@ -519,8 +520,8 @@ func mustGetProfileDir() string {
 	return filepath.Join(mustGetMcConfigDir(), globalProfileDir)
 }
 
-func showCommandHelpAndExit(cliCtx *cli.Context, cmd string, code int) {
-	cli.ShowCommandHelp(cliCtx, cmd)
+func showCommandHelpAndExit(cliCtx *cli.Context, code int) {
+	cli.ShowCommandHelp(cliCtx, cliCtx.Command.Name)
 	// Wait until the user quits the pager
 	globalHelpPager.WaitForExit()
 	os.Exit(code)

@@ -113,11 +113,10 @@ func (m *speedTestUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *speedTestUI) View() string {
 	// Quit when there is an error
 	if m.result.Err != "" {
-		return fmt.Sprintf("\n%s: ✗ (Err: %s)\n", m.result.Type.Name(), m.result.Err)
+		return fmt.Sprintf("\n%s: %s (Err: %s)\n", m.result.Type.Name(), crossTickCell, m.result.Err)
 	}
 
 	var s strings.Builder
-	s.WriteString("\n")
 
 	// Set table header
 	table := tablewriter.NewWriter(&s)
@@ -142,6 +141,13 @@ func (m *speedTestUI) View() string {
 			return in
 		}
 		return in[:max] + "..."
+	}
+
+	// Print the spinner
+	if !m.quitting {
+		s.WriteString(fmt.Sprintf("\n%s: %s\n\n", m.result.Type.Name(), m.spinner.View()))
+	} else {
+		s.WriteString(fmt.Sprintf("\n%s: %s\n\n", m.result.Type.Name(), m.spinner.Style.Render(tickCell)))
 	}
 
 	if ores != nil {
@@ -198,8 +204,8 @@ func (m *speedTestUI) View() string {
 				if nodeResult.Error != "" {
 					data = append(data, []string{
 						trailerIfGreaterThan(nodeResult.Endpoint, 64),
-						"✗",
-						"✗",
+						crossTickCell,
+						crossTickCell,
 						"Err: " + nodeResult.Error,
 					})
 				} else {
@@ -238,8 +244,8 @@ func (m *speedTestUI) View() string {
 						data = append(data, []string{
 							trailerIfGreaterThan(driveResult.Endpoint, 64),
 							result.Path,
-							"✗",
-							"✗",
+							crossTickCell,
+							crossTickCell,
 							"Err: " + result.Error,
 						})
 					} else {
@@ -258,11 +264,5 @@ func (m *speedTestUI) View() string {
 		table.Render()
 	}
 
-	// Print the spinner
-	if !m.quitting {
-		s.WriteString(fmt.Sprintf("\n%s: %s", m.result.Type.Name(), m.spinner.View()))
-	} else {
-		s.WriteString(fmt.Sprintf("\n%s: ✔\n", m.result.Type.Name()))
-	}
 	return s.String()
 }

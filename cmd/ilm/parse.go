@@ -27,6 +27,12 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
+// Used in tags. Ex: --tags "key1=value1&key2=value2&key3=value3"
+const (
+	tagSeperator    string = "&"
+	keyValSeperator string = "="
+)
+
 // Extracts the tags provided by user. The tagfilter array will be put in lifecycleRule structure.
 func extractILMTags(tagLabelVal string) []lifecycle.Tag {
 	var ilmTagKVList []lifecycle.Tag
@@ -81,8 +87,10 @@ func validateRuleAction(rule lifecycle.Rule) error {
 	expirySet := !rule.Expiration.IsNull()
 	transitionSet := !rule.Transition.IsNull()
 	noncurrentExpirySet := !rule.NoncurrentVersionExpiration.IsDaysNull()
+	newerNoncurrentVersionsExpiry := rule.NoncurrentVersionExpiration.NewerNoncurrentVersions > 0
 	noncurrentTransitionSet := rule.NoncurrentVersionTransition.StorageClass != ""
-	if !expirySet && !transitionSet && !noncurrentExpirySet && !noncurrentTransitionSet {
+	newerNoncurrentVersionsTransition := rule.NoncurrentVersionTransition.NewerNoncurrentVersions > 0
+	if !expirySet && !transitionSet && !noncurrentExpirySet && !noncurrentTransitionSet && !newerNoncurrentVersionsExpiry && !newerNoncurrentVersionsTransition {
 		return errors.New("at least one of Expiry, Transition, NoncurrentExpiry, NoncurrentVersionTransition actions should be specified in a rule")
 	}
 	return nil

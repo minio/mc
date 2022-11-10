@@ -50,7 +50,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctEnableSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctEnableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "enable", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -77,7 +77,7 @@ func mainAdminUserSvcAcctEnable(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        "enable",
+		op:        ctx.Command.Name,
 		AccessKey: svcAccount,
 	})
 
