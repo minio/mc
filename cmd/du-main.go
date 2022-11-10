@@ -122,6 +122,7 @@ func (r duMessage) JSON() string {
 
 func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (sz, objs int64, err error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
+
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
 	}
@@ -135,6 +136,11 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 	// No disk usage details below this level,
 	// just do a recursive listing
 	recursive := depth == 1
+
+	targetAbsolutePath := clnt.GetURL().String()
+	if strings.HasSuffix(targetAbsolutePath, "/") {
+		targetAbsolutePath = targetAbsolutePath[:len(targetAbsolutePath)-1]
+	}
 
 	contentCh := clnt.List(ctx, ListOptions{
 		TimeRef:           timeRef,
@@ -157,11 +163,13 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
 			return 0, 0, exitStatus(globalErrorExitStatus)
 		}
-		if content.URL.String() == targetURL {
+
+		if content.URL.Path == targetAbsolutePath {
 			continue
 		}
 
 		if content.Type.IsDir() && !recursive {
+
 			depth := depth
 			if depth > 0 {
 				depth--
