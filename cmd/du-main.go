@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -137,10 +138,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 	// just do a recursive listing
 	recursive := depth == 1
 
-	targetAbsolutePath := clnt.GetURL().String()
-	if strings.HasSuffix(targetAbsolutePath, "/") {
-		targetAbsolutePath = targetAbsolutePath[:len(targetAbsolutePath)-1]
-	}
+	targetAbsolutePath := path.Clean(clnt.GetURL().String())
 
 	contentCh := clnt.List(ctx, ListOptions{
 		TimeRef:           timeRef,
