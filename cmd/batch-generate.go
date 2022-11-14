@@ -37,7 +37,7 @@ var batchGenerateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET JOBTYPE
+  {{.HelpName}} JOBTYPE TARGET
 
 JOBTYPE:
 ` + supportedJobTypes() + `
@@ -46,7 +46,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Generate a new batch 'replication' job definition:
-     {{.Prompt}} {{.HelpName}} myminio replicate > replication.yaml
+     {{.Prompt}} {{.HelpName}} replicate myminio > replication.yaml
 `,
 }
 
@@ -73,8 +73,8 @@ func mainBatchGenerate(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	jobType := args.Get(1)
+	aliasedURL := args.Get(1)
+	jobType := args.Get(0)
 
 	// Start a new MinIO Admin Client
 	adminClient, err := newAdminClient(aliasedURL)
