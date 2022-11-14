@@ -30,18 +30,18 @@ var adminIDPOpenidUpdateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ID_TYPE [CFG_NAME] [CFG_PARAMS...]
+  {{.HelpName}} TARGET [CFG_NAME] [CFG_PARAMS...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Update the default OpenID IDP configuration (CFG_NAME is omitted).
-     {{.Prompt}} {{.HelpName}} play/ openid \
+     {{.Prompt}} {{.HelpName}} play/
           scopes="openid,groups" \
           role_policy="consoleAdmin"
   2. Update configuration for OpenID IDP configuration named "dex_test".
-     {{.Prompt}} {{.HelpName}} play/ openid dex_test \
+     {{.Prompt}} {{.HelpName}} play/ dex_test \
           scopes="openid,groups" \
           role_policy="consoleAdmin"
 `,
