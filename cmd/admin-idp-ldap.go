@@ -28,7 +28,7 @@ var (
 		adminIDPLdapInfoCmd,
 		adminIDPLdapEnableCmd,
 		adminIDPLdapDisableCmd,
-		// TODO: adminIDPLdapPolicyCmd,
+		adminIDPLdapPolicyCmd,
 	}
 	adminIDPLdapCmd = cli.Command{
 		Name:            "ldap",
