@@ -167,7 +167,6 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		}
 
 		if content.Type.IsDir() && !recursive {
-
 			depth := depth
 			if depth > 0 {
 				depth--
@@ -184,8 +183,8 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			size += used
 			objects += n
 		} else {
-			size += content.Size
-			if !content.IsDeleteMarker {
+			if !content.IsDeleteMarker && !content.Type.IsDir() {
+				size += content.Size
 				objects++
 			}
 		}
