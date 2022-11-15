@@ -21,47 +21,32 @@ import (
 	"fmt"
 
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
-
-var supportLogsSubcommands = []cli.Command{
-	supportLogsEnableCmd,
-	supportLogsDisableCmd,
-	supportLogsStatusCmd,
-	supportLogsShowCmd,
-}
 
 var supportLogsCmd = cli.Command{
 	Name:            "logs",
-	Usage:           "configure/display MinIO console logs",
+	Usage:           "show MinIO logs",
 	OnUsageError:    onUsageError,
-	Action:          mainLogs,
+	Action:          mainLogsShowConsole,
 	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
+	Flags:           append(logsShowFlags, globalFlags...),
 	HideHelpCommand: true,
-	Subcommands:     supportLogsSubcommands,
-}
-
-type supportLogsMessage struct {
-	Status string `json:"status"`
-	Logs   string `json:"logs"`
-	MsgPfx string `json:"-"`
-}
-
-// String colorized service status message.
-func (s supportLogsMessage) String() string {
-	return console.Colorize(featureToggleMessageTag, s.MsgPfx+s.Logs)
-}
-
-// JSON jsonified service status message.
-func (s supportLogsMessage) JSON() string {
-	s.Status = "success"
-	jsonBytes, e := json.MarshalIndent(s, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonBytes)
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET [NODENAME]
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Show logs for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} myminio
+  2. Show last 5 log entries for node 'node1' for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} --last 5 myminio node1
+  3. Show application errors in logs for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} --type application myminio
+`,
 }
 
 func configureSubnetWebhook(alias string, enable bool) {
@@ -81,24 +66,8 @@ func configureSubnetWebhook(alias string, enable bool) {
 	// Call set config API
 	_, e := client.SetConfigKV(globalContext, input)
 	fatalIf(probe.NewError(e), "Unable to set '%s' to server", input)
-
-	printMsg(supportLogsMessage{
-		Logs:   featureStatusStr(enable),
-		MsgPfx: "Logging to support is now ",
-	})
 }
 
-func validateLogsToggleCmd(ctx *cli.Context, cmdName string) string {
-	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
-	alias, _ := url2Alias(ctx.Args().Get(0))
-	return alias
-}
-
-// mainLogs is the handle for "mc support logs" command.
-func mainLogs(ctx *cli.Context) error {
-	commandNotFound(ctx, supportLogsSubcommands)
-	return nil
-	// Sub-commands like "enable", "disable", "status", "print" have their own main.
+func isLogsCallhomeEnabled(alias string) bool {
+	return isFeatureEnabled(alias, "logger_webhook", "subnet")
 }
