@@ -175,9 +175,6 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, doList
 	listZip := cliCtx.Bool("zip")
 
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
-	if timeRef.IsZero() && withOlderVersions {
-		timeRef = time.Now().UTC()
-	}
 
 	if listZip && (withOlderVersions || !timeRef.IsZero()) {
 		fatalIf(errInvalidArgument().Trace(args...), "Zip file listing can only be performed on the latest version")
