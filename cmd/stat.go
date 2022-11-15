@@ -27,10 +27,10 @@ import (
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/replication"
@@ -220,7 +220,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		url := targetAlias + getKey(content)
 		standardizedURL := getStandardizedURL(targetURL)
 
-		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
+		if !isRecursive && !strings.HasPrefix(url, standardizedURL) && !filepath.IsAbs(url) {
 			return nil, nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
