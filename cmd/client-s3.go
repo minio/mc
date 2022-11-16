@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -1759,10 +1759,6 @@ func (c *S3Client) listVersions(ctx context.Context, b, o string, isRecursive bo
 }
 
 func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool, objectInfoCh chan minio.ObjectInfo) {
-	if timeRef.IsZero() {
-		timeRef = time.Now().UTC()
-	}
-
 	var buckets []string
 	if b == "" {
 		bucketsInfo, err := c.api.ListBuckets(ctx)
@@ -1797,7 +1793,7 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 				continue
 			}
 
-			if objectVersion.LastModified.Before(timeRef) {
+			if timeRef.IsZero() || objectVersion.LastModified.Before(timeRef) {
 				skipKey = objectVersion.Key
 
 				// Skip if this is a delete marker and we are not asked to list it
