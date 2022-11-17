@@ -95,7 +95,7 @@ func ToTables(cfg *lifecycle.Configuration, filter LsFilter) []Table {
 				Prefix:          getPrefix(rule),
 				Tags:            getTags(rule),
 				Days:            getExpirationDays(rule),
-				ExpireDelMarker: false,
+				ExpireDelMarker: bool(rule.Expiration.DeleteMarker),
 			})
 		}
 		if !rule.NoncurrentVersionExpiration.IsDaysNull() {
