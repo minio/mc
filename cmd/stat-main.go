@@ -161,25 +161,9 @@ func mainStat(cliCtx *cli.Context) error {
 		args = []string{"."}
 	}
 
-	var cErr error
 	for _, targetURL := range args {
-		contents, bstats, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
-		if err != nil {
-			fatalIf(err, "Unable to stat `"+targetURL+"`.")
-		}
-		for _, content := range contents {
-			stat := parseStat(content)
-			stat.singleObject = len(contents) == 1
-			printMsg(stat)
-		}
-		for _, binfo := range bstats {
-			printMsg(bucketInfoMessage{
-				Status:   "success",
-				URL:      targetURL,
-				Metadata: *binfo,
-			})
-		}
-
+		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB), "Unable to stat `"+targetURL+"`.")
 	}
-	return cErr
+
+	return nil
 }
