@@ -58,7 +58,7 @@ func checkAdminUserSvcAcctEnableSyntax(ctx *cli.Context) {
 func mainAdminUserSvcAcctEnable(ctx *cli.Context) error {
 	checkAdminUserSvcAcctEnableSyntax(ctx)
 
-	console.SetColor("SVCMessage", color.New(color.FgGreen))
+	console.SetColor("AccMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -76,7 +76,7 @@ func mainAdminUserSvcAcctEnable(ctx *cli.Context) error {
 	e := client.UpdateServiceAccount(globalContext, svcAccount, opts)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable the specified service account")
 
-	printMsg(svcAcctMessage{
+	printMsg(acctMessage{
 		op:        svcAccOpEnable,
 		AccessKey: svcAccount,
 	})
