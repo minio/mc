@@ -22,13 +22,14 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
 )
 
-const featureToggleMessageTag = "FeatureToggleMessage"
+const supportSuccessMsgTag = "SupportSuccessMessage"
 
 var supportGlobalFlags = append(globalFlags, cli.BoolFlag{
 	Name:   "dev",
@@ -45,6 +46,7 @@ var supportSubcommands = []cli.Command{
 	supportInspectCmd,
 	supportProfileCmd,
 	supportTopCmd,
+	supportProxyCmd,
 }
 
 var supportCmd = cli.Command{
@@ -83,8 +85,8 @@ func checkToggleCmdSyntax(ctx *cli.Context, cmdName string) (string, string) {
 	return alias, arg
 }
 
-func setToggleMessageColor() {
-	console.SetColor(featureToggleMessageTag, color.New(color.FgGreen, color.Bold))
+func setSuccessMessageColor() {
+	console.SetColor(supportSuccessMsgTag, color.New(color.FgGreen, color.Bold))
 }
 
 func featureStatusStr(enabled bool) string {
@@ -156,6 +158,13 @@ func isFeatureEnabled(alias string, subSys string, target string) bool {
 		}
 	}
 	return false
+}
+
+func toJSON(obj interface{}) string {
+	jsonBytes, e := json.MarshalIndent(obj, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonBytes)
 }
 
 // mainSupport is the handle for "mc support" command.

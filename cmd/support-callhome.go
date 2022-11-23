@@ -103,7 +103,7 @@ func (s supportCallhomeMessage) String() string {
 	} else {
 		msg = s.Feature + " is now " + s.Action
 	}
-	return console.Colorize(featureToggleMessageTag, msg)
+	return console.Colorize(supportSuccessMsgTag, msg)
 }
 
 // JSON jsonified callhome command output message.
@@ -120,7 +120,7 @@ func isDiagCallhomeEnabled(alias string) bool {
 }
 
 func mainCallhome(ctx *cli.Context) error {
-	setToggleMessageColor()
+	setSuccessMessageColor()
 	alias, arg := checkToggleCmdSyntax(ctx, "callhome")
 
 	diag, logs := parseCallhomeFlags(ctx)
