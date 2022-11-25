@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -40,16 +40,16 @@ var encryptSetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
    
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} <sse-type> [<key-id>] TARGET
    
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable SSE-S3 auto encryption on bucket "mybucket" for alias "myminio".
-     {{.Prompt}} {{.HelpName}} sse-s3 myminio/mybucket
+  1. Enable SSE-KMS auto encryption with KMS key on bucket "mybucket" for alias "myminio".
+     {{.Prompt}} {{.HelpName}} sse-kms my-minio-key myminio/mybucket
 
-  2. Enable SSE-KMS auto encryption with kms key on bucket "mybucket" for alias "s3".
+  2. Enable SSE-KMS auto encryption with KMS key on bucket "mybucket" for alias "s3".
      {{.Prompt}} {{.HelpName}} sse-kms arn:aws:kms:us-east-1:xxx:key/xxx s3/mybucket  
 `,
 }

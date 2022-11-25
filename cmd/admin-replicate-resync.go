@@ -17,34 +17,25 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsEnableCmd = cli.Command{
-	Name:            "enable",
-	Usage:           "enable uploading real-time MinIO logs to SUBNET",
-	Action:          mainEnableLogs,
-	OnUsageError:    onUsageError,
-	Before:          setGlobalsFromContext,
-	Flags:           supportGlobalFlags,
-	HideHelpCommand: true,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-USAGE:
-  {{.HelpName}} ALIAS
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Enable  uploading real-time logs for cluster with alias 'play' to SUBNET.
-     {{.Prompt}} {{.HelpName}} play
-`,
+var adminReplicateResyncSubcommands = []cli.Command{
+	adminReplicateResyncStartCmd,
+	adminReplicateResyncStatusCmd,
+	adminReplicateResyncCancelCmd,
 }
 
-func mainEnableLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "enable")
-	configureSubnetWebhook(alias, true)
+var adminReplicateResyncCmd = cli.Command{
+	Name:            "resync",
+	Usage:           "resync content to site",
+	Action:          mainAdminReplicateResync,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     adminReplicateResyncSubcommands,
+	HideHelpCommand: true,
+}
+
+func mainAdminReplicateResync(ctx *cli.Context) error {
+	commandNotFound(ctx, adminReplicateResyncSubcommands)
 	return nil
 }

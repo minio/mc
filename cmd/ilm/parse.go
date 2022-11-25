@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -25,6 +25,12 @@ import (
 
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+)
+
+// Used in tags. Ex: --tags "key1=value1&key2=value2&key3=value3"
+const (
+	tagSeperator    string = "&"
+	keyValSeperator string = "="
 )
 
 // Extracts the tags provided by user. The tagfilter array will be put in lifecycleRule structure.

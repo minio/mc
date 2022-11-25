@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -20,7 +20,7 @@ package ilm
 import (
 	"errors"
 	"fmt"
-	"math"
+	"strconv"
 	"strings"
 
 	"github.com/minio/cli"
@@ -30,51 +30,6 @@ import (
 )
 
 const defaultILMDateFormat string = "2006-01-02"
-
-// Align text in label to center, pad with spaces on either sides.
-func getCenterAligned(label string, maxLen int) string {
-	const toPadWith string = " "
-	lblLth := len(label)
-	if lblLth > 1 && lblLth%2 != 0 {
-		lblLth++
-	} else if lblLth == 1 {
-		lblLth = 2
-	}
-	length := (float64(maxLen - lblLth)) / float64(2)
-	rptLth := (int)(math.Floor(length / float64(len(toPadWith))))
-	leftRptLth := rptLth
-	rightRptLth := rptLth
-	if rptLth <= 0 {
-		leftRptLth = 1
-		rightRptLth = 0
-	}
-	output := strings.Repeat(toPadWith, leftRptLth) + label + strings.Repeat(toPadWith, rightRptLth)
-	return output
-}
-
-// Align text in label to left, pad with spaces.
-func getLeftAligned(label string, maxLen int) string {
-	const toPadWith string = " "
-	lblLth := len(label)
-	length := maxLen - lblLth
-	if length <= 0 {
-		return label
-	}
-	output := strings.Repeat(toPadWith, 1) + label + strings.Repeat(toPadWith, length-1)
-	return output
-}
-
-// Align text in label to right, pad with spaces.
-func getRightAligned(label string, maxLen int) string {
-	const toPadWith string = " "
-	lblLth := len(label)
-	length := maxLen - lblLth
-	if length <= 0 {
-		return label
-	}
-	output := strings.Repeat(toPadWith, length) + label
-	return output
-}
 
 // RemoveILMRule - Remove the ILM rule (with ilmID) from the configuration in XML that is provided.
 func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Configuration, *probe.Error) {
@@ -287,13 +242,19 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if ctx.IsSet("tier") {
 		tier = strPtr(strings.ToUpper(ctx.String("tier")))
 	}
+	if f := "transition-tier"; ctx.IsSet(f) {
+		tier = strPtr(strings.ToUpper(ctx.String(f)))
+	}
 	if ctx.IsSet("noncurrentversion-tier") {
 		noncurrentTier = strPtr(strings.ToUpper(ctx.String("noncurrentversion-tier")))
+	}
+	if f := "noncurrent-transition-tier"; ctx.IsSet(f) {
+		noncurrentTier = strPtr(strings.ToUpper(ctx.String(f)))
 	}
 	if tier != nil && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
 		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
 	}
-	if noncurrentTier != nil && !ctx.IsSet("noncurrentversion-transition-days") {
+	if noncurrentTier != nil && !ctx.IsSet("noncurrentversion-transition-days") && !ctx.IsSet("noncurrent-transition-days") {
 		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
 	}
 	// for MinIO transition storage-class is same as label defined on
@@ -307,6 +268,9 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if ctx.IsSet("expiry-days") {
 		expiryDays = strPtr(ctx.String("expiry-days"))
 	}
+	if f := "expire-days"; ctx.IsSet(f) {
+		expiryDays = strPtr(ctx.String(f))
+	}
 	if ctx.IsSet("transition-date") {
 		transitionDate = strPtr(ctx.String("transition-date"))
 	}
@@ -316,17 +280,37 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if ctx.IsSet("expired-object-delete-marker") {
 		expiredObjectDeleteMarker = boolPtr(ctx.Bool("expired-object-delete-marker"))
 	}
+	if f := "expire-delete-marker"; ctx.IsSet(f) {
+		expiredObjectDeleteMarker = boolPtr(ctx.Bool(f))
+	}
 	if ctx.IsSet("noncurrentversion-expiration-days") {
 		noncurrentVersionExpirationDays = intPtr(ctx.Int("noncurrentversion-expiration-days"))
+	}
+	if f := "noncurrent-expire-days"; ctx.IsSet(f) {
+		ndaysStr := ctx.String(f)
+		ndays, err := strconv.Atoi(ndaysStr)
+		if err != nil {
+			return LifecycleOptions{}, probe.NewError(fmt.Errorf("failed to parse %s: %v", f, err))
+		}
+		noncurrentVersionExpirationDays = &ndays
 	}
 	if ctx.IsSet("newer-noncurrentversions-expiration") {
 		newerNoncurrentExpirationVersions = intPtr(ctx.Int("newer-noncurrentversions-expiration"))
 	}
+	if f := "noncurrent-expire-newer"; ctx.IsSet(f) {
+		newerNoncurrentExpirationVersions = intPtr(ctx.Int(f))
+	}
 	if ctx.IsSet("noncurrentversion-transition-days") {
 		noncurrentVersionTransitionDays = intPtr(ctx.Int("noncurrentversion-transition-days"))
 	}
+	if f := "noncurrent-transition-days"; ctx.IsSet(f) {
+		noncurrentVersionTransitionDays = intPtr(ctx.Int(f))
+	}
 	if ctx.IsSet("newer-noncurrentversions-transition") {
 		newerNoncurrentTransitionVersions = intPtr(ctx.Int("newer-noncurrentversions-transition"))
+	}
+	if f := "noncurrent-transition-newer"; ctx.IsSet(f) {
+		newerNoncurrentTransitionVersions = intPtr(ctx.Int(f))
 	}
 
 	return LifecycleOptions{

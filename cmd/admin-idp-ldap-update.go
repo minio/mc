@@ -30,14 +30,14 @@ var adminIDPLdapUpdateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ID_TYPE [CFG_NAME] [CFG_PARAMS...]
+  {{.HelpName}} TARGET [CFG_NAME] [CFG_PARAMS...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Create/Update the default LDAP IDP configuration (CFG_NAME is omitted).
-     {{.Prompt}} {{.HelpName}} play/ ldap \
+     {{.Prompt}} {{.HelpName}} play/ \
           lookup_bind_dn=cn=admin,dc=min,dc=io \
           lookup_bind_password=somesecret
 `,
