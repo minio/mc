@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -77,7 +77,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} s3\mybucket\
 
   3. Stat files recursively on a local filesystem on Microsoft Windows.
-     {{.Prompt}} {{.HelpName}} --recursive C:\Users\Worf\
+     {{.Prompt}} {{.HelpName}} --recursive C:\Users\mydocuments\
 
   4. Stat encrypted files on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx
@@ -97,7 +97,7 @@ EXAMPLES:
 // parseAndCheckStatSyntax - parse and validate all the passed arguments
 func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, "stat", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
 
 	args := cliCtx.Args()
@@ -161,25 +161,9 @@ func mainStat(cliCtx *cli.Context) error {
 		args = []string{"."}
 	}
 
-	var cErr error
 	for _, targetURL := range args {
-		contents, bstats, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
-		if err != nil {
-			fatalIf(err, "Unable to stat `"+targetURL+"`.")
-		}
-		for _, content := range contents {
-			stat := parseStat(content)
-			stat.singleObject = len(contents) == 1
-			printMsg(stat)
-		}
-		for _, binfo := range bstats {
-			printMsg(bucketInfoMessage{
-				Status:   "success",
-				URL:      targetURL,
-				Metadata: *binfo,
-			})
-		}
-
+		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB), "Unable to stat `"+targetURL+"`.")
 	}
-	return cErr
+
+	return nil
 }

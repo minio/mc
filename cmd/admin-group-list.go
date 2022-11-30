@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminGroupListSyntax - validate all the passed arguments
 func checkAdminGroupListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -71,7 +71,7 @@ func mainAdminGroupList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list groups")
 
 	printMsg(groupMessage{
-		op:     "list",
+		op:     ctx.Command.Name,
 		Groups: gs,
 	})
 

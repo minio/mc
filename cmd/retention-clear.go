@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -52,7 +52,7 @@ var retentionClearFlags = []cli.Flag{
 
 var retentionClearCmd = cli.Command{
 	Name:         "clear",
-	Usage:        "clear retention for object(s)",
+	Usage:        "clear all retention settings on object(s)",
 	Action:       mainRetentionClear,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -92,7 +92,7 @@ func parseClearRetentionArgs(cliCtx *cli.Context) (target, versionID string, tim
 	args := cliCtx.Args()
 
 	if len(args) != 1 {
-		showCommandHelpAndExit(cliCtx, "clear", 1)
+		showCommandHelpAndExit(cliCtx, 1)
 	}
 
 	target = args[0]

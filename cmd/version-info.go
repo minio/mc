@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -54,7 +54,7 @@ EXAMPLES:
 // checkVersionInfoSyntax - validate all the passed arguments
 func checkVersionInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -105,7 +105,7 @@ func mainVersionInfo(cliCtx *cli.Context) error {
 	vConfig, e := client.GetVersion(ctx)
 	fatalIf(e, "Unable to get versioning info")
 	vMsg := versioningInfoMessage{
-		Op:     "info",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	}

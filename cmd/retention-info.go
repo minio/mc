@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -56,7 +56,7 @@ var retentionInfoFlags = []cli.Flag{
 
 var retentionInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "show retention for object(s)",
+	Usage:        "show retention settings on object(s)",
 	Action:       mainRetentionInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -93,7 +93,7 @@ func parseInfoRetentionArgs(cliCtx *cli.Context) (target, versionID string, recu
 	args := cliCtx.Args()
 
 	if len(args) != 1 {
-		showCommandHelpAndExit(cliCtx, "info", 1)
+		showCommandHelpAndExit(cliCtx, 1)
 	}
 
 	target = args[0]
@@ -318,7 +318,6 @@ func getRetention(ctx context.Context, target, versionID string, timeRef time.Ti
 		err := infoRetentionSingle(ctx, alias, urlStr, versionID, false)
 		if err != nil {
 			if _, ok := err.ToGoError().(ObjectNameEmpty); ok {
-				console.Infoln("no object name specified, showing bucket default retention mode instead")
 				return showBucketLock(target)
 			}
 			return exitStatus(globalErrorExitStatus)

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,12 +19,12 @@ package cmd
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,18 +37,14 @@ import (
 	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
-	"github.com/secure-io/sio-go"
 )
+
+const defaultPublicKey = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
 
 var supportInspectFlags = []cli.Flag{
 	cli.BoolFlag{
-		Name:  "encrypt",
-		Usage: "encrypt content with one time key for confidential data",
-	},
-	cli.StringFlag{
-		Name:  "export",
-		Value: "json",
-		Usage: "exports inspect data as JSON or data JSON from 'xl.meta', supported values are 'json' or 'djson'",
+		Name:  "legacy",
+		Usage: "use the older inspect format",
 	},
 }
 
@@ -73,21 +69,41 @@ EXAMPLES:
   1. Download 'xl.meta' for a specific object from all the drives in a zip file.
      {{.Prompt}} {{.HelpName}} myminio/bucket/test*/xl.meta
 
-  2. Download all constituent parts for a specific object, and optionally encrypt the downloaded zip.
-     {{.Prompt}} {{.HelpName}} --encrypt myminio/bucket/test*/*/part.*
-
-  3. Download recursively all objects at a prefix. NOTE: This can be an expensive operation use it with caution.
+  2. Download recursively all objects at a prefix. NOTE: This can be an expensive operation use it with caution.
      {{.Prompt}} {{.HelpName}} myminio/bucket/test/**
 `,
 }
 
+type inspectMessage struct {
+	File string `json:"file"`
+	Key  string `json:"key,omitempty"`
+}
+
+// Colorized message for console printing.
+func (t inspectMessage) String() string {
+	msg := ""
+	if t.Key == "" {
+		msg += fmt.Sprintf("File data successfully downloaded as %s\n", console.Colorize("File", t.File))
+	} else {
+		msg += fmt.Sprintf("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", t.File))
+		msg += fmt.Sprintf("Decryption key: %s\n\n", console.Colorize("Key", t.Key))
+
+		msg += fmt.Sprintf("The decryption key will ONLY be shown here. It cannot be recovered.\n")
+		msg += fmt.Sprintf("The encrypted file can safely be shared without the decryption key.\n")
+		msg += fmt.Sprintf("Even with the decryption key, data stored with encryption cannot be accessed.\n")
+	}
+	return msg
+}
+
+func (t inspectMessage) JSON() string {
+	jsonMessageBytes, e := json.MarshalIndent(t, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
+}
+
 func checkSupportInspectSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "inspect", 1) // last argument is exit code
-	}
-
-	if ctx.IsSet("export") && globalJSON {
-		fatalIf(errInvalidArgument(), "--export=type cannot be specified with --json flag")
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -99,7 +115,6 @@ func mainSupportInspect(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	encrypt := ctx.Bool("encrypt")
 
 	alias, _ := url2Alias(aliasedURL)
 	validateClusterRegistered(alias, false)
@@ -124,36 +139,53 @@ func mainSupportInspect(ctx *cli.Context) error {
 		console.Infoln("Your shell is auto determined as '" + shellName + "', wildcard patterns are only supported with 'bash' SHELL.")
 	}
 
+	var publicKey []byte
+	if !ctx.Bool("legacy") {
+		var e error
+		publicKey, e = os.ReadFile(filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
+		if e != nil && !os.IsNotExist(e) {
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
+		} else if len(publicKey) > 0 {
+			if !globalJSON && !globalQuiet {
+				console.Infoln("Using public key from ", filepath.Join(mustGetMcConfigDir(), "support_public.pem"))
+			}
+		}
+
+		// Fall back to MinIO public key.
+		if len(publicKey) == 0 {
+			// Public key for MinIO confidential information.
+			publicKey, _ = base64.StdEncoding.DecodeString(defaultPublicKey)
+		}
+	}
+
 	key, r, e := client.Inspect(context.Background(), madmin.InspectOptions{
-		Volume: bucket,
-		File:   prefix,
+		Volume:    bucket,
+		File:      prefix,
+		PublicKey: publicKey,
 	})
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to inspect file.")
 
-	// Create profile zip file
-	tmpFile, e := ioutil.TempFile("", "mc-inspect-")
+	// Download the inspect data in a temporary file first
+	tmpFile, e := os.CreateTemp("", "mc-inspect-")
 	fatalIf(probe.NewError(e), "Unable to download file data.")
-
-	ext := "enc"
-	if !encrypt || ctx.IsSet("export") {
-		ext = "zip"
-		r = decryptInspect(key, r)
-	}
-
-	// Copy zip content to target download file
 	_, e = io.Copy(tmpFile, r)
 	fatalIf(probe.NewError(e), "Unable to download file data.")
-
-	// Close everything
 	r.Close()
 	tmpFile.Close()
 
-	// Create an id that is also crc.
-	var id [4]byte
-	binary.LittleEndian.PutUint32(id[:], crc32.ChecksumIEEE(key[:]))
+	var keyHex string
 
-	// We use 4 bytes of the 32 bytes to identify they file.
-	downloadPath := fmt.Sprintf("inspect.%s.%s", hex.EncodeToString(id[:]), ext)
+	// Choose a name and move the inspect data to its final destination
+	downloadPath := fmt.Sprintf("inspect-data.enc")
+	if key != nil {
+		// Create an id that is also crc.
+		var id [4]byte
+		binary.LittleEndian.PutUint32(id[:], crc32.ChecksumIEEE(key[:]))
+		// We use 4 bytes of the 32 bytes to identify they file.
+		downloadPath = fmt.Sprintf("inspect-data.%s.enc", hex.EncodeToString(id[:]))
+		keyHex = hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
+	}
+
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
@@ -165,56 +197,10 @@ func mainSupportInspect(ctx *cli.Context) error {
 	}
 
 	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to rename downloaded data, file exists at %s", tmpFile.Name())
-	if ctx.IsSet("export") {
-		switch v := ctx.String("export"); v {
-		case "json":
-			inspectToExportType(downloadPath, false)
-		case "djson":
-			inspectToExportType(downloadPath, true)
-		default:
-			os.Remove(downloadPath)
-			fatalIf(errInvalidArgument().Trace("export="+v), "Unable to export inspect data")
-		}
-		os.Remove(downloadPath)
-		return nil
-	}
 
-	hexKey := hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
-	if !globalJSON {
-		if !encrypt {
-			console.Infof("File data successfully downloaded as %s\n", console.Colorize("File", downloadPath))
-			return nil
-		}
-		console.Infof("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", downloadPath))
-		console.Infof("Decryption key: %s\n\n", console.Colorize("Key", hexKey))
-
-		console.Info("The decryption key will ONLY be shown here. It cannot be recovered.\n")
-		console.Info("The encrypted file can safely be shared without the decryption key.\n")
-		console.Info("Even with the decryption key, data stored with encryption cannot be accessed.\n")
-		return nil
-	}
-
-	v := struct {
-		File string `json:"file"`
-		Key  string `json:"key,omitempty"`
-	}{
+	printMsg(inspectMessage{
 		File: downloadPath,
-		Key:  hexKey,
-	}
-	if !encrypt {
-		v.Key = ""
-	}
-	b, e := json.Marshal(v)
-	fatalIf(probe.NewError(e), "Unable to serialize data")
-	console.Println(string(b))
+		Key:  keyHex,
+	})
 	return nil
-}
-
-func decryptInspect(key [32]byte, r io.Reader) io.ReadCloser {
-	stream, err := sio.AES_256_GCM.Stream(key[:])
-	fatalIf(probe.NewError(err), "Unable to initiate decryption")
-
-	// Zero nonce, we only use each key once, and 32 bytes is plenty.
-	nonce := make([]byte, stream.NonceSize())
-	return ioutil.NopCloser(stream.DecryptReader(r, nonce, nil))
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -60,7 +60,7 @@ EXAMPLES:
 // checkAdminPolicyCreateSyntax - validate all the passed arguments
 func checkAdminPolicyCreateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "create", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -136,7 +136,7 @@ func mainAdminPolicyCreate(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), policy)).Trace(args...), "Unable to create new policy")
 
 	printMsg(userPolicyMessage{
-		op:     "create",
+		op:     ctx.Command.Name,
 		Policy: args.Get(1),
 	})
 

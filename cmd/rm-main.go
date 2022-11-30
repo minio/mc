@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -257,7 +257,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	}
 	if !cliCtx.Args().Present() && !isStdin {
 		exitCode := 1
-		showCommandHelpAndExit(cliCtx, "rm", exitCode)
+		showCommandHelpAndExit(cliCtx, exitCode)
 	}
 
 	// For all recursive or versions bulk deletion operations make sure to check for 'force' flag.
@@ -390,9 +390,10 @@ func printDryRunMsg(content *ClientContent) {
 }
 
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
-//   Use cases:
-//      * Remove objects recursively
-//      * Remove all versions of a single object
+//
+//	Use cases:
+//	   * Remove objects recursively
+//	   * Remove all versions of a single object
 func listAndRemove(url string, opts removeOpts) error {
 	ctx, cancelRemove := context.WithCancel(globalContext)
 	defer cancelRemove()

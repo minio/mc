@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -140,10 +140,10 @@ func checkAdminBwInfoSyntax(ctx *cli.Context) {
 		u != "Bi" &&
 		u != "B" &&
 		u != "" {
-		showCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 	if len(ctx.Args()) > 1 || len(ctx.Args()) == 0 {
-		showCommandHelpAndExit(ctx, "bandwidth", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,13 +19,14 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -104,14 +105,14 @@ EXAMPLES:
 
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	// Check for scan argument
 	scanArg := ctx.String("scan")
 	scanArg = strings.ToLower(scanArg)
 	if scanArg != scanNormalMode && scanArg != scanDeepMode {
-		showCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -465,11 +466,17 @@ type shortBackgroundHealStatusMessage struct {
 func (s shortBackgroundHealStatusMessage) String() string {
 	healPrettyMsg := ""
 	var (
-		totalItems  uint64
-		totalBytes  uint64
-		itemsHealed uint64
-		bytesHealed uint64
-		startedAt   time.Time
+		totalItems         uint64
+		totalBytes         uint64
+		itemsHealed        uint64
+		bytesHealed        uint64
+		itemsFailed        uint64
+		bytesFailed        uint64
+		itemsHealedPerSec  float64
+		bytesHealedPerSec  float64
+		startedAt          time.Time
+		setsExceedsStd     int
+		setsExceedsReduced int
 
 		// The addition of Elapsed time of each parallel healing operation
 		// this is needed to calculate the rate of healing
@@ -479,65 +486,106 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		healingRemaining time.Duration
 	)
 
-	dedup := make(map[setIndex]struct{})
+	var problematicDisks int
 
 	for _, set := range s.HealInfo.Sets {
 		setsStatus := generateSetsStatus(set.Disks)
+		// Furthest along disk...
+		var furthestHealingDisk *madmin.Disk
+		missingInSet := 0
 		for _, disk := range set.Disks {
+			// Ignore disk with non 'ok' status
+			if disk.State != madmin.DriveStateOk {
+				if disk.State != madmin.DriveStateUnformatted {
+					missingInSet++
+					problematicDisks++
+				}
+				continue
+			}
+
 			if disk.HealInfo != nil {
-				// Avoid counting two disks beloning to the same pool/set
-				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
-				_, found := dedup[diskSet]
-				if found {
+				missingInSet++
+				disk := disk
+				if furthestHealingDisk == nil {
+					furthestHealingDisk = &disk
 					continue
 				}
-				dedup[diskSet] = struct{}{}
-
-				// Approximate values
-				totalItems += disk.HealInfo.ObjectsTotalCount
-				totalBytes += disk.HealInfo.ObjectsTotalSize
-				itemsHealed += disk.HealInfo.ItemsHealed
-				bytesHealed += disk.HealInfo.BytesDone
-
-				if !disk.HealInfo.Started.IsZero() {
-					if !disk.HealInfo.Started.Before(startedAt) {
-						startedAt = disk.HealInfo.Started
-					}
-
-					if !disk.HealInfo.LastUpdate.IsZero() {
-						accumulatedElapsedTime += disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started)
-					}
-
-					scanSpeed := float64(disk.UsedSpace) / float64(time.Now().Sub(disk.HealInfo.Started))
-					remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
-					if remainingTime > healingRemaining {
-						healingRemaining = remainingTime
-					}
+				if disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed > furthestHealingDisk.HealInfo.ItemsHealed+furthestHealingDisk.HealInfo.ItemsFailed {
+					furthestHealingDisk = &disk
+					continue
 				}
+			}
+		}
+		if furthestHealingDisk != nil {
+			disk := furthestHealingDisk
+			diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
+
+			// Approximate values
+			totalItems += disk.HealInfo.ObjectsTotalCount
+			totalBytes += disk.HealInfo.ObjectsTotalSize
+			itemsHealed += disk.HealInfo.ItemsHealed
+			bytesHealed += disk.HealInfo.BytesDone
+			bytesFailed += disk.HealInfo.BytesFailed
+			itemsFailed += disk.HealInfo.ItemsFailed
+
+			if !disk.HealInfo.Started.IsZero() {
+				if !disk.HealInfo.Started.Before(startedAt) {
+					startedAt = disk.HealInfo.Started
+				}
+
+				if !disk.HealInfo.LastUpdate.IsZero() {
+					accumulatedElapsedTime += disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started)
+				}
+
+				bytesHealedPerSec += float64(time.Second) * float64(disk.HealInfo.BytesDone) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
+				itemsHealedPerSec += float64(time.Second) * float64(disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
+
+				scanSpeed := float64(disk.UsedSpace) / float64(time.Now().Sub(disk.HealInfo.Started))
+				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
+				if remainingTime > healingRemaining {
+					healingRemaining = remainingTime
+				}
+			}
+			if n, ok := s.HealInfo.SCParity["STANDARD"]; ok && missingInSet > n {
+				setsExceedsStd++
+			}
+			if n, ok := s.HealInfo.SCParity["REDUCED_REDUNDANCY"]; ok && missingInSet > n {
+				setsExceedsReduced++
 			}
 		}
 	}
 
 	if startedAt.IsZero() && itemsHealed == 0 {
-		healPrettyMsg += "No active healing in progress."
+		healPrettyMsg += "No active healing is detected among disks"
+		if problematicDisks > 0 {
+			healPrettyMsg += fmt.Sprintf(", though %d offline disk(s) found.", problematicDisks)
+		} else {
+			healPrettyMsg += "."
+		}
 		return healPrettyMsg
 	}
 
 	if totalItems > 0 && totalBytes > 0 {
 		// Objects healed information
-		itemsPct := 100 * float64(itemsHealed) / float64(totalItems)
-		bytesPct := 100 * float64(bytesHealed) / float64(totalBytes)
+		itemsPct := math.Min(100, 100*float64(itemsHealed)/float64(totalItems))
+		bytesPct := math.Min(100, 100*float64(bytesHealed)/float64(totalBytes))
 
 		healPrettyMsg += fmt.Sprintf("Objects Healed: %s/%s (%s), %s/%s (%s)\n",
 			humanize.Comma(int64(itemsHealed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
 			humanize.Bytes(bytesHealed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
+
+		if itemsFailed > 0 {
+			itemsPct := math.Min(100, 100*float64(itemsFailed)/float64(totalItems))
+			bytesPct := math.Min(100, 100*float64(bytesFailed)/float64(totalBytes))
+			healPrettyMsg += fmt.Sprintf("Objects Failed: %s/%s (%s), %s/%s (%s)\n",
+				humanize.Comma(int64(itemsFailed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
+				humanize.Bytes(bytesFailed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
+		}
 	} else {
 		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.Bytes(bytesHealed))
 	}
 
 	if accumulatedElapsedTime > 0 {
-		bytesHealedPerSec := float64(uint64(time.Second)*bytesHealed) / float64(accumulatedElapsedTime)
-		itemsHealedPerSec := float64(uint64(time.Second)*itemsHealed) / float64(accumulatedElapsedTime)
 		healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))
 	}
 
@@ -545,6 +593,18 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	now := time.Now()
 	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, now.Add(healingRemaining), "", ""))
 
+	if problematicDisks > 0 {
+		healPrettyMsg += "\n"
+		healPrettyMsg += fmt.Sprintf("%d offline disk(s) found.", problematicDisks)
+	}
+	if setsExceedsStd > 0 {
+		healPrettyMsg += "\n"
+		healPrettyMsg += fmt.Sprintf("%d of %d sets exceeds standard parity count EC:%d lost/offline disks", setsExceedsStd, len(s.HealInfo.Sets), s.HealInfo.SCParity["STANDARD"])
+	}
+	if setsExceedsReduced > 0 {
+		healPrettyMsg += "\n"
+		healPrettyMsg += fmt.Sprintf("%d of %d sets exceeds reduced parity count EC:%d lost/offline disks", setsExceedsReduced, len(s.HealInfo.Sets), s.HealInfo.SCParity["REDUCED_REDUNDANCY"])
+	}
 	return healPrettyMsg
 }
 

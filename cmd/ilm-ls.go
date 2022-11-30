@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,18 +18,17 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"strconv"
-	"strings"
+	"os"
 
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
-	"github.com/minio/pkg/console"
 )
 
 var ilmListFlags = []cli.Flag{
@@ -85,62 +84,9 @@ type ilmListMessage struct {
 }
 
 func (i ilmListMessage) String() string {
-	showExpiry := i.Context.Bool("expiry")
-	showTransition := i.Context.Bool("transition")
-
-	// If none of the flags are explicitly mentioned, all fields are shown.
-	showAll := !showExpiry && !showTransition
-
-	var hdrLabelIndexMap map[string]int
-	var alignedHdrLabels []string
-	var cellDataNoTags [][]string
-	var cellDataWithTags [][]string
-	var tagRows map[string][]string
-	var tbl PrettyTable
-
-	ilm.PopulateILMDataForDisplay(i.Config, &hdrLabelIndexMap, &alignedHdrLabels,
-		&cellDataNoTags, &cellDataWithTags, &tagRows,
-		showAll, showExpiry, showTransition)
-
-	// Entire table content.
-	var tblContents string
-
-	// Fill up fields
-	var fields []Field
-
-	// The header table
-	for _, hdr := range alignedHdrLabels {
-		fields = append(fields, Field{ilmThemeHeader, len(hdr)})
-	}
-
-	tbl = newPrettyTable(tableSeperator, fields...)
-	tblContents = getILMHeader(&tbl, alignedHdrLabels...)
-
-	// If no data to show at all, quit here
-	if len(cellDataNoTags) == 0 && len(cellDataWithTags) == 0 {
-		return tblContents
-	}
-
-	// The data table
-	var tblRowField *[]string
-	if len(cellDataNoTags) == 0 {
-		tblRowField = &cellDataWithTags[0]
-	} else {
-		tblRowField = &cellDataNoTags[0]
-	}
-
-	// Reuse the fields
-	fields = nil
-
-	for _, hdr := range *tblRowField {
-		fields = append(fields, Field{ilmThemeRow, len(hdr)})
-	}
-
-	tbl = newPrettyTable(tableSeperator, fields...)
-	tblContents += getILMRowsNoTags(&tbl, &cellDataNoTags)
-	tblContents += getILMRowsWithTags(&tbl, &cellDataWithTags, tagRows)
-
-	return tblContents
+	// We don't use this method to display ilm-ls output. This is here to
+	// implement the interface required by printMsg
+	return ""
 }
 
 func (i ilmListMessage) JSON() string {
@@ -166,92 +112,12 @@ func validateILMListFlagSet(ctx *cli.Context) bool {
 // checkILMListSyntax - validate arguments passed by a user
 func checkILMListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "ls", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 
 	if !validateILMListFlagSet(ctx) {
 		fatalIf(errInvalidArgument(), "only one display field flag is allowed per ls command. Refer mc "+ctx.Command.FullName()+" --help.")
 	}
-}
-
-const tableSeperator = "|"
-
-func getILMHeader(tbl *PrettyTable, alignedHdrLabels ...string) string {
-	if len(alignedHdrLabels) == 0 {
-		return ""
-	}
-	row := tbl.buildRow(alignedHdrLabels...)
-	header := console.Colorize(ilmThemeHeader, row+"\n")
-	lineRow := buildILMTableLineRow(alignedHdrLabels...)
-	row = tbl.buildRow(lineRow...)
-	row = console.Colorize(ilmThemeHeader, row+"\n")
-	header += row
-	return header
-}
-
-func buildILMTableLineRow(rowArr ...string) []string {
-	lineRowArr := make([]string, len(rowArr))
-	for index := 0; index < len(rowArr); index++ {
-		var tagBfr bytes.Buffer
-		for rowArrChars := 0; rowArrChars < len(rowArr[index]); rowArrChars++ {
-			tagBfr.WriteByte('-')
-		}
-		lineRowArr[index] = tagBfr.String()
-	}
-	return lineRowArr
-}
-
-func getILMRowsNoTags(tbl *PrettyTable, cellDataNoTags *[][]string) string {
-	if cellDataNoTags == nil || len(*cellDataNoTags) == 0 {
-		return ""
-	}
-	var rows string
-	for _, rowArr := range *cellDataNoTags {
-		var row string // Table row
-		// Build & print row
-		row = tbl.buildRow(rowArr...)
-		row = console.Colorize(ilmThemeRow, row)
-		rows += row + "\n"
-		lineRow := buildILMTableLineRow(rowArr...)
-		row = tbl.buildRow(lineRow...)
-		row = console.Colorize(ilmThemeRow, row)
-		rows += row + "\n"
-	}
-	return rows
-}
-
-func getILMRowsWithTags(tbl *PrettyTable, cellDataWithTags *[][]string, newRows map[string][]string) string {
-	if cellDataWithTags == nil || len(*cellDataWithTags) == 0 {
-		return ""
-	}
-	var rows string
-	for _, rowArr := range *cellDataWithTags {
-		if rowArr == nil {
-			continue
-		}
-		var row string // Table row
-		// Build & print row
-		row = tbl.buildRow(rowArr...)
-		row = console.Colorize(ilmThemeRow, row)
-		rows += row + "\n"
-		// Add the extra blank rows & tag value in the right column
-		if len(newRows) > 0 {
-			for index := 0; index < len(newRows); index++ {
-				newRow, ok := newRows[strings.TrimSpace(rowArr[0])+strconv.Itoa(index)]
-				if ok {
-					row = tbl.buildRow(newRow...)
-					row = console.Colorize(ilmThemeRow, row)
-					rows += row + "\n"
-				}
-			}
-		}
-		// Build & print the line row
-		lineRow := buildILMTableLineRow(rowArr...)
-		row = tbl.buildRow(lineRow...)
-		row = console.Colorize(ilmThemeRow, row)
-		rows += row + "\n"
-	}
-	return rows
 }
 
 func mainILMList(cliCtx *cli.Context) error {
@@ -264,6 +130,15 @@ func mainILMList(cliCtx *cli.Context) error {
 	args := cliCtx.Args()
 	urlStr := args.Get(0)
 
+	// Note: validateILMListFlagsSet ensures we deal with only valid
+	// combinations here.
+	var filter ilm.LsFilter
+	if v := cliCtx.Bool("expiry"); v {
+		filter = ilm.ExpiryOnly
+	}
+	if v := cliCtx.Bool("transition"); v {
+		filter = ilm.TransitionOnly
+	}
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
 
@@ -275,12 +150,36 @@ func mainILMList(cliCtx *cli.Context) error {
 			"Unable to ls lifecycle configuration")
 	}
 
-	printMsg(ilmListMessage{
-		Status:  "success",
-		Target:  urlStr,
-		Context: cliCtx,
-		Config:  ilmCfg,
-	})
+	if globalJSON {
+		printMsg(ilmListMessage{
+			Status:  "success",
+			Target:  urlStr,
+			Context: cliCtx,
+			Config:  ilmCfg,
+		})
+		return nil
+	}
+
+	for _, tbl := range ilm.ToTables(ilmCfg, filter) {
+		rows := tbl.Rows()
+		if len(rows) == 0 {
+			continue
+		}
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		var colCfgs []table.ColumnConfig
+		for i := 0; i < len(rows[0]); i++ {
+			colCfgs = append(colCfgs, table.ColumnConfig{
+				Align: text.AlignCenter,
+			})
+		}
+		t.SetColumnConfigs(colCfgs)
+		t.SetTitle(tbl.Title())
+		t.AppendHeader(tbl.ColumnHeaders())
+		t.AppendRows(rows)
+		t.SetStyle(table.StyleLight)
+		t.Render()
+	}
 
 	return nil
 }

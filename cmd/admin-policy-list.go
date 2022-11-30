@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -49,7 +49,7 @@ EXAMPLES:
 // checkAdminPolicyListSyntax - validate all the passed arguments
 func checkAdminPolicyListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -72,7 +72,7 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 
 	for k := range policies {
 		printMsg(userPolicyMessage{
-			op:     "list",
+			op:     ctx.Command.Name,
 			Policy: k,
 		})
 	}

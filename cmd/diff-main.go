@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -116,7 +116,7 @@ func (d diffMessage) JSON() string {
 
 func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if len(cliCtx.Args()) != 2 {
-		showCommandHelpAndExit(cliCtx, "diff", 1) // last argument is exit code
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
 	for _, arg := range cliCtx.Args() {
 		if strings.TrimSpace(arg) == "" {

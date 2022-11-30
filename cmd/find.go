@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -58,19 +58,23 @@ func (f findMessage) JSON() string {
 // also proceed to look for similar strings alone and print it.
 //
 // pattern:
-// 	{ term }
-// term:
-// 	'*'         matches any sequence of non-Separator characters
-// 	'?'         matches any single non-Separator character
-// 	'[' [ '^' ] { character-range } ']'
-// 	            character class (must be non-empty)
-// 	c           matches character c (c != '*', '?', '\\', '[')
-// 	'\\' c      matches character c
-// character-range:
-// 	c           matches character c (c != '\\', '-', ']')
-// 	'\\' c      matches character c
-// 	lo '-' hi   matches character c for lo <= c <= hi
 //
+//	{ term }
+//
+// term:
+//
+//	'*'         matches any sequence of non-Separator characters
+//	'?'         matches any single non-Separator character
+//	'[' [ '^' ] { character-range } ']'
+//	            character class (must be non-empty)
+//	c           matches character c (c != '*', '?', '\\', '[')
+//	'\\' c      matches character c
+//
+// character-range:
+//
+//	c           matches character c (c != '\\', '-', ']')
+//	'\\' c      matches character c
+//	lo '-' hi   matches character c for lo <= c <= hi
 func nameMatch(pattern, path string) bool {
 	matched, e := filepath.Match(pattern, filepath.Base(path))
 	errorIf(probe.NewError(e).Trace(pattern, path), "Unable to match with input pattern.")

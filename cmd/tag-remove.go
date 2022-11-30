@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -104,7 +104,7 @@ func (t tagRemoveMessage) JSON() string {
 
 func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "remove", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 
 	targetURL = ctx.Args().Get(0)

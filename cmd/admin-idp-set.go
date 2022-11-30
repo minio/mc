@@ -19,9 +19,11 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -30,6 +32,7 @@ var adminIDPSetCmd = cli.Command{
 	Usage:        "Create/Update an IDP server configuration",
 	Before:       setGlobalsFromContext,
 	Action:       mainAdminIDPSet,
+	Hidden:       true,
 	OnUsageError: onUsageError,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -37,6 +40,11 @@ var adminIDPSetCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} TARGET ID_TYPE [CFG_NAME] [CFG_PARAMS...]
+
+  ID_TYPE must be one of 'ldap' or 'openid'.
+
+  **DEPRECATED**: This command will be removed in a future version. Please use
+  "mc admin idp ldap|openid" instead.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -58,12 +66,29 @@ EXAMPLES:
           scopes="openid,groups" \
           redirect_uri="http://127.0.0.1:10000/oauth_callback" \
           role_policy="consoleAdmin"
+  3. Create/Update the LDAP IDP configuration (CFG_NAME must be empty for LDAP).
+     {{.Prompt}} {{.HelpName}} play/ ldap \
+          server_addr=ldap.corp.min.io:686 \
+          lookup_bind_dn=cn=readonly,ou=service_account,dc=min,dc=io \
+          lookup_bind_password=mysecretpassword \
+          user_dn_search_base_dn=dc=min,dc=io \
+          user_dn_search_filter="(uid=%s)" \
+          group_search_base_dn=ou=swengg,dc=min,dc=io \
+          group_search_filter="(&(objectclass=groupofnames)(member=%d))"
+
 `,
+}
+
+func validateIDType(idpType string) {
+	if !madmin.ValidIDPConfigTypes.Contains(idpType) {
+		fatalIf(probe.NewError(errors.New("invalid IDP type")),
+			fmt.Sprintf("IDP type must be one of %v", madmin.ValidIDPConfigTypes))
+	}
 }
 
 func mainAdminIDPSet(ctx *cli.Context) error {
 	if len(ctx.Args()) < 3 {
-		showCommandHelpAndExit(ctx, "set", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
@@ -75,10 +100,7 @@ func mainAdminIDPSet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	idpType := args.Get(1)
-
-	if idpType != "openid" {
-		fatalIf(probe.NewError(errors.New("not implemented")), "This feature is not yet available")
-	}
+	validateIDType(idpType)
 
 	var cfgName string
 	input := args[2:]
@@ -89,7 +111,7 @@ func mainAdminIDPSet(ctx *cli.Context) error {
 
 	inputCfg := strings.Join(input, " ")
 
-	restart, e := client.SetIDPConfig(globalContext, idpType, cfgName, inputCfg)
+	restart, e := client.AddOrUpdateIDPConfig(globalContext, idpType, cfgName, inputCfg, false)
 	fatalIf(probe.NewError(e), "Unable to set IDP config for '%s' to server", idpType)
 
 	// Print set config result

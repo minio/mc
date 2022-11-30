@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -135,7 +135,7 @@ func (t tagListMessage) String() string {
 // parseTagListSyntax performs command-line input validation for tag list command.
 func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions bool) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "list", globalErrorExitStatus)
+		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 
 	targetURL = ctx.Args().Get(0)

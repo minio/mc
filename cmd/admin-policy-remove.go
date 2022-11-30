@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -52,7 +52,7 @@ EXAMPLES:
 // checkAdminPolicyRemoveSyntax - validate all the passed arguments
 func checkAdminPolicyRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -73,7 +73,7 @@ func mainAdminPolicyRemove(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.RemoveCannedPolicy(globalContext, args.Get(1))).Trace(args...), "Unable to remove policy")
 
 	printMsg(userPolicyMessage{
-		op:     "remove",
+		op:     ctx.Command.Name,
 		Policy: args.Get(1),
 	})
 

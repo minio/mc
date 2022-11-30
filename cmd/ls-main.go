@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -175,9 +175,6 @@ func checkListSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, doList
 	listZip := cliCtx.Bool("zip")
 
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
-	if timeRef.IsZero() && withOlderVersions {
-		timeRef = time.Now().UTC()
-	}
 
 	if listZip && (withOlderVersions || !timeRef.IsZero()) {
 		fatalIf(errInvalidArgument().Trace(args...), "Zip file listing can only be performed on the latest version")

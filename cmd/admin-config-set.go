@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -88,7 +88,7 @@ func (u configSetMessage) JSON() string {
 // checkAdminConfigSetSyntax - validate all the passed arguments
 func checkAdminConfigSetSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() && len(ctx.Args()) < 1 {
-		showCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

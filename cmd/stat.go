@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -27,10 +27,10 @@ import (
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/replication"
@@ -52,7 +52,6 @@ type statMessage struct {
 	Metadata          map[string]string `json:"metadata,omitempty"`
 	VersionID         string            `json:"versionID,omitempty"`
 	DeleteMarker      bool              `json:"deleteMarker,omitempty"`
-	singleObject      bool
 }
 
 func (stat statMessage) String() (msg string) {
@@ -164,13 +163,10 @@ func getStandardizedURL(targetURL string) string {
 // statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
 // HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
 // from GET listing.
-func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*ClientContent, []*BucketInfo, *probe.Error) {
-	var stats []*ClientContent
-	var bucketStats []*BucketInfo
-	var clnt Client
+func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	clnt, err := newClient(targetURL)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	targetAlias, _, _ := mustExpandAlias(targetURL)
@@ -190,7 +186,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		lstOptions.WithDeleteMarkers = true
 		lstOptions.TimeRef = timeRef
 	}
-	var cErr error
+	var e error
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -209,7 +205,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
-			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
+			e = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
 
@@ -220,8 +216,8 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		url := targetAlias + getKey(content)
 		standardizedURL := getStandardizedURL(targetURL)
 
-		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
-			return nil, nil, errTargetNotFound(targetURL).Trace(url, standardizedURL)
+		if !isRecursive && !strings.HasPrefix(url, standardizedURL) && !filepath.IsAbs(url) {
+			return errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
 		if versionID != "" {
@@ -233,6 +229,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		if err != nil {
 			continue
 		}
+
 		// if stat is on a bucket and non-recursive mode, serve the bucket metadata
 		if clnt != nil && !isRecursive && stat.Type.IsDir() {
 			bstat, err := clnt.GetBucketInfo(ctx)
@@ -243,7 +240,15 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				// Trim prefix path from the content path.
 				contentURL = strings.TrimPrefix(contentURL, prefixPath)
 				bstat.URL.Path = contentURL
-				bucketStats = append(bucketStats, &bstat)
+
+				if bstat.Date.IsZero() || bstat.Date.Equal(time.Unix(0, 0)) {
+					bstat.Date = content.Time
+				}
+
+				printMsg(bucketInfoMessage{
+					Status:     "success",
+					BucketInfo: bstat,
+				})
 				continue
 			}
 		}
@@ -254,10 +259,11 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		stat.URL.Path = contentURL
-		stats = append(stats, stat)
+
+		printMsg(parseStat(stat))
 	}
 
-	return stats, bucketStats, probe.NewError(cErr)
+	return probe.NewError(e)
 }
 
 // BucketInfo holds info about a bucket
@@ -318,16 +324,15 @@ func (i BucketInfo) Tags() string {
 }
 
 type bucketInfoMessage struct {
-	Op       string
-	URL      string     `json:"url"`
-	Status   string     `json:"status"`
-	Metadata BucketInfo `json:"metadata"`
+	Status string `json:"status"`
+	BucketInfo
 }
 
 func (v bucketInfoMessage) JSON() string {
 	v.Status = "success"
-	buf := &bytes.Buffer{}
-	enc := json.NewEncoder(buf)
+	v.Key = getKey(&ClientContent{URL: v.URL, Type: v.Type})
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", " ")
 	// Disable escaping special chars to display XML tags correctly
 	enc.SetEscapeHTML(false)
@@ -338,22 +343,23 @@ func (v bucketInfoMessage) JSON() string {
 
 func (v bucketInfoMessage) String() string {
 	var b strings.Builder
-	info := v.Metadata
 
-	keyStr := getKey(&ClientContent{URL: v.Metadata.URL, Type: v.Metadata.Type})
+	keyStr := getKey(&ClientContent{URL: v.URL, Type: v.Type})
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
-	fmt.Fprintln(&b, console.Colorize("Name", key))
-	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Metadata.Size))))
+	b.WriteString(console.Colorize("Name", key) + "\n")
+	b.WriteString(fmt.Sprintf("%-10s: %s ", "Date", v.Date.Format(printDate)) + "\n")
+	b.WriteString(fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Size))))
+
 	fType := func() string {
-		if v.Metadata.Type.IsDir() {
+		if v.Type.IsDir() {
 			return "folder"
 		}
 		return "file"
 	}()
-	fmt.Fprintf(&b, fmt.Sprintf("%-10s: %s \n", "Type", fType))
-	fmt.Fprintf(&b, fmt.Sprintf("%-10s:\n", "Metadata"))
+	b.WriteString(fmt.Sprintf("%-10s: %s \n", "Type", fType))
+	b.WriteString(fmt.Sprintf("%-10s:\n", "Metadata"))
+	b.WriteString(prettyPrintBucketMetadata(v.BucketInfo))
 
-	fmt.Fprintf(&b, prettyPrintBucketMetadata(info))
 	return b.String()
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -97,7 +97,7 @@ func (u configExportMessage) JSON() string {
 // checkAdminConfigExportSyntax - validate all the passed arguments
 func checkAdminConfigExportSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, "export", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

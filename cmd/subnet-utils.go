@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -63,7 +63,7 @@ mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 	subnetCommonFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "airgap",
-			Usage: "Use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+			Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		},
 		cli.StringFlag{
 			Name:  "api-key",
@@ -97,6 +97,10 @@ func subnetUploadURL(uploadType string, filename string) string {
 
 func subnetRegisterURL() string {
 	return subnetBaseURL() + "/api/cluster/register"
+}
+
+func subnetUnregisterURL(depID string) string {
+	return subnetBaseURL() + "/api/cluster/unregister?deploymentId=" + depID
 }
 
 func subnetOfflineRegisterURL(regToken string) string {
@@ -229,12 +233,23 @@ func getMinIOSubSysConfig(client *madmin.AdminClient, subSys string) ([]madmin.S
 	return madmin.ParseServerConfigOutput(string(buf))
 }
 
-func getKeyFromMinIOConfig(alias string, subSys string, key string) (string, bool) {
+func getMinIOSubnetConfig(alias string) []madmin.SubsysConfig {
+	if globalSubnetConfig != nil {
+		return globalSubnetConfig
+	}
+
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	scfg, e := getMinIOSubSysConfig(client, subSys)
+	var e error
+	globalSubnetConfig, e = getMinIOSubSysConfig(client, madmin.SubnetSubSys)
 	fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+
+	return globalSubnetConfig
+}
+
+func getKeyFromSubnetConfig(alias string, key string) (string, bool) {
+	scfg := getMinIOSubnetConfig(alias)
 
 	// This function only works for fetch config from single target sub-systems
 	// in the server config and is enough for now.
@@ -247,7 +262,7 @@ func getKeyFromMinIOConfig(alias string, subSys string, key string) (string, boo
 
 func getSubnetAPIKeyFromConfig(alias string) string {
 	// get the subnet api_key config from MinIO if available
-	apiKey, supported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "api_key")
+	apiKey, supported := getKeyFromSubnetConfig(alias, "api_key")
 	if supported {
 		return apiKey
 	}
@@ -263,7 +278,7 @@ func setGlobalSubnetProxyFromConfig(alias string) error {
 	}
 
 	// get the subnet proxy config from MinIO if available
-	proxy, supported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "proxy")
+	proxy, supported := getKeyFromSubnetConfig(alias, "proxy")
 	if supported && len(proxy) > 0 {
 		proxyURL, e := url.Parse(proxy)
 		if e != nil {
@@ -276,7 +291,7 @@ func setGlobalSubnetProxyFromConfig(alias string) error {
 
 func getSubnetLicenseFromConfig(alias string) string {
 	// get the subnet license config from MinIO if available
-	lic, supported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "license")
+	lic, supported := getKeyFromSubnetConfig(alias, "license")
 	if supported {
 		return lic
 	}
@@ -336,7 +351,7 @@ func setSubnetAPIKey(alias string, apiKey string) {
 		fatal(errDummy().Trace(), "API Key must not be empty.")
 	}
 
-	_, apiKeySupported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "api_key")
+	_, apiKeySupported := getKeyFromSubnetConfig(alias, "api_key")
 	if !apiKeySupported {
 		setSubnetAPIKeyInMcConfig(alias, apiKey)
 		return
@@ -350,7 +365,7 @@ func setSubnetLicense(alias string, lic string) {
 		fatal(errDummy().Trace(), "License must not be empty.")
 	}
 
-	_, licSupported := getKeyFromMinIOConfig(alias, madmin.SubnetSubSys, "license")
+	_, licSupported := getKeyFromSubnetConfig(alias, "license")
 	if !licSupported {
 		setSubnetLicenseInMcConfig(alias, lic)
 		return
@@ -544,6 +559,28 @@ func registerClusterOnSubnet(clusterRegInfo ClusterRegistrationInfo, alias strin
 	return extractAndSaveSubnetCreds(alias, resp)
 }
 
+func removeSubnetAuthConfig(alias string) {
+	setSubnetConfig(alias, "api_key", "")
+	setSubnetConfig(alias, "license", "")
+}
+
+// unregisterClusterFromSubnet - Unregisters the given cluster from SUBNET using given API key for auth
+func unregisterClusterFromSubnet(alias string, depID string, apiKey string) error {
+	regURL, headers, e := subnetURLWithAuth(subnetUnregisterURL(depID), apiKey)
+	if e != nil {
+		return e
+	}
+
+	_, e = subnetPostReq(regURL, nil, headers)
+	if e != nil {
+		return e
+	}
+
+	removeSubnetAuthConfig(alias)
+
+	return nil
+}
+
 // extractAndSaveSubnetCreds - extract license from response and set it in minio config
 func extractAndSaveSubnetCreds(alias string, resp string) (string, string, error) {
 	parsedResp := gjson.Parse(resp)
@@ -693,8 +730,8 @@ func getAPIKeyFlag(ctx *cli.Context) (string, error) {
 	return apiKey, nil
 }
 
-func initSubnetConnectivity(ctx *cli.Context, aliasedURL string) (string, string) {
-	e := validateSubnetFlags(ctx)
+func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool) (string, string) {
+	e := validateSubnetFlags(ctx, forUpload)
 	fatalIf(probe.NewError(e), "Invalid flags:")
 
 	alias, _ := url2Alias(aliasedURL)
@@ -714,9 +751,9 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string) (string, string
 	return alias, apiKey
 }
 
-func validateSubnetFlags(ctx *cli.Context) error {
+func validateSubnetFlags(ctx *cli.Context, forUpload bool) error {
 	if !globalAirgapped {
-		if globalJSON {
+		if globalJSON && forUpload {
 			return errors.New("--json is applicable only when --airgap is also passed")
 		}
 		return nil

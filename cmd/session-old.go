@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -26,7 +26,7 @@ import (
 	"github.com/minio/pkg/quick"
 )
 
-/////////////////// Session V6 ///////////////////
+// ///////////////// Session V6 ///////////////////
 // sessionV6Header for resumable sessions.
 type sessionV6Header struct {
 	Version            string            `json:"version"`

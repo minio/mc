@@ -51,7 +51,7 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 	args := ctx.Args()
 	nArgs := len(args)
 	if nArgs < 2 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 	if nArgs != 2 {
 		fatalIf(errInvalidArgument().Trace(args.Tail()...),
@@ -72,7 +72,7 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to verify remote tier target")
 
 	printMsg(&tierMessage{
-		op:       "verify",
+		op:       ctx.Command.Name,
 		Status:   "success",
 		TierName: tierName,
 	})

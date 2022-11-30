@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -98,7 +98,7 @@ func (s removeBucketMessage) JSON() string {
 func checkRbSyntax(ctx context.Context, cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
 		exitCode := 1
-		showCommandHelpAndExit(cliCtx, "rb", exitCode)
+		showCommandHelpAndExit(cliCtx, exitCode)
 	}
 	// Set command flags from context.
 	isForce := cliCtx.Bool("force")

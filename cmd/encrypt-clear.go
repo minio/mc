@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -53,7 +53,7 @@ EXAMPLES:
 // checkEncryptClearSyntax - validate all the passed arguments
 func checkEncryptClearSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "clear", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -90,7 +90,7 @@ func mainEncryptClear(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize connection.")
 	fatalIf(client.DeleteEncryption(ctx), "Unable to clear auto encryption configuration")
 	printMsg(encryptClearMessage{
-		Op:     "clear",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 	})

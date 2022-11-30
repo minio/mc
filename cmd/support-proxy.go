@@ -21,30 +21,27 @@ import (
 	"github.com/minio/cli"
 )
 
-var supportLogsEnableCmd = cli.Command{
-	Name:            "enable",
-	Usage:           "enable uploading real-time MinIO logs to SUBNET",
-	Action:          mainEnableLogs,
+var supportProxySubcommands = []cli.Command{
+	supportProxySetCmd,
+	supportProxyRemoveCmd,
+	supportProxyShowCmd,
+}
+
+var supportProxyCmd = cli.Command{
+	Name:            "proxy",
+	Usage:           "configure proxy",
+	Action:          mainSupportProxy,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           supportGlobalFlags,
+	Subcommands:     supportProxySubcommands,
 	HideHelpCommand: true,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-USAGE:
-  {{.HelpName}} ALIAS
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Enable  uploading real-time logs for cluster with alias 'play' to SUBNET.
-     {{.Prompt}} {{.HelpName}} play
-`,
 }
 
-func mainEnableLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "enable")
-	configureSubnetWebhook(alias, true)
+// mainSupportProxy is the handler for "mc support proxy" command.
+func mainSupportProxy(ctx *cli.Context) error {
+	commandNotFound(ctx, supportProxySubcommands)
 	return nil
+	// Sub-commands like "set", "remove", "show" have their own main.
+	// Check for command syntax
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -69,7 +69,7 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (copyURLsType,
 
 		// If recursion is ON, it is type C.
 		// If source is a folder, it is Type C.
-		if sourceContent.Type.IsDir() || o.isRecursive || o.isZip {
+		if sourceContent.Type.IsDir() || o.isRecursive {
 			return copyURLsTypeC, "", nil
 		}
 
@@ -91,13 +91,13 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (copyURLsType,
 
 // SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeA(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func prepareCopyURLsTypeA(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair, isZip bool) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{}, false)
+	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{}, isZip)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -124,13 +124,13 @@ func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targ
 
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
 // prepareCopyURLsTypeB - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeB(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+func prepareCopyURLsTypeB(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair, isZip bool) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{}, false)
+	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{}, isZip)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -241,9 +241,9 @@ func prepareCopyURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 
 		switch cpType {
 		case copyURLsTypeA:
-			copyURLsCh <- prepareCopyURLsTypeA(ctx, o.sourceURLs[0], cpVersion, o.targetURL, o.encKeyDB)
+			copyURLsCh <- prepareCopyURLsTypeA(ctx, o.sourceURLs[0], cpVersion, o.targetURL, o.encKeyDB, o.isZip)
 		case copyURLsTypeB:
-			copyURLsCh <- prepareCopyURLsTypeB(ctx, o.sourceURLs[0], cpVersion, o.targetURL, o.encKeyDB)
+			copyURLsCh <- prepareCopyURLsTypeB(ctx, o.sourceURLs[0], cpVersion, o.targetURL, o.encKeyDB, o.isZip)
 		case copyURLsTypeC:
 			for cURLs := range prepareCopyURLsTypeC(ctx, o.sourceURLs[0], o.targetURL, o.isRecursive, o.isZip, o.timeRef, o.encKeyDB) {
 				copyURLsCh <- cURLs

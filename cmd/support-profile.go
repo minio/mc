@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -37,7 +37,7 @@ var (
 	profileFlags = append([]cli.Flag{
 		cli.IntFlag{
 			Name:  "duration",
-			Usage: "start profiling for the specified duration in seconds",
+			Usage: "profile for the specified duration in seconds",
 			Value: 10,
 		},
 		cli.StringFlag{
@@ -52,7 +52,7 @@ const profileFile = "profile.zip"
 
 var supportProfileCmd = cli.Command{
 	Name:            "profile",
-	Usage:           "generate profile data for debugging",
+	Usage:           "upload profile data for debugging",
 	Action:          mainSupportProfile,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -68,14 +68,17 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Profile CPU for 10 seconds.
-     {{.Prompt}} {{.HelpName}} --type cpu myminio/
+  1. Profile CPU for 10 seconds on cluster with alias 'myminio' and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu myminio
 
-  2. Profile CPU, Memory, Goroutines for 10 seconds.
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines myminio/
+  2. Profile CPU, Memory, Goroutines for 10 seconds on cluster with alias 'myminio' and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines myminio
 
-  3. Profile CPU, Memory, Goroutines for 10 minutes.
-     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 myminio/
+  3. Profile CPU, Memory, Goroutines for 10 minutes on cluster with alias 'myminio' and upload results to SUBNET
+     {{.Prompt}} {{.HelpName}} --type cpu,mem,goroutines --duration 600 myminio
+
+  4. Profile CPU for 10 seconds on cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} --type cpu --airgap myminio
 `,
 }
 
@@ -99,7 +102,7 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 		}
 	}
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "profile", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	if ctx.Int("duration") < 10 {
@@ -168,7 +171,7 @@ func mainSupportProfile(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -119,18 +119,20 @@ type clusterStruct struct {
 }
 
 // String provides colorized info messages depending on the type of a server
-//        FS server                          non-FS server
+//
+//	FS server                          non-FS server
+//
 // ==============================  ===================================
 // ● <ip>:<port>                   ● <ip>:<port>
-//   Uptime: xxx                     Uptime: xxx
-//   Version: xxx                    Version: xxx
-//   Network: X/Y OK                 Network: X/Y OK
+//
+//	Uptime: xxx                     Uptime: xxx
+//	Version: xxx                    Version: xxx
+//	Network: X/Y OK                 Network: X/Y OK
 //
 // U Used, B Buckets, O Objects    Drives: N/N OK
 //
-//                                   U Used, B Buckets, O Objects
-//                                   N drives online, K drives offline
-//
+//	U Used, B Buckets, O Objects
+//	N drives online, K drives offline
 func (u clusterStruct) String() (msg string) {
 	// Check cluster level "Status" field for error
 	if u.Status == "error" {
@@ -320,7 +322,7 @@ func (u clusterStruct) JSON() string {
 // checkAdminInfoSyntax - validate arguments passed by a user
 func checkAdminInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 

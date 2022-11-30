@@ -20,6 +20,8 @@ package cmd
 import "github.com/minio/cli"
 
 var adminIDPSubcommands = []cli.Command{
+	adminIDPOpenidCmd,
+	adminIDPLdapCmd,
 	adminIDPSetCmd,
 	adminIDPInfoCmd,
 	adminIDPLsCmd,
