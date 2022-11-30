@@ -99,10 +99,10 @@ func (u userPolicyMessage) String() string {
 		return console.Colorize("PolicyMessage", "Created policy `"+u.Policy+"` successfully.")
 	case "detach":
 		return console.Colorize("PolicyMessage",
-			fmt.Sprintf("Policy `%s` is detached from %s `%s`", u.Policy, u.accountType(), u.UserOrGroup))
+			fmt.Sprintf("Policy `%s` successfully detached from %s `%s`", u.Policy, u.accountType(), u.UserOrGroup))
 	case "attach":
 		return console.Colorize("PolicyMessage",
-			fmt.Sprintf("Policy `%s` is attached to %s `%s`", u.Policy, u.accountType(), u.UserOrGroup))
+			fmt.Sprintf("Policy `%s` successfully attached to %s `%s`", u.Policy, u.accountType(), u.UserOrGroup))
 	}
 
 	return ""

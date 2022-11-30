@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -35,7 +37,7 @@ var adminUserPolicyDetachCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET POLICYNAME USERNAME
+  {{.HelpName}} TARGET USERNAME POLICYNAME [POLICYNAME...]
 
 POLICYNAME:
   Name of the policy on the MinIO server.
@@ -50,7 +52,7 @@ EXAMPLES:
 }
 
 func checkAdminUserPolicyDetachSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 3 {
+	if len(ctx.Args()) < 3 {
 		showCommandHelpAndExit(ctx, "detach", 1) // last argument is exit code
 	}
 }
@@ -65,18 +67,22 @@ func mainAdminUserPolicyDetach(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	policiesToDetach := args.Get(1)
-	user := args.Get(2)
+	user := args.Get(1)
+
+	var policyList []string
+	for i := 2; i < len(args); i++ {
+		policyList = append(policyList, args.Get(i))
+	}
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	e := client.DetachPoliciesFromUser(globalContext, policiesToDetach, user)
+	e := client.DetachPoliciesFromUser(globalContext, policyList, user)
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "detach",
-			Policy:      policiesToDetach,
+			Policy:      strings.Join(policyList, ","),
 			UserOrGroup: user,
 			IsGroup:     false,
 		})

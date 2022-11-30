@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -35,10 +37,10 @@ var adminGroupPolicyAttachCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET POLICYNAME GROUPNAME
+  {{.HelpName}} TARGET GROUPNAME POLICYNAME...
 
 POLICYNAME:
-  Name of the policy on the MinIO server.
+  Name of the policy on the MinIO server, may be multiple policies.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -49,12 +51,12 @@ EXAMPLES:
 
   2. Add user "james" to group "staff", then add the "readwrite" policy to the group "staff".
      {{.Prompt}} mc admin group add myminio staff james
-     {{.Prompt}} {{.HelpName}} myminio readwrite staff
+     {{.Prompt}} {{.HelpName}} myminio staff readwrite
 `,
 }
 
 func checkAdminGroupPolicyAttachSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 3 {
+	if len(ctx.Args()) < 3 {
 		showCommandHelpAndExit(ctx, "attach", 1) // last argument is exit code
 	}
 }
@@ -69,18 +71,22 @@ func mainAdminGroupPolicyAttach(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	policiesToAttach := args.Get(1)
-	group := args.Get(2)
+	group := args.Get(1)
+
+	var policyList []string
+	for i := 2; i < len(args); i++ {
+		policyList = append(policyList, args.Get(i))
+	}
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	e := client.AttachPoliciesToGroup(globalContext, policiesToAttach, group)
+	e := client.AttachPoliciesToGroup(globalContext, policyList, group)
 	if e == nil {
 		printMsg(userPolicyMessage{
 			op:          "attach",
-			Policy:      policiesToAttach,
+			Policy:      strings.Join(policyList, ", "),
 			UserOrGroup: group,
 			IsGroup:     true,
 		})
