@@ -40,7 +40,6 @@ var supportGlobalFlags = append(globalFlags, cli.BoolFlag{
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
 	supportCallhomeCmd,
-	supportLogsCmd,
 	supportDiagCmd,
 	supportPerfCmd,
 	supportInspectCmd,
