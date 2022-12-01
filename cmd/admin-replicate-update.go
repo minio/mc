@@ -29,7 +29,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminReplicateEditFlags = []cli.Flag{
+var adminReplicateUpdateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "deployment-id",
 		Usage: "deployment id of the site, should be a unique value",
@@ -40,13 +40,15 @@ var adminReplicateEditFlags = []cli.Flag{
 	},
 }
 
-var adminReplicateEditCmd = cli.Command{
-	Name:         "edit",
-	Usage:        "edit endpoint of site participating in cluster replication",
-	Action:       mainAdminReplicateEdit,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, adminReplicateEditFlags...),
+var adminReplicateUpdateCmd = cli.Command{
+	Name:          "update",
+	Aliases:       []string{"edit"},
+	HiddenAliases: true,
+	Usage:         "modify endpoint of site participating in site replication",
+	Action:        mainAdminReplicateUpdate,
+	OnUsageError:  onUsageError,
+	Before:        setGlobalsFromContext,
+	Flags:         append(globalFlags, adminReplicateUpdateFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -63,15 +65,15 @@ EXAMPLES:
 `,
 }
 
-type editSuccessMessage madmin.ReplicateEditStatus
+type updateSuccessMessage madmin.ReplicateEditStatus
 
-func (m editSuccessMessage) JSON() string {
+func (m updateSuccessMessage) JSON() string {
 	bs, e := json.MarshalIndent(madmin.ReplicateEditStatus(m), "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(bs)
 }
 
-func (m editSuccessMessage) String() string {
+func (m updateSuccessMessage) String() string {
 	v := madmin.ReplicateEditStatus(m)
 	messages := []string{v.Status}
 
@@ -81,7 +83,7 @@ func (m editSuccessMessage) String() string {
 	return console.Colorize("UserMessage", strings.Join(messages, "\n"))
 }
 
-func checkAdminReplicateEditSyntax(ctx *cli.Context) {
+func checkAdminReplicateUpdateSyntax(ctx *cli.Context) {
 	// Check argument count
 	argsNr := len(ctx.Args())
 	if argsNr < 1 {
@@ -93,8 +95,8 @@ func checkAdminReplicateEditSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainAdminReplicateEdit(ctx *cli.Context) error {
-	checkAdminReplicateEditSyntax(ctx)
+func mainAdminReplicateUpdate(ctx *cli.Context) error {
+	checkAdminReplicateUpdateSyntax(ctx)
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
@@ -122,7 +124,7 @@ func mainAdminReplicateEdit(ctx *cli.Context) error {
 	})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit cluster replication site endpoint")
 
-	printMsg(editSuccessMessage(res))
+	printMsg(updateSuccessMessage(res))
 
 	return nil
 }
