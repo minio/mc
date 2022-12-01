@@ -459,6 +459,7 @@ var appCmds = []cli.Command{
 	pingCmd,
 	odCmd,
 	batchCmd,
+	rehydrateCmd,
 }
 
 func printMCVersion(c *cli.Context) {

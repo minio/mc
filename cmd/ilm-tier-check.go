@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,16 +17,12 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
-)
+import "github.com/minio/cli"
 
-var adminTierVerifyCmd = cli.Command{
-	Name:         "verify",
-	Usage:        "verifies if remote tier configuration is valid",
+var ilmTierCheckCmd = cli.Command{
+	Name:         "check",
+	Usage:        "validates remote tier configuration",
 	Action:       mainAdminTierVerify,
-	Hidden:       true,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
@@ -43,39 +39,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Verify if a tier config is valid.
+  1. Validate a tier config given by name.
      {{.Prompt}} {{.HelpName}} myminio WARM-TIER
 `,
-}
-
-func mainAdminTierVerify(ctx *cli.Context) error {
-	args := ctx.Args()
-	nArgs := len(args)
-	if nArgs < 2 {
-		showCommandHelpAndExit(ctx, 1)
-	}
-	if nArgs != 2 {
-		fatalIf(errInvalidArgument().Trace(args.Tail()...),
-			"Incorrect number of arguments for tier verify command.")
-	}
-
-	aliasedURL := args.Get(0)
-	tierName := args.Get(1)
-	if tierName == "" {
-		fatalIf(errInvalidArgument(), "Tier name can't be empty")
-	}
-
-	// Create a new MinIO Admin Client
-	client, cerr := newAdminClient(aliasedURL)
-	fatalIf(cerr, "Unable to initialize admin connection.")
-
-	e := client.VerifyTier(globalContext, tierName)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to verify remote tier target")
-
-	printMsg(&tierMessage{
-		op:       ctx.Command.Name,
-		Status:   "success",
-		TierName: tierName,
-	})
-	return nil
 }
