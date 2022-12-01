@@ -32,6 +32,7 @@ var adminIDPSetCmd = cli.Command{
 	Usage:        "Create/Update an IDP server configuration",
 	Before:       setGlobalsFromContext,
 	Action:       mainAdminIDPSet,
+	Hidden:       true,
 	OnUsageError: onUsageError,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -41,6 +42,9 @@ USAGE:
   {{.HelpName}} TARGET ID_TYPE [CFG_NAME] [CFG_PARAMS...]
 
   ID_TYPE must be one of 'ldap' or 'openid'.
+
+  **DEPRECATED**: This command will be removed in a future version. Please use
+  "mc admin idp ldap|openid" instead.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -84,7 +88,7 @@ func validateIDType(idpType string) {
 
 func mainAdminIDPSet(ctx *cli.Context) error {
 	if len(ctx.Args()) < 3 {
-		showCommandHelpAndExit(ctx, "set", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
@@ -107,7 +111,7 @@ func mainAdminIDPSet(ctx *cli.Context) error {
 
 	inputCfg := strings.Join(input, " ")
 
-	restart, e := client.SetIDPConfig(globalContext, idpType, cfgName, inputCfg)
+	restart, e := client.AddOrUpdateIDPConfig(globalContext, idpType, cfgName, inputCfg, false)
 	fatalIf(probe.NewError(e), "Unable to set IDP config for '%s' to server", idpType)
 
 	// Print set config result

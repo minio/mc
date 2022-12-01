@@ -17,40 +17,34 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsStatusCmd = cli.Command{
-	Name:         "status",
-	Usage:        "show current status of MinIO logs",
-	OnUsageError: onUsageError,
-	Action:       mainStatusLogs,
+var adminIDPLdapListCmd = cli.Command{
+	Name:         "list",
+	Usage:        "list LDAP IDP server configuration(s)",
+	Action:       mainAdminIDPLDAPList,
 	Before:       setGlobalsFromContext,
-	Flags:        supportGlobalFlags,
+	Flags:        globalFlags,
+	OnUsageError: onUsageError,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
+
 USAGE:
-  {{.HelpName}} ALIAS
+  {{.HelpName}} TARGET
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show current status of MinIO logs for cluster with alias 'myminio', whether it is uploading to SUBNET or not
-     {{.Prompt}} {{.HelpName}} myminio
+  1. List configurations for LDAP IDP.
+     {{.Prompt}} {{.HelpName}} play/
 `,
 }
 
-func isSupportLogsEnabled(alias string) bool {
-	return isFeatureEnabled(alias, "logger_webhook", "subnet")
-}
+func mainAdminIDPLDAPList(ctx *cli.Context) error {
+	if len(ctx.Args()) != 1 {
+		showCommandHelpAndExit(ctx, 1)
+	}
 
-func mainStatusLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "status")
-	printMsg(supportLogsMessage{
-		Logs: featureStatusStr(isSupportLogsEnabled(alias)),
-	})
-
-	return nil
+	return adminIDPListCommon(ctx, false)
 }

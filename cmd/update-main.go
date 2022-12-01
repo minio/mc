@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -513,7 +513,7 @@ func (s updateMessage) JSON() string {
 
 func mainUpdate(ctx *cli.Context) {
 	if len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, -1)
+		showCommandHelpAndExit(ctx, -1)
 	}
 
 	globalQuiet = ctx.Bool("quiet") || ctx.GlobalBool("quiet")

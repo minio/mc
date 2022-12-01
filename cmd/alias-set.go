@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -110,7 +110,7 @@ func checkAliasSetSyntax(ctx *cli.Context, accessKey string, secretKey string, d
 	argsNr := len(args)
 
 	if argsNr == 0 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	if argsNr > 4 || argsNr < 2 {

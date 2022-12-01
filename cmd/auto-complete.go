@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -266,11 +266,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/encrypt/info":  s3Complete{deepLevel: 2},
 	"/encrypt/clear": s3Complete{deepLevel: 2},
 
-	"/replicate/add":  s3Complete{deepLevel: 2},
-	"/replicate/edit": s3Complete{deepLevel: 2},
-	"/replicate/ls":   s3Complete{deepLevel: 2},
-	"/replicate/rm":   s3Complete{deepLevel: 2},
-	"/replicate/diff": s3Complete{deepLevel: 2},
+	"/replicate/add":    s3Complete{deepLevel: 2},
+	"/replicate/edit":   s3Complete{deepLevel: 2},
+	"/replicate/update": s3Complete{deepLevel: 2},
+	"/replicate/ls":     s3Complete{deepLevel: 2},
+	"/replicate/rm":     s3Complete{deepLevel: 2},
+	"/replicate/diff":   s3Complete{deepLevel: 2},
 
 	"/replicate/export":        s3Complete{deepLevel: 2},
 	"/replicate/import":        s3Complete{deepLevel: 2},
@@ -309,6 +310,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/heal": s3Completer,
 
 	"/admin/info": aliasCompleter,
+	"/admin/logs": aliasCompleter,
 
 	"/admin/config/get":     adminConfigCompleter,
 	"/admin/config/set":     adminConfigCompleter,
@@ -324,6 +326,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/decommission/start":  aliasCompleter,
 	"/admin/decommission/status": aliasCompleter,
 	"/admin/decommission/cancel": aliasCompleter,
+
+	"/admin/rebalance/start":  aliasCompleter,
+	"/admin/rebalance/status": aliasCompleter,
+	"/admin/rebalance/stop":   aliasCompleter,
 
 	"/admin/trace":     aliasCompleter,
 	"/admin/speedtest": aliasCompleter,
@@ -351,6 +357,24 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/idp/info": aliasCompleter,
 	"/admin/idp/ls":   aliasCompleter,
 	"/admin/idp/rm":   aliasCompleter,
+
+	"/admin/idp/openid/add":     aliasCompleter,
+	"/admin/idp/openid/update":  aliasCompleter,
+	"/admin/idp/openid/remove":  aliasCompleter,
+	"/admin/idp/openid/list":    aliasCompleter,
+	"/admin/idp/openid/info":    aliasCompleter,
+	"/admin/idp/openid/enable":  aliasCompleter,
+	"/admin/idp/openid/disable": aliasCompleter,
+
+	"/admin/idp/ldap/add":     aliasCompleter,
+	"/admin/idp/ldap/update":  aliasCompleter,
+	"/admin/idp/ldap/remove":  aliasCompleter,
+	"/admin/idp/ldap/list":    aliasCompleter,
+	"/admin/idp/ldap/info":    aliasCompleter,
+	"/admin/idp/ldap/enable":  aliasCompleter,
+	"/admin/idp/ldap/disable": aliasCompleter,
+
+	"/admin/idp/ldap/policy/entities": aliasCompleter,
 
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
@@ -406,11 +430,14 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/tier/rm":     nil,
 	"/admin/tier/verify": nil,
 
-	"/admin/replicate/add":    aliasCompleter,
-	"/admin/replicate/edit":   aliasCompleter,
-	"/admin/replicate/info":   aliasCompleter,
-	"/admin/replicate/status": aliasCompleter,
-	"/admin/replicate/remove": aliasCompleter,
+	"/admin/replicate/add":           aliasCompleter,
+	"/admin/replicate/edit":          aliasCompleter,
+	"/admin/replicate/info":          aliasCompleter,
+	"/admin/replicate/status":        aliasCompleter,
+	"/admin/replicate/remove":        aliasCompleter,
+	"/admin/replicate/resync/start":  aliasCompleter,
+	"/admin/replicate/resync/cancel": aliasCompleter,
+	"/admin/replicate/resync/status": aliasCompleter,
 
 	"/admin/cluster/bucket/export": aliasCompleter,
 	"/admin/cluster/bucket/import": aliasCompleter,
@@ -423,13 +450,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/alias/import": nil,
 
 	"/support/callhome":     aliasCompleter,
-	"/support/logs/enable":  aliasCompleter,
-	"/support/logs/disable": aliasCompleter,
-	"/support/logs/status":  aliasCompleter,
-	"/support/logs/show":    aliasCompleter,
 	"/support/register":     aliasCompleter,
 	"/support/diag":         aliasCompleter,
 	"/support/profile":      aliasCompleter,
+	"/support/proxy/set":    aliasCompleter,
+	"/support/proxy/show":   aliasCompleter,
+	"/support/proxy/remove": aliasCompleter,
 	"/support/inspect":      aliasCompleter,
 	"/support/perf":         aliasCompleter,
 	"/support/metrics":      aliasCompleter,

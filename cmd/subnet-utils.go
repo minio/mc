@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -97,6 +97,10 @@ func subnetUploadURL(uploadType string, filename string) string {
 
 func subnetRegisterURL() string {
 	return subnetBaseURL() + "/api/cluster/register"
+}
+
+func subnetUnregisterURL(depID string) string {
+	return subnetBaseURL() + "/api/cluster/unregister?deploymentId=" + depID
 }
 
 func subnetOfflineRegisterURL(regToken string) string {
@@ -553,6 +557,28 @@ func registerClusterOnSubnet(clusterRegInfo ClusterRegistrationInfo, alias strin
 	}
 
 	return extractAndSaveSubnetCreds(alias, resp)
+}
+
+func removeSubnetAuthConfig(alias string) {
+	setSubnetConfig(alias, "api_key", "")
+	setSubnetConfig(alias, "license", "")
+}
+
+// unregisterClusterFromSubnet - Unregisters the given cluster from SUBNET using given API key for auth
+func unregisterClusterFromSubnet(alias string, depID string, apiKey string) error {
+	regURL, headers, e := subnetURLWithAuth(subnetUnregisterURL(depID), apiKey)
+	if e != nil {
+		return e
+	}
+
+	_, e = subnetPostReq(regURL, nil, headers)
+	if e != nil {
+		return e
+	}
+
+	removeSubnetAuthConfig(alias)
+
+	return nil
 }
 
 // extractAndSaveSubnetCreds - extract license from response and set it in minio config

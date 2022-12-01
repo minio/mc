@@ -25,6 +25,7 @@ var licenseSubcommands = []cli.Command{
 	licenseRegisterCmd,
 	licenseInfoCmd,
 	licenseUpdateCmd,
+	licenseUnregisterCmd,
 }
 
 var licenseCmd = cli.Command{

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -124,7 +124,7 @@ var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, colo
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "trace", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -279,6 +279,7 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 		opts.Decommission = true
 		opts.Healing = true
 		opts.BatchReplication = true
+		opts.ReplicationResync = true
 		return
 	}
 
@@ -307,9 +308,12 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.Decommission = true
 		case "batch-replication":
 			opts.BatchReplication = true
+		case "rebalance":
+			opts.Rebalance = true
+		case "replication-resync":
+			opts.ReplicationResync = true
 		}
 	}
-
 	return
 }
 

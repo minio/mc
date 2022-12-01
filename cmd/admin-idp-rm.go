@@ -19,7 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/madmin-go"
 )
 
 var adminIDPRmCmd = cli.Command{
@@ -27,6 +27,7 @@ var adminIDPRmCmd = cli.Command{
 	Usage:        "Remove an IDP configuration",
 	Before:       setGlobalsFromContext,
 	Action:       mainAdminIDPRemove,
+	Hidden:       true,
 	OnUsageError: onUsageError,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -34,6 +35,9 @@ var adminIDPRmCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} TARGET IDP_TYPE CFG_NAME
+
+  **DEPRECATED**: This command will be removed in a future version. Please use
+  "mc admin idp ldap|openid" instead.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -48,28 +52,13 @@ EXAMPLES:
 
 func mainAdminIDPRemove(ctx *cli.Context) error {
 	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, "rm", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
 	idpType := args.Get(1)
 	validateIDType(idpType)
 
 	cfgName := args.Get(2)
-
-	restart, e := client.DeleteIDPConfig(globalContext, idpType, cfgName)
-	fatalIf(probe.NewError(e), "Unable to remove %s IDP config '%s'", idpType, cfgName)
-
-	printMsg(configSetMessage{
-		targetAlias: aliasedURL,
-		restart:     restart,
-	})
-
-	return nil
+	return adminIDPRemove(ctx, idpType == madmin.OpenidIDPCfg, cfgName)
 }

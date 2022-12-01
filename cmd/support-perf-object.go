@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -95,11 +95,11 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- 
 
 	if globalJSON {
 		if e != nil {
-			printMsg(PerfTestResult{
+			printMsg(convertPerfResult(PerfTestResult{
 				Type:  ObjectPerfTest,
 				Err:   e.Error(),
 				Final: true,
-			})
+			}))
 			return nil
 		}
 
@@ -108,17 +108,13 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- 
 			if result.Version == "" {
 				continue
 			}
-			printMsg(PerfTestResult{
-				Type:         ObjectPerfTest,
-				ObjectResult: &result,
-			})
 		}
 
-		printMsg(PerfTestResult{
+		printMsg(convertPerfResult(PerfTestResult{
 			Type:         ObjectPerfTest,
 			ObjectResult: &result,
 			Final:        true,
-		})
+		}))
 
 		return nil
 	}

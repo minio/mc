@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -258,7 +258,7 @@ func checkIfBucketIsVersioned(ctx context.Context, aliasedURL string) (versioned
 
 func checkUndoSyntax(cliCtx *cli.Context) {
 	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, "undo", 1)
+		showCommandHelpAndExit(cliCtx, 1)
 	}
 }
 

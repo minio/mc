@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -37,7 +37,7 @@ import (
 // checkMirrorSyntax(URLs []string)
 func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) (srcURL, tgtURL string) {
 	if len(cliCtx.Args()) != 2 {
-		showCommandHelpAndExit(cliCtx, "mirror", 1) // last argument is exit code.
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
 
 	// extract URLs.

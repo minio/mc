@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -122,6 +123,7 @@ func (r duMessage) JSON() string {
 
 func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (sz, objs int64, err error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
+
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
 	}
@@ -135,6 +137,8 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 	// No disk usage details below this level,
 	// just do a recursive listing
 	recursive := depth == 1
+
+	targetAbsolutePath := path.Clean(clnt.GetURL().String())
 
 	contentCh := clnt.List(ctx, ListOptions{
 		TimeRef:           timeRef,
@@ -157,7 +161,8 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
 			return 0, 0, exitStatus(globalErrorExitStatus)
 		}
-		if content.URL.String() == targetURL {
+
+		if content.URL.Path == targetAbsolutePath {
 			continue
 		}
 
@@ -178,8 +183,8 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			size += used
 			objects += n
 		} else {
-			size += content.Size
-			if !content.IsDeleteMarker {
+			if !content.IsDeleteMarker && !content.Type.IsDir() {
+				size += content.Size
 				objects++
 			}
 		}
@@ -206,7 +211,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 // main for du command.
 func mainDu(cliCtx *cli.Context) error {
 	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, "du", 1)
+		showCommandHelpAndExit(cliCtx, 1)
 	}
 
 	// Set colors.

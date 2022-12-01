@@ -17,33 +17,32 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsDisableCmd = cli.Command{
-	Name:         "disable",
-	Usage:        "disable uploading MinIO logs to SUBNET",
+var adminIDPLdapUpdateCmd = cli.Command{
+	Name:         "update",
+	Usage:        "Update an LDAP IDP configuration",
+	Action:       mainAdminIDPLDAPUpdate,
 	OnUsageError: onUsageError,
-	Action:       mainDisableLogs,
 	Before:       setGlobalsFromContext,
-	Flags:        supportGlobalFlags,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
+
 USAGE:
-  {{.HelpName}} ALIAS
+  {{.HelpName}} TARGET [CFG_NAME] [CFG_PARAMS...]
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Disable uploading logs for cluster with alias 'play' to SUBNET
-     {{.Prompt}} {{.HelpName}} play
+  1. Create/Update the default LDAP IDP configuration (CFG_NAME is omitted).
+     {{.Prompt}} {{.HelpName}} play/ \
+          lookup_bind_dn=cn=admin,dc=min,dc=io \
+          lookup_bind_password=somesecret
 `,
 }
 
-func mainDisableLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "disable")
-	configureSubnetWebhook(alias, false)
+func mainAdminIDPLDAPUpdate(ctx *cli.Context) error {
 	return nil
 }

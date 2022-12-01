@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -53,7 +53,7 @@ EXAMPLES:
 // adminKMSCreateKeyCmd is the handler for the "mc admin kms key create" command.
 func mainAdminKMSCreateKey(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "create", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	client, err := newAdminClient(ctx.Args().Get(0))

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -61,7 +61,7 @@ EXAMPLES:
 // checkAdminUserSvcAcctInfoSyntax - validate all the passed arguments
 func checkAdminUserSvcAcctInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "info", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
@@ -96,7 +96,7 @@ func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 	}
 
 	printMsg(svcAcctMessage{
-		op:            "info",
+		op:            ctx.Command.Name,
 		AccessKey:     svcAccount,
 		AccountStatus: svcInfo.AccountStatus,
 		ParentUser:    svcInfo.ParentUser,

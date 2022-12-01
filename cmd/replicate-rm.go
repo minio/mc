@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -72,7 +72,7 @@ EXAMPLES:
 // checkReplicateRemoveSyntax - validate all the passed arguments
 func checkReplicateRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, "rm", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	rmAll := ctx.Bool("all")
 	rmForce := ctx.Bool("force")
@@ -147,7 +147,7 @@ func mainReplicateRemove(cliCtx *cli.Context) error {
 		fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not remove replication rule")
 	}
 	printMsg(replicateRemoveMessage{
-		Op:     "rm",
+		Op:     cliCtx.Command.Name,
 		Status: "success",
 		URL:    aliasedURL,
 		ID:     ruleID,

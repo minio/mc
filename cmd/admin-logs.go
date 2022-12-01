@@ -46,11 +46,11 @@ var logsShowFlags = []cli.Flag{
 	},
 }
 
-var supportLogsShowCmd = cli.Command{
-	Name:            "show",
+var adminLogsCmd = cli.Command{
+	Name:            "logs",
 	Usage:           "show MinIO logs",
-	Action:          mainLogsShowConsole,
 	OnUsageError:    onUsageError,
+	Action:          mainAdminLogs,
 	Before:          setGlobalsFromContext,
 	Flags:           append(logsShowFlags, globalFlags...),
 	HideHelpCommand: true,
@@ -73,7 +73,7 @@ EXAMPLES:
 
 func checkLogsShowSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, "show", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -164,8 +164,8 @@ func (l logMessage) String() string {
 	return fmt.Sprintf("%s\n", logMsg)
 }
 
-// mainLogsShowConsole - the entry function of support logs show
-func mainLogsShowConsole(ctx *cli.Context) error {
+// mainAdminLogs - the entry function of admin logs
+func mainAdminLogs(ctx *cli.Context) error {
 	// Check for command syntax
 	checkLogsShowSyntax(ctx)
 	console.SetColor("LogMessage", color.New(color.Bold, color.FgRed))

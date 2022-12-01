@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -173,7 +173,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 func parseLegalHoldArgs(cliCtx *cli.Context) (targetURL, versionID string, timeRef time.Time, recursive, withVersions bool) {
 	args := cliCtx.Args()
 	if len(args) != 1 {
-		showCommandHelpAndExit(cliCtx, cliCtx.Command.Name, 1)
+		showCommandHelpAndExit(cliCtx, 1)
 	}
 
 	targetURL = args[0]

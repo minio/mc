@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -58,7 +58,7 @@ EXAMPLES:
 func checkShareListSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !args.Present() || (args.First() != "upload" && args.First() != "download") {
-		showCommandHelpAndExit(ctx, "list", 1) // last argument is exit code.
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code.
 	}
 }
 

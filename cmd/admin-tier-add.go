@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -133,7 +133,7 @@ EXAMPLES:
 func checkAdminTierAddSyntax(ctx *cli.Context) {
 	argsNr := len(ctx.Args())
 	if argsNr < 3 {
-		showCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	if argsNr > 3 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
@@ -380,7 +380,7 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(client.AddTier(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
 
 	msg := &tierMessage{
-		op:     "add",
+		op:     ctx.Command.Name,
 		Status: "success",
 	}
 	msg.SetTierConfig(tCfg)

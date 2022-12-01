@@ -18,14 +18,8 @@
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go"
-	"github.com/minio/mc/pkg/probe"
 )
 
 var adminIDPInfoCmd = cli.Command{
@@ -34,6 +28,7 @@ var adminIDPInfoCmd = cli.Command{
 	Before:       setGlobalsFromContext,
 	Action:       mainAdminIDPGet,
 	OnUsageError: onUsageError,
+	Hidden:       true,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -42,6 +37,9 @@ USAGE:
   {{.HelpName}} TARGET ID_TYPE [CFG_NAME]
 
   ID_TYPE must be one of 'ldap' or 'openid'.
+
+  **DEPRECATED**: This command will be removed in a future version. Please use
+  "mc admin idp ldap|openid" instead.
 
 FLAGS:
    {{range .VisibleFlags}}{{.}}
@@ -58,82 +56,18 @@ EXAMPLES:
 
 func mainAdminIDPGet(ctx *cli.Context) error {
 	if len(ctx.Args()) < 2 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, "get", 1)
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
 	idpType := args.Get(1)
 	validateIDType(idpType)
+	isOpenID := idpType == madmin.OpenidIDPCfg
 
 	var cfgName string
 	if len(args) == 3 {
 		cfgName = args.Get(2)
 	}
 
-	result, e := client.GetIDPConfig(globalContext, idpType, cfgName)
-	fatalIf(probe.NewError(e), "Unable to get IDP config for '%s' to server", idpType)
-
-	// Print set config result
-	printMsg(idpConfig(result))
-
-	return nil
-}
-
-type idpConfig madmin.IDPConfig
-
-func (i idpConfig) JSON() string {
-	bs, e := json.MarshalIndent(i, "", "  ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(bs)
-}
-
-func (i idpConfig) String() string {
-	// Determine required width for key column.
-	fieldColWidth := 0
-	for _, kv := range i.Info {
-		if fieldColWidth < len(kv.Key) {
-			fieldColWidth = len(kv.Key)
-		}
-	}
-	// Add 1 for the colon-suffix in each entry.
-	fieldColWidth++
-
-	fieldColStyle := lipgloss.NewStyle().
-		Width(fieldColWidth).
-		Foreground(lipgloss.Color("#04B575")). // green
-		Bold(true).
-		Align(lipgloss.Right)
-	valueColStyle := lipgloss.NewStyle().
-		PaddingLeft(1).
-		Align(lipgloss.Left)
-	envMarkStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("201")). // pinkish-red
-		PaddingLeft(1)
-
-	var lines []string
-	for _, kv := range i.Info {
-		envStr := ""
-		if kv.IsCfg && kv.IsEnv {
-			envStr = " (environment)"
-		}
-		lines = append(lines, fmt.Sprintf("%s%s%s",
-			fieldColStyle.Render(kv.Key+":"),
-			valueColStyle.Render(kv.Value),
-			envMarkStyle.Render(envStr),
-		))
-	}
-
-	boxContent := strings.Join(lines, "\n")
-
-	boxStyle := lipgloss.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder())
-
-	return boxStyle.Render(boxContent)
+	return adminIDPInfo(ctx, isOpenID, cfgName)
 }

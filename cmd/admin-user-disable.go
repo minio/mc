@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -50,7 +50,7 @@ EXAMPLES:
 // checkAdminUserDisableSyntax - validate all the passed arguments
 func checkAdminUserDisableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, "disable", 1) // last argument is exit code
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
@@ -72,7 +72,7 @@ func mainAdminUserDisable(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to disable user")
 
 	printMsg(userMessage{
-		op:        "disable",
+		op:        ctx.Command.Name,
 		AccessKey: args.Get(1),
 	})
 
