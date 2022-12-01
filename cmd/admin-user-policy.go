@@ -17,12 +17,18 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"strings"
+
+	"github.com/fatih/color"
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
+)
 
 var adminUserPolicySubcommands = []cli.Command{
 	adminUserPolicyAttachCmd,
 	adminUserPolicyDetachCmd,
-	adminUserPolicyListCmd,
 }
 
 var adminUserPolicyCmd = cli.Command{
@@ -40,4 +46,43 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	commandNotFound(ctx, adminPolicySubcommands)
 	return nil
 	// Sub-commands like "attach", "list" have their own main.
+}
+
+func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
+	checkPolicyAttachDetachSyntax(ctx)
+
+	console.SetColor("PolicyMessage", color.New(color.FgGreen))
+	console.SetColor("Policy", color.New(color.FgBlue))
+
+	// Get the alias parameter from cli
+	args := ctx.Args()
+	aliasedURL := args.Get(0)
+	user := args.Get(1)
+
+	var policyList []string
+	for i := 2; i < len(args); i++ {
+		policyList = append(policyList, args.Get(i))
+	}
+
+	// Create a new MinIO Admin Client
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err, "Unable to initialize admin connection.")
+
+	var e error
+	if attach {
+		e = client.AttachPolicyUser(globalContext, user, policyList)
+	} else {
+		e = client.DetachPolicyUser(globalContext, user, policyList)
+	}
+
+	if e == nil {
+		printMsg(userPolicyMessage{
+			op:          ctx.Command.Name,
+			Policy:      strings.Join(policyList, ", "),
+			UserOrGroup: user,
+		})
+	} else {
+		fatalIf(probe.NewError(e), "Unable to attach the policy")
+	}
+	return nil
 }

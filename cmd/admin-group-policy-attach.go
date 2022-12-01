@@ -18,12 +18,7 @@
 package cmd
 
 import (
-	"strings"
-
-	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 var adminGroupPolicyAttachCmd = cli.Command{
@@ -55,43 +50,7 @@ EXAMPLES:
 `,
 }
 
-func checkAdminGroupPolicyAttachSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) < 3 {
-		showCommandHelpAndExit(ctx, "attach", 1) // last argument is exit code
-	}
-}
-
 // mainAdminGroupPolicyAttach is the handler for "mc admin group policy attach" command.
 func mainAdminGroupPolicyAttach(ctx *cli.Context) error {
-	checkAdminGroupPolicyAttachSyntax(ctx)
-
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-	console.SetColor("Policy", color.New(color.FgBlue))
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	group := args.Get(1)
-
-	var policyList []string
-	for i := 2; i < len(args); i++ {
-		policyList = append(policyList, args.Get(i))
-	}
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	e := client.AttachPoliciesToGroup(globalContext, policyList, group)
-	if e == nil {
-		printMsg(userPolicyMessage{
-			op:          "attach",
-			Policy:      strings.Join(policyList, ", "),
-			UserOrGroup: group,
-			IsGroup:     true,
-		})
-	} else {
-		fatalIf(probe.NewError(e), "Unable to attach the policy")
-	}
-	return nil
+	return groupAttachOrDetachPolicy(ctx, true)
 }
