@@ -56,7 +56,7 @@ func mainAdminIDPOpenIDRemove(ctx *cli.Context) error {
 
 	var cfgName string
 	if len(args) == 2 {
-		cfgName = args.Get(2)
+		cfgName = args.Get(1)
 	}
 	return adminIDPRemove(ctx, true, cfgName)
 }
