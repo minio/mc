@@ -24,7 +24,7 @@ import (
 
 var adminTierRmCmd = cli.Command{
 	Name:         "rm",
-	Usage:        "removes an empty remote tier",
+	Usage:        "remove an empty remote tier",
 	Action:       mainAdminTierRm,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

@@ -21,7 +21,7 @@ import "github.com/minio/cli"
 
 var ilmTierCheckCmd = cli.Command{
 	Name:         "check",
-	Usage:        "validates remote tier configuration",
+	Usage:        "validate remote tier configuration",
 	Action:       mainAdminTierVerify,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
