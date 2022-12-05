@@ -442,6 +442,7 @@ var appCmds = []cli.Command{
 	shareCmd,
 	versionCmd,
 	ilmCmd,
+	quotaCmd,
 	encryptCmd,
 	eventCmd,
 	watchCmd,

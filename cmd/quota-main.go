@@ -17,35 +17,27 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
-)
+import "github.com/minio/cli"
 
-var adminQuotaFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "hard",
-		Usage: "set a hard quota, disallowing writes after quota is reached",
-	},
-	cli.BoolFlag{
-		Name:  "clear",
-		Usage: "clears bucket quota configured for bucket",
-	},
+var quotaSubcommands = []cli.Command{
+	quotaSetCmd,
+	quotaInfoCmd,
+	quotaClearCmd,
 }
 
-var adminBucketQuotaCmd = cli.Command{
+var quotaCmd = cli.Command{
 	Name:            "quota",
 	Usage:           "manage bucket quota",
-	Action:          mainAdminBucketQuota,
-	OnUsageError:    onUsageError,
+	Action:          mainQuota,
 	Before:          setGlobalsFromContext,
-	Flags:           append(adminQuotaFlags, globalFlags...),
+	Flags:           globalFlags,
+	Subcommands:     quotaSubcommands,
 	HideHelpCommand: true,
-	Hidden:          true,
 }
 
-// mainAdminBucketQuota is the handler for "mc admin bucket quota" command.
-func mainAdminBucketQuota(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc quota'")
+// mainQuota is the handle for "mc quota" command.
+func mainQuota(ctx *cli.Context) error {
+	commandNotFound(ctx, quotaSubcommands)
 	return nil
+	// Sub-commands like "set", "clear", "info" have their own main.
 }
