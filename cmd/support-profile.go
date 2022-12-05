@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -139,7 +138,7 @@ func moveFile(sourcePath, destPath string) error {
 
 func saveProfileFile(data io.ReadCloser) {
 	// Create profile zip file
-	tmpFile, e := ioutil.TempFile("", "mc-profile-")
+	tmpFile, e := os.CreateTemp("", "mc-profile-")
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
 	// Copy zip content to target download file

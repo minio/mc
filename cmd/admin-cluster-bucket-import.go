@@ -177,7 +177,6 @@ func (i importMetaMsg) String() string {
 }
 
 func (i importMetaMsg) JSON() string {
-	i.Status = "success"
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 	enc.SetIndent("", " ")

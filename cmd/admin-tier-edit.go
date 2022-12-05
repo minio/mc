@@ -18,11 +18,11 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	madmin "github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -126,7 +126,7 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	case accountKey != "": // Azure tier
 		creds.SecretKey = accountKey
 	case credsPath != "": // GCS tier
-		credsBytes, err := ioutil.ReadFile(credsPath)
+		credsBytes, err := os.ReadFile(credsPath)
 		if err != nil {
 			fatalIf(probe.NewError(err), "Failed to read credentials file")
 		}

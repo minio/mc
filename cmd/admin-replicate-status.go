@@ -252,7 +252,7 @@ func (i srStatus) String() string {
 
 					switch {
 					case !ss.HasUser:
-						details = append(details, fmt.Sprintf("%s", blankCell))
+						details = append(details, blankCell)
 					case !ok, ss.UserInfoMismatch:
 						details = append(details, fmt.Sprintf("%s in-sync", crossTickCell))
 					default:
@@ -292,7 +292,7 @@ func (i srStatus) String() string {
 					ss := ssMap[dID]
 					switch {
 					case !ss.HasGroup:
-						details = append(details, fmt.Sprintf("%s", blankCell))
+						details = append(details, blankCell)
 					case ss.GroupDescMismatch:
 						details = append(details, fmt.Sprintf("%s in-sync", crossTickCell))
 					default:
@@ -713,11 +713,11 @@ func mainAdminReplicationStatus(ctx *cli.Context) error {
 
 func syncStatus(mismatch, set bool) (string, string) {
 	if !set {
-		return "Entity", fmt.Sprintf("%s", blankCell)
+		return "Entity", blankCell
 	}
 	if mismatch {
-		return "Entity", fmt.Sprintf("%s", crossTickCell)
+		return "Entity", crossTickCell
 	}
 
-	return "Entity", fmt.Sprintf("%s", tickCell)
+	return "Entity", tickCell
 }

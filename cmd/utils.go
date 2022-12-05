@@ -75,18 +75,6 @@ func UTCNow() time.Time {
 	return time.Now().UTC()
 }
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-// newRandomID generates a random id of regular lower case and uppercase english characters.
-func newRandomID(n int) string {
-	rand.Seed(UTCNow().UnixNano())
-	sid := make([]rune, n)
-	for i := range sid {
-		sid[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(sid)
-}
-
 func max(a, b int) int {
 	if a > b {
 		return a
@@ -460,8 +448,8 @@ func httpClient(timeout time.Duration) *http.Client {
 }
 
 func getPrometheusToken(hostConfig *aliasConfigV10) (string, error) {
-	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.StandardClaims{
-		ExpiresAt: UTCNow().Add(defaultPrometheusJWTExpiry).Unix(),
+	jwt := jwtgo.NewWithClaims(jwtgo.SigningMethodHS512, jwtgo.RegisteredClaims{
+		ExpiresAt: jwtgo.NewNumericDate(UTCNow().Add(defaultPrometheusJWTExpiry)),
 		Subject:   hostConfig.AccessKey,
 		Issuer:    "prometheus",
 	})
