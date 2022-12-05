@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -323,7 +322,7 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 			defer r.Close()
 		} else if strings.Contains(ctype, "bzip") {
 			defer r.Close()
-			r = ioutil.NopCloser(bzip2.NewReader(r))
+			r = io.NopCloser(bzip2.NewReader(r))
 		} else {
 			defer r.Close()
 		}

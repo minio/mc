@@ -80,7 +80,7 @@ func (i srRemoveStatus) JSON() string {
 
 func (i srRemoveStatus) String() string {
 	if i.RemoveAll {
-		return console.Colorize("UserMessage", fmt.Sprintf("All site(s) were removed successfully"))
+		return console.Colorize("UserMessage", "All site(s) were removed successfully")
 	}
 	return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed successfully", strings.Join(i.sites, ", ")))
 }

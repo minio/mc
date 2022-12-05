@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
@@ -85,7 +85,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	var buf []byte
 	if policyPath != "" {
 		var e error
-		buf, e = ioutil.ReadFile(policyPath)
+		buf, e = os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
 	}
 

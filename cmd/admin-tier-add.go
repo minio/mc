@@ -19,13 +19,13 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	madmin "github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -285,7 +285,7 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 		}
 
 		credsPath := ctx.String("credentials-file")
-		credsBytes, err := ioutil.ReadFile(credsPath)
+		credsBytes, err := os.ReadFile(credsPath)
 		if err != nil {
 			fatalIf(probe.NewError(err), "Failed to read credentials file")
 		}

@@ -203,8 +203,8 @@ func (m *batchJobMetricsUI) View() string {
 			addLine("Throughput: ", fmt.Sprintf("%s/s", humanize.IBytes(uint64(bytesTransferredPerSec))))
 			addLine("IOPs: ", fmt.Sprintf("%.2f objs/s", objectsPerSec))
 		}
-		addLine("Transferred: ", fmt.Sprintf("%s", humanize.IBytes(uint64(m.current.Replicate.BytesTransferred))))
-		addLine("Elapsed: ", fmt.Sprintf("%s", accElapsedTime))
+		addLine("Transferred: ", humanize.IBytes(uint64(m.current.Replicate.BytesTransferred)))
+		addLine("Elapsed: ", accElapsedTime.String())
 		addLine("CurrObjName: ", m.current.Replicate.Object)
 	}
 

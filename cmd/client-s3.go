@@ -1406,7 +1406,7 @@ func (c *S3Client) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Er
 		return probe.NewError(BucketInvalid{c.joinPath(bucket, object)})
 	}
 
-	opts := minio.BucketOptions{ForceDelete: forceRemove}
+	opts := minio.RemoveBucketOptions{ForceDelete: forceRemove}
 	if e := c.api.RemoveBucketWithOptions(ctx, bucket, opts); e != nil {
 		return probe.NewError(e)
 	}

@@ -369,57 +369,57 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 	placeHolder := ""
 	if info.Encryption.Algorithm != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
-		fmt.Fprintf(&b, console.Colorize("Key", "\n\tAlgorithm: "))
-		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.Algorithm))
-		fmt.Fprintf(&b, console.Colorize("Key", "\n\tKey ID: "))
-		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.KeyID))
+		fmt.Fprint(&b, console.Colorize("Key", "\n\tAlgorithm: "))
+		fmt.Fprint(&b, console.Colorize("Value", info.Encryption.Algorithm))
+		fmt.Fprint(&b, console.Colorize("Key", "\n\tKey ID: "))
+		fmt.Fprint(&b, console.Colorize("Value", info.Encryption.KeyID))
 		fmt.Fprintln(&b)
 	}
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Versioning: ")
 	if info.Versioning.Status == "" {
-		fmt.Fprintf(&b, console.Colorize("Unset", "Un-versioned"))
+		fmt.Fprint(&b, console.Colorize("Unset", "Un-versioned"))
 	} else {
-		fmt.Fprintf(&b, console.Colorize("Set", info.Versioning.Status))
+		fmt.Fprint(&b, console.Colorize("Set", info.Versioning.Status))
 	}
 	fmt.Fprintln(&b)
 
 	if info.Locking.Mode != "" {
 		fmt.Fprintf(&b, "%2s%s\n", placeHolder, "LockConfiguration: ")
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "RetentionMode: ")
-		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Mode))
+		fmt.Fprint(&b, console.Colorize("Value", info.Locking.Mode))
 		fmt.Fprintln(&b)
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "Retention Until Date: ")
-		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Validity))
+		fmt.Fprint(&b, console.Colorize("Value", info.Locking.Validity))
 		fmt.Fprintln(&b)
 	}
 	if len(info.Notification.Config.TopicConfigs) > 0 {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Notification: ")
-		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+		fmt.Fprint(&b, console.Colorize("Set", "Set"))
 		fmt.Fprintln(&b)
 	}
 	if info.Replication.Enabled {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Replication: ")
-		fmt.Fprintf(&b, console.Colorize("Set", "Enabled"))
+		fmt.Fprint(&b, console.Colorize("Set", "Enabled"))
 		fmt.Fprintln(&b)
 	}
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
-	fmt.Fprintf(&b, console.Colorize("Generic", info.Location))
+	fmt.Fprint(&b, console.Colorize("Generic", info.Location))
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Policy: ")
 	if info.Policy.Type == "none" {
-		fmt.Fprintf(&b, console.Colorize("UnSet", info.Policy.Type))
+		fmt.Fprint(&b, console.Colorize("UnSet", info.Policy.Type))
 	} else {
-		fmt.Fprintf(&b, console.Colorize("Set", info.Policy.Type))
+		fmt.Fprint(&b, console.Colorize("Set", info.Policy.Type))
 	}
 	fmt.Fprintln(&b)
 	if info.Tags() != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Tagging: ")
-		fmt.Fprintf(&b, console.Colorize("Generic", info.Tags()))
+		fmt.Fprint(&b, console.Colorize("Generic", info.Tags()))
 		fmt.Fprintln(&b)
 	}
 	if info.ILM.Config != nil {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
-		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+		fmt.Fprint(&b, console.Colorize("Set", "Set"))
 		fmt.Fprintln(&b)
 	}
 

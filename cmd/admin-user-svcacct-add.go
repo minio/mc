@@ -20,7 +20,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -163,7 +163,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	if policyPath != "" {
 		// Validate the policy document and ensure it has at least when statement
 		var e error
-		policyBytes, e = ioutil.ReadFile(policyPath)
+		policyBytes, e = os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
 		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
 		fatalIf(probe.NewError(e), "Unable to parse the policy document.")

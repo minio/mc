@@ -23,7 +23,7 @@ import (
 	"sort"
 	"strings"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -79,18 +79,18 @@ func countDigits(num uint64) (count uint) {
 func (bi adminBucketInfoMessage) String() string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, console.Colorize("Title", "Usage:\n"))
+	fmt.Fprint(&b, console.Colorize("Title", "Usage:\n"))
 
 	fmt.Fprintf(&b, "%16s: %s\n", "Total size", console.Colorize("Count", humanize.IBytes(bi.UsageInfo.Size)))
 	fmt.Fprintf(&b, "%16s: %s\n", "Objects count", console.Colorize("Count", humanize.Comma(int64(bi.UsageInfo.ObjectsCount))))
 	fmt.Fprintf(&b, "%16s: %s\n", "Versions count", console.Colorize("Count", humanize.Comma(int64(bi.UsageInfo.VersionsCount))))
 	fmt.Fprintf(&b, "\n")
 
-	fmt.Fprintf(&b, console.Colorize("Title", "Properties:\n"))
-	fmt.Fprintf(&b, prettyPrintBucketMetadata(bi.Props))
+	fmt.Fprint(&b, console.Colorize("Title", "Properties:\n"))
+	fmt.Fprint(&b, prettyPrintBucketMetadata(bi.Props))
 
 	fmt.Fprintf(&b, "\n")
-	fmt.Fprintf(&b, console.Colorize("Title", "Object sizes histogram:\n"))
+	fmt.Fprint(&b, console.Colorize("Title", "Object sizes histogram:\n"))
 
 	var maxDigits uint
 	for _, val := range bi.UsageInfo.ObjectSizesHistogram {

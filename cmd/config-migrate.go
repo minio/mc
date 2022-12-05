@@ -76,10 +76,7 @@ func migrateConfigV1ToV101() {
 
 	// Copy hosts.
 	for k, hostCfgV1 := range mcCfgV1.Data().(*configV1).Hosts {
-		cfgV101.Hosts[k] = hostConfigV101{
-			AccessKeyID:     hostCfgV1.AccessKeyID,
-			SecretAccessKey: hostCfgV1.SecretAccessKey,
-		}
+		cfgV101.Hosts[k] = hostConfigV101(hostCfgV1)
 	}
 
 	// Example localhost entry.
@@ -137,10 +134,7 @@ func migrateConfigV101ToV2() {
 
 	// Copy hosts.
 	for k, hostCfgV101 := range mcCfgV101.Data().(*configV101).Hosts {
-		cfgV2.Hosts[k] = hostConfigV2{
-			AccessKeyID:     hostCfgV101.AccessKeyID,
-			SecretAccessKey: hostCfgV101.SecretAccessKey,
-		}
+		cfgV2.Hosts[k] = hostConfigV2(hostCfgV101)
 	}
 
 	mcCfgV2, e := quick.NewConfig(cfgV2, nil)
@@ -179,10 +173,7 @@ func migrateConfigV2ToV3() {
 	// Copy hosts.
 	for k, hostCfgV2 := range mcCfgV2.Data().(*configV2).Hosts {
 		// New hostConfV3 uses struct json tags.
-		cfgV3.Hosts[k] = hostConfigV3{
-			AccessKeyID:     hostCfgV2.AccessKeyID,
-			SecretAccessKey: hostCfgV2.SecretAccessKey,
-		}
+		cfgV3.Hosts[k] = hostConfigV3(hostCfgV2)
 	}
 
 	mcNewCfgV3, e := quick.NewConfig(cfgV3, nil)
@@ -326,11 +317,7 @@ func migrateConfigV5ToV6() {
 			host = "*s3*amazonaws.com" // Use this glob entry.
 		}
 
-		cfgV6.Hosts[host] = hostConfigV6{
-			AccessKeyID:     hostCfgV5.AccessKeyID,
-			SecretAccessKey: hostCfgV5.SecretAccessKey,
-			API:             hostCfgV5.API,
-		}
+		cfgV6.Hosts[host] = hostConfigV6(hostCfgV5)
 	}
 
 	mcNewCfgV6, e := quick.NewConfig(cfgV6, nil)

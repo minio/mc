@@ -35,7 +35,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/pkg/console"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/term"
 )
 
@@ -268,7 +267,7 @@ func fetchAliasKeys(args cli.Args) (string, string) {
 	accessKey := ""
 	secretKey := ""
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
-	isTerminal := terminal.IsTerminal(int(os.Stdin.Fd()))
+	isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
 	reader := bufio.NewReader(os.Stdin)
 
 	argsNr := len(args)
@@ -286,7 +285,7 @@ func fetchAliasKeys(args cli.Args) (string, string) {
 	if argsNr == 2 || argsNr == 3 {
 		if isTerminal {
 			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
-			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+			bytePassword, _ := term.ReadPassword(int(os.Stdin.Fd()))
 			fmt.Printf("\n")
 			secretKey = string(bytePassword)
 		} else {
