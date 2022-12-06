@@ -51,43 +51,6 @@ var (
 	}
 )
 
-var ilmRestoreCmd = cli.Command{
-	Name:         "restore",
-	Usage:        "restore archived objects",
-	Action:       mainILMRestore,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(ilmRestoreFlags, globalFlags...),
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET
-
-DESCRIPTION:
-  Create a restored copy of one or more objects archived on a remote tier. The copy automatically expires 
-  after the specified number of days (Default 1 day). 
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-
-EXAMPLES:
-  1. Restore one specific object
-     {{.Prompt}} {{.HelpName}} myminio/mybucket/path/to/object
-
-  2. Restore a specific object version
-     {{.Prompt}} {{.HelpName}} --vid "CL3sWgdSN2pNntSf6UnZAuh2kcu8E8si" myminio/mybucket/path/to/object
-
-  3. Restore all objects under a specific prefix
-     {{.Prompt}} {{.HelpName}} --recursive myminio/mybucket/dir/
-
-  4. Restore all objects with all versions under a specific prefix
-     {{.Prompt}} {{.HelpName}} --recursive --versions myminio/mybucket/dir/
-
-`,
-}
-
 // checkILMRestoreSyntax - validate arguments passed by user
 func checkILMRestoreSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {

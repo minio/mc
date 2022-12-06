@@ -22,15 +22,6 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminTierSubcommands = []cli.Command{
-	adminTierDepInfoCmd,
-	adminTierDepListCmd,
-	adminTierDepAddCmd,
-	adminTierDepEditCmd,
-	adminTierDepVerifyCmd,
-	adminTierDepRmCmd,
-}
-
 var adminTierCmd = cli.Command{
 	Name:            "tier",
 	Usage:           "manage remote tier targets for ILM transition",
@@ -38,7 +29,7 @@ var adminTierCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
-	Subcommands:     adminTierSubcommands,
+	Subcommands:     adminTierDepCmds,
 }
 
 // mainAdminTier is the handle for "mc admin tier" command.
