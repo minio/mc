@@ -225,6 +225,8 @@ type Config struct {
 	Lookup            minio.BucketLookupType
 	ConnReadDeadline  time.Duration
 	ConnWriteDeadline time.Duration
+	UploadLimit       int64
+	DownloadLimit     int64
 	Transport         *http.Transport
 }
 
