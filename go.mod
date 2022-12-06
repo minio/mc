@@ -34,7 +34,7 @@ require (
 	github.com/rs/xid v1.4.0
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/tidwall/gjson v1.14.3
-	golang.org/x/crypto v0.3.0
+	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/net v0.2.0
 	golang.org/x/text v0.4.0
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b
@@ -47,6 +47,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/gdamore/tcell/v2 v2.5.3
 	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/juju/ratelimit v1.0.2
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5

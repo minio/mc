@@ -52,6 +52,7 @@ import (
 
 	"github.com/minio/mc/pkg/deadlineconn"
 	"github.com/minio/mc/pkg/httptracer"
+	"github.com/minio/mc/pkg/limiter"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -145,6 +146,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				hostName = googleHostName
 			}
 		}
+
 		// Generate a hash out of s3Conf.
 		confHash := fnv.New32a()
 		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
@@ -210,6 +212,8 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				}
 				transport = tr
 			}
+
+			transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
 
 			if config.Debug {
 				if strings.EqualFold(config.Signature, "S3v4") {

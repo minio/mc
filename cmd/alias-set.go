@@ -190,6 +190,8 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, pee
 		Debug:             globalDebug,
 		ConnReadDeadline:  globalConnReadDeadline,
 		ConnWriteDeadline: globalConnWriteDeadline,
+		UploadLimit:       int64(globalLimitUpload),
+		DownloadLimit:     int64(globalLimitDownload),
 	}
 	if peerCert != nil {
 		configurePeerCertificate(s3Config, peerCert)
