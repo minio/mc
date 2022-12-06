@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -63,15 +65,16 @@ func mainAlias(ctx *cli.Context) error {
 
 // aliasMessage container for content message structure
 type aliasMessage struct {
-	op          string
-	prettyPrint bool
-	Status      string `json:"status"`
-	Alias       string `json:"alias"`
-	URL         string `json:"URL"`
-	AccessKey   string `json:"accessKey,omitempty"`
-	SecretKey   string `json:"secretKey,omitempty"`
-	API         string `json:"api,omitempty"`
-	Path        string `json:"path,omitempty"`
+	op           string
+	prettyPrint  bool
+	Status       string `json:"status"`
+	Alias        string `json:"alias"`
+	URL          string `json:"URL"`
+	AccessKey    string `json:"accessKey,omitempty"`
+	SecretKey    string `json:"secretKey,omitempty"`
+	API          string `json:"api,omitempty"`
+	Path         string `json:"path,omitempty"`
+	TrailingHdrs bool   `json:"trailingHeaders,omitempty"`
 	// Deprecated field, replaced by Path
 	Lookup string `json:"lookup,omitempty"`
 }
@@ -89,6 +92,7 @@ func (h aliasMessage) String() string {
 			Row{"AccessKey", "AccessKey"},
 			Row{"SecretKey", "SecretKey"},
 			Row{"API", "API"},
+			Row{"Trailing", "Trailing"},
 			Row{"Path", "Path"},
 		)
 		// Handle deprecated lookup
@@ -96,7 +100,7 @@ func (h aliasMessage) String() string {
 		if path == "" {
 			path = h.Lookup
 		}
-		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, path)
+		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, fmt.Sprint(h.TrailingHdrs), path)
 	case "remove":
 		return console.Colorize("AliasMessage", "Removed `"+h.Alias+"` successfully.")
 	case "add": // add is deprecated

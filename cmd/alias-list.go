@@ -75,6 +75,7 @@ func mainAliasList(ctx *cli.Context, deprecated bool) error {
 	console.SetColor("SecretKey", color.New(color.FgCyan))
 	console.SetColor("API", color.New(color.FgBlue))
 	console.SetColor("Path", color.New(color.FgCyan))
+	console.SetColor("Trailing", color.New(color.FgBlue))
 
 	alias := cleanAlias(ctx.Args().Get(0))
 
@@ -124,12 +125,13 @@ func listAliases(alias string, deprecated bool) (aliases []aliasMessage) {
 	if alias != "" {
 		if v, ok := conf.Aliases[alias]; ok {
 			aliasMsg := aliasMessage{
-				prettyPrint: false,
-				Alias:       alias,
-				URL:         v.URL,
-				AccessKey:   v.AccessKey,
-				SecretKey:   v.SecretKey,
-				API:         v.API,
+				prettyPrint:  false,
+				Alias:        alias,
+				URL:          v.URL,
+				AccessKey:    v.AccessKey,
+				SecretKey:    v.SecretKey,
+				API:          v.API,
+				TrailingHdrs: v.TrailingHdrs,
 			}
 
 			if deprecated {
@@ -145,12 +147,13 @@ func listAliases(alias string, deprecated bool) (aliases []aliasMessage) {
 
 	for k, v := range conf.Aliases {
 		aliasMsg := aliasMessage{
-			prettyPrint: true,
-			Alias:       k,
-			URL:         v.URL,
-			AccessKey:   v.AccessKey,
-			SecretKey:   v.SecretKey,
-			API:         v.API,
+			prettyPrint:  true,
+			Alias:        k,
+			URL:          v.URL,
+			AccessKey:    v.AccessKey,
+			SecretKey:    v.SecretKey,
+			API:          v.API,
+			TrailingHdrs: v.TrailingHdrs,
 		}
 
 		if deprecated {
