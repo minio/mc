@@ -478,6 +478,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/batch/list":     aliasCompleter,
 	"/batch/status":   aliasCompleter,
 	"/batch/describe": aliasCompleter,
+	"/quota/set":      aliasCompleter,
+	"/quota/info":     aliasCompleter,
+	"/quota/clear":    aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags
