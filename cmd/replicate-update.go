@@ -63,13 +63,14 @@ var replicateUpdateFlags = []cli.Flag{
 }
 
 var replicateUpdateCmd = cli.Command{
-	Name:         "update",
-	Aliases:      []string{"edit"},
-	Usage:        "modify an existing server side replication configuration rule",
-	Action:       mainReplicateUpdate,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, replicateUpdateFlags...),
+	Name:          "update",
+	Aliases:       []string{"edit"},
+	HiddenAliases: true,
+	Usage:         "modify an existing server side replication configuration rule",
+	Action:        mainReplicateUpdate,
+	OnUsageError:  onUsageError,
+	Before:        setGlobalsFromContext,
+	Flags:         append(globalFlags, replicateUpdateFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
