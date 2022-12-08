@@ -38,6 +38,7 @@ var supportTopDriveFlags = []cli.Flag{
 var supportTopDriveCmd = cli.Command{
 	Name:            "drive",
 	Aliases:         []string{"disk"},
+	HiddenAliases:   true,
 	Usage:           "show real-time drive metrics",
 	Action:          mainSupportTopDrive,
 	OnUsageError:    onUsageError,

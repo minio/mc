@@ -197,12 +197,16 @@ func (m *traceUI) View() string {
 			totalTX += stats.loadAPIBytesTX()
 			totalCalls += stats.loadAPICall()
 		}
-		msg := fmt.Sprintf("\n========\nTotal: %d CALLS, %s RX, %s TX - in %.02fs",
+
+		msg := fmt.Sprintf("\nSummary:\n\nTotal: %d CALLS, %s RX, %s TX",
 			totalCalls,
 			humanize.IBytes(totalRX),
 			humanize.IBytes(totalTX),
-			lastReqTime.Sub(m.startTime).Seconds(),
 		)
+		if !m.startTime.IsZero() {
+			msg += fmt.Sprintf(" - in %.02fs", lastReqTime.Sub(m.startTime).Seconds())
+		}
+
 		s.WriteString(msg)
 		s.WriteString("\n")
 	}

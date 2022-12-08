@@ -63,6 +63,7 @@ var adminScannerInfoFlags = []cli.Flag{
 var adminScannerInfo = cli.Command{
 	Name:            "status",
 	Aliases:         []string{"info"},
+	HiddenAliases:   true,
 	Usage:           "summarize scanner events on MinIO server in real-time",
 	Action:          mainAdminScannerInfo,
 	OnUsageError:    onUsageError,

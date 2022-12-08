@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/compress v1.15.12
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.16
-	github.com/minio/cli v1.24.0
+	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
 	github.com/minio/madmin-go/v2 v2.0.0
