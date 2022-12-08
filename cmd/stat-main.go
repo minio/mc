@@ -150,6 +150,9 @@ func mainStat(cliCtx *cli.Context) error {
 	console.SetColor("Unset", color.New(color.FgRed))
 	console.SetColor("Set", color.New(color.FgGreen))
 
+	console.SetColor("Title", color.New(color.Bold, color.FgBlue))
+	console.SetColor("Count", color.New(color.FgGreen))
+
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
