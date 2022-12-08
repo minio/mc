@@ -342,54 +342,35 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 func stringsReplace(ctx context.Context, args string, fileContent contentMessage) string {
 	// replace all instances of {}
 	str := args
-	if strings.Contains(str, "{}") {
-		str = strings.ReplaceAll(str, "{}", fileContent.Key)
-	}
+
+	str = strings.ReplaceAll(str, "{}", fileContent.Key)
 
 	// replace all instances of {""}
-	if strings.Contains(str, `{""}`) {
-		str = strings.ReplaceAll(str, `{""}`, strconv.Quote(fileContent.Key))
-	}
+	str = strings.ReplaceAll(str, `{""}`, strconv.Quote(fileContent.Key))
 
 	// replace all instances of {base}
-	if strings.Contains(str, "{base}") {
-		str = strings.ReplaceAll(str, "{base}", filepath.Base(fileContent.Key))
-	}
+	str = strings.ReplaceAll(str, "{base}", filepath.Base(fileContent.Key))
 
 	// replace all instances of {"base"}
-	if strings.Contains(str, `{"base"}`) {
-		str = strings.ReplaceAll(str, `{"base"}`, strconv.Quote(filepath.Base(fileContent.Key)))
-	}
+	str = strings.ReplaceAll(str, `{"base"}`, strconv.Quote(filepath.Base(fileContent.Key)))
 
 	// replace all instances of {dir}
-	if strings.Contains(str, "{dir}") {
-		str = strings.ReplaceAll(str, "{dir}", filepath.Dir(fileContent.Key))
-	}
+	str = strings.ReplaceAll(str, "{dir}", filepath.Dir(fileContent.Key))
 
 	// replace all instances of {"dir"}
-	if strings.Contains(str, `{"dir"}`) {
-		str = strings.ReplaceAll(str, `{"dir"}`, strconv.Quote(filepath.Dir(fileContent.Key)))
-	}
+	str = strings.ReplaceAll(str, `{"dir"}`, strconv.Quote(filepath.Dir(fileContent.Key)))
 
 	// replace all instances of {size}
-	if strings.Contains(str, "{size}") {
-		str = strings.ReplaceAll(str, "{size}", humanize.IBytes(uint64(fileContent.Size)))
-	}
+	str = strings.ReplaceAll(str, "{size}", humanize.IBytes(uint64(fileContent.Size)))
 
 	// replace all instances of {"size"}
-	if strings.Contains(str, `{"size"}`) {
-		str = strings.ReplaceAll(str, `{"size"}`, strconv.Quote(humanize.IBytes(uint64(fileContent.Size))))
-	}
+	str = strings.ReplaceAll(str, `{"size"}`, strconv.Quote(humanize.IBytes(uint64(fileContent.Size))))
 
 	// replace all instances of {time}
-	if strings.Contains(str, "{time}") {
-		str = strings.ReplaceAll(str, "{time}", fileContent.Time.Format(printDate))
-	}
+	str = strings.ReplaceAll(str, "{time}", fileContent.Time.Format(printDate))
 
 	// replace all instances of {"time"}
-	if strings.Contains(str, `{"time"}`) {
-		str = strings.ReplaceAll(str, `{"time"}`, strconv.Quote(fileContent.Time.Format(printDate)))
-	}
+	str = strings.ReplaceAll(str, `{"time"}`, strconv.Quote(fileContent.Time.Format(printDate)))
 
 	// replace all instances of {url}
 	if strings.Contains(str, "{url}") {
@@ -402,14 +383,10 @@ func stringsReplace(ctx context.Context, args string, fileContent contentMessage
 	}
 
 	// replace all instances of {version}
-	if strings.Contains(str, `{version}`) {
-		str = strings.Replace(str, `{version}`, fileContent.VersionID, -1)
-	}
+	str = strings.ReplaceAll(str, `{version}`, fileContent.VersionID)
 
 	// replace all instances of {"version"}
-	if strings.Contains(str, `{"version"}`) {
-		str = strings.Replace(str, `{"version"}`, strconv.Quote(fileContent.VersionID), -1)
-	}
+	str = strings.ReplaceAll(str, `{"version"}`, strconv.Quote(fileContent.VersionID))
 
 	return str
 }
