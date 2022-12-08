@@ -95,7 +95,7 @@ USAGE:
   {{.HelpName}} TYPE ALIAS NAME [FLAGS]
 
 TYPE:
-  Transition objects to supported cloud storage backend tier. Supported values are minio, s3, azure and gcs.
+  Type of the cloud storage backend to add. Supported values are minio, s3, azure and gcs.
 
 NAME:
   Name of the remote tier target. e.g WARM-TIER

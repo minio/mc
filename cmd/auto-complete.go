@@ -303,7 +303,6 @@ var completeCmds = map[string]complete.Predictor{
 	"/ilm/export":  s3Complete{deepLevel: 2},
 	"/ilm/import":  s3Complete{deepLevel: 2},
 	"/ilm/restore": s3Completer,
-	"/rehydrate":   s3Completer,
 
 	"/ilm/rule/ls":      s3Complete{deepLevel: 2},
 	"/ilm/rule/add":     s3Complete{deepLevel: 2},

@@ -26,6 +26,7 @@ import (
 var ilmSubcommands = []cli.Command{
 	ilmRuleCmd,
 	ilmTierCmd,
+	ilmRestoreCmd,
 }
 
 var ilmCmd = cli.Command{
