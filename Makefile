@@ -18,7 +18,7 @@ getdeps:
 	@mkdir -p ${GOPATH}/bin
 	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.46.2
 	@echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@latest
-	@echo "Installing staticheck" @@ go install honnef.co/go/tools/cmd/staticcheck@latest
+	@echo "Installing staticheck" && go install honnef.co/go/tools/cmd/staticcheck@latest
 
 crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)
