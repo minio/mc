@@ -121,6 +121,8 @@ func (stat statMessage) String() (msg string) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))
 	}
 
+	msgBuilder.WriteString("\n")
+
 	return msgBuilder.String()
 }
 
@@ -260,6 +262,10 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 					}
 				}
 
+				if prefixPath != "/" {
+					bstat.Prefix = true
+				}
+
 				printMsg(bucketInfoMessage{
 					Status:     "success",
 					BucketInfo: bstat,
@@ -289,6 +295,7 @@ type BucketInfo struct {
 	Date       time.Time   `json:"lastModified"`
 	Size       int64       `json:"size"`
 	Type       os.FileMode `json:"-"`
+	Prefix     bool        `json:"-"`
 	Versioning struct {
 		Status    string `json:"status"`
 		MFADelete string `json:"MFADelete"`
@@ -401,9 +408,12 @@ func (v bucketInfoMessage) String() string {
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
 	b.WriteString(console.Colorize("Title", key) + "\n")
 	b.WriteString(fmt.Sprintf("%-10s: %s ", "Date", v.Date.Format(printDate)) + "\n")
-	b.WriteString(fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Size))))
+	b.WriteString(fmt.Sprintf("%-10s: %-6s \n", "Size", "N/A"))
 
 	fType := func() string {
+		if v.Prefix {
+			return "prefix"
+		}
 		if v.Type.IsDir() {
 			return "folder"
 		}
@@ -412,9 +422,11 @@ func (v bucketInfoMessage) String() string {
 	b.WriteString(fmt.Sprintf("%-10s: %s \n", "Type", fType))
 	fmt.Fprintf(&b, "\n")
 
-	fmt.Fprint(&b, console.Colorize("Title", "Properties:\n"))
-	fmt.Fprint(&b, prettyPrintBucketMetadata(v.BucketInfo))
-	fmt.Fprintf(&b, "\n")
+	if !v.Prefix {
+		fmt.Fprint(&b, console.Colorize("Title", "Properties:\n"))
+		fmt.Fprint(&b, prettyPrintBucketMetadata(v.BucketInfo))
+		fmt.Fprintf(&b, "\n")
+	}
 
 	fmt.Fprint(&b, console.Colorize("Title", "Usage:\n"))
 
@@ -451,10 +463,15 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 	placeHolder := ""
 	if info.Encryption.Algorithm != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
-		fmt.Fprint(&b, console.Colorize("Key", "\n\tAlgorithm: "))
-		fmt.Fprint(&b, console.Colorize("Value", info.Encryption.Algorithm))
-		fmt.Fprint(&b, console.Colorize("Key", "\n\tKey ID: "))
-		fmt.Fprint(&b, console.Colorize("Value", info.Encryption.KeyID))
+		if info.Encryption.Algorithm == "aws:kms" {
+			fmt.Fprint(&b, console.Colorize("Key", "\n\tKey Type: "))
+			fmt.Fprint(&b, console.Colorize("Value", "SSE-KMS"))
+			fmt.Fprint(&b, console.Colorize("Key", "\n\tKey ID: "))
+			fmt.Fprint(&b, console.Colorize("Value", info.Encryption.KeyID))
+		} else {
+			fmt.Fprint(&b, console.Colorize("Key", "\n\tKey Type: "))
+			fmt.Fprint(&b, console.Colorize("Value", "SSE-S3"))
+		}
 		fmt.Fprintln(&b)
 	}
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Versioning: ")
@@ -487,11 +504,11 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
 	fmt.Fprint(&b, console.Colorize("Generic", info.Location))
 	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Policy: ")
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Annonymous: ")
 	if info.Policy.Type == "none" {
-		fmt.Fprint(&b, console.Colorize("UnSet", info.Policy.Type))
+		fmt.Fprint(&b, console.Colorize("UnSet", "Disabled"))
 	} else {
-		fmt.Fprint(&b, console.Colorize("Set", info.Policy.Type))
+		fmt.Fprint(&b, console.Colorize("Set", "Enabled"))
 	}
 	fmt.Fprintln(&b)
 	if info.Tags() != "" {
@@ -499,11 +516,13 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 		fmt.Fprint(&b, console.Colorize("Generic", info.Tags()))
 		fmt.Fprintln(&b)
 	}
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
 	if info.ILM.Config != nil {
-		fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
-		fmt.Fprint(&b, console.Colorize("Set", "Set"))
-		fmt.Fprintln(&b)
+		fmt.Fprint(&b, console.Colorize("Set", "Enabled"))
+	} else {
+		fmt.Fprint(&b, console.Colorize("UnSet", "Disabled"))
 	}
+	fmt.Fprintln(&b)
 
 	return b.String()
 }
