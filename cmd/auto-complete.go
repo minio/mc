@@ -310,6 +310,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/heal": s3Completer,
 
 	"/admin/info": aliasCompleter,
+	"/admin/logs": aliasCompleter,
 
 	"/admin/config/get":     adminConfigCompleter,
 	"/admin/config/set":     adminConfigCompleter,
@@ -457,7 +458,6 @@ var completeCmds = map[string]complete.Predictor{
 	"/alias/import": nil,
 
 	"/support/callhome":     aliasCompleter,
-	"/support/logs":         aliasCompleter,
 	"/support/register":     aliasCompleter,
 	"/support/diag":         aliasCompleter,
 	"/support/profile":      aliasCompleter,
@@ -486,6 +486,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/batch/list":     aliasCompleter,
 	"/batch/status":   aliasCompleter,
 	"/batch/describe": aliasCompleter,
+	"/quota/set":      aliasCompleter,
+	"/quota/info":     aliasCompleter,
+	"/quota/clear":    aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

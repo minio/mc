@@ -19,26 +19,25 @@ package cmd
 
 import "github.com/minio/cli"
 
-var replicateResyncSubcommands = []cli.Command{
-	replicateResyncStartCmd,
-	replicateResyncStatusCmd,
+var quotaSubcommands = []cli.Command{
+	quotaSetCmd,
+	quotaInfoCmd,
+	quotaClearCmd,
 }
 
-var replicateResyncCmd = cli.Command{
-	Name:            "resync",
-	Usage:           "re-replicate all previously replicated objects",
-	HideHelpCommand: true,
-	Action:          mainReplicateResync,
+var quotaCmd = cli.Command{
+	Name:            "quota",
+	Usage:           "manage bucket quota",
+	Action:          mainQuota,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     replicateResyncSubcommands,
-	Aliases:         []string{"reset"},
-	HiddenAliases:   true,
+	Subcommands:     quotaSubcommands,
+	HideHelpCommand: true,
 }
 
-// mainReplicateResync is the handle for "mc replicate resync" command.
-func mainReplicateResync(ctx *cli.Context) error {
-	commandNotFound(ctx, replicateResyncSubcommands)
+// mainQuota is the handle for "mc quota" command.
+func mainQuota(ctx *cli.Context) error {
+	commandNotFound(ctx, quotaSubcommands)
 	return nil
-	// Sub-commands like "status", "start", have their own main.
+	// Sub-commands like "set", "clear", "info" have their own main.
 }

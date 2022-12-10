@@ -20,7 +20,6 @@ package cmd
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"testing"
 )
 
@@ -54,7 +53,7 @@ func TestPrettyStdout(t *testing.T) {
 		if int(n) != len(testCase.originText) {
 			t.Fatalf("Test %d: copy error\n", i+1)
 		}
-		prettyText, err := ioutil.ReadAll(fakeStdout)
+		prettyText, err := io.ReadAll(fakeStdout)
 		if err != nil {
 			t.Fatalf("Test %d: %v", i+1, err)
 		}

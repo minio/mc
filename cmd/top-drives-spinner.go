@@ -25,7 +25,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -277,5 +277,5 @@ func (m *topDriveUI) View() string {
 	if !m.quitting {
 		s.WriteString(fmt.Sprintf("\n%s \u25C0 Pool %d \u25B6 | Sort By: %s (u,t,r,w,d,A,U)", m.spinner.View(), m.pool+1, m.sortBy))
 	}
-	return s.String()
+	return s.String() + "\n"
 }

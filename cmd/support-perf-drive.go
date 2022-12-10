@@ -22,9 +22,9 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -43,7 +43,7 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- P
 		fatalIf(probe.NewError(e), "Unable to parse blocksize")
 		return nil
 	}
-	if blocksize < 0 {
+	if blocksize <= 0 {
 		fatalIf(errInvalidArgument(), "blocksize cannot be <= 0")
 		return nil
 	}
@@ -53,7 +53,7 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- P
 		fatalIf(probe.NewError(e), "Unable to parse filesize")
 		return nil
 	}
-	if filesize < 0 {
+	if filesize <= 0 {
 		fatalIf(errInvalidArgument(), "filesize cannot be <= 0")
 		return nil
 	}
@@ -62,8 +62,8 @@ func mainAdminSpeedTestDrive(ctx *cli.Context, aliasedURL string, outCh chan<- P
 
 	resultCh, e := client.DriveSpeedtest(ctxt, madmin.DriveSpeedTestOpts{
 		Serial:    serial,
-		BlockSize: uint64(blocksize),
-		FileSize:  uint64(filesize),
+		BlockSize: blocksize,
+		FileSize:  filesize,
 	})
 
 	if globalJSON {

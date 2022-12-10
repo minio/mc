@@ -20,12 +20,12 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -93,7 +93,7 @@ func mainBatchStart(ctx *cli.Context) error {
 	adminClient, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	buf, e := ioutil.ReadFile(args.Get(1))
+	buf, e := os.ReadFile(args.Get(1))
 	fatalIf(probe.NewError(e), "Unable to read %s", args.Get(1))
 
 	ctxt, cancel := context.WithCancel(globalContext)

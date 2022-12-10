@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -36,11 +35,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/licverifier"
 	"github.com/tidwall/gjson"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -192,7 +191,7 @@ func subnetReqDo(r *http.Request, headers map[string]string) (string, error) {
 	}
 
 	defer resp.Body.Close()
-	respBytes, e := ioutil.ReadAll(io.LimitReader(resp.Body, subnetRespBodyLimit))
+	respBytes, e := io.ReadAll(io.LimitReader(resp.Body, subnetRespBodyLimit))
 	if e != nil {
 		return "", e
 	}
@@ -435,7 +434,7 @@ func subnetLogin() (string, error) {
 	}
 
 	fmt.Print("Password: ")
-	bytepw, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+	bytepw, _ := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Println()
 
 	loginReq := map[string]string{
@@ -451,7 +450,7 @@ func subnetLogin() (string, error) {
 	if mfaRequired {
 		mfaToken := gjson.Get(respStr, "mfa_token").String()
 		fmt.Print("OTP received in email: ")
-		byteotp, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+		byteotp, _ := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
 
 		mfaLoginReq := SubnetMFAReq{Username: username, OTP: string(byteotp), Token: mfaToken}

@@ -18,11 +18,12 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -212,4 +213,27 @@ func setCallhomeConfig(alias string, enableCallhome bool) {
 	configStr := "callhome enable=" + enableStr
 	_, e := client.SetConfigKV(globalContext, configStr)
 	fatalIf(probe.NewError(e), "Unable to set callhome config on minio")
+}
+
+func configureSubnetWebhook(alias string, enable bool) {
+	// Create a new MinIO Admin Client
+	client, err := newAdminClient(alias)
+	fatalIf(err, "Unable to initialize admin connection.")
+
+	var input string
+	if enable {
+		apiKey := validateClusterRegistered(alias, true)
+		input = fmt.Sprintf("logger_webhook:subnet endpoint=%s auth_token=%s enable=on",
+			subnetLogWebhookURL(), apiKey)
+	} else {
+		input = "logger_webhook:subnet enable=off"
+	}
+
+	// Call set config API
+	_, e := client.SetConfigKV(globalContext, input)
+	fatalIf(probe.NewError(e), "Unable to set '%s' to server", input)
+}
+
+func isLogsCallhomeEnabled(alias string) bool {
+	return isFeatureEnabled(alias, "logger_webhook", "subnet")
 }

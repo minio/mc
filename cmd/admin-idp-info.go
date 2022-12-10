@@ -19,7 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 )
 
 var adminIDPInfoCmd = cli.Command{

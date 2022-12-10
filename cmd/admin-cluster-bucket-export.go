@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -92,7 +91,7 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 	}
 
 	// Create bucket metadata zip file
-	tmpFile, e := ioutil.TempFile("", fmt.Sprintf("%s-metadata-", bucket))
+	tmpFile, e := os.CreateTemp("", fmt.Sprintf("%s-metadata-", bucket))
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 
 	ext := "zip"

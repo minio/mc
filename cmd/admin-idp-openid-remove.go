@@ -19,7 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -56,7 +56,7 @@ func mainAdminIDPOpenIDRemove(ctx *cli.Context) error {
 
 	var cfgName string
 	if len(args) == 2 {
-		cfgName = args.Get(2)
+		cfgName = args.Get(1)
 	}
 	return adminIDPRemove(ctx, true, cfgName)
 }

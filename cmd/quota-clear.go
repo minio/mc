@@ -25,10 +25,10 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminUserSvcAcctEnableCmd = cli.Command{
-	Name:         "enable",
-	Usage:        "enable a service account",
-	Action:       mainAdminUserSvcAcctEnable,
+var quotaClearCmd = cli.Command{
+	Name:         "clear",
+	Usage:        "clear bucket quota",
+	Action:       mainQuotaClear,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
@@ -36,49 +36,47 @@ var adminUserSvcAcctEnableCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS SERVICE-ACCOUNT
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable a service account 'J123C4ZXEQN8RK6ND35I' on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
+  1. Clear bucket quota configured for bucket "mybucket" on MinIO.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket
 `,
 }
 
-// checkAdminUserSvcAcctEnableSyntax - validate all the passed arguments
-func checkAdminUserSvcAcctEnableSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, 1)
+// checkQuotaClearSyntax - validate all the passed arguments
+func checkQuotaClearSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
-// mainAdminUserSvcAcctEnable is the handle for "mc admin user svcacct enable" command.
-func mainAdminUserSvcAcctEnable(ctx *cli.Context) error {
-	checkAdminUserSvcAcctEnableSyntax(ctx)
+// mainQuotaClear is the handler for "mc quota clear" command.
+func mainQuotaClear(ctx *cli.Context) error {
+	checkQuotaClearSyntax(ctx)
 
-	console.SetColor("SVCMessage", color.New(color.FgGreen))
+	console.SetColor("QuotaMessage", color.New(color.FgGreen))
+	console.SetColor("QuotaInfo", color.New(color.FgCyan))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	svcAccount := args.Get(1)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	opts := madmin.UpdateServiceAccountReq{
-		NewStatus: "on",
+	_, targetURL := url2Alias(args[0])
+	if e := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); e != nil {
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to clear bucket quota config")
 	}
-
-	e := client.UpdateServiceAccount(globalContext, svcAccount, opts)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to enable the specified service account")
-
-	printMsg(svcAcctMessage{
-		op:        ctx.Command.Name,
-		AccessKey: svcAccount,
+	printMsg(quotaMessage{
+		op:     ctx.Command.Name,
+		Bucket: targetURL,
+		Status: "success",
 	})
 
 	return nil

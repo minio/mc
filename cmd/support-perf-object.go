@@ -23,9 +23,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -70,8 +70,8 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- 
 		fatalIf(probe.NewError(e), "Unable to parse object size")
 		return nil
 	}
-	if size < 0 {
-		fatalIf(errInvalidArgument(), "size is expected to be atleast 0 bytes")
+	if size <= 0 {
+		fatalIf(errInvalidArgument(), "size is expected to be more than 0 bytes")
 		return nil
 	}
 	concurrent := ctx.Int("concurrent")

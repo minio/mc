@@ -18,11 +18,24 @@
 package cmd
 
 import (
+	"math/rand"
 	"os"
 	"regexp"
 
 	. "gopkg.in/check.v1"
 )
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+// newRandomID generates a random id of regular lower case and uppercase english characters.
+func newRandomID(n int) string {
+	rand.Seed(UTCNow().UnixNano())
+	sid := make([]rune, n)
+	for i := range sid {
+		sid[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(sid)
+}
 
 func (s *TestSuite) TestValidSessionID(c *C) {
 	validSid := regexp.MustCompile("^[a-zA-Z]+$")

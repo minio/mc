@@ -29,6 +29,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
@@ -59,8 +60,13 @@ func (stat statMessage) String() (msg string) {
 	// Format properly for alignment based on maxKey leng
 	stat.Key = fmt.Sprintf("%-10s: %s", "Name", stat.Key)
 	msgBuilder.WriteString(console.Colorize("Name", stat.Key) + "\n")
-	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)) + "\n")
-	msgBuilder.WriteString(fmt.Sprintf("%-10s: %-6s ", "Size", humanize.IBytes(uint64(stat.Size))) + "\n")
+	if !stat.Date.IsZero() {
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)) + "\n")
+	}
+	if stat.Type != "folder" {
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %-6s ", "Size", humanize.IBytes(uint64(stat.Size))) + "\n")
+	}
+
 	if stat.ETag != "" {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "ETag", stat.ETag) + "\n")
 	}
@@ -170,7 +176,6 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	}
 
 	targetAlias, _, _ := mustExpandAlias(targetURL)
-
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
@@ -186,6 +191,8 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		lstOptions.WithDeleteMarkers = true
 		lstOptions.TimeRef = timeRef
 	}
+	adminClient, _ := newAdminClient(targetURL)
+
 	var e error
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
@@ -244,10 +251,19 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				if bstat.Date.IsZero() || bstat.Date.Equal(time.Unix(0, 0)) {
 					bstat.Date = content.Time
 				}
+				var bu madmin.BucketUsageInfo
+				if adminClient != nil {
+					// Create a new MinIO Admin Client
+					duinfo, e := adminClient.DataUsageInfo(globalContext)
+					if e == nil {
+						bu = duinfo.BucketsUsage[stat.BucketName]
+					}
+				}
 
 				printMsg(bucketInfoMessage{
 					Status:     "success",
 					BucketInfo: bstat,
+					Usage:      bu,
 				})
 				continue
 			}
@@ -326,6 +342,7 @@ func (i BucketInfo) Tags() string {
 type bucketInfoMessage struct {
 	Status string `json:"status"`
 	BucketInfo
+	Usage madmin.BucketUsageInfo
 }
 
 func (v bucketInfoMessage) JSON() string {
@@ -341,12 +358,48 @@ func (v bucketInfoMessage) JSON() string {
 	return buf.String()
 }
 
+type histogramDef struct {
+	start, end uint64
+	text       string
+}
+
+var histogramTagsDesc = map[string]histogramDef{
+	"LESS_THAN_1024_B":          {0, 1024, "less than 1024 bytes"},
+	"BETWEEN_1024_B_AND_1_MB":   {1024, 1024 * 1024, "between 1024 bytes and 1 MB"},
+	"BETWEEN_1_MB_AND_10_MB":    {1024 * 1024, 10 * 1024 * 1024, "between 1 MB and 10 MB"},
+	"BETWEEN_10_MB_AND_64_MB":   {10 * 1024 * 1024, 64 * 1024 * 1024, "between 10 MB and 64 MB"},
+	"BETWEEN_64_MB_AND_128_MB":  {64 * 1024 * 1024, 128 * 1024 * 1024, "between 64 MB and 128 MB"},
+	"BETWEEN_128_MB_AND_512_MB": {128 * 1024 * 1024, 512 * 1024 * 1024, "between 128 MB and 512 MB"},
+	"GREATER_THAN_512_MB":       {512 * 1024 * 1024, 0, "greater than 512 MB"},
+}
+
+// Return a sorted list of histograms
+func sortHistogramTags() (orderedTags []string) {
+	orderedTags = make([]string, 0, len(histogramTagsDesc))
+	for tag := range histogramTagsDesc {
+		orderedTags = append(orderedTags, tag)
+	}
+	sort.Slice(orderedTags, func(i, j int) bool {
+		return histogramTagsDesc[orderedTags[i]].start < histogramTagsDesc[orderedTags[j]].start
+	})
+	return
+}
+
+func countDigits(num uint64) (count uint) {
+	for num > 0 {
+		num /= 10
+		count++
+	}
+	return
+}
+
 func (v bucketInfoMessage) String() string {
 	var b strings.Builder
 
 	keyStr := getKey(&ClientContent{URL: v.URL, Type: v.Type})
+	keyStr = strings.TrimSuffix(keyStr, slashSeperator)
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
-	b.WriteString(console.Colorize("Name", key) + "\n")
+	b.WriteString(console.Colorize("Title", key) + "\n")
 	b.WriteString(fmt.Sprintf("%-10s: %s ", "Date", v.Date.Format(printDate)) + "\n")
 	b.WriteString(fmt.Sprintf("%-10s: %-6s \n", "Size", humanize.IBytes(uint64(v.Size))))
 
@@ -357,8 +410,37 @@ func (v bucketInfoMessage) String() string {
 		return "file"
 	}()
 	b.WriteString(fmt.Sprintf("%-10s: %s \n", "Type", fType))
-	b.WriteString(fmt.Sprintf("%-10s:\n", "Metadata"))
-	b.WriteString(prettyPrintBucketMetadata(v.BucketInfo))
+	fmt.Fprintf(&b, "\n")
+
+	fmt.Fprint(&b, console.Colorize("Title", "Properties:\n"))
+	fmt.Fprint(&b, prettyPrintBucketMetadata(v.BucketInfo))
+	fmt.Fprintf(&b, "\n")
+
+	fmt.Fprint(&b, console.Colorize("Title", "Usage:\n"))
+
+	fmt.Fprintf(&b, "%16s: %s\n", "Total size", console.Colorize("Count", humanize.IBytes(v.Usage.Size)))
+	fmt.Fprintf(&b, "%16s: %s\n", "Objects count", console.Colorize("Count", humanize.Comma(int64(v.Usage.ObjectsCount))))
+	fmt.Fprintf(&b, "%16s: %s\n", "Versions count", console.Colorize("Count", humanize.Comma(int64(v.Usage.VersionsCount))))
+	fmt.Fprintf(&b, "\n")
+
+	if len(v.Usage.ObjectSizesHistogram) > 0 {
+		fmt.Fprint(&b, console.Colorize("Title", "Object sizes histogram:\n"))
+
+		var maxDigits uint
+		for _, val := range v.Usage.ObjectSizesHistogram {
+			if d := countDigits(val); d > maxDigits {
+				maxDigits = d
+			}
+		}
+
+		sortedTags := sortHistogramTags()
+		for _, tagName := range sortedTags {
+			val, ok := v.Usage.ObjectSizesHistogram[tagName]
+			if ok {
+				fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, histogramTagsDesc[tagName].text)
+			}
+		}
+	}
 
 	return b.String()
 }
@@ -369,57 +451,57 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 	placeHolder := ""
 	if info.Encryption.Algorithm != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Encryption: ")
-		fmt.Fprintf(&b, console.Colorize("Key", "\n\tAlgorithm: "))
-		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.Algorithm))
-		fmt.Fprintf(&b, console.Colorize("Key", "\n\tKey ID: "))
-		fmt.Fprintf(&b, console.Colorize("Value", info.Encryption.KeyID))
+		fmt.Fprint(&b, console.Colorize("Key", "\n\tAlgorithm: "))
+		fmt.Fprint(&b, console.Colorize("Value", info.Encryption.Algorithm))
+		fmt.Fprint(&b, console.Colorize("Key", "\n\tKey ID: "))
+		fmt.Fprint(&b, console.Colorize("Value", info.Encryption.KeyID))
 		fmt.Fprintln(&b)
 	}
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Versioning: ")
 	if info.Versioning.Status == "" {
-		fmt.Fprintf(&b, console.Colorize("Unset", "Un-versioned"))
+		fmt.Fprint(&b, console.Colorize("Unset", "Un-versioned"))
 	} else {
-		fmt.Fprintf(&b, console.Colorize("Set", info.Versioning.Status))
+		fmt.Fprint(&b, console.Colorize("Set", info.Versioning.Status))
 	}
 	fmt.Fprintln(&b)
 
 	if info.Locking.Mode != "" {
 		fmt.Fprintf(&b, "%2s%s\n", placeHolder, "LockConfiguration: ")
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "RetentionMode: ")
-		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Mode))
+		fmt.Fprint(&b, console.Colorize("Value", info.Locking.Mode))
 		fmt.Fprintln(&b)
 		fmt.Fprintf(&b, "%4s%s", placeHolder, "Retention Until Date: ")
-		fmt.Fprintf(&b, console.Colorize("Value", info.Locking.Validity))
+		fmt.Fprint(&b, console.Colorize("Value", info.Locking.Validity))
 		fmt.Fprintln(&b)
 	}
 	if len(info.Notification.Config.TopicConfigs) > 0 {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Notification: ")
-		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+		fmt.Fprint(&b, console.Colorize("Set", "Set"))
 		fmt.Fprintln(&b)
 	}
 	if info.Replication.Enabled {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Replication: ")
-		fmt.Fprintf(&b, console.Colorize("Set", "Enabled"))
+		fmt.Fprint(&b, console.Colorize("Set", "Enabled"))
 		fmt.Fprintln(&b)
 	}
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
-	fmt.Fprintf(&b, console.Colorize("Generic", info.Location))
+	fmt.Fprint(&b, console.Colorize("Generic", info.Location))
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Policy: ")
 	if info.Policy.Type == "none" {
-		fmt.Fprintf(&b, console.Colorize("UnSet", info.Policy.Type))
+		fmt.Fprint(&b, console.Colorize("UnSet", info.Policy.Type))
 	} else {
-		fmt.Fprintf(&b, console.Colorize("Set", info.Policy.Type))
+		fmt.Fprint(&b, console.Colorize("Set", info.Policy.Type))
 	}
 	fmt.Fprintln(&b)
 	if info.Tags() != "" {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "Tagging: ")
-		fmt.Fprintf(&b, console.Colorize("Generic", info.Tags()))
+		fmt.Fprint(&b, console.Colorize("Generic", info.Tags()))
 		fmt.Fprintln(&b)
 	}
 	if info.ILM.Config != nil {
 		fmt.Fprintf(&b, "%2s%s", placeHolder, "ILM: ")
-		fmt.Fprintf(&b, console.Colorize("Set", "Set"))
+		fmt.Fprint(&b, console.Colorize("Set", "Set"))
 		fmt.Fprintln(&b)
 	}
 

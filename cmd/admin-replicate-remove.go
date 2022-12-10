@@ -24,7 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -80,7 +80,7 @@ func (i srRemoveStatus) JSON() string {
 
 func (i srRemoveStatus) String() string {
 	if i.RemoveAll {
-		return console.Colorize("UserMessage", fmt.Sprintf("All site(s) were removed successfully"))
+		return console.Colorize("UserMessage", "All site(s) were removed successfully")
 	}
 	return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed successfully", strings.Join(i.sites, ", ")))
 }

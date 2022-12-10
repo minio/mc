@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -27,7 +26,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	dto "github.com/prometheus/client_model/go"
-	prom2json "github.com/prometheus/prom2json"
+	"github.com/prometheus/prom2json"
 )
 
 var adminPrometheusMetricsCmd = cli.Command{
@@ -119,7 +118,7 @@ func (pm prometheusMetricsReader) JSON() string {
 
 // String - returns the string representation of the prometheus metrics
 func (pm prometheusMetricsReader) String() string {
-	respBytes, e := ioutil.ReadAll(pm.Reader)
+	respBytes, e := io.ReadAll(pm.Reader)
 	if e != nil {
 		fatalIf(probe.NewError(e), "error reading metrics:")
 	}
