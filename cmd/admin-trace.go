@@ -31,7 +31,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -516,7 +516,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 		s.StatusMsg = http.StatusText(t.HTTP.RespInfo.StatusCode)
 		s.Client = t.HTTP.ReqInfo.Client
 		s.CallStats = &callStats{}
-		s.CallStats.Duration = t.HTTP.CallStats.Latency
+		s.CallStats.Duration = t.Duration
 		s.CallStats.Rx = t.HTTP.CallStats.InputBytes
 		s.CallStats.Tx = t.HTTP.CallStats.OutputBytes
 	}
@@ -600,8 +600,6 @@ func colorizedNodeName(nodeName string) string {
 }
 
 func (t traceMessage) JSON() string {
-	t.Status = "success"
-
 	trc := verboseTrace{
 		trcType:    t.Trace.TraceType,
 		Type:       t.Trace.TraceType.String(),
@@ -710,7 +708,7 @@ func (t traceMessage) String() string {
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", "[RESPONSE] "))
 	fmt.Fprintf(b, "[%s] ", rs.Time.Local().Format(traceTimeFormat))
-	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.HTTP.CallStats.Latency.Round(time.Microsecond), humanize.IBytes(uint64(trc.HTTP.CallStats.InputBytes)), humanize.IBytes(uint64(trc.HTTP.CallStats.OutputBytes)))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.Duration.Round(time.Microsecond), humanize.IBytes(uint64(trc.HTTP.CallStats.InputBytes)), humanize.IBytes(uint64(trc.HTTP.CallStats.OutputBytes)))))
 
 	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
 	if rs.StatusCode != http.StatusOK {

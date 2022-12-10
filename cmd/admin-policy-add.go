@@ -19,12 +19,12 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -126,7 +126,7 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	policy, e := ioutil.ReadFile(args.Get(2))
+	policy, e := os.ReadFile(args.Get(2))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get policy")
 
 	// Create a new MinIO Admin Client

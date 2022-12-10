@@ -24,7 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -101,7 +101,6 @@ func (u lockMessage) String() string {
 
 // JSON jsonified top oldest locks message.
 func (u lockMessage) JSON() string {
-	u.Status = "success"
 	type lockEntry struct {
 		Timestamp  time.Time `json:"time"`       // When the lock was first granted
 		Elapsed    string    `json:"elapsed"`    // Humanized duration for which lock has been held

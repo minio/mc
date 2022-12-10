@@ -228,7 +228,9 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 	}
 
 	// Undo the remaining versions found if any
-	exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
+	if len(perObjectVersions) > 0 {
+		exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
+	}
 
 	if !atLeastOneUndoApplied {
 		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object version to undo.")

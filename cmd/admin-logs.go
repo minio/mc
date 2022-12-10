@@ -26,7 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -44,6 +44,31 @@ var logsShowFlags = []cli.Flag{
 		Usage: "list error logs by type. Valid options are '[minio, application, all]'",
 		Value: "all",
 	},
+}
+
+var adminLogsCmd = cli.Command{
+	Name:            "logs",
+	Usage:           "show MinIO logs",
+	OnUsageError:    onUsageError,
+	Action:          mainAdminLogs,
+	Before:          setGlobalsFromContext,
+	Flags:           append(logsShowFlags, globalFlags...),
+	HideHelpCommand: true,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET [NODENAME]
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Show logs for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} myminio
+  2. Show last 5 log entries for node 'node1' for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} --last 5 myminio node1
+  3. Show application errors in logs for a MinIO server with alias 'myminio'
+     {{.Prompt}} {{.HelpName}} --type application myminio
+`,
 }
 
 func checkLogsShowSyntax(ctx *cli.Context) {
@@ -139,8 +164,8 @@ func (l logMessage) String() string {
 	return fmt.Sprintf("%s\n", logMsg)
 }
 
-// mainLogsShowConsole - the entry function of support logs show
-func mainLogsShowConsole(ctx *cli.Context) error {
+// mainAdminLogs - the entry function of admin logs
+func mainAdminLogs(ctx *cli.Context) error {
 	// Check for command syntax
 	checkLogsShowSyntax(ctx)
 	console.SetColor("LogMessage", color.New(color.Bold, color.FgRed))

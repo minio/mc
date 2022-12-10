@@ -13,16 +13,16 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/inconshreveable/mousetrap v1.0.1
 	github.com/json-iterator/go v1.1.12
-	github.com/klauspost/compress v1.15.11
+	github.com/klauspost/compress v1.15.12
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.16
-	github.com/minio/cli v1.24.0
+	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go v1.7.5
+	github.com/minio/madmin-go/v2 v2.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.43
-	github.com/minio/pkg v1.5.4
+	github.com/minio/minio-go/v7 v7.0.44
+	github.com/minio/pkg v1.5.5
 	github.com/minio/selfupdate v0.5.0
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -34,7 +34,7 @@ require (
 	github.com/rs/xid v1.4.0
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/tidwall/gjson v1.14.3
-	golang.org/x/crypto v0.2.0
+	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/net v0.2.0
 	golang.org/x/text v0.4.0
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b
@@ -47,6 +47,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/gdamore/tcell/v2 v2.5.3
 	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/juju/ratelimit v1.0.2
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
@@ -70,7 +71,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.3.8
-	github.com/klauspost/cpuid/v2 v2.1.2 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.1 // indirect

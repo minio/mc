@@ -108,10 +108,7 @@ func fixConfigV3() {
 		}
 
 		// Use the correct hostConfig with JSON tags in it.
-		cfgV3.Hosts[host] = hostConfigV3{
-			AccessKeyID:     brokenHostCfgV3.AccessKeyID,
-			SecretAccessKey: brokenHostCfgV3.SecretAccessKey,
-		}
+		cfgV3.Hosts[host] = hostConfigV3(brokenHostCfgV3)
 	}
 
 	// We blindly drop ACL and Access fields from the broken config v3.

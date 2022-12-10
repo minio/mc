@@ -32,7 +32,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 	"github.com/olekukonko/tablewriter"
@@ -63,6 +63,7 @@ var adminScannerInfoFlags = []cli.Flag{
 var adminScannerInfo = cli.Command{
 	Name:            "status",
 	Aliases:         []string{"info"},
+	HiddenAliases:   true,
 	Usage:           "summarize scanner events on MinIO server in real-time",
 	Action:          mainAdminScannerInfo,
 	OnUsageError:    onUsageError,

@@ -34,7 +34,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -88,9 +88,9 @@ func (t inspectMessage) String() string {
 		msg += fmt.Sprintf("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", t.File))
 		msg += fmt.Sprintf("Decryption key: %s\n\n", console.Colorize("Key", t.Key))
 
-		msg += fmt.Sprintf("The decryption key will ONLY be shown here. It cannot be recovered.\n")
-		msg += fmt.Sprintf("The encrypted file can safely be shared without the decryption key.\n")
-		msg += fmt.Sprintf("Even with the decryption key, data stored with encryption cannot be accessed.\n")
+		msg += "The decryption key will ONLY be shown here. It cannot be recovered.\n"
+		msg += "The encrypted file can safely be shared without the decryption key.\n"
+		msg += "Even with the decryption key, data stored with encryption cannot be accessed.\n"
 	}
 	return msg
 }
@@ -176,7 +176,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 	var keyHex string
 
 	// Choose a name and move the inspect data to its final destination
-	downloadPath := fmt.Sprintf("inspect-data.enc")
+	downloadPath := "inspect-data.enc"
 	if key != nil {
 		// Create an id that is also crc.
 		var id [4]byte

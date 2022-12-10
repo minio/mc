@@ -93,7 +93,7 @@ func (opts LifecycleOptions) ToILMRule(config *lifecycle.Configuration) (lifecyc
 
 	id = opts.ID
 	status = func() string {
-		if opts.Status != nil && *opts.Status == false {
+		if opts.Status != nil && !*opts.Status {
 			return "Disabled"
 		}
 		// Generating a new ILM rule without explicit status is enabled

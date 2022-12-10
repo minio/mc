@@ -771,42 +771,7 @@ Key: my-key
 ```
 <a name = "bucket"></a>
 <a name="quota"></a>
-### Command `quota` - Set/Get bucket quota
-`quota` command to set or get bucket quota on MinIO server.
-
-```
-NAME:
-  mc admin bucket quota - manage bucket quota
-
-USAGE:
-  mc admin bucket quota TARGET [--hard QUOTA | --clear]
-
-QUOTA
-  quota accepts human-readable case-insensitive number
-  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
-  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
-  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
-  also accepted. Without suffixes the unit is bytes.
-
-```
-*Example: List bucket quota on bucket 'mybucket' on MinIO.*
-
-```
-mc admin bucket quota myminio/mybucket
-```
-
-*Example: Set a hard bucket quota of 64Mb for bucket 'mybucket' on MinIO.*
-
-```
-mc admin bucket quota myminio/mybucket --hard 64MB
-```
-
-*Example: Reset bucket quota configured for bucket 'mybucket' on MinIO.*
-
-```
-mc admin bucket quota myminio/mybucket --clear
-```
-
+This command is deprecated and will be removed in a future release. Use 'mc quota set|info|clear' instead.
 <a name="remote"></a>
 ### Command `remote` - configure remote target buckets
 `remote` command manages remote bucket targets on MinIO server.

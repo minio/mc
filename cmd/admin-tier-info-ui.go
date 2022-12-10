@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"strconv"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/navidys/tvxwidgets"
 	"github.com/rivo/tview"
 )
@@ -46,7 +46,7 @@ func quitOnKeys(app *tview.Application) func(event *tcell.EventKey) *tcell.Event
 	}
 }
 
-func (ts tierInfos) TableUI() *tview.Table {
+func (t tierInfos) TableUI() *tview.Table {
 	table := tview.NewTable().
 		SetBorders(true)
 	columnHdrs := []string{"Name", "API", "Type", "Usage", "Objects", "Versions"}
@@ -63,7 +63,7 @@ func (ts tierInfos) TableUI() *tview.Table {
 		}
 		return "warm"
 	}
-	for i, tInfo := range ts {
+	for i, tInfo := range t {
 		table.SetCell(i+1, 0,
 			tview.NewTableCell(tInfo.Name).
 				SetTextColor(tcell.ColorWhite).
@@ -93,10 +93,10 @@ func (ts tierInfos) TableUI() *tview.Table {
 	return table
 }
 
-func (ts tierInfos) Barcharts(tier string) (objects *tvxwidgets.BarChart, versions *tvxwidgets.BarChart) {
+func (t tierInfos) Barcharts(tier string) (objects *tvxwidgets.BarChart, versions *tvxwidgets.BarChart) {
 	var maxObj int
 	var maxVer int
-	for _, t := range ts {
+	for _, t := range t {
 		if maxObj < t.Stats.NumObjects {
 			maxObj = t.Stats.NumObjects
 		}
@@ -116,7 +116,7 @@ func (ts tierInfos) Barcharts(tier string) (objects *tvxwidgets.BarChart, versio
 	versions.SetMaxValue(maxVer)
 
 	var tInfo madmin.TierInfo
-	for _, t := range ts {
+	for _, t := range t {
 		if t.Name == tier {
 			tInfo = t
 			break
@@ -131,9 +131,8 @@ func (ts tierInfos) Barcharts(tier string) (objects *tvxwidgets.BarChart, versio
 	hrs := 23
 	for i := 1; i <= 24; i++ {
 		if hrs == 0 {
-			objects.AddBar(fmt.Sprintf("now"), dailyStats.Bins[(lastIdx+i)%24].NumObjects, tcell.ColorRed)
-			versions.AddBar(fmt.Sprintf("now"), dailyStats.Bins[(lastIdx+i)%24].NumVersions, tcell.ColorBlue)
-
+			objects.AddBar("now", dailyStats.Bins[(lastIdx+i)%24].NumObjects, tcell.ColorRed)
+			versions.AddBar("now", dailyStats.Bins[(lastIdx+i)%24].NumVersions, tcell.ColorBlue)
 		} else {
 			objects.AddBar(fmt.Sprintf("-%d", hrs), dailyStats.Bins[(lastIdx+i)%24].NumObjects, tcell.ColorRed)
 			versions.AddBar(fmt.Sprintf("-%d", hrs), dailyStats.Bins[(lastIdx+i)%24].NumVersions, tcell.ColorBlue)

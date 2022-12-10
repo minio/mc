@@ -36,6 +36,7 @@ admin       manage MinIO servers
 update      update mc to latest release
 support     supportability tools like  profile, register, callhome, inspect
 ping        perform liveness check
+quota       manage bucket quota
 ```
 
 ## 1.  Download MinIO Client
@@ -2006,4 +2007,44 @@ mc ping play
 1: https://play.min.io:   min=919.538ms   max=919.538ms   average=919.538ms   errors=0   roundtrip=919.538ms
 2: https://play.min.io:   min=278.356ms   max=919.538ms   average=598.947ms   errors=0   roundtrip=278.356ms
 3: https://play.min.io:   min=278.356ms   max=919.538ms   average=504.759ms   errors=0   roundtrip=316.384ms
+```
+
+<a name="quota"></a>
+
+### Command `quota` - Manage bucket quota
+`quota` command to set or get bucket quota on MinIO server.
+
+```
+NAME:
+  mc quota - manage bucket quota
+
+USAGE:
+  set    set bucket quota
+  info   show bucket quota
+  clear  clear bucket quota
+
+QUOTA
+  quota accepts human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
+
+```
+*Example: Show bucket quota on bucket 'mybucket' on MinIO.*
+
+```
+mc quota info myminio/mybucket
+```
+
+*Example: Set a hard bucket quota of 64Mb for bucket 'mybucket' on MinIO.*
+
+```
+mc quota set myminio/mybucket --size 64MB
+```
+
+*Example: Reset bucket quota configured for bucket 'mybucket' on MinIO.*
+
+```
+mc quota clear myminio/mybucket
 ```
