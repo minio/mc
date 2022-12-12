@@ -20,14 +20,18 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
+	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/pkg/console"
 )
 
@@ -59,6 +63,28 @@ var replicateUpdateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "replicate",
 		Usage: `comma separated list to enable replication of soft deletes, permanent deletes, existing objects and metadata sync. Valid options are "delete-marker","delete","existing-objects","metadata-sync" and ""'`,
+	},
+	cli.StringFlag{
+		Name:  "sync",
+		Usage: "enable synchronous replication for this target. Valid values are enable,disable.Defaults to disable if unset",
+	},
+	cli.StringFlag{
+		Name:  "proxy",
+		Usage: "enable proxying in active-active replication. Valid values are enable,disable.By default proxying is enabled.",
+	},
+	cli.StringFlag{
+		Name:  "bandwidth",
+		Usage: "Set bandwidth limit in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
+	},
+	cli.UintFlag{
+		Name:  "healthcheck-seconds",
+		Usage: "health check duration in seconds",
+		Value: 60,
+	},
+	cli.StringFlag{
+		Name:  "path",
+		Value: "auto",
+		Usage: "bucket path lookup supported by the server. Valid options are '[on,off,auto]'",
 	},
 }
 
@@ -101,6 +127,12 @@ EXAMPLES:
 
   7. Enable existing object replication on a configuration rule with ID "kxYD.491" on a target myminio/bucket. Rule previously had enabled delete marker and versioned delete replication.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate "existing-objects,delete-marker,delete"
+  
+  8. Edit credentials for remote target with replication rule ID kxYD.491 
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --remote-bucket  https://foobar:newpassword@minio.siteb.example.com/targetbucket
+  
+  9 Disable proxying and enable synchronous replication for remote target of bucket mybucket with rule ID kxYD.492
+  	 {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.492" --remote-bucket https://foobar:newpassword@minio.siteb.example.com/targetbucket  --sync "enable" --proxy "disable"
 `,
 }
 
@@ -109,6 +141,106 @@ func checkReplicateUpdateSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
+}
+
+// modifyRemoteTarget - modifies the dest credentials or updates sync , disable-proxy settings
+func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget, arnStr string) (*madmin.BucketTarget, []madmin.TargetUpdateType) {
+	args := cli.Args()
+	foundIdx := -1
+	for i, t := range targets {
+		if t.Arn == arnStr {
+			arn, e := madmin.ParseARN(arnStr)
+			if e != nil {
+				fatalIf(errInvalidArgument().Trace(args...), "Malformed ARN `"+arnStr+"` in replication config")
+			}
+			if arn.Bucket != t.TargetBucket {
+				fatalIf(errInvalidArgument().Trace(args...), "Expected remote bucket %s, got %s for rule id %s", t.TargetBucket, arn.Bucket, cli.String("id"))
+			}
+			foundIdx = i
+			break
+		}
+	}
+	if foundIdx < 0 {
+		fatalIf(errInvalidArgument().Trace(args...), "`"+arnStr+"` not found in replication config")
+	}
+	var ops []madmin.TargetUpdateType
+	bktTarget := targets[foundIdx].Clone()
+	if cli.IsSet("sync") {
+		syncState := strings.ToLower(cli.String("sync"))
+		switch syncState {
+		case "enable", "disable":
+			bktTarget.ReplicationSync = syncState == "enable"
+			ops = append(ops, madmin.SyncUpdateType)
+		default:
+			fatalIf(errInvalidArgument().Trace(args...), "--sync can be either [enable|disable]")
+		}
+	}
+	if cli.IsSet("proxy") {
+		proxyState := strings.ToLower(cli.String("proxy"))
+		switch proxyState {
+		case "enable", "disable":
+			bktTarget.DisableProxy = proxyState == "disable"
+			ops = append(ops, madmin.ProxyUpdateType)
+
+		default:
+			fatalIf(errInvalidArgument().Trace(args...), "--proxy can be either [enable|disable]")
+		}
+	}
+
+	if len(args) == 1 {
+		_, sourceBucket := url2Alias(args[0])
+
+		tgtURL := cli.String("remote-bucket")
+		accessKey, secretKey, u := extractCredentialURL(tgtURL)
+		var tgtBucket string
+		if u.Path != "" {
+			tgtBucket = path.Clean(u.Path[1:])
+		}
+		if e := s3utils.CheckValidBucketName(tgtBucket); e != nil {
+			fatalIf(probe.NewError(e).Trace(tgtURL), "Invalid target bucket specified")
+		}
+		secure := u.Scheme == "https"
+		host := u.Host
+		if u.Port() == "" {
+			port := 80
+			if secure {
+				port = 443
+			}
+			host = host + ":" + strconv.Itoa(port)
+		}
+		console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+		creds := &madmin.Credentials{AccessKey: accessKey, SecretKey: secretKey}
+		if tgtBucket != bktTarget.TargetBucket {
+			fatalIf(errInvalidArgument().Trace(args...), "configured remote target bucket `"+tgtBucket+"` does not match "+bktTarget.TargetBucket+"` for this ARN `"+bktTarget.Arn+"`")
+		}
+		if sourceBucket != bktTarget.SourceBucket {
+			fatalIf(errInvalidArgument().Trace(args...), "configured source bucket `"+sourceBucket+"` does not match "+bktTarget.SourceBucket+"` for this ARN `"+bktTarget.Arn+"`")
+		}
+		bktTarget.TargetBucket = tgtBucket
+		bktTarget.Secure = secure
+		bktTarget.Credentials = creds
+		bktTarget.Endpoint = host
+		ops = append(ops, madmin.CredentialsUpdateType)
+	}
+	if cli.IsSet("bandwidth") {
+		bandwidthStr := cli.String("bandwidth")
+		bandwidth, err := getBandwidthInBytes(bandwidthStr)
+		if err != nil {
+			fatalIf(errInvalidArgument().Trace(bandwidthStr), "Invalid bandwidth number")
+		}
+		bktTarget.BandwidthLimit = int64(bandwidth)
+		ops = append(ops, madmin.BandwidthLimitUpdateType)
+
+	}
+	if cli.IsSet("healthcheck-seconds") {
+		bktTarget.HealthCheckDuration = time.Duration(cli.Uint("healthcheck-seconds")) * time.Second
+		ops = append(ops, madmin.HealthCheckDurationUpdateType)
+	}
+	if cli.IsSet("path") {
+		bktTarget.Path = cli.String("path")
+		ops = append(ops, madmin.PathUpdateType)
+	}
+	return &bktTarget, ops
 }
 
 type replicateUpdateMessage struct {
@@ -159,6 +291,28 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(args...), "--state can be either `enable` or `disable`")
 		}
 	}
+	_, sourceBucket := url2Alias(args[0])
+	// Create a new MinIO Admin Client
+	admClient, cerr := newAdminClient(aliasedURL)
+	fatalIf(cerr, "Unable to initialize admin connection.")
+
+	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch remote target.")
+	var arn string
+	for _, rule := range rcfg.Rules {
+		if rule.ID == cliCtx.String("id") {
+			arn = rule.Destination.Bucket
+			break
+		}
+	}
+	if cliCtx.IsSet("remote-bucket") {
+		bktTarget, ops := modifyRemoteTarget(cliCtx, targets, arn)
+		_, e = admClient.UpdateRemoteTarget(globalContext, bktTarget, ops...)
+		if e != nil {
+			fatalIf(probe.NewError(e).Trace(args...), "Unable to update remote target `"+bktTarget.Endpoint+"` from `"+bktTarget.SourceBucket+"` -> `"+bktTarget.TargetBucket+"`")
+		}
+	}
+
 	var vDeleteReplicate, dmReplicate, replicasync, existingReplState string
 	if cliCtx.IsSet("replicate") {
 		replSlice := strings.Split(cliCtx.String("replicate"), ",")
@@ -192,7 +346,7 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 		RuleStatus:   state,
 		ID:           cliCtx.String("id"),
 		Op:           replication.SetOption,
-		DestBucket:   cliCtx.String("remote-bucket"),
+		DestBucket:   arn,
 		IsSCSet:      cliCtx.IsSet("storage-class"),
 		IsTagSet:     cliCtx.IsSet("tags"),
 	}
