@@ -126,6 +126,10 @@ func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
+
+	if ctx.Bool("all") && len(ctx.StringSlice("call")) > 0 {
+		fatalIf(errDummy().Trace(), "You cannot specify both --all and --call flags at the same time.")
+	}
 }
 
 func printTrace(verbose bool, traceInfo madmin.ServiceTraceInfo) {
@@ -312,6 +316,8 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 			opts.Rebalance = true
 		case "replication-resync":
 			opts.ReplicationResync = true
+		default:
+			return madmin.ServiceTraceOpts{}, fmt.Errorf("unknown call name: `%s`", api)
 		}
 	}
 	return
