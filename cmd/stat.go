@@ -407,7 +407,6 @@ func (v bucketInfoMessage) String() string {
 	keyStr = strings.TrimSuffix(keyStr, slashSeperator)
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
 	b.WriteString(console.Colorize("Title", key) + "\n")
-  
 	if !v.Date.IsZero() && !v.Date.Equal(timeSentinel) {
 		b.WriteString(fmt.Sprintf("%-10s: %s ", "Date", v.Date.Format(printDate)) + "\n")
 	}
