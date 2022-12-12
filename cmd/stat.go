@@ -250,7 +250,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				contentURL = strings.TrimPrefix(contentURL, prefixPath)
 				bstat.URL.Path = contentURL
 
-				if bstat.Date.IsZero() || bstat.Date.Equal(time.Unix(0, 0)) {
+				if bstat.Date.IsZero() || bstat.Date.Equal(timeSentinel) {
 					bstat.Date = content.Time
 				}
 				var bu madmin.BucketUsageInfo
@@ -407,7 +407,10 @@ func (v bucketInfoMessage) String() string {
 	keyStr = strings.TrimSuffix(keyStr, slashSeperator)
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
 	b.WriteString(console.Colorize("Title", key) + "\n")
-	b.WriteString(fmt.Sprintf("%-10s: %s ", "Date", v.Date.Format(printDate)) + "\n")
+  
+	if !v.Date.IsZero() && !v.Date.Equal(timeSentinel) {
+		b.WriteString(fmt.Sprintf("%-10s: %s ", "Date", v.Date.Format(printDate)) + "\n")
+	}
 	b.WriteString(fmt.Sprintf("%-10s: %-6s \n", "Size", "N/A"))
 
 	fType := func() string {

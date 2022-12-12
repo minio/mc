@@ -18,7 +18,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -102,6 +105,17 @@ func mainAdminServerUpdate(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	updateURL := args.Get(1)
+
+	if isTerminal() {
+		fmt.Printf("You are about to upgrade *MinIO Server*, please confirm [y/N]: ")
+		answer, e := bufio.NewReader(os.Stdin).ReadString('\n')
+		fatalIf(probe.NewError(e), "Unable to parse user input.")
+		answer = strings.TrimSpace(answer)
+		if answer = strings.ToLower(answer); answer != "y" && answer != "yes" {
+			fmt.Println("Upgrade aborted!")
+			return nil
+		}
+	}
 
 	// Update the specified MinIO server, optionally also
 	// with the provided update URL.
