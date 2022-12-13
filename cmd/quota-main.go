@@ -17,34 +17,27 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsEnableCmd = cli.Command{
-	Name:            "enable",
-	Usage:           "enable uploading real-time MinIO logs to SUBNET",
-	Action:          mainEnableLogs,
-	OnUsageError:    onUsageError,
-	Before:          setGlobalsFromContext,
-	Flags:           supportGlobalFlags,
-	HideHelpCommand: true,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-USAGE:
-  {{.HelpName}} ALIAS
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Enable  uploading real-time logs for cluster with alias 'play' to SUBNET.
-     {{.Prompt}} {{.HelpName}} play
-`,
+var quotaSubcommands = []cli.Command{
+	quotaSetCmd,
+	quotaInfoCmd,
+	quotaClearCmd,
 }
 
-func mainEnableLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "enable")
-	configureSubnetWebhook(alias, true)
+var quotaCmd = cli.Command{
+	Name:            "quota",
+	Usage:           "manage bucket quota",
+	Action:          mainQuota,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     quotaSubcommands,
+	HideHelpCommand: true,
+}
+
+// mainQuota is the handle for "mc quota" command.
+func mainQuota(ctx *cli.Context) error {
+	commandNotFound(ctx, quotaSubcommands)
 	return nil
+	// Sub-commands like "set", "clear", "info" have their own main.
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -225,6 +225,8 @@ type Config struct {
 	Lookup            minio.BucketLookupType
 	ConnReadDeadline  time.Duration
 	ConnWriteDeadline time.Duration
+	UploadLimit       int64
+	DownloadLimit     int64
 	Transport         *http.Transport
 }
 

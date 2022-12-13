@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -82,7 +81,7 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to export IAM info.")
 
 	// Create iam info zip file
-	tmpFile, e := ioutil.TempFile("", fmt.Sprintf("%s-iam-info", aliasedURL))
+	tmpFile, e := os.CreateTemp("", fmt.Sprintf("%s-iam-info", aliasedURL))
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 
 	ext := "zip"

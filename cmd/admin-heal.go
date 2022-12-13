@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -30,7 +30,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -378,17 +378,17 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 			_, ok := offlineEndpoints[endpoint]
 			if ok {
 				stateText := console.Colorize("NodeFailed", "OFFLINE")
-				fmt.Fprintf(&msg, fmt.Sprintf("  %s: %s\n", endpoint, stateText))
+				fmt.Fprintf(&msg, "  %s: %s\n", endpoint, stateText)
 				continue
 			}
 			serverStatus := serversStatus[endpoint]
 			switch {
 			case showTolerance:
 				serverHeader := "  %s: (Tolerance: %d server(s))\n"
-				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint, poolsInfo[serverStatus.pool].tolerance))
+				fmt.Fprintf(&msg, serverHeader, endpoint, poolsInfo[serverStatus.pool].tolerance)
 			default:
 				serverHeader := "  %s:\n"
-				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint))
+				fmt.Fprintf(&msg, serverHeader, endpoint)
 			}
 
 			for _, d := range serverStatus.disks {
@@ -439,11 +439,11 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 
 	summary := shortBackgroundHealStatusMessage{HealInfo: s.HealInfo}
 
-	fmt.Fprintf(&msg, "\n")
-	fmt.Fprintf(&msg, "Summary:\n")
-	fmt.Fprintf(&msg, "=======\n")
-	fmt.Fprintf(&msg, summary.String())
-	fmt.Fprintf(&msg, "\n")
+	fmt.Fprint(&msg, "\n")
+	fmt.Fprint(&msg, "Summary:\n")
+	fmt.Fprint(&msg, "=======\n")
+	fmt.Fprint(&msg, summary.String())
+	fmt.Fprint(&msg, "\n")
 
 	return msg.String()
 }
@@ -540,7 +540,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				bytesHealedPerSec += float64(time.Second) * float64(disk.HealInfo.BytesDone) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 				itemsHealedPerSec += float64(time.Second) * float64(disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 
-				scanSpeed := float64(disk.UsedSpace) / float64(time.Now().Sub(disk.HealInfo.Started))
+				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
 				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
 				if remainingTime > healingRemaining {
 					healingRemaining = remainingTime

@@ -26,7 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -46,11 +46,11 @@ var logsShowFlags = []cli.Flag{
 	},
 }
 
-var supportLogsShowCmd = cli.Command{
-	Name:            "show",
+var adminLogsCmd = cli.Command{
+	Name:            "logs",
 	Usage:           "show MinIO logs",
-	Action:          mainLogsShowConsole,
 	OnUsageError:    onUsageError,
+	Action:          mainAdminLogs,
 	Before:          setGlobalsFromContext,
 	Flags:           append(logsShowFlags, globalFlags...),
 	HideHelpCommand: true,
@@ -164,8 +164,8 @@ func (l logMessage) String() string {
 	return fmt.Sprintf("%s\n", logMsg)
 }
 
-// mainLogsShowConsole - the entry function of support logs show
-func mainLogsShowConsole(ctx *cli.Context) error {
+// mainAdminLogs - the entry function of admin logs
+func mainAdminLogs(ctx *cli.Context) error {
 	// Check for command syntax
 	checkLogsShowSyntax(ctx)
 	console.SetColor("LogMessage", color.New(color.Bold, color.FgRed))

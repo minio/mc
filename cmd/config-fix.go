@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -108,10 +108,7 @@ func fixConfigV3() {
 		}
 
 		// Use the correct hostConfig with JSON tags in it.
-		cfgV3.Hosts[host] = hostConfigV3{
-			AccessKeyID:     brokenHostCfgV3.AccessKeyID,
-			SecretAccessKey: brokenHostCfgV3.SecretAccessKey,
-		}
+		cfgV3.Hosts[host] = hostConfigV3(brokenHostCfgV3)
 	}
 
 	// We blindly drop ACL and Access fields from the broken config v3.

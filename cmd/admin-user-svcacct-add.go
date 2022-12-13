@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -20,13 +20,13 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 	iampolicy "github.com/minio/pkg/iam/policy"
@@ -163,7 +163,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	if policyPath != "" {
 		// Validate the policy document and ensure it has at least when statement
 		var e error
-		policyBytes, e = ioutil.ReadFile(policyPath)
+		policyBytes, e = os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
 		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
 		fatalIf(probe.NewError(e), "Unable to parse the policy document.")

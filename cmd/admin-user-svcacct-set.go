@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,10 +18,10 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -85,7 +85,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	var buf []byte
 	if policyPath != "" {
 		var e error
-		buf, e = ioutil.ReadFile(policyPath)
+		buf, e = os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
 	}
 

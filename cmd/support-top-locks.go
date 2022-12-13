@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -24,7 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -70,12 +70,10 @@ type lockMessage struct {
 	Lock   madmin.LockEntry `json:"locks"`
 }
 
-func getTimeDiff(timeStamp time.Time) (string, string) {
-	now := time.Now().UTC()
-	diff := now.Sub(timeStamp)
-	hours := int(diff.Hours())
-	minutes := int(diff.Minutes()) % 60
-	seconds := int(diff.Seconds()) % 60
+func getLockDuration(duration time.Duration) (string, string) {
+	hours := int(duration.Hours())
+	minutes := int(duration.Minutes()) % 60
+	seconds := int(duration.Seconds()) % 60
 	if hours == 0 {
 		if minutes == 0 {
 			return "Lock", fmt.Sprint(seconds, " seconds")
@@ -93,7 +91,7 @@ func (u lockMessage) String() string {
 		typeFieldMaxLen     = 6
 	)
 
-	lockState, timeDiff := getTimeDiff(u.Lock.Timestamp)
+	lockState, timeDiff := getLockDuration(u.Lock.Elapsed)
 	return console.Colorize(lockState, newPrettyTable("  ",
 		Field{"Time", timeFieldMaxLen},
 		Field{"Type", typeFieldMaxLen},
@@ -103,8 +101,31 @@ func (u lockMessage) String() string {
 
 // JSON jsonified top oldest locks message.
 func (u lockMessage) JSON() string {
-	u.Status = "success"
-	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
+	type lockEntry struct {
+		Timestamp  time.Time `json:"time"`       // When the lock was first granted
+		Elapsed    string    `json:"elapsed"`    // Humanized duration for which lock has been held
+		Resource   string    `json:"resource"`   // Resource contains info like bucket+object
+		Type       string    `json:"type"`       // Type indicates if 'Write' or 'Read' lock
+		Source     string    `json:"source"`     // Source at which lock was granted
+		ServerList []string  `json:"serverlist"` // List of servers participating in the lock.
+		Owner      string    `json:"owner"`      // Owner UUID indicates server owns the lock.
+		ID         string    `json:"id"`         // UID to uniquely identify request of client.
+		// Represents quorum number of servers required to hold this lock, used to look for stale locks.
+		Quorum int `json:"quorum"`
+	}
+
+	le := lockEntry{
+		Timestamp:  u.Lock.Timestamp,
+		Elapsed:    u.Lock.Elapsed.Round(time.Second).String(),
+		Resource:   u.Lock.Resource,
+		Type:       u.Lock.Type,
+		Source:     u.Lock.Source,
+		ServerList: u.Lock.ServerList,
+		Owner:      u.Lock.Owner,
+		ID:         u.Lock.ID,
+		Quorum:     u.Lock.Quorum,
+	}
+	statusJSONBytes, e := json.MarshalIndent(le, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(statusJSONBytes)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -24,6 +24,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -47,7 +48,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "call",
-		Usage: "trace only matching call types (e.g. `s3`, `internal`, `storage`, `os`, `scanner`, `decommission`, `healing`)",
+		Usage: "trace only matching call types. See CALL TYPES below for list. (default: s3)",
 	},
 	cli.DurationFlag{
 		Name:  "response-threshold",
@@ -83,6 +84,57 @@ var adminTraceFlags = []cli.Flag{
 	},
 }
 
+// traceCallTypes contains all call types and flags to apply when selected.
+var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
+	"storage":  func(o *madmin.ServiceTraceOpts) string { o.Storage = true; return "Trace Storage calls" },
+	"internal": func(o *madmin.ServiceTraceOpts) string { o.Internal = true; return "Trace Internal RPC calls" },
+	"s3":       func(o *madmin.ServiceTraceOpts) string { o.S3 = true; return "Trace S3 API calls" },
+	"os":       func(o *madmin.ServiceTraceOpts) string { o.OS = true; return "Trace Operating System calls" },
+	"healing": func(o *madmin.ServiceTraceOpts) string {
+		o.Healing = true
+		return "Trace Healing operations (alias: heal)"
+	},
+	"batch-replication": func(o *madmin.ServiceTraceOpts) string {
+		o.BatchReplication = true
+		return "Trace Batch Replication (alias: brep)"
+	},
+	"decommission": func(o *madmin.ServiceTraceOpts) string {
+		o.Decommission = true
+		return "Trace Decommission operations (alias: decom)"
+	},
+	"rebalance": func(o *madmin.ServiceTraceOpts) string {
+		o.Rebalance = true
+		return "Trace Server Pool Rebalancing operations"
+	},
+	"replication-resync": func(o *madmin.ServiceTraceOpts) string {
+		o.ReplicationResync = true
+		return "Trace Replication Resync operations (alias: resync)"
+	},
+}
+
+// traceCallTypes contains aliases (short versions) of
+var traceCallTypeAliases = map[string]func(o *madmin.ServiceTraceOpts) string{
+	"heal":   traceCallTypes["healing"],
+	"decom":  traceCallTypes["decommission"],
+	"resync": traceCallTypes["replication-resync"],
+	"brep":   traceCallTypes["batch-replication"],
+}
+
+func traceCallsHelp() string {
+	var help []string
+	o := madmin.ServiceTraceOpts{}
+	const padkeyLen = 19
+	for k, fn := range traceCallTypes {
+		pad := ""
+		if len(k) < padkeyLen {
+			pad = strings.Repeat(" ", padkeyLen-len(k))
+		}
+		help = append(help, fmt.Sprintf("  %s: %s%s", k, pad, fn(&o)))
+	}
+	sort.Strings(help)
+	return strings.Join(help, "\n")
+}
+
 var adminTraceCmd = cli.Command{
 	Name:            "trace",
 	Usage:           "show http trace for MinIO server",
@@ -100,6 +152,10 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+CALL TYPES:
+` + traceCallsHelp() + `
+
 EXAMPLES:
   1. Show verbose console trace for MinIO server
      {{.Prompt}} {{.HelpName}} -v -a myminio
@@ -125,6 +181,10 @@ var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, colo
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+
+	if ctx.Bool("all") && len(ctx.StringSlice("call")) > 0 {
+		fatalIf(errDummy().Trace(), "You cannot specify both --all and --call flags at the same time.")
 	}
 }
 
@@ -271,15 +331,9 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 	opts.OnlyErrors = ctx.Bool("errors")
 
 	if ctx.Bool("all") {
-		opts.S3 = true
-		opts.Internal = true
-		opts.Storage = true
-		opts.OS = true
-		opts.Scanner = true
-		opts.Decommission = true
-		opts.Healing = true
-		opts.BatchReplication = true
-		return
+		for _, fn := range traceCallTypes {
+			fn(&opts)
+		}
 	}
 
 	if len(apis) == 0 {
@@ -290,26 +344,14 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 	}
 
 	for _, api := range apis {
-		switch api {
-		case "storage":
-			opts.Storage = true
-		case "internal":
-			opts.Internal = true
-		case "s3":
-			opts.S3 = true
-		case "os":
-			opts.OS = true
-		case "scanner":
-			opts.Scanner = true
-		case "heal", "healing":
-			opts.Healing = true
-		case "decom", "decommission":
-			opts.Decommission = true
-		case "batch-replication":
-			opts.BatchReplication = true
-		case "rebalance":
-			opts.Rebalance = true
+		fn, ok := traceCallTypes[api]
+		if !ok {
+			fn, ok = traceCallTypeAliases[api]
 		}
+		if !ok {
+			return madmin.ServiceTraceOpts{}, fmt.Errorf("unknown call name: `%s`", api)
+		}
+		fn(&opts)
 	}
 	return
 }
@@ -456,7 +498,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 		s.StatusMsg = http.StatusText(t.HTTP.RespInfo.StatusCode)
 		s.Client = t.HTTP.ReqInfo.Client
 		s.CallStats = &callStats{}
-		s.CallStats.Duration = t.HTTP.CallStats.Latency
+		s.CallStats.Duration = t.Duration
 		s.CallStats.Rx = t.HTTP.CallStats.InputBytes
 		s.CallStats.Tx = t.HTTP.CallStats.OutputBytes
 	}
@@ -540,8 +582,6 @@ func colorizedNodeName(nodeName string) string {
 }
 
 func (t traceMessage) JSON() string {
-	t.Status = "success"
-
 	trc := verboseTrace{
 		trcType:    t.Trace.TraceType,
 		Type:       t.Trace.TraceType.String(),
@@ -650,7 +690,7 @@ func (t traceMessage) String() string {
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", "[RESPONSE] "))
 	fmt.Fprintf(b, "[%s] ", rs.Time.Local().Format(traceTimeFormat))
-	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.HTTP.CallStats.Latency.Round(time.Microsecond), humanize.IBytes(uint64(trc.HTTP.CallStats.InputBytes)), humanize.IBytes(uint64(trc.HTTP.CallStats.OutputBytes)))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.Duration.Round(time.Microsecond), humanize.IBytes(uint64(trc.HTTP.CallStats.InputBytes)), humanize.IBytes(uint64(trc.HTTP.CallStats.OutputBytes)))))
 
 	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
 	if rs.StatusCode != http.StatusOK {

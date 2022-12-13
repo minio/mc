@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,7 +35,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	isatty "github.com/mattn/go-isatty"
+	"github.com/mattn/go-isatty"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -244,7 +243,7 @@ func downloadReleaseURL(releaseChecksumURL string, timeout time.Duration) (conte
 	if resp.StatusCode != http.StatusOK {
 		return content, probe.NewError(fmt.Errorf("Error downloading URL %s. Response: %v", releaseChecksumURL, resp.Status))
 	}
-	contentBytes, e := ioutil.ReadAll(resp.Body)
+	contentBytes, e := io.ReadAll(resp.Body)
 	if e != nil {
 		return content, probe.NewError(fmt.Errorf("Error reading response. %s", err))
 	}

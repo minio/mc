@@ -19,7 +19,7 @@ jobs:
       GO111MODULE: on
     strategy:
       matrix:
-        go-version: [1.18.x, 1.19.x]
+        go-version: [1.19.x]
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Set up Go ${{ matrix.go-version }} on ${{ matrix.os }}
@@ -73,3 +73,7 @@ jobs:
 
       - name: Test 386
         run: GOOS=linux GOARCH=386 go test -short ./...
+
+      - name: Staticcheck
+        # Run with defaults, but allow errors with other formats ST1005
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest && staticcheck -tests=false -checks="all,-ST1000,-ST1003,-ST1016,-ST1020,-ST1021,-ST1022,-ST1023,-ST1005" ./...

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -150,6 +150,9 @@ func mainStat(cliCtx *cli.Context) error {
 	console.SetColor("Unset", color.New(color.FgRed))
 	console.SetColor("Set", color.New(color.FgGreen))
 
+	console.SetColor("Title", color.New(color.Bold, color.FgBlue))
+	console.SetColor("Count", color.New(color.FgGreen))
+
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
@@ -161,25 +164,9 @@ func mainStat(cliCtx *cli.Context) error {
 		args = []string{"."}
 	}
 
-	var cErr error
 	for _, targetURL := range args {
-		contents, bstats, err := statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB)
-		if err != nil {
-			fatalIf(err, "Unable to stat `"+targetURL+"`.")
-		}
-		for _, content := range contents {
-			stat := parseStat(content)
-			stat.singleObject = len(contents) == 1
-			printMsg(stat)
-		}
-		for _, binfo := range bstats {
-			printMsg(bucketInfoMessage{
-				Status:   "success",
-				URL:      targetURL,
-				Metadata: *binfo,
-			})
-		}
-
+		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB), "Unable to stat `"+targetURL+"`.")
 	}
-	return cErr
+
+	return nil
 }

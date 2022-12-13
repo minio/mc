@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,14 +18,7 @@
 package cmd
 
 import (
-	"fmt"
-
-	humanize "github.com/dustin/go-humanize"
-	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
-	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
 
@@ -40,133 +33,19 @@ var adminQuotaFlags = []cli.Flag{
 	},
 }
 
-// quotaMessage container for content message structure
-type quotaMessage struct {
-	op        string
-	Status    string `json:"status"`
-	Bucket    string `json:"bucket"`
-	Quota     uint64 `json:"quota,omitempty"`
-	QuotaType string `json:"type,omitempty"`
-}
-
-func (q quotaMessage) String() string {
-	switch q.op {
-	case "set":
-		return console.Colorize("QuotaMessage",
-			fmt.Sprintf("Successfully set bucket quota of %s with %s type on `%s`", humanize.IBytes(q.Quota), q.QuotaType, q.Bucket))
-	case "unset":
-		return console.Colorize("QuotaMessage",
-			fmt.Sprintf("Successfully cleared bucket quota configured on `%s`", q.Bucket))
-	default:
-		return console.Colorize("QuotaInfo",
-			fmt.Sprintf("Bucket `%s` has %s quota of %s", q.Bucket, q.QuotaType, humanize.IBytes(q.Quota)))
-	}
-}
-
-func (q quotaMessage) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(q, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
-}
-
 var adminBucketQuotaCmd = cli.Command{
-	Name:         "quota",
-	Usage:        "manage bucket quota",
-	Action:       mainAdminBucketQuota,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(adminQuotaFlags, globalFlags...),
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET [--hard QUOTA | --clear]
-
-QUOTA
-  quota accepts human-readable case-insensitive number
-  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
-  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
-  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
-  also accepted. Without suffixes the unit is bytes.
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Display bucket quota configured for "mybucket" on MinIO.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket
-
-  3. Set hard quota of 1gb for a bucket "mybucket" on MinIO.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket --hard 1GB
-
-  4. Clear bucket quota configured for bucket "mybucket" on MinIO.
-     {{.Prompt}} {{.HelpName}} myminio/mybucket --clear
-`,
-}
-
-// checkAdminBucketQuotaSyntax - validate all the passed arguments
-func checkAdminBucketQuotaSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
+	Name:            "quota",
+	Usage:           "manage bucket quota",
+	Action:          mainAdminBucketQuota,
+	OnUsageError:    onUsageError,
+	Before:          setGlobalsFromContext,
+	Flags:           append(adminQuotaFlags, globalFlags...),
+	HideHelpCommand: true,
+	Hidden:          true,
 }
 
 // mainAdminBucketQuota is the handler for "mc admin bucket quota" command.
 func mainAdminBucketQuota(ctx *cli.Context) error {
-	checkAdminBucketQuotaSyntax(ctx)
-
-	console.SetColor("QuotaMessage", color.New(color.FgGreen))
-	console.SetColor("QuotaInfo", color.New(color.FgBlue))
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	_, targetURL := url2Alias(args[0])
-	if ctx.IsSet("hard") {
-		qType := madmin.HardQuota
-		quotaStr := ctx.String("hard")
-		quota, e := humanize.ParseBytes(quotaStr)
-		fatalIf(probe.NewError(e).Trace(quotaStr), "Unable to parse quota")
-
-		fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{
-			Quota: quota,
-			Type:  qType,
-		})).Trace(args...), "Unable to set bucket quota")
-
-		printMsg(quotaMessage{
-			op:        ctx.Command.Name,
-			Bucket:    targetURL,
-			Quota:     quota,
-			QuotaType: string(qType),
-			Status:    "success",
-		})
-	} else if ctx.Bool("clear") {
-		if e := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); e != nil {
-			fatalIf(probe.NewError(e).Trace(args...), "Unable to clear bucket quota config")
-		}
-		printMsg(quotaMessage{
-			op:     ctx.Command.Name,
-			Bucket: targetURL,
-			Status: "success",
-		})
-
-	} else {
-		qCfg, e := client.GetBucketQuota(globalContext, targetURL)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to get bucket quota")
-		printMsg(quotaMessage{
-			op:        ctx.Command.Name,
-			Bucket:    targetURL,
-			Quota:     qCfg.Quota,
-			QuotaType: string(qCfg.Type),
-			Status:    "success",
-		})
-	}
-
+	console.Infoln("Please use 'mc quota'")
 	return nil
 }

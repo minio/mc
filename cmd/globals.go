@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -24,8 +24,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/pkg/console"
 )
 
@@ -72,6 +73,9 @@ var (
 	globalConnReadDeadline  time.Duration
 	globalConnWriteDeadline time.Duration
 
+	globalLimitUpload   uint64
+	globalLimitDownload uint64
+
 	globalContext, globalCancel = context.WithCancel(context.Background())
 )
 
@@ -110,6 +114,39 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	}
 
 	globalConnReadDeadline = ctx.Duration("conn-read-deadline")
+	if globalConnReadDeadline <= 0 {
+		globalConnReadDeadline = ctx.GlobalDuration("conn-read-deadline")
+	}
+
 	globalConnWriteDeadline = ctx.Duration("conn-write-deadline")
+	if globalConnWriteDeadline <= 0 {
+		globalConnWriteDeadline = ctx.GlobalDuration("conn-write-deadline")
+	}
+
+	limitUploadStr := ctx.String("limit-upload")
+	if limitUploadStr == "" {
+		limitUploadStr = ctx.GlobalString("limit-upload")
+	}
+	if limitUploadStr != "" {
+		var e error
+		globalLimitUpload, e = humanize.ParseBytes(limitUploadStr)
+		if e != nil {
+			return e
+		}
+	}
+
+	limitDownloadStr := ctx.String("limit-download")
+	if limitDownloadStr == "" {
+		limitDownloadStr = ctx.GlobalString("limit-download")
+	}
+
+	if limitDownloadStr != "" {
+		var e error
+		globalLimitDownload, e = humanize.ParseBytes(limitDownloadStr)
+		if e != nil {
+			return e
+		}
+	}
+
 	return nil
 }

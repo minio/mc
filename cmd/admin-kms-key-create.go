@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -25,7 +25,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 var adminKMSCreateKeyCmd = cli.Command{
@@ -63,7 +63,7 @@ func mainAdminKMSCreateKey(ctx *cli.Context) error {
 	e := client.CreateKey(globalContext, keyID)
 	fatalIf(probe.NewError(e), "Failed to create master key")
 
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+	if term.IsTerminal(int(os.Stdout.Fd())) {
 		console.Println(color.GreenString(fmt.Sprintf("Created master key `%s` successfully", keyID)))
 	}
 	return nil

@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/olekukonko/tablewriter"
 )
@@ -203,8 +203,8 @@ func (m *batchJobMetricsUI) View() string {
 			addLine("Throughput: ", fmt.Sprintf("%s/s", humanize.IBytes(uint64(bytesTransferredPerSec))))
 			addLine("IOPs: ", fmt.Sprintf("%.2f objs/s", objectsPerSec))
 		}
-		addLine("Transferred: ", fmt.Sprintf("%s", humanize.IBytes(uint64(m.current.Replicate.BytesTransferred))))
-		addLine("Elapsed: ", fmt.Sprintf("%s", accElapsedTime))
+		addLine("Transferred: ", humanize.IBytes(uint64(m.current.Replicate.BytesTransferred)))
+		addLine("Elapsed: ", accElapsedTime.String())
 		addLine("CurrObjName: ", m.current.Replicate.Object)
 	}
 

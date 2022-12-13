@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
-	mem "github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 const (
@@ -225,7 +225,7 @@ func (p *ParallelManager) stopAndWait() {
 const cgroupLimitFile = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
 
 func cgroupLimit(limitFile string) (limit uint64) {
-	buf, err := ioutil.ReadFile(limitFile)
+	buf, err := os.ReadFile(limitFile)
 	if err != nil {
 		return 9223372036854771712
 	}
