@@ -256,8 +256,8 @@ func getBandwidthInBytes(bandwidthStr string) (bandwidth uint64, err error) {
 		if err != nil {
 			return
 		}
+		bandwidth = bandwidth / 8
 	}
-	bandwidth = bandwidth / 8
 	return
 }
 
