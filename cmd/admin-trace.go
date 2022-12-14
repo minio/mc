@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"hash/fnv"
 	"net/http"
 	"path"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
