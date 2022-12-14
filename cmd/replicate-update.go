@@ -311,6 +311,10 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 		if e != nil {
 			fatalIf(probe.NewError(e).Trace(args...), "Unable to update remote target `"+bktTarget.Endpoint+"` from `"+bktTarget.SourceBucket+"` -> `"+bktTarget.TargetBucket+"`")
 		}
+	} else {
+		if cliCtx.IsSet("sync") || cliCtx.IsSet("bandwidth") || cliCtx.IsSet("proxy") || cliCtx.IsSet("healthcheck-seconds") || cliCtx.IsSet("path") {
+			fatalIf(errInvalidArgument().Trace(args...), "--remote-bucket is a required flag`")
+		}
 	}
 
 	var vDeleteReplicate, dmReplicate, replicasync, existingReplState string
