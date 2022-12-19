@@ -117,7 +117,11 @@ func mainAdminReplicationRemoveStatus(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	st, e := client.SiteReplicationRemove(globalContext, rreq)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove cluster replication")
+	statusMsg := "Unable to remove cluster replication"
+	if st.Status != "" {
+		statusMsg = st.Status
+	}
+	fatalIf(probe.NewError(e).Trace(args...), statusMsg)
 
 	printMsg(srRemoveStatus{
 		ReplicateRemoveStatus: st,
