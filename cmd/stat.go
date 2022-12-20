@@ -506,7 +506,7 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 	fmt.Fprintf(&b, "%2s%s", placeHolder, "Location: ")
 	fmt.Fprint(&b, console.Colorize("Generic", info.Location))
 	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "%2s%s", placeHolder, "Annonymous: ")
+	fmt.Fprintf(&b, "%2s%s", placeHolder, "Anonymous: ")
 	if info.Policy.Type == "none" {
 		fmt.Fprint(&b, console.Colorize("UnSet", "Disabled"))
 	} else {
