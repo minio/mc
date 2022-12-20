@@ -65,8 +65,8 @@ USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Create a restored copy of one or more objects archived on a remote tier. The copy automatically expires 
-  after the specified number of days (Default 1 day). 
+  Restore a copy of one or more objects from its remote tier. This copy automatically expires
+  after the specified number of days (Default 1 day).
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -84,7 +84,6 @@ EXAMPLES:
 
   4. Restore all objects with all versions under a specific prefix
      {{.Prompt}} {{.HelpName}} --recursive --versions myminio/mybucket/dir/
-
 `,
 }
 
