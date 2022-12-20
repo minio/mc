@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,23 +17,29 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
-)
+import "github.com/minio/cli"
 
-var adminTierCmd = cli.Command{
-	Name:            "tier",
-	Usage:           "manage remote tier targets for ILM transition",
-	Action:          mainAdminTier,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	HideHelpCommand: true,
-	Subcommands:     adminTierDepCmds,
-}
+var ilmTierCheckCmd = cli.Command{
+	Name:         "check",
+	Usage:        "validate remote tier configuration",
+	Action:       mainAdminTierVerify,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
-// mainAdminTier is the handle for "mc admin tier" command.
-func mainAdminTier(ctx *cli.Context) error {
-	console.Println("Please use 'mc ilm tier' instead.")
-	return nil
+USAGE:
+  {{.HelpName}} TARGET NAME
+
+NAME:
+  Name of remote tier target. e.g WARM-TIER
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Validate a tier config given by name.
+     {{.Prompt}} {{.HelpName}} myminio WARM-TIER
+`,
 }
