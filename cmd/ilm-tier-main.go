@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,23 +17,30 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
-)
+import "github.com/minio/cli"
 
-var adminTierCmd = cli.Command{
-	Name:            "tier",
-	Usage:           "manage remote tier targets for ILM transition",
-	Action:          mainAdminTier,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	HideHelpCommand: true,
-	Subcommands:     adminTierDepCmds,
+var ilmTierSubcommands = []cli.Command{
+	adminTierInfoCmd,
+	adminTierListCmd,
+	adminTierAddCmd,
+	adminTierEditCmd,
+	ilmTierUpdateCmd,
+	adminTierVerifyCmd,
+	ilmTierCheckCmd,
+	adminTierRmCmd,
 }
 
-// mainAdminTier is the handle for "mc admin tier" command.
-func mainAdminTier(ctx *cli.Context) error {
-	console.Println("Please use 'mc ilm tier' instead.")
+var ilmTierCmd = cli.Command{
+	Name:            "tier",
+	Usage:           "manage remote tiers",
+	Action:          mainILMTier,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     ilmTierSubcommands,
+	HideHelpCommand: true,
+}
+
+func mainILMTier(ctx *cli.Context) error {
+	commandNotFound(ctx, ilmTierSubcommands)
 	return nil
 }

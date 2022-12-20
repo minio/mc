@@ -556,7 +556,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	}
 
 	if startedAt.IsZero() && itemsHealed == 0 {
-		healPrettyMsg += "No active healing is detected among disks"
+		healPrettyMsg += "No active healing is detected for new disks"
 		if problematicDisks > 0 {
 			healPrettyMsg += fmt.Sprintf(", though %d offline disk(s) found.", problematicDisks)
 		} else {

@@ -325,6 +325,9 @@ func (msg *tierMessage) String() string {
 	case "verify":
 		verifyMsg := fmt.Sprintf("Verified remote tier %s", msg.TierName)
 		return console.Colorize("TierMessage", verifyMsg)
+	case "check":
+		checkMsg := fmt.Sprintf("Remote tier connectivity check for %s was successful", msg.TierName)
+		return console.Colorize("TierMessage", checkMsg)
 	case "edit":
 		editMsg := fmt.Sprintf("Updated remote tier %s", msg.TierName)
 		return console.Colorize("TierMessage", editMsg)

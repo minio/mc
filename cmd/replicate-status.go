@@ -26,6 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/pkg/console"
@@ -61,10 +62,11 @@ func checkReplicateStatusSyntax(ctx *cli.Context) {
 }
 
 type replicateStatusMessage struct {
-	Op                string              `json:"op"`
-	URL               string              `json:"url"`
-	Status            string              `json:"status"`
-	ReplicationStatus replication.Metrics `json:"replicationStatus"`
+	Op                string                `json:"op"`
+	URL               string                `json:"url"`
+	Status            string                `json:"status"`
+	ReplicationStatus replication.Metrics   `json:"replicationStatus"`
+	Targets           []madmin.BucketTarget `json:"remoteTargets"`
 }
 
 func (s replicateStatusMessage) JSON() string {
@@ -97,7 +99,6 @@ func (s replicateStatusMessage) String() string {
 	).buildRow("Summary: "))
 	rows += r
 	rows += "\n"
-
 	hIdx := 0
 	for i, row := range contents {
 		if i%3 == 0 {
@@ -145,13 +146,33 @@ func (s replicateStatusMessage) String() string {
 		if i > 0 {
 			rows += "\n"
 		}
-
+		var ep string
+		for _, t := range s.Targets {
+			if t.Arn == arn {
+				ep = t.Endpoint
+				break
+			}
+		}
 		th = arntheme[0]
+		var hdrStr, hdrDet string
+		hdrStr = ep
+		if hdrStr != "" {
+			hdrDet = arn
+		} else {
+			hdrStr = arn
+		}
 		r := console.Colorize(th, newPrettyTable(" | ",
-			Field{"ARN", 120},
-		).buildRow(fmt.Sprintf("%s %s", coloredDot, arn)))
+			Field{"Ep", 120},
+		).buildRow(fmt.Sprintf("%s %s", coloredDot, hdrStr)))
 		rows += r
 		rows += "\n"
+		if hdrDet != "" {
+			r = console.Colorize("THeader", newPrettyTable(" | ",
+				Field{"Arn", 120},
+			).buildRow("  "+hdrDet))
+			rows += r
+			rows += "\n"
+		}
 		rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
 			Field{"Status", 21},
 			Field{"Size", maxLen},
@@ -181,6 +202,8 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	defer cancelReplicateStatus()
 
 	console.SetColor("THeaders", color.New(color.Bold, color.FgHiWhite))
+	console.SetColor("THeader", color.New(color.FgWhite))
+
 	console.SetColor("Headers", color.New(color.Bold, color.FgGreen))
 	console.SetColor("TgtHeaders", color.New(color.Bold, color.FgCyan))
 
@@ -197,11 +220,18 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize connection.")
 	replicateStatus, err := client.GetReplicationMetrics(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication status")
+	// Create a new MinIO Admin Client
+	admClient, cerr := newAdminClient(aliasedURL)
+	fatalIf(cerr, "Unable to initialize admin connection.")
+	_, sourceBucket := url2Alias(args[0])
+	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch remote target.")
 
 	printMsg(replicateStatusMessage{
 		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ReplicationStatus: replicateStatus,
+		Targets:           targets,
 	})
 
 	return nil
