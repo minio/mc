@@ -472,7 +472,7 @@ func prettyPrintBucketMetadata(info BucketInfo) string {
 			fmt.Fprint(&b, console.Colorize("Value", info.Encryption.KeyID))
 		} else {
 			fmt.Fprint(&b, console.Colorize("Key", "\n\tKey Type: "))
-			fmt.Fprint(&b, console.Colorize("Value", "SSE-S3"))
+			fmt.Fprint(&b, console.Colorize("Value", strings.ToUpper(info.Encryption.Algorithm)))
 		}
 		fmt.Fprintln(&b)
 	}
