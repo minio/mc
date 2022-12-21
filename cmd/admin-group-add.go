@@ -51,7 +51,7 @@ EXAMPLES:
 
   2. Add user "james" to group "staff", then add the "readwrite" policy to the group "staff".
      {{.Prompt}} {{.HelpName}} myminio staff james
-     {{.Prompt}} mc admin group policy attach myminio readwrite staff
+     {{.Prompt}} mc admin policy attach myminio readwrite --group staff
 `,
 }
 

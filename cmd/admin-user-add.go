@@ -71,7 +71,7 @@ EXAMPLES:
 
   4. Add a new user 'foobar' to MinIO server, then attach IAM policy "writeonly".
      {{.Prompt}} {{.HelpName}} myminio foobar foo12345 
-     {{.Prompt}} mc admin user policy attach myminio writeonly foobar
+     {{.Prompt}} mc admin policy attach myminio writeonly --user foobar
 `,
 }
 

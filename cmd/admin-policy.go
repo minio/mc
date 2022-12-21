@@ -24,12 +24,12 @@ var adminPolicySubcommands = []cli.Command{
 	adminPolicyRemoveCmd,
 	adminPolicyListCmd,
 	adminPolicyInfoCmd,
-	adminPolicyUpdateCmd,
 	adminPolicyAttachCmd,
 	adminPolicyDetachCmd,
 	adminPolicyEntitiesCmd,
 	adminPolicySetCmd,
 	adminPolicyUnsetCmd,
+	adminPolicyUpdateCmd,
 }
 
 var adminPolicyCmd = cli.Command{
