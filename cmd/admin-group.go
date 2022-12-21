@@ -26,7 +26,6 @@ var adminGroupSubcommands = []cli.Command{
 	adminGroupListCmd,
 	adminGroupEnableCmd,
 	adminGroupDisableCmd,
-	adminGroupPolicyCmd,
 }
 
 var adminGroupCmd = cli.Command{

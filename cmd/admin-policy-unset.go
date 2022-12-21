@@ -30,10 +30,10 @@ var adminPolicyUnsetCmd = cli.Command{
 	Before:             setGlobalsFromContext,
 	HideHelpCommand:    true,
 	Hidden:             true,
-	CustomHelpTemplate: `"Please use 'mc admin user policy detach' or 'mc admin group policy detach'"`,
+	CustomHelpTemplate: `Please use 'mc admin policy detach'`,
 }
 
 func mainAdminPolicyUnsetErr(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc admin user policy detach' or 'mc admin group policy detach'")
+	console.Infoln("Please use 'mc admin policy detach'")
 	return nil
 }

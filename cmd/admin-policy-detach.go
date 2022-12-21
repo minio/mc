@@ -21,32 +21,45 @@ import (
 	"github.com/minio/cli"
 )
 
-var adminUserPolicyDetachCmd = cli.Command{
+var adminDetachPolicyFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "user, u",
+		Usage: "detach policy from user",
+	},
+	cli.StringFlag{
+		Name:  "group, g",
+		Usage: "detach policy from group",
+	},
+}
+
+var adminPolicyDetachCmd = cli.Command{
 	Name:         "detach",
-	Usage:        "detach an IAM policy from a user",
-	Action:       mainAdminUserPolicyDetach,
+	Usage:        "detach an IAM policy from a user or group",
+	Action:       mainAdminPolicyDetach,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(adminDetachPolicyFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET USERNAME POLICYNAME [POLICYNAME...]
+  {{.HelpName}} [FLAGS] TARGET POLICY [POLICY...] [--user USER | --group GROUP]
 
-POLICYNAME:
+  Exactly one of --user or --group is required.
+
+POLICY:
   Name of the policy on the MinIO server.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Detach the "diagnostics" policy from user "james".
-     {{.Prompt}} {{.HelpName}} myminio diagnostics james
+  1. Detach the "readonly" policy from user "james".
+     {{.Prompt}} {{.HelpName}} TODO
 `,
 }
 
-// mainAdminUserPolicyDetach is the handler for "mc admin group policy detach" command.
-func mainAdminUserPolicyDetach(ctx *cli.Context) error {
+// mainAdmihPolicyDetach is the handler for "mc admin user policy attach" command.
+func mainAdminPolicyDetach(ctx *cli.Context) error {
 	return userAttachOrDetachPolicy(ctx, false)
 }

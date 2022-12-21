@@ -30,10 +30,10 @@ var adminPolicySetCmd = cli.Command{
 	Before:             setGlobalsFromContext,
 	HideHelpCommand:    true,
 	Hidden:             true,
-	CustomHelpTemplate: `Please use 'mc admin user policy attach' or 'mc admin group policy attach'`,
+	CustomHelpTemplate: `Please use 'mc admin policy attach'`,
 }
 
 func mainAdminPolicySetErr(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc admin user policy attach' or 'mc admin group policy attach'")
+	console.Infoln("Please use 'mc admin policy attach'")
 	return nil
 }
