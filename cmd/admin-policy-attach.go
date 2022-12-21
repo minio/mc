@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
@@ -61,7 +59,9 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Attach the "readonly" policy to user "james".
-     {{.Prompt}} {{.HelpName}} TODO
+     {{.Prompt}} {{.HelpName}} myminio readonly --user james
+  2. Attach the "audit-policy" and "acct-policy" policies to group "legal".
+     {{.Prompt}} {{.HelpName}} myminio audit-policy acct-policy --group legal
 `,
 }
 
@@ -82,6 +82,7 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
+	// Put args in PolicyAssociationReq, client checks for validity
 	req := madmin.PolicyAssociationReq{
 		User:     ctx.String("user"),
 		Group:    ctx.String("group"),
@@ -105,11 +106,13 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	}
 
 	if e == nil {
-		printMsg(userPolicyMessage{
-			op:          ctx.Command.Name,
-			Policy:      strings.Join(req.Policies, ", "),
-			UserOrGroup: userOrGroup,
-		})
+		for _, policy := range req.Policies {
+			printMsg(userPolicyMessage{
+				op:          ctx.Command.Name,
+				Policy:      policy,
+				UserOrGroup: userOrGroup,
+			})
+		}
 	} else {
 		if attach {
 			fatalIf(probe.NewError(e), "Unable to attach the policy")

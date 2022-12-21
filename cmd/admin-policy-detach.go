@@ -55,11 +55,13 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Detach the "readonly" policy from user "james".
-     {{.Prompt}} {{.HelpName}} TODO
+     {{.Prompt}} {{.HelpName}} myminio readonly --user james
+  2. Detach the "audit-policy" and "acct-policy" policies from group "legal".
+     {{.Prompt}} {{.HelpName}} myminio audit-policy acct-policy --group legal
 `,
 }
 
-// mainAdmihPolicyDetach is the handler for "mc admin user policy attach" command.
+// mainAdmihPolicyDetach is the handler for "mc admin policy detach" command.
 func mainAdminPolicyDetach(ctx *cli.Context) error {
 	return userAttachOrDetachPolicy(ctx, false)
 }

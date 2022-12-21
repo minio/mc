@@ -61,7 +61,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} play/ --policy finteam-policy --policy mlteam-policy
   3. List all policies associated with a pair of user entities
      {{.Prompt}} {{.HelpName}} play/ --user bob --user james
-  4. List all policies associated with a pair of Group LDAP entities
+  4. List all policies associated with a pair of group entities
      {{.Prompt}} {{.HelpName}} play/ --group auditors --group accounting
   5. List all entities associated with a policy, group and user
      {{.Prompt}} {{.HelpName}} play/ \
@@ -69,6 +69,7 @@ EXAMPLES:
 `,
 }
 
+// mainAdminPolicyEntities is the handler for "mc admin policy entities" command.
 func mainAdminPolicyEntities(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1)

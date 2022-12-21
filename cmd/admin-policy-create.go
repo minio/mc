@@ -116,7 +116,7 @@ func (u userPolicyMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// mainAdminPolicyCreate is the handle for "mc admin policy add" command.
+// mainAdminPolicyCreate is the handle for "mc admin policy create" command.
 func mainAdminPolicyCreate(ctx *cli.Context) error {
 	checkAdminPolicyCreateSyntax(ctx)
 
