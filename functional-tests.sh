@@ -289,6 +289,10 @@ function setup()
 {
     start_time=$(get_time)
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${BUCKET_NAME}"
+    if [ "$ENABLE_SSE_S3TESTS" == "1" ]; then
+            assert_success "$start_time" "SetSSES3Encryption" mc_cmd encrypt set sse-s3 "${SERVER_ALIAS}/${BUCKET_NAME}"
+            log_success "$start_time" "SetSSES3EncryptionWith_mc-cmd"
+    fi
 }
 
 function teardown()
