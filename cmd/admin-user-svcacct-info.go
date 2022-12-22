@@ -96,7 +96,7 @@ func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 	}
 
 	printMsg(svcAcctMessage{
-		op:            ctx.Command.Name,
+		op:            svcAccOpInfo,
 		AccessKey:     svcAccount,
 		AccountStatus: svcInfo.AccountStatus,
 		ParentUser:    svcInfo.ParentUser,

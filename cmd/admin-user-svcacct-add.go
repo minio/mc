@@ -81,7 +81,7 @@ func checkAdminUserSvcAcctAddSyntax(ctx *cli.Context) {
 
 // svcAcctMessage container for content message structure
 type svcAcctMessage struct {
-	op            string
+	op            svcAcctOp
 	Status        string          `json:"status"`
 	AccessKey     string          `json:"accessKey,omitempty"`
 	SecretKey     string          `json:"secretKey,omitempty"`
@@ -96,14 +96,26 @@ const (
 	accessFieldMaxLen = 20
 )
 
+type svcAcctOp int
+
+const (
+	svcAccOpAdd = svcAcctOp(iota)
+	svcAccOpList
+	svcAccOpInfo
+	svcAccOpRemove
+	svcAccOpDisable
+	svcAccOpEnable
+	svcAccOpSet
+)
+
 func (u svcAcctMessage) String() string {
 	switch u.op {
-	case "list":
+	case svcAccOpList:
 		// Create a new pretty table with cols configuration
 		return newPrettyTable("  ",
 			Field{"AccessKey", accessFieldMaxLen},
 		).buildRow(u.AccessKey)
-	case "info":
+	case svcAccOpInfo:
 		policyField := ""
 		if u.ImpliedPolicy {
 			policyField = "implied"
@@ -117,16 +129,16 @@ func (u svcAcctMessage) String() string {
 				fmt.Sprintf("Status: %s", u.AccountStatus),
 				fmt.Sprintf("Policy: %s", policyField),
 			}, "\n"))
-	case "rm":
+	case svcAccOpRemove:
 		return console.Colorize("SVCMessage", "Removed service account `"+u.AccessKey+"` successfully.")
-	case "disable":
+	case svcAccOpDisable:
 		return console.Colorize("SVCMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
-	case "enable":
+	case svcAccOpEnable:
 		return console.Colorize("SVCMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
-	case "add":
+	case svcAccOpAdd:
 		return console.Colorize("SVCMessage",
 			fmt.Sprintf("Access Key: %s\nSecret Key: %s", u.AccessKey, u.SecretKey))
-	case "set":
+	case svcAccOpSet:
 		return console.Colorize("SVCMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
 	return ""
@@ -183,7 +195,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
 
 	printMsg(svcAcctMessage{
-		op:            ctx.Command.Name,
+		op:            svcAccOpAdd,
 		AccessKey:     creds.AccessKey,
 		SecretKey:     creds.SecretKey,
 		AccountStatus: "enabled",
