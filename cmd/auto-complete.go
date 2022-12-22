@@ -421,7 +421,6 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/bucket/remote/add":       aliasCompleter,
 	"/admin/bucket/remote/edit":      aliasCompleter,
-	"/admin/bucket/remote/ls":        aliasCompleter,
 	"/admin/bucket/remote/rm":        aliasCompleter,
 	"/admin/bucket/remote/bandwidth": aliasCompleter,
 	"/admin/bucket/quota":            aliasCompleter,
