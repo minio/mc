@@ -90,6 +90,7 @@ var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
 	"internal": func(o *madmin.ServiceTraceOpts) string { o.Internal = true; return "Trace Internal RPC calls" },
 	"s3":       func(o *madmin.ServiceTraceOpts) string { o.S3 = true; return "Trace S3 API calls" },
 	"os":       func(o *madmin.ServiceTraceOpts) string { o.OS = true; return "Trace Operating System calls" },
+	"scanner":  func(o *madmin.ServiceTraceOpts) string { o.Scanner = true; return "Trace Scanner calls" },
 	"healing": func(o *madmin.ServiceTraceOpts) string {
 		o.Healing = true
 		return "Trace Healing operations (alias: heal)"
