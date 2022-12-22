@@ -778,58 +778,6 @@ This command is deprecated and will be removed in a future release. Use 'mc quot
 
 ```
 NAME:
-  mc admin bucket remote - configure remote bucket targets
+  mc admin bucket remote - configure remote bucket targets 
 
-USAGE:
-  mc admin bucket remote COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
-
-COMMANDS:
-  add  add a new remote target
-  ls   list remote target ARN(s)
-  rm   remove configured remote target
-
-```
-
-*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint.*
-
-```
-mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1"
-ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
-```
-
-*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint. The max bandwidth is metric 2G (2*10^9). Enable synchronous replication to this target, set healthcheck duration for checking target availability to 100 seconds*
-
-```
-mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2G" --sync --healthcheck-seconds 100
-ARN = `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`
-```
-
-*Example: Add a new replication target `targetbucket` in region `us-west-1` on `https://minio2:9000` for bucket `srcbucket` on MinIO server. `foobar` and `foo12345` are credentials to target endpoint. The max bandwidth is IEC 2Gi (2*2^30)*
-
-```
-mc admin bucket remote add myminio/srcbucket https://foobar:foobar12345@minio2:9000/targetbucket --service "replication" --region "us-west-1" --bandwidth "2Gi"
-```
-
-*Example: Get remote target for replication on bucket 'srcbucket' in MinIO.*
-
-```
-mc admin bucket remote ls myminio/srcbucket --service "replication"
-```
-
-*Example: List remote target(s) on bucket 'srcbucket' in MinIO.*
-
-```
-mc admin bucket remote ls myminio/srcbucket
-```
-
-*Example: List remote target(s) on MinIO.*
-
-```
-mc admin bucket remote ls myminio
-```
-
-*Example: Remove bucket target configured for bucket 'srcbucket' on MinIO with arn `arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket`.*
-
-```
-mc admin bucket remote rm myminio/srcbucket --arn "arn:minio:replication:us-west-1:1f8712ba-e38f-4429-bcb1-a7bb5aa97447:targetbucket"
-```
+This command is deprecated and will be removed in a future release. Use 'mc replicate add|update|rm` commands to manage remote targets
