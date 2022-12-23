@@ -419,12 +419,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/admin/bucket/remote/add":       aliasCompleter,
-	"/admin/bucket/remote/edit":      aliasCompleter,
-	"/admin/bucket/remote/rm":        aliasCompleter,
-	"/admin/bucket/remote/bandwidth": aliasCompleter,
-	"/admin/bucket/quota":            aliasCompleter,
-	"/admin/bucket/info":             s3Complete{deepLevel: 2},
+	"/admin/bucket/remote/add":  aliasCompleter,
+	"/admin/bucket/remote/edit": aliasCompleter,
+	"/admin/bucket/remote/rm":   aliasCompleter,
+	"/admin/bucket/quota":       aliasCompleter,
+	"/admin/bucket/info":        s3Complete{deepLevel: 2},
 
 	"/admin/kms/key/create": aliasCompleter,
 	"/admin/kms/key/status": aliasCompleter,

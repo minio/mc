@@ -78,6 +78,7 @@ func (s replicateStatusMessage) JSON() string {
 
 func (s replicateStatusMessage) String() string {
 	coloredDot := console.Colorize("Headers", dot)
+
 	maxLen := 15
 	var contents [][]string
 
@@ -94,7 +95,7 @@ func (s replicateStatusMessage) String() string {
 		s.ReplicationStatus.ReplicatedSize == 0 {
 		return "Replication status not available."
 	}
-	r := console.Colorize("THeaders", newPrettyTable(" | ",
+	r := console.Colorize("THeaderBold", newPrettyTable(" | ",
 		Field{"Summary", 95},
 	).buildRow("Summary: "))
 	rows += r
@@ -136,8 +137,8 @@ func (s replicateStatusMessage) String() string {
 	sort.Strings(arns)
 	if len(arns) > 0 {
 		rows += "\n"
-		r := console.Colorize("THeaders", newPrettyTable(" | ",
-			Field{"Target statuses", 95},
+		r := console.Colorize("THeaderBold", newPrettyTable(" | ",
+			Field{"Target statuses", 120},
 		).buildRow("Remote Target Statuses: "))
 		rows += r
 		rows += "\n"
@@ -157,20 +158,39 @@ func (s replicateStatusMessage) String() string {
 		var hdrStr, hdrDet string
 		hdrStr = ep
 		if hdrStr != "" {
-			hdrDet = arn
+			hdrDet = console.Colorize("Values", arn)
 		} else {
 			hdrStr = arn
 		}
 		r := console.Colorize(th, newPrettyTable(" | ",
-			Field{"Ep", 120},
+			Field{"Ep", 100},
 		).buildRow(fmt.Sprintf("%s %s", coloredDot, hdrStr)))
 		rows += r
 		rows += "\n"
 		if hdrDet != "" {
 			r = console.Colorize("THeader", newPrettyTable(" | ",
-				Field{"Arn", 120},
-			).buildRow("  "+hdrDet))
+				Field{"Arn", 100},
+			).buildRow("  "+"ARN: "+hdrDet))
 			rows += r
+			rows += "\n"
+			bwStat, ok := s.ReplicationStatus.Stats[arn]
+			if ok && bwStat.BandWidthLimitInBytesPerSecond > 0 {
+				limit := humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
+				current := humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
+				if bwStat.BandWidthLimitInBytesPerSecond == 0 {
+					limit = "N/A" // N/A means cluster bandwidth is not configured
+				}
+
+				r = console.Colorize("THeaderBold", newPrettyTable("",
+					Field{"B/w limit Hdr", 80},
+				).buildRow("  Configured Max Bandwidth (Bps): "+console.Colorize("Values", limit)))
+				rows += r
+				rows += "\n"
+				r = console.Colorize("THeaderBold", newPrettyTable("",
+					Field{"B/w limit Hdr", 80},
+				).buildRow("  Current Bandwidth (Bps): "+console.Colorize("Values", current)))
+				rows += r
+			}
 			rows += "\n"
 		}
 		rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
@@ -201,10 +221,12 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	ctx, cancelReplicateStatus := context.WithCancel(globalContext)
 	defer cancelReplicateStatus()
 
-	console.SetColor("THeaders", color.New(color.Bold, color.FgHiWhite))
 	console.SetColor("THeader", color.New(color.FgWhite))
 
 	console.SetColor("Headers", color.New(color.Bold, color.FgGreen))
+	console.SetColor("Values", color.New(color.FgGreen))
+	console.SetColor("THeaderBold", color.New(color.FgWhite))
+
 	console.SetColor("TgtHeaders", color.New(color.Bold, color.FgCyan))
 
 	console.SetColor("Replica", color.New(color.FgCyan))
