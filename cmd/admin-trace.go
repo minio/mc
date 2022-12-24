@@ -50,10 +50,6 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "call",
 		Usage: "trace only matching call types. See CALL TYPES below for list. (default: s3)",
 	},
-	cli.DurationFlag{
-		Name:  "response-threshold",
-		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
-	},
 	cli.IntSliceFlag{
 		Name:  "status-code",
 		Usage: "trace only matching status code",
@@ -81,6 +77,22 @@ var adminTraceFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "errors, e",
 		Usage: "trace only failed requests",
+	},
+	cli.BoolFlag{
+		Name:  "filter-request",
+		Usage: "trace calls only with request bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "filter-response",
+		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "response-duration",
+		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
+	},
+	cli.StringFlag{
+		Name:  "filter-size",
+		Usage: "filter size, use with filter (see UNITS)",
 	},
 }
 
@@ -157,6 +169,13 @@ FLAGS:
 CALL TYPES:
 ` + traceCallsHelp() + `
 
+UNITS
+  --filter-size flags use with --filter-response or --filter-request accept human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
+
 EXAMPLES:
   1. Show verbose console trace for MinIO server
      {{.Prompt}} {{.HelpName}} -v -a myminio
@@ -172,6 +191,15 @@ EXAMPLES:
 
   5. Show console trace for requests with '404' and '503' status code
     {{.Prompt}} {{.HelpName}} --status-code 404 --status-code 503 myminio
+  
+  6. Show trace only for requests bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-request --filter-size 1MB myminio
+
+  7. Show trace only for response bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-response --filter-size 1MB myminio
+  
+  8. Show trace only for requests operations duration greater than 5ms
+     {{.Prompt}} {{.HelpName}} --response-duration 5ms myminio
 `,
 }
 
@@ -182,6 +210,11 @@ var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, colo
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response")
+	if filterFlag && ctx.String("filter-size") == "" {
+		// filter must use with filter-size flags
+		showCommandHelpAndExit(ctx, 1)
 	}
 
 	if ctx.Bool("all") && len(ctx.StringSlice("call")) > 0 {
@@ -203,12 +236,14 @@ type matchString struct {
 }
 
 type matchOpts struct {
-	statusCodes []int
-	methods     []string
-	funcNames   []string
-	apiPaths    []string
-	nodes       []string
-	reqHeaders  []matchString
+	statusCodes  []int
+	methods      []string
+	funcNames    []string
+	apiPaths     []string
+	nodes        []string
+	reqHeaders   []matchString
+	requestSize  uint64
+	responseSize uint64
 }
 
 func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
@@ -308,6 +343,14 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
+	if opts.requestSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.requestSize) {
+		return false
+	}
+
+	if opts.responseSize > 0 && traceInfo.Trace.HTTP.CallStats.OutputBytes < int(opts.responseSize) {
+		return false
+	}
+
 	return true
 }
 
@@ -323,12 +366,25 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 		ms.val = strings.TrimPrefix(s, "!")
 		opts.reqHeaders = append(opts.reqHeaders, ms)
 	}
+	var e error
+	var requestSize, responseSize uint64
+	if ctx.Bool("filter-request") && ctx.String("filter-size") != "" {
+		requestSize, e = humanize.ParseBytes(ctx.String("filter-size"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("filter-size")), "Unable to parse input bytes.")
+	}
+
+	if ctx.Bool("filter-response") && ctx.String("filter-size") != "" {
+		responseSize, e = humanize.ParseBytes(ctx.String("filter-size"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("filter-size")), "Unable to parse input bytes.")
+	}
+	opts.requestSize = requestSize
+	opts.responseSize = responseSize
 	return
 }
 
 // Calculate tracing options for command line flags
 func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts, e error) {
-	opts.Threshold = ctx.Duration("response-threshold")
+	opts.Threshold = ctx.Duration("response-duration")
 	opts.OnlyErrors = ctx.Bool("errors")
 
 	if ctx.Bool("all") {
