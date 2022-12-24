@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,23 +17,28 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
-)
+import "github.com/minio/cli"
 
-var adminTierCmd = cli.Command{
-	Name:            "tier",
-	Usage:           "manage remote tier targets for ILM transition",
-	Action:          mainAdminTier,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	HideHelpCommand: true,
-	Subcommands:     adminTierDepCmds,
+var ilmRuleSubcommands = []cli.Command{
+	ilmAddCmd,
+	ilmEditCmd,
+	ilmLsCmd,
+	ilmRmCmd,
+	ilmExportCmd,
+	ilmImportCmd,
 }
 
-// mainAdminTier is the handle for "mc admin tier" command.
-func mainAdminTier(ctx *cli.Context) error {
-	console.Println("Please use 'mc ilm tier' instead.")
+var ilmRuleCmd = cli.Command{
+	Name:            "rule",
+	Usage:           "manage bucket lifecycle rules",
+	Before:          setGlobalsFromContext,
+	Action:          mainILMRule,
+	Subcommands:     ilmRuleSubcommands,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
+}
+
+func mainILMRule(ctx *cli.Context) error {
+	commandNotFound(ctx, ilmRuleSubcommands)
 	return nil
 }

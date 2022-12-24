@@ -22,10 +22,10 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminTierVerifyCmd = cli.Command{
-	Name:         "verify",
-	Usage:        "verifies if remote tier configuration is valid",
-	Action:       mainAdminTierVerify,
+var adminTierRmCmd = cli.Command{
+	Name:         "rm",
+	Usage:        "remove an empty remote tier",
+	Action:       mainAdminTierRm,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
@@ -33,7 +33,7 @@ var adminTierVerifyCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET NAME
+  {{.HelpName}} ALIAS NAME
 
 NAME:
   Name of remote tier target. e.g WARM-TIER
@@ -42,12 +42,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Verify if a tier config is valid.
+  1. Remove an empty tier by name 'WARM-TIER':
      {{.Prompt}} {{.HelpName}} myminio WARM-TIER
 `,
 }
 
-func mainAdminTierVerify(ctx *cli.Context) error {
+func mainAdminTierRm(ctx *cli.Context) error {
 	args := ctx.Args()
 	nArgs := len(args)
 	if nArgs < 2 {
@@ -55,7 +55,7 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 	}
 	if nArgs != 2 {
 		fatalIf(errInvalidArgument().Trace(args.Tail()...),
-			"Incorrect number of arguments for tier verify command.")
+			"Incorrect number of arguments for tier remove command.")
 	}
 
 	aliasedURL := args.Get(0)
@@ -68,8 +68,8 @@ func mainAdminTierVerify(ctx *cli.Context) error {
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
-	e := client.VerifyTier(globalContext, tierName)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to verify remote tier target")
+	e := client.RemoveTier(globalContext, tierName)
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove remote tier target")
 
 	printMsg(&tierMessage{
 		op:       ctx.Command.Name,

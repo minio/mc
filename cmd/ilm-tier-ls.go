@@ -28,7 +28,7 @@ import (
 
 var adminTierListCmd = cli.Command{
 	Name:         "ls",
-	Usage:        "lists configured remote tier targets",
+	Usage:        "list configured remote tier targets",
 	Action:       mainAdminTierList,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

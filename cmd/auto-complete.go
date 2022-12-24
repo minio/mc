@@ -304,6 +304,14 @@ var completeCmds = map[string]complete.Predictor{
 	"/ilm/import":  s3Complete{deepLevel: 2},
 	"/ilm/restore": s3Completer,
 
+	"/ilm/rule/ls":      s3Complete{deepLevel: 2},
+	"/ilm/rule/add":     s3Complete{deepLevel: 2},
+	"/ilm/rule/edit":    s3Complete{deepLevel: 2},
+	"/ilm/rule/rm":      s3Complete{deepLevel: 2},
+	"/ilm/rule/export":  s3Complete{deepLevel: 2},
+	"/ilm/rule/import":  s3Complete{deepLevel: 2},
+	"/ilm/rule/restore": s3Completer,
+
 	"/undo": s3Completer,
 
 	// Admin API commands MinIO only.
@@ -413,7 +421,6 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/bucket/remote/add":       aliasCompleter,
 	"/admin/bucket/remote/edit":      aliasCompleter,
-	"/admin/bucket/remote/ls":        aliasCompleter,
 	"/admin/bucket/remote/rm":        aliasCompleter,
 	"/admin/bucket/remote/bandwidth": aliasCompleter,
 	"/admin/bucket/quota":            aliasCompleter,
@@ -431,6 +438,13 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/tier/info":   nil,
 	"/admin/tier/rm":     nil,
 	"/admin/tier/verify": nil,
+
+	"/ilm/tier/info":   nil,
+	"/ilm/tier/ls":     nil,
+	"/ilm/tier/add":    nil,
+	"/ilm/tier/update": nil,
+	"/ilm/tier/check":  nil,
+	"/ilm/tier/rm":     nil,
 
 	"/admin/replicate/add":           aliasCompleter,
 	"/admin/replicate/edit":          aliasCompleter,

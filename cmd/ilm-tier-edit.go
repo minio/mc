@@ -58,6 +58,7 @@ var adminTierEditCmd = cli.Command{
 	Name:         "edit",
 	Usage:        "update an existing remote tier configuration",
 	Action:       mainAdminTierEdit,
+	Hidden:       true,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        append(globalFlags, adminTierEditFlags...),

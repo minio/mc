@@ -98,7 +98,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit the specified service account")
 
 	printMsg(svcAcctMessage{
-		op:        ctx.Command.Name,
+		op:        svcAccOpSet,
 		AccessKey: svcAccount,
 	})
 
