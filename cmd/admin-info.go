@@ -20,6 +20,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -59,10 +60,13 @@ EXAMPLES:
 }
 
 type poolSummary struct {
-	setsCount      int
-	drivesPerSet   int
-	driveTolerance int
-	endpoints      set.StringSet
+	setsCount    int
+	drivesPerSet int
+	// All nodes name - offline and online
+	endpoints set.StringSet
+
+	offlineDisks   int
+	offlineServers int
 }
 
 type clusterInfo map[int]*poolSummary
@@ -75,8 +79,7 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 			pool := summary[disk.PoolIndex]
 			if pool == nil {
 				pool = &poolSummary{
-					endpoints:      set.NewStringSet(),
-					driveTolerance: info.StandardParity(),
+					endpoints: set.NewStringSet(),
 				}
 			}
 			pool.endpoints.Add(srv.Endpoint)
@@ -87,7 +90,12 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 				if disk.DiskIndex > pool.drivesPerSet {
 					pool.drivesPerSet = disk.DiskIndex
 				}
-
+				if disk.State != madmin.DriveStateOk {
+					pool.offlineDisks++
+				}
+			}
+			if srv.State != string(madmin.ItemOnline) {
+				pool.offlineServers++
 			}
 			summary[disk.PoolIndex] = pool
 		}
@@ -109,6 +117,32 @@ func endpointToPools(endpoint string, c clusterInfo) (pools []int) {
 	}
 	sort.Ints(pools)
 	return
+}
+
+func poolTolerance(numServers int, stripeSize int, parityCount int) (driveTolerance, serverTolerance int) {
+	numServersPerShard := numServers
+
+	for potentialNumServerPerShard := 1; potentialNumServerPerShard <= 16; potentialNumServerPerShard++ {
+		if numServers%potentialNumServerPerShard == 0 {
+			numServersPerShard = potentialNumServerPerShard
+		}
+	}
+
+	driveFailureTolerance := parityCount
+	if driveFailureTolerance == stripeSize/2 {
+		driveFailureTolerance--
+	}
+
+	serverFailureTolerance := math.Floor((float64(driveFailureTolerance) * float64(numServersPerShard)) / float64(stripeSize))
+
+	return driveFailureTolerance, int(serverFailureTolerance)
+}
+
+func toleranceInfoText(remainingItems int) string {
+	if remainingItems < 0 {
+		return "lost"
+	}
+	return fmt.Sprintf("%d", remainingItems)
 }
 
 // Wrap "Info" message together with fields "Status" and "Error"
@@ -271,8 +305,13 @@ func (u clusterStruct) String() (msg string) {
 	if backendType == madmin.Erasure {
 		msg += "Pools:\n"
 		for pool, summary := range clusterSummary {
-			msg += fmt.Sprintf("   %s, Erasure sets: %d, Drives per erasure set: %d\n",
+			msg += fmt.Sprintf("   %s, Erasure sets: %d, Drives per erasure set: %d",
 				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.drivesPerSet)
+			driveTolerance, serverTolerance := poolTolerance(len(summary.endpoints), summary.drivesPerSet, u.Info.StandardParity())
+			msg += fmt.Sprintf(", Drives tolerance: %s, Servers tolerance: %s",
+				toleranceInfoText(driveTolerance-summary.offlineDisks),
+				toleranceInfoText(serverTolerance-summary.offlineServers))
+			msg += "\n"
 		}
 	}
 
