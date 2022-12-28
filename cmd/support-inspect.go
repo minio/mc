@@ -39,7 +39,10 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-const defaultPublicKey = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
+const (
+	defaultPublicKey      = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
+	inspectOutputFilename = "inspect-data.enc"
+)
 
 var supportInspectFlags = append(subnetCommonFlags,
 	cli.BoolFlag{
@@ -184,8 +187,8 @@ func mainSupportInspect(ctx *cli.Context) error {
 		return nil
 	}
 
-	uploadURL := subnetUploadURL("inspect", tmpFile.Name())
-	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, tmpFile.Name(), apiKey)
+	uploadURL := subnetUploadURL("inspect", inspectOutputFilename)
+	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, inspectOutputFilename, apiKey)
 
 	_, e = uploadFileToSubnet(alias, tmpFile.Name(), reqURL, headers)
 	if e != nil {
@@ -202,8 +205,8 @@ func mainSupportInspect(ctx *cli.Context) error {
 func saveInspectDataFile(key []byte, tmpFile *os.File) {
 	var keyHex string
 
+	downloadPath := inspectOutputFilename
 	// Choose a name and move the inspect data to its final destination
-	downloadPath := "inspect-data.enc"
 	if key != nil {
 		// Create an id that is also crc.
 		var id [4]byte
