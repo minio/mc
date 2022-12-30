@@ -76,7 +76,7 @@ type userPolicyMessage struct {
 
 func (u userPolicyMessage) accountType() string {
 	switch u.op {
-	case "set", "unset", "update":
+	case "attach", "detach":
 		if u.IsGroup {
 			return "group"
 		}
