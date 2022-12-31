@@ -100,8 +100,13 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 		e = client.DetachPolicy(globalContext, req)
 	}
 
+	isGroup := false
+	if req.User == "" {
+		isGroup = true
+	}
+
 	userOrGroup := req.User
-	if userOrGroup == "" {
+	if isGroup {
 		userOrGroup = req.Group
 	}
 
@@ -111,6 +116,7 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 				op:          ctx.Command.Name,
 				Policy:      policy,
 				UserOrGroup: userOrGroup,
+				IsGroup:     isGroup,
 			})
 		}
 	} else {
