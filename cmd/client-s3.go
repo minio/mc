@@ -1042,20 +1042,21 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	}
 
 	opts := minio.PutObjectOptions{
-		UserMetadata:         metadata,
-		UserTags:             tagsMap,
-		Progress:             progress,
-		ContentType:          contentType,
-		CacheControl:         cacheControl,
-		ContentDisposition:   contentDisposition,
-		ContentEncoding:      contentEncoding,
-		ContentLanguage:      contentLanguage,
-		StorageClass:         strings.ToUpper(putOpts.storageClass),
-		ServerSideEncryption: putOpts.sse,
-		SendContentMd5:       putOpts.md5,
-		DisableMultipart:     putOpts.disableMultipart,
-		PartSize:             putOpts.multipartSize,
-		NumThreads:           putOpts.multipartThreads,
+		UserMetadata:          metadata,
+		UserTags:              tagsMap,
+		Progress:              progress,
+		ContentType:           contentType,
+		CacheControl:          cacheControl,
+		ContentDisposition:    contentDisposition,
+		ContentEncoding:       contentEncoding,
+		ContentLanguage:       contentLanguage,
+		StorageClass:          strings.ToUpper(putOpts.storageClass),
+		ServerSideEncryption:  putOpts.sse,
+		SendContentMd5:        putOpts.md5,
+		DisableMultipart:      putOpts.disableMultipart,
+		PartSize:              putOpts.multipartSize,
+		NumThreads:            putOpts.multipartThreads,
+		ConcurrentStreamParts: putOpts.concurrentStream, // if enabled honors NumThreads for piped() uploads
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
