@@ -98,11 +98,12 @@ var adminTraceFlags = []cli.Flag{
 
 // traceCallTypes contains all call types and flags to apply when selected.
 var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
-	"storage":  func(o *madmin.ServiceTraceOpts) string { o.Storage = true; return "Trace Storage calls" },
-	"internal": func(o *madmin.ServiceTraceOpts) string { o.Internal = true; return "Trace Internal RPC calls" },
-	"s3":       func(o *madmin.ServiceTraceOpts) string { o.S3 = true; return "Trace S3 API calls" },
-	"os":       func(o *madmin.ServiceTraceOpts) string { o.OS = true; return "Trace Operating System calls" },
-	"scanner":  func(o *madmin.ServiceTraceOpts) string { o.Scanner = true; return "Trace Scanner calls" },
+	"storage":   func(o *madmin.ServiceTraceOpts) string { o.Storage = true; return "Trace Storage calls" },
+	"internal":  func(o *madmin.ServiceTraceOpts) string { o.Internal = true; return "Trace Internal RPC calls" },
+	"s3":        func(o *madmin.ServiceTraceOpts) string { o.S3 = true; return "Trace S3 API calls" },
+	"os":        func(o *madmin.ServiceTraceOpts) string { o.OS = true; return "Trace Operating System calls" },
+	"scanner":   func(o *madmin.ServiceTraceOpts) string { o.Scanner = true; return "Trace Scanner calls" },
+	"bootstrap": func(o *madmin.ServiceTraceOpts) string { o.Bootstrap = true; return "Trace Bootstrap operations" },
 	"healing": func(o *madmin.ServiceTraceOpts) string {
 		o.Healing = true
 		return "Trace Healing operations (alias: heal)"
@@ -585,6 +586,12 @@ func (s shortTraceMsg) String() string {
 
 	switch s.trcType {
 	case madmin.TraceS3, madmin.TraceInternal:
+	case madmin.TraceBootstrap:
+		fmt.Fprintf(b, "[%s] %s %s %s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
+			hostStr,
+			s.StatusMsg,
+		)
+		return b.String()
 	default:
 		if s.Error != "" {
 			fmt.Fprintf(b, "[%s] %s %s %s err='%s' %2s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
@@ -714,6 +721,9 @@ func (t traceMessage) String() string {
 		if trc.HTTP == nil {
 			return ""
 		}
+	case madmin.TraceBootstrap:
+		fmt.Fprintf(b, "%s %s [%s] %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Message)
+		return b.String()
 	default:
 		if trc.Error != "" {
 			fmt.Fprintf(b, "%s %s [%s] %s err='%s' %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, console.Colorize("ErrStatus", trc.Error), trc.Duration)
