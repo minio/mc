@@ -1,6 +1,6 @@
 module github.com/minio/mc
 
-go 1.18
+go 1.19
 
 require (
 	github.com/charmbracelet/bubbletea v0.22.1
@@ -19,9 +19,9 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v2 v2.0.1
+	github.com/minio/madmin-go/v2 v2.0.2-0.20221221104141-93e7e5aefaf2
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.44
+	github.com/minio/minio-go/v7 v7.0.46
 	github.com/minio/pkg v1.5.6
 	github.com/minio/selfupdate v0.5.0
 	github.com/minio/sha256-simd v1.0.0

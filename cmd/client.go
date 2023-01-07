@@ -60,6 +60,7 @@ type PutOptions struct {
 	storageClass          string
 	multipartSize         uint64
 	multipartThreads      uint
+	concurrentStream      bool
 }
 
 // StatOptions holds options of the HEAD operation

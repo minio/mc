@@ -511,6 +511,9 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
 			default:
+				if strings.Contains(sURLs.Error.ToGoError().Error(), "Overwrite not allowed") {
+					ignoreErr = true
+				}
 				if sURLs.ErrorCond == differInUnknown {
 					errorIf(sURLs.Error.Trace(), "Failed to perform mirroring")
 				} else {

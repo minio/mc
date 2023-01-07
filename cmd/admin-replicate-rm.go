@@ -40,12 +40,14 @@ var adminReplicateRemoveFlags = []cli.Flag{
 }
 
 var adminReplicateRemoveCmd = cli.Command{
-	Name:         "remove",
-	Usage:        "remove one or more sites from site replication",
-	Action:       mainAdminReplicationRemoveStatus,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, adminReplicateRemoveFlags...),
+	Name:          "rm",
+	Aliases:       []string{"remove"},
+	Usage:         "remove one or more sites from site replication",
+	Action:        mainAdminReplicationRemoveStatus,
+	OnUsageError:  onUsageError,
+	HiddenAliases: true,
+	Before:        setGlobalsFromContext,
+	Flags:         append(globalFlags, adminReplicateRemoveFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
