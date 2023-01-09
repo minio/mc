@@ -43,9 +43,10 @@ import (
 )
 
 const (
-	subnetRespBodyLimit  = 1 << 20 // 1 MiB
-	minioSubscriptionURL = "https://min.io/subscription"
-	subnetPublicKeyPath  = "/downloads/license-pubkey.pem"
+	subnetRespBodyLimit     = 1 << 20 // 1 MiB
+	minioSubscriptionURL    = "https://min.io/subscription"
+	subnetPublicKeyPath     = "/downloads/license-pubkey.pem"
+	minioDeploymentIDHeader = "x-minio-deployment-id"
 )
 
 var (
@@ -102,6 +103,10 @@ func subnetUnregisterURL(depID string) string {
 	return subnetBaseURL() + "/api/cluster/unregister?deploymentId=" + depID
 }
 
+func subnetLicenseRenewURL() string {
+	return subnetBaseURL() + "/api/cluster/renew-license"
+}
+
 func subnetOfflineRegisterURL(regToken string) string {
 	return subnetBaseURL() + "/cluster/register?token=" + regToken
 }
@@ -151,6 +156,12 @@ func subnetURLWithAuth(reqURL string, apiKey string) (string, map[string]string,
 	return reqURL, subnetAPIKeyAuthHeaders(apiKey), nil
 }
 
+type subnetHeaders map[string]string
+
+func (h subnetHeaders) addDeploymentIDHeader(alias string) {
+	h[minioDeploymentIDHeader] = getAdminInfo(alias).DeploymentID
+}
+
 func subnetTokenAuthHeaders(authToken string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + authToken}
 }
@@ -159,7 +170,7 @@ func subnetLicenseAuthHeaders(lic string) map[string]string {
 	return map[string]string{"x-subnet-license": lic}
 }
 
-func subnetAPIKeyAuthHeaders(apiKey string) map[string]string {
+func subnetAPIKeyAuthHeaders(apiKey string) subnetHeaders {
 	return map[string]string{"x-subnet-api-key": apiKey}
 }
 
@@ -580,9 +591,44 @@ func unregisterClusterFromSubnet(alias string, depID string, apiKey string) erro
 	return nil
 }
 
+// validateAndSaveLic - validates the given license in minio config
+// If the license contains api key and the saveApiKey arg is true,
+// api key is also saved in the minio config
+func validateAndSaveLic(lic string, alias string, saveAPIKey bool) string {
+	li, e := parseLicense(lic)
+	fatalIf(probe.NewError(e), "Error parsing license")
+
+	if li.ExpiresAt.Before(time.Now()) {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("License has expired on %s", li.ExpiresAt))
+	}
+
+	if li.DeploymentID != getAdminInfo(alias).DeploymentID {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("License is invalid for the deployment %s", alias))
+	}
+
+	setSubnetLicense(alias, lic)
+	if len(li.APIKey) > 0 && saveAPIKey {
+		setSubnetAPIKey(alias, li.APIKey)
+	}
+
+	return li.APIKey
+}
+
 // extractAndSaveSubnetCreds - extract license from response and set it in minio config
 func extractAndSaveSubnetCreds(alias string, resp string) (string, string, error) {
 	parsedResp := gjson.Parse(resp)
+
+	lic, e := extractSubnetCred("license", parsedResp)
+	if e != nil {
+		return "", "", e
+	}
+	if len(lic) > 0 {
+		apiKey := validateAndSaveLic(lic, alias, true)
+		if len(apiKey) > 0 {
+			return apiKey, lic, nil
+		}
+	}
+
 	apiKey, e := extractSubnetCred("api_key", parsedResp)
 	if e != nil {
 		return "", "", e
@@ -591,13 +637,6 @@ func extractAndSaveSubnetCreds(alias string, resp string) (string, string, error
 		setSubnetAPIKey(alias, apiKey)
 	}
 
-	lic, e := extractSubnetCred("license", parsedResp)
-	if e != nil {
-		return "", "", e
-	}
-	if len(lic) > 0 {
-		setSubnetLicense(alias, lic)
-	}
 	return apiKey, lic, nil
 }
 
