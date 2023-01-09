@@ -1057,6 +1057,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		PartSize:              putOpts.multipartSize,
 		NumThreads:            putOpts.multipartThreads,
 		ConcurrentStreamParts: putOpts.concurrentStream, // if enabled honors NumThreads for piped() uploads
+		DisableContentSha256:  putOpts.concurrentStream, // if concurrent stream turn-off sha256 payload calculation
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
