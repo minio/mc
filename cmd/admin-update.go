@@ -30,12 +30,12 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var adminUpdateFlags = append([]cli.Flag{
+var adminUpdateFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "yes, y",
 		Usage: "Confirms the server update",
 	},
-}, subnetCommonFlags...)
+}
 
 var adminServerUpdateCmd = cli.Command{
 	Name:         "update",
