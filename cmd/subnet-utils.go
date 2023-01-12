@@ -582,13 +582,7 @@ func unregisterClusterFromSubnet(alias string, depID string, apiKey string) erro
 	}
 
 	_, e = subnetPostReq(regURL, nil, headers)
-	if e != nil {
-		return e
-	}
-
-	removeSubnetAuthConfig(alias)
-
-	return nil
+	return e
 }
 
 // validateAndSaveLic - validates the given license in minio config
