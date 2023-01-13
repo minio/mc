@@ -203,15 +203,17 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias stri
 
 	saveProfileFile(data)
 
-	clr := color.New(color.FgGreen, color.Bold)
+	successClr := color.New(color.FgGreen, color.Bold)
+	failureClr := color.New(color.FgRed, color.Bold)
 	if !globalAirgapped {
 		_, e := uploadFileToSubnet(alias, profileFile, reqURL, headers)
-		fatalIf(probe.NewError(e), "Unable to upload profile file to SUBNET portal")
-		if len(apiKey) > 0 {
-			setSubnetAPIKey(alias, apiKey)
+		if e != nil {
+			failureClr.Println("\nUnable to upload profile file to SUBNET.", e.Error())
+			successClr.Printf("It has been saved locally at '%s'\n", profileFile)
+			return
 		}
-		clr.Println("uploaded successfully to SUBNET.")
+		successClr.Println("uploaded successfully to SUBNET.")
 	} else {
-		clr.Printf("saved successfully at '%s'\n", profileFile)
+		successClr.Printf("saved successfully at '%s'\n", profileFile)
 	}
 }
