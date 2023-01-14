@@ -20,16 +20,25 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/klauspost/compress/gzip"
+
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/klauspost/compress/zstd"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v2"
@@ -93,6 +102,22 @@ var adminTraceFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "filter-size",
 		Usage: "filter size, use with filter (see UNITS)",
+	},
+	cli.StringFlag{
+		Name:  "rotate-trace-logs-size",
+		Usage: "maximum size of a rotated trace log file (see UNITS)",
+	},
+	cli.StringFlag{
+		Name:  "rotate-trace-logs-frequency",
+		Usage: "frequency, in terms of time, of trace log file rotations (see time UNITS), minimum 1 minute",
+	},
+	cli.StringFlag{
+		Name:  "rotate-trace-logs-pattern",
+		Usage: "pattern (based on golang https://go.dev/src/time/format.go) of directories and files into which trace log files are placed",
+	},
+	cli.StringFlag{
+		Name:  "rotate-trace-logs-compress",
+		Usage: "compress in place using 'gzip' or 'zstd' (Zstandard)",
 	},
 }
 
@@ -169,13 +194,20 @@ FLAGS:
 
 CALL TYPES:
 ` + traceCallsHelp() + `
-
 UNITS
-  --filter-size flags use with --filter-response or --filter-request accept human-readable case-insensitive number
-  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
-  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
-  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
-  also accepted. Without suffixes the unit is bytes.
+  --filter-size flags (use with --filter-response or --filter-request), as 
+  well as the --rotate-trace-logs-size flag, accept human-readable case-
+  insensitive number suffixes such as "k", "m", "g" and "t" referring to 
+  the metric units KB, MB, GB and TB respectively. Adding an "i" to these 
+  prefixes, uses the IEC units, so that "gi" refers to "gibibyte" or "GiB". 
+  A "b" at the end is also accepted. Without suffixes the unit is bytes.
+
+  --rotate-trace-logs-frequency accepts the human-readable number suffixes 
+  "m", "h", "d", "w", "y" referring to the time units minutes, hours, days, 
+  weeks, and years respectively. 
+  If pattern-based naming is used, then the corresponding trace log files 
+  will indicate the lower bound of the current time interval. 
+  e.g. minio-log-18-00-00.log will contain logs from [18:00..20:00)
 
 EXAMPLES:
   1. Show verbose console trace for MinIO server
@@ -201,6 +233,12 @@ EXAMPLES:
   
   8. Show trace only for requests operations duration greater than 5ms
      {{.Prompt}} {{.HelpName}} --response-duration 5ms myminio
+
+  9. Log to a new default trace file trace when the previous log trace file reaches 1MB then compress in place using gzip
+     {{.Prompt}} {{.HelpName}} --rotate-trace-logs-size 1MB --rotate-trace-logs-compress gzip myminio
+
+  10. Log to a new trace file trace every hour, in a directory hierarchy to log files with timestamp suffixes
+     {{.Prompt}} {{.HelpName}} --rotate-trace-logs-frequency 1h --rotate-trace-logs-pattern "/tmp/minio/[2006-01-02]/minio-log-[15-04-05].log" myminio
 `,
 }
 
@@ -221,6 +259,14 @@ func checkAdminTraceSyntax(ctx *cli.Context) {
 	if ctx.Bool("all") && len(ctx.StringSlice("call")) > 0 {
 		fatalIf(errDummy().Trace(), "You cannot specify both --all and --call flags at the same time.")
 	}
+
+	if ctx.String("rotate-trace-logs-size") != "" && ctx.String("rotate-trace-logs-frequency") != "" {
+		fatalIf(errDummy().Trace(), "You cannot specify both --rotate-trace-logs-size and --rotate-trace-logs-frequency flags at the same time.")
+	}
+
+	if ctx.String("rotate-trace-logs-pattern") != "" && ctx.String("rotate-trace-logs-size") == "" && ctx.String("rotate-trace-logs-frequency") == "" {
+		fatalIf(errDummy().Trace(), "You cannot specify flag --rotate-trace-logs-pattern if neither --rotate-trace-logs-size nor --rotate-trace-logs-frequency flags are specified as well.")
+	}
 }
 
 func printTrace(verbose bool, traceInfo madmin.ServiceTraceInfo) {
@@ -237,15 +283,29 @@ type matchString struct {
 }
 
 type matchOpts struct {
-	statusCodes  []int
-	methods      []string
-	funcNames    []string
-	apiPaths     []string
-	nodes        []string
-	reqHeaders   []matchString
-	requestSize  uint64
-	responseSize uint64
+	statusCodes              []int
+	methods                  []string
+	funcNames                []string
+	apiPaths                 []string
+	nodes                    []string
+	reqHeaders               []matchString
+	requestSize              uint64
+	responseSize             uint64
+	rotateTraceLogsSize      uint64
+	rotateTraceLogsFrequency time.Duration
+	rotateTraceLogsPattern   string
+	rotateTraceLogsCompress  string
 }
+
+var (
+	traceLogsEnabled, traceLogsStarted                     bool
+	traceLogsStartTime                                     time.Time
+	traceLogsIntervalType                                  time.Duration
+	traceLogsFilePath, traceLogsPattern, traceLogsCompress string
+	traceLogsFile                                          *os.File
+	traceLogsFileZstdEncoder                               *zstd.Encoder
+	traceLogsFileSize                                      int
+)
 
 func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 	// Filter request path if passed by the user
@@ -344,6 +404,45 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
+	if opts.rotateTraceLogsSize > 0 {
+		if traceLogsFileSize >= int(opts.rotateTraceLogsSize) {
+			// Reset trace log file size tracker
+			traceLogsFileSize = 0
+			// Prepare to create a new log file
+			traceLogsStartTime = time.Now()
+			// Compress current file
+			if traceLogsCompress != "" {
+				compressTraceLogsFile()
+			}
+			// Create new trace log file
+			traceLogsFile = createTraceLogsFile()
+		}
+	}
+
+	if opts.rotateTraceLogsFrequency > 0 {
+		currentTime := time.Now()
+		if !traceLogsStarted {
+			traceLogsStarted = true
+			traceLogsStartTime = traceLogsStartTime.Add(time.Duration(opts.rotateTraceLogsFrequency))
+		}
+		nextTraceLogsStartTime := traceLogsStartTime
+		for currentTime.After(nextTraceLogsStartTime) {
+			// Find latest time slice
+			// Prepare to create a new log file
+			nextTraceLogsStartTime = nextTraceLogsStartTime.Add(time.Duration(opts.rotateTraceLogsFrequency))
+
+			if nextTraceLogsStartTime.After(currentTime) || nextTraceLogsStartTime.Equal(currentTime) {
+				// Compress current file
+				if traceLogsCompress != "" {
+					compressTraceLogsFile()
+				}
+				// Create new trace log file
+				traceLogsFile = createTraceLogsFile()
+				traceLogsStartTime = nextTraceLogsStartTime
+			}
+		}
+	}
+
 	if opts.requestSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.requestSize) {
 		return false
 	}
@@ -369,6 +468,9 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 	}
 	var e error
 	var requestSize, responseSize uint64
+	var rotateTraceLogsSize uint64
+	var rotateTraceLogsFrequency time.Duration
+	var rotateTraceLogsPattern, rotateTraceLogsCompress string
 	if ctx.Bool("filter-request") && ctx.String("filter-size") != "" {
 		requestSize, e = humanize.ParseBytes(ctx.String("filter-size"))
 		fatalIf(probe.NewError(e).Trace(ctx.String("filter-size")), "Unable to parse input bytes.")
@@ -378,9 +480,176 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 		responseSize, e = humanize.ParseBytes(ctx.String("filter-size"))
 		fatalIf(probe.NewError(e).Trace(ctx.String("filter-size")), "Unable to parse input bytes.")
 	}
+
+	if ctx.String("rotate-trace-logs-size") != "" {
+		rotateTraceLogsSize, e = humanize.ParseBytes(ctx.String("rotate-trace-logs-size"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("rotate-trace-logs-size")), "Unable to parse input trace logs bytes.")
+	}
+
+	if ctx.String("rotate-trace-logs-frequency") != "" {
+		rotateTraceLogsFrequency, e = time.ParseDuration(ctx.String("rotate-trace-logs-frequency"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("rotate-trace-logs-frequency")), "Unable to parse input trace logs frequency.")
+		// Enforce minimum frequency
+		if rotateTraceLogsFrequency < time.Minute {
+			fatalIf(errDummy().Trace(), "Frequency must be a minimum of every 1 minute.")
+		}
+		// Obtain time interval type. Default to day
+		pattern := regexp.MustCompile(`.*([a-zA-Z])+`)
+		subMatches := pattern.FindStringSubmatch(ctx.String("rotate-trace-logs-frequency"))
+		switch subMatches[1] {
+		case "m":
+			traceLogsIntervalType = time.Second * 60
+		case "h":
+			traceLogsIntervalType = time.Second * 60 * 60
+		case "d":
+			traceLogsIntervalType = time.Second * 60 * 60 * 24
+		default:
+			traceLogsIntervalType = time.Second * 60 * 60 * 24
+		}
+	}
+
+	if ctx.String("rotate-trace-logs-pattern") != "" {
+		rotateTraceLogsPattern = ctx.String("rotate-trace-logs-pattern")
+		traceLogsPattern = rotateTraceLogsPattern
+	}
+
+	if ctx.String("rotate-trace-logs-compress") != "" {
+		rotateTraceLogsCompress = ctx.String("rotate-trace-logs-compress")
+		traceLogsCompress = rotateTraceLogsCompress
+	}
+
 	opts.requestSize = requestSize
 	opts.responseSize = responseSize
+	opts.rotateTraceLogsSize = rotateTraceLogsSize
+	opts.rotateTraceLogsFrequency = rotateTraceLogsFrequency
+	opts.rotateTraceLogsPattern = rotateTraceLogsPattern
+	opts.rotateTraceLogsCompress = rotateTraceLogsCompress
 	return
+}
+
+// Write trace log file
+func writeTracelogsFile(log string) {
+	traceLogsFileSize += len(log)
+	if _, e := traceLogsFile.WriteString(log + "\n"); e != nil {
+		traceLogsFile.Close()
+		fatalIf(probe.NewError(e), "Unable to write trace log file `"+defineTraceLogsFile()+"`")
+	}
+}
+
+// Compress trace log file
+func compressTraceLogsFile() {
+	// Create separate fd for asynch compress
+	switch traceLogsCompress {
+	case "gzip":
+		go compressGzip(traceLogsFile, traceLogsFilePath)
+	case "zstd":
+		go compressZstd(traceLogsFile, traceLogsFilePath)
+	default:
+		break
+	}
+}
+
+// gzip
+func compressGzip(asynchTraceLogsFile *os.File, asynchTraceLogsFilePath string) {
+	// Remove raw file
+	defer func() {
+		if e := os.Remove(asynchTraceLogsFilePath); e != nil {
+			// Ignore "no such file or directory". Another log archive already contains this data
+			if errors.Is(e, os.ErrNotExist) {
+				return
+			}
+			fatalIf(probe.NewError(e), "Unable to remove current trace log file `"+asynchTraceLogsFilePath+"`")
+		}
+	}()
+	compressFile, e := os.OpenFile(asynchTraceLogsFilePath+".gz", os.O_CREATE|os.O_RDWR, 0o644)
+	if e != nil {
+		compressFile.Close()
+		asynchTraceLogsFile.Close()
+		fatalIf(probe.NewError(e), "Unable to open trace log file archive for gzip `"+asynchTraceLogsFilePath+"`")
+	}
+	asynchTraceLogsFile.Seek(0, io.SeekStart)
+	writer := gzip.NewWriter(compressFile)
+	_, e = io.Copy(writer, asynchTraceLogsFile)
+	writer.Close()
+	compressFile.Close()
+	asynchTraceLogsFile.Close()
+	fatalIf(probe.NewError(e), "Unable to write trace log file archive for gzip `"+asynchTraceLogsFilePath+"`")
+}
+
+// zstandard
+func compressZstd(asynchTraceLogsFile *os.File, asynchTraceLogsFilePath string) {
+	// Remove raw file
+	defer func() {
+		if e := os.Remove(asynchTraceLogsFilePath); e != nil {
+			fatalIf(probe.NewError(e), "Unable to remove current trace log file `"+asynchTraceLogsFilePath+"`")
+		}
+	}()
+	compressFile, e := os.OpenFile(asynchTraceLogsFilePath+".zst", os.O_CREATE|os.O_RDWR, 0o644)
+	if e != nil {
+		compressFile.Close()
+		asynchTraceLogsFile.Close()
+		fatalIf(probe.NewError(e), "Unable to open trace log file archive for zstd `"+asynchTraceLogsFilePath+"`")
+	}
+	contentSize, _ := asynchTraceLogsFile.Seek(0, io.SeekCurrent)
+	asynchTraceLogsFile.Seek(0, io.SeekStart)
+
+	// Reuse encoder to reuse resources and avoid unnecessary allocation
+	if traceLogsFileZstdEncoder == nil {
+		traceLogsFileZstdEncoder, e = zstd.NewWriter(nil)
+		if e != nil {
+			traceLogsFileZstdEncoder.Close()
+			compressFile.Close()
+			asynchTraceLogsFile.Close()
+			fatalIf(probe.NewError(e), "Unable to create encoder for zstd `"+asynchTraceLogsFilePath+"`")
+		}
+	}
+	traceLogsFileZstdEncoder.ResetContentSize(compressFile, contentSize)
+
+	_, e = io.Copy(traceLogsFileZstdEncoder, asynchTraceLogsFile)
+	traceLogsFileZstdEncoder.Close()
+	compressFile.Close()
+	asynchTraceLogsFile.Close()
+	fatalIf(probe.NewError(e), "Unable to copy encoder for zstd `"+asynchTraceLogsFilePath+"`")
+}
+
+// Create trace log file
+func createTraceLogsFile() *os.File {
+	// Create and open file if it does not exist
+	traceLogsFile, e := os.OpenFile(defineTraceLogsFile(), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o644)
+	if e != nil {
+		fatalIf(probe.NewError(e), "Unable to create trace log file `"+defineTraceLogsFile()+"`")
+	}
+	console.Println("Now logging to", traceLogsFilePath)
+	return traceLogsFile
+}
+
+// Derive new trace log file name
+func defineTraceLogsFile() string {
+	// Identify trace log format.Time pattern within square brackets, to create a customizable and dynamic path
+	pattern := regexp.MustCompile(`\[([^\[\]]+)\]`)
+	traceLogsDirectory := pattern.ReplaceAllStringFunc(traceLogsPattern, func(match string) string {
+		subMatches := pattern.FindStringSubmatch(match)
+		return traceLogsStartTime.Format(subMatches[1])
+	})
+	traceLogsDirectoryName, traceLogsFileName := filepath.Split(traceLogsDirectory)
+	// Default directory and file name if not provided
+	if traceLogsDirectoryName == "" {
+		defineTraceLogsDirectoryName, e := os.Getwd()
+		if e != nil {
+			fatalIf(probe.NewError(e), "Unable to deterine current working directory")
+		}
+		traceLogsDirectoryName = defineTraceLogsDirectoryName
+	}
+	if traceLogsFileName == "" {
+		// Default file name
+		traceLogsFileName = "minio.trace." + strconv.Itoa(int(traceLogsStartTime.Unix())) + ".log"
+	}
+	// Create hierarchy of directories if they do not exist
+	if e := os.MkdirAll(traceLogsDirectoryName, 0o755); e != nil {
+		fatalIf(probe.NewError(e), "Unable to create trace log file directory `"+traceLogsDirectoryName+"`")
+	}
+	traceLogsFilePath = filepath.Join(traceLogsDirectoryName, traceLogsFileName)
+	return traceLogsFilePath
 }
 
 // Calculate tracing options for command line flags
@@ -440,6 +709,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	for _, c := range colors {
 		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
 	}
+
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
@@ -455,6 +725,18 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 	mopts := matchingOpts(ctx)
 
+	if ctx.String("rotate-trace-logs-size") != "" || ctx.String("rotate-trace-logs-frequency") != "" || ctx.String("rotate-trace-logs-pattern") != "" {
+		console.SetColorOff()
+		traceLogsEnabled = true
+		traceLogsStartTime = time.Now()
+		// If logging is based on frequency, ensure truncate of time to nearest interval
+		if ctx.String("rotate-trace-logs-frequency") != "" {
+			traceLogsStartTime = time.Now().Truncate(traceLogsIntervalType)
+		}
+		// Create new trace log file
+		traceLogsFile = createTraceLogsFile()
+	}
+
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
 	for traceInfo := range traceCh {
@@ -465,7 +747,6 @@ func mainAdminTrace(ctx *cli.Context) error {
 			printTrace(verbose, traceInfo)
 		}
 	}
-
 	return nil
 }
 

@@ -47,5 +47,10 @@ func printMsg(msg message) {
 		}
 	}
 	msgStr = strings.TrimSuffix(msgStr, "\n")
+	// Redirect message to trace log file
+	if traceLogsEnabled {
+		writeTracelogsFile(msgStr)
+		return
+	}
 	console.Println(msgStr)
 }
