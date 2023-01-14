@@ -45,6 +45,10 @@ var adminUserSvcAcctAddFlags = []cli.Flag{
 		Name:  "policy",
 		Usage: "path to a JSON policy file",
 	},
+	cli.StringFlag{
+		Name:  "comment",
+		Usage: "personal note for the service account",
+	},
 }
 
 var adminUserSvcAcctAddCmd = cli.Command{
@@ -88,6 +92,7 @@ type svcAcctMessage struct {
 	ParentUser    string          `json:"parentUser,omitempty"`
 	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
 	Policy        json.RawMessage `json:"policy,omitempty"`
+	Comment       string          `json:"comment,omitempty"`
 	AccountStatus string          `json:"accountStatus,omitempty"`
 	MemberOf      []string        `json:"memberOf,omitempty"`
 }
@@ -127,6 +132,7 @@ func (u svcAcctMessage) String() string {
 				fmt.Sprintf("AccessKey: %s", u.AccessKey),
 				fmt.Sprintf("ParentUser: %s", u.ParentUser),
 				fmt.Sprintf("Status: %s", u.AccountStatus),
+				fmt.Sprintf("Comment: %s", u.Comment),
 				fmt.Sprintf("Policy: %s", policyField),
 			}, "\n"))
 	case svcAccOpRemove:
@@ -166,6 +172,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	accessKey := ctx.String("access-key")
 	secretKey := ctx.String("secret-key")
 	policyPath := ctx.String("policy")
+	comment := ctx.String("comment")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -188,6 +195,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		Policy:     policyBytes,
 		AccessKey:  accessKey,
 		SecretKey:  secretKey,
+		Comment:    comment,
 		TargetUser: user,
 	}
 
