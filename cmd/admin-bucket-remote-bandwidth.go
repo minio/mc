@@ -126,9 +126,8 @@ func printTable(report madmin.Report, bits bool, iec bool) {
 		index++
 	}
 	if len(report.Report.BucketStats) > 0 {
-		err := tbl.DisplayTable(cellText)
-		if err != nil {
-			console.Error(err)
+		if e := tbl.DisplayTable(cellText); e != nil {
+			console.Error(e)
 		}
 	}
 }

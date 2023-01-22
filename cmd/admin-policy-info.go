@@ -107,14 +107,11 @@ func mainAdminPolicyInfo(ctx *cli.Context) error {
 
 	policyFile := ctx.String("policy-file")
 	if policyFile != "" {
-		f, err := os.Create(policyFile)
-		if err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Could not open given policy file")
-		}
-		_, err = f.Write(pinfo.Policy)
-		if err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Could not write to given policy file")
-		}
+		f, e := os.Create(policyFile)
+		fatalIf(probe.NewError(e).Trace(args...), "Could not open given policy file")
+
+		_, e = f.Write(pinfo.Policy)
+		fatalIf(probe.NewError(e).Trace(args...), "Could not write to given policy file")
 	}
 
 	printMsg(userPolicyMessage{

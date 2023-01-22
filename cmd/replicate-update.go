@@ -46,11 +46,11 @@ var replicateUpdateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "storage-class",
-		Usage: `storage class for destination, valid values are either "STANDARD" or "REDUCED_REDUNDANCY"`,
+		Usage: `storage class for destination, valid values are ['STANDARD', 'REDUCED_REDUNDANCY']`,
 	},
 	cli.StringFlag{
 		Name:  "state",
-		Usage: "change rule status. Valid values are [enable|disable]",
+		Usage: "change rule status, valid values are ['enable', 'disable']",
 	},
 	cli.IntFlag{
 		Name:  "priority",
@@ -66,11 +66,13 @@ var replicateUpdateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "sync",
-		Usage: "enable synchronous replication for this target. Valid values are enable,disable.Defaults to disable if unset",
+		Usage: "enable synchronous replication for this target, valid values are ['enable', 'disable'].",
+		Value: "disable",
 	},
 	cli.StringFlag{
 		Name:  "proxy",
-		Usage: "enable proxying in active-active replication. Valid values are enable,disable.By default proxying is enabled.",
+		Usage: "enable proxying in active-active replication, valid values are ['enable', 'disable']",
+		Value: "enable",
 	},
 	cli.StringFlag{
 		Name:  "bandwidth",
@@ -84,7 +86,7 @@ var replicateUpdateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "path",
 		Value: "auto",
-		Usage: "bucket path lookup supported by the server. Valid options are '[on,off,auto]'",
+		Usage: "bucket path lookup supported by the server, valid options are ['on', 'off', 'auto']",
 	},
 }
 
@@ -101,7 +103,7 @@ var replicateUpdateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]	
+  {{.HelpName}} TARGET --id=RULE-ID [FLAGS]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -127,12 +129,13 @@ EXAMPLES:
 
   7. Enable existing object replication on a configuration rule with ID "kxYD.491" on a target myminio/bucket. Rule previously had enabled delete marker and versioned delete replication.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --replicate "existing-objects,delete-marker,delete"
-  
-  8. Edit credentials for remote target with replication rule ID kxYD.491 
+
+  8. Edit credentials for remote target with replication rule ID kxYD.491
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --remote-bucket  https://foobar:newpassword@minio.siteb.example.com/targetbucket
-  
-  9 Disable proxying and enable synchronous replication for remote target of bucket mybucket with rule ID kxYD.492
-  	 {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.492" --remote-bucket https://foobar:newpassword@minio.siteb.example.com/targetbucket  --sync "enable" --proxy "disable"
+
+  9. Disable proxying and enable synchronous replication for remote target of bucket mybucket with rule ID kxYD.492
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.492" --remote-bucket https://foobar:newpassword@minio.siteb.example.com/targetbucket \
+         --sync "enable" --proxy "disable"
 `,
 }
 
@@ -196,9 +199,8 @@ func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget, arnStr 
 		if u.Path != "" {
 			tgtBucket = path.Clean(u.Path[1:])
 		}
-		if e := s3utils.CheckValidBucketName(tgtBucket); e != nil {
-			fatalIf(probe.NewError(e).Trace(tgtURL), "Invalid target bucket specified")
-		}
+		fatalIf(probe.NewError(s3utils.CheckValidBucketName(tgtBucket)).Trace(tgtURL), "invalid target bucket")
+
 		secure := u.Scheme == "https"
 		host := u.Host
 		if u.Port() == "" {
@@ -224,13 +226,11 @@ func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget, arnStr 
 	}
 	if cli.IsSet("bandwidth") {
 		bandwidthStr := cli.String("bandwidth")
-		bandwidth, err := getBandwidthInBytes(bandwidthStr)
-		if err != nil {
-			fatalIf(errInvalidArgument().Trace(bandwidthStr), "Invalid bandwidth number")
-		}
+		bandwidth, e := getBandwidthInBytes(bandwidthStr)
+		fatalIf(probe.NewError(e).Trace(bandwidthStr), "invalid bandwidth value")
+
 		bktTarget.BandwidthLimit = int64(bandwidth)
 		ops = append(ops, madmin.BandwidthLimitUpdateType)
-
 	}
 	if cli.IsSet("healthcheck-seconds") {
 		bktTarget.HealthCheckDuration = time.Duration(cli.Uint("healthcheck-seconds")) * time.Second
@@ -277,9 +277,9 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	// Create a new Client
 	client, err := newClient(aliasedURL)
-	fatalIf(err, "Unable to initialize connection.")
+	fatalIf(err, "unable to initialize connection.")
 	rcfg, err := client.GetReplication(ctx)
-	fatalIf(err.Trace(args...), "Unable to get replication configuration")
+	fatalIf(err.Trace(args...), "unable to get replication configuration")
 
 	if !cliCtx.IsSet("id") {
 		fatalIf(errInvalidArgument(), "--id is a required flag")
@@ -293,11 +293,12 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 	}
 	_, sourceBucket := url2Alias(args[0])
 	// Create a new MinIO Admin Client
-	admClient, cerr := newAdminClient(aliasedURL)
-	fatalIf(cerr, "Unable to initialize admin connection.")
+	admClient, err := newAdminClient(aliasedURL)
+	fatalIf(err, "unable to initialize admin connection.")
 
 	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch remote target.")
+	fatalIf(probe.NewError(e).Trace(args...), "unable to fetch remote target.")
+
 	var arn string
 	for _, rule := range rcfg.Rules {
 		if rule.ID == cliCtx.String("id") {
@@ -337,7 +338,8 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 				existingReplState = enableStatus
 			default:
 				if opt != "" {
-					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))), `--replicate flag takes one or more comma separated string with values "delete", "delete-marker", "metadata-sync", "existing-objects" or "" to disable these settings`)
+					fatalIf(probe.NewError(fmt.Errorf("invalid value for --replicate flag %s", cliCtx.String("replicate"))),
+						`--replicate flag takes one or more comma separated string with values "delete", "delete-marker", "metadata-sync", "existing-objects" or "" to disable these settings`)
 				}
 			}
 		}
@@ -365,7 +367,7 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 		opts.ExistingObjectReplicate = existingReplState
 	}
 
-	fatalIf(client.SetReplication(ctx, &rcfg, opts), "Could not modify replication rule")
+	fatalIf(client.SetReplication(ctx, &rcfg, opts), "unable to modify replication rule")
 	printMsg(replicateUpdateMessage{
 		Op:  cliCtx.Command.Name,
 		URL: aliasedURL,

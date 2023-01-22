@@ -557,8 +557,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// If the passed source URL points to fs, fetch the absolute src path
 		// to correctly calculate targetPath
 		if sourceAlias == "" {
-			tmpSrcURL, err := filepath.Abs(sourceURLFull)
-			if err == nil {
+			tmpSrcURL, e := filepath.Abs(sourceURLFull)
+			if e == nil {
 				sourceURLFull = tmpSrcURL
 			}
 		}

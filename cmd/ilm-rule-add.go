@@ -59,10 +59,8 @@ EXAMPLES:
          --noncurrent-transition-days "45" --noncurrent-transition-tier "MINIOTIER-1" \
          myminio/mybucket/
 
-
   2. Add a lifecycle rule with an expiration action for all objects in mybucket.
      {{.Prompt}} {{.HelpName}} --expire-days "200" myminio/mybucket
-
 
   3. Add a lifecycle rule with an expiration and a noncurrent version expiration action for all objects with prefix doc/ in mybucket.
      {{.Prompt}} {{.HelpName}} --prefix "doc/" --expire-days "300" --noncurrent-expire-days "100" \

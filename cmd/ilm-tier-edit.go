@@ -127,10 +127,9 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	case accountKey != "": // Azure tier
 		creds.SecretKey = accountKey
 	case credsPath != "": // GCS tier
-		credsBytes, err := os.ReadFile(credsPath)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Failed to read credentials file")
-		}
+		credsBytes, e := os.ReadFile(credsPath)
+		fatalIf(probe.NewError(e), "Unable to read credentials file at %s", credsPath)
+
 		creds.CredsJSON = credsBytes
 	default:
 		fatalIf(errInvalidArgument().Trace(args.Tail()...), "Insufficient credential information supplied to update remote tier target credentials")
