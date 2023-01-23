@@ -65,7 +65,7 @@ func getExpirationDays(rule lifecycle.Rule) int {
 		return int(rule.Expiration.Days)
 	}
 	if !rule.Expiration.Date.Time.IsZero() {
-		return int(time.Now().UTC().Sub(rule.Expiration.Date.Time).Hours() / 24)
+		return int(rule.Expiration.Date.Time.Sub(time.Now().UTC()).Hours() / 24)
 	}
 
 	return 0
