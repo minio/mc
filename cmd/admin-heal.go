@@ -572,17 +572,17 @@ func (s shortBackgroundHealStatusMessage) String() string {
 
 		healPrettyMsg += fmt.Sprintf("Objects Healed: %s/%s (%s), %s/%s (%s)\n",
 			humanize.Comma(int64(itemsHealed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
-			humanize.Bytes(bytesHealed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
+			humanize.IBytes(bytesHealed), humanize.IBytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
 
 		if itemsFailed > 0 {
 			itemsPct := math.Min(100, 100*float64(itemsFailed)/float64(totalItems))
 			bytesPct := math.Min(100, 100*float64(bytesFailed)/float64(totalBytes))
 			healPrettyMsg += fmt.Sprintf("Objects Failed: %s/%s (%s), %s/%s (%s)\n",
 				humanize.Comma(int64(itemsFailed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
-				humanize.Bytes(bytesFailed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
+				humanize.IBytes(bytesFailed), humanize.IBytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
 		}
 	} else {
-		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.Bytes(bytesHealed))
+		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.IBytes(bytesHealed))
 	}
 
 	if accumulatedElapsedTime > 0 {
