@@ -56,8 +56,6 @@ require (
 	golang.org/x/term v0.3.0
 )
 
-require github.com/docker/go-units v0.5.0 // indirect
-
 require (
 	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
