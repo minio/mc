@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	units "github.com/docker/go-units"
 	"github.com/fatih/color"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/cli"
@@ -489,6 +490,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 			close(statusCh)
 		}
 
+		startContinue := true
 		for {
 			select {
 			case <-quitCh:
@@ -551,6 +553,14 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						return doCopyFake(ctx, cpURLs, pg)
 					}, 0)
 				} else {
+					// Print the copy resume summary once in start
+					if startContinue && cli.Bool("continue") {
+						abbrs := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"}
+						startSize := units.CustomSize("%.2f%s", float64(pg.(*progressBar).Start().Get()), 1024.0, abbrs)
+						totalSize := units.CustomSize("%.2f%s", float64(pg.(*progressBar).Total), 1024.0, abbrs)
+						fmt.Println("Resuming copy from ", startSize, " / ", totalSize)
+						startContinue = false
+					}
 					parallel.queueTask(func() URLs {
 						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve, isZip)
 					}, cpURLs.SourceContent.Size)
