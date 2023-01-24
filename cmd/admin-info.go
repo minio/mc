@@ -80,15 +80,13 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 				}
 			}
 			pool.endpoints.Add(srv.Endpoint)
-			for _, disk := range srv.Disks {
-				if disk.SetIndex > pool.setsCount {
-					pool.setsCount = disk.SetIndex
-				}
-				if disk.DiskIndex > pool.drivesPerSet {
-					pool.drivesPerSet = disk.DiskIndex
-				}
-
+			if disk.SetIndex > pool.setsCount {
+				pool.setsCount = disk.SetIndex
 			}
+			if disk.DiskIndex > pool.drivesPerSet {
+				pool.drivesPerSet = disk.DiskIndex
+			}
+
 			summary[disk.PoolIndex] = pool
 		}
 	}

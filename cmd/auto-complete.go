@@ -32,8 +32,8 @@ type fsComplete struct{}
 
 // predictPathWithTilde completes an FS path which starts with a `~/`
 func (fs fsComplete) predictPathWithTilde(a complete.Args) []string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil || homeDir == "" {
+	homeDir, e := os.UserHomeDir()
+	if e != nil || homeDir == "" {
 		return nil
 	}
 	// Clean the home directory path

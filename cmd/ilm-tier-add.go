@@ -178,10 +178,8 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 			minioOpts = append(minioOpts, madmin.MinIORegion(region))
 		}
 
-		minioCfg, err := madmin.NewTierMinIO(tierName, endpoint, accessKey, secretKey, bucket, minioOpts...)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Invalid configuration for MinIO tier")
-		}
+		minioCfg, e := madmin.NewTierMinIO(tierName, endpoint, accessKey, secretKey, bucket, minioOpts...)
+		fatalIf(probe.NewError(e), "Invalid configuration for MinIO tier")
 
 		return minioCfg
 
@@ -227,10 +225,8 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 		if ctx.IsSet("use-aws-role") {
 			s3Opts = append(s3Opts, madmin.S3AWSRole())
 		}
-		s3Cfg, err := madmin.NewTierS3(tierName, accessKey, secretKey, bucket, s3Opts...)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Invalid configuration for AWS S3 compatible remote tier")
-		}
+		s3Cfg, e := madmin.NewTierS3(tierName, accessKey, secretKey, bucket, s3Opts...)
+		fatalIf(probe.NewError(e), "Invalid configuration for AWS S3 compatible remote tier")
 
 		return s3Cfg
 	case madmin.Azure:
@@ -261,10 +257,8 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 			azOpts = append(azOpts, madmin.AzurePrefix(prefix))
 		}
 
-		azCfg, err := madmin.NewTierAzure(tierName, accountName, accountKey, bucket, azOpts...)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Invalid configuration for Azure Blob Storage remote tier")
-		}
+		azCfg, e := madmin.NewTierAzure(tierName, accountName, accountKey, bucket, azOpts...)
+		fatalIf(probe.NewError(e), "Invalid configuration for Azure Blob Storage remote tier")
 
 		return azCfg
 	case madmin.GCS:
@@ -285,15 +279,11 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 		}
 
 		credsPath := ctx.String("credentials-file")
-		credsBytes, err := os.ReadFile(credsPath)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Failed to read credentials file")
-		}
+		credsBytes, e := os.ReadFile(credsPath)
+		fatalIf(probe.NewError(e), "Failed to read credentials file")
 
-		gcsCfg, err := madmin.NewTierGCS(tierName, credsBytes, bucket, gcsOpts...)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Invalid configuration for Google Cloud Storage remote tier")
-		}
+		gcsCfg, e := madmin.NewTierGCS(tierName, credsBytes, bucket, gcsOpts...)
+		fatalIf(probe.NewError(e), "Invalid configuration for Google Cloud Storage remote tier")
 
 		return gcsCfg
 	}

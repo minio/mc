@@ -119,7 +119,7 @@ func mainAdminRebalanceStatus(ctx *cli.Context) error {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "Summary: \n")
-	fmt.Fprintf(&b, "Data: %s (%d objects, %d versions) \n", humanize.Bytes(totalBytes), totalObjects, totalVersions)
+	fmt.Fprintf(&b, "Data: %s (%d objects, %d versions) \n", humanize.IBytes(totalBytes), totalObjects, totalVersions)
 	fmt.Fprintf(&b, "Time: %s (%s to completion)", maxElapsed, maxETA)
 	console.Println(b.String())
 	return nil

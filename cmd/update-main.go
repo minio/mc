@@ -322,8 +322,8 @@ func getDownloadURL(customReleaseURL string, releaseTag string) (downloadURL str
 		return mcReleaseURL + "archive/mc." + releaseTag
 	}
 
-	u, err := url.Parse(customReleaseURL)
-	if err != nil {
+	u, e := url.Parse(customReleaseURL)
+	if e != nil {
 		return mcReleaseURL + "archive/mc." + releaseTag
 	}
 
