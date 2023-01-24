@@ -114,25 +114,25 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 // working directory is a different partition. To allow all situations to
 // be handled appropriately use this function instead of os.Rename()
 func moveFile(sourcePath, destPath string) error {
-	inputFile, err := os.Open(sourcePath)
-	if err != nil {
-		return err
+	inputFile, e := os.Open(sourcePath)
+	if e != nil {
+		return e
 	}
 
-	outputFile, err := os.Create(destPath)
-	if err != nil {
+	outputFile, e := os.Create(destPath)
+	if e != nil {
 		inputFile.Close()
-		return err
+		return e
 	}
 	defer outputFile.Close()
 
-	_, err = io.Copy(outputFile, inputFile)
-	inputFile.Close()
-	if err != nil {
-		return err
+	if _, e = io.Copy(outputFile, inputFile); e != nil {
+		inputFile.Close()
+		return e
 	}
 
 	// The copy was successful, so now delete the original file
+	inputFile.Close()
 	return os.Remove(sourcePath)
 }
 

@@ -139,9 +139,9 @@ func (s prettyStdout) Write(input []byte) (int, error) {
 	bufLen := s.buffer.Len()
 
 	// Copy all buffer content to the writer (stdout)
-	n, err := s.buffer.WriteTo(s.writer)
-	if err != nil {
-		return 0, err
+	n, e := s.buffer.WriteTo(s.writer)
+	if e != nil {
+		return 0, e
 	}
 
 	if int(n) != bufLen {

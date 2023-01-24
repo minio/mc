@@ -62,8 +62,8 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	p := 0
 
 	for ; ; p++ {
-		ch, _, err := r.ReadRune()
-		if err != nil {
+		ch, _, e := r.ReadRune()
+		if e != nil {
 			// eof
 			if ps == QSTRING || ps == DQSTRING || pt == KEY {
 				return nil, probe.NewError(ErrInvalidMetadata)

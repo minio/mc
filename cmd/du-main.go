@@ -191,9 +191,9 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 	}
 
 	if depth != 0 {
-		u, err := url.Parse(targetURL)
-		if err != nil {
-			panic(err)
+		u, e := url.Parse(targetURL)
+		if e != nil {
+			panic(e)
 		}
 
 		printMsg(duMessage{
