@@ -175,14 +175,11 @@ func mainLicenseRegister(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e), "Error in fetching subnet API Key")
 		if len(apiKey) > 0 {
 			alreadyRegistered = true
-			if len(accAPIKey) == 0 {
-				accAPIKey = apiKey
-			}
+			accAPIKey = apiKey
 		}
 	} else {
 		apiKey := getSubnetAPIKeyFromConfig(alias)
-		lic := getSubnetLicenseFromConfig(alias)
-		if len(apiKey) > 0 || len(lic) > 0 {
+		if len(apiKey) > 0 {
 			alreadyRegistered = true
 		}
 	}
