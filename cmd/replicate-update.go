@@ -291,7 +291,13 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 			fatalIf(err.Trace(args...), "--state can be either `enable` or `disable`")
 		}
 	}
-	_, sourceBucket := url2Alias(args[0])
+	var sourceBucket string
+	switch c := client.(type) {
+	case *S3Client:
+		sourceBucket, _ = c.url2BucketAndObject()
+	default:
+		fatalIf(err.Trace(args...), "replication is not supported for filesystem")
+	}
 	// Create a new MinIO Admin Client
 	admClient, err := newAdminClient(aliasedURL)
 	fatalIf(err, "unable to initialize admin connection.")

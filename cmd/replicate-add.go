@@ -203,12 +203,10 @@ func extractCredentialURL(argURL string) (accessKey, secretKey string, u *url.UR
 }
 
 // fetchRemoteTarget - returns the dest bucket, dest endpoint, access and secret key
-func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin.BucketTarget) {
-	args := cli.Args()
+func fetchRemoteTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 	if !cli.IsSet("remote-bucket") {
 		fatalIf(probe.NewError(fmt.Errorf("missing Remote target configuration")), "unable to parse remote target")
 	}
-	_, sourceBucket = url2Alias(args[0])
 	p := cli.String("path")
 	if !isValidPath(p) {
 		fatalIf(errInvalidArgument().Trace(p),
@@ -244,7 +242,7 @@ func fetchRemoteTarget(cli *cli.Context) (sourceBucket string, bktTarget *madmin
 		DisableProxy:        disableproxy,
 		HealthCheckDuration: time.Duration(cli.Uint("healthcheck-seconds")) * time.Second,
 	}
-	return sourceBucket, bktTarget
+	return bktTarget
 }
 
 func getBandwidthInBytes(bandwidthStr string) (bandwidth uint64, err error) {
@@ -270,17 +268,24 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	args := cliCtx.Args()
 	aliasedURL := args.Get(0)
 
+	// Create a new Client
+	client, err := newClient(aliasedURL)
+	fatalIf(err, "unable to initialize connection.")
+
+	var sourceBucket string
+	switch c := client.(type) {
+	case *S3Client:
+		sourceBucket, _ = c.url2BucketAndObject()
+	default:
+		fatalIf(err.Trace(args...), "replication is not supported for filesystem")
+	}
 	// Create a new MinIO Admin Client
 	admclient, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "unable to initialize admin connection.")
 
-	sourceBucket, bktTarget := fetchRemoteTarget(cliCtx)
+	bktTarget := fetchRemoteTarget(cliCtx)
 	arn, e := admclient.SetRemoteTarget(globalContext, sourceBucket, bktTarget)
 	fatalIf(probe.NewError(e).Trace(args...), "unable to configure remote target")
-
-	// Create a new Client
-	client, err := newClient(aliasedURL)
-	fatalIf(err, "unable to initialize connection.")
 
 	rcfg, err := client.GetReplication(ctx)
 	fatalIf(err.Trace(args...), "unable to fetch replication configuration")
