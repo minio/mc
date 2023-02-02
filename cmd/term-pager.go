@@ -126,7 +126,8 @@ func (tp *termPager) init() {
 		)
 
 		go func() {
-			tp.statusCh <- tp.teaPager.Start()
+			_, e := tp.teaPager.Run()
+			tp.statusCh <- e
 			close(tp.statusCh)
 		}()
 

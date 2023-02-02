@@ -133,7 +133,7 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		}
 	}()
 
-	if e := ui.Start(); e != nil {
+	if _, e := ui.Run(); e != nil {
 		cancel()
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
 	}

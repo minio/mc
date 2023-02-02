@@ -12,7 +12,6 @@ linters:
     - gomodguard
     - gofmt
     - unused
-    - structcheck
     - varcheck
     - gofumpt
 
