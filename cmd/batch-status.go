@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -61,22 +60,10 @@ func mainBatchStatus(ctx *cli.Context) error {
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
-	done := make(chan struct{})
-
 	_, e := client.DescribeBatchJob(ctxt, jobID)
 	fatalIf(probe.NewError(e), "Unable to lookup job status")
 
 	ui := tea.NewProgram(initBatchJobMetricsUI(jobID))
-	if !globalJSON {
-		go func() {
-			if e := ui.Start(); e != nil {
-				cancel()
-				os.Exit(1)
-			}
-			close(done)
-		}()
-	}
-
 	go func() {
 		opts := madmin.MetricsOptions{
 			Type:    madmin.MetricsBatchJobs,
@@ -96,11 +83,17 @@ func mainBatchStatus(ctx *cli.Context) error {
 			}
 		})
 		if e != nil && !errors.Is(e, context.Canceled) {
-			fatalIf(probe.NewError(e).Trace(ctx.Args()...), "Unable to get current status")
+			fatalIf(probe.NewError(e).Trace(ctx.Args()...), "Unable to get current batch status")
 		}
 	}()
 
-	<-done
+	if !globalJSON {
+		if _, e := ui.Run(); e != nil {
+			cancel()
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to get current batch status")
+		}
+	}
+
 	return nil
 }
 
