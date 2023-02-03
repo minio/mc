@@ -86,7 +86,7 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "filter-response",
 		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
 	},
-	cli.BoolFlag{
+	cli.DurationFlag{
 		Name:  "response-duration",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
