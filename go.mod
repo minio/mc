@@ -14,7 +14,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.15.15
-	github.com/mattn/go-ieproxy v0.0.9
+	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.17
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
@@ -41,8 +41,6 @@ require (
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-replace github.com/mattn/go-ieproxy => github.com/mattn/go-ieproxy v0.0.1 // do not remove until https://github.com/mattn/go-ieproxy/issues/45 is fixed
 
 require (
 	github.com/charmbracelet/bubbles v0.15.0
