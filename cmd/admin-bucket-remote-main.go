@@ -23,8 +23,6 @@ var adminBucketRemoteSubcommands = []cli.Command{
 	adminBucketRemoteAddCmd,
 	adminBucketRemoteEditCmd,
 	adminBucketRemoteRmCmd,
-
-	adminBwInfoCmd,
 }
 
 var adminBucketRemoteCmd = cli.Command{
