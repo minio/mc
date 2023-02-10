@@ -34,7 +34,6 @@ import (
 	"time"
 
 	"github.com/mattn/go-ieproxy"
-	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
@@ -418,13 +417,6 @@ func centerText(s string, w int) string {
 	fmt.Fprintf(&sb, "%s", s)
 	fmt.Fprintf(&sb, "%s", bytes.Repeat([]byte{' '}, int(math.Floor(padding))))
 	return sb.String()
-}
-
-func getAliasAndBucket(ctx *cli.Context) (string, string) {
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	aliasedURL = filepath.Clean(aliasedURL)
-	return url2Alias(aliasedURL)
 }
 
 func getClient(aliasURL string) *madmin.AdminClient {

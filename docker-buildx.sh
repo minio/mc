@@ -23,28 +23,11 @@ sudo sysctl net.ipv6.conf.all.disable_ipv6=1
 release=$(git describe --abbrev=0 --tags)
 
 docker buildx build --push --no-cache \
-       --build-arg RELEASE="${release}" -t "minio/mc:latest" \
-       --platform=linux/arm64,linux/amd64,linux/ppc64le,linux/s390x \
-       -f Dockerfile.release .
-
-docker buildx prune -f
-
-docker buildx build --push --no-cache \
-       --build-arg RELEASE="${release}" -t "minio/mc:${release}" \
-       --platform=linux/arm64,linux/amd64,linux/ppc64le,linux/s390x \
-       -f Dockerfile.release .
-
-docker buildx prune -f
-
-docker buildx build --push --no-cache \
-       --build-arg RELEASE="${release}" -t "quay.io/minio/mc:${release}" \
-       --platform=linux/arm64,linux/amd64,linux/ppc64le,linux/s390x \
-       -f Dockerfile.release .
-
-docker buildx prune -f
-
-docker buildx build --push --no-cache \
-       --build-arg RELEASE="${release}" -t "quay.io/minio/mc:latest" \
+       --build-arg RELEASE="${release}" \
+       -t "minio/mc:latest" \
+       -t "minio/mc:${release}" \
+       -t "quay.io/minio/mc:${release}" \
+       -t "quay.io/minio/mc:latest" \
        --platform=linux/arm64,linux/amd64,linux/ppc64le,linux/s390x \
        -f Dockerfile.release .
 

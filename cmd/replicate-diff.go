@@ -209,7 +209,7 @@ func initReplicateDiffUI(arn string, diffCh <-chan madmin.DiffInfo) *replicateDi
 		sub:     diffCh,
 		arn:     arn,
 		table:   t,
-		help:    help.NewModel(),
+		help:    help.New(),
 		keymap:  newKeyMap(),
 	}
 }
@@ -413,8 +413,7 @@ func mainReplicateDiff(cliCtx *cli.Context) error {
 	}
 
 	ui := tea.NewProgram(initReplicateDiffUI(arn, diffCh))
-
-	if e := ui.Start(); e != nil {
+	if _, e := ui.Run(); e != nil {
 		cancel()
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch replication diff")
 	}

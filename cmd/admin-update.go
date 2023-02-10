@@ -30,13 +30,20 @@ import (
 	"github.com/minio/pkg/console"
 )
 
+var adminUpdateFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "yes, y",
+		Usage: "Confirms the server update",
+	},
+}
+
 var adminServerUpdateCmd = cli.Command{
 	Name:         "update",
 	Usage:        "update all MinIO servers",
 	Action:       mainAdminServerUpdate,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(adminUpdateFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -106,7 +113,9 @@ func mainAdminServerUpdate(ctx *cli.Context) error {
 
 	updateURL := args.Get(1)
 
-	if isTerminal() {
+	autoConfirm := ctx.Bool("yes")
+
+	if isTerminal() && !autoConfirm {
 		fmt.Printf("You are about to upgrade *MinIO Server*, please confirm [y/N]: ")
 		answer, e := bufio.NewReader(os.Stdin).ReadString('\n')
 		fatalIf(probe.NewError(e), "Unable to parse user input.")

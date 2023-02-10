@@ -92,10 +92,7 @@ func mainAdminIDPLdapPolicyAttach(ctx *cli.Context) error {
 		User:     user,
 		Group:    group,
 	}
-
-	if err := req.IsValid(); err != nil {
-		fatalIf(probe.NewError(err), "Invalid policy attach arguments.")
-	}
+	fatalIf(probe.NewError(req.IsValid()), "Invalid policy attach arguments.")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)

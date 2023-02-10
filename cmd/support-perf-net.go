@@ -83,7 +83,7 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 
 	p := tea.NewProgram(initSpeedTestUI())
 	go func() {
-		if e := p.Start(); e != nil {
+		if _, e := p.Run(); e != nil {
 			os.Exit(1)
 		}
 		close(done)

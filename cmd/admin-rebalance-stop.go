@@ -56,8 +56,8 @@ type rebalanceStopMsg struct {
 
 func (r rebalanceStopMsg) JSON() string {
 	r.Status = "success"
-	b, err := json.MarshalIndent(r, "", " ")
-	fatalIf(probe.NewError(err), "Unable to marshal to JSON")
+	b, e := json.MarshalIndent(r, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal to JSON")
 	return string(b)
 }
 
