@@ -412,6 +412,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/user/svcacct/enable":  aliasCompleter,
 	"/admin/user/svcacct/disable": aliasCompleter,
 
+	"/admin/user/sts/info": aliasCompleter,
+
 	"/admin/group/add":     aliasCompleter,
 	"/admin/group/disable": aliasCompleter,
 	"/admin/group/enable":  aliasCompleter,
