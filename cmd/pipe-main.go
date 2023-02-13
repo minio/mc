@@ -61,6 +61,11 @@ var pipeFlags = []cli.Flag{
 		Value: defaultPartSize(),
 		Usage: "customize chunk size for each concurrent upload",
 	},
+	cli.IntFlag{
+		Name:   "pipe-max-size",
+		Usage:  "increase the pipe buffer size to a custom value",
+		Hidden: true,
+	},
 }
 
 // Display contents of a file.
@@ -109,6 +114,11 @@ EXAMPLES:
 }
 
 func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPair, meta map[string]string) *probe.Error {
+	// If possible increase the pipe buffer size
+	if e := increasePipeBufferSize(os.Stdin, ctx.Int("pipe-max-size")); e != nil {
+		fatalIf(probe.NewError(e), "Unable to increase custom pipe-max-size")
+	}
+
 	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin, -1).Trace()
