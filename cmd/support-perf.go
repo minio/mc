@@ -60,6 +60,11 @@ var supportPerfFlags = append([]cli.Flag{
 		Usage:  "provide a custom bucket name to use (NOTE: bucket must be created prior)",
 		Hidden: true, // Hidden for now.
 	},
+	cli.BoolFlag{
+		Name:   "noclear",
+		Usage:  "do not cleanup generated data after running object speedtest",
+		Hidden: true, // Hidden for now.
+	},
 	// Drive test specific flags.
 	cli.StringFlag{
 		Name:   "filesize",
