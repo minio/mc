@@ -779,14 +779,14 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool)
 
 	alias, _ := url2Alias(aliasedURL)
 
-	e = setGlobalSubnetProxyFromConfig(alias)
-	fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
-
 	apiKey, e := getAPIKeyFlag(ctx)
 	fatalIf(probe.NewError(e), "Error in reading --api-key flag:")
 
 	// if `--airgap` is provided no need to test SUBNET connectivity.
 	if !globalAirgapped {
+		e = setGlobalSubnetProxyFromConfig(alias)
+		fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
+
 		sbu := subnetBaseURL()
 		fatalIf(checkURLReachable(sbu).Trace(aliasedURL), "Unable to reach %s, please use --airgap if there is no connectivity to SUBNET", sbu)
 	}
