@@ -19,7 +19,7 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v2 v2.0.11
+	github.com/minio/madmin-go/v2 v2.0.13-0.20230220143547-e6641ef0b8d5
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/minio/pkg v1.6.1
@@ -35,8 +35,8 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.1
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/net v0.5.0
-	golang.org/x/text v0.6.0
+	golang.org/x/net v0.7.0
+	golang.org/x/text v0.7.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.4.0
@@ -53,7 +53,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.3.0
 	github.com/rivo/tview v0.0.0-20230130130022-4a1b7a76c01c
-	golang.org/x/term v0.4.0
+	golang.org/x/term v0.5.0
 )
 
 require (
@@ -116,7 +116,7 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/sys v0.5.0
 	google.golang.org/genproto v0.0.0-20230131230820-1c016267d619 // indirect
 	google.golang.org/grpc v1.52.3 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
