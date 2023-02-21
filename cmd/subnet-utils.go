@@ -175,7 +175,7 @@ func subnetAPIKeyAuthHeaders(apiKey string) subnetHeaders {
 }
 
 func getSubnetClient() *http.Client {
-	client := httpClient(10 * time.Second)
+	client := httpClient(0)
 	if globalSubnetProxyURL != nil {
 		client.Transport.(*http.Transport).Proxy = http.ProxyURL(globalSubnetProxyURL)
 	}
