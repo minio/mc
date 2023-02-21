@@ -721,30 +721,41 @@ func uploadFileToSubnet(alias string, filename string, reqURL string, headers ma
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
-	file, e := os.Open(filename)
+	r, w := io.Pipe()
+	mwriter := multipart.NewWriter(w)
+	contentType := mwriter.FormDataContentType()
+
+	go func() {
+		var (
+			part io.Writer
+			e    error
+		)
+		defer func() {
+			mwriter.Close()
+			w.CloseWithError(e)
+		}()
+
+		part, e = mwriter.CreateFormFile("file", filepath.Base(filename))
+		if e != nil {
+			return
+		}
+
+		file, e := os.Open(filename)
+		if e != nil {
+			return
+		}
+		defer file.Close()
+
+		_, e = io.Copy(part, file)
+	}()
+
+	req, e := http.NewRequest(http.MethodPost, url, r)
 	if e != nil {
 		return nil, e
 	}
-	defer file.Close()
+	req.Header.Add("Content-Type", contentType)
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, e := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	if e != nil {
-		return nil, e
-	}
-	if _, e = io.Copy(part, file); e != nil {
-		return nil, e
-	}
-	writer.Close()
-
-	r, e := http.NewRequest(http.MethodPost, url, &body)
-	if e != nil {
-		return nil, e
-	}
-	r.Header.Add("Content-Type", writer.FormDataContentType())
-
-	return r, nil
+	return req, nil
 }
 
 func getAPIKeyFlag(ctx *cli.Context) (string, error) {
