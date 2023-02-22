@@ -253,7 +253,9 @@ func getMinIOSubnetConfig(alias string) []madmin.SubsysConfig {
 
 	var e error
 	globalSubnetConfig, e = getMinIOSubSysConfig(client, madmin.SubnetSubSys)
-	fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+	if e != nil && e.Error() != "unknown sub-system subnet" {
+		fatal(probe.NewError(e), "Unable to get server config for subnet")
+	}
 
 	return globalSubnetConfig
 }
