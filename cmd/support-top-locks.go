@@ -91,7 +91,14 @@ func (u lockMessage) String() string {
 		typeFieldMaxLen     = 6
 	)
 
-	lockState, timeDiff := getLockDuration(u.Lock.Elapsed)
+	elapsed := u.Lock.Elapsed
+	// elapsed can be zero with older MinIO versions,
+	// so this code is deprecated and can be removed later.
+	if elapsed == 0 {
+		elapsed = time.Now().UTC().Sub(u.Lock.Timestamp)
+	}
+
+	lockState, timeDiff := getLockDuration(elapsed)
 	return console.Colorize(lockState, newPrettyTable("  ",
 		Field{"Time", timeFieldMaxLen},
 		Field{"Type", typeFieldMaxLen},

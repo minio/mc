@@ -1,4 +1,6 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+//go:build !linux
+
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,23 +19,9 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
-)
+import "os"
 
-var adminTierCmd = cli.Command{
-	Name:            "tier",
-	Usage:           "manage remote tier targets for ILM transition",
-	Action:          mainAdminTier,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	HideHelpCommand: true,
-	Subcommands:     adminTierDepCmds,
-}
-
-// mainAdminTier is the handle for "mc admin tier" command.
-func mainAdminTier(ctx *cli.Context) error {
-	console.Println("Please use 'mc ilm tier' instead.")
+func increasePipeBufferSize(f *os.File, desiredPipeSize int) error {
+	// this is not supported on non-Linux platforms.
 	return nil
 }

@@ -34,6 +34,10 @@ var adminUserSvcAcctSetFlags = []cli.Flag{
 		Name:  "policy",
 		Usage: "path to a JSON policy file",
 	},
+	cli.StringFlag{
+		Name:  "comment",
+		Usage: "personal note for the service account",
+	},
 }
 
 var adminUserSvcAcctSetCmd = cli.Command{
@@ -77,6 +81,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 
 	secretKey := ctx.String("secret-key")
 	policyPath := ctx.String("policy")
+	comment := ctx.String("comment")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -92,13 +97,14 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	opts := madmin.UpdateServiceAccountReq{
 		NewPolicy:    buf,
 		NewSecretKey: secretKey,
+		NewComment:   comment,
 	}
 
 	e := client.UpdateServiceAccount(globalContext, svcAccount, opts)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit the specified service account")
 
-	printMsg(svcAcctMessage{
-		op:        ctx.Command.Name,
+	printMsg(acctMessage{
+		op:        svcAccOpSet,
 		AccessKey: svcAccount,
 	})
 

@@ -24,12 +24,8 @@ import (
 )
 
 var ilmSubcommands = []cli.Command{
-	ilmAddCmd,
-	ilmEditCmd,
-	ilmLsCmd,
-	ilmRmCmd,
-	ilmExportCmd,
-	ilmImportCmd,
+	ilmRuleCmd,
+	ilmTierCmd,
 	ilmRestoreCmd,
 }
 
@@ -40,7 +36,7 @@ var ilmCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
-	Subcommands:     ilmSubcommands,
+	Subcommands:     append(ilmSubcommands, ilmDepCmds...),
 }
 
 const (

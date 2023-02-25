@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,31 +19,27 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminUserSubcommands = []cli.Command{
-	adminUserAddCmd,
-	adminUserDisableCmd,
-	adminUserEnableCmd,
-	adminUserRemoveCmd,
-	adminUserListCmd,
-	adminUserInfoCmd,
-	adminUserPolicyCmd,
-	adminUserSvcAcctCmd,
-	adminUserSTSAcctCmd,
-}
+var ilmTierCheckCmd = cli.Command{
+	Name:         "check",
+	Usage:        "validate remote tier configuration",
+	Action:       mainAdminTierVerify,
+	OnUsageError: onUsageError,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
 
-var adminUserCmd = cli.Command{
-	Name:            "user",
-	Usage:           "manage users",
-	Action:          mainAdminUser,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	Subcommands:     adminUserSubcommands,
-	HideHelpCommand: true,
-}
+USAGE:
+  {{.HelpName}} TARGET NAME
 
-// mainAdminUser is the handle for "mc admin config" command.
-func mainAdminUser(ctx *cli.Context) error {
-	commandNotFound(ctx, adminUserSubcommands)
-	return nil
-	// Sub-commands like "get", "set" have their own main.
+NAME:
+  Name of remote tier target. e.g WARM-TIER
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Validate a tier config given by name.
+     {{.Prompt}} {{.HelpName}} myminio WARM-TIER
+`,
 }

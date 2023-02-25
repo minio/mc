@@ -511,6 +511,9 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
 			default:
+				if strings.Contains(sURLs.Error.ToGoError().Error(), "Overwrite not allowed") {
+					ignoreErr = true
+				}
 				if sURLs.ErrorCond == differInUnknown {
 					errorIf(sURLs.Error.Trace(), "Failed to perform mirroring")
 				} else {
@@ -554,8 +557,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// If the passed source URL points to fs, fetch the absolute src path
 		// to correctly calculate targetPath
 		if sourceAlias == "" {
-			tmpSrcURL, err := filepath.Abs(sourceURLFull)
-			if err == nil {
+			tmpSrcURL, e := filepath.Abs(sourceURLFull)
+			if e == nil {
 				sourceURLFull = tmpSrcURL
 			}
 		}

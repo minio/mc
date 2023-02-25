@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,31 +19,26 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminUserSubcommands = []cli.Command{
-	adminUserAddCmd,
-	adminUserDisableCmd,
-	adminUserEnableCmd,
-	adminUserRemoveCmd,
-	adminUserListCmd,
-	adminUserInfoCmd,
-	adminUserPolicyCmd,
-	adminUserSvcAcctCmd,
-	adminUserSTSAcctCmd,
+var ilmRuleSubcommands = []cli.Command{
+	ilmAddCmd,
+	ilmEditCmd,
+	ilmLsCmd,
+	ilmRmCmd,
+	ilmExportCmd,
+	ilmImportCmd,
 }
 
-var adminUserCmd = cli.Command{
-	Name:            "user",
-	Usage:           "manage users",
-	Action:          mainAdminUser,
+var ilmRuleCmd = cli.Command{
+	Name:            "rule",
+	Usage:           "manage bucket lifecycle rules",
 	Before:          setGlobalsFromContext,
+	Action:          mainILMRule,
+	Subcommands:     ilmRuleSubcommands,
 	Flags:           globalFlags,
-	Subcommands:     adminUserSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainAdminUser is the handle for "mc admin config" command.
-func mainAdminUser(ctx *cli.Context) error {
-	commandNotFound(ctx, adminUserSubcommands)
+func mainILMRule(ctx *cli.Context) error {
+	commandNotFound(ctx, ilmRuleSubcommands)
 	return nil
-	// Sub-commands like "get", "set" have their own main.
 }

@@ -29,65 +29,85 @@ import (
 	iampolicy "github.com/minio/pkg/iam/policy"
 )
 
-var adminUserSvcAcctInfoFlags = []cli.Flag{
+var adminUserSTSAcctSubcommands = []cli.Command{
+	adminUserSTSAcctInfoCmd,
+}
+
+var adminUserSTSAcctCmd = cli.Command{
+	Name:            "sts",
+	Usage:           "manage STS accounts",
+	Action:          mainAdminUserSTSAcct,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     adminUserSTSAcctSubcommands,
+	HideHelpCommand: true,
+}
+
+// mainAdminUserSTSAcct is the handle for "mc admin user sts" command.
+func mainAdminUserSTSAcct(ctx *cli.Context) error {
+	commandNotFound(ctx, adminUserSTSAcctSubcommands)
+	return nil
+}
+
+var adminUserSTSAcctInfoFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "policy",
 		Usage: "print policy in JSON format",
 	},
 }
 
-var adminUserSvcAcctInfoCmd = cli.Command{
+var adminUserSTSAcctInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "display service account info",
-	Action:       mainAdminUserSvcAcctInfo,
+	Usage:        "display temporary account info",
+	Action:       mainAdminUserSTSAcctInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(adminUserSvcAcctInfoFlags, globalFlags...),
+	Flags:        append(adminUserSTSAcctInfoFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS SERVICE-ACCOUNT
+  {{.HelpName}} ALIAS STS-ACCOUNT
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Display information for service account 'J123C4ZXEQN8RK6ND35I'
+  1. Display information for the temporary account 'J123C4ZXEQN8RK6ND35I'
      {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
 `,
 }
 
-// checkAdminUserSvcAcctInfoSyntax - validate all the passed arguments
-func checkAdminUserSvcAcctInfoSyntax(ctx *cli.Context) {
+// checkAdminUserSTSAcctInfoSyntax - validate all the passed arguments
+func checkAdminUserSTSAcctInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
 		showCommandHelpAndExit(ctx, 1)
 	}
 }
 
-// mainAdminUserSvcAcctInfo is the handle for "mc admin user svcacct info" command.
-func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
-	checkAdminUserSvcAcctInfoSyntax(ctx)
+// mainAdminUserSTSAcctInfo is the handle for "mc admin user sts info" command.
+func mainAdminUserSTSAcctInfo(ctx *cli.Context) error {
+	checkAdminUserSTSAcctInfoSyntax(ctx)
 
-	console.SetColor("AccMessage", color.New(color.FgGreen))
+	console.SetColor("AccountMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	svcAccount := args.Get(1)
+	stsAccount := args.Get(1)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	svcInfo, e := client.InfoServiceAccount(globalContext, svcAccount)
+	stsInfo, e := client.TemporaryAccountInfo(globalContext, stsAccount)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get information of the specified service account")
 
 	if ctx.Bool("policy") {
-		if svcInfo.Policy == "" {
+		if stsInfo.Policy == "" {
 			fatalIf(errDummy().Trace(args...), "No policy found associated to the specified service account. Check the policy of its parent user.")
 		}
-		p, e := iampolicy.ParseConfig(strings.NewReader(svcInfo.Policy))
+		p, e := iampolicy.ParseConfig(strings.NewReader(stsInfo.Policy))
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to parse policy.")
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", " ")
@@ -97,12 +117,11 @@ func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 
 	printMsg(acctMessage{
 		op:            svcAccOpInfo,
-		AccessKey:     svcAccount,
-		Comment:       svcInfo.Comment,
-		AccountStatus: svcInfo.AccountStatus,
-		ParentUser:    svcInfo.ParentUser,
-		ImpliedPolicy: svcInfo.ImpliedPolicy,
-		Policy:        json.RawMessage(svcInfo.Policy),
+		AccessKey:     stsAccount,
+		AccountStatus: stsInfo.AccountStatus,
+		ParentUser:    stsInfo.ParentUser,
+		ImpliedPolicy: stsInfo.ImpliedPolicy,
+		Policy:        json.RawMessage(stsInfo.Policy),
 	})
 
 	return nil

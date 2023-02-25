@@ -45,6 +45,10 @@ var adminUserSvcAcctAddFlags = []cli.Flag{
 		Name:  "policy",
 		Usage: "path to a JSON policy file",
 	},
+	cli.StringFlag{
+		Name:  "comment",
+		Usage: "personal note for the service account",
+	},
 }
 
 var adminUserSvcAcctAddCmd = cli.Command{
@@ -79,15 +83,16 @@ func checkAdminUserSvcAcctAddSyntax(ctx *cli.Context) {
 	}
 }
 
-// svcAcctMessage container for content message structure
-type svcAcctMessage struct {
-	op            string
+// acctMessage container for content message structure
+type acctMessage struct {
+	op            acctOp
 	Status        string          `json:"status"`
 	AccessKey     string          `json:"accessKey,omitempty"`
 	SecretKey     string          `json:"secretKey,omitempty"`
 	ParentUser    string          `json:"parentUser,omitempty"`
 	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
 	Policy        json.RawMessage `json:"policy,omitempty"`
+	Comment       string          `json:"comment,omitempty"`
 	AccountStatus string          `json:"accountStatus,omitempty"`
 	MemberOf      []string        `json:"memberOf,omitempty"`
 }
@@ -96,43 +101,58 @@ const (
 	accessFieldMaxLen = 20
 )
 
-func (u svcAcctMessage) String() string {
+type acctOp int
+
+const (
+	svcAccOpAdd = acctOp(iota)
+	svcAccOpList
+	svcAccOpInfo
+	svcAccOpRemove
+	svcAccOpDisable
+	svcAccOpEnable
+	svcAccOpSet
+
+	stsAccOpInfo
+)
+
+func (u acctMessage) String() string {
 	switch u.op {
-	case "list":
+	case svcAccOpList:
 		// Create a new pretty table with cols configuration
 		return newPrettyTable("  ",
 			Field{"AccessKey", accessFieldMaxLen},
 		).buildRow(u.AccessKey)
-	case "info":
+	case stsAccOpInfo, svcAccOpInfo:
 		policyField := ""
 		if u.ImpliedPolicy {
 			policyField = "implied"
 		} else {
 			policyField = "embedded"
 		}
-		return console.Colorize("SVCMessage", strings.Join(
+		return console.Colorize("AccMessage", strings.Join(
 			[]string{
 				fmt.Sprintf("AccessKey: %s", u.AccessKey),
 				fmt.Sprintf("ParentUser: %s", u.ParentUser),
 				fmt.Sprintf("Status: %s", u.AccountStatus),
+				fmt.Sprintf("Comment: %s", u.Comment),
 				fmt.Sprintf("Policy: %s", policyField),
 			}, "\n"))
-	case "rm":
-		return console.Colorize("SVCMessage", "Removed service account `"+u.AccessKey+"` successfully.")
-	case "disable":
-		return console.Colorize("SVCMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
-	case "enable":
-		return console.Colorize("SVCMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
-	case "add":
-		return console.Colorize("SVCMessage",
+	case svcAccOpRemove:
+		return console.Colorize("AccMessage", "Removed service account `"+u.AccessKey+"` successfully.")
+	case svcAccOpDisable:
+		return console.Colorize("AccMessage", "Disabled service account `"+u.AccessKey+"` successfully.")
+	case svcAccOpEnable:
+		return console.Colorize("AccMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
+	case svcAccOpAdd:
+		return console.Colorize("AccMessage",
 			fmt.Sprintf("Access Key: %s\nSecret Key: %s", u.AccessKey, u.SecretKey))
-	case "set":
-		return console.Colorize("SVCMessage", "Edited service account `"+u.AccessKey+"` successfully.")
+	case svcAccOpSet:
+		return console.Colorize("AccMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
 	return ""
 }
 
-func (u svcAcctMessage) JSON() string {
+func (u acctMessage) JSON() string {
 	u.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -144,7 +164,7 @@ func (u svcAcctMessage) JSON() string {
 func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	checkAdminUserSvcAcctAddSyntax(ctx)
 
-	console.SetColor("SVCMessage", color.New(color.FgGreen))
+	console.SetColor("AccMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -154,6 +174,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	accessKey := ctx.String("access-key")
 	secretKey := ctx.String("secret-key")
 	policyPath := ctx.String("policy")
+	comment := ctx.String("comment")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -176,14 +197,15 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		Policy:     policyBytes,
 		AccessKey:  accessKey,
 		SecretKey:  secretKey,
+		Comment:    comment,
 		TargetUser: user,
 	}
 
 	creds, e := client.AddServiceAccount(globalContext, opts)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
 
-	printMsg(svcAcctMessage{
-		op:            ctx.Command.Name,
+	printMsg(acctMessage{
+		op:            svcAccOpAdd,
 		AccessKey:     creds.AccessKey,
 		SecretKey:     creds.SecretKey,
 		AccountStatus: "enabled",

@@ -1813,11 +1813,14 @@ USAGE:
 
 COMMANDS:
   add     add a server side replication configuration rule
-  edit    modify an existing server side replication cofiguration rule
+  update  modify an existing server side replication configuration rule
   ls      list server side replication configuration rules
+  status  show server side replication status
+  resync  re-replicate all previously replicated objects
   export  export server side replication configuration
   import  import server side replication configuration in JSON format
-  rm      remove a server side replication configuration rule(s)
+  rm      remove a server side replication configuration rule
+  diff    show unreplicated object versions
 
 FLAGS:
   --help, -h                    show help
@@ -1826,43 +1829,51 @@ FLAGS:
 *Example: Add replication configuration rule on `mybucket` on alias `myminio`. Enable delete marker replication and replication of versioned deletes for the configuration*
 
 ```
-mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --remote-bucket 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket' --priority 1 --replicate "delete-marker,delete"
+mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --remote-bucket "http://minio3:minio123@localhost:9006/bucket" --priority 1
 Replication configuration rule applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Disable replication configuration rule with rule Id "bsibgh8t874dnjst8hkg" on bucket "mybucket" with prefix "prefix" for alias `myminio`*
 
 ```
-mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
+mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias `myminio`.*
 
 ```
-mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
+mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
 *Example: Clear tags on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"*
 
 ```
-mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
+mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 
 *Example: Enable delete marker replication and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
 
 ```
-mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate "delete,delete-marker"
+mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate "delete,delete-marker"
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 *Example: Disable delete marker and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
 
 ```
-mc replicate edit myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate ""
+mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate ""
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
+
+*Example:  Edit credentials for remote target with replication rule ID kxYD.491
+
+```
+$ mc replicate update myminio/mybucket --id "kxYD.491" --remote-bucket
+https://foobar:newpassword@minio.siteb.example.com/targetbucket
+```
+
 *Example: List replication configuration rules set on `mybucket` on alias `myminio`*
 
 ```

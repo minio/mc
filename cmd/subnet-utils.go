@@ -43,9 +43,10 @@ import (
 )
 
 const (
-	subnetRespBodyLimit  = 1 << 20 // 1 MiB
-	minioSubscriptionURL = "https://min.io/subscription"
-	subnetPublicKeyPath  = "/downloads/license-pubkey.pem"
+	subnetRespBodyLimit     = 1 << 20 // 1 MiB
+	minioSubscriptionURL    = "https://min.io/subscription"
+	subnetPublicKeyPath     = "/downloads/license-pubkey.pem"
+	minioDeploymentIDHeader = "x-minio-deployment-id"
 )
 
 var (
@@ -53,12 +54,12 @@ var (
 MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEaK31xujr6/rZ7ZfXZh3SlwovjC+X8wGq
 qkltaKyTLRENd4w3IRktYYCRgzpDLPn/nrf7snV/ERO5qcI7fkEES34IVEr+2Uff
 JkO2PfyyAYEO/5dBlPh1Undu9WQl6J7B
------END PUBLIC KEY-----`  // https://subnet.min.io/downloads/license-pubkey.pem
+-----END PUBLIC KEY-----` // https://subnet.min.io/downloads/license-pubkey.pem
 	subnetPublicKeyDev = `-----BEGIN PUBLIC KEY-----
 MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEbo+e1wpBY4tBq9AONKww3Kq7m6QP/TBQ
 mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 9NKlTdQFGF3+aO6jbQ4hX/S5qPyF+a3z
------END PUBLIC KEY-----`  // https://localhost:9000/downloads/license-pubkey.pem
+-----END PUBLIC KEY-----` // https://localhost:9000/downloads/license-pubkey.pem
 	subnetCommonFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "airgap",
@@ -100,6 +101,10 @@ func subnetRegisterURL() string {
 
 func subnetUnregisterURL(depID string) string {
 	return subnetBaseURL() + "/api/cluster/unregister?deploymentId=" + depID
+}
+
+func subnetLicenseRenewURL() string {
+	return subnetBaseURL() + "/api/cluster/renew-license"
 }
 
 func subnetOfflineRegisterURL(regToken string) string {
@@ -151,6 +156,12 @@ func subnetURLWithAuth(reqURL string, apiKey string) (string, map[string]string,
 	return reqURL, subnetAPIKeyAuthHeaders(apiKey), nil
 }
 
+type subnetHeaders map[string]string
+
+func (h subnetHeaders) addDeploymentIDHeader(alias string) {
+	h[minioDeploymentIDHeader] = getAdminInfo(alias).DeploymentID
+}
+
 func subnetTokenAuthHeaders(authToken string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + authToken}
 }
@@ -159,12 +170,12 @@ func subnetLicenseAuthHeaders(lic string) map[string]string {
 	return map[string]string{"x-subnet-license": lic}
 }
 
-func subnetAPIKeyAuthHeaders(apiKey string) map[string]string {
+func subnetAPIKeyAuthHeaders(apiKey string) subnetHeaders {
 	return map[string]string{"x-subnet-api-key": apiKey}
 }
 
 func getSubnetClient() *http.Client {
-	client := httpClient(10 * time.Second)
+	client := httpClient(0)
 	if globalSubnetProxyURL != nil {
 		client.Transport.(*http.Transport).Proxy = http.ProxyURL(globalSubnetProxyURL)
 	}
@@ -571,18 +582,47 @@ func unregisterClusterFromSubnet(alias string, depID string, apiKey string) erro
 	}
 
 	_, e = subnetPostReq(regURL, nil, headers)
-	if e != nil {
-		return e
+	return e
+}
+
+// validateAndSaveLic - validates the given license in minio config
+// If the license contains api key and the saveApiKey arg is true,
+// api key is also saved in the minio config
+func validateAndSaveLic(lic string, alias string, saveAPIKey bool) string {
+	li, e := parseLicense(lic)
+	fatalIf(probe.NewError(e), "Error parsing license")
+
+	if li.ExpiresAt.Before(time.Now()) {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("License has expired on %s", li.ExpiresAt))
 	}
 
-	removeSubnetAuthConfig(alias)
+	if li.DeploymentID != getAdminInfo(alias).DeploymentID {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("License is invalid for the deployment %s", alias))
+	}
 
-	return nil
+	setSubnetLicense(alias, lic)
+	if len(li.APIKey) > 0 && saveAPIKey {
+		setSubnetAPIKey(alias, li.APIKey)
+	}
+
+	return li.APIKey
 }
 
 // extractAndSaveSubnetCreds - extract license from response and set it in minio config
 func extractAndSaveSubnetCreds(alias string, resp string) (string, string, error) {
 	parsedResp := gjson.Parse(resp)
+
+	lic, e := extractSubnetCred("license", parsedResp)
+	if e != nil {
+		return "", "", e
+	}
+	if len(lic) > 0 {
+		apiKey := validateAndSaveLic(lic, alias, true)
+		if len(apiKey) > 0 {
+			return apiKey, lic, nil
+		}
+	}
+
 	apiKey, e := extractSubnetCred("api_key", parsedResp)
 	if e != nil {
 		return "", "", e
@@ -591,13 +631,6 @@ func extractAndSaveSubnetCreds(alias string, resp string) (string, string, error
 		setSubnetAPIKey(alias, apiKey)
 	}
 
-	lic, e := extractSubnetCred("license", parsedResp)
-	if e != nil {
-		return "", "", e
-	}
-	if len(lic) > 0 {
-		setSubnetLicense(alias, lic)
-	}
 	return apiKey, lic, nil
 }
 
@@ -688,30 +721,41 @@ func uploadFileToSubnet(alias string, filename string, reqURL string, headers ma
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
-	file, e := os.Open(filename)
+	r, w := io.Pipe()
+	mwriter := multipart.NewWriter(w)
+	contentType := mwriter.FormDataContentType()
+
+	go func() {
+		var (
+			part io.Writer
+			e    error
+		)
+		defer func() {
+			mwriter.Close()
+			w.CloseWithError(e)
+		}()
+
+		part, e = mwriter.CreateFormFile("file", filepath.Base(filename))
+		if e != nil {
+			return
+		}
+
+		file, e := os.Open(filename)
+		if e != nil {
+			return
+		}
+		defer file.Close()
+
+		_, e = io.Copy(part, file)
+	}()
+
+	req, e := http.NewRequest(http.MethodPost, url, r)
 	if e != nil {
 		return nil, e
 	}
-	defer file.Close()
+	req.Header.Add("Content-Type", contentType)
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, e := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	if e != nil {
-		return nil, e
-	}
-	if _, e = io.Copy(part, file); e != nil {
-		return nil, e
-	}
-	writer.Close()
-
-	r, e := http.NewRequest(http.MethodPost, url, &body)
-	if e != nil {
-		return nil, e
-	}
-	r.Header.Add("Content-Type", writer.FormDataContentType())
-
-	return r, nil
+	return req, nil
 }
 
 func getAPIKeyFlag(ctx *cli.Context) (string, error) {

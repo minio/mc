@@ -57,7 +57,7 @@ var ilmRestoreCmd = cli.Command{
 	Action:       mainILMRestore,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(ilmRestoreFlags, globalFlags...),
+	Flags:        append(append(ilmRestoreFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -65,8 +65,8 @@ USAGE:
   {{.HelpName}} TARGET
 
 DESCRIPTION:
-  Create a restored copy of one or more objects archived on a remote tier. The copy automatically expires 
-  after the specified number of days (Default 1 day). 
+  Restore a copy of one or more objects from its remote tier. This copy automatically expires
+  after the specified number of days (Default 1 day).
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -85,6 +85,8 @@ EXAMPLES:
   4. Restore all objects with all versions under a specific prefix
      {{.Prompt}} {{.HelpName}} --recursive --versions myminio/mybucket/dir/
 
+  5. Restore an SSE-C encrypted object.
+     {{.Prompt}} {{.HelpName}} --encrypt-key "myminio/mybucket/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" myminio/mybucket/myobject.txt
 `,
 }
 
@@ -154,14 +156,17 @@ func sendRestoreRequests(ctx context.Context, targetAlias, targetURL, targetVers
 }
 
 // Wait until an object which receives restore request is completely restored in the fast tier
-func waitRestoreObject(ctx context.Context, targetAlias, targetURL, versionID string) *probe.Error {
+func waitRestoreObject(ctx context.Context, targetAlias, targetURL, versionID string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	clnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
 		return err
 	}
 
 	for {
-		opts := StatOptions{versionID: versionID}
+		opts := StatOptions{
+			versionID: versionID,
+			sse:       getSSE(targetAlias+clnt.GetURL().Path, encKeyDB[targetAlias]),
+		}
 		st, err := clnt.Stat(ctx, opts)
 		if err != nil {
 			return err
@@ -178,7 +183,7 @@ func waitRestoreObject(ctx context.Context, targetAlias, targetURL, versionID st
 }
 
 // Check and wait the restore status of one or more objects one by one.
-func checkRestoreStatus(ctx context.Context, targetAlias, targetURL, targetVersionID string, recursive, applyOnVersions bool, restoreStatus chan *probe.Error) {
+func checkRestoreStatus(ctx context.Context, targetAlias, targetURL, targetVersionID string, recursive, applyOnVersions bool, encKeyDB map[string][]prefixSSEPair, restoreStatus chan *probe.Error) {
 	defer close(restoreStatus)
 
 	client, err := newClientFromAlias(targetAlias, targetURL)
@@ -188,7 +193,7 @@ func checkRestoreStatus(ctx context.Context, targetAlias, targetURL, targetVersi
 	}
 
 	if !recursive {
-		restoreStatus <- waitRestoreObject(ctx, targetAlias, targetURL, targetVersionID)
+		restoreStatus <- waitRestoreObject(ctx, targetAlias, targetURL, targetVersionID, encKeyDB)
 		return
 	}
 
@@ -203,7 +208,7 @@ func checkRestoreStatus(ctx context.Context, targetAlias, targetURL, targetVersi
 			continue
 		}
 
-		err := waitRestoreObject(ctx, targetAlias, content.URL.String(), content.VersionID)
+		err := waitRestoreObject(ctx, targetAlias, content.URL.String(), content.VersionID, encKeyDB)
 		if err != nil {
 			restoreStatus <- err
 			continue
@@ -306,6 +311,9 @@ func mainILMRestore(cliCtx *cli.Context) (cErr error) {
 	includeVersions := cliCtx.Bool("versions")
 	days := cliCtx.Int("days")
 
+	encKeyDB, err := getEncKeys(cliCtx)
+	fatalIf(err, "Unable to parse encryption keys.")
+
 	targetAlias, targetURL, _ := mustExpandAlias(aliasedURL)
 	if targetAlias == "" {
 		fatalIf(errDummy().Trace(), "Unable to restore the given URL")
@@ -321,7 +329,7 @@ func mainILMRestore(cliCtx *cli.Context) (cErr error) {
 	}()
 
 	sendRestoreRequests(ctx, targetAlias, targetURL, versionID, recursive, includeVersions, days, restoreReqStatus)
-	checkRestoreStatus(ctx, targetAlias, targetURL, versionID, recursive, includeVersions, restoreStatus)
+	checkRestoreStatus(ctx, targetAlias, targetURL, versionID, recursive, includeVersions, encKeyDB, restoreStatus)
 
 	// Wait until the UI printed all the status
 	<-done

@@ -67,7 +67,7 @@ func (u configExportMessage) String() string {
 	bio := bufio.NewReader(bytes.NewReader(u.Value))
 	var lines []string
 	for {
-		s, err := bio.ReadString('\n')
+		s, e := bio.ReadString('\n')
 		// Make lines displaying environment variables bold.
 		if strings.HasPrefix(s, "# MINIO_") {
 			s = strings.TrimPrefix(s, "# ")
@@ -77,10 +77,10 @@ func (u configExportMessage) String() string {
 		} else {
 			lines = append(lines, s)
 		}
-		if err == io.EOF {
+		if e == io.EOF {
 			break
 		}
-		fatalIf(probe.NewError(err), "Unable to marshal to string.")
+		fatalIf(probe.NewError(e), "Unable to marshal to string.")
 	}
 	return strings.Join(lines, "")
 }

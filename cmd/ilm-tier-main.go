@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,31 +19,28 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminUserSubcommands = []cli.Command{
-	adminUserAddCmd,
-	adminUserDisableCmd,
-	adminUserEnableCmd,
-	adminUserRemoveCmd,
-	adminUserListCmd,
-	adminUserInfoCmd,
-	adminUserPolicyCmd,
-	adminUserSvcAcctCmd,
-	adminUserSTSAcctCmd,
+var ilmTierSubcommands = []cli.Command{
+	adminTierInfoCmd,
+	adminTierListCmd,
+	adminTierAddCmd,
+	adminTierEditCmd,
+	ilmTierUpdateCmd,
+	adminTierVerifyCmd,
+	ilmTierCheckCmd,
+	adminTierRmCmd,
 }
 
-var adminUserCmd = cli.Command{
-	Name:            "user",
-	Usage:           "manage users",
-	Action:          mainAdminUser,
+var ilmTierCmd = cli.Command{
+	Name:            "tier",
+	Usage:           "manage remote tiers",
+	Action:          mainILMTier,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminUserSubcommands,
+	Subcommands:     ilmTierSubcommands,
 	HideHelpCommand: true,
 }
 
-// mainAdminUser is the handle for "mc admin config" command.
-func mainAdminUser(ctx *cli.Context) error {
-	commandNotFound(ctx, adminUserSubcommands)
+func mainILMTier(ctx *cli.Context) error {
+	commandNotFound(ctx, ilmTierSubcommands)
 	return nil
-	// Sub-commands like "get", "set" have their own main.
 }
