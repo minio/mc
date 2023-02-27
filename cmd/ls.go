@@ -94,6 +94,8 @@ func (c contentMessage) JSON() string {
 // Use OS separator and adds a trailing separator if it is a dir
 func getOSDependantKey(path string, isDir bool) string {
 	sep := "/"
+	
+	path = getStandardizedURL(path)
 
 	if isDir && !strings.HasSuffix(path, sep) {
 		return fmt.Sprintf("%s%s", path, sep)
