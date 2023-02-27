@@ -95,6 +95,8 @@ func (c contentMessage) JSON() string {
 func getOSDependantKey(path string, isDir bool) string {
 	sep := "/"
 
+	path = getStandardizedURL(path)
+
 	if isDir && !strings.HasSuffix(path, sep) {
 		return fmt.Sprintf("%s%s", path, sep)
 	}
