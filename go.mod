@@ -3,7 +3,7 @@ module github.com/minio/mc
 go 1.19
 
 require (
-	github.com/charmbracelet/bubbletea v0.23.1
+	github.com/charmbracelet/bubbletea v0.23.2
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.14.1
@@ -19,10 +19,10 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v2 v2.0.13-0.20230220143547-e6641ef0b8d5
+	github.com/minio/madmin-go/v2 v2.0.15-0.20230227182557-14091d909631
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.47
-	github.com/minio/pkg v1.6.1
+	github.com/minio/minio-go/v7 v7.0.49
+	github.com/minio/pkg v1.6.3
 	github.com/minio/selfupdate v0.6.0
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -34,7 +34,7 @@ require (
 	github.com/rs/xid v1.4.0
 	github.com/shirou/gopsutil/v3 v3.23.1
 	github.com/tidwall/gjson v1.14.4
-	golang.org/x/crypto v0.5.0 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/net v0.7.0
 	golang.org/x/text v0.7.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -45,20 +45,23 @@ require (
 require (
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/gdamore/tcell/v2 v2.5.4
-	github.com/golang-jwt/jwt/v4 v4.4.3
+	github.com/gdamore/tcell/v2 v2.6.0
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.3.0
-	github.com/rivo/tview v0.0.0-20230130130022-4a1b7a76c01c
+	github.com/rivo/tview v0.0.0-20230208211350-7dfff1ce7854
 	golang.org/x/term v0.5.0
 )
 
 require (
 	aead.dev/minisign v0.2.0 // indirect
-	github.com/kr/pretty v0.2.1 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
+	github.com/minio/mux v1.9.0 // indirect
+	github.com/rogpeppe/go-internal v1.8.1 // indirect
+	go.uber.org/goleak v1.2.0 // indirect
 )
 
 require (
@@ -76,7 +79,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.4.4
-	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
@@ -94,13 +97,13 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20221106050444-61f0cd9a192a // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/termenv v0.13.0 // indirect
+	github.com/muesli/termenv v0.14.0 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
-	github.com/prometheus/common v0.39.0 // indirect
+	github.com/prometheus/common v0.40.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/rivo/uniseg v0.4.3 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/secure-io/sio-go v0.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -117,8 +120,8 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0
-	google.golang.org/genproto v0.0.0-20230131230820-1c016267d619 // indirect
-	google.golang.org/grpc v1.52.3 // indirect
+	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148 // indirect
+	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
