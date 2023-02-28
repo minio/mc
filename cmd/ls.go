@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -108,6 +109,13 @@ func getKey(c *ClientContent) string {
 	return getOSDependantKey(c.URL.Path, c.Type.IsDir())
 }
 
+func getMessageKey(c *ClientContent) string {
+	if runtime.GOOS == "windows" {
+		return strings.Replace(getKey(c), "\\", "/", -1)
+	}
+	return getKey(c)
+}
+
 // Generate printable listing from a list of sorted client
 // contents, the latest created content comes first.
 func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAllVersions bool) (msgs []contentMessage) {
@@ -143,7 +151,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		md5sum = strings.TrimSuffix(md5sum, "\"")
 		contentMsg.ETag = md5sum
 		// Convert OS Type to match console file printing style.
-		contentMsg.Key = getKey(c)
+		contentMsg.Key = getMessageKey(c)
 		contentMsg.VersionID = c.VersionID
 		contentMsg.IsDeleteMarker = c.IsDeleteMarker
 		contentMsg.VersionOrd = nrVersions - i
