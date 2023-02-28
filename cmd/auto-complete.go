@@ -98,11 +98,6 @@ func completeS3Path(s3Path string) (prediction []string) {
 	// to the path that we want to complete
 	for content := range clnt.List(globalContext, ListOptions{Recursive: false, ShowDir: DirFirst}) {
 		cmplS3Path := alias + getKey(content)
-		if content.Type.IsDir() {
-			if !strings.HasSuffix(cmplS3Path, "/") {
-				cmplS3Path += "/"
-			}
-		}
 		if strings.HasPrefix(cmplS3Path, s3Path) {
 			prediction = append(prediction, cmplS3Path)
 		}
