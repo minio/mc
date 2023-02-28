@@ -93,7 +93,7 @@ func (c contentMessage) JSON() string {
 
 // Use OS separator and adds a trailing separator if it is a dir
 func getOSDependantKey(path string, isDir bool) string {
-	sep := "/"
+	sep := string(filepath.Separator)
 
 	path = getStandardizedURL(path)
 
