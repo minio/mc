@@ -48,6 +48,10 @@ var (
 			Name:  "rewind",
 			Usage: "include all object versions no later than specified date",
 		},
+		cli.StringFlag{
+			Name:  "block-size",
+			Usage: "display summarize disk usage units (eg 'KB', 'k', 'm')",
+		},
 		cli.BoolFlag{
 			Name:  "versions",
 			Usage: "include all object versions",
@@ -82,26 +86,61 @@ EXAMPLES:
   2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
      {{.Prompt}} {{.HelpName}} --depth=2 s3/jazz-songs/louis/
 
-  3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time
+  3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time.
      {{.Prompt}} {{.HelpName}} --rewind "2020.01.01" s3/jazz-songs/
 
-  4. Summarize disk usage of 'jazz-songs' bucket with all objects versions
+  4. Summarize disk usage of 'jazz-songs' bucket with all objects versions.
      {{.Prompt}} {{.HelpName}} --versions s3/jazz-songs/
+
+  5. Summarize disk usage of 'jazz-songs' bucket recursively, display use mb units.
+     {{.Prompt}} {{.HelpName}} --block-size mb s3/jazz-songs
 `,
 }
 
 // Structured message depending on the type of console.
 type duMessage struct {
 	Prefix     string `json:"prefix"`
+	BlockSize  string `json:"blockSize"`
 	Size       int64  `json:"size"`
 	Objects    int64  `json:"objects"`
 	Status     string `json:"status"`
 	IsVersions bool   `json:"isVersions"`
 }
 
+type matchDuOpts struct {
+	urlStr       string
+	timeRef      time.Time
+	withVersions bool
+	depth        int
+	encKeyDB     map[string][]prefixSSEPair
+	blockSize    string
+}
+
+func formatSize(r duMessage) string {
+	if r.BlockSize == "b" || r.BlockSize == "b" {
+		return fmt.Sprintf("%.2fB", float64(r.Size)/float64(1))
+	}
+	if r.BlockSize == "k" || r.BlockSize == "kb" {
+		return fmt.Sprintf("%.2fKB", float64(r.Size)/float64(1024))
+	}
+	if r.BlockSize == "m" || r.BlockSize == "mb" {
+		return fmt.Sprintf("%.2fMB", float64(r.Size)/float64(1024*1024))
+	}
+	if r.BlockSize == "g" || r.BlockSize == "gb" {
+		return fmt.Sprintf("%.2fGB", float64(r.Size)/float64(1024*1024*1024))
+	}
+	if r.BlockSize == "t" || r.BlockSize == "tb" {
+		return fmt.Sprintf("%.2fTB", float64(r.Size)/float64(1024*1024*1024*1024))
+	}
+	if r.BlockSize == "p" || r.BlockSize == "pb" {
+		return fmt.Sprintf("%.2fPB", float64(r.Size)/float64(1024*1024*1024*1024*1024))
+	}
+	return strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
+}
+
 // Colorized message for console printing.
 func (r duMessage) String() string {
-	humanSize := strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
+	size := formatSize(r)
 	cnt := fmt.Sprintf("%d object", r.Objects)
 	if r.IsVersions {
 		cnt = fmt.Sprintf("%d version", r.Objects)
@@ -109,7 +148,7 @@ func (r duMessage) String() string {
 	if r.Objects != 1 {
 		cnt += "s" // pluralize
 	}
-	return fmt.Sprintf("%s\t%s\t%s", console.Colorize("Size", humanSize),
+	return fmt.Sprintf("%s\t%s\t%s", console.Colorize("Size", size),
 		console.Colorize("Objects", cnt),
 		console.Colorize("Prefix", r.Prefix))
 }
@@ -121,8 +160,8 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (sz, objs int64, err error) {
-	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
+func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
+	targetAlias, targetURL, _ := mustExpandAlias(opts.urlStr)
 
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
@@ -130,19 +169,19 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(urlStr), "Failed to summarize disk usage `"+urlStr+"`.")
+		errorIf(pErr.Trace(opts.urlStr), "Failed to summarize disk usage `"+opts.urlStr+"`.")
 		return 0, 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
 	// No disk usage details below this level,
 	// just do a recursive listing
-	recursive := depth == 1
+	recursive := opts.depth == 1
 
 	targetAbsolutePath := path.Clean(clnt.GetURL().String())
 
 	contentCh := clnt.List(ctx, ListOptions{
-		TimeRef:           timeRef,
-		WithOlderVersions: withVersions,
+		TimeRef:           opts.timeRef,
+		WithOlderVersions: opts.withVersions,
 		Recursive:         recursive,
 		ShowDir:           DirFirst,
 	})
@@ -158,7 +197,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}
-			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
+			errorIf(content.Err.Trace(opts.urlStr), "Failed to find disk usage of `"+opts.urlStr+"` recursively.")
 			return 0, 0, exitStatus(globalErrorExitStatus)
 		}
 
@@ -167,7 +206,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		}
 
 		if content.Type.IsDir() && !recursive {
-			depth := depth
+			depth := opts.depth
 			if depth > 0 {
 				depth--
 			}
@@ -176,7 +215,8 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			used, n, err := du(ctx, subDirAlias, timeRef, withVersions, depth, encKeyDB)
+			opts.urlStr = subDirAlias
+			used, n, err := du(ctx, opts)
 			if err != nil {
 				return 0, 0, err
 			}
@@ -190,7 +230,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		}
 	}
 
-	if depth != 0 {
+	if opts.depth != 0 {
 		u, e := url.Parse(targetURL)
 		if e != nil {
 			panic(e)
@@ -201,28 +241,15 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			Size:       size,
 			Objects:    objects,
 			Status:     "success",
-			IsVersions: withVersions,
+			IsVersions: opts.withVersions,
+			BlockSize:  opts.blockSize,
 		})
 	}
 
 	return size, objects, nil
 }
 
-// main for du command.
-func mainDu(cliCtx *cli.Context) error {
-	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, 1)
-	}
-
-	// Set colors.
-	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
-	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
-	console.SetColor("Objects", color.New(color.FgGreen))
-	console.SetColor("Size", color.New(color.FgYellow))
-
-	ctx, cancelRm := context.WithCancel(globalContext)
-	defer cancelRm()
-
+func matchingDuOpts(cliCtx *cli.Context) (opts matchDuOpts) {
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
@@ -242,13 +269,39 @@ func mainDu(cliCtx *cli.Context) error {
 	withVersions := cliCtx.Bool("versions")
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 
+	blockSizeStr := cliCtx.String("block-size")
+	_, e := humanize.ParseBytes("1" + blockSizeStr)
+	fatalIf(probe.NewError(e).Trace(blockSizeStr), "invalid suffix in --block-size argument '"+blockSizeStr+"'")
+	opts.depth = depth
+	opts.blockSize = strings.ToLower(blockSizeStr)
+	opts.encKeyDB = encKeyDB
+	opts.withVersions = withVersions
+	opts.timeRef = timeRef
+	return
+}
+
+// main for du command.
+func mainDu(cliCtx *cli.Context) error {
+	if !cliCtx.Args().Present() {
+		showCommandHelpAndExit(cliCtx, 1)
+	}
+
+	// Set colors.
+	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Objects", color.New(color.FgGreen))
+	console.SetColor("Size", color.New(color.FgYellow))
+
+	ctx, cancelRm := context.WithCancel(globalContext)
+	defer cancelRm()
+	matchDuOpts := matchingDuOpts(cliCtx)
 	var duErr error
 	for _, urlStr := range cliCtx.Args() {
 		if !isAliasURLDir(ctx, urlStr, nil, time.Time{}) {
 			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}
-
-		if _, _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
+		matchDuOpts.urlStr = urlStr
+		if _, _, err := du(ctx, matchDuOpts); duErr == nil {
 			duErr = err
 		}
 	}
