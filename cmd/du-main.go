@@ -107,6 +107,7 @@ type duMessage struct {
 	IsVersions bool   `json:"isVersions"`
 }
 
+// matchDuOpts is structure to encapsulate
 type matchDuOpts struct {
 	urlStr       string
 	timeRef      time.Time
@@ -116,24 +117,28 @@ type matchDuOpts struct {
 	blockSize    string
 }
 
+// Convert units
 func formatSize(r duMessage) string {
 	if r.BlockSize == "b" || r.BlockSize == "b" {
 		return fmt.Sprintf("%.2fB", float64(r.Size)/float64(1))
 	}
-	if r.BlockSize == "k" || r.BlockSize == "kb" {
-		return fmt.Sprintf("%.2fKB", float64(r.Size)/float64(1024))
+	if r.BlockSize == "k" || r.BlockSize == "kb" || r.BlockSize == "kib" {
+		return fmt.Sprintf("%.2fKiB", float64(r.Size)/float64(1024))
 	}
-	if r.BlockSize == "m" || r.BlockSize == "mb" {
-		return fmt.Sprintf("%.2fMB", float64(r.Size)/float64(1024*1024))
+	if r.BlockSize == "m" || r.BlockSize == "mb" || r.BlockSize == "mib" {
+		return fmt.Sprintf("%.2fMiB", float64(r.Size)/float64(1024*1024))
 	}
-	if r.BlockSize == "g" || r.BlockSize == "gb" {
-		return fmt.Sprintf("%.2fGB", float64(r.Size)/float64(1024*1024*1024))
+	if r.BlockSize == "g" || r.BlockSize == "gb" || r.BlockSize == "gib" {
+		return fmt.Sprintf("%.2fGiB", float64(r.Size)/float64(1024*1024*1024))
 	}
-	if r.BlockSize == "t" || r.BlockSize == "tb" {
-		return fmt.Sprintf("%.2fTB", float64(r.Size)/float64(1024*1024*1024*1024))
+	if r.BlockSize == "t" || r.BlockSize == "tb" || r.BlockSize == "tib" {
+		return fmt.Sprintf("%.2fTiB", float64(r.Size)/float64(1024*1024*1024*1024))
 	}
-	if r.BlockSize == "p" || r.BlockSize == "pb" {
-		return fmt.Sprintf("%.2fPB", float64(r.Size)/float64(1024*1024*1024*1024*1024))
+	if r.BlockSize == "p" || r.BlockSize == "pb" || r.BlockSize == "pib" {
+		return fmt.Sprintf("%.2fPiB", float64(r.Size)/float64(1024*1024*1024*1024*1024))
+	}
+	if r.BlockSize == "e" || r.BlockSize == "pb" || r.BlockSize == "eib" {
+		return fmt.Sprintf("%.2fEiB", float64(r.Size)/float64(1024*1024*1024*1024*1024*1024))
 	}
 	return strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
 }
