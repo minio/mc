@@ -120,7 +120,7 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 		}
 	}()
 
-	if e := p.Start(); e != nil {
+	if _, e := p.Run(); e != nil {
 		cancel()
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top API events")
 	}

@@ -18,12 +18,21 @@
 package cmd
 
 import (
+	"io"
 	"os"
+	"runtime/debug"
 	"syscall"
 
+	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7"
 )
+
+func defaultPartSize() string {
+	_, partSize, _, _ := minio.OptimalPartInfo(-1, 0)
+	return humanize.IBytes(uint64(partSize))
+}
 
 var pipeFlags = []cli.Flag{
 	cli.StringFlag{
@@ -41,6 +50,21 @@ var pipeFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "tags",
 		Usage: "apply one or more tags to the uploaded objects",
+	},
+	cli.IntFlag{
+		Name:  "concurrent",
+		Value: 1,
+		Usage: "allow N concurrent uploads [WARNING: will use more memory use it with caution]",
+	},
+	cli.StringFlag{
+		Name:  "part-size",
+		Value: defaultPartSize(),
+		Usage: "customize chunk size for each concurrent upload",
+	},
+	cli.IntFlag{
+		Name:   "pipe-max-size",
+		Usage:  "increase the pipe buffer size to a custom value",
+		Hidden: true,
 	},
 }
 
@@ -89,23 +113,51 @@ EXAMPLES:
 `,
 }
 
-func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair, storageClass string, meta map[string]string) *probe.Error {
+func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPair, meta map[string]string) *probe.Error {
+	// If possible increase the pipe buffer size
+	if e := increasePipeBufferSize(os.Stdin, ctx.Int("pipe-max-size")); e != nil {
+		fatalIf(probe.NewError(e), "Unable to increase custom pipe-max-size")
+	}
+
 	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin, -1).Trace()
 	}
+
+	storageClass := ctx.String("storage-class")
 	alias, _ := url2Alias(targetURL)
 	sseKey := getSSE(targetURL, encKeyDB[alias])
+
+	multipartThreads := ctx.Int("concurrent")
+	if multipartThreads > 1 {
+		// We will be allocating large buffers, reduce default GC overhead
+		debug.SetGCPercent(20)
+	}
+
+	var multipartSize uint64
+	var e error
+	if partSizeStr := ctx.String("part-size"); partSizeStr != "" {
+		multipartSize, e = humanize.ParseBytes(partSizeStr)
+		if e != nil {
+			return probe.NewError(e)
+		}
+	}
 
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
 	opts := PutOptions{
-		sse:          sseKey,
-		storageClass: storageClass,
-		metadata:     meta,
+		sse:              sseKey,
+		storageClass:     storageClass,
+		metadata:         meta,
+		multipartSize:    multipartSize,
+		multipartThreads: uint(multipartThreads),
+		concurrentStream: ctx.IsSet("concurrent"),
 	}
-	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, opts)
+
+	pg := newProgressBar(0)
+
+	_, err := putTargetStreamWithURL(targetURL, io.TeeReader(os.Stdin, pg), -1, opts)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
@@ -142,12 +194,12 @@ func mainPipe(ctx *cli.Context) error {
 		meta["X-Amz-Tagging"] = tags
 	}
 	if len(ctx.Args()) == 0 {
-		err = pipe("", nil, ctx.String("storage-class"), meta)
+		err = pipe(ctx, "", nil, meta)
 		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
 	} else {
 		// extract URLs.
 		URLs := ctx.Args()
-		err = pipe(URLs[0], encKeyDB, ctx.String("storage-class"), meta)
+		err = pipe(ctx, URLs[0], encKeyDB, meta)
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
 

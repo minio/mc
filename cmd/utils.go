@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,7 +35,6 @@ import (
 	"time"
 
 	"github.com/mattn/go-ieproxy"
-	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
@@ -420,23 +420,19 @@ func centerText(s string, w int) string {
 	return sb.String()
 }
 
-func getAliasAndBucket(ctx *cli.Context) (string, string) {
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	aliasedURL = filepath.Clean(aliasedURL)
-	return url2Alias(aliasedURL)
-}
-
 func getClient(aliasURL string) *madmin.AdminClient {
 	client, err := newAdminClient(aliasURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 	return client
 }
 
-func httpClient(timeout time.Duration) *http.Client {
+func httpClient(reqTimeout time.Duration) *http.Client {
 	return &http.Client{
-		Timeout: timeout,
+		Timeout: reqTimeout,
 		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: 10 * time.Second,
+			}).DialContext,
 			Proxy: ieproxy.GetProxyFunc(),
 			TLSClientConfig: &tls.Config{
 				RootCAs: globalRootCAs,
@@ -445,6 +441,9 @@ func httpClient(timeout time.Duration) *http.Client {
 				// Can't use TLSv1.1 because of RC4 cipher usage
 				MinVersion: tls.VersionTLS12,
 			},
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
 		},
 	}
 }

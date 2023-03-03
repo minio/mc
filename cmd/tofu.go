@@ -158,9 +158,9 @@ func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x5
 // fetchPeerCertificate uses the given transport to fetch the peer
 // certificate from the given endpoint.
 func fetchPeerCertificate(ctx context.Context, endpoint string) (*x509.Certificate, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
+	req, e := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if e != nil {
+		return nil, e
 	}
 	client := http.Client{
 		Transport: &http.Transport{
@@ -169,9 +169,9 @@ func fetchPeerCertificate(ctx context.Context, endpoint string) (*x509.Certifica
 			},
 		},
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	resp, e := client.Do(req)
+	if e != nil {
+		return nil, e
 	}
 	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
 		return nil, fmt.Errorf("Unable to read remote TLS certificate")

@@ -7,13 +7,9 @@ linters:
     - govet
     - revive
     - ineffassign
-    - deadcode
-    - structcheck
     - gomodguard
     - gofmt
     - unused
-    - structcheck
-    - varcheck
     - gofumpt
 
 linters-settings:

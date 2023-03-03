@@ -83,8 +83,8 @@ func mainAdminIDPLdapPolicyDetach(ctx *cli.Context) error {
 	group := ctx.String("group")
 
 	if user == "" && group == "" {
-		err := errors.New("at least one of --user or --group is required.")
-		fatalIf(probe.NewError(err), "Missing flag in command")
+		e := errors.New("at least one of --user or --group is required.")
+		fatalIf(probe.NewError(e), "Missing flag in command")
 	}
 
 	args := ctx.Args()

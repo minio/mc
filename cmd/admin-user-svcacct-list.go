@@ -61,7 +61,7 @@ func checkAdminUserSvcAcctListSyntax(ctx *cli.Context) {
 func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 	checkAdminUserSvcAcctListSyntax(ctx)
 
-	console.SetColor("SVCMessage", color.New(color.FgGreen))
+	console.SetColor("AccMessage", color.New(color.FgGreen))
 	console.SetColor("AccessKey", color.New(color.FgBlue))
 
 	// Get the alias parameter from cli
@@ -77,7 +77,7 @@ func mainAdminUserSvcAcctList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list service accounts")
 
 	for _, svc := range svcList.Accounts {
-		printMsg(svcAcctMessage{
+		printMsg(acctMessage{
 			op:        svcAccOpList,
 			AccessKey: svc,
 		})

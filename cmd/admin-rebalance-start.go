@@ -43,7 +43,7 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-EXAMPLES:
+xEXAMPLES:
   1. Start rebalance on a MinIO deployment with alias myminio
      {{.Prompt}} {{.HelpName}} myminio
 `,
@@ -57,8 +57,8 @@ type rebalanceStartMsg struct {
 
 func (r rebalanceStartMsg) JSON() string {
 	r.Status = "success"
-	b, err := json.MarshalIndent(r, "", " ")
-	fatalIf(probe.NewError(err), "Unable to marshal to JSON")
+	b, e := json.MarshalIndent(r, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal to JSON")
 	return string(b)
 }
 

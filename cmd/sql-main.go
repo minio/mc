@@ -328,9 +328,9 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 		}
 	}
 	br := bufio.NewReader(r)
-	line, _, err := br.ReadLine()
-	if err != nil {
-		return nil, probe.NewError(err)
+	line, _, e := br.ReadLine()
+	if e != nil {
+		return nil, probe.NewError(e)
 	}
 	return strings.Split(string(line), ","), nil
 }

@@ -32,8 +32,8 @@ type fsComplete struct{}
 
 // predictPathWithTilde completes an FS path which starts with a `~/`
 func (fs fsComplete) predictPathWithTilde(a complete.Args) []string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil || homeDir == "" {
+	homeDir, e := os.UserHomeDir()
+	if e != nil || homeDir == "" {
 		return nil
 	}
 	// Clean the home directory path
@@ -414,6 +414,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/user/svcacct/enable":  aliasCompleter,
 	"/admin/user/svcacct/disable": aliasCompleter,
 
+	"/admin/user/sts/info": aliasCompleter,
+
 	"/admin/group/add":     aliasCompleter,
 	"/admin/group/disable": aliasCompleter,
 	"/admin/group/enable":  aliasCompleter,
@@ -421,12 +423,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/admin/bucket/remote/add":       aliasCompleter,
-	"/admin/bucket/remote/edit":      aliasCompleter,
-	"/admin/bucket/remote/rm":        aliasCompleter,
-	"/admin/bucket/remote/bandwidth": aliasCompleter,
-	"/admin/bucket/quota":            aliasCompleter,
-	"/admin/bucket/info":             s3Complete{deepLevel: 2},
+	"/admin/bucket/remote/add":  aliasCompleter,
+	"/admin/bucket/remote/edit": aliasCompleter,
+	"/admin/bucket/remote/rm":   aliasCompleter,
+	"/admin/bucket/quota":       aliasCompleter,
+	"/admin/bucket/info":        s3Complete{deepLevel: 2},
 
 	"/admin/kms/key/create": aliasCompleter,
 	"/admin/kms/key/status": aliasCompleter,
@@ -449,9 +450,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/ilm/tier/rm":     nil,
 
 	"/admin/replicate/add":           aliasCompleter,
+	"/admin/replicate/update":        aliasCompleter,
 	"/admin/replicate/edit":          aliasCompleter,
 	"/admin/replicate/info":          aliasCompleter,
 	"/admin/replicate/status":        aliasCompleter,
+	"/admin/replicate/rm":            aliasCompleter,
 	"/admin/replicate/remove":        aliasCompleter,
 	"/admin/replicate/resync/start":  aliasCompleter,
 	"/admin/replicate/resync/cancel": aliasCompleter,
