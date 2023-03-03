@@ -13,13 +13,13 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/json-iterator/go v1.1.12
-	github.com/klauspost/compress v1.15.15
+	github.com/klauspost/compress v1.16.0
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.17
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v2 v2.0.15-0.20230227182557-14091d909631
+	github.com/minio/madmin-go/v2 v2.0.15
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.49
 	github.com/minio/pkg v1.6.3
@@ -32,7 +32,7 @@ require (
 	github.com/prometheus/prom2json v1.3.2
 	github.com/rjeczalik/notify v0.9.3
 	github.com/rs/xid v1.4.0
-	github.com/shirou/gopsutil/v3 v3.23.1
+	github.com/shirou/gopsutil/v3 v3.23.2
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/net v0.7.0
@@ -52,7 +52,7 @@ require (
 	github.com/navidys/tvxwidgets v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.3.0
-	github.com/rivo/tview v0.0.0-20230208211350-7dfff1ce7854
+	github.com/rivo/tview v0.0.0-20230226195229-47e7db7885b4
 	golang.org/x/term v0.5.0
 )
 
@@ -65,7 +65,7 @@ require (
 )
 
 require (
-	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect
+	github.com/aymanbagabas/go-osc52 v1.2.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
@@ -78,7 +78,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.4.4
+	github.com/jedib0t/go-pretty/v6 v6.4.6
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
@@ -101,7 +101,7 @@ require (
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
-	github.com/prometheus/common v0.40.0 // indirect
+	github.com/prometheus/common v0.41.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/secure-io/sio-go v0.3.1 // indirect
@@ -120,7 +120,7 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0
-	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148 // indirect
+	google.golang.org/genproto v0.0.0-20230301171018-9ab4bdc49ad5 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
