@@ -18,8 +18,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
+	"github.com/minio/mc/pkg/probe"
 )
 
 var adminPolicyUpdateCmd = cli.Command{
@@ -28,12 +30,14 @@ var adminPolicyUpdateCmd = cli.Command{
 	Action:             mainAdminPolicyUpdateErr,
 	OnUsageError:       onUsageError,
 	Before:             setGlobalsFromContext,
+	Flags:              globalFlags,
 	HideHelpCommand:    true,
 	Hidden:             true,
 	CustomHelpTemplate: `Please use 'mc admin policy attach'`,
 }
 
 func mainAdminPolicyUpdateErr(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc admin policy attach'")
+	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy attach'"))
+	fatal(err, "Incorrect command")
 	return nil
 }

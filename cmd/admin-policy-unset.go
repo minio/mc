@@ -18,8 +18,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
+	"github.com/minio/mc/pkg/probe"
 )
 
 var adminPolicyUnsetCmd = cli.Command{
@@ -28,12 +30,14 @@ var adminPolicyUnsetCmd = cli.Command{
 	Action:             mainAdminPolicyUnsetErr,
 	OnUsageError:       onUsageError,
 	Before:             setGlobalsFromContext,
+	Flags:              globalFlags,
 	HideHelpCommand:    true,
 	Hidden:             true,
 	CustomHelpTemplate: `Please use 'mc admin policy detach'`,
 }
 
 func mainAdminPolicyUnsetErr(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc admin policy detach'")
+	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy detach'"))
+	fatal(err, "Incorrect command")
 	return nil
 }

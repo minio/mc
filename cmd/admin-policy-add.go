@@ -24,20 +24,20 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminPolicySetCmd = cli.Command{
-	Name:               "set",
-	Usage:              "set IAM policy on a user or group",
-	Action:             mainAdminPolicySet,
+var adminPolicyAddCmd = cli.Command{
+	Name:               "add",
+	Usage:              "add an IAM policy",
+	Action:             mainAdminPolicyAdd,
 	OnUsageError:       onUsageError,
 	Before:             setGlobalsFromContext,
 	Flags:              globalFlags,
 	HideHelpCommand:    true,
 	Hidden:             true,
-	CustomHelpTemplate: `Please use 'mc admin policy attach'`,
+	CustomHelpTemplate: `Please use 'mc admin policy create'`,
 }
 
-func mainAdminPolicySet(ctx *cli.Context) error {
-	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy attach'"))
+func mainAdminPolicyAdd(ctx *cli.Context) error {
+	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy create'"))
 	fatal(err, "Incorrect command")
 	return nil
 }
