@@ -108,7 +108,7 @@ func getKey(c *ClientContent) string {
 
 // Generate printable listing from a list of sorted client
 // contents, the latest created content comes first.
-func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAllVersions bool) (msgs []contentMessage) {
+func generateContentMessage(clntURL ClientURL, c *ClientContent, versionOrd int) (msg contentMessage) {
 	prefixPath := clntURL.Path
 	prefixPath = filepath.ToSlash(prefixPath)
 	if !strings.HasSuffix(prefixPath, "/") {
@@ -116,46 +116,37 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 	}
 	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
-	nrVersions := len(ctnts)
+	// Convert any os specific delimiters to "/".
+	contentURL := filepath.ToSlash(c.URL.Path)
+	// Trim prefix path from the content path.
+	c.URL.Path = strings.TrimPrefix(contentURL, prefixPath)
 
-	for i, c := range ctnts {
-		// Convert any os specific delimiters to "/".
-		contentURL := filepath.ToSlash(c.URL.Path)
-		// Trim prefix path from the content path.
-		c.URL.Path = strings.TrimPrefix(contentURL, prefixPath)
+	contentMsg := contentMessage{}
+	contentMsg.Time = c.Time.Local()
 
-		contentMsg := contentMessage{}
-		contentMsg.Time = c.Time.Local()
-
-		// guess file type.
-		contentMsg.Filetype = func() string {
-			if c.Type.IsDir() {
-				return "folder"
-			}
-			return "file"
-		}()
-
-		contentMsg.Size = c.Size
-		contentMsg.StorageClass = c.StorageClass
-		md5sum := strings.TrimPrefix(c.ETag, "\"")
-		md5sum = strings.TrimSuffix(md5sum, "\"")
-		contentMsg.ETag = md5sum
-		// Convert OS Type to match console file printing style.
-		contentMsg.Key = getKey(c)
-		contentMsg.VersionID = c.VersionID
-		contentMsg.IsDeleteMarker = c.IsDeleteMarker
-		contentMsg.VersionOrd = nrVersions - i
-		// URL is empty by default
-		// Set it to either relative dir (host) or public url (remote)
-		contentMsg.URL = clntURL.String()
-
-		msgs = append(msgs, contentMsg)
-
-		if !printAllVersions {
-			break
+	// guess file type.
+	contentMsg.Filetype = func() string {
+		if c.Type.IsDir() {
+			return "folder"
 		}
-	}
-	return
+		return "file"
+	}()
+
+	contentMsg.Size = c.Size
+	contentMsg.StorageClass = c.StorageClass
+	md5sum := strings.TrimPrefix(c.ETag, "\"")
+	md5sum = strings.TrimSuffix(md5sum, "\"")
+	contentMsg.ETag = md5sum
+	// Convert OS Type to match console file printing style.
+	contentMsg.Key = getKey(c)
+	contentMsg.VersionID = c.VersionID
+	contentMsg.IsDeleteMarker = c.IsDeleteMarker
+	contentMsg.VersionOrd = versionOrd
+	// URL is empty by default
+	// Set it to either relative dir (host) or public url (remote)
+	contentMsg.URL = clntURL.String()
+
+	return contentMsg
 }
 
 func sortObjectVersions(ctntVersions []*ClientContent) {
@@ -192,12 +183,9 @@ func (s summaryMessage) JSON() string {
 }
 
 // Pretty print the list of versions belonging to one object
-func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions, isSummary bool) {
-	sortObjectVersions(ctntVersions)
-	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
-	for _, msg := range msgs {
-		printMsg(msg)
-	}
+func printObjectVersion(clntURL ClientURL, ctntVersion *ClientContent, versionOrd int) {
+	msg := generateContentMessage(clntURL, ctntVersion, versionOrd)
+	printMsg(msg)
 }
 
 type doListOptions struct {
@@ -213,11 +201,11 @@ type doListOptions struct {
 // doList - list all entities inside a folder.
 func doList(ctx context.Context, clnt Client, o doListOptions) error {
 	var (
-		lastPath          string
-		perObjectVersions []*ClientContent
-		cErr              error
-		totalSize         int64
-		totalObjects      int64
+		lastPath            string
+		objectVersionsCount int
+		cErr                error
+		totalSize           int64
+		totalObjects        int64
 	)
 
 	for content := range clnt.List(ctx, ListOptions{
@@ -240,18 +228,18 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		}
 
 		if lastPath != content.URL.Path {
-			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions, o.isSummary)
-			lastPath = content.URL.Path
-			perObjectVersions = []*ClientContent{}
+			objectVersionsCount = 0
 		}
 
-		perObjectVersions = append(perObjectVersions, content)
+		lastPath = content.URL.Path
+
+		objectVersionsCount++
+		printObjectVersion(clnt.GetURL(), content, objectVersionsCount)
+
 		totalSize += content.Size
 		totalObjects++
-	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions, o.isSummary)
+	}
 
 	if o.isSummary {
 		printMsg(summaryMessage{
