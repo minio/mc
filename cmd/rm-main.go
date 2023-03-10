@@ -361,7 +361,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 			printMsg(msg)
 		}
 	} else {
-		printDryRunMsg(content)
+		printDryRunMsg(content, opts.withVersions)
 	}
 	return nil
 }
@@ -381,12 +381,12 @@ type removeOpts struct {
 	encKeyDB          map[string][]prefixSSEPair
 }
 
-func printDryRunMsg(content *ClientContent) {
+func printDryRunMsg(content *ClientContent, printModTime bool) {
 	if globalJSON {
 		return
 	}
-	if content.VersionID != "" {
-		fmt.Println("DRYRUN: Removing ", content.URL.Path, "version:", content.VersionID)
+	if printModTime {
+		fmt.Println("DRYRUN: Removing ", content.VersionID, content.Time.Format(printDate), content.URL.Path)
 		return
 	}
 	fmt.Println("DRYRUN: Removing ", content.URL.Path)
@@ -472,7 +472,7 @@ func listAndRemove(url string, opts removeOpts) error {
 					}
 
 					if opts.isFake {
-						printDryRunMsg(content)
+						printDryRunMsg(content, true)
 						continue
 					}
 
@@ -568,7 +568,7 @@ func listAndRemove(url string, opts removeOpts) error {
 				}
 			}
 		} else {
-			printDryRunMsg(content)
+			printDryRunMsg(content, opts.withVersions)
 		}
 	}
 
@@ -593,7 +593,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			}
 
 			if opts.isFake {
-				printDryRunMsg(content)
+				printDryRunMsg(content, true)
 				continue
 			}
 
