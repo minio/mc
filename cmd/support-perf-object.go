@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminSpeedtestCmd = cli.Command{
@@ -41,7 +42,7 @@ var adminSpeedtestCmd = cli.Command{
 }
 
 func mainAdminSpeedtest(ctx *cli.Context) error {
-	deprecatedError("mc support perf")
+	console.Infoln("Please use 'mc support perf'")
 	return nil
 }
 

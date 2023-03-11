@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var adminInspectCmd = cli.Command{
@@ -34,6 +35,6 @@ var adminInspectCmd = cli.Command{
 
 // mainAdminHeal - the entry function of heal command
 func mainAdminInspect(ctx *cli.Context) error {
-	deprecatedError("mc support inspect")
+	console.Infoln("Please use 'mc support inspect'")
 	return nil
 }

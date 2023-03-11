@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var policyFlags = []cli.Flag{
@@ -42,6 +43,6 @@ var policyCmd = cli.Command{
 }
 
 func mainPolicy(ctx *cli.Context) error {
-	deprecatedError("mc anonymous")
+	console.Infoln("Please use 'mc anonymous'")
 	return nil
 }

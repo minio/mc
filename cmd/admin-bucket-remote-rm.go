@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var adminBucketRemoteRmCmd = cli.Command{
@@ -34,6 +35,7 @@ var adminBucketRemoteRmCmd = cli.Command{
 
 // mainAdminBucketRemoteRemove is the handle for "mc admin bucket remote rm" command.
 func mainAdminBucketRemoteRemove(ctx *cli.Context) error {
-	deprecatedError("mc replicate rm")
+	console.Infoln("Please use 'mc replicate rm'")
+
 	return nil
 }

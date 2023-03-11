@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var adminProfileSubcommands = []cli.Command{
@@ -40,6 +41,6 @@ var adminProfileCmd = cli.Command{
 
 // mainAdminProfile is the handle for "mc admin profile" command.
 func mainAdminProfile(ctx *cli.Context) error {
-	deprecatedError("mc support profile")
+	console.Infoln("Please use 'mc support profile'")
 	return nil
 }

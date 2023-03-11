@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var supportRegisterFlags = append([]cli.Flag{
@@ -39,6 +40,6 @@ var supportRegisterCmd = cli.Command{
 }
 
 func mainSupportRegister(ctx *cli.Context) error {
-	deprecatedError("mc license register")
+	console.Infoln("Please use 'mc license register'")
 	return nil
 }

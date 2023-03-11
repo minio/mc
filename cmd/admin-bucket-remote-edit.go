@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var adminBucketRemoteEditCmd = cli.Command{
@@ -34,6 +35,6 @@ var adminBucketRemoteEditCmd = cli.Command{
 
 // mainAdminBucketRemoteEdit is the handle for "mc admin bucket remote edit" command.
 func mainAdminBucketRemoteEdit(ctx *cli.Context) error {
-	deprecatedError("mc replicate update")
+	console.Infoln("Please use 'mc replicate update'")
 	return nil
 }

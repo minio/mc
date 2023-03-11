@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var subnetHealthSubcommands = []cli.Command{
@@ -38,7 +39,7 @@ var adminSubnetCmd = cli.Command{
 
 // mainAdminSubnet is the handle for "mc admin subnet" command.
 func mainAdminSubnet(ctx *cli.Context) error {
-	deprecatedError("mc support")
+	console.Infoln("Please use 'mc support'")
 	return nil
 	// Sub-commands like "health", "register" have their own main.
 }

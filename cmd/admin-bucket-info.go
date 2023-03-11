@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
 )
 
 var adminBucketInfoFlags = []cli.Flag{}
@@ -36,6 +37,6 @@ var adminBucketInfoCmd = cli.Command{
 
 // mainAdminBucketInfo is the handler for "mc admin bucket info" command.
 func mainAdminBucketInfo(ctx *cli.Context) error {
-	deprecatedError("mc stat")
+	console.Infoln("Please use 'mc stat'")
 	return nil
 }
