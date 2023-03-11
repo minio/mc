@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
 )
 
 var adminTopAPIFlags = []cli.Flag{
@@ -54,6 +53,6 @@ var adminTopAPICmd = cli.Command{
 }
 
 func mainAdminTopAPI(ctx *cli.Context) error {
-	console.Infoln("Please use 'mc support top api'")
+	deprecatedError("mc support top api")
 	return nil
 }

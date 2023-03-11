@@ -172,3 +172,8 @@ func errorIf(err *probe.Error, msg string, data ...interface{}) {
 	}
 	console.Errorln(fmt.Sprintf("%s %s", msg, err))
 }
+
+func deprecatedError(newCommandName string) {
+	err := probe.NewError(fmt.Errorf("Please use '%s' instead", newCommandName))
+	fatal(err, "Deprecated command")
+}
