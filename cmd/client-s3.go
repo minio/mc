@@ -2753,9 +2753,12 @@ func (c *S3Client) DeleteEncryption(ctx context.Context) *probe.Error {
 // GetBucketInfo gets info about a bucket
 func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
 	var b BucketInfo
-	bucket, _ := c.url2BucketAndObject()
+	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return b, probe.NewError(BucketNameEmpty{})
+	}
+	if object != "" {
+		return b, probe.NewError(InvalidArgument{})
 	}
 	content, err := c.bucketStat(ctx, bucket)
 	if err != nil {
