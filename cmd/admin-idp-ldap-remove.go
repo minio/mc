@@ -17,7 +17,10 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v2"
+)
 
 var adminIDPLdapRemoveCmd = cli.Command{
 	Name:         "remove",
@@ -30,27 +33,22 @@ var adminIDPLdapRemoveCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [CFG_NAME]
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove the default LDAP IDP configuration (CFG_NAME is omitted).
+  1. Remove the default LDAP IDP configuration.
      {{.Prompt}} {{.HelpName}} play/
 `,
 }
 
 func mainAdminIDPLDAPRemove(ctx *cli.Context) error {
-	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1)
 	}
 
-	args := ctx.Args()
-
-	var cfgName string
-	if len(args) == 2 {
-		cfgName = args.Get(1)
-	}
+	var cfgName string = madmin.Default
 	return adminIDPRemove(ctx, false, cfgName)
 }
