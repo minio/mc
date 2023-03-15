@@ -209,7 +209,9 @@ func mainAdminLogs(ctx *cli.Context) error {
 		if node != "" {
 			logInfo.NodeName = ""
 		}
-		printMsg(logMessage{LogInfo: logInfo})
+		if logInfo.DeploymentID != "" {
+			printMsg(logMessage{LogInfo: logInfo})
+		}
 	}
 	return nil
 }

@@ -54,12 +54,12 @@ var (
 MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEaK31xujr6/rZ7ZfXZh3SlwovjC+X8wGq
 qkltaKyTLRENd4w3IRktYYCRgzpDLPn/nrf7snV/ERO5qcI7fkEES34IVEr+2Uff
 JkO2PfyyAYEO/5dBlPh1Undu9WQl6J7B
------END PUBLIC KEY-----`  // https://subnet.min.io/downloads/license-pubkey.pem
+-----END PUBLIC KEY-----` // https://subnet.min.io/downloads/license-pubkey.pem
 	subnetPublicKeyDev = `-----BEGIN PUBLIC KEY-----
 MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEbo+e1wpBY4tBq9AONKww3Kq7m6QP/TBQ
 mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 9NKlTdQFGF3+aO6jbQ4hX/S5qPyF+a3z
------END PUBLIC KEY-----`  // https://localhost:9000/downloads/license-pubkey.pem
+-----END PUBLIC KEY-----` // https://localhost:9000/downloads/license-pubkey.pem
 	subnetCommonFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "airgap",
@@ -175,7 +175,7 @@ func subnetAPIKeyAuthHeaders(apiKey string) subnetHeaders {
 }
 
 func getSubnetClient() *http.Client {
-	client := httpClient(10 * time.Second)
+	client := httpClient(0)
 	if globalSubnetProxyURL != nil {
 		client.Transport.(*http.Transport).Proxy = http.ProxyURL(globalSubnetProxyURL)
 	}
@@ -253,7 +253,9 @@ func getMinIOSubnetConfig(alias string) []madmin.SubsysConfig {
 
 	var e error
 	globalSubnetConfig, e = getMinIOSubSysConfig(client, madmin.SubnetSubSys)
-	fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+	if e != nil && e.Error() != "unknown sub-system subnet" {
+		fatal(probe.NewError(e), "Unable to get server config for subnet")
+	}
 
 	return globalSubnetConfig
 }
@@ -721,30 +723,41 @@ func uploadFileToSubnet(alias string, filename string, reqURL string, headers ma
 }
 
 func subnetUploadReq(url string, filename string) (*http.Request, error) {
-	file, e := os.Open(filename)
+	r, w := io.Pipe()
+	mwriter := multipart.NewWriter(w)
+	contentType := mwriter.FormDataContentType()
+
+	go func() {
+		var (
+			part io.Writer
+			e    error
+		)
+		defer func() {
+			mwriter.Close()
+			w.CloseWithError(e)
+		}()
+
+		part, e = mwriter.CreateFormFile("file", filepath.Base(filename))
+		if e != nil {
+			return
+		}
+
+		file, e := os.Open(filename)
+		if e != nil {
+			return
+		}
+		defer file.Close()
+
+		_, e = io.Copy(part, file)
+	}()
+
+	req, e := http.NewRequest(http.MethodPost, url, r)
 	if e != nil {
 		return nil, e
 	}
-	defer file.Close()
+	req.Header.Add("Content-Type", contentType)
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, e := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	if e != nil {
-		return nil, e
-	}
-	if _, e = io.Copy(part, file); e != nil {
-		return nil, e
-	}
-	writer.Close()
-
-	r, e := http.NewRequest(http.MethodPost, url, &body)
-	if e != nil {
-		return nil, e
-	}
-	r.Header.Add("Content-Type", writer.FormDataContentType())
-
-	return r, nil
+	return req, nil
 }
 
 func getAPIKeyFlag(ctx *cli.Context) (string, error) {
@@ -768,14 +781,14 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool)
 
 	alias, _ := url2Alias(aliasedURL)
 
-	e = setGlobalSubnetProxyFromConfig(alias)
-	fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
-
 	apiKey, e := getAPIKeyFlag(ctx)
 	fatalIf(probe.NewError(e), "Error in reading --api-key flag:")
 
 	// if `--airgap` is provided no need to test SUBNET connectivity.
 	if !globalAirgapped {
+		e = setGlobalSubnetProxyFromConfig(alias)
+		fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
+
 		sbu := subnetBaseURL()
 		fatalIf(checkURLReachable(sbu).Trace(aliasedURL), "Unable to reach %s, please use --airgap if there is no connectivity to SUBNET", sbu)
 	}

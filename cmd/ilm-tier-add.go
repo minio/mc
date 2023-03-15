@@ -85,6 +85,11 @@ var adminTierAddFlags = []cli.Flag{
 		Value: "",
 		Usage: "remote tier storage-class",
 	},
+	cli.BoolFlag{
+		Name:   "force",
+		Hidden: true,
+		Usage:  "ignores in-use check for remote tier bucket/prefix",
+	},
 }
 
 var adminTierAddCmd = cli.Command{
@@ -370,7 +375,12 @@ func mainAdminTierAdd(ctx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
 	tCfg := fetchTierConfig(ctx, strings.ToUpper(tierName), tierType)
-	fatalIf(probe.NewError(client.AddTier(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
+	ignoreInUse := ctx.Bool("force")
+	if ignoreInUse {
+		fatalIf(probe.NewError(client.AddTierIgnoreInUse(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
+	} else {
+		fatalIf(probe.NewError(client.AddTier(globalContext, tCfg)).Trace(args...), "Unable to configure remote tier target")
+	}
 
 	msg := &tierMessage{
 		op:     ctx.Command.Name,

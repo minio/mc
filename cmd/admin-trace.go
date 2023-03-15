@@ -86,7 +86,7 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "filter-response",
 		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
 	},
-	cli.BoolFlag{
+	cli.DurationFlag{
 		Name:  "response-duration",
 		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
 	},
@@ -436,6 +436,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	console.SetColor("ErrStatus", color.New(color.Bold, color.FgRed))
 
 	console.SetColor("Response", color.New(color.FgGreen))
+	console.SetColor("Extra", color.New(color.FgBlue))
 	console.SetColor("Body", color.New(color.FgYellow))
 	for _, c := range colors {
 		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
@@ -471,19 +472,20 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 // Short trace record
 type shortTraceMsg struct {
-	Status     string        `json:"status"`
-	Host       string        `json:"host"`
-	Time       time.Time     `json:"time"`
-	Client     string        `json:"client"`
-	CallStats  *callStats    `json:"callStats,omitempty"`
-	Duration   time.Duration `json:"duration"`
-	FuncName   string        `json:"api"`
-	Path       string        `json:"path"`
-	Query      string        `json:"query"`
-	StatusCode int           `json:"statusCode"`
-	StatusMsg  string        `json:"statusMsg"`
-	Type       string        `json:"type"`
-	Error      string        `json:"error"`
+	Status     string            `json:"status"`
+	Host       string            `json:"host"`
+	Time       time.Time         `json:"time"`
+	Client     string            `json:"client"`
+	CallStats  *callStats        `json:"callStats,omitempty"`
+	Duration   time.Duration     `json:"duration"`
+	FuncName   string            `json:"api"`
+	Path       string            `json:"path"`
+	Query      string            `json:"query"`
+	StatusCode int               `json:"statusCode"`
+	StatusMsg  string            `json:"statusMsg"`
+	Type       string            `json:"type"`
+	Error      string            `json:"error"`
+	Extra      map[string]string `json:"extra"`
 	trcType    madmin.TraceType
 }
 
@@ -530,6 +532,7 @@ type verboseTrace struct {
 	ResponseInfo *responseInfo          `json:"response,omitempty"`
 	CallStats    *callStats             `json:"callStats,omitempty"`
 	HealResult   *madmin.HealResultItem `json:"healResult,omitempty"`
+	Extra        map[string]string      `json:"extra,omitempty"`
 
 	trcType madmin.TraceType
 }
@@ -548,6 +551,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.Host = t.NodeName
 	s.Duration = t.Duration
 	s.StatusMsg = t.Message
+	s.Extra = t.Custom
 
 	switch t.TraceType {
 	case madmin.TraceS3, madmin.TraceInternal:
@@ -657,6 +661,7 @@ func (t traceMessage) JSON() string {
 		Error:      t.Trace.Error,
 		HealResult: t.Trace.HealResult,
 		Message:    t.Trace.Message,
+		Extra:      t.Trace.Custom,
 	}
 
 	if t.Trace.HTTP != nil {
@@ -715,20 +720,26 @@ func (t traceMessage) String() string {
 	if trc.NodeName != "" {
 		nodeNameStr = fmt.Sprintf("%s ", colorizedNodeName(trc.NodeName))
 	}
-
+	extra := ""
+	if len(t.Trace.Custom) > 0 {
+		for k, v := range t.Trace.Custom {
+			extra = fmt.Sprintf("%s %s=%s", extra, k, v)
+		}
+		extra = console.Colorize("Extra", extra)
+	}
 	switch trc.TraceType {
 	case madmin.TraceS3, madmin.TraceInternal:
 		if trc.HTTP == nil {
 			return ""
 		}
 	case madmin.TraceBootstrap:
-		fmt.Fprintf(b, "%s %s [%s] %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Message)
+		fmt.Fprintf(b, "%s %s [%s] %s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Message, extra)
 		return b.String()
 	default:
 		if trc.Error != "" {
-			fmt.Fprintf(b, "%s %s [%s] %s err='%s' %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, console.Colorize("ErrStatus", trc.Error), trc.Duration)
+			fmt.Fprintf(b, "%s %s [%s] %s%s err='%s' %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, extra, console.Colorize("ErrStatus", trc.Error), trc.Duration)
 		} else {
-			fmt.Fprintf(b, "%s %s [%s] %s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, trc.Duration)
+			fmt.Fprintf(b, "%s %s [%s] %s%s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, extra, trc.Duration)
 		}
 		return b.String()
 	}
@@ -768,6 +779,9 @@ func (t traceMessage) String() string {
 	for k, v := range rs.Headers {
 		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey",
 			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ","))))
+	}
+	if len(extra) > 0 {
+		fmt.Fprintf(b, "%s%s\n", nodeNameStr, extra)
 	}
 	fmt.Fprintf(b, "%s%s\n", nodeNameStr, console.Colorize("Body", string(rs.Body)))
 	fmt.Fprint(b, nodeNameStr)

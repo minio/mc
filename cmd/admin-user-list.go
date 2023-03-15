@@ -79,6 +79,7 @@ func mainAdminUserList(ctx *cli.Context) error {
 			op:         ctx.Command.Name,
 			AccessKey:  k,
 			PolicyName: v.PolicyName,
+			MemberOf:   v.MemberOf,
 			UserStatus: string(v.Status),
 		})
 	}

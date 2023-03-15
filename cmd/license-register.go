@@ -169,16 +169,6 @@ func mainLicenseRegister(ctx *cli.Context) error {
 
 	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
 
-	alreadyRegistered := false
-	apiKey, _, e := getSubnetCreds(alias)
-	fatalIf(probe.NewError(e), "Error in fetching subnet API Key")
-	if len(apiKey) > 0 {
-		alreadyRegistered = true
-		if len(accAPIKey) == 0 {
-			accAPIKey = apiKey
-		}
-	}
-
 	lrm := licRegisterMessage{Status: "success", Alias: alias}
 	if globalAirgapped {
 		lrm.Type = "offline"
@@ -188,8 +178,23 @@ func mainLicenseRegister(ctx *cli.Context) error {
 
 		lrm.URL = subnetOfflineRegisterURL(regToken)
 	} else {
+		alreadyRegistered := false
+		if len(accAPIKey) == 0 {
+			apiKey, _, e := getSubnetCreds(alias)
+			fatalIf(probe.NewError(e), "Error in fetching subnet API Key")
+			if len(apiKey) > 0 {
+				alreadyRegistered = true
+				accAPIKey = apiKey
+			}
+		} else {
+			apiKey := getSubnetAPIKeyFromConfig(alias)
+			if len(apiKey) > 0 {
+				alreadyRegistered = true
+			}
+		}
+
 		lrm.Type = "online"
-		_, _, e = registerClusterOnSubnet(regInfo, alias, accAPIKey)
+		_, _, e := registerClusterOnSubnet(regInfo, alias, accAPIKey)
 		fatalIf(probe.NewError(e), "Could not register cluster with SUBNET:")
 
 		lrm.Action = "registered"

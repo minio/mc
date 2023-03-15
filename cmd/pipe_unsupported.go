@@ -1,4 +1,6 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+//go:build !linux
+
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,27 +19,9 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import "os"
 
-var adminBucketRemoteSubcommands = []cli.Command{
-	adminBucketRemoteAddCmd,
-	adminBucketRemoteEditCmd,
-	adminBucketRemoteRmCmd,
-}
-
-var adminBucketRemoteCmd = cli.Command{
-	Name:            "remote",
-	Usage:           "configure remote target buckets",
-	Action:          mainadminBucketRemote,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	Subcommands:     adminBucketRemoteSubcommands,
-	HideHelpCommand: true,
-}
-
-// mainadminBucketRemote is the handle for "mc admin bucket remote" command.
-func mainadminBucketRemote(ctx *cli.Context) error {
-	commandNotFound(ctx, adminBucketRemoteSubcommands)
+func increasePipeBufferSize(f *os.File, desiredPipeSize int) error {
+	// this is not supported on non-Linux platforms.
 	return nil
-	// Sub-commands like "add", "ls", "rm" have their own main.
 }

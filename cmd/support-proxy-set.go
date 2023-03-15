@@ -79,8 +79,6 @@ func mainSupportProxySet(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	alias, _ := url2Alias(aliasedURL)
-	validateClusterRegistered(alias, true)
 
 	// Create a new MinIO Admin Client
 	client := getClient(aliasedURL)

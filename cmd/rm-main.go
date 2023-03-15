@@ -234,7 +234,10 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 		fatalIf(errDummy().Trace(),
 			"You cannot specify --purge with --recursive.")
 	}
-
+	if isForceDel && (isNoncurrentVersion || isVersions || cliCtx.IsSet("older-than") || cliCtx.IsSet("newer-than") || versionID != "") {
+		fatalIf(errDummy().Trace(),
+			"You cannot specify --purge flag with any flag(s) other than --force.")
+	}
 	for _, url := range cliCtx.Args() {
 		// clean path for aliases like s3/.
 		// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.

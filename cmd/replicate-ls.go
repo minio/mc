@@ -20,12 +20,13 @@ package cmd
 import (
 	"context"
 	"errors"
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/pkg/console"
@@ -71,29 +72,15 @@ func printReplicateListHeader() {
 	if globalJSON {
 		return
 	}
-	idFieldMaxLen := 20
-	priorityFieldMaxLen := 8
-	statusFieldMaxLen := 8
-	prefixFieldMaxLen := 25
-	tagsFieldMaxLen := 25
-	scFieldMaxLen := 15
-	destBucketFieldMaxLen := 20
-	console.Println(console.Colorize("Headers", newPrettyTable(" | ",
-		Field{"ID", idFieldMaxLen},
-		Field{"Priority", priorityFieldMaxLen},
-		Field{"Status", statusFieldMaxLen},
-		Field{"Prefix", prefixFieldMaxLen},
-		Field{"Tags", tagsFieldMaxLen},
-		Field{"DestBucket", destBucketFieldMaxLen},
-		Field{"StorageClass", scFieldMaxLen},
-	).buildRow("ID", "Priority", "Status", "Prefix", "Tags", "DestBucket", "StorageClass")))
+	console.Println(console.Colorize("Headers", "Rules:"))
 }
 
 type replicateListMessage struct {
-	Op     string           `json:"op"`
-	Status string           `json:"status"`
-	URL    string           `json:"url"`
-	Rule   replication.Rule `json:"rule"`
+	Op      string           `json:"op"`
+	Status  string           `json:"status"`
+	URL     string           `json:"url"`
+	Rule    replication.Rule `json:"rule"`
+	targets []madmin.BucketTarget
 }
 
 func (l replicateListMessage) JSON() string {
@@ -104,23 +91,35 @@ func (l replicateListMessage) JSON() string {
 }
 
 func (l replicateListMessage) String() string {
-	idFieldMaxLen := 20
-	priorityFieldMaxLen := 8
-	statusFieldMaxLen := 8
-	prefixFieldMaxLen := 25
-	tagsFieldMaxLen := 25
-	scFieldMaxLen := 15
-	destBucketFieldMaxLen := 20
 	r := l.Rule
-	return console.Colorize("replicateListMessage", newPrettyTable(" | ",
-		Field{"ID", idFieldMaxLen},
-		Field{"Priority", priorityFieldMaxLen},
-		Field{"Status", statusFieldMaxLen},
-		Field{"Prefix", prefixFieldMaxLen},
-		Field{"Tags", tagsFieldMaxLen},
-		Field{"DestBucket", destBucketFieldMaxLen},
-		Field{"StorageClass", scFieldMaxLen},
-	).buildRow(r.ID, strconv.Itoa(r.Priority), string(r.Status), r.Filter.And.Prefix, r.Tags(), r.Destination.Bucket, r.Destination.StorageClass))
+	destBucket := r.Destination.Bucket
+	if arn, err := madmin.ParseARN(r.Destination.Bucket); err == nil {
+		destBucket = arn.Bucket
+	}
+	endpoint := r.Destination.Bucket
+	for _, t := range l.targets {
+		if t.Arn == r.Destination.Bucket {
+			endpoint = t.Endpoint
+			break
+		}
+	}
+	var sb strings.Builder
+	sb.WriteString(console.Colorize("Key", "Remote Bucket: "))
+
+	sb.WriteString(console.Colorize("EpVal", fmt.Sprintf("%s/%s\n", endpoint, destBucket)))
+
+	sb.WriteString(fmt.Sprintf("  Rule ID: %s\n", console.Colorize("Val", r.ID)))
+	sb.WriteString(fmt.Sprintf("  Priority: %s\n", console.Colorize("Val", r.Priority)))
+	if r.Filter.And.Prefix != "" {
+		sb.WriteString(fmt.Sprintf("  Prefix: %s\n", console.Colorize("Val", r.Filter.And.Prefix)))
+	}
+	if r.Tags() != "" {
+		sb.WriteString(fmt.Sprintf("  Tags: %s\n", console.Colorize("Val", r.Tags())))
+	}
+	if r.Destination.StorageClass != "" && r.Destination.StorageClass != "STANDARD" {
+		sb.WriteString(fmt.Sprintf("  StorageClass: %s\n", console.Colorize("Val", r.Destination.StorageClass)))
+	}
+	return sb.String() + "\n"
 }
 
 func mainReplicateList(cliCtx *cli.Context) error {
@@ -128,6 +127,10 @@ func mainReplicateList(cliCtx *cli.Context) error {
 	defer cancelReplicateList()
 
 	console.SetColor("Headers", color.New(color.Bold, color.FgHiGreen))
+	console.SetColor("Key", color.New(color.Bold, color.FgWhite))
+
+	console.SetColor("Val", color.New(color.Bold, color.FgCyan))
+	console.SetColor("EpVal", color.New(color.Bold, color.FgYellow))
 
 	checkReplicateListSyntax(cliCtx)
 
@@ -145,11 +148,19 @@ func mainReplicateList(cliCtx *cli.Context) error {
 			"Unable to list replication configuration")
 	}
 	printReplicateListHeader()
+	// Create a new MinIO Admin Client
+	admClient, cerr := newAdminClient(aliasedURL)
+	fatalIf(cerr, "Unable to initialize admin connection.")
+	_, sourceBucket := url2Alias(args[0])
+	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch remote target.")
+
 	statusFlag := cliCtx.String("status")
 	for _, rule := range rCfg.Rules {
 		if statusFlag == "" || strings.EqualFold(statusFlag, string(rule.Status)) {
 			printMsg(replicateListMessage{
-				Rule: rule,
+				Rule:    rule,
+				targets: targets,
 			})
 		}
 	}
