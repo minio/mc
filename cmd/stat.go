@@ -148,7 +148,7 @@ func parseStat(c *ClientContent) statMessage {
 	}()
 	content.Size = c.Size
 	content.VersionID = c.VersionID
-	content.Key = getMessageKey(c)
+	content.Key = getKey(c)
 	content.Metadata = c.Metadata
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
@@ -354,7 +354,7 @@ type bucketInfoMessage struct {
 
 func (v bucketInfoMessage) JSON() string {
 	v.Status = "success"
-	v.Key = getMessageKey(&ClientContent{URL: v.URL, Type: v.Type})
+	v.Key = getKey(&ClientContent{URL: v.URL, Type: v.Type})
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", " ")
@@ -403,7 +403,7 @@ func countDigits(num uint64) (count uint) {
 func (v bucketInfoMessage) String() string {
 	var b strings.Builder
 
-	keyStr := getMessageKey(&ClientContent{URL: v.URL, Type: v.Type})
+	keyStr := getKey(&ClientContent{URL: v.URL, Type: v.Type})
 	keyStr = strings.TrimSuffix(keyStr, slashSeperator)
 	key := fmt.Sprintf("%-10s: %s", "Name", keyStr)
 	b.WriteString(console.Colorize("Title", key) + "\n")

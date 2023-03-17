@@ -442,7 +442,8 @@ func listAndRemove(url string, opts removeOpts) error {
 		}
 
 		if !opts.isRecursive {
-			standardizedURL := targetAlias + getKey(content)
+			currentObjectURL := targetAlias + getKey(content)
+			standardizedURL := getStandardizedURL(currentObjectURL)
 			if !strings.HasPrefix(url, standardizedURL) {
 				break
 			}

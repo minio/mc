@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -94,9 +93,7 @@ func (c contentMessage) JSON() string {
 
 // Use OS separator and adds a trailing separator if it is a dir
 func getOSDependantKey(path string, isDir bool) string {
-	sep := string(filepath.Separator)
-
-	path = getStandardizedURL(path)
+	sep := "/"
 
 	if isDir && !strings.HasSuffix(path, sep) {
 		return fmt.Sprintf("%s%s", path, sep)
@@ -107,13 +104,6 @@ func getOSDependantKey(path string, isDir bool) string {
 // get content key
 func getKey(c *ClientContent) string {
 	return getOSDependantKey(c.URL.Path, c.Type.IsDir())
-}
-
-func getMessageKey(c *ClientContent) string {
-	if runtime.GOOS == "windows" {
-		return strings.Replace(getKey(c), "\\", "/", -1)
-	}
-	return getKey(c)
 }
 
 // Generate printable listing from a list of sorted client
@@ -151,7 +141,7 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 		md5sum = strings.TrimSuffix(md5sum, "\"")
 		contentMsg.ETag = md5sum
 		// Convert OS Type to match console file printing style.
-		contentMsg.Key = getMessageKey(c)
+		contentMsg.Key = getKey(c)
 		contentMsg.VersionID = c.VersionID
 		contentMsg.IsDeleteMarker = c.IsDeleteMarker
 		contentMsg.VersionOrd = nrVersions - i
