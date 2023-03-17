@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,14 +19,13 @@ package cmd
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
@@ -115,31 +114,31 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 // working directory is a different partition. To allow all situations to
 // be handled appropriately use this function instead of os.Rename()
 func moveFile(sourcePath, destPath string) error {
-	inputFile, err := os.Open(sourcePath)
-	if err != nil {
-		return err
+	inputFile, e := os.Open(sourcePath)
+	if e != nil {
+		return e
 	}
 
-	outputFile, err := os.Create(destPath)
-	if err != nil {
+	outputFile, e := os.Create(destPath)
+	if e != nil {
 		inputFile.Close()
-		return err
+		return e
 	}
 	defer outputFile.Close()
 
-	_, err = io.Copy(outputFile, inputFile)
-	inputFile.Close()
-	if err != nil {
-		return err
+	if _, e = io.Copy(outputFile, inputFile); e != nil {
+		inputFile.Close()
+		return e
 	}
 
 	// The copy was successful, so now delete the original file
+	inputFile.Close()
 	return os.Remove(sourcePath)
 }
 
 func saveProfileFile(data io.ReadCloser) {
 	// Create profile zip file
-	tmpFile, e := ioutil.TempFile("", "mc-profile-")
+	tmpFile, e := os.CreateTemp("", "mc-profile-")
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
 	// Copy zip content to target download file
@@ -204,15 +203,17 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias stri
 
 	saveProfileFile(data)
 
-	clr := color.New(color.FgGreen, color.Bold)
+	successClr := color.New(color.FgGreen, color.Bold)
+	failureClr := color.New(color.FgRed, color.Bold)
 	if !globalAirgapped {
 		_, e := uploadFileToSubnet(alias, profileFile, reqURL, headers)
-		fatalIf(probe.NewError(e), "Unable to upload profile file to SUBNET portal")
-		if len(apiKey) > 0 {
-			setSubnetAPIKey(alias, apiKey)
+		if e != nil {
+			failureClr.Println("\nUnable to upload profile file to SUBNET.", e.Error())
+			successClr.Printf("It has been saved locally at '%s'\n", profileFile)
+			return
 		}
-		clr.Println("uploaded successfully to SUBNET.")
+		successClr.Println("uploaded successfully to SUBNET.")
 	} else {
-		clr.Printf("saved successfully at '%s'\n", profileFile)
+		successClr.Printf("saved successfully at '%s'\n", profileFile)
 	}
 }

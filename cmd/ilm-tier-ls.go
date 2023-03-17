@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -21,14 +21,14 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	madmin "github.com/minio/madmin-go"
+	madmin "github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
 
 var adminTierListCmd = cli.Command{
 	Name:         "ls",
-	Usage:        "lists configured remote tier targets",
+	Usage:        "list configured remote tier targets",
 	Action:       mainAdminTierList,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

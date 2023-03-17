@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -56,7 +56,7 @@ func checkAdminUserSvcAcctRemoveSyntax(ctx *cli.Context) {
 
 // mainAdminUserSvcAcctRemove is the handle for "mc admin user svcacct rm" command.
 func mainAdminUserSvcAcctRemove(ctx *cli.Context) error {
-	console.SetColor("SVCMessage", color.New(color.FgGreen))
+	console.SetColor("AccMessage", color.New(color.FgGreen))
 
 	checkAdminUserSvcAcctRemoveSyntax(ctx)
 
@@ -72,8 +72,8 @@ func mainAdminUserSvcAcctRemove(ctx *cli.Context) error {
 	e := client.DeleteServiceAccount(globalContext, svcAccount)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove the specified service account")
 
-	printMsg(svcAcctMessage{
-		op:        ctx.Command.Name,
+	printMsg(acctMessage{
+		op:        svcAccOpRemove,
 		AccessKey: svcAccount,
 	})
 

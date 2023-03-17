@@ -24,7 +24,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -228,7 +228,9 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 	}
 
 	// Undo the remaining versions found if any
-	exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
+	if len(perObjectVersions) > 0 {
+		exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
+	}
 
 	if !atLeastOneUndoApplied {
 		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object version to undo.")

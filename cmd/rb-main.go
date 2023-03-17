@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -198,6 +198,15 @@ func deleteBucket(ctx context.Context, url string, isForce bool) *probe.Error {
 		if result.Err != nil {
 			return result.Err.Trace(url)
 		}
+	}
+	// Return early if prefix delete
+	switch c := clnt.(type) {
+	case *S3Client:
+		_, object := c.url2BucketAndObject()
+		if object != "" && isForce {
+			return nil
+		}
+	default:
 	}
 
 	// Remove a bucket without force flag first because force

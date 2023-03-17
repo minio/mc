@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,16 +17,10 @@
 
 package cmd
 
-import "github.com/minio/cli"
-
-var adminTierSubCommands = []cli.Command{
-	adminTierAddCmd,
-	adminTierListCmd,
-	adminTierEditCmd,
-	adminTierRmCmd,
-	adminTierVerifyCmd,
-	adminTierInfoCmd,
-}
+import (
+	"github.com/minio/cli"
+	"github.com/minio/pkg/console"
+)
 
 var adminTierCmd = cli.Command{
 	Name:            "tier",
@@ -34,13 +28,12 @@ var adminTierCmd = cli.Command{
 	Action:          mainAdminTier,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminTierSubCommands,
 	HideHelpCommand: true,
+	Subcommands:     adminTierDepCmds,
 }
 
 // mainAdminTier is the handle for "mc admin tier" command.
 func mainAdminTier(ctx *cli.Context) error {
-	commandNotFound(ctx, adminTierSubCommands)
+	console.Println("Please use 'mc ilm tier' instead.")
 	return nil
-	// Sub-commands like "add", "ls", "edit", "rm" and "verify" have their own main.
 }

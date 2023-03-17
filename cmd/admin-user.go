@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -28,6 +28,7 @@ var adminUserSubcommands = []cli.Command{
 	adminUserInfoCmd,
 	adminUserPolicyCmd,
 	adminUserSvcAcctCmd,
+	adminUserSTSAcctCmd,
 }
 
 var adminUserCmd = cli.Command{

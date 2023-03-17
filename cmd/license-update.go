@@ -20,7 +20,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -35,7 +34,7 @@ var licenseUpdateCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainLicenseUpdate,
 	Before:       setGlobalsFromContext,
-	Flags:        append(supportGlobalFlags, subnetCommonFlags...),
+	Flags:        supportGlobalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -49,6 +48,8 @@ FLAGS:
 EXAMPLES:
   1. Update license for cluster with alias 'play' from the file license.key
      {{.Prompt}} {{.HelpName}} play license.key
+  2. Update (renew) license for already registered cluster with alias 'play'
+     {{.Prompt}} {{.HelpName}} play
 `,
 }
 
@@ -73,19 +74,49 @@ func (li licUpdateMessage) JSON() string {
 }
 
 func mainLicenseUpdate(ctx *cli.Context) error {
-	if len(ctx.Args()) != 2 {
+	args := ctx.Args()
+	argsLen := len(args)
+	if argsLen > 2 || argsLen < 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	console.SetColor(licUpdateMsgTag, color.New(color.FgGreen, color.Bold))
 
-	aliasedURL := ctx.Args().Get(0)
-	alias, _ := initSubnetConnectivity(ctx, aliasedURL, false)
+	aliasedURL := args.Get(0)
+	alias, _ := url2Alias(aliasedURL)
 
-	licFile := ctx.Args().Get(1)
+	if argsLen == 2 {
+		licFile := args.Get(1)
+		printMsg(performLicenseUpdate(licFile, alias))
+		return nil
+	}
 
-	printMsg(performLicenseUpdate(licFile, alias))
+	// renew the license
+	printMsg(performLicenseRenew(alias))
 	return nil
+}
+
+func performLicenseRenew(alias string) licUpdateMessage {
+	apiKey, _, e := getSubnetCreds(alias)
+	fatalIf(probe.NewError(e), "Error getting subnet creds")
+
+	if len(apiKey) == 0 {
+		errMsg := fmt.Sprintf("Please register the cluster first by running 'mc license register %s'", alias)
+		fatal(errDummy().Trace(), errMsg)
+	}
+
+	renewURL := subnetLicenseRenewURL()
+	headers := subnetAPIKeyAuthHeaders(apiKey)
+	headers.addDeploymentIDHeader(alias)
+	resp, e := subnetPostReq(renewURL, nil, headers)
+	fatalIf(probe.NewError(e), "Error renewing license for %s", alias)
+
+	extractAndSaveSubnetCreds(alias, resp)
+
+	return licUpdateMessage{
+		Alias:  alias,
+		Status: "success",
+	}
 }
 
 func performLicenseUpdate(licFile string, alias string) licUpdateMessage {
@@ -98,21 +129,7 @@ func performLicenseUpdate(licFile string, alias string) licUpdateMessage {
 	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to read license file %s", licFile))
 
 	lic := string(licBytes)
-	li, e := parseLicense(lic)
-	fatalIf(probe.NewError(e), fmt.Sprintf("Error parsing license from %s", licFile))
-
-	if li.ExpiresAt.Before(time.Now()) {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("License has expired on %s", li.ExpiresAt))
-	}
-
-	if li.DeploymentID != getAdminInfo(alias).DeploymentID {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("License is invalid for the deployment %s", alias))
-	}
-
-	setSubnetLicense(alias, lic)
-	if len(li.APIKey) > 0 {
-		setSubnetAPIKey(alias, li.APIKey)
-	}
+	validateAndSaveLic(lic, alias, true)
 
 	return lum
 }

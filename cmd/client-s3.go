@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -38,9 +38,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/mc/pkg/deadlineconn"
-	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
@@ -48,11 +45,15 @@ import (
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/policy"
 	"github.com/minio/minio-go/v7/pkg/replication"
-	"github.com/minio/minio-go/v7/pkg/sse"
-
 	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/minio/minio-go/v7/pkg/sse"
 	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/pkg/mimedb"
+
+	"github.com/minio/mc/pkg/deadlineconn"
+	"github.com/minio/mc/pkg/httptracer"
+	"github.com/minio/mc/pkg/limiter"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // S3Client construct
@@ -145,6 +146,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				hostName = googleHostName
 			}
 		}
+
 		// Generate a hash out of s3Conf.
 		confHash := fnv.New32a()
 		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
@@ -211,6 +213,8 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				transport = tr
 			}
 
+			transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
+
 			if config.Debug {
 				if strings.EqualFold(config.Signature, "S3v4") {
 					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
@@ -266,20 +270,18 @@ func (c *S3Client) GetURL() ClientURL {
 // AddNotificationConfig - Add bucket notification
 func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events []string, prefix, suffix string, ignoreExisting bool) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
-	// Validate total fields in ARN.
-	fields := strings.Split(arn, ":")
-	if len(fields) != 6 {
-		return errInvalidArgument()
+
+	accountArn, err := notification.NewArnFromString(arn)
+	if err != nil {
+		return probe.NewError(invalidArgumentErr(err)).Untrace()
 	}
+	nc := notification.NewConfig(accountArn)
 
 	// Get any enabled notification.
 	mb, e := c.api.GetBucketNotification(ctx, bucket)
 	if e != nil {
 		return probe.NewError(e)
 	}
-
-	accountArn := notification.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
-	nc := notification.NewConfig(accountArn)
 
 	// Configure events
 	for _, event := range events {
@@ -306,7 +308,7 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 		nc.AddFilterSuffix(suffix)
 	}
 
-	switch fields[2] {
+	switch accountArn.Service {
 	case "sns":
 		if !mb.AddTopic(nc) {
 			return errInvalidArgument().Trace("Overlapping Topic configs")
@@ -320,7 +322,7 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 			return errInvalidArgument().Trace("Overlapping lambda configs")
 		}
 	default:
-		return errInvalidArgument().Trace(fields[2])
+		return errInvalidArgument().Trace(accountArn.Service)
 	}
 
 	// Set the new bucket configuration
@@ -349,11 +351,10 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 		return probe.NewError(e)
 	}
 
-	fields := strings.Split(arn, ":")
-	if len(fields) != 6 {
-		return errInvalidArgument().Trace(fields...)
+	accountArn, err := notification.NewArnFromString(arn)
+	if err != nil {
+		return probe.NewError(invalidArgumentErr(err)).Untrace()
 	}
-	accountArn := notification.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
 
 	// if we are passed filters for either events, suffix or prefix, then only delete the single event that matches
 	// the arguments
@@ -380,7 +381,7 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 		}
 		var err error
 		// based on the arn type, we'll look for the event in the corresponding sublist and delete it if there's a match
-		switch fields[2] {
+		switch accountArn.Service {
 		case "sns":
 			err = mb.RemoveTopicByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
 		case "sqs":
@@ -388,7 +389,7 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 		case "lambda":
 			err = mb.RemoveLambdaByArnEventsPrefixSuffix(accountArn, eventsTyped, prefix, suffix)
 		default:
-			return errInvalidArgument().Trace(fields[2])
+			return errInvalidArgument().Trace(accountArn.Service)
 		}
 		if err != nil {
 			return probe.NewError(err)
@@ -396,7 +397,7 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 
 	} else {
 		// remove all events for matching arn
-		switch fields[2] {
+		switch accountArn.Service {
 		case "sns":
 			mb.RemoveTopicByArn(accountArn)
 		case "sqs":
@@ -404,7 +405,7 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, eve
 		case "lambda":
 			mb.RemoveLambdaByArn(accountArn)
 		default:
-			return errInvalidArgument().Trace(fields[2])
+			return errInvalidArgument().Trace(accountArn.Service)
 		}
 	}
 
@@ -1041,20 +1042,21 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	}
 
 	opts := minio.PutObjectOptions{
-		UserMetadata:         metadata,
-		UserTags:             tagsMap,
-		Progress:             progress,
-		ContentType:          contentType,
-		CacheControl:         cacheControl,
-		ContentDisposition:   contentDisposition,
-		ContentEncoding:      contentEncoding,
-		ContentLanguage:      contentLanguage,
-		StorageClass:         strings.ToUpper(putOpts.storageClass),
-		ServerSideEncryption: putOpts.sse,
-		SendContentMd5:       putOpts.md5,
-		DisableMultipart:     putOpts.disableMultipart,
-		PartSize:             putOpts.multipartSize,
-		NumThreads:           putOpts.multipartThreads,
+		UserMetadata:          metadata,
+		UserTags:              tagsMap,
+		Progress:              progress,
+		ContentType:           contentType,
+		CacheControl:          cacheControl,
+		ContentDisposition:    contentDisposition,
+		ContentEncoding:       contentEncoding,
+		ContentLanguage:       contentLanguage,
+		StorageClass:          strings.ToUpper(putOpts.storageClass),
+		ServerSideEncryption:  putOpts.sse,
+		SendContentMd5:        putOpts.md5,
+		DisableMultipart:      putOpts.disableMultipart,
+		PartSize:              putOpts.multipartSize,
+		NumThreads:            putOpts.multipartThreads,
+		ConcurrentStreamParts: putOpts.concurrentStream, // if enabled honors NumThreads for piped() uploads
 	}
 
 	if !retainUntilDate.IsZero() && !retainUntilDate.Equal(timeSentinel) {
@@ -1409,7 +1411,7 @@ func (c *S3Client) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Er
 		return probe.NewError(BucketInvalid{c.joinPath(bucket, object)})
 	}
 
-	opts := minio.BucketOptions{ForceDelete: forceRemove}
+	opts := minio.RemoveBucketOptions{ForceDelete: forceRemove}
 	if e := c.api.RemoveBucketWithOptions(ctx, bucket, opts); e != nil {
 		return probe.NewError(e)
 	}
@@ -1599,13 +1601,9 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	//     - /path/to/directory_marker
 	//     - /path/to/directory_marker/
 
-	// First an HEAD call is issued, this is faster than doing listing even if the object exists
-	// because the list could be very large. At the same time, the HEAD call is avoided if the
-	// object already contains a trailing prefix or we passed rewind flag to know the object version
-	// created just before the rewind parameter.
+	// Start with a HEAD request first to return object metadata information.
+	// If the object is not found, continue to look for a directory marker or a prefix
 	if !strings.HasSuffix(path, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
-		// Issue HEAD request first but ignore no such key error
-		// so we can check if there is such prefix which exists
 		o := minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID}
 		if opts.isZip {
 			o.Set("x-minio-extract", "true")
@@ -1614,16 +1612,11 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if err == nil {
 			return ctnt, nil
 		}
-
 		// Ignore object missing error but return for other errors
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
-	}
-
-	// No object found, start looking for a prefix with the same name
-	// or a directory marker. Add a trailing slash if it is not in the path
-	if !strings.HasSuffix(path, string(c.targetURL.Separator)) {
+		// The object is not found, look for a directory marker or a prefix
 		path += string(c.targetURL.Separator)
 	}
 
@@ -1759,10 +1752,6 @@ func (c *S3Client) listVersions(ctx context.Context, b, o string, isRecursive bo
 }
 
 func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool, objectInfoCh chan minio.ObjectInfo) {
-	if timeRef.IsZero() {
-		timeRef = time.Now().UTC()
-	}
-
 	var buckets []string
 	if b == "" {
 		bucketsInfo, err := c.api.ListBuckets(ctx)
@@ -1797,7 +1786,7 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 				continue
 			}
 
-			if objectVersion.LastModified.Before(timeRef) {
+			if timeRef.IsZero() || objectVersion.LastModified.Before(timeRef) {
 				skipKey = objectVersion.Key
 
 				// Skip if this is a delete marker and we are not asked to list it

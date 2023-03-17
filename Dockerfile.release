@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7
 
 ARG TARGETARCH
 
@@ -11,7 +11,7 @@ COPY LICENSE /licenses/LICENSE
 
 RUN \
     microdnf update --nodocs && \
-    microdnf install curl ca-certificates shadow-utils --nodocs && \
+    microdnf install curl ca-certificates shadow-utils util-linux gzip lsof tar net-tools jq --nodocs && \
     microdnf clean all && \
     curl -s -q https://dl.minio.io/client/mc/release/linux-${TARGETARCH}/archive/mc.${RELEASE} -o /usr/bin/mc && \
     chmod +x /usr/bin/mc

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -35,7 +35,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/pkg/console"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/term"
 )
 
@@ -191,6 +190,8 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, pee
 		Debug:             globalDebug,
 		ConnReadDeadline:  globalConnReadDeadline,
 		ConnWriteDeadline: globalConnWriteDeadline,
+		UploadLimit:       int64(globalLimitUpload),
+		DownloadLimit:     int64(globalLimitDownload),
 	}
 	if peerCert != nil {
 		configurePeerCertificate(s3Config, peerCert)
@@ -268,7 +269,7 @@ func fetchAliasKeys(args cli.Args) (string, string) {
 	accessKey := ""
 	secretKey := ""
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
-	isTerminal := terminal.IsTerminal(int(os.Stdin.Fd()))
+	isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
 	reader := bufio.NewReader(os.Stdin)
 
 	argsNr := len(args)
@@ -286,7 +287,7 @@ func fetchAliasKeys(args cli.Args) (string, string) {
 	if argsNr == 2 || argsNr == 3 {
 		if isTerminal {
 			fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key: "))
-			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+			bytePassword, _ := term.ReadPassword(int(os.Stdin.Fd()))
 			fmt.Printf("\n")
 			secretKey = string(bytePassword)
 		} else {

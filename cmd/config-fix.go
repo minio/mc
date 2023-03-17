@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -108,10 +108,7 @@ func fixConfigV3() {
 		}
 
 		// Use the correct hostConfig with JSON tags in it.
-		cfgV3.Hosts[host] = hostConfigV3{
-			AccessKeyID:     brokenHostCfgV3.AccessKeyID,
-			SecretAccessKey: brokenHostCfgV3.SecretAccessKey,
-		}
+		cfgV3.Hosts[host] = hostConfigV3(brokenHostCfgV3)
 	}
 
 	// We blindly drop ACL and Access fields from the broken config v3.
@@ -276,8 +273,8 @@ func fixConfigLocation() {
 		// If there is a config at legacyLoc+".exe", rename it.
 		legacyLoc := mcCustomConfigDir + ".exe"
 		unusedLoc := mcCustomConfigDir + ".unused"
-		s, err := os.Stat(legacyLoc)
-		if err != nil || !s.IsDir() {
+		s, e := os.Stat(legacyLoc)
+		if e != nil || !s.IsDir() {
 			return
 		}
 		_ = os.Rename(legacyLoc, unusedLoc)
@@ -286,24 +283,24 @@ func fixConfigLocation() {
 
 	// mc was called with '.exe';
 	// config can have changed location.
-	_, err := os.Stat(mcCustomConfigDir)
-	wantExists := !os.IsNotExist(err)
+	_, e := os.Stat(mcCustomConfigDir)
+	wantExists := !os.IsNotExist(e)
 
 	legFileName := mcCustomConfigDir + ".exe"
-	stat, err := os.Stat(legFileName)
-	legExists := !os.IsNotExist(err) && stat.IsDir()
+	stat, e := os.Stat(legFileName)
+	legExists := !os.IsNotExist(e) && stat.IsDir()
 	switch {
 	case legExists && wantExists:
 		// Both exist and mc was called with legacy path (.exe)
 		// Rename the 'mc' config and move the legacy location one to where we want it.
 		backupdir := fmt.Sprintf("%s.unused\\", mcCustomConfigDir)
 		_ = os.RemoveAll(backupdir)
-		err := os.Rename(mcCustomConfigDir, backupdir)
-		fatalIf(probe.NewError(err), fmt.Sprintln("Renaming unused config", mcCustomConfigDir, "->", backupdir, "failed. Please rename/remove file."))
+		e := os.Rename(mcCustomConfigDir, backupdir)
+		fatalIf(probe.NewError(e), fmt.Sprintln("Renaming unused config", mcCustomConfigDir, "->", backupdir, "failed. Please rename/remove file."))
 		fallthrough
 	case !wantExists && legExists:
-		err := os.Rename(legFileName, mcCustomConfigDir)
-		fatalIf(probe.NewError(err), fmt.Sprintln("Migrating config location", legFileName, "->", mcCustomConfigDir, "failed. Please move config file."))
+		e := os.Rename(legFileName, mcCustomConfigDir)
+		fatalIf(probe.NewError(e), fmt.Sprintln("Migrating config location", legFileName, "->", mcCustomConfigDir, "failed. Please move config file."))
 	default:
 		// Legacy does not exist.
 	}

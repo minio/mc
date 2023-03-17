@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -167,7 +167,6 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 		}
 
 		if content.Type.IsDir() && !recursive {
-
 			depth := depth
 			if depth > 0 {
 				depth--
@@ -184,17 +183,17 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			size += used
 			objects += n
 		} else {
-			size += content.Size
-			if !content.IsDeleteMarker {
+			if !content.IsDeleteMarker && !content.Type.IsDir() {
+				size += content.Size
 				objects++
 			}
 		}
 	}
 
 	if depth != 0 {
-		u, err := url.Parse(targetURL)
-		if err != nil {
-			panic(err)
+		u, e := url.Parse(targetURL)
+		if e != nil {
+			panic(e)
 		}
 
 		printMsg(duMessage{

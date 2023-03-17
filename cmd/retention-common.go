@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -96,9 +96,9 @@ func (m retentionBucketMessage) String() string {
 	}
 	// info/set command
 	if m.Mode == "" {
-		return console.Colorize("RetentionNotFound", "Object locking configuration is not enabled.")
+		return console.Colorize("RetentionNotFound", "Object locking is not configured.")
 	}
-	return console.Colorize("RetentionSuccess", fmt.Sprintf("Object locking configuration '%s' is enabled for %s.",
+	return console.Colorize("RetentionSuccess", fmt.Sprintf("Object locking '%s' is configured for %s.",
 		console.Colorize("Mode", m.Mode), console.Colorize("Validity", m.Validity)))
 }
 

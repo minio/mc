@@ -24,7 +24,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -83,7 +83,7 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 
 	p := tea.NewProgram(initSpeedTestUI())
 	go func() {
-		if e := p.Start(); e != nil {
+		if _, e := p.Run(); e != nil {
 			os.Exit(1)
 		}
 		close(done)

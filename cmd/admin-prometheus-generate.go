@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"fmt"
 	"net/url"
 	"time"
 
@@ -74,10 +73,9 @@ type PrometheusConfig struct {
 
 // String colorized prometheus config yaml.
 func (c PrometheusConfig) String() string {
-	b, err := yaml.Marshal(c)
-	if err != nil {
-		return fmt.Sprintf("error creating config string: %s", err)
-	}
+	b, e := yaml.Marshal(c)
+	fatalIf(probe.NewError(e), "Unable to generate Prometheus config")
+
 	return console.Colorize("yaml", string(b))
 }
 
@@ -95,10 +93,9 @@ type StatConfig struct {
 
 // String colorized stat config yaml.
 func (t StatConfig) String() string {
-	b, err := yaml.Marshal(t)
-	if err != nil {
-		return fmt.Sprintf("error creating config string: %s", err)
-	}
+	b, e := yaml.Marshal(t)
+	fatalIf(probe.NewError(e), "Unable to generate Prometheus config")
+
 	return console.Colorize("yaml", string(b))
 }
 

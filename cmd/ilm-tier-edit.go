@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,11 +18,11 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	madmin "github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -58,6 +58,7 @@ var adminTierEditCmd = cli.Command{
 	Name:         "edit",
 	Usage:        "update an existing remote tier configuration",
 	Action:       mainAdminTierEdit,
+	Hidden:       true,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        append(globalFlags, adminTierEditFlags...),
@@ -126,10 +127,9 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	case accountKey != "": // Azure tier
 		creds.SecretKey = accountKey
 	case credsPath != "": // GCS tier
-		credsBytes, err := ioutil.ReadFile(credsPath)
-		if err != nil {
-			fatalIf(probe.NewError(err), "Failed to read credentials file")
-		}
+		credsBytes, e := os.ReadFile(credsPath)
+		fatalIf(probe.NewError(e), "Unable to read credentials file at %s", credsPath)
+
 		creds.CredsJSON = credsBytes
 	default:
 		fatalIf(errInvalidArgument().Trace(args.Tail()...), "Insufficient credential information supplied to update remote tier target credentials")

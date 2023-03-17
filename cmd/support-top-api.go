@@ -22,7 +22,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -120,7 +120,7 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 		}
 	}()
 
-	if e := p.Start(); e != nil {
+	if _, e := p.Run(); e != nil {
 		cancel()
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top API events")
 	}

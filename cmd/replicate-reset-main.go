@@ -26,13 +26,14 @@ var replicateResyncSubcommands = []cli.Command{
 
 var replicateResyncCmd = cli.Command{
 	Name:            "resync",
-	Usage:           "replicate back all previously replicated objects",
+	Usage:           "re-replicate all previously replicated objects",
 	HideHelpCommand: true,
 	Action:          mainReplicateResync,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	Subcommands:     replicateResyncSubcommands,
 	Aliases:         []string{"reset"},
+	HiddenAliases:   true,
 }
 
 // mainReplicateResync is the handle for "mc replicate resync" command.

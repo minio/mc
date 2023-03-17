@@ -73,10 +73,10 @@ func GetSysInfo() map[string]string {
 		"host.arch":      runtime.GOARCH,
 		"host.lang":      runtime.Version(),
 		"host.cpus":      strconv.Itoa(runtime.NumCPU()),
-		"mem.used":       humanize.Bytes(memstats.Alloc),
-		"mem.total":      humanize.Bytes(memstats.Sys),
-		"mem.heap.used":  humanize.Bytes(memstats.HeapAlloc),
-		"mem.heap.total": humanize.Bytes(memstats.HeapSys),
+		"mem.used":       humanize.IBytes(memstats.Alloc),
+		"mem.total":      humanize.IBytes(memstats.Sys),
+		"mem.heap.used":  humanize.IBytes(memstats.HeapAlloc),
+		"mem.heap.total": humanize.IBytes(memstats.HeapSys),
 	}
 }
 

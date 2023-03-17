@@ -32,8 +32,8 @@ type fsComplete struct{}
 
 // predictPathWithTilde completes an FS path which starts with a `~/`
 func (fs fsComplete) predictPathWithTilde(a complete.Args) []string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil || homeDir == "" {
+	homeDir, e := os.UserHomeDir()
+	if e != nil || homeDir == "" {
 		return nil
 	}
 	// Clean the home directory path
@@ -304,12 +304,21 @@ var completeCmds = map[string]complete.Predictor{
 	"/ilm/import":  s3Complete{deepLevel: 2},
 	"/ilm/restore": s3Completer,
 
+	"/ilm/rule/ls":      s3Complete{deepLevel: 2},
+	"/ilm/rule/add":     s3Complete{deepLevel: 2},
+	"/ilm/rule/edit":    s3Complete{deepLevel: 2},
+	"/ilm/rule/rm":      s3Complete{deepLevel: 2},
+	"/ilm/rule/export":  s3Complete{deepLevel: 2},
+	"/ilm/rule/import":  s3Complete{deepLevel: 2},
+	"/ilm/rule/restore": s3Completer,
+
 	"/undo": s3Completer,
 
 	// Admin API commands MinIO only.
 	"/admin/heal": s3Completer,
 
 	"/admin/info": aliasCompleter,
+	"/admin/logs": aliasCompleter,
 
 	"/admin/config/get":     adminConfigCompleter,
 	"/admin/config/set":     adminConfigCompleter,
@@ -374,6 +383,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/idp/ldap/disable": aliasCompleter,
 
 	"/admin/idp/ldap/policy/entities": aliasCompleter,
+	"/admin/idp/ldap/policy/attach":   aliasCompleter,
+	"/admin/idp/ldap/policy/detach":   aliasCompleter,
 
 	"/admin/policy/info":   aliasCompleter,
 	"/admin/policy/set":    aliasCompleter,
@@ -401,6 +412,8 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/user/svcacct/enable":  aliasCompleter,
 	"/admin/user/svcacct/disable": aliasCompleter,
 
+	"/admin/user/sts/info": aliasCompleter,
+
 	"/admin/group/add":     aliasCompleter,
 	"/admin/group/disable": aliasCompleter,
 	"/admin/group/enable":  aliasCompleter,
@@ -408,13 +421,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/admin/bucket/remote/add":       aliasCompleter,
-	"/admin/bucket/remote/edit":      aliasCompleter,
-	"/admin/bucket/remote/ls":        aliasCompleter,
-	"/admin/bucket/remote/rm":        aliasCompleter,
-	"/admin/bucket/remote/bandwidth": aliasCompleter,
-	"/admin/bucket/quota":            aliasCompleter,
-	"/admin/bucket/info":             s3Complete{deepLevel: 2},
+	"/admin/bucket/remote/add":  aliasCompleter,
+	"/admin/bucket/remote/edit": aliasCompleter,
+	"/admin/bucket/remote/rm":   aliasCompleter,
+	"/admin/bucket/quota":       aliasCompleter,
+	"/admin/bucket/info":        s3Complete{deepLevel: 2},
 
 	"/admin/kms/key/create": aliasCompleter,
 	"/admin/kms/key/status": aliasCompleter,
@@ -429,11 +440,23 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/tier/rm":     nil,
 	"/admin/tier/verify": nil,
 
-	"/admin/replicate/add":    aliasCompleter,
-	"/admin/replicate/edit":   aliasCompleter,
-	"/admin/replicate/info":   aliasCompleter,
-	"/admin/replicate/status": aliasCompleter,
-	"/admin/replicate/remove": aliasCompleter,
+	"/ilm/tier/info":   nil,
+	"/ilm/tier/ls":     nil,
+	"/ilm/tier/add":    nil,
+	"/ilm/tier/update": nil,
+	"/ilm/tier/check":  nil,
+	"/ilm/tier/rm":     nil,
+
+	"/admin/replicate/add":           aliasCompleter,
+	"/admin/replicate/update":        aliasCompleter,
+	"/admin/replicate/edit":          aliasCompleter,
+	"/admin/replicate/info":          aliasCompleter,
+	"/admin/replicate/status":        aliasCompleter,
+	"/admin/replicate/rm":            aliasCompleter,
+	"/admin/replicate/remove":        aliasCompleter,
+	"/admin/replicate/resync/start":  aliasCompleter,
+	"/admin/replicate/resync/cancel": aliasCompleter,
+	"/admin/replicate/resync/status": aliasCompleter,
 
 	"/admin/cluster/bucket/export": aliasCompleter,
 	"/admin/cluster/bucket/import": aliasCompleter,
@@ -446,13 +469,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/alias/import": nil,
 
 	"/support/callhome":     aliasCompleter,
-	"/support/logs/enable":  aliasCompleter,
-	"/support/logs/disable": aliasCompleter,
-	"/support/logs/status":  aliasCompleter,
-	"/support/logs/show":    aliasCompleter,
 	"/support/register":     aliasCompleter,
 	"/support/diag":         aliasCompleter,
 	"/support/profile":      aliasCompleter,
+	"/support/proxy/set":    aliasCompleter,
+	"/support/proxy/show":   aliasCompleter,
+	"/support/proxy/remove": aliasCompleter,
 	"/support/inspect":      aliasCompleter,
 	"/support/perf":         aliasCompleter,
 	"/support/metrics":      aliasCompleter,
@@ -475,6 +497,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/batch/list":     aliasCompleter,
 	"/batch/status":   aliasCompleter,
 	"/batch/describe": aliasCompleter,
+	"/quota/set":      aliasCompleter,
+	"/quota/info":     aliasCompleter,
+	"/quota/clear":    aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -34,19 +34,22 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
 
-const defaultPublicKey = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
+const (
+	defaultPublicKey      = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
+	inspectOutputFilename = "inspect-data.enc"
+)
 
-var supportInspectFlags = []cli.Flag{
+var supportInspectFlags = append(subnetCommonFlags,
 	cli.BoolFlag{
 		Name:  "legacy",
 		Usage: "use the older inspect format",
 	},
-}
+)
 
 var supportInspectCmd = cli.Command{
 	Name:            "inspect",
@@ -66,11 +69,14 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Download 'xl.meta' for a specific object from all the drives in a zip file.
+  1. Upload 'xl.meta' of a specific object from all the drives
      {{.Prompt}} {{.HelpName}} myminio/bucket/test*/xl.meta
 
-  2. Download recursively all objects at a prefix. NOTE: This can be an expensive operation use it with caution.
+  2. Upload recursively all objects at a prefix. NOTE: This can be an expensive operation use it with caution.
      {{.Prompt}} {{.HelpName}} myminio/bucket/test/**
+
+  3. Download 'xl.meta' of a specific object from all the drives locally, and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} myminio/bucket/test*/xl.meta --airgap
 `,
 }
 
@@ -88,9 +94,9 @@ func (t inspectMessage) String() string {
 		msg += fmt.Sprintf("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", t.File))
 		msg += fmt.Sprintf("Decryption key: %s\n\n", console.Colorize("Key", t.Key))
 
-		msg += fmt.Sprintf("The decryption key will ONLY be shown here. It cannot be recovered.\n")
-		msg += fmt.Sprintf("The encrypted file can safely be shared without the decryption key.\n")
-		msg += fmt.Sprintf("Even with the decryption key, data stored with encryption cannot be accessed.\n")
+		msg += "The decryption key will ONLY be shown here. It cannot be recovered.\n"
+		msg += "The encrypted file can safely be shared without the decryption key.\n"
+		msg += "Even with the decryption key, data stored with encryption cannot be accessed.\n"
 	}
 	return msg
 }
@@ -116,8 +122,11 @@ func mainSupportInspect(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	alias, _ := url2Alias(aliasedURL)
-	validateClusterRegistered(alias, false)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
+	if len(apiKey) == 0 {
+		// api key not passed as flag. Check that the cluster is registered.
+		apiKey = validateClusterRegistered(alias, true)
+	}
 
 	console.SetColor("File", color.New(color.FgWhite, color.Bold))
 	console.SetColor("Key", color.New(color.FgHiRed, color.Bold))
@@ -173,10 +182,31 @@ func mainSupportInspect(ctx *cli.Context) error {
 	r.Close()
 	tmpFile.Close()
 
+	if globalAirgapped {
+		saveInspectDataFile(key, tmpFile)
+		return nil
+	}
+
+	uploadURL := subnetUploadURL("inspect", inspectOutputFilename)
+	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, inspectOutputFilename, apiKey)
+
+	_, e = uploadFileToSubnet(alias, tmpFile.Name(), reqURL, headers)
+	if e != nil {
+		console.Errorln("Unable to upload inspect data to SUBNET portal: " + e.Error())
+		saveInspectDataFile(key, tmpFile)
+		return nil
+	}
+
+	clr := color.New(color.FgGreen, color.Bold)
+	clr.Println("uploaded successfully to SUBNET.")
+	return nil
+}
+
+func saveInspectDataFile(key []byte, tmpFile *os.File) {
 	var keyHex string
 
+	downloadPath := inspectOutputFilename
 	// Choose a name and move the inspect data to its final destination
-	downloadPath := fmt.Sprintf("inspect-data.enc")
 	if key != nil {
 		// Create an id that is also crc.
 		var id [4]byte
@@ -202,5 +232,4 @@ func mainSupportInspect(ctx *cli.Context) error {
 		File: downloadPath,
 		Key:  keyHex,
 	})
-	return nil
 }

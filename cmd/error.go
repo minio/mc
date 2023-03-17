@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -84,11 +84,12 @@ func fatal(err *probe.Error, msg string, data ...interface{}) {
 	msg = fmt.Sprintf(msg, data...)
 	errmsg := err.String()
 	if !globalDebug {
-		e := err.ToGoError()
-		if errors.Is(e, context.Canceled) {
-			// This will replace context canceled error message
-			// that the user is seeing to a better one.
+		var e error
+		if errors.Is(globalContext.Err(), context.Canceled) {
+			// mc is getting killed
 			e = errors.New("Canceling upon user request")
+		} else {
+			e = err.ToGoError()
 		}
 		errmsg = e.Error()
 	}
@@ -159,11 +160,12 @@ func errorIf(err *probe.Error, msg string, data ...interface{}) {
 	}
 	msg = fmt.Sprintf(msg, data...)
 	if !globalDebug {
-		e := err.ToGoError()
-		if errors.Is(e, context.Canceled) {
-			// This will replace context canceled error message
-			// that the user is seeing to a better one.
+		var e error
+		if errors.Is(globalContext.Err(), context.Canceled) {
+			// mc is getting killed
 			e = errors.New("Canceling upon user request")
+		} else {
+			e = err.ToGoError()
 		}
 		console.Errorln(fmt.Sprintf("%s %s", msg, e))
 		return

@@ -26,7 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -46,11 +46,11 @@ var logsShowFlags = []cli.Flag{
 	},
 }
 
-var supportLogsShowCmd = cli.Command{
-	Name:            "show",
+var adminLogsCmd = cli.Command{
+	Name:            "logs",
 	Usage:           "show MinIO logs",
-	Action:          mainLogsShowConsole,
 	OnUsageError:    onUsageError,
+	Action:          mainAdminLogs,
 	Before:          setGlobalsFromContext,
 	Flags:           append(logsShowFlags, globalFlags...),
 	HideHelpCommand: true,
@@ -86,15 +86,15 @@ type logMessage struct {
 // JSON - jsonify loginfo
 func (l logMessage) JSON() string {
 	l.Status = "success"
-	logJSON, err := json.MarshalIndent(&l, "", " ")
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+	logJSON, e := json.MarshalIndent(&l, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(logJSON)
 }
 
 func getLogTime(lt string) string {
-	tm, err := time.Parse(time.RFC3339Nano, lt)
-	if err != nil {
+	tm, e := time.Parse(time.RFC3339Nano, lt)
+	if e != nil {
 		return lt
 	}
 	return tm.Format(logTimeFormat)
@@ -164,8 +164,8 @@ func (l logMessage) String() string {
 	return fmt.Sprintf("%s\n", logMsg)
 }
 
-// mainLogsShowConsole - the entry function of support logs show
-func mainLogsShowConsole(ctx *cli.Context) error {
+// mainAdminLogs - the entry function of admin logs
+func mainAdminLogs(ctx *cli.Context) error {
 	// Check for command syntax
 	checkLogsShowSyntax(ctx)
 	console.SetColor("LogMessage", color.New(color.Bold, color.FgRed))
@@ -209,7 +209,9 @@ func mainLogsShowConsole(ctx *cli.Context) error {
 		if node != "" {
 			logInfo.NodeName = ""
 		}
-		printMsg(logMessage{LogInfo: logInfo})
+		if logInfo.DeploymentID != "" {
+			printMsg(logMessage{LogInfo: logInfo})
+		}
 	}
 	return nil
 }

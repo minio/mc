@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,33 +17,35 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsDisableCmd = cli.Command{
-	Name:         "disable",
-	Usage:        "disable uploading MinIO logs to SUBNET",
+var ilmTierUpdateCmd = cli.Command{
+	Name:         "update",
+	Usage:        "update an existing remote tier configuration",
+	Action:       mainAdminTierEdit,
 	OnUsageError: onUsageError,
-	Action:       mainDisableLogs,
 	Before:       setGlobalsFromContext,
-	Flags:        supportGlobalFlags,
+	Flags:        append(globalFlags, adminTierEditFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
+
 USAGE:
-  {{.HelpName}} ALIAS
+  {{.HelpName}} ALIAS NAME
+
+NAME:
+  Name of remote tier. e.g WARM-TIER
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Disable uploading logs for cluster with alias 'play' to SUBNET
-     {{.Prompt}} {{.HelpName}} play
-`,
-}
+  1. Update credentials for an existing Azure Blob Storage remote tier:
+     {{.Prompt}} {{.HelpName}} myminio AZTIER --account-key ACCOUNT-KEY
 
-func mainDisableLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "disable")
-	configureSubnetWebhook(alias, false)
-	return nil
+  2. Update credentials for an existing AWS S3 compatible remote tier:
+     {{.Prompt}} {{.HelpName}} myminio S3TIER --access-key ACCESS-KEY --secret-key SECRET-KEY
+
+  3. Update credentials for an existing Google Cloud Storage remote tier:
+     {{.Prompt}} {{.HelpName}} myminio GCSTIER --credentials-file /path/to/credentials.json
+`,
 }

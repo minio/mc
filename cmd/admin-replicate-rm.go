@@ -19,12 +19,11 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -41,12 +40,14 @@ var adminReplicateRemoveFlags = []cli.Flag{
 }
 
 var adminReplicateRemoveCmd = cli.Command{
-	Name:         "remove",
-	Usage:        "remove one or more sites from site replication",
-	Action:       mainAdminReplicationRemoveStatus,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, adminReplicateRemoveFlags...),
+	Name:          "rm",
+	Aliases:       []string{"remove"},
+	Usage:         "remove one or more sites from site replication",
+	Action:        mainAdminReplicationRemoveStatus,
+	OnUsageError:  onUsageError,
+	HiddenAliases: true,
+	Before:        setGlobalsFromContext,
+	Flags:         append(globalFlags, adminReplicateRemoveFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -80,9 +81,15 @@ func (i srRemoveStatus) JSON() string {
 
 func (i srRemoveStatus) String() string {
 	if i.RemoveAll {
-		return console.Colorize("UserMessage", fmt.Sprintf("All site(s) were removed successfully"))
+		return console.Colorize("UserMessage", "All site(s) were removed successfully")
 	}
-	return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed successfully", strings.Join(i.sites, ", ")))
+	if i.ReplicateRemoveStatus.Status == madmin.ReplicateRemoveStatusSuccess {
+		return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed successfully", i.sites))
+	}
+	if len(i.sites) == 1 {
+		return console.Colorize("UserMessage", fmt.Sprintf("Following site %s was removed partially, some operations failed:\nERROR: '%s'", i.sites, i.ReplicateRemoveStatus.ErrDetail))
+	}
+	return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed partially, some operations failed: \nERROR: '%s'", i.sites, i.ReplicateRemoveStatus.ErrDetail))
 }
 
 func checkAdminReplicateRemoveSyntax(ctx *cli.Context) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -119,13 +119,13 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 		if len(srcURLs) != 1 {
 			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 		}
-		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isMvCmd, timeRef)
+		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, isMvCmd, timeRef)
 	case copyURLsTypeB: // File -> Folder.
 		// Check source.
 		if len(srcURLs) != 1 {
 			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 		}
-		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isMvCmd, timeRef)
+		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, isMvCmd, timeRef)
 	case copyURLsTypeC: // Folder... -> Folder.
 		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, isZip, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeD: // File1...FileN -> Folder.
@@ -141,8 +141,8 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
-func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
-	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, false)
+func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isZip, isMvCmd bool, timeRef time.Time) {
+	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, isZip)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
@@ -151,8 +151,8 @@ func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, tgtURL 
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
-func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
-	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, false)
+func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isZip, isMvCmd bool, timeRef time.Time) {
+	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, isZip)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {

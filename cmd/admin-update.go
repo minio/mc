@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,7 +18,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -27,13 +30,20 @@ import (
 	"github.com/minio/pkg/console"
 )
 
+var adminUpdateFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "yes, y",
+		Usage: "Confirms the server update",
+	},
+}
+
 var adminServerUpdateCmd = cli.Command{
 	Name:         "update",
 	Usage:        "update all MinIO servers",
 	Action:       mainAdminServerUpdate,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(adminUpdateFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -102,6 +112,19 @@ func mainAdminServerUpdate(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	updateURL := args.Get(1)
+
+	autoConfirm := ctx.Bool("yes")
+
+	if isTerminal() && !autoConfirm {
+		fmt.Printf("You are about to upgrade *MinIO Server*, please confirm [y/N]: ")
+		answer, e := bufio.NewReader(os.Stdin).ReadString('\n')
+		fatalIf(probe.NewError(e), "Unable to parse user input.")
+		answer = strings.TrimSpace(answer)
+		if answer = strings.ToLower(answer); answer != "y" && answer != "yes" {
+			fmt.Println("Upgrade aborted!")
+			return nil
+		}
+	}
 
 	// Update the specified MinIO server, optionally also
 	// with the provided update URL.

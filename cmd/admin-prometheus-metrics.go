@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -27,7 +26,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	dto "github.com/prometheus/client_model/go"
-	prom2json "github.com/prometheus/prom2json"
+	"github.com/prometheus/prom2json"
 )
 
 var adminPrometheusMetricsCmd = cli.Command{
@@ -104,9 +103,7 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 func (pm prometheusMetricsReader) JSON() string {
 	mfChan := make(chan *dto.MetricFamily)
 	go func() {
-		if err := prom2json.ParseReader(pm.Reader, mfChan); err != nil {
-			fatalIf(probe.NewError(err), "error reading metrics:")
-		}
+		fatalIf(probe.NewError(prom2json.ParseReader(pm.Reader, mfChan)), "Unable to parse Prometheus metrics.")
 	}()
 	result := []*prom2json.Family{}
 	for mf := range mfChan {
@@ -119,10 +116,9 @@ func (pm prometheusMetricsReader) JSON() string {
 
 // String - returns the string representation of the prometheus metrics
 func (pm prometheusMetricsReader) String() string {
-	respBytes, e := ioutil.ReadAll(pm.Reader)
-	if e != nil {
-		fatalIf(probe.NewError(e), "error reading metrics:")
-	}
+	respBytes, e := io.ReadAll(pm.Reader)
+	fatalIf(probe.NewError(e), "Unable to read Prometheus metrics.")
+
 	return string(respBytes)
 }
 
@@ -133,8 +129,8 @@ type prometheusMetricsReader struct {
 
 func mainSupportMetrics(ctx *cli.Context) error {
 	checkSupportMetricsSyntax(ctx)
-	if err := printPrometheusMetrics(ctx); err != nil {
-		fatalIf(probe.NewError(err), "Error in listing prometheus metrics")
-	}
+
+	fatalIf(probe.NewError(printPrometheusMetrics(ctx)), "Unable to list prometheus metrics.")
+
 	return nil
 }

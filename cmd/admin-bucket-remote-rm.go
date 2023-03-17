@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -18,18 +18,9 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
-
-var adminBucketRemoteRmFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "arn",
-		Usage: "ARN to be removed",
-	},
-}
 
 var adminBucketRemoteRmCmd = cli.Command{
 	Name:         "rm",
@@ -37,57 +28,14 @@ var adminBucketRemoteRmCmd = cli.Command{
 	Action:       mainAdminBucketRemoteRemove,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(globalFlags, adminBucketRemoteRmFlags...),
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Remove existing remote target with arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
-     for bucket srcbucket on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/srcbucket --arn "arn:minio:replication:us-west-1:993bc6b6-accd-45e3-884f-5f3e652aed2a:dest1"
-`,
-}
-
-// checkAdminBucketRemoteRemoveSyntax - validate all the passed arguments
-func checkAdminBucketRemoteRemoveSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
+	Flags:        globalFlags,
+	HideHelp:     true,
+	Hidden:       true,
 }
 
 // mainAdminBucketRemoteRemove is the handle for "mc admin bucket remote rm" command.
 func mainAdminBucketRemoteRemove(ctx *cli.Context) error {
-	checkAdminBucketRemoteRemoveSyntax(ctx)
-
-	console.SetColor("RemoteMessage", color.New(color.FgGreen))
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	// Create a new MinIO Admin Client
-	client, cerr := newAdminClient(aliasedURL)
-	fatalIf(cerr.Trace(aliasedURL), "Unable to initialize admin connection.")
-	_, sourceBucket := url2Alias(args[0])
-	if sourceBucket == "" {
-		fatalIf(errInvalidArgument(), "Source bucket not specified in `"+args[0]+"`.")
-	}
-	arn := ctx.String("arn")
-	if arn == "" {
-		fatalIf(errInvalidArgument(), "ARN needs to be specified.")
-	}
-	fatalIf(probe.NewError(client.RemoveRemoteTarget(globalContext, sourceBucket, arn)).Trace(args...), "Unable to remove remote target")
-
-	printMsg(RemoteMessage{
-		op:           ctx.Command.Name,
-		SourceBucket: sourceBucket,
-		RemoteARN:    arn,
-	})
+	console.Infoln("Please use 'mc replicate rm'")
 
 	return nil
 }

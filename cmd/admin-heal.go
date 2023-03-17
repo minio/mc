@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -30,7 +30,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -226,8 +226,8 @@ func generateSetsStatus(disks []madmin.Disk) map[setIndex]setInfo {
 func generateServersStatus(disks []madmin.Disk) map[string]serverInfo {
 	m := make(map[string]serverInfo)
 	for _, d := range disks {
-		u, err := url.Parse(d.Endpoint)
-		if err != nil {
+		u, e := url.Parse(d.Endpoint)
+		if e != nil {
 			continue
 		}
 		endpoint := u.Host
@@ -378,17 +378,17 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 			_, ok := offlineEndpoints[endpoint]
 			if ok {
 				stateText := console.Colorize("NodeFailed", "OFFLINE")
-				fmt.Fprintf(&msg, fmt.Sprintf("  %s: %s\n", endpoint, stateText))
+				fmt.Fprintf(&msg, "  %s: %s\n", endpoint, stateText)
 				continue
 			}
 			serverStatus := serversStatus[endpoint]
 			switch {
 			case showTolerance:
 				serverHeader := "  %s: (Tolerance: %d server(s))\n"
-				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint, poolsInfo[serverStatus.pool].tolerance))
+				fmt.Fprintf(&msg, serverHeader, endpoint, poolsInfo[serverStatus.pool].tolerance)
 			default:
 				serverHeader := "  %s:\n"
-				fmt.Fprintf(&msg, fmt.Sprintf(serverHeader, endpoint))
+				fmt.Fprintf(&msg, serverHeader, endpoint)
 			}
 
 			for _, d := range serverStatus.disks {
@@ -439,11 +439,11 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 
 	summary := shortBackgroundHealStatusMessage{HealInfo: s.HealInfo}
 
-	fmt.Fprintf(&msg, "\n")
-	fmt.Fprintf(&msg, "Summary:\n")
-	fmt.Fprintf(&msg, "=======\n")
-	fmt.Fprintf(&msg, summary.String())
-	fmt.Fprintf(&msg, "\n")
+	fmt.Fprint(&msg, "\n")
+	fmt.Fprint(&msg, "Summary:\n")
+	fmt.Fprint(&msg, "=======\n")
+	fmt.Fprint(&msg, summary.String())
+	fmt.Fprint(&msg, "\n")
 
 	return msg.String()
 }
@@ -540,7 +540,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				bytesHealedPerSec += float64(time.Second) * float64(disk.HealInfo.BytesDone) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 				itemsHealedPerSec += float64(time.Second) * float64(disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 
-				scanSpeed := float64(disk.UsedSpace) / float64(time.Now().Sub(disk.HealInfo.Started))
+				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
 				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
 				if remainingTime > healingRemaining {
 					healingRemaining = remainingTime
@@ -556,7 +556,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	}
 
 	if startedAt.IsZero() && itemsHealed == 0 {
-		healPrettyMsg += "No active healing is detected among disks"
+		healPrettyMsg += "No active healing is detected for new disks"
 		if problematicDisks > 0 {
 			healPrettyMsg += fmt.Sprintf(", though %d offline disk(s) found.", problematicDisks)
 		} else {
@@ -572,17 +572,17 @@ func (s shortBackgroundHealStatusMessage) String() string {
 
 		healPrettyMsg += fmt.Sprintf("Objects Healed: %s/%s (%s), %s/%s (%s)\n",
 			humanize.Comma(int64(itemsHealed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
-			humanize.Bytes(bytesHealed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
+			humanize.IBytes(bytesHealed), humanize.IBytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
 
 		if itemsFailed > 0 {
 			itemsPct := math.Min(100, 100*float64(itemsFailed)/float64(totalItems))
 			bytesPct := math.Min(100, 100*float64(bytesFailed)/float64(totalBytes))
 			healPrettyMsg += fmt.Sprintf("Objects Failed: %s/%s (%s), %s/%s (%s)\n",
 				humanize.Comma(int64(itemsFailed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
-				humanize.Bytes(bytesFailed), humanize.Bytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
+				humanize.IBytes(bytesFailed), humanize.IBytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
 		}
 	} else {
-		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.Bytes(bytesHealed))
+		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.IBytes(bytesHealed))
 	}
 
 	if accumulatedElapsedTime > 0 {
@@ -666,8 +666,8 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Return the background heal status when the user
 	// doesn't pass a bucket or --recursive flag.
 	if bucket == "" && !ctx.Bool("recursive") {
-		bgHealStatus, berr := adminClnt.BackgroundHealStatus(globalContext)
-		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
+		bgHealStatus, e := adminClnt.BackgroundHealStatus(globalContext)
+		fatalIf(probe.NewError(e), "Unable to get background heal status.")
 		if ctx.Bool("verbose") {
 			printMsg(verboseBackgroundHealStatusMessage{
 				Status:         "success",
@@ -701,14 +701,14 @@ func mainAdminHeal(ctx *cli.Context) error {
 	forceStart := ctx.Bool("force-start")
 	forceStop := ctx.Bool("force-stop")
 	if forceStop {
-		_, _, herr := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, forceStop)
-		fatalIf(probe.NewError(herr), "Failed to stop heal sequence.")
+		_, _, e := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, forceStop)
+		fatalIf(probe.NewError(e), "Unable to stop healing.")
 		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
 		return nil
 	}
 
-	healStart, _, herr := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
-	fatalIf(probe.NewError(herr), "Failed to start heal sequence.")
+	healStart, _, e := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
+	fatalIf(probe.NewError(e), "Unable to start healing.")
 
 	ui := uiData{
 		Bucket:                bucket,

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -85,6 +85,7 @@ func fsNew(path string) (Client, *probe.Error) {
 	}, nil
 }
 
+//lint:ignore U1000 Used on some platforms.
 func isNotSupported(e error) bool {
 	if e == nil {
 		return false
@@ -546,7 +547,7 @@ func (f *fsClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 		return nil, err.Trace(f.PathURL.Path)
 	}
 	if opts.RangeStart != 0 {
-		_, e := fileData.Seek(opts.RangeStart, os.SEEK_SET)
+		_, e := fileData.Seek(opts.RangeStart, io.SeekStart)
 		if e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return nil, err.Trace(f.PathURL.Path)

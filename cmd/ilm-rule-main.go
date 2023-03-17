@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,34 +17,28 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsEnableCmd = cli.Command{
-	Name:            "enable",
-	Usage:           "enable uploading real-time MinIO logs to SUBNET",
-	Action:          mainEnableLogs,
-	OnUsageError:    onUsageError,
-	Before:          setGlobalsFromContext,
-	Flags:           supportGlobalFlags,
-	HideHelpCommand: true,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-USAGE:
-  {{.HelpName}} ALIAS
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Enable  uploading real-time logs for cluster with alias 'play' to SUBNET.
-     {{.Prompt}} {{.HelpName}} play
-`,
+var ilmRuleSubcommands = []cli.Command{
+	ilmAddCmd,
+	ilmEditCmd,
+	ilmLsCmd,
+	ilmRmCmd,
+	ilmExportCmd,
+	ilmImportCmd,
 }
 
-func mainEnableLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "enable")
-	configureSubnetWebhook(alias, true)
+var ilmRuleCmd = cli.Command{
+	Name:            "rule",
+	Usage:           "manage bucket lifecycle rules",
+	Before:          setGlobalsFromContext,
+	Action:          mainILMRule,
+	Subcommands:     ilmRuleSubcommands,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
+}
+
+func mainILMRule(ctx *cli.Context) error {
+	commandNotFound(ctx, ilmRuleSubcommands)
 	return nil
 }

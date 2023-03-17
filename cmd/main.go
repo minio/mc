@@ -335,10 +335,10 @@ func installAutoCompletion() {
 				"Supported shells are: bash, zsh, fish")
 	}
 
-	err := completeinstall.Install(filepath.Base(os.Args[0]))
+	e := completeinstall.Install(filepath.Base(os.Args[0]))
 	var printMsg string
-	if err != nil && strings.Contains(err.Error(), "* already installed") {
-		errStr := err.Error()[strings.Index(err.Error(), "\n")+1:]
+	if e != nil && strings.Contains(e.Error(), "* already installed") {
+		errStr := e.Error()[strings.Index(e.Error(), "\n")+1:]
 		re := regexp.MustCompile(`[::space::]*\*.*` + shellName + `.*`)
 		relatedMsg := re.FindStringSubmatch(errStr)
 		if len(relatedMsg) > 0 {
@@ -351,7 +351,7 @@ func installAutoCompletion() {
 		if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
 			console.Infoln("autocompletion is enabled.", printMsg)
 		} else {
-			fatalIf(probe.NewError(err), "Unable to install auto-completion.")
+			fatalIf(probe.NewError(e), "Unable to install auto-completion.")
 		}
 	} else {
 		console.Infoln("enabled autocompletion in your '" + shellName + "' rc file. Please restart your shell.")
@@ -442,6 +442,7 @@ var appCmds = []cli.Command{
 	shareCmd,
 	versionCmd,
 	ilmCmd,
+	quotaCmd,
 	encryptCmd,
 	eventCmd,
 	watchCmd,

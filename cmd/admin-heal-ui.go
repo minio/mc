@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -27,7 +27,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -291,8 +291,8 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 
 	for _, item := range s.Items {
 		h := newHRI(&item)
-		jsonBytes, err := json.MarshalIndent(makeHR(h), "", " ")
-		fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
+		jsonBytes, e := json.MarshalIndent(makeHR(h), "", " ")
+		fatalIf(probe.NewError(e), "Unable to marshal to JSON.")
 		console.Println(string(jsonBytes))
 	}
 	return nil
@@ -321,8 +321,8 @@ func (ui *uiData) printStatsJSON(s *madmin.HealTaskStatus) {
 	summary.Size = ui.BytesScanned
 	summary.ElapsedTime = int64(ui.HealDuration.Round(time.Second).Seconds())
 
-	jBytes, err := json.MarshalIndent(summary, "", " ")
-	fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
+	jBytes, e := json.MarshalIndent(summary, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal to JSON.")
 	console.Println(string(jBytes))
 }
 

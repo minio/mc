@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/cli"
@@ -489,6 +490,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 			close(statusCh)
 		}
 
+		startContinue := true
 		for {
 			select {
 			case <-quitCh:
@@ -551,6 +553,13 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						return doCopyFake(ctx, cpURLs, pg)
 					}, 0)
 				} else {
+					// Print the copy resume summary once in start
+					if startContinue && cli.Bool("continue") {
+						startSize := humanize.IBytes(uint64(pg.(*progressBar).Start().Get()))
+						totalSize := humanize.IBytes(uint64(pg.(*progressBar).Total))
+						console.Println("Resuming copy from ", startSize, " / ", totalSize)
+						startContinue = false
+					}
 					parallel.queueTask(func() URLs {
 						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve, isZip)
 					}, cpURLs.SourceContent.Size)

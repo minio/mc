@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -28,25 +28,25 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
 
 var supportPerfFlags = append([]cli.Flag{
 	cli.StringFlag{
-		Name:  "duration",
-		Usage: "duration the entire perf tests are run",
-		Value: "10s",
+		Name:  "size",
+		Usage: "size of the object used for uploads/downloads",
+		Value: "64MiB",
 	},
 	cli.BoolFlag{
 		Name:  "verbose, v",
 		Usage: "display per-server stats",
 	},
 	cli.StringFlag{
-		Name:   "size",
-		Usage:  "size of the object used for uploads/downloads",
-		Value:  "64MiB",
+		Name:   "duration",
+		Usage:  "maximum duration each perf tests are run",
+		Value:  "10s",
 		Hidden: true,
 	},
 	cli.IntFlag{
@@ -97,12 +97,12 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 EXAMPLES:
   1. Upload object storage, network, and drive performance analysis for cluster with alias 'myminio' to SUBNET
      {{.Prompt}} {{.HelpName}} myminio
+
   2. Run object storage, network, and drive performance tests on cluster with alias 'myminio', save and upload to SUBNET manually
-     {{.Prompt}} {{.HelpName}} --airgap myminio
+     {{.Prompt}} {{.HelpName}} myminio --airgap
 `,
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -470,7 +470,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	now := time.Now()
 	ret := uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata, false)
 	if ret.Error == nil {
-		durationMs := time.Since(now) / time.Millisecond
+		durationMs := time.Since(now).Milliseconds()
 		mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
 	}
 	return ret
@@ -496,33 +496,40 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 		mirrorTotalOps.Inc()
 
 		if sURLs.Error != nil {
-			mirrorFailedOps.Inc()
+			var ignoreErr bool
+
 			switch {
 			case sURLs.SourceContent != nil:
-				if !isErrIgnored(sURLs.Error) {
+				if isErrIgnored(sURLs.Error) {
+					ignoreErr = true
+				} else {
 					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
 						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
-					errDuringMirror = true
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
 				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
-				errDuringMirror = true
 			default:
+				if strings.Contains(sURLs.Error.ToGoError().Error(), "Overwrite not allowed") {
+					ignoreErr = true
+				}
 				if sURLs.ErrorCond == differInUnknown {
 					errorIf(sURLs.Error.Trace(), "Failed to perform mirroring")
 				} else {
 					errorIf(sURLs.Error.Trace(),
 						"Failed to perform mirroring, with error condition (%s)", sURLs.ErrorCond)
 				}
-				errDuringMirror = true
 			}
 
-			// Do not quit mirroring if we are in --watch or --active-active mode
-			if !mj.opts.activeActive && !mj.opts.isWatch {
-				cancel()
-				cancelInProgress = true
+			if !ignoreErr {
+				mirrorFailedOps.Inc()
+				errDuringMirror = true
+				// Quit mirroring if --watch and --active-active are not passed
+				if !mj.opts.activeActive && !mj.opts.isWatch {
+					cancel()
+					cancelInProgress = true
+				}
 			}
 
 			continue
@@ -550,8 +557,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// If the passed source URL points to fs, fetch the absolute src path
 		// to correctly calculate targetPath
 		if sourceAlias == "" {
-			tmpSrcURL, err := filepath.Abs(sourceURLFull)
-			if err == nil {
+			tmpSrcURL, e := filepath.Abs(sourceURLFull)
+			if e == nil {
 				sourceURLFull = tmpSrcURL
 			}
 		}

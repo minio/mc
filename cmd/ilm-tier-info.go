@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -25,7 +25,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 	"github.com/rivo/tview"
@@ -124,26 +124,13 @@ func (t tierInfos) MarshalJSON() ([]byte, error) {
 	for _, tInfo := range t {
 		ts = append(ts, tierInfo{
 			Name:       tInfo.Name,
-			API:        tierInfoAPI(tInfo.Type),
+			API:        tInfo.Type,
 			Type:       tierInfoType(tInfo.Type),
 			Stats:      tInfo.Stats,
 			DailyStats: tInfo.DailyStats,
 		})
 	}
 	return json.Marshal(ts)
-}
-
-func tierInfoAPI(tierType string) string {
-	switch tierType {
-	case madmin.S3.String(), madmin.GCS.String():
-		return tierType
-	case madmin.Azure.String():
-		return "blob"
-	case "internal":
-		return madmin.S3.String()
-	default:
-		return "unknown"
-	}
 }
 
 func tierInfoType(tierType string) string {
@@ -160,7 +147,7 @@ func (t tierInfos) ToRow(i int, ls []int) []string {
 	} else {
 		tierInfo := t[i]
 		row[tierInfoNameHdr] = tierInfo.Name
-		row[tierInfoAPIHdr] = tierInfoAPI(tierInfo.Type)
+		row[tierInfoAPIHdr] = tierInfo.Type
 		row[tierInfoTypeHdr] = tierInfoType(tierInfo.Type)
 		row[tierInfoUsageHdr] = humanize.IBytes(tierInfo.Stats.TotalSize)
 		row[tierInfoObjectsHdr] = strconv.Itoa(tierInfo.Stats.NumObjects)

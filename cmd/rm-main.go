@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -97,8 +97,8 @@ var (
 			Usage: "remove object(s) versions that are non-current",
 		},
 		cli.BoolFlag{
-			Name:   "force-delete",
-			Usage:  "attempt a prefix force delete, requires confirmation please use with caution",
+			Name:   "purge",
+			Usage:  "attempt a prefix purge, requires confirmation please use with caution - only works with '--force'",
 			Hidden: true,
 		},
 	}
@@ -210,7 +210,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 	isDangerous := cliCtx.Bool("dangerous")
 	isVersions := cliCtx.Bool("versions")
 	isNoncurrentVersion := cliCtx.Bool("non-current")
-	isForceDel := cliCtx.Bool("force-delete")
+	isForceDel := cliCtx.Bool("purge")
 	versionID := cliCtx.String("version-id")
 	rewind := cliCtx.String("rewind")
 	isNamespaceRemoval := false
@@ -227,14 +227,17 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 
 	if isForceDel && !isForce {
 		fatalIf(errDummy().Trace(),
-			"You cannot specify --force-delete without --force.")
+			"You cannot specify --purge without --force.")
 	}
 
 	if isForceDel && isRecursive {
 		fatalIf(errDummy().Trace(),
-			"You cannot specify --force-delete with --recursive.")
+			"You cannot specify --purge with --recursive.")
 	}
-
+	if isForceDel && (isNoncurrentVersion || isVersions || cliCtx.IsSet("older-than") || cliCtx.IsSet("newer-than") || versionID != "") {
+		fatalIf(errDummy().Trace(),
+			"You cannot specify --purge flag with any flag(s) other than --force.")
+	}
 	for _, url := range cliCtx.Args() {
 		// clean path for aliases like s3/.
 		// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
@@ -686,7 +689,7 @@ func mainRm(cliCtx *cli.Context) error {
 	olderThan := cliCtx.String("older-than")
 	newerThan := cliCtx.String("newer-than")
 	isForce := cliCtx.Bool("force")
-	isForceDel := cliCtx.Bool("force-delete")
+	isForceDel := cliCtx.Bool("purge")
 	withNoncurrentVersion := cliCtx.Bool("non-current")
 	withVersions := cliCtx.Bool("versions")
 	versionID := cliCtx.String("version-id")

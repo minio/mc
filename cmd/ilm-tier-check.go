@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,40 +17,29 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var supportLogsStatusCmd = cli.Command{
-	Name:         "status",
-	Usage:        "show current status of MinIO logs",
+var ilmTierCheckCmd = cli.Command{
+	Name:         "check",
+	Usage:        "validate remote tier configuration",
+	Action:       mainAdminTierVerify,
 	OnUsageError: onUsageError,
-	Action:       mainStatusLogs,
 	Before:       setGlobalsFromContext,
-	Flags:        supportGlobalFlags,
+	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
+
 USAGE:
-  {{.HelpName}} ALIAS
+  {{.HelpName}} TARGET NAME
+
+NAME:
+  Name of remote tier target. e.g WARM-TIER
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show current status of MinIO logs for cluster with alias 'myminio', whether it is uploading to SUBNET or not
-     {{.Prompt}} {{.HelpName}} myminio
+  1. Validate a tier config given by name.
+     {{.Prompt}} {{.HelpName}} myminio WARM-TIER
 `,
-}
-
-func isSupportLogsEnabled(alias string) bool {
-	return isFeatureEnabled(alias, "logger_webhook", "subnet")
-}
-
-func mainStatusLogs(ctx *cli.Context) error {
-	setToggleMessageColor()
-	alias := validateLogsToggleCmd(ctx, "status")
-	printMsg(supportLogsMessage{
-		Logs: featureStatusStr(isSupportLogsEnabled(alias)),
-	})
-
-	return nil
 }

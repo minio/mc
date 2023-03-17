@@ -22,11 +22,12 @@ package cmd
 
 import (
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
 func normalizePath(path string) string {
-	if filepath.VolumeName(path) == "" && filepath.HasPrefix(path, "\\") {
+	if filepath.VolumeName(path) == "" && strings.HasPrefix(path, "\\") {
 		var err error
 		path, err = syscall.FullPath(path)
 		if err != nil {

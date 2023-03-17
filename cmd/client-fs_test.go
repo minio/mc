@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,7 +30,7 @@ import (
 
 // Test list files in a folder.
 func (s *TestSuite) TestList(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -197,7 +196,7 @@ func (s *TestSuite) TestList(c *C) {
 
 // Test put bucket aka 'mkdir()' operation.
 func (s *TestSuite) TestPutBucket(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -210,7 +209,7 @@ func (s *TestSuite) TestPutBucket(c *C) {
 
 // Test stat bucket aka 'stat()' operation.
 func (s *TestSuite) TestStatBucket(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -226,7 +225,7 @@ func (s *TestSuite) TestStatBucket(c *C) {
 
 // Test bucket acl fails for directories.
 func (s *TestSuite) TestBucketACLFails(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -248,7 +247,7 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 
 // Test creating a file.
 func (s *TestSuite) TestPut(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -272,7 +271,7 @@ func (s *TestSuite) TestPut(c *C) {
 
 // Test read a file.
 func (s *TestSuite) TestGet(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -301,7 +300,7 @@ func (s *TestSuite) TestGet(c *C) {
 
 // Test get range in a file.
 func (s *TestSuite) TestGetRange(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -334,7 +333,7 @@ func (s *TestSuite) TestGetRange(c *C) {
 
 // Test stat file.
 func (s *TestSuite) TestStatObject(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
@@ -361,7 +360,7 @@ func (s *TestSuite) TestStatObject(c *C) {
 
 // Test copy.
 func (s *TestSuite) TestCopy(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	root, e := os.MkdirTemp(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 	sourcePath := filepath.Join(root, "source")

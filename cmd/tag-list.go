@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -97,8 +97,8 @@ type tagListMessage struct {
 }
 
 func (t tagListMessage) JSON() string {
-	tagJSONbytes, err := json.MarshalIndent(t, "", "  ")
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON for "+t.URL)
+	tagJSONbytes, e := json.MarshalIndent(t, "", "  ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON for "+t.URL)
 	return string(tagJSONbytes)
 }
 

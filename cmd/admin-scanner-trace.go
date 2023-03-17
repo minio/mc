@@ -32,10 +32,6 @@ var adminScannerTraceFlags = []cli.Flag{
 		Name:  "verbose, v",
 		Usage: "print verbose trace",
 	},
-	cli.StringFlag{
-		Name:  "response-threshold",
-		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
-	},
 	cli.StringSliceFlag{
 		Name:  "funcname",
 		Usage: "trace only matching func name (eg 'scanner.ScanObject')",
@@ -47,6 +43,22 @@ var adminScannerTraceFlags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "path",
 		Usage: "trace only matching path",
+	},
+	cli.BoolFlag{
+		Name:  "filter-request",
+		Usage: "trace calls only with request bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "filter-response",
+		Usage: "trace calls only with response bytes greater than this threshold, use with filter-size",
+	},
+	cli.BoolFlag{
+		Name:  "response-duration",
+		Usage: "trace calls only with response duration greater than this threshold (e.g. `5ms`)",
+	},
+	cli.StringFlag{
+		Name:  "filter-size",
+		Usage: "filter size, use with filter (see UNITS)",
 	},
 }
 
@@ -67,6 +79,14 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+UNITS
+  --filter-size flags use with --filter-response or --filter-request accept human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
+
 EXAMPLES:
   1. Show scanner trace for MinIO server
      {{.Prompt}} {{.HelpName}} myminio
@@ -80,12 +100,25 @@ EXAMPLES:
   4. Avoid printing replication related S3 requests
     {{.Prompt}} {{.HelpName}} --request-header '!X-Minio-Source' myminio
 
+  5. Show trace only for ScanObject operations request bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-request --filter-size 1MB myminio
+
+  6. Show trace only for ScanObject operations response bytes greater than 1MB
+    {{.Prompt}} {{.HelpName}} --filter-response --filter-size 1MB myminio
+  
+  7. Show trace only for requests operations duration greater than 5ms
+    {{.Prompt}} {{.HelpName}} --response-duration 5ms myminio
 `,
 }
 
 func checkAdminScannerTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response")
+	if filterFlag && ctx.String("filter-size") == "" {
+		// filter must use with filter-size flags
+		showCommandHelpAndExit(ctx, 1)
 	}
 }
 

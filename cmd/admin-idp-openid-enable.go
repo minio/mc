@@ -19,7 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -60,7 +60,7 @@ func adminIDPEnableDisable(ctx *cli.Context, isOpenID bool, enable bool) error {
 	args := ctx.Args()
 	cfgName := madmin.Default
 	if len(args) == 2 {
-		cfgName = args.Get(2)
+		cfgName = args.Get(1)
 	}
 	aliasedURL := args.Get(0)
 

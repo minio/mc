@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 MinIO, Inc.
+// Copyright (c) 2015-2022 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -22,7 +22,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go"
+	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -107,14 +107,11 @@ func mainAdminPolicyInfo(ctx *cli.Context) error {
 
 	policyFile := ctx.String("policy-file")
 	if policyFile != "" {
-		f, err := os.Create(policyFile)
-		if err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Could not open given policy file")
-		}
-		_, err = f.Write(pinfo.Policy)
-		if err != nil {
-			fatalIf(probe.NewError(err).Trace(args...), "Could not write to given policy file")
-		}
+		f, e := os.Create(policyFile)
+		fatalIf(probe.NewError(e).Trace(args...), "Could not open given policy file")
+
+		_, e = f.Write(pinfo.Policy)
+		fatalIf(probe.NewError(e).Trace(args...), "Could not write to given policy file")
 	}
 
 	printMsg(userPolicyMessage{
