@@ -92,7 +92,10 @@ func (l replicateListMessage) JSON() string {
 
 func (l replicateListMessage) String() string {
 	r := l.Rule
-	arn, _ := madmin.ParseARN(r.Destination.Bucket)
+	destBucket := r.Destination.Bucket
+	if arn, err := madmin.ParseARN(r.Destination.Bucket); err == nil {
+		destBucket = arn.Bucket
+	}
 	endpoint := r.Destination.Bucket
 	for _, t := range l.targets {
 		if t.Arn == r.Destination.Bucket {
@@ -102,7 +105,8 @@ func (l replicateListMessage) String() string {
 	}
 	var sb strings.Builder
 	sb.WriteString(console.Colorize("Key", "Remote Bucket: "))
-	sb.WriteString(console.Colorize("EpVal", fmt.Sprintf("%s/%s\n", endpoint, arn.Bucket)))
+
+	sb.WriteString(console.Colorize("EpVal", fmt.Sprintf("%s/%s\n", endpoint, destBucket)))
 
 	sb.WriteString(fmt.Sprintf("  Rule ID: %s\n", console.Colorize("Val", r.ID)))
 	sb.WriteString(fmt.Sprintf("  Priority: %s\n", console.Colorize("Val", r.Priority)))
