@@ -253,7 +253,9 @@ func getMinIOSubnetConfig(alias string) []madmin.SubsysConfig {
 
 	var e error
 	globalSubnetConfig, e = getMinIOSubSysConfig(client, madmin.SubnetSubSys)
-	fatalIf(probe.NewError(e), "Unable to get server config for subnet")
+	if e != nil && e.Error() != "unknown sub-system subnet" {
+		fatal(probe.NewError(e), "Unable to get server config for subnet")
+	}
 
 	return globalSubnetConfig
 }
@@ -779,14 +781,14 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool)
 
 	alias, _ := url2Alias(aliasedURL)
 
-	e = setGlobalSubnetProxyFromConfig(alias)
-	fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
-
 	apiKey, e := getAPIKeyFlag(ctx)
 	fatalIf(probe.NewError(e), "Error in reading --api-key flag:")
 
 	// if `--airgap` is provided no need to test SUBNET connectivity.
 	if !globalAirgapped {
+		e = setGlobalSubnetProxyFromConfig(alias)
+		fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
+
 		sbu := subnetBaseURL()
 		fatalIf(checkURLReachable(sbu).Trace(aliasedURL), "Unable to reach %s, please use --airgap if there is no connectivity to SUBNET", sbu)
 	}
