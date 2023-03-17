@@ -98,7 +98,7 @@ func ToTables(cfg *lifecycle.Configuration, filter LsFilter) []Table {
 				ExpireDelMarker: bool(rule.Expiration.DeleteMarker),
 			})
 		}
-		if !rule.NoncurrentVersionExpiration.IsDaysNull() {
+		if !rule.NoncurrentVersionExpiration.IsDaysNull() || rule.NoncurrentVersionExpiration.NewerNoncurrentVersions > 0 {
 			expNoncur = append(expNoncur, expirationNoncurrentRow{
 				ID:           rule.ID,
 				Status:       rule.Status,
