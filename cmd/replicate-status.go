@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 
 	humanize "github.com/dustin/go-humanize"
@@ -67,6 +68,7 @@ type replicateStatusMessage struct {
 	Status            string                `json:"status"`
 	ReplicationStatus replication.Metrics   `json:"replicationStatus"`
 	Targets           []madmin.BucketTarget `json:"remoteTargets"`
+	cfg               replication.Config    `json:"-"`
 }
 
 func (s replicateStatusMessage) JSON() string {
@@ -77,24 +79,51 @@ func (s replicateStatusMessage) JSON() string {
 }
 
 func (s replicateStatusMessage) String() string {
-	coloredDot := console.Colorize("Headers", dot)
-
-	maxLen := 15
-	var contents [][]string
-
-	var rows string
-	arntheme := []string{"Headers"}
-	theme := []string{"Failed", "Replicated", "Replica"}
-	contents = append(contents, []string{"Failed", humanize.IBytes(s.ReplicationStatus.FailedSize), humanize.Comma(int64(s.ReplicationStatus.FailedCount))})
-	contents = append(contents, []string{"Replicated", humanize.IBytes(s.ReplicationStatus.ReplicatedSize), ""})
-	contents = append(contents, []string{"Replica", humanize.IBytes(s.ReplicationStatus.ReplicaSize), ""})
-	var th string
-
 	if s.ReplicationStatus.FailedSize == 0 &&
 		s.ReplicationStatus.ReplicaSize == 0 &&
 		s.ReplicationStatus.ReplicatedSize == 0 {
 		return "Replication status not available."
 	}
+
+	coloredDot := console.Colorize("Headers", dot)
+
+	maxLen := 15
+	var contents [][]string
+	var (
+		failCount = s.ReplicationStatus.FailedCount
+		failedSz  = s.ReplicationStatus.FailedSize
+		replSz    = s.ReplicationStatus.ReplicatedSize
+		replicaSz = s.ReplicationStatus.ReplicaSize
+	)
+	for arn, st := range s.ReplicationStatus.Stats { // Remove stale ARNs from stats
+		staleARN := true
+		for _, r := range s.cfg.Rules {
+			if r.Destination.Bucket == arn {
+				staleARN = false
+				break
+			}
+		}
+		if staleARN {
+			failCount -= st.FailedCount
+			failedSz -= st.FailedSize
+			replicaSz -= st.ReplicaSize
+			replSz -= st.ReplicatedSize
+		}
+	}
+	// normalize stats, avoid negative values
+	failCount = uint64(math.Max(float64(failCount), 0))
+	failedSz = uint64(math.Max(float64(failedSz), 0))
+	replicaSz = uint64(math.Max(float64(replicaSz), 0))
+	replSz = uint64(math.Max(float64(replSz), 0))
+
+	var rows string
+	arntheme := []string{"Headers"}
+	theme := []string{"Failed", "Replicated", "Replica"}
+	contents = append(contents, []string{"Failed", humanize.IBytes(failedSz), humanize.Comma(int64(failCount))})
+	contents = append(contents, []string{"Replicated", humanize.IBytes(replSz), ""})
+	contents = append(contents, []string{"Replica", humanize.IBytes(replicaSz), ""})
+	var th string
+
 	r := console.Colorize("THeaderBold", newPrettyTable(" | ",
 		Field{"Summary", 95},
 	).buildRow("Summary: "))
@@ -146,6 +175,16 @@ func (s replicateStatusMessage) String() string {
 	for i, arn := range arns {
 		if i > 0 {
 			rows += "\n"
+		}
+		staleARN := true
+		for _, r := range s.cfg.Rules {
+			if r.Destination.Bucket == arn {
+				staleARN = false
+				break
+			}
+		}
+		if staleARN {
+			continue // skip historic metrics for deleted targets
 		}
 		var ep string
 		for _, t := range s.Targets {
@@ -248,12 +287,15 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	_, sourceBucket := url2Alias(args[0])
 	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch remote target.")
+	cfg, err := client.GetReplication(ctx)
+	fatalIf(err.Trace(args...), "Unable to fetch replication configuration.")
 
 	printMsg(replicateStatusMessage{
 		Op:                cliCtx.Command.Name,
 		URL:               aliasedURL,
 		ReplicationStatus: replicateStatus,
 		Targets:           targets,
+		cfg:               cfg,
 	})
 
 	return nil
