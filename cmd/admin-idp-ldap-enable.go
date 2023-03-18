@@ -32,20 +32,22 @@ var adminIDPLdapEnableCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [CFG_NAME]
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable the default LDAP IDP configuration (CFG_NAME is omitted).
+  1. Enable the LDAP IDP configuration.
      {{.Prompt}} {{.HelpName}} play/
-  2. Enable LDAP IDP configuration named "dex_test".
-     {{.Prompt}} {{.HelpName}} play/ dex_test
 `,
 }
 
 func mainAdminIDPLDAPEnable(ctx *cli.Context) error {
+	if len(ctx.Args()) != 1 {
+		showCommandHelpAndExit(ctx, 1)
+	}
+
 	isOpenID, enable := false, true
 	return adminIDPEnableDisable(ctx, isOpenID, enable)
 }
