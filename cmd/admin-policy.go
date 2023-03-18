@@ -20,10 +20,14 @@ package cmd
 import "github.com/minio/cli"
 
 var adminPolicySubcommands = []cli.Command{
-	adminPolicyAddCmd,
+	adminPolicyCreateCmd,
 	adminPolicyRemoveCmd,
 	adminPolicyListCmd,
 	adminPolicyInfoCmd,
+	adminPolicyAttachCmd,
+	adminPolicyDetachCmd,
+	adminPolicyEntitiesCmd,
+	adminPolicyAddCmd,
 	adminPolicySetCmd,
 	adminPolicyUnsetCmd,
 	adminPolicyUpdateCmd,
