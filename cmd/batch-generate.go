@@ -82,6 +82,7 @@ func mainBatchGenerate(ctx *cli.Context) error {
 
 	switch jobType {
 	case string(madmin.BatchJobReplicate):
+	case string(madmin.BatchJobKeyRotate):
 	default:
 		fatalIf(errInvalidArgument().Trace(jobType), "Unable to generate a job template for the specified job type")
 	}
