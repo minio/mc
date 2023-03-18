@@ -225,7 +225,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		url := targetAlias + getKey(content)
 		standardizedURL := getStandardizedURL(targetURL)
 
-		if !isRecursive && !strings.HasPrefix(url, standardizedURL) && !filepath.IsAbs(url) {
+		if !isRecursive && !strings.HasPrefix(filepath.FromSlash(url), standardizedURL) && !filepath.IsAbs(url) {
 			return errTargetNotFound(targetURL).Trace(url, standardizedURL)
 		}
 
