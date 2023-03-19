@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/minio/cli"
@@ -36,13 +37,13 @@ var adminIDPLdapAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [CFG_NAME] [CFG_PARAMS...]
+  {{.HelpName}} TARGET [CFG_PARAMS...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Create a default LDAP IDP configuration (CFG_NAME is omitted).
+  1. Create LDAP IDentity Provider configuration.
      {{.Prompt}} {{.HelpName}} myminio/ \
           server_addr=myldapserver:636 \
           lookup_bind_dn=cn=admin,dc=min,dc=io \
@@ -72,6 +73,11 @@ func mainAdminIDPLDAPAdd(ctx *cli.Context) error {
 	if !strings.Contains(args.Get(1), "=") {
 		cfgName = args.Get(1)
 		input = args[2:]
+	}
+
+	if cfgName != madmin.Default {
+		fatalIf(probe.NewError(errors.New("all config parameters must be of the form \"key=value\"")),
+			"Bad LDAP IDP configuration")
 	}
 
 	inputCfg := strings.Join(input, " ")

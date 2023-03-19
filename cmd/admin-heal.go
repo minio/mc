@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"math"
 	"net/url"
 	"path/filepath"
 	"sort"
@@ -466,8 +465,6 @@ type shortBackgroundHealStatusMessage struct {
 func (s shortBackgroundHealStatusMessage) String() string {
 	healPrettyMsg := ""
 	var (
-		totalItems         uint64
-		totalBytes         uint64
 		itemsHealed        uint64
 		bytesHealed        uint64
 		itemsFailed        uint64
@@ -487,6 +484,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	)
 
 	var problematicDisks int
+	leastPct := 100.0
 
 	for _, set := range s.HealInfo.Sets {
 		setsStatus := generateSetsStatus(set.Disks)
@@ -521,8 +519,6 @@ func (s shortBackgroundHealStatusMessage) String() string {
 			diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
 
 			// Approximate values
-			totalItems += disk.HealInfo.ObjectsTotalCount
-			totalBytes += disk.HealInfo.ObjectsTotalSize
 			itemsHealed += disk.HealInfo.ItemsHealed
 			bytesHealed += disk.HealInfo.BytesDone
 			bytesFailed += disk.HealInfo.BytesFailed
@@ -539,6 +535,15 @@ func (s shortBackgroundHealStatusMessage) String() string {
 
 				bytesHealedPerSec += float64(time.Second) * float64(disk.HealInfo.BytesDone) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 				itemsHealedPerSec += float64(time.Second) * float64(disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
+
+				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
+					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
+						leastPct = pct
+					}
+				} else {
+					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
+					leastPct = 0
+				}
 
 				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
 				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
@@ -565,25 +570,10 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		return healPrettyMsg
 	}
 
-	if totalItems > 0 && totalBytes > 0 {
-		// Objects healed information
-		itemsPct := math.Min(100, 100*float64(itemsHealed)/float64(totalItems))
-		bytesPct := math.Min(100, 100*float64(bytesHealed)/float64(totalBytes))
-
-		healPrettyMsg += fmt.Sprintf("Objects Healed: %s/%s (%s), %s/%s (%s)\n",
-			humanize.Comma(int64(itemsHealed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
-			humanize.IBytes(bytesHealed), humanize.IBytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
-
-		if itemsFailed > 0 {
-			itemsPct := math.Min(100, 100*float64(itemsFailed)/float64(totalItems))
-			bytesPct := math.Min(100, 100*float64(bytesFailed)/float64(totalBytes))
-			healPrettyMsg += fmt.Sprintf("Objects Failed: %s/%s (%s), %s/%s (%s)\n",
-				humanize.Comma(int64(itemsFailed)), humanize.Comma(int64(totalItems)), humanize.CommafWithDigits(itemsPct, 1)+"%%",
-				humanize.IBytes(bytesFailed), humanize.IBytes(totalBytes), humanize.CommafWithDigits(bytesPct, 1)+"%%")
-		}
-	} else {
-		healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s\n", humanize.Comma(int64(itemsHealed)), humanize.IBytes(bytesHealed))
-	}
+	// Objects healed information
+	healPrettyMsg += fmt.Sprintf("Objects Healed: %s, %s (%s)\n",
+		humanize.Comma(int64(itemsHealed)), humanize.IBytes(bytesHealed), humanize.CommafWithDigits(leastPct*100, 1)+"%")
+	healPrettyMsg += fmt.Sprintf("Objects Failed: %s\n", humanize.Comma(int64(itemsFailed)))
 
 	if accumulatedElapsedTime > 0 {
 		healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))

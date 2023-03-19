@@ -17,7 +17,14 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"errors"
+	"strings"
+
+	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v2"
+	"github.com/minio/mc/pkg/probe"
+)
 
 var adminIDPLdapUpdateCmd = cli.Command{
 	Name:         "update",
@@ -30,13 +37,13 @@ var adminIDPLdapUpdateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [CFG_NAME] [CFG_PARAMS...]
+  {{.HelpName}} TARGET [CFG_PARAMS...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Create/Update the default LDAP IDP configuration (CFG_NAME is omitted).
+  1. Update the LDAP IDP configuration.
      {{.Prompt}} {{.HelpName}} play/ \
           lookup_bind_dn=cn=admin,dc=min,dc=io \
           lookup_bind_password=somesecret
@@ -44,5 +51,40 @@ EXAMPLES:
 }
 
 func mainAdminIDPLDAPUpdate(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		showCommandHelpAndExit(ctx, 1)
+	}
+
+	args := ctx.Args()
+
+	aliasedURL := args.Get(0)
+
+	// Create a new MinIO Admin Client
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err, "Unable to initialize admin connection.")
+
+	cfgName := madmin.Default
+	input := args[1:]
+	if !strings.Contains(args.Get(1), "=") {
+		cfgName = args.Get(1)
+		input = args[2:]
+	}
+
+	if cfgName != madmin.Default {
+		fatalIf(probe.NewError(errors.New("all config parameters must be of the form \"key=value\"")),
+			"Bad LDAP IDP configuration")
+	}
+
+	inputCfg := strings.Join(input, " ")
+
+	restart, e := client.AddOrUpdateIDPConfig(globalContext, madmin.LDAPIDPCfg, cfgName, inputCfg, true)
+	fatalIf(probe.NewError(e), "Unable to update LDAP IDP configuration")
+
+	// Print set config result
+	printMsg(configSetMessage{
+		targetAlias: aliasedURL,
+		restart:     restart,
+	})
+
 	return nil
 }
