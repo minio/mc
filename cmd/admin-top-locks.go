@@ -46,7 +46,7 @@ var adminTopLocksCmd = cli.Command{
 `,
 }
 
-func mainAdminTopLocks(ctx *cli.Context) error {
+func mainAdminTopLocks(_ *cli.Context) error {
 	console.Infoln("Please use 'mc support top locks'")
 	return nil
 }

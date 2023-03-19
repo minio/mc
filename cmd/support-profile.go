@@ -194,7 +194,7 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias stri
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the profile data
 		uploadURL := subnetUploadURL("profile", profileFile)
-		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, profileFile, apiKey)
+		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	}
 
 	console.Infof("Profiling '%s' for %d seconds... ", alias, duration)

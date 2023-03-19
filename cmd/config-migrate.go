@@ -366,12 +366,7 @@ func migrateConfigV6ToV7() {
 				continue
 			}
 		}
-		if hostCfgV6.AccessKeyID == "YOUR-ACCESS-KEY-ID-HERE" ||
-			hostCfgV6.SecretAccessKey == "YOUR-SECRET-ACCESS-KEY-HERE" ||
-			hostCfgV6.AccessKeyID == "" ||
-			hostCfgV6.SecretAccessKey == "" {
-			// Ignore default entries. configV7.loadDefaults() will re-insert them back.
-		} else if host == "https://s3.amazonaws.com" {
+		if host == "https://s3.amazonaws.com" {
 			// Only one entry can exist for "s3" domain.
 			cfgV7.Hosts["s3"] = hostConfigV7{
 				URL:       host,

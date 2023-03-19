@@ -226,7 +226,7 @@ func (ui *uiData) printItemsQuietly(s *madmin.HealTaskStatus) (err error) {
 	return nil
 }
 
-func (ui *uiData) printStatsQuietly(s *madmin.HealTaskStatus) {
+func (ui *uiData) printStatsQuietly() {
 	totalObjects, totalSize, totalTime := ui.getProgress()
 
 	healedStr := fmt.Sprintf("Healed:\t%s/%s objects; %s in %s\n",
@@ -298,7 +298,7 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 	return nil
 }
 
-func (ui *uiData) printStatsJSON(s *madmin.HealTaskStatus) {
+func (ui *uiData) printStatsJSON(_ *madmin.HealTaskStatus) {
 	var summary struct {
 		Status         string `json:"status"`
 		Error          string `json:"error,omitempty"`
@@ -429,7 +429,7 @@ func (ui *uiData) DisplayAndFollowHealStatus(aliasedURL string) (res madmin.Heal
 				if globalJSON {
 					ui.printStatsJSON(&res)
 				} else if globalQuiet {
-					ui.printStatsQuietly(&res)
+					ui.printStatsQuietly()
 				}
 				return res, nil
 			}

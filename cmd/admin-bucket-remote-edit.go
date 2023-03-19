@@ -34,7 +34,7 @@ var adminBucketRemoteEditCmd = cli.Command{
 }
 
 // mainAdminBucketRemoteEdit is the handle for "mc admin bucket remote edit" command.
-func mainAdminBucketRemoteEdit(ctx *cli.Context) error {
+func mainAdminBucketRemoteEdit(_ *cli.Context) error {
 	console.Infoln("Please use 'mc replicate update'")
 	return nil
 }

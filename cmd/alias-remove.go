@@ -28,7 +28,7 @@ var aliasRemoveCmd = cli.Command{
 	ShortName: "rm",
 	Usage:     "remove an alias from configuration file",
 	Action: func(ctx *cli.Context) error {
-		return mainAliasRemove(ctx, false)
+		return mainAliasRemove(ctx)
 	},
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
@@ -66,7 +66,7 @@ func checkAliasRemoveSyntax(ctx *cli.Context) {
 }
 
 // mainAliasRemove is the handle for "mc alias rm" command.
-func mainAliasRemove(ctx *cli.Context, deprecated bool) error {
+func mainAliasRemove(ctx *cli.Context) error {
 	checkAliasRemoveSyntax(ctx)
 
 	console.SetColor("AliasMessage", color.New(color.FgGreen))

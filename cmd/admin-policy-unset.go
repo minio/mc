@@ -36,7 +36,7 @@ var adminPolicyUnsetCmd = cli.Command{
 	CustomHelpTemplate: `Please use 'mc admin policy detach'`,
 }
 
-func mainAdminPolicyUnsetErr(ctx *cli.Context) error {
+func mainAdminPolicyUnsetErr(_ *cli.Context) error {
 	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy detach'"))
 	fatal(err, "Incorrect command")
 	return nil

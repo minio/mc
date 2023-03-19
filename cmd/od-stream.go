@@ -180,7 +180,7 @@ func odCopy(ctx context.Context, odURLs URLs, args argKVS, odType string) (odMes
 }
 
 // odSetParts sets parts for object download.
-func odSetParts(odURLs URLs, args argKVS) (parts int, skip int, e error) {
+func odSetParts(args argKVS) (parts int, skip int, e error) {
 	if args.Get("size") != "" {
 		return 0, 0, fmt.Errorf("size cannot be specified getting from server")
 	}
@@ -213,7 +213,7 @@ func odSetParts(odURLs URLs, args argKVS) (parts int, skip int, e error) {
 // odDownload copies an object from server to local.
 func odDownload(ctx context.Context, odURLs URLs, args argKVS) (odMessage, error) {
 	/// Set number of parts to get.
-	parts, skip, e := odSetParts(odURLs, args)
+	parts, skip, e := odSetParts(args)
 	if e != nil {
 		return odMessage{}, e
 	}
