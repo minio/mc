@@ -47,6 +47,7 @@ var adminTopAPICmd = cli.Command{
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminTopAPIFlags, globalFlags...),
+	Hidden:          true,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `Please use 'mc support top api' 
 `,

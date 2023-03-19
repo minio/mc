@@ -18,10 +18,7 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
 )
 
 var adminPolicyAddCmd = cli.Command{
@@ -37,7 +34,6 @@ var adminPolicyAddCmd = cli.Command{
 }
 
 func mainAdminPolicyAdd(ctx *cli.Context) error {
-	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy create'"))
-	fatal(err, "Incorrect command")
+	deprecatedError("mc admin policy create")
 	return nil
 }
