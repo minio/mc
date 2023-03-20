@@ -122,7 +122,7 @@ func isDiagCallhomeEnabled(alias string) bool {
 
 func mainCallhome(ctx *cli.Context) error {
 	setSuccessMessageColor()
-	alias, arg := checkToggleCmdSyntax(ctx, "callhome")
+	alias, arg := checkToggleCmdSyntax(ctx)
 
 	diag, logs := parseCallhomeFlags(ctx)
 

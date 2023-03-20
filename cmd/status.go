@@ -92,7 +92,7 @@ func (qs *QuietStatus) SetTotal(v int64) Status {
 }
 
 // SetCaption sets the caption of the progressbar, ignored for quietstatus
-func (qs *QuietStatus) SetCaption(s string) {
+func (qs *QuietStatus) SetCaption(_ string) {
 }
 
 // Get returns the current number of bytes
@@ -112,7 +112,7 @@ func (qs *QuietStatus) Add(v int64) Status {
 }
 
 // Println prints line, ignored for quietstatus
-func (qs *QuietStatus) Println(data ...interface{}) {
+func (qs *QuietStatus) Println(_ ...interface{}) {
 }
 
 // PrintMsg prints message
@@ -214,7 +214,7 @@ func (ps *ProgressStatus) Println(data ...interface{}) {
 }
 
 // PrintMsg prints message
-func (ps *ProgressStatus) PrintMsg(msg message) {
+func (ps *ProgressStatus) PrintMsg(_ message) {
 }
 
 // Start is ignored for quietstatus

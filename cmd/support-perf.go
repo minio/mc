@@ -405,17 +405,17 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	fatalIf(probe.NewError(e), "Error creating zip from perf test results:")
 
 	if globalAirgapped {
-		savePerfResultFile(tmpFileName, resultFileNamePfx, alias)
+		savePerfResultFile(tmpFileName, resultFileNamePfx)
 		return
 	}
 
 	uploadURL := subnetUploadURL("perf", tmpFileName)
-	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, tmpFileName, apiKey)
+	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
 
 	_, e = uploadFileToSubnet(alias, tmpFileName, reqURL, headers)
 	if e != nil {
 		console.Errorln("Unable to upload perf test results to SUBNET portal: " + e.Error())
-		savePerfResultFile(tmpFileName, resultFileNamePfx, alias)
+		savePerfResultFile(tmpFileName, resultFileNamePfx)
 		return
 	}
 
@@ -423,7 +423,7 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	clr.Println("uploaded successfully to SUBNET.")
 }
 
-func savePerfResultFile(tmpFileName string, resultFileNamePfx string, alias string) {
+func savePerfResultFile(tmpFileName string, resultFileNamePfx string) {
 	zipFileName := resultFileNamePfx + ".zip"
 	e := moveFile(tmpFileName, zipFileName)
 	fatalIf(probe.NewError(e), fmt.Sprintf("Error moving temp file %s to %s:", tmpFileName, zipFileName))
@@ -467,12 +467,7 @@ func writeJSONObjToZip(zipWriter *zip.Writer, obj interface{}, filename string) 
 		return e
 	}
 
-	enc := gojson.NewEncoder(writer)
-	if e = enc.Encode(obj); e != nil {
-		return e
-	}
-
-	return nil
+	return gojson.NewEncoder(writer).Encode(obj)
 }
 
 // compress MinIO performance output

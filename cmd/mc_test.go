@@ -32,10 +32,10 @@ type TestSuite struct{}
 
 var _ = Suite(&TestSuite{})
 
-func (s *TestSuite) SetUpSuite(c *C) {
+func (s *TestSuite) SetUpSuite(_ *C) {
 }
 
-func (s *TestSuite) TearDownSuite(c *C) {
+func (s *TestSuite) TearDownSuite(_ *C) {
 }
 
 func (s *TestSuite) TestValidPERMS(c *C) {

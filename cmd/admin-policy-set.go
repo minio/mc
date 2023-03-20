@@ -36,7 +36,7 @@ var adminPolicySetCmd = cli.Command{
 	CustomHelpTemplate: `Please use 'mc admin policy attach'`,
 }
 
-func mainAdminPolicySet(ctx *cli.Context) error {
+func mainAdminPolicySet(_ *cli.Context) error {
 	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy attach'"))
 	fatal(err, "Incorrect command")
 	return nil

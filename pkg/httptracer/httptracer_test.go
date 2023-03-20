@@ -29,6 +29,5 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-func (s *MySuite) TestHTTPTracer(c *C) {
-	//
+func (s *MySuite) TestHTTPTracer(_ *C) {
 }
