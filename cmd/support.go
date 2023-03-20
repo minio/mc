@@ -70,7 +70,7 @@ func validateToggleCmdArg(arg string) error {
 	return nil
 }
 
-func checkToggleCmdSyntax(ctx *cli.Context, cmdName string) (string, string) {
+func checkToggleCmdSyntax(ctx *cli.Context) (string, string) {
 	if len(ctx.Args()) != 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}

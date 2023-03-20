@@ -860,7 +860,7 @@ func getEventPathURLWin(srcURL, eventPath string) string {
 }
 
 // runMirror - mirrors all buckets to another S3 server
-func runMirror(ctx context.Context, cancelMirror context.CancelFunc, srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
+func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
 	// Parse metadata.
 	userMetadata := make(map[string]string)
 	if cli.String("attr") != "" {
@@ -1037,7 +1037,7 @@ func mainMirror(cliCtx *cli.Context) error {
 		case <-ctx.Done():
 			return exitStatus(globalErrorExitStatus)
 		default:
-			errorDetected := runMirror(ctx, cancelMirror, srcURL, tgtURL, cliCtx, encKeyDB)
+			errorDetected := runMirror(ctx, srcURL, tgtURL, cliCtx, encKeyDB)
 			if cliCtx.Bool("watch") || cliCtx.Bool("multi-master") || cliCtx.Bool("active-active") {
 				mirrorRestarts.Inc()
 				time.Sleep(time.Duration(r.Float64() * float64(2*time.Second)))

@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v2"
 )
 
 var adminIDPLdapInfoCmd = cli.Command{
@@ -32,29 +33,22 @@ var adminIDPLdapInfoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [CFG_NAME]
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get configuration info on the default LDAP IDP configuration (CFG_NAME is omitted).
+  1. Get configuration info on the LDAP IDP configuration.
      {{.Prompt}} {{.HelpName}} play/
-  2. Get configuration info on LDAP IDP configuration named "dex_test".
-     {{.Prompt}} {{.HelpName}} play/ dex_test
 `,
 }
 
 func mainAdminIDPLDAPInfo(ctx *cli.Context) error {
-	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1)
 	}
 
-	args := ctx.Args()
-	var cfgName string
-	if len(args) == 2 {
-		cfgName = args.Get(1)
-	}
-
+	var cfgName string = madmin.Default
 	return adminIDPInfo(ctx, false, cfgName)
 }

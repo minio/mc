@@ -68,6 +68,10 @@ EXAMPLES:
      {{.DisableHistory}}
      {{.Prompt}} echo -e "foobar\nfoobar12345" | {{.HelpName}} myminio
      {{.EnableHistory}}
+
+  4. Add a new user 'foobar' to MinIO server, then attach IAM policy "writeonly".
+     {{.Prompt}} {{.HelpName}} myminio foobar foo12345 
+     {{.Prompt}} mc admin policy attach myminio writeonly --user foobar
 `,
 }
 

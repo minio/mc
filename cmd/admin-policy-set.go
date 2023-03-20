@@ -18,102 +18,26 @@
 package cmd
 
 import (
-	"errors"
-	"strings"
+	"fmt"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 var adminPolicySetCmd = cli.Command{
-	Name:         "set",
-	Usage:        "set IAM policy on a user or group",
-	Action:       mainAdminPolicySet,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET POLICYNAME [ user=username1 | group=groupname1 ]
-
-POLICYNAME:
-  Name of the policy on the MinIO server. To set multiple policies, separate names with a comma (,).
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Set the "readwrite" policy for user "james".
-     {{.Prompt}} {{.HelpName}} myminio readwrite user=james
-
-  2. Set the "readonly" policy for group "auditors".
-     {{.Prompt}} {{.HelpName}} myminio readonly group=auditors
-
-  3. Set the "readonly" and the "diagnostics" policies for user "alice"
-     {{.Prompt}} {{.HelpName}} myminio readonly,diagnostics user=alice
-`,
+	Name:               "set",
+	Usage:              "set IAM policy on a user or group",
+	Action:             mainAdminPolicySet,
+	OnUsageError:       onUsageError,
+	Before:             setGlobalsFromContext,
+	Flags:              globalFlags,
+	HideHelpCommand:    true,
+	Hidden:             true,
+	CustomHelpTemplate: `Please use 'mc admin policy attach'`,
 }
 
-var errBadUserGroupArg = errors.New("Last argument must be of the form user=xx or group=xx")
-
-func checkAdminPolicySetSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
-}
-
-func parseEntityArg(arg string) (userOrGroup string, isGroup bool, err error) {
-	parts := strings.SplitN(arg, "=", 2)
-	switch {
-	case len(parts) != 2 || parts[1] == "":
-		err = errBadUserGroupArg
-	case strings.ToLower(parts[0]) == "user":
-		userOrGroup = parts[1]
-		isGroup = false
-	case strings.ToLower(parts[0]) == "group":
-		userOrGroup = parts[1]
-		isGroup = true
-	default:
-		err = errBadUserGroupArg
-
-	}
-	return
-}
-
-// mainAdminPolicySet is the handler for "mc admin policy set" command.
-func mainAdminPolicySet(ctx *cli.Context) error {
-	checkAdminPolicySetSyntax(ctx)
-
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-	console.SetColor("Policy", color.New(color.FgBlue))
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	policyName := strings.TrimSpace(args.Get(1))
-	entityArg := args.Get(2)
-
-	userOrGroup, isGroup, e1 := parseEntityArg(entityArg)
-	fatalIf(probe.NewError(e1).Trace(args...), "Bad last argument")
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	e := client.SetPolicy(globalContext, policyName, userOrGroup, isGroup)
-	if e == nil {
-		printMsg(userPolicyMessage{
-			op:          ctx.Command.Name,
-			Policy:      policyName,
-			UserOrGroup: userOrGroup,
-			IsGroup:     isGroup,
-		})
-	} else {
-		fatalIf(probe.NewError(e), "Unable to set the policy")
-	}
+func mainAdminPolicySet(_ *cli.Context) error {
+	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy attach'"))
+	fatal(err, "Incorrect command")
 	return nil
 }

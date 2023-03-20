@@ -78,7 +78,7 @@ type LifecycleOptions struct {
 }
 
 // ToILMRule creates lifecycle.Configuration based on LifecycleOptions
-func (opts LifecycleOptions) ToILMRule(config *lifecycle.Configuration) (lifecycle.Rule, *probe.Error) {
+func (opts LifecycleOptions) ToILMRule() (lifecycle.Rule, *probe.Error) {
 	var (
 		id, status string
 

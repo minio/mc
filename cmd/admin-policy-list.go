@@ -26,7 +26,7 @@ import (
 
 var adminPolicyListCmd = cli.Command{
 	Name:         "list",
-	Usage:        "list all policies",
+	Usage:        "list all IAM policies",
 	Action:       mainAdminPolicyList,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

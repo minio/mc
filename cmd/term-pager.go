@@ -170,7 +170,8 @@ func (tp *termPager) WaitForExit() {
 	// Wait until the term pager this is closed
 	// which is trigerred when there is an error
 	// or the user quits
-	for range tp.statusCh {
+	for status := range tp.statusCh {
+		_ = status
 	}
 }
 

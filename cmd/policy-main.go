@@ -42,7 +42,7 @@ var policyCmd = cli.Command{
 `,
 }
 
-func mainPolicy(ctx *cli.Context) error {
+func mainPolicy(_ *cli.Context) error {
 	console.Infoln("Please use 'mc anonymous'")
 	return nil
 }

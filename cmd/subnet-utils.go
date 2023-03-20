@@ -92,7 +92,7 @@ func subnetLogWebhookURL() string {
 }
 
 func subnetUploadURL(uploadType string, filename string) string {
-	return fmt.Sprintf("%s/api/%s/upload?filename=%s", subnetBaseURL(), uploadType, filename)
+	return fmt.Sprintf("%s/api/%s/upload?filename=%s&src=mc", subnetBaseURL(), uploadType, filename)
 }
 
 func subnetRegisterURL() string {
@@ -577,7 +577,7 @@ func removeSubnetAuthConfig(alias string) {
 }
 
 // unregisterClusterFromSubnet - Unregisters the given cluster from SUBNET using given API key for auth
-func unregisterClusterFromSubnet(alias string, depID string, apiKey string) error {
+func unregisterClusterFromSubnet(depID string, apiKey string) error {
 	regURL, headers, e := subnetURLWithAuth(subnetUnregisterURL(depID), apiKey)
 	if e != nil {
 		return e
@@ -687,7 +687,7 @@ func parseLicense(license string) (*licverifier.LicenseInfo, error) {
 	return &li, e
 }
 
-func prepareSubnetUploadURL(uploadURL string, alias string, filename string, apiKey string) (string, map[string]string) {
+func prepareSubnetUploadURL(uploadURL string, alias string, apiKey string) (string, map[string]string) {
 	var e error
 	if len(apiKey) == 0 {
 		// api key not passed as flag. check if it's available in the config

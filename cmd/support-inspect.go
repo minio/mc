@@ -188,7 +188,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 	}
 
 	uploadURL := subnetUploadURL("inspect", inspectOutputFilename)
-	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, inspectOutputFilename, apiKey)
+	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
 
 	_, e = uploadFileToSubnet(alias, tmpFile.Name(), reqURL, headers)
 	if e != nil {

@@ -36,7 +36,7 @@ var adminBucketInfoCmd = cli.Command{
 }
 
 // mainAdminBucketInfo is the handler for "mc admin bucket info" command.
-func mainAdminBucketInfo(ctx *cli.Context) error {
+func mainAdminBucketInfo(_ *cli.Context) error {
 	console.Infoln("Please use 'mc stat'")
 	return nil
 }

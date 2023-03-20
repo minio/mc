@@ -19,126 +19,25 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 var adminPolicyAddCmd = cli.Command{
-	Name:         "add",
-	Usage:        "add new policy",
-	Action:       mainAdminPolicyAdd,
-	OnUsageError: onUsageError,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET POLICYNAME POLICYFILE
-
-POLICYNAME:
-  Name of the canned policy on MinIO server.
-
-POLICYFILE:
-  Name of the policy file associated with the policy name.
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Add a new canned policy 'writeonly'.
-     {{.Prompt}} {{.HelpName}} myminio writeonly /tmp/writeonly.json
- `,
+	Name:               "add",
+	Usage:              "add an IAM policy",
+	Action:             mainAdminPolicyAdd,
+	OnUsageError:       onUsageError,
+	Before:             setGlobalsFromContext,
+	Flags:              globalFlags,
+	HideHelpCommand:    true,
+	Hidden:             true,
+	CustomHelpTemplate: `Please use 'mc admin policy create'`,
 }
 
-// checkAdminPolicyAddSyntax - validate all the passed arguments
-func checkAdminPolicyAddSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
-}
-
-// userPolicyMessage container for content message structure
-type userPolicyMessage struct {
-	op          string
-	Status      string            `json:"status"`
-	Policy      string            `json:"policy,omitempty"`
-	PolicyInfo  madmin.PolicyInfo `json:"policyInfo,omitempty"`
-	UserOrGroup string            `json:"userOrGroup,omitempty"`
-	IsGroup     bool              `json:"isGroup"`
-}
-
-func (u userPolicyMessage) accountType() string {
-	switch u.op {
-	case "set", "unset", "update":
-		if u.IsGroup {
-			return "group"
-		}
-		return "user"
-	}
-	return ""
-}
-
-func (u userPolicyMessage) String() string {
-	switch u.op {
-	case "info":
-		buf, e := json.MarshalIndent(u.PolicyInfo, "", " ")
-		fatalIf(probe.NewError(e), "Unable to marshal to JSON.")
-		return string(buf)
-	case "list":
-		return console.Colorize("PolicyName", u.Policy)
-	case "remove":
-		return console.Colorize("PolicyMessage", "Removed policy `"+u.Policy+"` successfully.")
-	case "add":
-		return console.Colorize("PolicyMessage", "Added policy `"+u.Policy+"` successfully.")
-	case "set", "unset":
-		return console.Colorize("PolicyMessage",
-			fmt.Sprintf("Policy `%s` is %s on %s `%s`", u.Policy, u.op, u.accountType(), u.UserOrGroup))
-	case "update":
-		return console.Colorize("PolicyMessage",
-			fmt.Sprintf("Policy `%s` is added to %s `%s`", u.Policy, u.accountType(), u.UserOrGroup))
-	}
-
-	return ""
-}
-
-func (u userPolicyMessage) JSON() string {
-	u.Status = "success"
-	jsonMessageBytes, e := json.MarshalIndent(u, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
-}
-
-// mainAdminPolicyAdd is the handle for "mc admin policy add" command.
-func mainAdminPolicyAdd(ctx *cli.Context) error {
-	checkAdminPolicyAddSyntax(ctx)
-
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	policy, e := os.ReadFile(args.Get(2))
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to get policy")
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	fatalIf(probe.NewError(client.AddCannedPolicy(globalContext, args.Get(1), policy)).Trace(args...), "Unable to add new policy")
-
-	printMsg(userPolicyMessage{
-		op:     ctx.Command.Name,
-		Policy: args.Get(1),
-	})
-
+func mainAdminPolicyAdd(_ *cli.Context) error {
+	err := probe.NewError(fmt.Errorf("Please use 'mc admin policy create'"))
+	fatal(err, "Incorrect command")
 	return nil
 }

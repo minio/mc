@@ -134,7 +134,7 @@ func (f *fsClient) GetURL() ClientURL {
 }
 
 // Select replies a stream of query results.
-func (f *fsClient) Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Select(_ context.Context, _ string, _ encrypt.ServerSide, _ SelectObjectOpts) (io.ReadCloser, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "Select",
 		APIType: "filesystem",
@@ -142,7 +142,7 @@ func (f *fsClient) Select(ctx context.Context, expression string, sse encrypt.Se
 }
 
 // Watches for all fs events on an input path.
-func (f *fsClient) Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error) {
+func (f *fsClient) Watch(_ context.Context, options WatchOptions) (*WatchObject, *probe.Error) {
 	eventChan := make(chan []EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan struct{})
@@ -278,7 +278,7 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 
 /// Object operations.
 
-func (f *fsClient) put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+func (f *fsClient) put(_ context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -392,7 +392,7 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, progre
 	return f.put(ctx, reader, size, progress, opts)
 }
 
-func (f *fsClient) putN(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+func (f *fsClient) putN(_ context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -503,7 +503,7 @@ func (f *fsClient) PutPart(ctx context.Context, reader io.Reader, size int64, pr
 }
 
 // ShareDownload - share download not implemented for filesystem.
-func (f *fsClient) ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error) {
+func (f *fsClient) ShareDownload(_ context.Context, _ string, _ time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
 		API:     "ShareDownload",
 		APIType: "filesystem",
@@ -511,7 +511,7 @@ func (f *fsClient) ShareDownload(ctx context.Context, versionID string, expires 
 }
 
 // ShareUpload - share upload not implemented for filesystem.
-func (f *fsClient) ShareUpload(ctx context.Context, startsWith bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
+func (f *fsClient) ShareUpload(_ context.Context, _ bool, _ time.Duration, _ string) (string, map[string]string, *probe.Error) {
 	return "", nil, probe.NewError(APINotImplemented{
 		API:     "ShareUpload",
 		APIType: "filesystem",
@@ -540,7 +540,7 @@ func (f *fsClient) Copy(ctx context.Context, source string, opts CopyOptions, pr
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Get(_ context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
@@ -612,7 +612,7 @@ func deleteFile(basePath, deletePath string) error {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass, isForceDel bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+func (f *fsClient) Remove(_ context.Context, isIncomplete, _, _, _ bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
 	resultCh := make(chan RemoveResult)
 
 	// Goroutine reads from contentCh and removes the entry in content.
@@ -662,7 +662,7 @@ func (f *fsClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isB
 }
 
 // List - list files and folders.
-func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
+func (f *fsClient) List(_ context.Context, opts ListOptions) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent, 1)
 	filteredCh := make(chan *ClientContent, 1)
 	if opts.ListZip {
@@ -675,12 +675,12 @@ func (f *fsClient) List(ctx context.Context, opts ListOptions) <-chan *ClientCon
 
 	if opts.Recursive {
 		if opts.ShowDir == DirNone {
-			go f.listRecursiveInRoutine(contentCh, opts.WithMetadata)
+			go f.listRecursiveInRoutine(contentCh)
 		} else {
 			go f.listDirOpt(contentCh, opts.Incomplete, opts.WithMetadata, opts.ShowDir)
 		}
 	} else {
-		go f.listInRoutine(contentCh, opts.WithMetadata)
+		go f.listInRoutine(contentCh)
 	}
 
 	// This function filters entries from any  listing go routine
@@ -790,7 +790,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *ClientContent) 
 	}
 }
 
-func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent, isMetadata bool) {
+func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent) {
 	// close the channel when the function returns.
 	defer close(contentCh)
 
@@ -866,7 +866,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent, isMetadata boo
 }
 
 // List files recursively using non-recursive mode.
-func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, isMetadata bool, dirOpt DirOpt) {
+func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, _ bool, dirOpt DirOpt) {
 	defer close(contentCh)
 
 	// Trim trailing / or \.
@@ -944,7 +944,7 @@ func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, 
 	}
 }
 
-func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetadata bool) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent) {
 	// close channels upon return.
 	defer close(contentCh)
 	var dirName string
@@ -1053,7 +1053,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent, isMetad
 }
 
 // MakeBucket - create a new bucket.
-func (f *fsClient) MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error {
+func (f *fsClient) MakeBucket(_ context.Context, _ string, _, _ bool) *probe.Error {
 	// TODO: ignoreExisting has no effect currently. In the future, we want
 	// to call os.Mkdir() when ignoredExisting is disabled and os.MkdirAll()
 	// otherwise.
@@ -1066,7 +1066,7 @@ func (f *fsClient) MakeBucket(ctx context.Context, region string, ignoreExisting
 }
 
 // RemoveBucket - remove a bucket
-func (f *fsClient) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error {
+func (f *fsClient) RemoveBucket(_ context.Context, forceRemove bool) *probe.Error {
 	var e error
 	if forceRemove {
 		e = os.RemoveAll(f.PathURL.Path)
@@ -1077,7 +1077,7 @@ func (f *fsClient) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Er
 }
 
 // Set object lock configuration of bucket.
-func (f *fsClient) SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
+func (f *fsClient) SetObjectLockConfig(_ context.Context, _ minio.RetentionMode, _ uint64, _ minio.ValidityUnit) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectLockConfig",
 		APIType: "filesystem",
@@ -1085,7 +1085,7 @@ func (f *fsClient) SetObjectLockConfig(ctx context.Context, mode minio.Retention
 }
 
 // Get object lock configuration of bucket.
-func (f *fsClient) GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
+func (f *fsClient) GetObjectLockConfig(_ context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, err *probe.Error) {
 	return "", "", 0, "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLockConfig",
 		APIType: "filesystem",
@@ -1093,7 +1093,7 @@ func (f *fsClient) GetObjectLockConfig(ctx context.Context) (status string, mode
 }
 
 // GetAccessRules - unsupported API
-func (f *fsClient) GetAccessRules(ctx context.Context) (map[string]string, *probe.Error) {
+func (f *fsClient) GetAccessRules(_ context.Context) (map[string]string, *probe.Error) {
 	return map[string]string{}, probe.NewError(APINotImplemented{
 		API:     "GetBucketPolicy",
 		APIType: "filesystem",
@@ -1101,14 +1101,14 @@ func (f *fsClient) GetAccessRules(ctx context.Context) (map[string]string, *prob
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
+func (f *fsClient) PutObjectRetention(_ context.Context, _ string, _ minio.RetentionMode, _ time.Time, _ bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectRetention",
 		APIType: "filesystem",
 	})
 }
 
-func (f *fsClient) GetObjectRetention(ctx context.Context, versionID string) (minio.RetentionMode, time.Time, *probe.Error) {
+func (f *fsClient) GetObjectRetention(_ context.Context, _ string) (minio.RetentionMode, time.Time, *probe.Error) {
 	return "", time.Time{}, probe.NewError(APINotImplemented{
 		API:     "GetObjectRetention",
 		APIType: "filesystem",
@@ -1116,7 +1116,7 @@ func (f *fsClient) GetObjectRetention(ctx context.Context, versionID string) (mi
 }
 
 // Set object legal hold for a given object.
-func (f *fsClient) PutObjectLegalHold(ctx context.Context, versionID string, lhold minio.LegalHoldStatus) *probe.Error {
+func (f *fsClient) PutObjectLegalHold(_ context.Context, _ string, _ minio.LegalHoldStatus) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "PutObjectLegalHold",
 		APIType: "filesystem",
@@ -1124,7 +1124,7 @@ func (f *fsClient) PutObjectLegalHold(ctx context.Context, versionID string, lho
 }
 
 // Get object legal hold for a given object.
-func (f *fsClient) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+func (f *fsClient) GetObjectLegalHold(_ context.Context, _ string) (minio.LegalHoldStatus, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
 		API:     "GetObjectLegalHold",
 		APIType: "filesystem",
@@ -1132,7 +1132,7 @@ func (f *fsClient) GetObjectLegalHold(ctx context.Context, versionID string) (mi
 }
 
 // GetAccess - get access policy permissions.
-func (f *fsClient) GetAccess(ctx context.Context) (access string, policyJSON string, err *probe.Error) {
+func (f *fsClient) GetAccess(_ context.Context) (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
 	if runtime.GOOS == "windows" {
 		return "", "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
@@ -1157,7 +1157,7 @@ func (f *fsClient) GetAccess(ctx context.Context) (access string, policyJSON str
 }
 
 // SetAccess - set access policy permissions.
-func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error {
+func (f *fsClient) SetAccess(_ context.Context, access string, isJSON bool) *probe.Error {
 	// For windows this feature is not implemented.
 	// JSON policy for fs is not yet implemented.
 	if runtime.GOOS == "windows" || isJSON {
@@ -1189,7 +1189,7 @@ func (f *fsClient) SetAccess(ctx context.Context, access string, isJSON bool) *p
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(ctx context.Context, opts StatOptions) (content *ClientContent, err *probe.Error) {
+func (f *fsClient) Stat(_ context.Context, opts StatOptions) (content *ClientContent, err *probe.Error) {
 	st, err := f.fsStat(opts.incomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
@@ -1265,7 +1265,7 @@ func (f *fsClient) AddUserAgent(_, _ string) {
 }
 
 // Get Object Tags
-func (f *fsClient) GetTags(ctx context.Context, _ string) (map[string]string, *probe.Error) {
+func (f *fsClient) GetTags(_ context.Context, _ string) (map[string]string, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetObjectTagging",
 		APIType: "filesystem",
@@ -1273,7 +1273,7 @@ func (f *fsClient) GetTags(ctx context.Context, _ string) (map[string]string, *p
 }
 
 // Set Object tags
-func (f *fsClient) SetTags(ctx context.Context, versionID, tags string) *probe.Error {
+func (f *fsClient) SetTags(_ context.Context, _, _ string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetObjectTagging",
 		APIType: "filesystem",
@@ -1281,7 +1281,7 @@ func (f *fsClient) SetTags(ctx context.Context, versionID, tags string) *probe.E
 }
 
 // Delete object tags
-func (f *fsClient) DeleteTags(ctx context.Context, versionID string) *probe.Error {
+func (f *fsClient) DeleteTags(_ context.Context, _ string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteObjectTagging",
 		APIType: "filesystem",
@@ -1289,7 +1289,7 @@ func (f *fsClient) DeleteTags(ctx context.Context, versionID string) *probe.Erro
 }
 
 // Get lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error) {
+func (f *fsClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetLifecycle",
 		APIType: "filesystem",
@@ -1297,7 +1297,7 @@ func (f *fsClient) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, 
 }
 
 // Set lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) SetLifecycle(ctx context.Context, _ *lifecycle.Configuration) *probe.Error {
+func (f *fsClient) SetLifecycle(_ context.Context, _ *lifecycle.Configuration) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetLifecycle",
 		APIType: "filesystem",
@@ -1305,7 +1305,7 @@ func (f *fsClient) SetLifecycle(ctx context.Context, _ *lifecycle.Configuration)
 }
 
 // Get version info for a bucket, not implemented.
-func (f *fsClient) GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
+func (f *fsClient) GetVersion(_ context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
 	return minio.BucketVersioningConfiguration{}, probe.NewError(APINotImplemented{
 		API:     "GetVersion",
 		APIType: "filesystem",
@@ -1313,7 +1313,7 @@ func (f *fsClient) GetVersion(ctx context.Context) (minio.BucketVersioningConfig
 }
 
 // SetVersion - Set version configuration on a bucket, not implemented
-func (f *fsClient) SetVersion(ctx context.Context, status string, _ []string, _ bool) *probe.Error {
+func (f *fsClient) SetVersion(_ context.Context, _ string, _ []string, _ bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetVersion",
 		APIType: "filesystem",
@@ -1321,7 +1321,7 @@ func (f *fsClient) SetVersion(ctx context.Context, status string, _ []string, _ 
 }
 
 // Get replication configuration for a given bucket, not implemented.
-func (f *fsClient) GetReplication(ctx context.Context) (replication.Config, *probe.Error) {
+func (f *fsClient) GetReplication(_ context.Context) (replication.Config, *probe.Error) {
 	return replication.Config{}, probe.NewError(APINotImplemented{
 		API:     "GetReplication",
 		APIType: "filesystem",
@@ -1329,7 +1329,7 @@ func (f *fsClient) GetReplication(ctx context.Context) (replication.Config, *pro
 }
 
 // Set replication configuration for a given bucket, not implemented.
-func (f *fsClient) SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error {
+func (f *fsClient) SetReplication(_ context.Context, _ *replication.Config, _ replication.Options) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetReplication",
 		APIType: "filesystem",
@@ -1337,7 +1337,7 @@ func (f *fsClient) SetReplication(ctx context.Context, cfg *replication.Config, 
 }
 
 // Remove replication configuration for a given bucket. Not implemented
-func (f *fsClient) RemoveReplication(ctx context.Context) *probe.Error {
+func (f *fsClient) RemoveReplication(_ context.Context) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "RemoveReplication",
 		APIType: "filesystem",
@@ -1345,7 +1345,7 @@ func (f *fsClient) RemoveReplication(ctx context.Context) *probe.Error {
 }
 
 // GetReplicationMetrics - Get replication metrics for a given bucket, not implemented.
-func (f *fsClient) GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error) {
+func (f *fsClient) GetReplicationMetrics(_ context.Context) (replication.Metrics, *probe.Error) {
 	return replication.Metrics{}, probe.NewError(APINotImplemented{
 		API:     "GetReplicationMetrics",
 		APIType: "filesystem",
@@ -1354,7 +1354,7 @@ func (f *fsClient) GetReplicationMetrics(ctx context.Context) (replication.Metri
 
 // ResetReplication - kicks off replication again on previously replicated objects if existing object
 // replication is enabled in the replication config, not implemented
-func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
+func (f *fsClient) ResetReplication(_ context.Context, _ time.Duration, _ string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
 	return rinfo, probe.NewError(APINotImplemented{
 		API:     "ResetReplication",
 		APIType: "filesystem",
@@ -1362,7 +1362,7 @@ func (f *fsClient) ResetReplication(ctx context.Context, before time.Duration, a
 }
 
 // ReplicationResyncStatus - gets status of replication resync for this target arn
-func (f *fsClient) ReplicationResyncStatus(ctx context.Context, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
+func (f *fsClient) ReplicationResyncStatus(_ context.Context, _ string) (rinfo replication.ResyncTargetsInfo, err *probe.Error) {
 	return rinfo, probe.NewError(APINotImplemented{
 		API:     "ReplicationResyncStatus",
 		APIType: "filesystem",
@@ -1370,7 +1370,7 @@ func (f *fsClient) ReplicationResyncStatus(ctx context.Context, arn string) (rin
 }
 
 // Get encryption info for a bucket, not implemented.
-func (f *fsClient) GetEncryption(ctx context.Context) (string, string, *probe.Error) {
+func (f *fsClient) GetEncryption(_ context.Context) (string, string, *probe.Error) {
 	return "", "", probe.NewError(APINotImplemented{
 		API:     "GetEncryption",
 		APIType: "filesystem",
@@ -1378,7 +1378,7 @@ func (f *fsClient) GetEncryption(ctx context.Context) (string, string, *probe.Er
 }
 
 // SetEncryption - Set encryption configuration on a bucket, not implemented
-func (f *fsClient) SetEncryption(ctx context.Context, algorithm, keyID string) *probe.Error {
+func (f *fsClient) SetEncryption(_ context.Context, _, _ string) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetEncryption",
 		APIType: "filesystem",
@@ -1386,15 +1386,15 @@ func (f *fsClient) SetEncryption(ctx context.Context, algorithm, keyID string) *
 }
 
 // DeleteEncryption - removes encryption configuration on a bucket, not implemented
-func (f *fsClient) DeleteEncryption(ctx context.Context) *probe.Error {
+func (f *fsClient) DeleteEncryption(_ context.Context) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "DeleteEncryption",
 		APIType: "filesystem",
 	})
 }
 
-// Gets bucket info
-func (f *fsClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
+// Gets bucket infoOA
+func (f *fsClient) GetBucketInfo(_ context.Context) (BucketInfo, *probe.Error) {
 	return BucketInfo{}, probe.NewError(APINotImplemented{
 		API:     "GetBucketInfo",
 		APIType: "filesystem",
@@ -1410,7 +1410,7 @@ func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
 }
 
 // OD Get - not implemented
-func (f *fsClient) GetPart(ctx context.Context, _ int) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) GetPart(_ context.Context, _ int) (io.ReadCloser, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetPart",
 		APIType: "filesystem",

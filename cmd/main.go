@@ -161,7 +161,7 @@ func visibleFlags(fl []cli.Flag) []cli.Flag {
 }
 
 // Function invoked when invalid flag is passed
-func onUsageError(ctx *cli.Context, err error, subcommand bool) error {
+func onUsageError(ctx *cli.Context, err error, _ bool) error {
 	type subCommandHelp struct {
 		flagName string
 		usage    string
