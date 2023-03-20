@@ -121,7 +121,7 @@ func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRe
 }
 
 // Delete tags of a bucket or a specified object/version
-func deleteTags(ctx context.Context, clnt Client, versionID string, verbose bool) {
+func deleteTags(ctx context.Context, clnt Client, versionID string) {
 	targetName := clnt.GetURL().String()
 	if versionID != "" {
 		targetName += " (" + versionID + ")"
@@ -155,13 +155,13 @@ func mainRemoveTag(cliCtx *cli.Context) error {
 	fatalIf(pErr, "Unable to initialize target "+targetURL)
 
 	if timeRef.IsZero() && !withVersions {
-		deleteTags(ctx, clnt, versionID, true)
+		deleteTags(ctx, clnt, versionID)
 	} else {
 		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
 			if content.Err != nil {
 				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
 			}
-			deleteTags(ctx, clnt, content.VersionID, false)
+			deleteTags(ctx, clnt, content.VersionID)
 		}
 	}
 	return nil

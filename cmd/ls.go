@@ -192,7 +192,7 @@ func (s summaryMessage) JSON() string {
 }
 
 // Pretty print the list of versions belonging to one object
-func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions, isSummary bool) {
+func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) {
 	sortObjectVersions(ctntVersions)
 	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
 	for _, msg := range msgs {
@@ -241,7 +241,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions, o.isSummary)
+			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -251,7 +251,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions, o.isSummary)
+	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions)
 
 	if o.isSummary {
 		printMsg(summaryMessage{

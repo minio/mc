@@ -34,7 +34,7 @@ var adminBucketRemoteAddCmd = cli.Command{
 }
 
 // mainAdminBucketRemoteAdd is the handle for "mc admin bucket remote set" command.
-func mainAdminBucketRemoteAdd(ctx *cli.Context) error {
+func mainAdminBucketRemoteAdd(_ *cli.Context) error {
 	console.Infoln("Please use 'mc replicate add'")
 	return nil
 }

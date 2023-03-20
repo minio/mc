@@ -157,7 +157,7 @@ func doShareUploadURL(ctx context.Context, objectURL string, isRecursive bool, e
 	}
 
 	// Generate pre-signed access info.
-	shareURL, uploadInfo, err := clnt.ShareUpload(context.Background(), isRecursive, expiry, contentType)
+	shareURL, uploadInfo, err := clnt.ShareUpload(ctx, isRecursive, expiry, contentType)
 	if err != nil {
 		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
 	}

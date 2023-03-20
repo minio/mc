@@ -224,7 +224,7 @@ func mainILMAdd(cliCtx *cli.Context) error {
 	opts, err := ilm.GetLifecycleOptions(cliCtx)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
-	newRule, err := opts.ToILMRule(lfcCfg)
+	newRule, err := opts.ToILMRule()
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
 	lfcCfg.Rules = append(lfcCfg.Rules, newRule)
