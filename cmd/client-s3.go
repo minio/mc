@@ -1843,12 +1843,11 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 				if objectVersion.Err != nil {
 					if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 						goto noVersioning
-					} else {
-						contentCh <- &ClientContent{
-							Err: probe.NewError(objectVersion.Err),
-						}
-						continue
 					}
+					contentCh <- &ClientContent{
+						Err: probe.NewError(objectVersion.Err),
+					}
+					continue
 				}
 				contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion)
 			}
@@ -1864,12 +1863,11 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 			if objectVersion.Err != nil {
 				if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 					goto noVersioning
-				} else {
-					contentCh <- &ClientContent{
-						Err: probe.NewError(objectVersion.Err),
-					}
-					continue
 				}
+				contentCh <- &ClientContent{
+					Err: probe.NewError(objectVersion.Err),
+				}
+				continue
 			}
 			contentCh <- c.objectInfo2ClientContent(b, objectVersion)
 		}
@@ -1886,7 +1884,7 @@ func (c *S3Client) unversionedList(ctx context.Context, contentCh chan *ClientCo
 		if opts.Recursive {
 			c.listIncompleteRecursiveInRoutine(ctx, contentCh, opts)
 		} else {
-			c.listIncompleteInRoutine(ctx, contentCh, opts)
+			c.listIncompleteInRoutine(ctx, contentCh)
 		}
 	} else {
 		if opts.Recursive {
@@ -1897,7 +1895,7 @@ func (c *S3Client) unversionedList(ctx context.Context, contentCh chan *ClientCo
 	}
 }
 
-func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
+func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *ClientContent) {
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {

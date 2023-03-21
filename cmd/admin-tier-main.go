@@ -33,7 +33,7 @@ var adminTierCmd = cli.Command{
 }
 
 // mainAdminTier is the handle for "mc admin tier" command.
-func mainAdminTier(ctx *cli.Context) error {
+func mainAdminTier(_ *cli.Context) error {
 	deprecatedError("mc ilm tier")
 	return nil
 }

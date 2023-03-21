@@ -37,7 +37,7 @@ var adminSubnetCmd = cli.Command{
 }
 
 // mainAdminSubnet is the handle for "mc admin subnet" command.
-func mainAdminSubnet(ctx *cli.Context) error {
+func mainAdminSubnet(_ *cli.Context) error {
 	deprecatedError("mc support")
 	return nil
 	// Sub-commands like "health", "register" have their own main.

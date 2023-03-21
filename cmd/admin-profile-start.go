@@ -33,7 +33,7 @@ var adminProfileStartCmd = cli.Command{
 }
 
 // mainAdminProfileStart - the entry function of profile command
-func mainAdminProfileStart(ctx *cli.Context) error {
+func mainAdminProfileStart(_ *cli.Context) error {
 	deprecatedError("mc support profile start")
 	return nil
 }

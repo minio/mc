@@ -33,7 +33,7 @@ var adminPolicyUnsetCmd = cli.Command{
 	CustomHelpTemplate: `Please use 'mc admin policy detach'`,
 }
 
-func mainAdminPolicyUnsetErr(ctx *cli.Context) error {
+func mainAdminPolicyUnsetErr(_ *cli.Context) error {
 	deprecatedError("mc admin policy detach")
 	return nil
 }

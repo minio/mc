@@ -152,7 +152,7 @@ func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef 
 }
 
 // showTags pretty prints tags of a bucket or a specified object/version
-func showTags(ctx context.Context, clnt Client, versionID string, verbose bool) {
+func showTags(ctx context.Context, clnt Client, versionID string) {
 	targetName := clnt.GetURL().String()
 	if versionID != "" {
 		targetName += " (" + versionID + ")"
@@ -193,13 +193,13 @@ func mainListTag(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
 	if timeRef.IsZero() && !withVersions {
-		showTags(ctx, clnt, versionID, true)
+		showTags(ctx, clnt, versionID)
 	} else {
 		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
 			if content.Err != nil {
 				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
 			}
-			showTags(ctx, clnt, content.VersionID, false)
+			showTags(ctx, clnt, content.VersionID)
 		}
 	}
 

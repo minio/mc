@@ -91,7 +91,7 @@ func mainLicenseUnregister(ctx *cli.Context) error {
 
 	if !globalAirgapped {
 		info := getAdminInfo(aliasedURL)
-		e := unregisterClusterFromSubnet(alias, info.DeploymentID, apiKey)
+		e := unregisterClusterFromSubnet(info.DeploymentID, apiKey)
 		fatalIf(probe.NewError(e), "Could not unregister cluster from SUBNET:")
 	}
 

@@ -31,7 +31,7 @@ var adminSubnetRegisterCmd = cli.Command{
 	CustomHelpTemplate: "Please use 'mc support register'",
 }
 
-func mainAdminRegister(ctx *cli.Context) error {
+func mainAdminRegister(_ *cli.Context) error {
 	deprecatedError("mc support register")
 	return nil
 }

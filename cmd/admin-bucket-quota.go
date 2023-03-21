@@ -44,7 +44,7 @@ var adminBucketQuotaCmd = cli.Command{
 }
 
 // mainAdminBucketQuota is the handler for "mc admin bucket quota" command.
-func mainAdminBucketQuota(ctx *cli.Context) error {
+func mainAdminBucketQuota(_ *cli.Context) error {
 	deprecatedError("mc quota")
 	return nil
 }

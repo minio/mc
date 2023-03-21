@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2015-2021 MinIO, Inc.
+# Copyright (c) 2015-2023 MinIO, Inc.
 #
 # This file is part of MinIO Object Storage stack
 #
@@ -40,20 +40,20 @@ LANG=C
 
 if [ -n "$MINT_MODE" ]; then
     if [ -z "${MINT_DATA_DIR+x}" ]; then
-        echo "MINT_DATA_DIR not defined"
-        exit 1
+	echo "MINT_DATA_DIR not defined"
+	exit 1
     fi
     if [ -z "${SERVER_ENDPOINT+x}" ]; then
-        echo "SERVER_ENDPOINT not defined"
-        exit 1
+	echo "SERVER_ENDPOINT not defined"
+	exit 1
     fi
     if [ -z "${ACCESS_KEY+x}" ]; then
-        echo "ACCESS_KEY not defined"
-        exit 1
+	echo "ACCESS_KEY not defined"
+	exit 1
     fi
     if [ -z "${SECRET_KEY+x}" ]; then
-        echo "SECRET_KEY not defined"
-        exit 1
+	echo "SECRET_KEY not defined"
+	exit 1
     fi
 fi
 
@@ -99,7 +99,7 @@ function get_md5sum()
     out=$(md5sum "$filename" 2>/dev/null)
     rv=$?
     if [ "$rv" -eq 0 ]; then
-        echo $(awk '{ print $1 }' <<< "$out")
+	echo $(awk '{ print $1 }' <<< "$out")
     fi
 
     return "$rv"
@@ -121,15 +121,15 @@ function get_duration()
 function log_success()
 {
     if [ -n "$MINT_MODE" ]; then
-        printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "PASS"}\n' "$(get_duration "$1")" "$2"
+	printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "PASS"}\n' "$(get_duration "$1")" "$2"
     fi
 }
 
 function show()
 {
     if [ -z "$MINT_MODE" ]; then
-        func_name="$1"
-        echo "Running $func_name()"
+	func_name="$1"
+	echo "Running $func_name()"
     fi
 }
 
@@ -139,7 +139,7 @@ function show_on_success()
     shift
 
     if [ "$rv" -eq 0 ]; then
-        echo "$@"
+	echo "$@"
     fi
 
     return "$rv"
@@ -151,7 +151,7 @@ function show_on_failure()
     shift
 
     if [ "$rv" -ne 0 ]; then
-        echo "$@"
+	echo "$@"
     fi
 
     return "$rv"
@@ -169,19 +169,19 @@ function assert()
     err=$("$@")
     rv=$?
     if [ "$rv" -ne "$expected_rv" ]; then
-        if [ -n "$MINT_MODE" ]; then
-            err=$(printf "$err" | python -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
-            ## err is already JSON string, no need to double quote
-            printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "FAIL", "error": %s}\n' "$(get_duration "$start_time")" "$func_name" "$err"
-        else
-            echo "mc: $func_name: $err"
-        fi
+	if [ -n "$MINT_MODE" ]; then
+	    err=$(printf "$err" | python -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
+	    ## err is already JSON string, no need to double quote
+	    printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "FAIL", "error": %s}\n' "$(get_duration "$start_time")" "$func_name" "$err"
+	else
+	    echo "mc: $func_name: $err"
+	fi
 
-        if [ "$rv" -eq 0 ]; then
-            exit 1
-        fi
+	if [ "$rv" -eq 0 ]; then
+	    exit 1
+	fi
 
-        exit "$rv"
+	exit "$rv"
     fi
 
     return 0
@@ -203,9 +203,9 @@ function mc_cmd()
     "${cmd[@]}" >"$err_file" 2>&1
     rv=$?
     if [ "$rv" -ne 0 ]; then
-        printf '%q ' "${cmd[@]}"
-        echo " >>> "
-        cat "$err_file"
+	printf '%q ' "${cmd[@]}"
+	echo " >>> "
+	cat "$err_file"
     fi
 
     rm -f "$err_file"
@@ -221,13 +221,13 @@ function check_md5sum()
     checksum="$(get_md5sum "$filename")"
     rv=$?
     if [ "$rv" -ne 0 ]; then
-        echo "unable to get md5sum for $filename"
-        return "$rv"
+	echo "unable to get md5sum for $filename"
+	return "$rv"
     fi
 
     if [ "$checksum" != "$expected_checksum" ]; then
-        echo "$filename: md5sum mismatch"
-        return 1
+	echo "$filename: md5sum mismatch"
+	return 1
     fi
 
     return 0
@@ -633,27 +633,27 @@ function test_watch_object()
     ( assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
     rv=$?
     if [ "$rv" -ne 0 ]; then
-        kill "$watch_cmd_pid"
-        exit "$rv"
+	kill "$watch_cmd_pid"
+	exit "$rv"
     fi
 
     sleep 1
     if ! jq -r .events.type "$WATCH_OUT_FILE" | grep -qi ObjectCreated; then
-        kill "$watch_cmd_pid"
-        assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "ObjectCreated event not found"
+	kill "$watch_cmd_pid"
+	assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "ObjectCreated event not found"
     fi
 
     ( assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
     rv=$?
     if [ "$rv" -ne 0 ]; then
-        kill "$watch_cmd_pid"
-        exit "$rv"
+	kill "$watch_cmd_pid"
+	exit "$rv"
     fi
 
     sleep 1
     if ! jq -r .events.type "$WATCH_OUT_FILE" | grep -qi ObjectRemoved; then
-        kill "$watch_cmd_pid"
-        assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "ObjectRemoved event not found"
+	kill "$watch_cmd_pid"
+	assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "ObjectRemoved event not found"
     fi
 
     kill "$watch_cmd_pid"
@@ -684,7 +684,7 @@ function test_config_host_add_error()
     assert_failure "$start_time" "${FUNCNAME[0]}" show_on_success $? "adding host should fail"
     got_code=$(echo "$out" | jq -r .error.cause.error.Code)
     if [ "${got_code}" != "SignatureDoesNotMatch" ]; then
-        assert_failure "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "incorrect error code ${got_code} returned by server"
+	assert_failure "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "incorrect error code ${got_code} returned by server"
     fi
 
     log_success "$start_time" "${FUNCNAME[0]}"
@@ -990,25 +990,26 @@ function test_admin_users()
     # setup temporary alias to make requests as the created user.
     scheme="https"
     if [ "$ENABLE_HTTPS" != "1" ]; then
-        scheme="http"
+	scheme="http"
     fi
     object1_name="mc-test-object-$RANDOM"
     object2_name="mc-test-object-$RANDOM"
-    export MC_HOST_foo=${scheme}://${username}:${password}@${SERVER_ENDPOINT}
+    export MC_HOST_foo="${scheme}://${username}:${password}@${SERVER_ENDPOINT}"
 
     # check that the user can write objects with readwrite policy
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy set "$SERVER_ALIAS" readwrite user="${username}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy attach "$SERVER_ALIAS" readwrite --user="${username}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object1_name}"
 
     # check that the user cannot write objects with readonly policy
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy set "$SERVER_ALIAS" readonly user="$username"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy detach "$SERVER_ALIAS" readwrite --user="${username}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy attach "$SERVER_ALIAS" readonly --user="${username}"
     assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object2_name}"
 
     # check that the user can read with readonly policy
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
 
     # check that user can delete with readwrite policy
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy set "$SERVER_ALIAS" readwrite user="${username}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy attach "$SERVER_ALIAS" readwrite --user="${username}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "foo/${BUCKET_NAME}/${object1_name}"
 
     # check that user cannot perform admin actions with readwrite policy
@@ -1066,30 +1067,27 @@ function run_test()
     test_find
     test_find_empty
     if [ -z "$MINT_MODE" ]; then
-        test_watch_object
+	test_watch_object
     fi
 
     if [ "$ENABLE_HTTPS" == "1" ]; then
-        test_put_object_with_sse
-        test_put_object_with_encoded_sse
-        test_put_object_with_sse_error
-        test_put_object_multipart_sse
-        test_get_object_with_sse
-        test_cat_object_with_sse
-        test_cat_object_with_sse_error
-        test_copy_object_with_sse_rewrite
-        test_copy_object_with_sse_dest
-        test_sse_key_rotation
-        test_mirror_with_sse
-        test_rm_object_with_sse
+	test_put_object_with_sse
+	test_put_object_with_encoded_sse
+	test_put_object_with_sse_error
+	test_put_object_multipart_sse
+	test_get_object_with_sse
+	test_cat_object_with_sse
+	test_cat_object_with_sse_error
+	test_copy_object_with_sse_rewrite
+	test_copy_object_with_sse_dest
+	test_sse_key_rotation
+	test_mirror_with_sse
+	test_rm_object_with_sse
     fi
 
     test_config_host_add
     test_config_host_add_error
-
-    if [ "$ENABLE_ADMIN" == "1" ]; then
-        test_admin_users
-    fi
+    test_admin_users
 
     teardown
 }
@@ -1097,38 +1095,42 @@ function run_test()
 function __init__()
 {
     set -e
+    if [ -n "$DEBUG" ]; then
+	set -x
+    fi
+
     # For Mint, setup is already done.  For others, setup the environment
     if [ -z "$MINT_MODE" ]; then
-        mkdir -p "$WORK_DIR"
-        mkdir -p "$DATA_DIR"
+	mkdir -p "$WORK_DIR"
+	mkdir -p "$DATA_DIR"
 
-        # If mc executable binary is not available in current directory, use it in the path.
-        if [ ! -x "$MC" ]; then
-            if ! MC=$(which mc 2>/dev/null); then
-                echo "'mc' executable binary not found in current directory and in path"
-                exit 1
-            fi
-        fi
+	# If mc executable binary is not available in current directory, use it in the path.
+	if [ ! -x "$MC" ]; then
+	    if ! MC=$(which mc 2>/dev/null); then
+		echo "'mc' executable binary not found in current directory and in path"
+		exit 1
+	    fi
+	fi
     fi
 
     if [ ! -x "$MC" ]; then
-        echo "$MC executable binary not found"
-        exit 1
+	echo "$MC executable binary not found"
+	exit 1
     fi
 
     mkdir -p "$MC_CONFIG_DIR"
     MC_CMD=( "${MC}" --config-dir "$MC_CONFIG_DIR" --quiet --no-color )
 
     if [ ! -e "$FILE_0_B" ]; then
-        base64 /dev/urandom | head -c 0 >"$FILE_0_B"
+	base64 /dev/urandom | head -c 0 >"$FILE_0_B"
     fi
 
     if [ ! -e "$FILE_1_MB" ]; then
-        base64 /dev/urandom | head -c 1048576 >"$FILE_1_MB"
+	base64 /dev/urandom | head -c 1048576 >"$FILE_1_MB"
     fi
 
     if [ ! -e "$FILE_65_MB" ]; then
-        base64 /dev/urandom | head -c 68157440 >"$FILE_65_MB"
+	base64 /dev/urandom | head -c 68157440 >"$FILE_65_MB"
     fi
 
     set -E
@@ -1136,20 +1138,20 @@ function __init__()
 
     FILE_0_B_MD5SUM="$(get_md5sum "$FILE_0_B")"
     if [ $? -ne 0 ]; then
-        echo "unable to get md5sum of $FILE_0_B"
-        exit 1
+	echo "unable to get md5sum of $FILE_0_B"
+	exit 1
     fi
 
     FILE_1_MB_MD5SUM="$(get_md5sum "$FILE_1_MB")"
     if [ $? -ne 0 ]; then
-        echo "unable to get md5sum of $FILE_1_MB"
-        exit 1
+	echo "unable to get md5sum of $FILE_1_MB"
+	exit 1
     fi
 
     FILE_65_MB_MD5SUM="$(get_md5sum "$FILE_65_MB")"
     if [ $? -ne 0 ]; then
-        echo "unable to get md5sum of $FILE_65_MB"
-        exit 1
+	echo "unable to get md5sum of $FILE_65_MB"
+	exit 1
     fi
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias set "${SERVER_ALIAS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias set "${SERVER_ALIAS_TLS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
@@ -1164,7 +1166,7 @@ function main()
 
     rm -fr "$MC_CONFIG_DIR" "$WATCH_OUT_FILE"
     if [ -z "$MINT_MODE" ]; then
-        rm -fr "$WORK_DIR" "$DATA_DIR"
+	rm -fr "$WORK_DIR" "$DATA_DIR"
     fi
 
     exit "$rv"

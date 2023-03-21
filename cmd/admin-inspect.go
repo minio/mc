@@ -33,7 +33,7 @@ var adminInspectCmd = cli.Command{
 }
 
 // mainAdminHeal - the entry function of heal command
-func mainAdminInspect(ctx *cli.Context) error {
+func mainAdminInspect(_ *cli.Context) error {
 	deprecatedError("mc support inspect")
 	return nil
 }

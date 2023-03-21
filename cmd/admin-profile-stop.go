@@ -34,7 +34,7 @@ var adminProfileStopCmd = cli.Command{
 }
 
 // mainAdminProfileStop - the entry function of profile stop command
-func mainAdminProfileStop(ctx *cli.Context) error {
+func mainAdminProfileStop(_ *cli.Context) error {
 	deprecatedError("mc support profile stop")
 	return nil
 }

@@ -39,7 +39,7 @@ var adminProfileCmd = cli.Command{
 }
 
 // mainAdminProfile is the handle for "mc admin profile" command.
-func mainAdminProfile(ctx *cli.Context) error {
+func mainAdminProfile(_ *cli.Context) error {
 	deprecatedError("mc support profile")
 	return nil
 }

@@ -40,7 +40,7 @@ var adminSpeedtestCmd = cli.Command{
 	CustomHelpTemplate: "Please use 'mc support perf'",
 }
 
-func mainAdminSpeedtest(ctx *cli.Context) error {
+func mainAdminSpeedtest(_ *cli.Context) error {
 	deprecatedError("mc support perf")
 	return nil
 }

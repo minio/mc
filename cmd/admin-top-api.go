@@ -53,7 +53,7 @@ var adminTopAPICmd = cli.Command{
 `,
 }
 
-func mainAdminTopAPI(ctx *cli.Context) error {
+func mainAdminTopAPI(_ *cli.Context) error {
 	deprecatedError("mc support top api")
 	return nil
 }

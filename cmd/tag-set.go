@@ -121,7 +121,7 @@ func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef t
 }
 
 // Set tags to a bucket or to a specified object/version
-func setTags(ctx context.Context, clnt Client, versionID, tags string, verbose bool) {
+func setTags(ctx context.Context, clnt Client, versionID, tags string) {
 	targetName := clnt.GetURL().String()
 	if versionID != "" {
 		targetName += " (" + versionID + ")"
@@ -154,13 +154,13 @@ func mainSetTag(cliCtx *cli.Context) error {
 	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
 	if timeRef.IsZero() && !withVersions {
-		setTags(ctx, clnt, versionID, tags, true)
+		setTags(ctx, clnt, versionID, tags)
 	} else {
 		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
 			if content.Err != nil {
 				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
 			}
-			setTags(ctx, clnt, content.VersionID, tags, false)
+			setTags(ctx, clnt, content.VersionID, tags)
 		}
 	}
 

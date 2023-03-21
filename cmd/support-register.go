@@ -38,7 +38,7 @@ var supportRegisterCmd = cli.Command{
 	CustomHelpTemplate: "Please use 'mc license register'",
 }
 
-func mainSupportRegister(ctx *cli.Context) error {
+func mainSupportRegister(_ *cli.Context) error {
 	deprecatedError("mc license register")
 	return nil
 }

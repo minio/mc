@@ -33,7 +33,7 @@ var adminPolicyUpdateCmd = cli.Command{
 	CustomHelpTemplate: `Please use 'mc admin policy attach'`,
 }
 
-func mainAdminPolicyUpdateErr(ctx *cli.Context) error {
+func mainAdminPolicyUpdateErr(_ *cli.Context) error {
 	deprecatedError("mc admin policy attach")
 	return nil
 }

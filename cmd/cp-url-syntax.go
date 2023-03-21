@@ -119,17 +119,17 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 		if len(srcURLs) != 1 {
 			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 		}
-		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, isMvCmd, timeRef)
+		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, encKeyDB, isZip, timeRef)
 	case copyURLsTypeB: // File -> Folder.
 		// Check source.
 		if len(srcURLs) != 1 {
 			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 		}
-		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, isMvCmd, timeRef)
+		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, timeRef)
 	case copyURLsTypeC: // Folder... -> Folder.
 		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, isZip, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeD: // File1...FileN -> Folder.
-		checkCopySyntaxTypeD(ctx, srcURLs, tgtURL, encKeyDB, isMvCmd, timeRef)
+		checkCopySyntaxTypeD(ctx, tgtURL, encKeyDB, timeRef)
 	default:
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
 	}
@@ -141,7 +141,7 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
-func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isZip, isMvCmd bool, timeRef time.Time) {
+func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, keys map[string][]prefixSSEPair, isZip bool, timeRef time.Time) {
 	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, isZip)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
@@ -151,7 +151,7 @@ func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, tgtURL 
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
-func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isZip, isMvCmd bool, timeRef time.Time) {
+func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isZip bool, timeRef time.Time) {
 	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, isZip)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
@@ -208,7 +208,7 @@ func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, 
 }
 
 // checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.
-func checkCopySyntaxTypeD(ctx context.Context, srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
+func checkCopySyntaxTypeD(ctx context.Context, tgtURL string, keys map[string][]prefixSSEPair, timeRef time.Time) {
 	// Source can be anything: file, dir, dir...
 	// Check target if it is a dir
 	if _, tgtContent, err := url2Stat(ctx, tgtURL, "", false, keys, timeRef, false); err == nil {
