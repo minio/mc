@@ -92,7 +92,7 @@ func subnetLogWebhookURL() string {
 }
 
 func subnetUploadURL(uploadType string, filename string) string {
-	return fmt.Sprintf("%s/api/%s/upload?filename=%s&src=mc", subnetBaseURL(), uploadType, filename)
+	return fmt.Sprintf("%s/api/%s/upload?filename=%s", subnetBaseURL(), uploadType, filename)
 }
 
 func subnetRegisterURL() string {
