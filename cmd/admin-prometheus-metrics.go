@@ -85,7 +85,7 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 		return e
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
-	client := httpClient(10 * time.Second)
+	client := httpClient(60 * time.Second)
 	resp, e := client.Do(req)
 	if e != nil {
 		return e
