@@ -180,9 +180,53 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	targetAlias, _, _ := mustExpandAlias(targetURL)
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
-	if !strings.HasSuffix(prefixPath, separator) {
+
+	hasTrailingSlash := strings.HasSuffix(prefixPath, separator)
+
+	if !hasTrailingSlash {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+
+	// if stat is on a bucket and non-recursive mode, serve the bucket metadata
+	if !isRecursive && !hasTrailingSlash {
+		bstat, err := clnt.GetBucketInfo(ctx)
+		if err == nil {
+			// Convert any os specific delimiters to "/".
+			contentURL := filepath.ToSlash(bstat.URL.Path)
+			prefixPath = filepath.ToSlash(prefixPath)
+			// Trim prefix path from the content path.
+			contentURL = strings.TrimPrefix(contentURL, prefixPath)
+			bstat.URL.Path = contentURL
+
+			if bstat.Date.IsZero() || bstat.Date.Equal(timeSentinel) {
+				bstat.Date = time.Now()
+			}
+
+			var bu madmin.BucketUsageInfo
+
+			adminClient, _ := newAdminClient(targetURL)
+			if adminClient != nil {
+				// Create a new MinIO Admin Client
+				duinfo, e := adminClient.DataUsageInfo(ctx)
+				if e == nil {
+					bu = duinfo.BucketsUsage[bstat.Key]
+				}
+			}
+
+			if prefixPath != "/" {
+				bstat.Prefix = true
+			}
+
+			printMsg(bucketInfoMessage{
+				Status:     "success",
+				BucketInfo: bstat,
+				Usage:      bu,
+			})
+
+			return nil
+		}
+	}
+
 	lstOptions := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirNone}
 	switch {
 	case versionID != "":
@@ -193,7 +237,6 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		lstOptions.WithDeleteMarkers = true
 		lstOptions.TimeRef = timeRef
 	}
-	adminClient, _ := newAdminClient(targetURL)
 
 	var e error
 	for content := range clnt.List(ctx, lstOptions) {
@@ -234,45 +277,9 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef, false)
+		_, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef, false)
 		if err != nil {
 			continue
-		}
-
-		// if stat is on a bucket and non-recursive mode, serve the bucket metadata
-		if clnt != nil && !isRecursive && stat.Type.IsDir() {
-			bstat, err := clnt.GetBucketInfo(ctx)
-			if err == nil {
-				// Convert any os specific delimiters to "/".
-				contentURL := filepath.ToSlash(bstat.URL.Path)
-				prefixPath = filepath.ToSlash(prefixPath)
-				// Trim prefix path from the content path.
-				contentURL = strings.TrimPrefix(contentURL, prefixPath)
-				bstat.URL.Path = contentURL
-
-				if bstat.Date.IsZero() || bstat.Date.Equal(timeSentinel) {
-					bstat.Date = content.Time
-				}
-				var bu madmin.BucketUsageInfo
-				if adminClient != nil {
-					// Create a new MinIO Admin Client
-					duinfo, e := adminClient.DataUsageInfo(globalContext)
-					if e == nil {
-						bu = duinfo.BucketsUsage[stat.BucketName]
-					}
-				}
-
-				if prefixPath != "/" {
-					bstat.Prefix = true
-				}
-
-				printMsg(bucketInfoMessage{
-					Status:     "success",
-					BucketInfo: bstat,
-					Usage:      bu,
-				})
-				continue
-			}
 		}
 
 		// Convert any os specific delimiters to "/".
