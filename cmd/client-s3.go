@@ -1756,8 +1756,11 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 	if b == "" {
 		bucketsInfo, err := c.api.ListBuckets(ctx)
 		if err != nil {
-			objectInfoCh <- minio.ObjectInfo{
+			select {
+			case <-ctx.Done():
+			case objectInfoCh <- minio.ObjectInfo{
 				Err: err,
+			}:
 			}
 			return
 		}
@@ -1776,7 +1779,11 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 			WithVersions: true,
 		}) {
 			if objectVersion.Err != nil {
-				objectInfoCh <- objectVersion
+				select {
+				case <-ctx.Done():
+					return
+				case objectInfoCh <- objectVersion:
+				}
 				continue
 			}
 
@@ -1794,7 +1801,11 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 					continue
 				}
 
-				objectInfoCh <- objectVersion
+				select {
+				case <-ctx.Done():
+					return
+				case objectInfoCh <- objectVersion:
+				}
 			}
 		}
 	}
@@ -1826,8 +1837,11 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets(ctx)
 		if err != nil {
-			contentCh <- &ClientContent{
+			select {
+			case <-ctx.Done():
+			case contentCh <- &ClientContent{
 				Err: probe.NewError(err),
+			}:
 			}
 			return
 		}
@@ -1836,7 +1850,11 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 		}
 		for _, bucket := range buckets {
 			if opts.ShowDir != DirLast {
-				contentCh <- c.bucketInfo2ClientContent(bucket)
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- c.bucketInfo2ClientContent(bucket):
+				}
 			}
 			for objectVersion := range c.listVersions(ctx, bucket.Name, "",
 				opts.Recursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
@@ -1844,16 +1862,28 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 					if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 						goto noVersioning
 					}
-					contentCh <- &ClientContent{
+					select {
+					case <-ctx.Done():
+						return
+					case contentCh <- &ClientContent{
 						Err: probe.NewError(objectVersion.Err),
+					}:
 					}
 					continue
 				}
-				contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion)
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- c.objectInfo2ClientContent(bucket.Name, objectVersion):
+				}
 			}
 
 			if opts.ShowDir == DirLast {
-				contentCh <- c.bucketInfo2ClientContent(bucket)
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- c.bucketInfo2ClientContent(bucket):
+				}
 			}
 		}
 		return
@@ -1864,12 +1894,20 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 				if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 					goto noVersioning
 				}
-				contentCh <- &ClientContent{
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- &ClientContent{
 					Err: probe.NewError(objectVersion.Err),
+				}:
 				}
 				continue
 			}
-			contentCh <- c.objectInfo2ClientContent(b, objectVersion)
+			select {
+			case <-ctx.Done():
+				return
+			case contentCh <- c.objectInfo2ClientContent(b, objectVersion):
+			}
 		}
 		return
 	}
@@ -1902,8 +1940,11 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets(ctx)
 		if err != nil {
-			contentCh <- &ClientContent{
+			select {
+			case <-ctx.Done():
+			case contentCh <- &ClientContent{
 				Err: probe.NewError(err),
+			}:
 			}
 			return
 		}
@@ -1911,8 +1952,12 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 		for _, bucket := range buckets {
 			for object := range c.api.ListIncompleteUploads(ctx, bucket.Name, o, isRecursive) {
 				if object.Err != nil {
-					contentCh <- &ClientContent{
+					select {
+					case <-ctx.Done():
+						return
+					case contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
+					}:
 					}
 					return
 				}
@@ -1932,15 +1977,22 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 					content.Time = object.Initiated
 					content.Type = os.ModeTemporary
 				}
-				contentCh <- content
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- content:
+				}
 			}
 		}
 	default:
 		isRecursive := false
 		for object := range c.api.ListIncompleteUploads(ctx, b, o, isRecursive) {
 			if object.Err != nil {
-				contentCh <- &ClientContent{
+				select {
+				case <-ctx.Done():
+				case contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
+				}:
 				}
 				return
 			}
@@ -1960,7 +2012,11 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 				content.Time = object.Initiated
 				content.Type = os.ModeTemporary
 			}
-			contentCh <- content
+			select {
+			case <-ctx.Done():
+				return
+			case contentCh <- content:
+			}
 		}
 	}
 }
@@ -1972,8 +2028,11 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets(ctx)
 		if err != nil {
-			contentCh <- &ClientContent{
+			select {
+			case <-ctx.Done():
+			case contentCh <- &ClientContent{
 				Err: probe.NewError(err),
+			}:
 			}
 			return
 		}
@@ -1981,13 +2040,21 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 		isRecursive := true
 		for _, bucket := range buckets {
 			if opts.ShowDir != DirLast {
-				contentCh <- c.bucketInfo2ClientContent(bucket)
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- c.bucketInfo2ClientContent(bucket):
+				}
 			}
 
 			for object := range c.api.ListIncompleteUploads(ctx, bucket.Name, o, isRecursive) {
 				if object.Err != nil {
-					contentCh <- &ClientContent{
+					select {
+					case <-ctx.Done():
+						return
+					case contentCh <- &ClientContent{
 						Err: probe.NewError(object.Err),
+					}:
 					}
 					return
 				}
@@ -1998,19 +2065,31 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 				content.Size = object.Size
 				content.Time = object.Initiated
 				content.Type = os.ModeTemporary
-				contentCh <- content
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- content:
+				}
 			}
 
 			if opts.ShowDir == DirLast {
-				contentCh <- c.bucketInfo2ClientContent(bucket)
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- c.bucketInfo2ClientContent(bucket):
+				}
 			}
 		}
 	default:
 		isRecursive := true
 		for object := range c.api.ListIncompleteUploads(ctx, b, o, isRecursive) {
 			if object.Err != nil {
-				contentCh <- &ClientContent{
+				select {
+				case <-ctx.Done():
+					return
+				case contentCh <- &ClientContent{
 					Err: probe.NewError(object.Err),
+				}:
 				}
 				return
 			}
@@ -2022,7 +2101,11 @@ func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, content
 			content.Size = object.Size
 			content.Time = object.Initiated
 			content.Type = os.ModeTemporary
-			contentCh <- content
+			select {
+			case <-ctx.Done():
+				return
+			case contentCh <- content:
+			}
 		}
 	}
 }
