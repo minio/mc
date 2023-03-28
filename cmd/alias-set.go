@@ -256,7 +256,7 @@ func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path str
 	// Probe S3 signature version
 	api, err := probeS3Signature(ctx, accessKey, secretKey, url, peerCert)
 	if err != nil {
-		return nil, err.Trace(url, accessKey, secretKey, api, path)
+		return nil, err.Trace(url, accessKey, api, path)
 	}
 
 	s3Config.Signature = api
