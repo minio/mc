@@ -336,11 +336,11 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 
 	if !globalInsecure && !globalJSON && term.IsTerminal(int(os.Stdout.Fd())) {
 		peerCert, err = promptTrustSelfSignedCert(ctx, url, alias)
-		fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+		fatalIf(err.Trace(alias, url, accessKey), "Unable to initialize new alias from the provided credentials.")
 	}
 
 	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, path, peerCert)
-	fatalIf(err.Trace(cli.Args()...), "Unable to initialize new alias from the provided credentials.")
+	fatalIf(err.Trace(alias, url, accessKey), "Unable to initialize new alias from the provided credentials.")
 
 	msg := setAlias(alias, aliasConfigV10{
 		URL:       s3Config.HostURL,
