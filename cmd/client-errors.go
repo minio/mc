@@ -34,6 +34,13 @@ func (e APINotImplemented) Error() string {
 	return "`" + e.API + "` is not supported for `" + e.APIType + "`."
 }
 
+// InvalidArgument - passed argument is invalid for this operation
+type InvalidArgument struct{}
+
+func (e InvalidArgument) Error() string {
+	return "invalid argument"
+}
+
 // GenericBucketError - generic bucket operations error
 type GenericBucketError struct {
 	Bucket string

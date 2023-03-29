@@ -122,6 +122,7 @@ func mainAdminUserSTSAcctInfo(ctx *cli.Context) error {
 		ParentUser:    stsInfo.ParentUser,
 		ImpliedPolicy: stsInfo.ImpliedPolicy,
 		Policy:        json.RawMessage(stsInfo.Policy),
+		Expiration:    stsInfo.Expiration,
 	})
 
 	return nil

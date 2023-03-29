@@ -26,7 +26,7 @@ var batchSubcommands = []cli.Command{
 	batchStatusCmd,
 	batchDescribeCmd,
 	// batchSuspendResumeCmd,
-	// batchStopCmd,
+	batchCancelCmd,
 }
 
 var batchCmd = cli.Command{

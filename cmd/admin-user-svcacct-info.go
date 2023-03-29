@@ -103,6 +103,7 @@ func mainAdminUserSvcAcctInfo(ctx *cli.Context) error {
 		ParentUser:    svcInfo.ParentUser,
 		ImpliedPolicy: svcInfo.ImpliedPolicy,
 		Policy:        json.RawMessage(svcInfo.Policy),
+		Expiration:    svcInfo.Expiration,
 	})
 
 	return nil
