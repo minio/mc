@@ -394,11 +394,13 @@ FLAGS:
   --help, -h                       show help
 
 COMMANDS:
-  add      add new policy
+  create   create new policy
   remove   remove policy
   list     list all policies
   info     show info on a policy
-  set      set IAM policy on a user or group
+  attach   attach an IAM policy to a user or group
+  detach   detach an IAM policy from a user or group
+  entities list policy association entities
 ```
 
 *Example: List all canned policies on MinIO.*
@@ -452,14 +454,18 @@ mc admin policy info myminio/ writeonly
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::*"]}]}
 ```
 
-*Example: Set the canned policy.'writeonly' on a user or group*
+*Example: Attach the canned policy.'writeonly' on a user or group*
 
 ```
-mc admin policy set myminio/ writeonly user=someuser
-Policy writeonly is set on user `someuser`
+mc admin policy attach myminio/ writeonly user=someuser
+Policy `writeonly` successfully attached to user `someuser`
+```
 
-mc admin policy set myminio/ writeonly group=somegroup
-Policy writeonly is set on group `somegroup`
+*Example: Detach the canned policy.'writeonly' on a user or group*
+
+```
+mc admin policy detach myminio/ writeonly group=somegroup
+Policy `writeonly` successfully detached from group `somegroup`
 ```
 
 <a name="user"></a>
