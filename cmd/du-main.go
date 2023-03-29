@@ -48,10 +48,6 @@ var (
 			Name:  "rewind",
 			Usage: "include all object versions no later than specified date",
 		},
-		cli.StringFlag{
-			Name:  "block-size",
-			Usage: "display summarize disk usage units (eg 'KB', 'k', 'm')",
-		},
 		cli.BoolFlag{
 			Name:  "versions",
 			Usage: "include all object versions",
@@ -86,66 +82,26 @@ EXAMPLES:
   2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
      {{.Prompt}} {{.HelpName}} --depth=2 s3/jazz-songs/louis/
 
-  3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time.
+  3. Summarize disk usage of 'jazz-songs' bucket at a fixed date/time
      {{.Prompt}} {{.HelpName}} --rewind "2020.01.01" s3/jazz-songs/
 
-  4. Summarize disk usage of 'jazz-songs' bucket with all objects versions.
+  4. Summarize disk usage of 'jazz-songs' bucket with all objects versions
      {{.Prompt}} {{.HelpName}} --versions s3/jazz-songs/
-
-  5. Summarize disk usage of 'jazz-songs' bucket recursively, display use mb units.
-     {{.Prompt}} {{.HelpName}} --block-size mb s3/jazz-songs
 `,
 }
 
 // Structured message depending on the type of console.
 type duMessage struct {
 	Prefix     string `json:"prefix"`
-	BlockSize  string `json:"blockSize"`
 	Size       int64  `json:"size"`
 	Objects    int64  `json:"objects"`
 	Status     string `json:"status"`
 	IsVersions bool   `json:"isVersions"`
 }
 
-// matchDuOpts is structure to encapsulate
-type matchDuOpts struct {
-	urlStr       string
-	timeRef      time.Time
-	withVersions bool
-	depth        int
-	encKeyDB     map[string][]prefixSSEPair
-	blockSize    string
-}
-
-// Convert units
-func formatSize(r duMessage) string {
-	if r.BlockSize == "b" || r.BlockSize == "b" {
-		return fmt.Sprintf("%.2fB", float64(r.Size)/float64(1))
-	}
-	if r.BlockSize == "k" || r.BlockSize == "kb" || r.BlockSize == "kib" {
-		return fmt.Sprintf("%.2fKiB", float64(r.Size)/float64(1024))
-	}
-	if r.BlockSize == "m" || r.BlockSize == "mb" || r.BlockSize == "mib" {
-		return fmt.Sprintf("%.2fMiB", float64(r.Size)/float64(1024*1024))
-	}
-	if r.BlockSize == "g" || r.BlockSize == "gb" || r.BlockSize == "gib" {
-		return fmt.Sprintf("%.2fGiB", float64(r.Size)/float64(1024*1024*1024))
-	}
-	if r.BlockSize == "t" || r.BlockSize == "tb" || r.BlockSize == "tib" {
-		return fmt.Sprintf("%.2fTiB", float64(r.Size)/float64(1024*1024*1024*1024))
-	}
-	if r.BlockSize == "p" || r.BlockSize == "pb" || r.BlockSize == "pib" {
-		return fmt.Sprintf("%.2fPiB", float64(r.Size)/float64(1024*1024*1024*1024*1024))
-	}
-	if r.BlockSize == "e" || r.BlockSize == "pb" || r.BlockSize == "eib" {
-		return fmt.Sprintf("%.2fEiB", float64(r.Size)/float64(1024*1024*1024*1024*1024*1024))
-	}
-	return strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
-}
-
 // Colorized message for console printing.
 func (r duMessage) String() string {
-	size := formatSize(r)
+	humanSize := strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
 	cnt := fmt.Sprintf("%d object", r.Objects)
 	if r.IsVersions {
 		cnt = fmt.Sprintf("%d version", r.Objects)
@@ -153,7 +109,7 @@ func (r duMessage) String() string {
 	if r.Objects != 1 {
 		cnt += "s" // pluralize
 	}
-	return fmt.Sprintf("%s\t%s\t%s", console.Colorize("Size", size),
+	return fmt.Sprintf("%s\t%s\t%s", console.Colorize("Size", humanSize),
 		console.Colorize("Objects", cnt),
 		console.Colorize("Prefix", r.Prefix))
 }
@@ -165,8 +121,8 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
-	targetAlias, targetURL, _ := mustExpandAlias(opts.urlStr)
+func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (sz, objs int64, err error) {
+	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
 
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
@@ -174,19 +130,19 @@ func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
 
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(opts.urlStr), "Failed to summarize disk usage `"+opts.urlStr+"`.")
+		errorIf(pErr.Trace(urlStr), "Failed to summarize disk usage `"+urlStr+"`.")
 		return 0, 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
 	// No disk usage details below this level,
 	// just do a recursive listing
-	recursive := opts.depth == 1
+	recursive := depth == 1
 
 	targetAbsolutePath := path.Clean(clnt.GetURL().String())
 
 	contentCh := clnt.List(ctx, ListOptions{
-		TimeRef:           opts.timeRef,
-		WithOlderVersions: opts.withVersions,
+		TimeRef:           timeRef,
+		WithOlderVersions: withVersions,
 		Recursive:         recursive,
 		ShowDir:           DirFirst,
 	})
@@ -202,7 +158,7 @@ func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}
-			errorIf(content.Err.Trace(opts.urlStr), "Failed to find disk usage of `"+opts.urlStr+"` recursively.")
+			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
 			return 0, 0, exitStatus(globalErrorExitStatus)
 		}
 
@@ -211,7 +167,7 @@ func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
 		}
 
 		if content.Type.IsDir() && !recursive {
-			depth := opts.depth
+			depth := depth
 			if depth > 0 {
 				depth--
 			}
@@ -220,8 +176,7 @@ func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			opts.urlStr = subDirAlias
-			used, n, err := du(ctx, opts)
+			used, n, err := du(ctx, subDirAlias, timeRef, withVersions, depth, encKeyDB)
 			if err != nil {
 				return 0, 0, err
 			}
@@ -235,7 +190,7 @@ func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
 		}
 	}
 
-	if opts.depth != 0 {
+	if depth != 0 {
 		u, e := url.Parse(targetURL)
 		if e != nil {
 			panic(e)
@@ -246,15 +201,28 @@ func du(ctx context.Context, opts matchDuOpts) (sz, objs int64, err error) {
 			Size:       size,
 			Objects:    objects,
 			Status:     "success",
-			IsVersions: opts.withVersions,
-			BlockSize:  opts.blockSize,
+			IsVersions: withVersions,
 		})
 	}
 
 	return size, objects, nil
 }
 
-func matchingDuOpts(cliCtx *cli.Context) (opts matchDuOpts) {
+// main for du command.
+func mainDu(cliCtx *cli.Context) error {
+	if !cliCtx.Args().Present() {
+		showCommandHelpAndExit(cliCtx, 1)
+	}
+
+	// Set colors.
+	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Objects", color.New(color.FgGreen))
+	console.SetColor("Size", color.New(color.FgYellow))
+
+	ctx, cancelRm := context.WithCancel(globalContext)
+	defer cancelRm()
+
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
@@ -274,39 +242,13 @@ func matchingDuOpts(cliCtx *cli.Context) (opts matchDuOpts) {
 	withVersions := cliCtx.Bool("versions")
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 
-	blockSizeStr := cliCtx.String("block-size")
-	_, e := humanize.ParseBytes("1" + blockSizeStr)
-	fatalIf(probe.NewError(e).Trace(blockSizeStr), "invalid suffix in --block-size argument '"+blockSizeStr+"'")
-	opts.depth = depth
-	opts.blockSize = strings.ToLower(blockSizeStr)
-	opts.encKeyDB = encKeyDB
-	opts.withVersions = withVersions
-	opts.timeRef = timeRef
-	return
-}
-
-// main for du command.
-func mainDu(cliCtx *cli.Context) error {
-	if !cliCtx.Args().Present() {
-		showCommandHelpAndExit(cliCtx, 1)
-	}
-
-	// Set colors.
-	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
-	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
-	console.SetColor("Objects", color.New(color.FgGreen))
-	console.SetColor("Size", color.New(color.FgYellow))
-
-	ctx, cancelRm := context.WithCancel(globalContext)
-	defer cancelRm()
-	matchDuOpts := matchingDuOpts(cliCtx)
 	var duErr error
 	for _, urlStr := range cliCtx.Args() {
 		if !isAliasURLDir(ctx, urlStr, nil, time.Time{}) {
 			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}
-		matchDuOpts.urlStr = urlStr
-		if _, _, err := du(ctx, matchDuOpts); duErr == nil {
+
+		if _, _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
 			duErr = err
 		}
 	}
