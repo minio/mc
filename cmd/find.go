@@ -490,6 +490,7 @@ func getRegexMap(cliCtx *cli.Context, key string) map[string]*regexp.Regexp {
 		// No value means it should not exist or be empty.
 		if len(split[1]) == 0 {
 			reMap[split[0]] = nil
+			continue
 		}
 		var err error
 		reMap[split[0]], err = regexp.Compile(split[1])
