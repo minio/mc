@@ -2177,6 +2177,8 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.Restore = entry.Restore
 	content.Metadata = map[string]string{}
 	content.UserMetadata = map[string]string{}
+	content.Tags = entry.UserTags
+
 	content.ReplicationStatus = entry.ReplicationStatus
 	for k, v := range entry.UserMetadata {
 		content.UserMetadata[k] = v

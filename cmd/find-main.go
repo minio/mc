@@ -19,10 +19,11 @@ package cmd
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -66,7 +67,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "regex",
-			Usage: "match directory and object name with PCRE regex pattern",
+			Usage: "match directory and object name with RE2 regex pattern",
 		},
 		cli.StringFlag{
 			Name:  "larger",
@@ -83,6 +84,15 @@ var (
 		cli.BoolFlag{
 			Name:  "watch",
 			Usage: "monitor a specified path for newly created object(s)",
+		},
+		cli.StringSliceFlag{
+			Name:  "metadata",
+			Usage: "match metadata with RE2 regex pattern. Specify each with key=regex. MinIO server only.",
+		},
+		cli.StringSliceFlag{
+			Name:   "tags",
+			Usage:  "match tags with RE2 regex pattern. Specify each with key=regex. MinIO server only.",
+			Hidden: true, // Hide until released
 		},
 	}
 )
@@ -202,7 +212,7 @@ type findContext struct {
 	ignorePattern     string
 	namePattern       string
 	pathPattern       string
-	regexPattern      string
+	regexPattern      *regexp.Regexp
 	maxDepth          uint
 	printFmt          string
 	olderThan         string
@@ -211,6 +221,8 @@ type findContext struct {
 	smallerSize       uint64
 	watch             bool
 	withOlderVersions bool
+	matchMeta         map[string]*regexp.Regexp
+	matchTags         map[string]*regexp.Regexp
 
 	// Internal values
 	targetAlias   string
@@ -278,6 +290,10 @@ func mainFind(cliCtx *cli.Context) error {
 	if hostCfg != nil {
 		targetFullURL = hostCfg.URL
 	}
+	var regMatch *regexp.Regexp
+	if cliCtx.String("regex") != "" {
+		regMatch = regexp.MustCompile(cliCtx.String("regex"))
+	}
 
 	return doFind(ctx, &findContext{
 		Context:           cliCtx,
@@ -286,7 +302,7 @@ func mainFind(cliCtx *cli.Context) error {
 		printFmt:          cliCtx.String("print"),
 		namePattern:       cliCtx.String("name"),
 		pathPattern:       cliCtx.String("path"),
-		regexPattern:      cliCtx.String("regex"),
+		regexPattern:      regMatch,
 		ignorePattern:     cliCtx.String("ignore"),
 		withOlderVersions: withVersions,
 		olderThan:         olderThan,
@@ -298,5 +314,7 @@ func mainFind(cliCtx *cli.Context) error {
 		targetURL:         args[0],
 		targetFullURL:     targetFullURL,
 		clnt:              clnt,
+		matchMeta:         getRegexMap(cliCtx, "metadata"),
+		matchTags:         getRegexMap(cliCtx, "tags"),
 	})
 }

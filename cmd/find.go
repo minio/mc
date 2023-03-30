@@ -20,6 +20,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 
@@ -280,6 +282,7 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 		WithDeleteMarkers: false,
 		Recursive:         true,
 		ShowDir:           DirFirst,
+		WithMetadata:      len(ctx.matchMeta) > 0 || len(ctx.matchTags) > 0,
 	}
 
 	// iterate over all content which is within the given directory
@@ -313,6 +316,8 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 			VersionID: content.VersionID,
 			Time:      content.Time.Local(),
 			Size:      content.Size,
+			Metadata:  content.UserMetadata,
+			Tags:      content.Tags,
 		}
 
 		// Match the incoming content, didn't match return.
@@ -412,8 +417,8 @@ func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 	if match && ctx.pathPattern != "" {
 		match = pathMatch(ctx.pathPattern, path)
 	}
-	if match && ctx.regexPattern != "" {
-		match = regexMatch(ctx.regexPattern, path)
+	if match && ctx.regexPattern != nil {
+		match = ctx.regexPattern.MatchString(path)
 	}
 	if match && ctx.olderThan != "" {
 		match = !isOlder(fileContent.Time, ctx.olderThan)
@@ -426,6 +431,12 @@ func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 	}
 	if match && ctx.smallerSize > 0 {
 		match = int64(ctx.smallerSize) > fileContent.Size
+	}
+	if match && len(ctx.matchMeta) > 0 {
+		match = matchRegexMaps(ctx.matchMeta, fileContent.Metadata)
+	}
+	if match && len(ctx.matchTags) > 0 {
+		match = matchRegexMaps(ctx.matchTags, fileContent.Tags)
 	}
 	return match
 }
@@ -445,7 +456,7 @@ func getShareURL(ctx context.Context, path string) string {
 	content, err := clnt.Stat(ctx, StatOptions{})
 	fatalIf(err.Trace(targetURLFull, targetAlias), "Unable to lookup file/object.")
 
-	// Skip if its a directory.
+	// Skip if it is a directory.
 	if content.Type.IsDir() {
 		return ""
 	}
@@ -459,4 +470,51 @@ func getShareURL(ctx context.Context, path string) string {
 	fatalIf(err.Trace(targetAlias, objectURL), "Unable to generate share url.")
 
 	return shareURL
+}
+
+// getRegexMap returns a map from the StringSlice key.
+// Each entry must be key=regex.
+// Will exit with error if an un-parsable entry is found.
+func getRegexMap(cliCtx *cli.Context, key string) map[string]*regexp.Regexp {
+	sl := cliCtx.StringSlice(key)
+	if len(sl) == 0 {
+		return nil
+	}
+	reMap := make(map[string]*regexp.Regexp, len(sl))
+	for _, v := range sl {
+		split := strings.SplitN(v, "=", 2)
+		if len(split) < 2 {
+			err := probe.NewError(fmt.Errorf("want one = separator, got none"))
+			fatalIf(err.Trace(v), "Unable to split key+value. Must be key=regex")
+		}
+		// No value means it should not exist or be empty.
+		if len(split[1]) == 0 {
+			reMap[split[0]] = nil
+		}
+		var err error
+		reMap[split[0]], err = regexp.Compile(split[1])
+		if err != nil {
+			fatalIf(probe.NewError(err), fmt.Sprintf("Unable to compile metadata regex for %s=%s", split[0], split[1]))
+		}
+	}
+	return reMap
+}
+
+// matchRegexMaps will check if all regexes in 'm' match values in 'v' with the same key.
+// If a regex is nil, it must either not exist in v or have a 0 length value.
+func matchRegexMaps(m map[string]*regexp.Regexp, v map[string]string) bool {
+	for k, reg := range m {
+		if reg == nil {
+			if v[k] != "" {
+				return false
+			}
+			// Does not exist or empty, that is fine.
+			continue
+		}
+		val, ok := v[k]
+		if !ok || !reg.MatchString(val) {
+			return false
+		}
+	}
+	return true
 }
