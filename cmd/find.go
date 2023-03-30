@@ -111,13 +111,6 @@ func pathMatch(pattern, path string) bool {
 	return wildcard.Match(pattern, path)
 }
 
-// regexMatch reports whether path matches the regex pattern.
-func regexMatch(pattern, path string) bool {
-	matched, e := regexp.MatchString(pattern, path)
-	errorIf(probe.NewError(e).Trace(pattern), "Unable to regex match with input pattern.")
-	return matched
-}
-
 func getExitStatus(err error) int {
 	if err == nil {
 		return 0
