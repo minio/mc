@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -54,7 +55,7 @@ func TestMatchFind(t *testing.T) {
 			clnt: &S3Client{
 				targetURL: &ClientURL{},
 			},
-			regexPattern: `^(\d+\.){3}\d+$`,
+			regexPattern: regexp.MustCompile(`^(\d+\.){3}\d+$`),
 		},
 		{
 			clnt: &S3Client{
