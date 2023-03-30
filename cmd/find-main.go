@@ -90,9 +90,8 @@ var (
 			Usage: "match metadata with RE2 regex pattern. Specify each with key=regex. MinIO server only.",
 		},
 		cli.StringSliceFlag{
-			Name:   "tags",
-			Usage:  "match tags with RE2 regex pattern. Specify each with key=regex. MinIO server only.",
-			Hidden: true, // Hide until released
+			Name:  "tags",
+			Usage: "match tags with RE2 regex pattern. Specify each with key=regex. MinIO server only.",
 		},
 	}
 )

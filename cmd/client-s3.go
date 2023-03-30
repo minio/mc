@@ -1510,7 +1510,7 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 // listObjectWrapper - select ObjectList mode depending on arguments
 func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool, maxKeys int, zip bool) <-chan minio.ObjectInfo {
 	if !timeRef.IsZero() || withVersions {
-		return c.listVersions(ctx, bucket, object, isRecursive, timeRef, withVersions, withDeleteMarkers)
+		return c.listVersions(ctx, bucket, object, ListOptions{Recursive: isRecursive, TimeRef: timeRef, WithOlderVersions: withVersions, WithDeleteMarkers: withDeleteMarkers})
 	}
 
 	if isGoogle(c.targetURL.Host) {
@@ -1742,16 +1742,16 @@ func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 
 /// Bucket API operations.
 
-func (c *S3Client) listVersions(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool) chan minio.ObjectInfo {
+func (c *S3Client) listVersions(ctx context.Context, b, o string, opts ListOptions) chan minio.ObjectInfo {
 	objectInfoCh := make(chan minio.ObjectInfo)
 	go func() {
 		defer close(objectInfoCh)
-		c.listVersionsRoutine(ctx, b, o, isRecursive, timeRef, includeOlderVersions, withDeleteMarkers, objectInfoCh)
+		c.listVersionsRoutine(ctx, b, o, opts, objectInfoCh)
 	}()
 	return objectInfoCh
 }
 
-func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecursive bool, timeRef time.Time, includeOlderVersions, withDeleteMarkers bool, objectInfoCh chan minio.ObjectInfo) {
+func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, opts ListOptions, objectInfoCh chan minio.ObjectInfo) {
 	var buckets []string
 	if b == "" {
 		bucketsInfo, err := c.api.ListBuckets(ctx)
@@ -1775,8 +1775,9 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 		var skipKey string
 		for objectVersion := range c.api.ListObjects(ctx, b, minio.ListObjectsOptions{
 			Prefix:       o,
-			Recursive:    isRecursive,
+			Recursive:    opts.Recursive,
 			WithVersions: true,
+			WithMetadata: opts.WithMetadata,
 		}) {
 			if objectVersion.Err != nil {
 				select {
@@ -1787,17 +1788,17 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, isRecur
 				continue
 			}
 
-			if !includeOlderVersions && skipKey == objectVersion.Key {
+			if !opts.WithOlderVersions && skipKey == objectVersion.Key {
 				// Skip current version if not asked to list all versions
 				// and we already listed the current object key name
 				continue
 			}
 
-			if timeRef.IsZero() || objectVersion.LastModified.Before(timeRef) {
+			if opts.TimeRef.IsZero() || objectVersion.LastModified.Before(opts.TimeRef) {
 				skipKey = objectVersion.Key
 
 				// Skip if this is a delete marker and we are not asked to list it
-				if !withDeleteMarkers && objectVersion.IsDeleteMarker {
+				if !opts.WithDeleteMarkers && objectVersion.IsDeleteMarker {
 					continue
 				}
 
@@ -1856,8 +1857,7 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 				case contentCh <- c.bucketInfo2ClientContent(bucket):
 				}
 			}
-			for objectVersion := range c.listVersions(ctx, bucket.Name, "",
-				opts.Recursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
+			for objectVersion := range c.listVersions(ctx, bucket.Name, "", opts) {
 				if objectVersion.Err != nil {
 					if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 						goto noVersioning
@@ -1888,8 +1888,7 @@ func (c *S3Client) versionedList(ctx context.Context, contentCh chan *ClientCont
 		}
 		return
 	default:
-		for objectVersion := range c.listVersions(ctx, b, o,
-			opts.Recursive, opts.TimeRef, opts.WithOlderVersions, opts.WithDeleteMarkers) {
+		for objectVersion := range c.listVersions(ctx, b, o, opts) {
 			if objectVersion.Err != nil {
 				if minio.ToErrorResponse(objectVersion.Err).Code == "NotImplemented" {
 					goto noVersioning
