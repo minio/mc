@@ -397,30 +397,36 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 		return
 	}
 
-	resultFileNamePfx := fmt.Sprintf("%s-perf_%s", filepath.Clean(alias), UTCNow().Format("20060102150405"))
-	resultFileName := resultFileNamePfx + ".json"
+	// If results still not available, don't write anything
+	if len(results) == 0 {
+		clr := color.New(color.FgRed, color.Bold)
+		clr.Println("Nothing available to upload to SUBNET yet.")
+	} else {
+		resultFileNamePfx := fmt.Sprintf("%s-perf_%s", filepath.Clean(alias), UTCNow().Format("20060102150405"))
+		resultFileName := resultFileNamePfx + ".json"
 
-	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), alias)
-	tmpFileName, e := zipPerfResult(convertPerfResults(results), resultFileName, regInfo)
-	fatalIf(probe.NewError(e), "Error creating zip from perf test results:")
+		regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), alias)
+		tmpFileName, e := zipPerfResult(convertPerfResults(results), resultFileName, regInfo)
+		fatalIf(probe.NewError(e), "Error creating zip from perf test results:")
 
-	if globalAirgapped {
-		savePerfResultFile(tmpFileName, resultFileNamePfx)
-		return
+		if globalAirgapped {
+			savePerfResultFile(tmpFileName, resultFileNamePfx)
+			return
+		}
+
+		uploadURL := subnetUploadURL("perf", tmpFileName)
+		reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
+
+		_, e = uploadFileToSubnet(alias, tmpFileName, reqURL, headers)
+		if e != nil {
+			console.Errorln("Unable to upload perf test results to SUBNET portal: " + e.Error())
+			savePerfResultFile(tmpFileName, resultFileNamePfx)
+			return
+		}
+
+		clr := color.New(color.FgGreen, color.Bold)
+		clr.Println("uploaded successfully to SUBNET.")
 	}
-
-	uploadURL := subnetUploadURL("perf", tmpFileName)
-	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
-
-	_, e = uploadFileToSubnet(alias, tmpFileName, reqURL, headers)
-	if e != nil {
-		console.Errorln("Unable to upload perf test results to SUBNET portal: " + e.Error())
-		savePerfResultFile(tmpFileName, resultFileNamePfx)
-		return
-	}
-
-	clr := color.New(color.FgGreen, color.Bold)
-	clr.Println("uploaded successfully to SUBNET.")
 }
 
 func savePerfResultFile(tmpFileName string, resultFileNamePfx string) {
