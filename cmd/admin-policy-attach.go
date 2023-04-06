@@ -72,16 +72,20 @@ func mainAdminPolicyAttach(ctx *cli.Context) error {
 	return userAttachOrDetachPolicy(ctx, true)
 }
 
-// updateCannedPolicies is update the policy list.
+// updateCannedPolicies adds or updates the existing policy list and returns the merged result.
 func updateCannedPolicies(existingPolicies string, policiesToAdd []string) ([]string, error) {
 	var updatedPolicies []string
 	if len(policiesToAdd) == 0 {
-		return updatedPolicies, errors.New("empty policy name is unsupported")
+		return updatedPolicies, errors.New("no policies to add specified")
 	}
+	existingPoliciesList := strings.Split(existingPolicies, ",")
 	for _, p1 := range policiesToAdd {
 		found := false
 		p1 = strings.TrimSpace(p1)
-		for _, p2 := range strings.Split(existingPolicies, ",") {
+		if p1 == "" {
+			continue
+		}
+		for _, p2 := range existingPoliciesList {
 			if p1 == p2 {
 				found = true
 				break
@@ -117,7 +121,7 @@ func userAttachPolicy(ctx *cli.Context, req madmin.PolicyAssociationReq, client 
 	if e != nil {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to update the policy")
 	}
-	// new policys already has setting, skip
+	// no new policies were found, skip.
 	if len(updatedPolicies) <= 0 {
 		return nil
 	}
