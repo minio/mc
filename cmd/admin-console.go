@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
 )
 
 var adminConsoleFlags = []cli.Flag{
@@ -67,7 +66,6 @@ func mainAdminConsole(ctx *cli.Context) error {
 	}
 	newCmd = append(newCmd, ctx.Args()...)
 
-	msg := fmt.Sprintf("Please use '%s'", strings.Join(newCmd, " "))
-	console.Infoln(msg)
+	deprecatedError(strings.Join(newCmd, " "))
 	return nil
 }

@@ -112,6 +112,10 @@ var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
 		o.BatchReplication = true
 		return "Trace Batch Replication (alias: brep)"
 	},
+	"batch-keyrotation": func(o *madmin.ServiceTraceOpts) string {
+		o.BatchKeyRotation = true
+		return "Trace Batch KeyRotation (alias: brot)"
+	},
 	"decommission": func(o *madmin.ServiceTraceOpts) string {
 		o.Decommission = true
 		return "Trace Decommission operations (alias: decom)"
@@ -132,6 +136,7 @@ var traceCallTypeAliases = map[string]func(o *madmin.ServiceTraceOpts) string{
 	"decom":  traceCallTypes["decommission"],
 	"resync": traceCallTypes["replication-resync"],
 	"brep":   traceCallTypes["batch-replication"],
+	"brot":   traceCallTypes["batch-keyrotation"],
 }
 
 func traceCallsHelp() string {
