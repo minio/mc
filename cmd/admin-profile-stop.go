@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
 )
 
 var adminProfileStopCmd = cli.Command{
@@ -36,6 +35,6 @@ var adminProfileStopCmd = cli.Command{
 
 // mainAdminProfileStop - the entry function of profile stop command
 func mainAdminProfileStop(_ *cli.Context) error {
-	console.Infoln("Please use 'mc support profile stop'")
+	deprecatedError("mc support profile stop")
 	return nil
 }

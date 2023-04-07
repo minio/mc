@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
 )
 
 var adminTierCmd = cli.Command{
@@ -28,12 +27,13 @@ var adminTierCmd = cli.Command{
 	Action:          mainAdminTier,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
+	Hidden:          true,
 	HideHelpCommand: true,
 	Subcommands:     adminTierDepCmds,
 }
 
 // mainAdminTier is the handle for "mc admin tier" command.
 func mainAdminTier(_ *cli.Context) error {
-	console.Println("Please use 'mc ilm tier' instead.")
+	deprecatedError("mc ilm tier")
 	return nil
 }
