@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -30,9 +31,6 @@ import (
 
 func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) {
 	if len(cliCtx.Args()) < 2 {
-		if isMvCmd {
-			showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
-		}
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
 
@@ -59,8 +57,13 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
+		hasWildcard := strings.HasSuffix(srcURL, "*")
+		if hasWildcard {
+			srcURL = strings.TrimSuffix(srcURL, "*")
+		}
+
 		var err *probe.Error
-		if !isRecursive {
+		if !isRecursive && !hasWildcard {
 			_, _, err = url2Stat(ctx, srcURL, versionID, false, encKeyDB, timeRef, isZip)
 		} else {
 			_, _, err = firstURL2Stat(ctx, srcURL, timeRef, isZip)
@@ -182,7 +185,19 @@ func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, 
 	}
 
 	for _, srcURL := range srcURLs {
-		c, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef, isZip)
+		hasWildCard := strings.HasSuffix(srcURL, "*")
+		if hasWildCard {
+			srcURL = strings.TrimSuffix(srcURL, "*")
+		}
+
+		var c Client
+		var srcContent *ClientContent
+		var err *probe.Error
+		if !hasWildCard {
+			c, srcContent, err = url2Stat(ctx, srcURL, "", false, keys, timeRef, isZip)
+		} else {
+			c, srcContent, err = firstURL2Stat(ctx, srcURL, timeRef, isZip)
+		}
 		fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 		if srcContent.Type.IsDir() {
