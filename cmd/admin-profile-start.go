@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/pkg/console"
 )
 
 var adminProfileStartCmd = cli.Command{
@@ -35,6 +34,6 @@ var adminProfileStartCmd = cli.Command{
 
 // mainAdminProfileStart - the entry function of profile command
 func mainAdminProfileStart(_ *cli.Context) error {
-	console.Infoln("Please use 'mc support profile start'")
+	deprecatedError("mc support profile start")
 	return nil
 }
