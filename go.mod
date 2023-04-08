@@ -125,3 +125,5 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+replace github.com/minio/minio-go/v7 => github.com/klauspost/minio-go/v7 v7.0.0-20230330164821-4ec9eb28c34e
