@@ -140,7 +140,7 @@ type driveIOStat struct {
 }
 
 func generateDriveStat(disk madmin.Disk, curr, prev madmin.DiskIOStats, interval uint64) (d driveIOStat) {
-	if disk.TotalSpace < 0 {
+	if disk.TotalSpace == 0 {
 		return d
 	}
 	d.endpoint = disk.Endpoint
