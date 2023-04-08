@@ -140,22 +140,23 @@ type driveIOStat struct {
 }
 
 func generateDriveStat(disk madmin.Disk, curr, prev madmin.DiskIOStats, interval uint64) (d driveIOStat) {
-	if disk.TotalSpace > 0 {
-		d.endpoint = disk.Endpoint
-		d.used = 100 * disk.UsedSpace / disk.TotalSpace
-		d.util = 100 * float64(curr.TotalTicks-prev.TotalTicks) / float64(interval)
-		currTotalIOs := curr.ReadIOs + curr.WriteIOs + curr.DiscardIOs
-		prevTotalIOs := prev.ReadIOs + prev.WriteIOs + prev.DiscardIOs
-		totalTicksDiff := curr.ReadTicks - prev.ReadTicks + curr.WriteTicks - prev.WriteTicks + curr.DiscardTicks - prev.DiscardTicks
-		if currTotalIOs > prevTotalIOs {
-			d.tps = currTotalIOs - prevTotalIOs
-			d.await = float64(totalTicksDiff) / float64(currTotalIOs-prevTotalIOs)
-		}
-		intervalInSec := float64(interval / 1000)
-		d.readMBs = float64(curr.ReadSectors-prev.ReadSectors) / (2048 * intervalInSec)
-		d.writeMBs = float64(curr.WriteSectors-prev.WriteSectors) / (2048 * intervalInSec)
-		d.discardMBs = float64(curr.DiscardSectors-prev.DiscardSectors) / (2048 * intervalInSec)
+	if disk.TotalSpace < 0 {
+		return d
 	}
+	d.endpoint = disk.Endpoint
+	d.used = 100 * disk.UsedSpace / disk.TotalSpace
+	d.util = 100 * float64(curr.TotalTicks-prev.TotalTicks) / float64(interval)
+	currTotalIOs := curr.ReadIOs + curr.WriteIOs + curr.DiscardIOs
+	prevTotalIOs := prev.ReadIOs + prev.WriteIOs + prev.DiscardIOs
+	totalTicksDiff := curr.ReadTicks - prev.ReadTicks + curr.WriteTicks - prev.WriteTicks + curr.DiscardTicks - prev.DiscardTicks
+	if currTotalIOs > prevTotalIOs {
+		d.tps = currTotalIOs - prevTotalIOs
+		d.await = float64(totalTicksDiff) / float64(currTotalIOs-prevTotalIOs)
+	}
+	intervalInSec := float64(interval / 1000)
+	d.readMBs = float64(curr.ReadSectors-prev.ReadSectors) / (2048 * intervalInSec)
+	d.writeMBs = float64(curr.WriteSectors-prev.WriteSectors) / (2048 * intervalInSec)
+	d.discardMBs = float64(curr.DiscardSectors-prev.DiscardSectors) / (2048 * intervalInSec)
 	return d
 }
 
