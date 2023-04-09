@@ -62,7 +62,7 @@ var supportPerfFlags = append([]cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:   "noclear",
-		Usage:  "do not cleanup generated data after running object speedtest",
+		Usage:  "do not clear bucket after running object perf test",
 		Hidden: true, // Hidden for now.
 	},
 	// Drive test specific flags.
