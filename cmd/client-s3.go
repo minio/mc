@@ -2848,6 +2848,7 @@ func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 	if err != nil {
 		return b, err.Trace(bucket)
 	}
+	b.Key = bucket
 	b.URL = content.URL
 	b.Size = content.Size
 	b.Type = content.Type
