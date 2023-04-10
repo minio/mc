@@ -56,7 +56,7 @@ var errInvalidAliasedURL = func(URL string) *probe.Error {
 type invalidAliasErr error
 
 var errInvalidAlias = func(alias string) *probe.Error {
-	msg := "Alias `" + alias + "` should have alphanumeric characters such as [helloWorld0, hello_World0, ...]"
+	msg := "Alias `" + alias + "` should have alphanumeric characters such as [helloWorld0, hello_World0, ...] and begin with a letter"
 	return probe.NewError(invalidAliasErr(errors.New(msg)))
 }
 

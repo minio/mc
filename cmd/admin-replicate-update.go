@@ -38,6 +38,11 @@ var adminReplicateUpdateFlags = []cli.Flag{
 		Name:  "endpoint",
 		Usage: "endpoint for the site",
 	},
+	cli.StringFlag{
+		Name:  "sync",
+		Usage: "enable synchronous replication for this target, valid values are ['enable', 'disable'].",
+		Value: "disable",
+	},
 }
 
 var adminReplicateUpdateCmd = cli.Command{
@@ -110,17 +115,31 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	if !ctx.IsSet("deployment-id") {
 		fatalIf(errInvalidArgument(), "--deployment-id is a required flag")
 	}
-	if !ctx.IsSet("endpoint") {
-		fatalIf(errInvalidArgument(), "--endpoint is a required flag")
+	if !ctx.IsSet("endpoint") && !ctx.IsSet("sync") {
+		fatalIf(errInvalidArgument(), "--endpoint or --sync is a required flag")
 	}
-	parsedURL := ctx.String("endpoint")
-	u, e := url.Parse(parsedURL)
-	if e != nil {
-		fatalIf(errInvalidArgument().Trace(parsedURL), "Unsupported URL format %v", e)
+	var syncState string
+	if ctx.IsSet("sync") {
+		syncState = strings.ToLower(ctx.String("sync"))
+		switch syncState {
+		case "enable", "disable":
+		default:
+			fatalIf(errInvalidArgument().Trace(args...), "--sync can be either [enable|disable]")
+		}
+	}
+	var ep string
+	if ctx.IsSet("endpoint") {
+		parsedURL := ctx.String("endpoint")
+		u, e := url.Parse(parsedURL)
+		if e != nil {
+			fatalIf(errInvalidArgument().Trace(parsedURL), "Unsupported URL format %v", e)
+		}
+		ep = u.String()
 	}
 	res, e := client.SiteReplicationEdit(globalContext, madmin.PeerInfo{
 		DeploymentID: ctx.String("deployment-id"),
-		Endpoint:     u.String(),
+		Endpoint:     ep,
+		SyncState:    madmin.SyncStatus(syncState),
 	})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit cluster replication site endpoint")
 

@@ -51,6 +51,9 @@ type contentMessage struct {
 	VersionIndex   int    `json:"versionIndex,omitempty"`
 	IsDeleteMarker bool   `json:"isDeleteMarker,omitempty"`
 	StorageClass   string `json:"storageClass,omitempty"`
+
+	Metadata map[string]string `json:"metadata,omitempty"`
+	Tags     map[string]string `json:"tags,omitempty"`
 }
 
 // String colorized string message.
@@ -137,6 +140,9 @@ func generateContentMessages(clntURL ClientURL, ctnts []*ClientContent, printAll
 
 		contentMsg.Size = c.Size
 		contentMsg.StorageClass = c.StorageClass
+		contentMsg.Metadata = c.Metadata
+		contentMsg.Tags = c.Tags
+
 		md5sum := strings.TrimPrefix(c.ETag, "\"")
 		md5sum = strings.TrimSuffix(md5sum, "\"")
 		contentMsg.ETag = md5sum

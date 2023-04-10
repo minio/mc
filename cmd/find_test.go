@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -54,7 +55,7 @@ func TestMatchFind(t *testing.T) {
 			clnt: &S3Client{
 				targetURL: &ClientURL{},
 			},
-			regexPattern: `^(\d+\.){3}\d+$`,
+			regexPattern: regexp.MustCompile(`^(\d+\.){3}\d+$`),
 		},
 		{
 			clnt: &S3Client{
@@ -308,14 +309,6 @@ func TestFindMatch(t *testing.T) {
 		{"*W", "/Word//this/is a/trickyTest", "path", false},
 		{"LTIxNDc0ODM2NDgvLTE=", "LTIxNDc0ODM2NDgvLTE=/I/Am/One/Baaaaad/String", "path", false},
 		{"/", "funky/path/name", "path", false},
-
-		// Regexp based - success cases.
-		{"^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", "testbucket-1", "regex", true},
-		{`^(\d+\.){3}\d+$`, "192.168.1.1", "regex", true},
-
-		// Regexp based - failure cases.
-		{"^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", "testbucket.", "regex", false},
-		{`^(\d+\.){3}\d+$`, "192.168.x.x", "regex", false},
 	}
 
 	for _, test := range basicTests {
@@ -328,12 +321,6 @@ func TestFindMatch(t *testing.T) {
 			}
 		case "path":
 			testMatch := pathMatch(test.pattern, test.filePath)
-			if testMatch != test.match {
-				t.Fatalf("Unexpected result %t, with pattern %s, flag %s and filepath %s \n",
-					!test.match, test.pattern, test.flagName, test.filePath)
-			}
-		case "regex":
-			testMatch := regexMatch(test.pattern, test.filePath)
 			if testMatch != test.match {
 				t.Fatalf("Unexpected result %t, with pattern %s, flag %s and filepath %s \n",
 					!test.match, test.pattern, test.flagName, test.filePath)
