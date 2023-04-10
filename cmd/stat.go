@@ -40,19 +40,20 @@ import (
 
 // contentMessage container for content message structure.
 type statMessage struct {
-	Status            string            `json:"status"`
-	Key               string            `json:"name"`
-	Date              time.Time         `json:"lastModified"`
-	Size              int64             `json:"size"`
-	ETag              string            `json:"etag"`
-	Type              string            `json:"type,omitempty"`
-	Expires           *time.Time        `json:"expires,omitempty"`
-	Expiration        *time.Time        `json:"expiration,omitempty"`
-	ExpirationRuleID  string            `json:"expirationRuleID,omitempty"`
-	ReplicationStatus string            `json:"replicationStatus,omitempty"`
-	Metadata          map[string]string `json:"metadata,omitempty"`
-	VersionID         string            `json:"versionID,omitempty"`
-	DeleteMarker      bool              `json:"deleteMarker,omitempty"`
+	Status            string             `json:"status"`
+	Key               string             `json:"name"`
+	Date              time.Time          `json:"lastModified"`
+	Size              int64              `json:"size"`
+	ETag              string             `json:"etag"`
+	Type              string             `json:"type,omitempty"`
+	Expires           *time.Time         `json:"expires,omitempty"`
+	Expiration        *time.Time         `json:"expiration,omitempty"`
+	ExpirationRuleID  string             `json:"expirationRuleID,omitempty"`
+	ReplicationStatus string             `json:"replicationStatus,omitempty"`
+	Metadata          map[string]string  `json:"metadata,omitempty"`
+	VersionID         string             `json:"versionID,omitempty"`
+	DeleteMarker      bool               `json:"deleteMarker,omitempty"`
+	Restore           *minio.RestoreInfo `json:"restore,omitempty"`
 }
 
 func (stat statMessage) String() (msg string) {
@@ -84,6 +85,13 @@ func (stat statMessage) String() (msg string) {
 	if stat.Expiration != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
+	}
+	if stat.Restore != nil {
+		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Restore") + "\n")
+		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
+			stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
+		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %t", "Ongoing",
+			stat.Restore.OngoingRestore) + "\n")
 	}
 	maxKeyMetadata := 0
 	maxKeyEncrypted := 0
@@ -160,6 +168,7 @@ func parseStat(c *ClientContent) statMessage {
 	}
 	content.ExpirationRuleID = c.ExpirationRuleID
 	content.ReplicationStatus = c.ReplicationStatus
+	content.Restore = c.Restore
 	return content
 }
 

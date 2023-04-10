@@ -140,6 +140,9 @@ type driveIOStat struct {
 }
 
 func generateDriveStat(disk madmin.Disk, curr, prev madmin.DiskIOStats, interval uint64) (d driveIOStat) {
+	if disk.TotalSpace == 0 {
+		return d
+	}
 	d.endpoint = disk.Endpoint
 	d.used = 100 * disk.UsedSpace / disk.TotalSpace
 	d.util = 100 * float64(curr.TotalTicks-prev.TotalTicks) / float64(interval)
@@ -257,6 +260,9 @@ func (m *topDriveUI) View() string {
 		}
 		if diskInfo.Scanning {
 			endpoint += "*"
+		}
+		if diskInfo.TotalSpace == 0 {
+			endpoint += crossTickCell
 		}
 
 		dataRender = append(dataRender, []string{
