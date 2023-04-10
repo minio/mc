@@ -355,14 +355,6 @@ NAME:
   mc admin service - restart and stop all MinIO servers
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
   
 COMMANDS:
@@ -386,14 +378,6 @@ NAME:
   mc admin info - display MinIO server information
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -420,14 +404,6 @@ NAME:
   mc admin policy - manage policies defined in the MinIO server
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 
 COMMANDS:
@@ -514,14 +490,6 @@ NAME:
   mc admin user - manage users
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 
 COMMANDS:
@@ -590,14 +558,6 @@ NAME:
   mc admin replicate - manage MinIO site replication
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 
 COMMANDS:
@@ -673,14 +633,6 @@ NAME:
   mc admin idp - manage MinIO IDentity Provider server configuration
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 
 COMMANDS:
@@ -845,14 +797,6 @@ COMMANDS:
   import   import multiple config keys from STDIN
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -897,14 +841,6 @@ COMMANDS:
   cancel  cancel an ongoing decommissioning of a pool
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -953,23 +889,6 @@ USAGE:
   mc admin heal [FLAGS] TARGET
   
 FLAGS:
-  --scan value                  select the healing scan mode (normal/deep) (default: "normal")
-  --recursive, -r               heal recursively
-  --dry-run, -n                 only inspect data, but do not mutate
-  --force-start, -f             force start a new heal sequence
-  --force-stop, -s              force stop a running heal sequence
-  --remove                      remove dangling objects in heal sequence
-  --storage-class value         show server/drives failure tolerance with the given storage class
-  --rewrite                     rewrite objects from older to newer format
-  --verbose, -v                 show verbose information
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -1002,14 +921,6 @@ FLAGS:
   --filter-response             trace calls only with response bytes greater than this threshold, use with filter-size
   --response-duration 5ms       trace calls only with response duration greater than this threshold (e.g. 5ms) (default: 0s)
   --filter-size value           filter size, use with filter (see UNITS)
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
   
 CALL TYPES:
@@ -1117,14 +1028,6 @@ NAME:
   mc admin scanner - provide MinIO scanner info
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -1157,14 +1060,6 @@ USAGE:
 FLAGS:
   --last value, -l value        show last n log entries (default: 10)
   --type value, -t value        list error logs by type. Valid options are '[minio, application, all]' (default: "all")
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -1198,14 +1093,6 @@ USAGE:
   mc admin cluster COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
@@ -1245,14 +1132,6 @@ USAGE:
   mc admin rebalance COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 FLAGS:
-  --config-dir value, -C value  path to configuration folder
-  --quiet, -q                   disable progress bar display
-  --no-color                    disable color theme
-  --json                        enable JSON lines formatted output
-  --debug                       enable debug output
-  --insecure                    disable SSL certificate verification
-  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
-  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
   --help, -h                    show help
 ```
 
