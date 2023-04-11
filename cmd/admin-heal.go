@@ -503,6 +503,23 @@ func (s shortBackgroundHealStatusMessage) String() string {
 
 			if disk.HealInfo != nil {
 				missingInSet++
+
+				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
+				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
+					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
+						leastPct = pct
+					}
+				} else {
+					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
+					leastPct = 0
+				}
+
+				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
+				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
+				if remainingTime > healingRemaining {
+					healingRemaining = remainingTime
+				}
+
 				disk := disk
 				if furthestHealingDisk == nil {
 					furthestHealingDisk = &disk
@@ -514,9 +531,9 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				}
 			}
 		}
+
 		if furthestHealingDisk != nil {
 			disk := furthestHealingDisk
-			diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
 
 			// Approximate values
 			itemsHealed += disk.HealInfo.ItemsHealed
@@ -536,20 +553,6 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				bytesHealedPerSec += float64(time.Second) * float64(disk.HealInfo.BytesDone) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 				itemsHealedPerSec += float64(time.Second) * float64(disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 
-				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
-					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
-						leastPct = pct
-					}
-				} else {
-					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
-					leastPct = 0
-				}
-
-				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
-				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
-				if remainingTime > healingRemaining {
-					healingRemaining = remainingTime
-				}
 			}
 			if n, ok := s.HealInfo.SCParity["STANDARD"]; ok && missingInSet > n {
 				setsExceedsStd++
