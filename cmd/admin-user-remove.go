@@ -26,6 +26,7 @@ import (
 
 var adminUserRemoveCmd = cli.Command{
 	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove user",
 	Action:       mainAdminUserRemove,
 	OnUsageError: onUsageError,
