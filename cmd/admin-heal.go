@@ -145,6 +145,7 @@ type poolInfo struct {
 
 type setInfo struct {
 	maxUsedSpace   uint64
+	maxUsedInodes  uint64
 	totalDisks     int
 	incapableDisks int
 }
@@ -202,6 +203,9 @@ func generateSetsStatus(disks []madmin.Disk) map[setIndex]setInfo {
 		setSt.totalDisks++
 		if d.UsedSpace > setSt.maxUsedSpace {
 			setSt.maxUsedSpace = d.UsedSpace
+		}
+		if d.UsedInodes > setSt.maxUsedInodes {
+			setSt.maxUsedInodes = d.UsedInodes
 		}
 		if d.State != "ok" || d.Healing {
 			setSt.incapableDisks++
@@ -304,6 +308,34 @@ func getOfflineNodes(endpoints []string) map[string]struct{} {
 	return offlineNodes
 }
 
+func estimateHealDiskETA(now time.Time, healDisk madmin.Disk, set setInfo) (remainingTime time.Duration, pct float64) {
+	if set.maxUsedSpace == 0 {
+		return
+	}
+
+	// Calculate ETA depending on disk used space
+	healSpeed := float64(healDisk.UsedSpace) / float64(now.Sub(healDisk.HealInfo.Started))
+	remainingTime = time.Duration(float64(set.maxUsedSpace-healDisk.UsedSpace) / healSpeed)
+	pct = float64(healDisk.UsedSpace) / float64(set.maxUsedSpace)
+
+	if set.maxUsedInodes == 0 {
+		// Older version of the server
+		return
+	}
+
+	// Calculate ETA depending on disk used inodes - override the previous
+	// calculation if ETA is furtherst or pct is lower
+	healSpeed = float64(healDisk.UsedInodes) / float64(now.Sub(healDisk.HealInfo.Started))
+	if t := time.Duration(float64(set.maxUsedInodes-healDisk.UsedInodes) / healSpeed); t > remainingTime {
+		remainingTime = t
+	}
+	if p := float64(healDisk.UsedInodes) / float64(set.maxUsedInodes); p < pct {
+		pct = p
+	}
+
+	return
+}
+
 // verboseBackgroundHealStatusMessage is container for stop heal success and failure messages.
 type verboseBackgroundHealStatusMessage struct {
 	Status   string `json:"status"`
@@ -316,6 +348,8 @@ type verboseBackgroundHealStatusMessage struct {
 // String colorized to show background heal status message.
 func (s verboseBackgroundHealStatusMessage) String() string {
 	var msg strings.Builder
+
+	now := time.Now().UTC()
 
 	parity, showTolerance := s.HealInfo.SCParity[s.ToleranceForSC]
 	offlineEndpoints := getOfflineNodes(s.HealInfo.OfflineEndpoints)
@@ -381,9 +415,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 				}
 				fmt.Fprintf(&msg, "  +  %s : %s\n", d.DrivePath, stateText)
 				if d.Healing {
-					now := time.Now().UTC()
-					scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
-					remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
+					remainingTime, _ := estimateHealDiskETA(now, d, setsStatus[setIndex{d.PoolIndex, d.SetIndex}])
 					estimationText := humanize.RelTime(now, now.Add(remainingTime), "", "")
 					fmt.Fprintf(&msg, "  |__ Estimated: %s\n", estimationText)
 				}
@@ -441,6 +473,8 @@ type shortBackgroundHealStatusMessage struct {
 func (s shortBackgroundHealStatusMessage) String() string {
 	healPrettyMsg := ""
 	var (
+		now = time.Now()
+
 		itemsHealed        uint64
 		bytesHealed        uint64
 		itemsFailed        uint64
@@ -480,20 +514,13 @@ func (s shortBackgroundHealStatusMessage) String() string {
 			if disk.HealInfo != nil {
 				missingInSet++
 
-				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
-				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
-					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
-						leastPct = pct
-					}
-				} else {
-					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
-					leastPct = 0
-				}
+				remainingTime, pct := estimateHealDiskETA(now, disk, setsStatus[setIndex{disk.PoolIndex, disk.SetIndex}])
 
-				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
-				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
 				if remainingTime > healingRemaining {
 					healingRemaining = remainingTime
+				}
+				if pct != 0 && pct < leastPct {
+					leastPct = pct
 				}
 
 				disk := disk
@@ -559,7 +586,6 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	}
 
 	// Estimation completion
-	now := time.Now()
 	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, now.Add(healingRemaining), "", ""))
 
 	if problematicDisks > 0 {
