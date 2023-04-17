@@ -40,7 +40,8 @@ var replicateListFlags = []cli.Flag{
 }
 
 var replicateListCmd = cli.Command{
-	Name:         "ls",
+	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list server side replication configuration rules",
 	Action:       mainReplicateList,
 	OnUsageError: onUsageError,

@@ -21,6 +21,7 @@ import "github.com/minio/cli"
 
 var adminIDPLdapListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list LDAP IDP server configuration(s)",
 	Action:       mainAdminIDPLDAPList,
 	Before:       setGlobalsFromContext,

@@ -45,7 +45,8 @@ var replicateRemoveFlags = []cli.Flag{
 }
 
 var replicateRemoveCmd = cli.Command{
-	Name:         "rm",
+	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove a server side replication configuration rule",
 	Action:       mainReplicateRemove,
 	OnUsageError: onUsageError,

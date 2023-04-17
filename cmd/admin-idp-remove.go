@@ -22,19 +22,20 @@ import (
 	"github.com/minio/madmin-go/v2"
 )
 
-var adminIDPLsCmd = cli.Command{
-	Name:         "ls",
-	Usage:        "List IDP configurations",
+var adminIDPRmCmd = cli.Command{
+	Name:         "remove",
+	ShortName:    "rm",
+	Usage:        "Remove an IDP configuration",
 	Before:       setGlobalsFromContext,
-	Action:       mainAdminIDPList,
-	OnUsageError: onUsageError,
+	Action:       mainAdminIDPRemove,
 	Hidden:       true,
+	OnUsageError: onUsageError,
 	Flags:        globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ID_TYPE
+  {{.HelpName}} TARGET IDP_TYPE CFG_NAME
 
   **DEPRECATED**: This command will be removed in a future version. Please use
   "mc admin idp ldap|openid" instead.
@@ -43,15 +44,15 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List the available openid configurations.
-     {{.Prompt}} {{.HelpName}} play/ openid
-  2. List the available ldap configurations.
-     {{.Prompt}} {{.HelpName}} play/ ldap
+  1. Remove an OpenID configuration from the server.
+     {{.Prompt}} {{.HelpName}} play/ openid myidp
+  2. Remove default LDAP configuration from the server.
+     {{.Prompt}} {{.HelpName}} play/ ldap _
 `,
 }
 
-func mainAdminIDPList(ctx *cli.Context) error {
-	if len(ctx.Args()) != 2 {
+func mainAdminIDPRemove(ctx *cli.Context) error {
+	if len(ctx.Args()) != 3 {
 		showCommandHelpAndExit(ctx, 1)
 	}
 
@@ -59,10 +60,6 @@ func mainAdminIDPList(ctx *cli.Context) error {
 	idpType := args.Get(1)
 	validateIDType(idpType)
 
-	isOpenID := false
-	if idpType == madmin.OpenidIDPCfg {
-		isOpenID = true
-	}
-
-	return adminIDPListCommon(ctx, isOpenID)
+	cfgName := args.Get(2)
+	return adminIDPRemove(ctx, idpType == madmin.OpenidIDPCfg, cfgName)
 }

@@ -25,8 +25,8 @@ import (
 )
 
 var adminUserSvcAcctListCmd = cli.Command{
-	Name:         "ls",
-	Aliases:      []string{"list"},
+	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list services accounts",
 	Action:       mainAdminUserSvcAcctList,
 	OnUsageError: onUsageError,

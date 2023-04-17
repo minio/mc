@@ -25,6 +25,7 @@ import (
 
 var adminIDPOpenidRemoveCmd = cli.Command{
 	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove OpenID IDP server configuration",
 	Action:       mainAdminIDPOpenIDRemove,
 	Before:       setGlobalsFromContext,
