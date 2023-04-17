@@ -40,8 +40,8 @@ var adminReplicateRemoveFlags = []cli.Flag{
 }
 
 var adminReplicateRemoveCmd = cli.Command{
-	Name:          "rm",
-	Aliases:       []string{"remove"},
+	Name:          "remove",
+	ShortName:     "rm",
 	Usage:         "remove one or more sites from site replication",
 	Action:        mainAdminReplicationRemoveStatus,
 	OnUsageError:  onUsageError,

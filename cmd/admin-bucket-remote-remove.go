@@ -22,7 +22,8 @@ import (
 )
 
 var adminBucketRemoteRmCmd = cli.Command{
-	Name:         "rm",
+	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove configured remote target",
 	Action:       mainAdminBucketRemoteRemove,
 	OnUsageError: onUsageError,

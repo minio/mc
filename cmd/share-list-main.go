@@ -30,6 +30,7 @@ var shareListFlags = []cli.Flag{}
 // Share documents via URL.
 var shareList = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list previously shared objects",
 	Action:       mainShareList,
 	OnUsageError: onUsageError,

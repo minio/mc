@@ -23,7 +23,8 @@ import (
 )
 
 var adminTierRmCmd = cli.Command{
-	Name:         "rm",
+	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove an empty remote tier",
 	Action:       mainAdminTierRm,
 	OnUsageError: onUsageError,
