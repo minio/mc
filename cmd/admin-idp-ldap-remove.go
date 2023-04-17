@@ -24,6 +24,7 @@ import (
 
 var adminIDPLdapRemoveCmd = cli.Command{
 	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove LDAP IDP server configuration",
 	Action:       mainAdminIDPLDAPRemove,
 	Before:       setGlobalsFromContext,

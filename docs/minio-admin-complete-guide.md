@@ -10,6 +10,7 @@ user                 manage users
 group                manage groups
 policy               manage policies defined in the MinIO server
 replicate            manage MinIO site replication
+idp                  manage MinIO IDentity Provider server configuration
 config               manage MinIO server configuration
 decommission, decom  manage MinIO server pool decommissioning
 heal                 heal bucket(s) and object(s) on MinIO server
@@ -17,8 +18,12 @@ prometheus           manages prometheus config
 kms                  perform KMS management operations
 bucket               manage buckets defined in the MinIO server
 tier                 manage remote tier targets for ILM transition
+scanner              provide MinIO scanner info
+top                  provide top like statistics for MinIO
 trace                show http trace for MinIO server
-console              show console logs for MinIO server
+cluster              manage MinIO cluster metadata
+rebalance            Manage MinIO rebalance
+logs                 show MinIO logs
 ```
 
 ## 1.  Download MinIO Client
@@ -289,23 +294,40 @@ Use this option to set a custom config path.
 ### Option [ --insecure]
 Skip SSL certificate verification.
 
+### Option [--version]
+Display the current version of `mc` installed
+
+*Example: Print version of mc.*
+
+```
+mc --version
+mc version RELEASE.2020-04-25T00-43-23Z
+```
+
 ## 7. Commands
 
-| Commands                                                               |
-|:-----------------------------------------------------------------------|
-| [**service** - restart and stop all MinIO servers](#service)           |
-| [**update** - updates all MinIO servers](#update)                      |
-| [**info** - display MinIO server information](#info)                   |
-| [**user** - manage users](#user)                                       |
-| [**group** - manage groups](#group)                                    |
-| [**policy** - manage canned policies](#policy)                         |
-| [**config** - manage server configuration file](#config)               |
-| [**heal** - heal bucket(s) and object(s) on MinIO server](#heal)    |
-| [**top** - provide top like statistics for MinIO](#top)                |
-| [**trace** - show http trace for MinIO server](#trace)                 |
-| [**console** - show console logs for MinIO server](#console)           |
-| [**prometheus** - manages prometheus config settings](#prometheus)     |
-| [**bucket** - manages buckets defined in the MinIO server](#bucket)     |
+| Commands                                                                           |
+|:-----------------------------------------------------------------------------------|
+| [**service** - restart and stop all MinIO servers](#service)                       |
+| [**update** - updates all MinIO servers](#update)                                  |
+| [**info** - display MinIO server information](#info)                               |
+| [**user** - manage users](#user)                                                   |
+| [**group** - manage groups](#group)                                                |
+| [**policy** - manage canned policies](#policy)                                     |
+| [**replicate** - manage MinIO site replication](#replicate)                        |
+| [**idp** - manage MinIO IDentity Provider server configuration](#idp)              |
+| [**config** - manage server configuration file](#config)                           |
+| [**decommission, decom** - manage MinIO server pool decommissioning](#config)      |
+| [**heal** - heal bucket(s) and object(s) on MinIO server](#heal)                   |
+| [**prometheus** - manages prometheus config settings](#prometheus)                 |
+| [**kms** - perform KMS management operations](#kms)                                |
+| [**bucket** - manages buckets defined in the MinIO server](#bucket)                |
+| [**scanner** - provide MinIO scanner info](#scanner)                               |
+| [**top** - provide top like statistics for MinIO](#top)                            |
+| [**trace** - show http trace for MinIO server](#trace)                             |
+| [**logs** - show MinIO logs](#logs)                                                |
+| [**cluster** - manage MinIO cluster metadata](#cluster)                            |
+| [**rebalance** - Manage MinIO rebalance](#rebalance)                               |
 
 <a name="update"></a>
 ### Command `update` - updates all MinIO servers
@@ -343,11 +365,12 @@ NAME:
   mc admin service - restart and stop all MinIO servers
 
 FLAGS:
-  --help, -h                       show help
-
+  --help, -h                    show help
+  
 COMMANDS:
-  restart  restart all MinIO servers
-  stop     stop all MinIO servers
+  restart  restart a MinIO cluster
+  stop     stop a MinIO cluster
+  unfreeze unfreeze S3 API calls on MinIO cluster
 ```
 
 *Example: Restart all MinIO servers.*
@@ -362,10 +385,10 @@ Restarted `play` successfully.
 
 ```
 NAME:
-  mc admin info - get MinIO server information
+  mc admin info - display MinIO server information
 
 FLAGS:
-  --help, -h                       show help
+  --help, -h                    show help
 ```
 
 *Example: Display MinIO server information.*
@@ -388,17 +411,19 @@ mc admin info play
 
 ```
 NAME:
-  mc admin policy - manage policies
+  mc admin policy - manage policies defined in the MinIO server
 
 FLAGS:
-  --help, -h                       show help
+  --help, -h                    show help
 
 COMMANDS:
-  add      add new policy
-  remove   remove policy
-  list     list all policies
-  info     show info on a policy
-  set      set IAM policy on a user or group
+  create    create a new IAM policy
+  remove    remove an IAM policy
+  list      list all IAM policies
+  info      show info on an IAM policy
+  attach    attach an IAM policy to a user or group
+  detach    detach an IAM policy from a user or group
+  entities  list policy association entities
 ```
 
 *Example: List all canned policies on MinIO.*
@@ -434,7 +459,7 @@ writeonly
 
 *Add the policy as 'listbucketsonly' to the policy database*
 ```
-mc admin policy add myminio/ listbucketsonly /tmp/listbucketsonly.json
+mc admin policy create myminio/ listbucketsonly /tmp/listbucketsonly.json
 Added policy `listbucketsonly` successfully.
 ```
 
@@ -452,14 +477,18 @@ mc admin policy info myminio/ writeonly
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::*"]}]}
 ```
 
-*Example: Set the canned policy.'writeonly' on a user or group*
+*Example: Attach the canned policy.'writeonly' on a user or group*
 
 ```
-mc admin policy set myminio/ writeonly user=someuser
-Policy writeonly is set on user `someuser`
+mc admin policy attach myminio/ writeonly user=someuser
+Policy `writeonly` successfully attached to user `someuser`
+```
 
-mc admin policy set myminio/ writeonly group=somegroup
-Policy writeonly is set on group `somegroup`
+*Example: Detach the canned policy.'writeonly' on a user or group*
+
+```
+mc admin policy detach myminio/ writeonly group=somegroup
+Policy `writeonly` successfully detached from group `somegroup`
 ```
 
 <a name="user"></a>
@@ -471,15 +500,18 @@ NAME:
   mc admin user - manage users
 
 FLAGS:
-  --help, -h                       show help
+  --help, -h                    show help
 
 COMMANDS:
-  add      add new user
+  add      add a new user
   disable  disable user
   enable   enable user
   remove   remove user
   list     list all users
   info     display info of a user
+  policy   export user policies in JSON format
+  svcacct  manage service accounts
+  sts      manage STS accounts
 ```
 
 *Example: Add a new user 'newuser' on MinIO.*
@@ -526,6 +558,167 @@ mc admin user list --json myminio/
 ```
 mc admin user info myminio someuser
 ```
+
+<a name="replicate"></a>
+### Command `replicate` - manage MinIO site replication
+`replicate` command to add, update, rm sites for replication.
+
+```
+NAME:
+  mc admin replicate - manage MinIO site replication
+
+FLAGS:
+  --help, -h                    show help
+
+COMMANDS:
+  add     add one or more sites for replication
+  update  modify endpoint of site participating in site replication
+  rm      remove one or more sites from site replication
+  info    get site replication information
+  status  display site replication status
+  resync  resync content to site
+```
+
+*Example: Add a site for cluster-level replication.*
+
+```
+mc admin replicate add minio1 minio2
+```
+
+*Example: Edit a site endpoint participating in cluster-level replication.*
+
+```
+mc admin replicate update myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --endpoint https://minio2:9000
+```
+
+*Example: Remove site replication for all sites.*
+
+```
+mc admin replicate rm minio2 --all --force
+```
+
+*Example: Remove site replication for site with site names alpha, baker from active cluster minio2.*
+
+```
+mc admin replicate rm minio2 alpha baker --force
+```
+
+*Example: Get Site Replication information.*
+
+```
+mc admin replicate info minio1
+```
+
+*Example: Display overall site replication status.*
+
+```
+mc admin replicate status minio1
+```
+
+*Example: Resync bucket data from minio1 to minio2.*
+
+```
+mc admin replicate resync start minio1 minio2
+```
+
+*Example: Display status of resync from minio1 to minio2.*
+
+```
+mc admin replicate resync status minio1 minio2
+```
+
+*Example: Cancel ongoing resync of bucket data from minio1 to minio2.*
+
+```
+mc admin replicate resync cancel minio1 minio2
+```
+
+
+<a name="idp"></a>
+### Command `idp` - manage MinIO IDentity Provider server configuration
+`idp` command to add, update, remove, list, enable, disable OpenID or Ldap IDP server configuration.
+
+```
+NAME:
+  mc admin idp - manage MinIO IDentity Provider server configuration
+
+FLAGS:
+  --help, -h                    show help
+
+COMMANDS:
+  openid  manage OpenID IDP server configuration
+  ldap    manage Ldap IDP server configuration
+```
+
+*Example: Create OpenID IDP configuration named "dex_test".*
+
+```
+mc admin idp openid add play/ dex_test \
+client_id=minio-client-app \
+client_secret=minio-client-app-secret \
+config_url="http://localhost:5556/dex/.well-known/openid-configuration" \
+scopes="openid,groups" \
+redirect_uri="http://127.0.0.1:10000/oauth_callback" \
+role_policy="consoleAdmin"
+```
+
+*Example: Update configuration for OpenID IDP configuration named "dex_test".*
+
+```
+mc admin idp openid update play/ dex_test \
+scopes="openid,groups" \
+role_policy="consoleAdmin"
+```
+
+*Example: Remove OpenID IDP configuration named "dex_test".*
+
+```
+mc admin idp openid remove play/ dex_test
+```
+
+*Example:  List configurations for OpenID IDP.*
+
+```
+mc admin idp openid list play/
+```
+
+*Example: Get configuration info on OpenID IDP configuration named "dex_test".*
+
+```
+mc admin idp openid info play/ dex_test
+```
+
+*Example: Enable OpenID IDP configuration named "dex_test".*
+
+```
+mc admin idp openid enable play/ dex_test
+```
+
+*Example: Disable OpenID IDP configuration named "dex_test".*
+
+```
+mc admin idp openid disable play/ dex_test
+```
+
+*Example: Create LDAP IDentity Provider configuration.*
+
+```
+mc admin idp ldap add myminio/ \
+server_addr=myldapserver:636 \
+lookup_bind_dn=cn=admin,dc=min,dc=io \
+lookup_bind_password=somesecret \
+user_dn_search_base_dn=dc=min,dc=io \
+user_dn_search_filter="(uid=%s)" \
+group_search_base_dn=ou=swengg,dc=min,dc=io \
+group_search_filter="(&(objectclass=groupofnames)(member=%d))"
+```
+
+*Example: Remove the default LDAP IDP configuration.*
+
+```
+mc admin idp ldap remove play/
+```
+
 
 <a name="group"></a>
 ### Command `group` - Manage groups
@@ -614,7 +807,7 @@ COMMANDS:
   import   import multiple config keys from STDIN
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                    show help
 ```
 
 *Example: Get 'etcd' sub-system configuration.*
@@ -641,9 +834,79 @@ mc admin config export myminio > /tmp/my-serverconfig
 mc admin config import myminio < /tmp/my-serverconfig
 ```
 
+<a name="decommission"></a>
+### Command `decommission` - Manage MinIO server pool decommissioning
+`decommission` manage MinIO server pool decommissioning.
+
+```
+NAME:
+  mc admin decommission - manage MinIO server pool decommissioning
+
+USAGE:
+  mc admin decommission COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  start   start decommissioning a pool
+  status  show current decommissioning status
+  cancel  cancel an ongoing decommissioning of a pool
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Start decommissioning a pool for removal.*
+
+```
+mc admin decommission start myminio/ http://server{5...8}/disk{1...4}
+```
+
+*Example: Show current decommissioning status.*
+```
+mc admin decommission status myminio/ http://server{5...8}/disk{1...4}
+```
+
+*Example: List all current decommissioning status of all pools.*
+
+```
+mc admin decommission status myminio/
+```
+
+*Example: Cancel an ongoing decommissioning of a pool.*
+
+```
+mc admin decommission cancel myminio/ http://server{5...8}/disk{1...4}
+```
+
+*Example: Cancel all decommissioning of a pool.*
+
+```
+mc admin decommission cancel myminio/
+```
+
 <a name="heal"></a>
 ### Command `heal` - heal bucket(s) and object(s) on MinIO server
 Healing is automatic on server side which runs on a continuous basis on a low priority thread.
+
+<a name="heal"></a>
+### Command `heal` - heal bucket(s) and object(s) on MinIO server
+Healing is automatic on server side which runs on a continuous basis on a low priority thread.
+
+```
+NAME:
+  mc admin heal - heal bucket(s) and object(s) on MinIO server
+
+USAGE:
+  mc admin heal [FLAGS] TARGET
+  
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Monitor healing status on a running server at alias 'myminio'.*
+
+```
+ mc admin heal myminio/
+```
 
 <a name="trace"></a>
 ### Command `trace` - Show http trace for MinIO server
@@ -655,9 +918,41 @@ NAME:
 
 FLAGS:
   --verbose, -v                 print verbose trace
-  --all, -a                     trace all traffic (including internode traffic between MinIO servers)
-  --errors, -e                  trace failed requests only
+  --all, -a                     trace all call types
+  --call value                  trace only matching call types. See CALL TYPES below for list. (default: s3)
+  --status-code value           trace only matching status code
+  --method value                trace only matching HTTP method
+  --funcname value              trace only matching func name
+  --path value                  trace only matching path
+  --node value                  trace only matching servers
+  --request-header value        trace only matching request headers
+  --errors, -e                  trace only failed requests
+  --filter-request              trace calls only with request bytes greater than this threshold, use with filter-size
+  --filter-response             trace calls only with response bytes greater than this threshold, use with filter-size
+  --response-duration 5ms       trace calls only with response duration greater than this threshold (e.g. 5ms) (default: 0s)
+  --filter-size value           filter size, use with filter (see UNITS)
   --help, -h                    show help
+  
+CALL TYPES:
+  batch-replication:   Trace Batch Replication (alias: brep)
+  bootstrap:           Trace Bootstrap operations
+  decommission:        Trace Decommission operations (alias: decom)
+  healing:             Trace Healing operations (alias: heal)
+  internal:            Trace Internal RPC calls
+  os:                  Trace Operating System calls
+  rebalance:           Trace Server Pool Rebalancing operations
+  replication-resync:  Trace Replication Resync operations (alias: resync)
+  s3:                  Trace S3 API calls
+  scanner:             Trace Scanner calls
+  storage:             Trace Storage calls
+
+UNITS
+  --filter-size flags use with --filter-response or --filter-request accept human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
+
 ```
 
 *Example: Display MinIO server http trace.*
@@ -686,15 +981,194 @@ mc admin trace myminio
 ...
 ```
 
+*Example: Show verbose console trace for MinIO server.*
+
+```
+ mc admin trace -v -a myminio
+```
+
+*Example: Show trace only for failed requests for MinIO server.*
+
+```
+ mc admin trace -v -e myminio
+```
+
+*Example: Show verbose console trace for requests with '503' status code.*
+
+```
+ mc admin trace -v --status-code 503 myminio
+```
+
+*Example: Show console trace for a specific path.*
+
+```
+ mc admin trace --path my-bucket/my-prefix/* myminio
+```
+
+*Example: Show console trace for requests with '404' and '503' status code.*
+
+```
+ mc admin trace --status-code 404 --status-code 503 myminio
+```
+
+*Example: Show trace only for requests bytes greater than 1MB.*
+
+```
+ mc admin trace --filter-request --filter-size 1MB myminio
+```
+
+*Example: Show trace only for response bytes greater than 1MB.*
+
+```
+ mc admin trace --filter-response --filter-size 1MB myminio
+```
+
+*Example: Show trace only for requests operations duration greater than 5ms.*
+
+```
+ mc admin trace --response-duration 5ms myminio
+```
+
+<a name="scanner"></a>
+### Command `scanner` - Provide MinIO scanner info
+`scanner` provide MinIO scanner info.
+
+```sh
+NAME:
+  mc admin scanner - provide MinIO scanner info
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Show scanner trace for MinIO server.*
+
+```
+ mc admin scanner trace myminio
+```
+
+*Example: Display current in-progress all scanner operations.*
+
+```
+ mc admin scanner status myminio/
+```
+
 <a name="console"></a>
 ### Command `console` - show console logs for MinIO server
 This command is deprecated and will be removed in a future release. Use 'mc support logs show' instead.
+
+<a name="logs"></a>
+### Command `logs` - Show MinIO logs
+`logs` show console logs for MinIO server.
+
+```
+NAME:
+  mc admin logs - show MinIO logs
+USAGE:
+  mc admin logs [FLAGS] TARGET [NODENAME]
+
+FLAGS:
+  --last value, -l value        show last n log entries (default: 10)
+  --type value, -t value        list error logs by type. Valid options are '[minio, application, all]' (default: "all")
+  --help, -h                    show help
+```
+
+*Example: Show logs for a MinIO server with alias 'myminio'.*
+
+```
+ mc admin logs myminio
+```
+
+*Example: Show last 5 log entries for node 'node1' for a MinIO server with alias 'myminio'.*
+
+```
+ mc admin logs --last 5 myminio node1
+```
+
+*Example: Show application errors in logs for a MinIO server with alias 'myminio'.*
+
+```
+ mc admin logs --type application myminio
+```
+
+<a name="cluster"></a>
+### Command `cluster` - Manage MinIO cluster metadata
+`cluster` manage MinIO cluster metadata.
+
+```
+NAME:
+  mc admin cluster - manage MinIO cluster metadata
+
+USAGE:
+  mc admin cluster COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Recover bucket metadata for all buckets from previously saved bucket metadata backup.*
+
+```
+ mc admin cluster bucket import myminio /backups/cluster-metadata.zip
+```
+
+*Example: Save metadata of all buckets to a zip file.*
+
+```
+ mc admin cluster bucket export myminio
+```
+
+*Example: Set IAM info from previously exported metadata zip file.*
+
+```
+ mc admin cluster iam import myminio /tmp/myminio-iam-info.zip
+```
+
+*Example: Download all IAM metadata for cluster into zip file.*
+
+```
+ mc admin cluster iam export myminio
+```
+
+<a name="rebalance"></a>
+### Command `rebalance` - Manage MinIO rebalance
+`rebalance` manage MinIO rebalance.
+
+```
+NAME:
+  mc admin rebalance - Manage MinIO rebalance
+
+USAGE:
+  mc admin rebalance COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: Start rebalance on a MinIO deployment with alias myminio.*
+
+```
+ mc admin rebalance start myminio
+```
+
+*Example: Stop an ongoing rebalance on a MinIO deployment with alias myminio.*
+
+```
+ mc admin rebalance stop myminio
+```
+
+*Example: Summarize ongoing rebalance on a MinIO deployment with alias myminio.*
+
+```
+ mc admin rebalance status myminio
+```
 
 <a name="prometheus"></a>
 
 ### Command `prometheus` - Manages prometheus config settings
 
 `generate` command generates the prometheus config (To be pasted in `prometheus.yml`)
+`metrics` command print cluster wide prometheus metrics
 
 ```sh
 NAME:

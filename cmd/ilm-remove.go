@@ -43,7 +43,8 @@ var ilmRemoveFlags = []cli.Flag{
 }
 
 var ilmRmCmd = cli.Command{
-	Name:         "rm",
+	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove (if any) existing lifecycle configuration rule",
 	Action:       mainILMRemove,
 	OnUsageError: onUsageError,

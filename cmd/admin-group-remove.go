@@ -27,6 +27,7 @@ import (
 
 var adminGroupRemoveCmd = cli.Command{
 	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove group or members from a group",
 	Action:       mainAdminGroupRemove,
 	OnUsageError: onUsageError,

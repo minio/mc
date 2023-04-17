@@ -32,6 +32,7 @@ var eventListFlags = []cli.Flag{}
 
 var eventListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list bucket notifications",
 	Action:       mainEventList,
 	OnUsageError: onUsageError,
