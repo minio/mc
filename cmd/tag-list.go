@@ -199,6 +199,10 @@ func mainListTag(cliCtx *cli.Context) error {
 			if content.Err != nil {
 				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
 			}
+			// If a dir found, dot do anything
+			if content.Type.IsDir() {
+				continue
+			}
 			showTags(ctx, clnt, content.VersionID)
 		}
 	}

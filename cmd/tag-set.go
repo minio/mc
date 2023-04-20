@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -40,6 +41,10 @@ var tagSetFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "versions",
 		Usage: "set tags on multiple versions for an object",
+	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "recursivley set tags for all objects of subdirs",
 	},
 }
 
@@ -73,6 +78,12 @@ EXAMPLES:
 
   4. Assign tags to a bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket "key1=value1&key2=value2&key3=value3"
+
+  5. Assign tags recursively to all the objects of subdirs of bucket.
+     {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive "key1=value1&key2=value2&key3=value3"
+
+  6. Assign tags recursively to all versions of all objects of subdirs of bucket.
+  	 {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive --versions "key1=value1&key2=value2&key3=value3"
 `,
 }
 
@@ -101,7 +112,7 @@ func (t tagSetMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string) {
+func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string, recursive bool) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
@@ -111,6 +122,7 @@ func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef t
 	versionID = ctx.String("version-id")
 	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
+	recursive = ctx.Bool("recursive")
 
 	if versionID != "" && (rewind != "" || withVersions) {
 		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
@@ -139,13 +151,24 @@ func setTags(ctx context.Context, clnt Client, versionID, tags string) {
 	})
 }
 
+func setTagsForSubDirs(ctx context.Context, cliCtx *cli.Context, content *ClientContent, targetURL string, tags string) {
+	bucket, _ := url2BucketAndObject(&content.URL)
+	targetURL = targetURL + string(content.URL.Separator) +
+		strings.TrimPrefix(
+			content.URL.String(),
+			content.URL.Scheme+"://"+content.URL.Host+string(content.URL.Separator)+bucket+string(content.URL.Separator))
+	clnt, err := newClient(targetURL)
+	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
+	setTags(ctx, clnt, content.VersionID, tags)
+}
+
 func mainSetTag(cliCtx *cli.Context) error {
 	ctx, cancelSetTag := context.WithCancel(globalContext)
 	defer cancelSetTag()
 
 	console.SetColor("List", color.New(color.FgGreen))
 
-	targetURL, versionID, timeRef, withVersions, tags := parseSetTagSyntax(cliCtx)
+	targetURL, versionID, timeRef, withVersions, tags, recursive := parseSetTagSyntax(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
@@ -155,10 +178,33 @@ func mainSetTag(cliCtx *cli.Context) error {
 
 	if timeRef.IsZero() && !withVersions {
 		setTags(ctx, clnt, versionID, tags)
+		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef}) {
+			if content.Err != nil {
+				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			}
+			// If found a dir under bucket, recursively set tags for all the objects
+			if content.Type.IsDir() && recursive {
+				for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, Recursive: true}) {
+					setTagsForSubDirs(ctx, cliCtx, content, targetURL, tags)
+				}
+				break
+			}
+		}
 	} else {
 		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
 			if content.Err != nil {
 				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			}
+			// If found a dir under bucket, recursively set tags for all the object versions
+			if recursive {
+				for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions, Recursive: true}) {
+					setTagsForSubDirs(ctx, cliCtx, content, targetURL, tags)
+				}
+				break
+			}
+			// If a dir found, dont do anything
+			if content.Type.IsDir() {
+				continue
 			}
 			setTags(ctx, clnt, content.VersionID, tags)
 		}
