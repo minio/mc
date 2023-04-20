@@ -96,10 +96,10 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 			usedStart := (poolStatus.Decommission.TotalSize - poolStatus.Decommission.StartSize)
 			usedCurrent := (poolStatus.Decommission.TotalSize - poolStatus.Decommission.CurrentSize)
 
-			if usedStart > usedCurrent {
-				duration := uint64(time.Since(poolStatus.Decommission.StartTime).Seconds())
+			duration := float64(time.Since(poolStatus.Decommission.StartTime)) / float64(time.Second)
+			if usedStart > usedCurrent && duration > 10 {
 				copied := uint64(usedStart - usedCurrent)
-				speed := copied / duration
+				speed := uint64(float64(copied) / duration)
 				msg = "Decommissioning rate at " + humanize.IBytes(speed) + "/sec " + "[" + humanize.IBytes(
 					uint64(usedCurrent)) + "/" + humanize.IBytes(uint64(poolStatus.Decommission.TotalSize)) + "]"
 				msg += "\nStarted: " + humanize.RelTime(time.Now().UTC(), poolStatus.Decommission.StartTime, "", "ago")

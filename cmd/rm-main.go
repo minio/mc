@@ -382,7 +382,7 @@ type removeOpts struct {
 }
 
 func printDryRunMsg(content *ClientContent, printModTime bool) {
-	if globalJSON {
+	if globalJSON || content == nil {
 		return
 	}
 	if printModTime {

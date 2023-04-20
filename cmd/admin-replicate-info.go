@@ -70,16 +70,21 @@ func (i srInfo) String() string {
 			Field{"Deployment ID", 36},
 
 			Field{"Name", 15},
-			Field{"Endpoint", 50},
-		).buildRow("Deployment ID", "Site Name", "Endpoint"))
+			Field{"Endpoint", 46},
+			Field{"Sync", 4},
+		).buildRow("Deployment ID", "Site Name", "Endpoint", "Sync"))
 		messages = append(messages, r)
 		for _, peer := range info.Sites {
+			var chk string
+			if peer.SyncState == madmin.SyncEnabled {
+				chk = check
+			}
 			r := console.Colorize("TDetail", newPrettyTable(" | ",
 				Field{"Deployment ID", 36},
-
 				Field{"Name", 15},
-				Field{"Endpoint", 50},
-			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint))
+				Field{"Endpoint", 46},
+				Field{"Sync", 4},
+			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint, chk))
 			messages = append(messages, r)
 		}
 	} else {

@@ -29,6 +29,7 @@ import (
 
 var adminIDPOpenidListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list OpenID IDP server configuration(s)",
 	Action:       mainAdminIDPOpenIDList,
 	Before:       setGlobalsFromContext,

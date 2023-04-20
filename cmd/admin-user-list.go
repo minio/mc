@@ -26,6 +26,7 @@ import (
 
 var adminUserListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list all users",
 	Action:       mainAdminUserList,
 	OnUsageError: onUsageError,

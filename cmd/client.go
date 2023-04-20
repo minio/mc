@@ -189,6 +189,7 @@ type ClientContent struct {
 	Type         os.FileMode
 	StorageClass string
 	Metadata     map[string]string
+	Tags         map[string]string
 	UserMetadata map[string]string
 	ETag         string
 	Expires      time.Time
