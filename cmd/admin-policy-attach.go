@@ -18,9 +18,6 @@
 package cmd
 
 import (
-	"errors"
-	"strings"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
@@ -73,63 +70,6 @@ func mainAdminPolicyAttach(ctx *cli.Context) error {
 	return userAttachOrDetachPolicy(ctx, true)
 }
 
-// updateCannedPolicies adds or updates the existing policy list and returns the merged result.
-func updateCannedPolicies(existingPolicies string, policiesToAdd []string) ([]string, error) {
-	var updatedPolicies []string
-	if len(policiesToAdd) == 0 {
-		return updatedPolicies, errors.New("no policies to add specified")
-	}
-	existingPoliciesList := strings.Split(existingPolicies, ",")
-	for _, p1 := range policiesToAdd {
-		found := false
-		p1 = strings.TrimSpace(p1)
-		if p1 == "" {
-			continue
-		}
-		for _, p2 := range existingPoliciesList {
-			if p1 == p2 {
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
-		updatedPolicies = append(updatedPolicies, p1)
-	}
-
-	return updatedPolicies, nil
-}
-
-func userAttachPolicy(ctx *cli.Context, req madmin.PolicyAssociationReq, client *madmin.AdminClient) error {
-	user := ctx.String("user")
-	group := ctx.String("group")
-
-	var existingPolicies string
-	args := ctx.Args()
-
-	// get existing policies
-	if user == "" {
-		groupInfo, e := client.GetGroupDescription(globalContext, group)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to get group policy info")
-		existingPolicies = groupInfo.Policy
-	} else {
-		userInfo, e := client.GetUserInfo(globalContext, user)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to get user policy info")
-		existingPolicies = userInfo.PolicyName
-	}
-	updatedPolicies, e := updateCannedPolicies(existingPolicies, args.Tail())
-	if e != nil {
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to update the policy")
-	}
-	// no new policies were found, skip.
-	if len(updatedPolicies) <= 0 {
-		return nil
-	}
-	req.Policies = updatedPolicies
-	return client.AttachPolicy(globalContext, req)
-}
-
 func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	if len(ctx.Args()) < 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
@@ -155,7 +95,7 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 
 	var e error
 	if attach {
-		e = userAttachPolicy(ctx, req, client)
+		e = client.AttachPolicy(globalContext, req)
 	} else {
 		e = client.DetachPolicy(globalContext, req)
 	}
