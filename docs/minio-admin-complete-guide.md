@@ -296,28 +296,28 @@ Skip SSL certificate verification.
 
 ## 7. Commands
 
-| Commands                                                                           |
-|:-----------------------------------------------------------------------------------|
-| [**service** - restart and stop all MinIO servers](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-service.html)                       |
-| [**update** - updates all MinIO servers](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-update.html)                                  |
-| [**info** - display MinIO server information](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-info.html)                               |
-| [**user** - manage users](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-user.html)                                                   |
-| [**group** - manage groups](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-group.html)                                                |
-| [**policy** - manage canned policies](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-policy.html)                                     |
-| [**replicate** - manage MinIO site replication](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-replicate.html)                        |
-| [**idp** - manage MinIO IDentity Provider server configuration](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-idp-ldap.html)              |
-| [**config** - manage server configuration file](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-config.html)                           |
+| Commands                                                                                                                                                       |
+|:---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**service** - restart and stop all MinIO servers](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-service.html)                             |
+| [**update** - updates all MinIO servers](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-update.html)                                        |
+| [**info** - display MinIO server information](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-info.html)                                     |
+| [**user** - manage users](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-user.html)                                                         |
+| [**group** - manage groups](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-group.html)                                                      |
+| [**policy** - manage canned policies](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-policy.html)                                           |
+| [**replicate** - manage MinIO site replication](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-replicate.html)                              |
+| [**idp** - manage MinIO IDentity Provider server configuration](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-idp-ldap.html)               |
+| [**config** - manage server configuration file](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-config.html)                                 |
 | [**decommission, decom** - manage MinIO server pool decommissioning](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-decommission.html)      |
-| [**heal** - heal bucket(s) and object(s) on MinIO server](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-heal.html)                   |
-| [**prometheus** - manages prometheus config settings](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-prometheus.html)                 |
-| [**kms** - perform KMS management operations](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-kms-key.html)                                |
-| [**bucket** - manages buckets defined in the MinIO server](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-bucket-remote.html)                |
-| [**scanner** - provide MinIO scanner info](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-trace.html)                               |
-| [**top** - provide top like statistics for MinIO](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-top.html)                            |
-| [**trace** - show http trace for MinIO server](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-trace.html)                             |
-| [**logs** - show MinIO logs](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-logs.html)                                                |
-| [**cluster** - manage MinIO cluster metadata](#cluster)                            |
-| [**rebalance** - Manage MinIO rebalance](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-rebalance.html)                               |
+| [**heal** - heal bucket(s) and object(s) on MinIO server](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-heal.html)                         |
+| [**prometheus** - manages prometheus config settings](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-prometheus.html)                       |
+| [**kms** - perform KMS management operations](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-kms-key.html)                                  |
+| [**bucket** - manages buckets defined in the MinIO server](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-bucket-remote.html)               |
+| [**scanner** - provide MinIO scanner info](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-trace.html)                                       |
+| [**top** - provide top like statistics for MinIO](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-top.html)                                  |
+| [**trace** - show http trace for MinIO server](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-trace.html)                                   |
+| [**logs** - show MinIO logs](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-logs.html)                                                      |
+| [**cluster** - manage MinIO cluster metadata](#cluster)                                                                                                        |
+| [**rebalance** - Manage MinIO rebalance](https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-rebalance.html)                                     |
 
 <a name="cluster"></a>
 ### Command `cluster` - Manage MinIO cluster metadata
