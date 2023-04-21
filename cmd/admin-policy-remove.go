@@ -26,6 +26,7 @@ import (
 
 var adminPolicyRemoveCmd = cli.Command{
 	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove an IAM policy",
 	Action:       mainAdminPolicyRemove,
 	OnUsageError: onUsageError,

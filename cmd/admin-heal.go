@@ -143,16 +143,6 @@ type poolInfo struct {
 	endpoints []string
 }
 
-type diskInfo struct {
-	set   setIndex
-	path  string
-	state string
-
-	healStarted, healLastUpdate time.Time
-
-	usedSpace, totalSpace uint64
-}
-
 type setInfo struct {
 	maxUsedSpace   uint64
 	totalDisks     int
@@ -161,16 +151,16 @@ type setInfo struct {
 
 type serverInfo struct {
 	pool  int
-	disks []diskInfo
+	disks []madmin.Disk
 }
 
 func (s serverInfo) onlineDisksForSet(index setIndex) (setFound bool, count int) {
 	for _, disk := range s.disks {
-		if disk.set != index {
+		if disk.PoolIndex != index.pool || disk.SetIndex != index.set {
 			continue
 		}
 		setFound = true
-		if disk.state == "ok" && disk.healStarted.IsZero() {
+		if disk.State == "ok" && !disk.Healing {
 			count++
 		}
 	}
@@ -239,21 +229,7 @@ func generateServersStatus(disks []madmin.Disk) map[string]serverInfo {
 				pool: d.PoolIndex,
 			}
 		}
-		setIndex := setIndex{pool: d.PoolIndex, set: d.SetIndex}
-		di := diskInfo{
-			set:        setIndex,
-			path:       u.Path,
-			state:      d.State,
-			usedSpace:  d.UsedSpace,
-			totalSpace: d.TotalSpace,
-		}
-
-		if d.HealInfo != nil {
-			di.healStarted = d.HealInfo.Started
-			di.healLastUpdate = d.HealInfo.LastUpdate
-		}
-
-		serverSt.disks = append(serverSt.disks, di)
+		serverSt.disks = append(serverSt.disks, d)
 		m[endpoint] = serverSt
 	}
 	return m
@@ -391,29 +367,29 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 			}
 
 			for _, d := range serverStatus.disks {
-				if d.set.pool != pool {
+				if d.PoolIndex != pool {
 					continue
 				}
 				stateText := ""
 				switch {
-				case d.state == "ok" && !d.healStarted.IsZero():
+				case d.State == "ok" && d.Healing:
 					stateText = console.Colorize("DiskHealing", "HEALING")
-				case d.state == "ok":
+				case d.State == "ok":
 					stateText = console.Colorize("DiskOK", "OK")
 				default:
-					stateText = console.Colorize("DiskFailed", d.state)
+					stateText = console.Colorize("DiskFailed", d.State)
 				}
-				fmt.Fprintf(&msg, "  +  %s : %s\n", d.path, stateText)
-				if !d.healStarted.IsZero() {
+				fmt.Fprintf(&msg, "  +  %s : %s\n", d.DrivePath, stateText)
+				if d.Healing {
 					now := time.Now().UTC()
-					scanSpeed := float64(d.usedSpace) / float64(now.Sub(d.healStarted))
-					remainingTime := time.Duration(float64(setsStatus[d.set].maxUsedSpace-d.usedSpace) / scanSpeed)
+					scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
+					remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
 					estimationText := humanize.RelTime(now, now.Add(remainingTime), "", "")
 					fmt.Fprintf(&msg, "  |__ Estimated: %s\n", estimationText)
 				}
-				fmt.Fprintf(&msg, "  |__  Capacity: %s/%s\n", humanize.IBytes(d.usedSpace), humanize.IBytes(d.totalSpace))
+				fmt.Fprintf(&msg, "  |__  Capacity: %s/%s\n", humanize.IBytes(d.UsedSpace), humanize.IBytes(d.TotalSpace))
 				if showTolerance {
-					fmt.Fprintf(&msg, "  |__ Tolerance: %d drive(s)\n", parity-setsStatus[d.set].incapableDisks)
+					fmt.Fprintf(&msg, "  |__ Tolerance: %d drive(s)\n", parity-setsStatus[setIndex{d.PoolIndex, d.SetIndex}].incapableDisks)
 				}
 			}
 
@@ -503,6 +479,23 @@ func (s shortBackgroundHealStatusMessage) String() string {
 
 			if disk.HealInfo != nil {
 				missingInSet++
+
+				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
+				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
+					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
+						leastPct = pct
+					}
+				} else {
+					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
+					leastPct = 0
+				}
+
+				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
+				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
+				if remainingTime > healingRemaining {
+					healingRemaining = remainingTime
+				}
+
 				disk := disk
 				if furthestHealingDisk == nil {
 					furthestHealingDisk = &disk
@@ -514,9 +507,9 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				}
 			}
 		}
+
 		if furthestHealingDisk != nil {
 			disk := furthestHealingDisk
-			diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
 
 			// Approximate values
 			itemsHealed += disk.HealInfo.ItemsHealed
@@ -536,20 +529,6 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				bytesHealedPerSec += float64(time.Second) * float64(disk.HealInfo.BytesDone) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 				itemsHealedPerSec += float64(time.Second) * float64(disk.HealInfo.ItemsHealed+disk.HealInfo.ItemsFailed) / float64(disk.HealInfo.LastUpdate.Sub(disk.HealInfo.Started))
 
-				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
-					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
-						leastPct = pct
-					}
-				} else {
-					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
-					leastPct = 0
-				}
-
-				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
-				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
-				if remainingTime > healingRemaining {
-					healingRemaining = remainingTime
-				}
 			}
 			if n, ok := s.HealInfo.SCParity["STANDARD"]; ok && missingInSet > n {
 				setsExceedsStd++

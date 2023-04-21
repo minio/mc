@@ -50,6 +50,7 @@ var eventRemoveFlags = []cli.Flag{
 
 var eventRemoveCmd = cli.Command{
 	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove a bucket notification; '--force' removes all bucket notifications",
 	Action:       mainEventRemove,
 	OnUsageError: onUsageError,

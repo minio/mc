@@ -294,6 +294,16 @@ Use this option to set a custom config path.
 ### Option [ --insecure]
 Skip SSL certificate verification.
 
+### Option [--version]
+Display the current version of `mc` installed
+
+*Example: Print version of mc.*
+
+```
+mc --version
+mc version RELEASE.2020-04-25T00-43-23Z
+```
+
 ## 7. Commands
 
 | Commands                                                                                                                                                       |

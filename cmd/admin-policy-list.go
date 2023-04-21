@@ -26,6 +26,7 @@ import (
 
 var adminPolicyListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list all IAM policies",
 	Action:       mainAdminPolicyList,
 	OnUsageError: onUsageError,

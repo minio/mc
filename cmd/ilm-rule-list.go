@@ -43,7 +43,8 @@ var ilmListFlags = []cli.Flag{
 }
 
 var ilmLsCmd = cli.Command{
-	Name:         "ls",
+	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "lists lifecycle configuration rules set on a bucket",
 	Action:       mainILMList,
 	OnUsageError: onUsageError,
