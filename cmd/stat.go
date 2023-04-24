@@ -40,19 +40,20 @@ import (
 
 // contentMessage container for content message structure.
 type statMessage struct {
-	Status            string            `json:"status"`
-	Key               string            `json:"name"`
-	Date              time.Time         `json:"lastModified"`
-	Size              int64             `json:"size"`
-	ETag              string            `json:"etag"`
-	Type              string            `json:"type,omitempty"`
-	Expires           *time.Time        `json:"expires,omitempty"`
-	Expiration        *time.Time        `json:"expiration,omitempty"`
-	ExpirationRuleID  string            `json:"expirationRuleID,omitempty"`
-	ReplicationStatus string            `json:"replicationStatus,omitempty"`
-	Metadata          map[string]string `json:"metadata,omitempty"`
-	VersionID         string            `json:"versionID,omitempty"`
-	DeleteMarker      bool              `json:"deleteMarker,omitempty"`
+	Status            string             `json:"status"`
+	Key               string             `json:"name"`
+	Date              time.Time          `json:"lastModified"`
+	Size              int64              `json:"size"`
+	ETag              string             `json:"etag"`
+	Type              string             `json:"type,omitempty"`
+	Expires           *time.Time         `json:"expires,omitempty"`
+	Expiration        *time.Time         `json:"expiration,omitempty"`
+	ExpirationRuleID  string             `json:"expirationRuleID,omitempty"`
+	ReplicationStatus string             `json:"replicationStatus,omitempty"`
+	Metadata          map[string]string  `json:"metadata,omitempty"`
+	VersionID         string             `json:"versionID,omitempty"`
+	DeleteMarker      bool               `json:"deleteMarker,omitempty"`
+	Restore           *minio.RestoreInfo `json:"restore,omitempty"`
 }
 
 func (stat statMessage) String() (msg string) {
@@ -84,6 +85,13 @@ func (stat statMessage) String() (msg string) {
 	if stat.Expiration != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
+	}
+	if stat.Restore != nil {
+		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Restore") + "\n")
+		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
+			stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
+		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %t", "Ongoing",
+			stat.Restore.OngoingRestore) + "\n")
 	}
 	maxKeyMetadata := 0
 	maxKeyEncrypted := 0
@@ -160,6 +168,7 @@ func parseStat(c *ClientContent) statMessage {
 	}
 	content.ExpirationRuleID = c.ExpirationRuleID
 	content.ReplicationStatus = c.ReplicationStatus
+	content.Restore = c.Restore
 	return content
 }
 
@@ -180,9 +189,53 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	targetAlias, _, _ := mustExpandAlias(targetURL)
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
-	if !strings.HasSuffix(prefixPath, separator) {
+
+	hasTrailingSlash := strings.HasSuffix(prefixPath, separator)
+
+	if !hasTrailingSlash {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+
+	// if stat is on a bucket and non-recursive mode, serve the bucket metadata
+	if !isRecursive && !hasTrailingSlash {
+		bstat, err := clnt.GetBucketInfo(ctx)
+		if err == nil {
+			// Convert any os specific delimiters to "/".
+			contentURL := filepath.ToSlash(bstat.URL.Path)
+			prefixPath = filepath.ToSlash(prefixPath)
+			// Trim prefix path from the content path.
+			contentURL = strings.TrimPrefix(contentURL, prefixPath)
+			bstat.URL.Path = contentURL
+
+			if bstat.Date.IsZero() || bstat.Date.Equal(timeSentinel) {
+				bstat.Date = time.Now()
+			}
+
+			var bu madmin.BucketUsageInfo
+
+			adminClient, _ := newAdminClient(targetURL)
+			if adminClient != nil {
+				// Create a new MinIO Admin Client
+				duinfo, e := adminClient.DataUsageInfo(ctx)
+				if e == nil {
+					bu = duinfo.BucketsUsage[bstat.Key]
+				}
+			}
+
+			if prefixPath != "/" {
+				bstat.Prefix = true
+			}
+
+			printMsg(bucketInfoMessage{
+				Status:     "success",
+				BucketInfo: bstat,
+				Usage:      bu,
+			})
+
+			return nil
+		}
+	}
+
 	lstOptions := ListOptions{Recursive: isRecursive, Incomplete: isIncomplete, ShowDir: DirNone}
 	switch {
 	case versionID != "":
@@ -193,7 +246,6 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		lstOptions.WithDeleteMarkers = true
 		lstOptions.TimeRef = timeRef
 	}
-	adminClient, _ := newAdminClient(targetURL)
 
 	var e error
 	for content := range clnt.List(ctx, lstOptions) {
@@ -234,45 +286,9 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-		clnt, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef, false)
+		_, stat, err := url2Stat(ctx, url, content.VersionID, true, encKeyDB, timeRef, false)
 		if err != nil {
 			continue
-		}
-
-		// if stat is on a bucket and non-recursive mode, serve the bucket metadata
-		if clnt != nil && !isRecursive && stat.Type.IsDir() {
-			bstat, err := clnt.GetBucketInfo(ctx)
-			if err == nil {
-				// Convert any os specific delimiters to "/".
-				contentURL := filepath.ToSlash(bstat.URL.Path)
-				prefixPath = filepath.ToSlash(prefixPath)
-				// Trim prefix path from the content path.
-				contentURL = strings.TrimPrefix(contentURL, prefixPath)
-				bstat.URL.Path = contentURL
-
-				if bstat.Date.IsZero() || bstat.Date.Equal(timeSentinel) {
-					bstat.Date = content.Time
-				}
-				var bu madmin.BucketUsageInfo
-				if adminClient != nil {
-					// Create a new MinIO Admin Client
-					duinfo, e := adminClient.DataUsageInfo(globalContext)
-					if e == nil {
-						bu = duinfo.BucketsUsage[stat.BucketName]
-					}
-				}
-
-				if prefixPath != "/" {
-					bstat.Prefix = true
-				}
-
-				printMsg(bucketInfoMessage{
-					Status:     "success",
-					BucketInfo: bstat,
-					Usage:      bu,
-				})
-				continue
-			}
 		}
 
 		// Convert any os specific delimiters to "/".

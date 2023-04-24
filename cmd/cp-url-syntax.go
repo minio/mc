@@ -73,7 +73,7 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 			if versionID != "" {
 				msg += " (" + versionID + ")"
 			}
-			msg += "."
+			msg += ": " + err.ToGoError().Error()
 			console.Fatalln(msg)
 		}
 	}

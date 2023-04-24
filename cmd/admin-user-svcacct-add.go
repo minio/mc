@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -95,6 +97,7 @@ type acctMessage struct {
 	Comment       string          `json:"comment,omitempty"`
 	AccountStatus string          `json:"accountStatus,omitempty"`
 	MemberOf      []string        `json:"memberOf,omitempty"`
+	Expiration    *time.Time      `json:"expiration,omitempty"`
 }
 
 const (
@@ -136,6 +139,12 @@ func (u acctMessage) String() string {
 				fmt.Sprintf("Status: %s", u.AccountStatus),
 				fmt.Sprintf("Comment: %s", u.Comment),
 				fmt.Sprintf("Policy: %s", policyField),
+				func() string {
+					if u.Expiration != nil {
+						return fmt.Sprintf("Expiration: %s", humanize.Time(*u.Expiration))
+					}
+					return "Expiration: no-expiry"
+				}(),
 			}, "\n"))
 	case svcAccOpRemove:
 		return console.Colorize("AccMessage", "Removed service account `"+u.AccessKey+"` successfully.")

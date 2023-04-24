@@ -26,6 +26,7 @@ import (
 
 var adminGroupListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "display list of groups",
 	Action:       mainAdminGroupList,
 	OnUsageError: onUsageError,

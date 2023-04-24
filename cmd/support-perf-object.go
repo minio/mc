@@ -27,7 +27,6 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 var adminSpeedtestCmd = cli.Command{
@@ -42,7 +41,7 @@ var adminSpeedtestCmd = cli.Command{
 }
 
 func mainAdminSpeedtest(_ *cli.Context) error {
-	console.Infoln("Please use 'mc support perf'")
+	deprecatedError("mc support perf")
 	return nil
 }
 
@@ -91,6 +90,7 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- 
 		Concurrency: concurrent,
 		Autotune:    autotune,
 		Bucket:      ctx.String("bucket"), // This is a hidden flag.
+		NoClear:     ctx.Bool("noclear"),
 	})
 
 	if globalJSON {

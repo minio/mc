@@ -25,8 +25,8 @@ import (
 )
 
 var adminUserSvcAcctRemoveCmd = cli.Command{
-	Name:         "rm",
-	Aliases:      []string{"remove"},
+	Name:         "remove",
+	ShortName:    "rm",
 	Usage:        "remove a service account",
 	Action:       mainAdminUserSvcAcctRemove,
 	OnUsageError: onUsageError,

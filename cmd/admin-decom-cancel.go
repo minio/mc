@@ -48,7 +48,7 @@ EXAMPLES:
   1. Cancel an ongoing decommissioning of a pool.
      {{.Prompt}} {{.HelpName}} myminio/ http://server{5...8}/disk{1...4}
 
-  2. List all ongoing decommissioning of pools.
+  2. Cancel all ongoing decommissioning of pools.
      {{.Prompt}} {{.HelpName}} myminio/
 `,
 }
