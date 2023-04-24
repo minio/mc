@@ -143,6 +143,7 @@ func (u clusterStruct) String() (msg string) {
 	}
 
 	// Initialization
+	var totalOfflineNodes int
 	var totalOnlineDrivesCluster int
 	var totalOfflineDrivesCluster int
 
@@ -166,12 +167,12 @@ func (u clusterStruct) String() (msg string) {
 
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
-		// Check if MinIO server is offline ("Mode" field),
-		// If offline, error out
-		if srv.State == "offline" {
+		// Check if MinIO server is not online ("Mode" field),
+		if srv.State != string(madmin.ItemOnline) {
+			totalOfflineNodes++
 			// "PrintB" is color blue in console library package
 			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
-			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
+			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", srv.State))
 
 			if backendType == madmin.Erasure {
 				// Info about drives on a server, only available for non-FS types
@@ -289,6 +290,9 @@ func (u clusterStruct) String() (msg string) {
 		msg += "\n"
 	}
 	if backendType == madmin.Erasure {
+		if totalOfflineNodes != 0 {
+			msg += fmt.Sprintf("%s offline, ", english.Plural(totalOfflineNodes, "node", ""))
+		}
 		// Summary on total no of online and total
 		// number of offline drives at the Cluster level
 		bkInfo, ok := u.Info.Backend.(madmin.ErasureBackend)
