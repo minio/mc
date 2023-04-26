@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -151,15 +150,14 @@ func setTags(ctx context.Context, clnt Client, versionID, tags string) {
 	})
 }
 
-func setTagsForSubDirs(ctx context.Context, cliCtx *cli.Context, content *ClientContent, targetURL string, tags string) {
-	bucket, _ := url2BucketAndObject(&content.URL)
-	targetURL = targetURL + string(content.URL.Separator) +
-		strings.TrimPrefix(
-			content.URL.String(),
-			content.URL.Scheme+"://"+content.URL.Host+string(content.URL.Separator)+bucket+string(content.URL.Separator))
-	clnt, err := newClient(targetURL)
-	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
-	setTags(ctx, clnt, content.VersionID, tags)
+func setTagsSingle(ctx context.Context, alias, url, versionID, tags string) *probe.Error {
+	newClnt, err := newClientFromAlias(alias, url)
+	if err != nil {
+		return err
+	}
+
+	setTags(ctx, newClnt, versionID, tags)
+	return nil
 }
 
 func mainSetTag(cliCtx *cli.Context) error {
@@ -176,37 +174,31 @@ func mainSetTag(cliCtx *cli.Context) error {
 	clnt, err := newClient(targetURL)
 	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
-	if timeRef.IsZero() && !withVersions {
-		setTags(ctx, clnt, versionID, tags)
-		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef}) {
-			if content.Err != nil {
-				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
-			}
-			// If found a dir under bucket, recursively set tags for all the objects
-			if content.Type.IsDir() && recursive {
-				for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, Recursive: true}) {
-					setTagsForSubDirs(ctx, cliCtx, content, targetURL, tags)
-				}
-				break
-			}
+	alias, urlStr, _ := mustExpandAlias(targetURL)
+	if timeRef.IsZero() && !withVersions && !recursive {
+		err := setTagsSingle(ctx, alias, urlStr, versionID, tags)
+		fatalIf(err.Trace(), "Unable to set tags on `%s`", targetURL)
+		return nil
+	}
+	for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions, Recursive: recursive}) {
+		if content.Err != nil {
+			fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			continue
 		}
-	} else {
-		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
-			if content.Err != nil {
-				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
-			}
-			// If found a dir under bucket, recursively set tags for all the object versions
-			if recursive {
-				for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions, Recursive: true}) {
-					setTagsForSubDirs(ctx, cliCtx, content, targetURL, tags)
-				}
-				break
-			}
-			// If a dir found, dont do anything
-			if content.Type.IsDir() {
-				continue
-			}
-			setTags(ctx, clnt, content.VersionID, tags)
+
+		// Dont set tag for the delete marker
+		if content.IsDeleteMarker {
+			continue
+		}
+
+		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+			break
+		}
+
+		err := setTagsSingle(ctx, alias, content.URL.String(), content.VersionID, tags)
+		if err != nil {
+			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
+			continue
 		}
 	}
 

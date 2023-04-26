@@ -46,6 +46,10 @@ var tagListFlags = []cli.Flag{
 		Name:  "versions",
 		Usage: "list tags on all versions for an object",
 	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "recursivley show tags for all objects of subdirs",
+	},
 }
 
 var tagListCmd = cli.Command{
@@ -85,6 +89,12 @@ EXAMPLES:
 
   6. List the tags assigned to a bucket in JSON format.
      {{.Prompt}} {{.HelpName}} --json s3/testbucket
+
+  7. List the tags recursively for all the objects of subdirs of bucket.
+     {{.Prompt}} {{.HelpName}} --recursive myminio/testbucket
+
+  8. Show the tags recursively for all versions of all objects of subdirs of bucket.
+     {{.Prompt}} {{.HelpName}} --recursive --versions myminio/testbucket
 `,
 }
 
@@ -114,8 +124,12 @@ func (t tagListMessage) String() string {
 	sort.Strings(keys)
 
 	maxKeyLen += 2 // add len(" :")
+	strName := t.URL
+	if strings.TrimSpace(t.VersionID) != "" {
+		strName += " (" + t.VersionID + ")"
+	}
 	strs := []string{
-		fmt.Sprintf("%v%*v %v", console.Colorize("Name", "Name"), maxKeyLen-4, ":", console.Colorize("Name", t.URL+" ("+t.VersionID+")")),
+		fmt.Sprintf("%v%*v %v", console.Colorize("Name", "Name"), maxKeyLen-4, ":", console.Colorize("Name", strName)),
 	}
 
 	for _, key := range keys {
@@ -133,7 +147,7 @@ func (t tagListMessage) String() string {
 }
 
 // parseTagListSyntax performs command-line input validation for tag list command.
-func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions bool) {
+func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions bool, recursive bool) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
@@ -142,6 +156,7 @@ func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef 
 	versionID = ctx.String("version-id")
 	withOlderVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
+	recursive = ctx.Bool("recursive")
 
 	if versionID != "" && rewind != "" {
 		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind flags at the same time")
@@ -175,6 +190,16 @@ func showTags(ctx context.Context, clnt Client, versionID string) {
 	})
 }
 
+func showTagsSingle(ctx context.Context, alias, url, versionID string) *probe.Error {
+	newClnt, err := newClientFromAlias(alias, url)
+	if err != nil {
+		return err
+	}
+
+	showTags(ctx, newClnt, versionID)
+	return nil
+}
+
 func mainListTag(cliCtx *cli.Context) error {
 	ctx, cancelListTag := context.WithCancel(globalContext)
 	defer cancelListTag()
@@ -184,7 +209,7 @@ func mainListTag(cliCtx *cli.Context) error {
 	console.SetColor("Value", color.New(color.FgYellow))
 	console.SetColor("NoTags", color.New(color.FgRed))
 
-	targetURL, versionID, timeRef, withVersions := parseTagListSyntax(cliCtx)
+	targetURL, versionID, timeRef, withVersions, recursive := parseTagListSyntax(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
@@ -192,18 +217,32 @@ func mainListTag(cliCtx *cli.Context) error {
 	clnt, err := newClient(targetURL)
 	fatalIf(err, "Unable to initialize target "+targetURL)
 
-	if timeRef.IsZero() && !withVersions {
-		showTags(ctx, clnt, versionID)
-	} else {
-		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
-			if content.Err != nil {
-				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
-			}
-			// If a dir found, dot do anything
-			if content.Type.IsDir() {
-				continue
-			}
-			showTags(ctx, clnt, content.VersionID)
+	alias, urlStr, _ := mustExpandAlias(targetURL)
+	if timeRef.IsZero() && !withVersions && !recursive {
+		err := showTagsSingle(ctx, alias, urlStr, versionID)
+		fatalIf(err.Trace(), "Unable to show tags on `%s`", targetURL)
+		return nil
+	}
+
+	for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions, Recursive: recursive}) {
+		if content.Err != nil {
+			fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			continue
+		}
+
+		// Skip if its delete marker
+		if content.IsDeleteMarker {
+			continue
+		}
+
+		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+			break
+		}
+
+		err := showTagsSingle(ctx, alias, content.URL.String(), content.VersionID)
+		if err != nil {
+			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
+			continue
 		}
 	}
 
