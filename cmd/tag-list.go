@@ -48,7 +48,7 @@ var tagListFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "recursive, r",
-		Usage: "recursivley show tags for all objects of subdirs",
+		Usage: "recursivley show tags for all objects",
 	},
 }
 
