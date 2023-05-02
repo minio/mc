@@ -165,7 +165,7 @@ func makeCopyContentTypeB(sourceAlias string, sourceContent *ClientContent, targ
 
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
 // prepareCopyRecursiveURLTypeC - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeC(ctx context.Context, sourceURL, targetURL string, isRecursive, isZip, wildCard bool, timeRef time.Time) <-chan URLs {
+func prepareCopyURLsTypeC(ctx context.Context, sourceURL, targetURL string, isRecursive, isZip bool, timeRef time.Time) <-chan URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
@@ -223,7 +223,7 @@ func prepareCopyURLsTypeD(ctx context.Context, sourceURLs []string, targetURL st
 			if hasWildCard {
 				sourceURL = strings.TrimSuffix(sourceURL, "*")
 			}
-			for cpURLs := range prepareCopyURLsTypeC(ctx, sourceURL, targetURL, isRecursive, false, hasWildCard, timeRef) {
+			for cpURLs := range prepareCopyURLsTypeC(ctx, sourceURL, targetURL, isRecursive, false, timeRef) {
 				copyURLsCh <- cpURLs
 			}
 		}
@@ -261,7 +261,7 @@ func prepareCopyURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 			if hasWildCard {
 				srcURL = strings.TrimSuffix(srcURL, "*")
 			}
-			for cURLs := range prepareCopyURLsTypeC(ctx, srcURL, o.targetURL, o.isRecursive, o.isZip, hasWildCard, o.timeRef) {
+			for cURLs := range prepareCopyURLsTypeC(ctx, srcURL, o.targetURL, o.isRecursive, o.isZip, o.timeRef) {
 				copyURLsCh <- cURLs
 			}
 		case copyURLsTypeD:
