@@ -327,7 +327,7 @@ func estimateHealDiskETA(now time.Time, healDisk madmin.Disk, set setInfo) (rema
 	// calculation if ETA is furtherst or pct is lower
 	healSpeed = float64(healDisk.UsedInodes) / float64(now.Sub(healDisk.HealInfo.Started))
 	if t := time.Duration(float64(set.maxUsedInodes-healDisk.UsedInodes) / healSpeed); t > remainingTime {
-		remainingTime = t
+		remainingTime = (t + remainingTime) / 2
 	}
 	if p := float64(healDisk.UsedInodes) / float64(set.maxUsedInodes); p < pct {
 		pct = p
