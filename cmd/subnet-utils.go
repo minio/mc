@@ -81,6 +81,10 @@ func subnetOfflinePublicKey() string {
 
 func subnetBaseURL() string {
 	if globalDevMode {
+		subnetURLDev := os.Getenv("SUBNET_URL_DEV")
+		if len(subnetURLDev) > 0 {
+			return subnetURLDev
+		}
 		return "http://localhost:9000"
 	}
 
