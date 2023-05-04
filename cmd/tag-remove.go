@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -39,7 +40,11 @@ var tagRemoveFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "versions",
-		Usage: "remote tags on multiple versions of an object",
+		Usage: "remove tags on multiple versions of an object",
+	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "recursivley remove tags for all objects",
 	},
 }
 
@@ -74,6 +79,12 @@ EXAMPLES:
 
   4. Remove the tags assigned to a bucket.
      {{.Prompt}} {{.HelpName}} play/testbucket
+
+  5. Remove the tags recursively for all the objects of subdirs of bucket.
+     {{.Prompt}} {{.HelpName}} --recursive myminio/testbucket
+
+  6. Remove the tags recursively for all versions of all objects of subdirs of bucket.
+     {{.Prompt}} {{.HelpName}} --recursive --versions myminio/testbucket
 `,
 }
 
@@ -88,7 +99,7 @@ type tagRemoveMessage struct {
 func (t tagRemoveMessage) String() string {
 	var msg string
 	msg += "Tags removed for " + t.Name
-	if t.VersionID != "" {
+	if strings.TrimSpace(t.VersionID) != "" {
 		msg += " (" + t.VersionID + ")"
 	}
 	msg += "."
@@ -102,7 +113,7 @@ func (t tagRemoveMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool) {
+func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, recursive bool) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
@@ -111,6 +122,7 @@ func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRe
 	versionID = ctx.String("version-id")
 	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
+	recursive = ctx.Bool("recursive")
 
 	if versionID != "" && (rewind != "" || withVersions) {
 		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
@@ -140,13 +152,23 @@ func deleteTags(ctx context.Context, clnt Client, versionID string) {
 	})
 }
 
+func deleteTagsSingle(ctx context.Context, alias, url, versionID string) *probe.Error {
+	newClnt, err := newClientFromAlias(alias, url)
+	if err != nil {
+		return err
+	}
+
+	deleteTags(ctx, newClnt, versionID)
+	return nil
+}
+
 func mainRemoveTag(cliCtx *cli.Context) error {
 	ctx, cancelList := context.WithCancel(globalContext)
 	defer cancelList()
 
 	console.SetColor("Remove", color.New(color.FgGreen))
 
-	targetURL, versionID, timeRef, withVersions := parseRemoveTagSyntax(cliCtx)
+	targetURL, versionID, timeRef, withVersions, recursive := parseRemoveTagSyntax(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
@@ -154,14 +176,30 @@ func mainRemoveTag(cliCtx *cli.Context) error {
 	clnt, pErr := newClient(targetURL)
 	fatalIf(pErr, "Unable to initialize target "+targetURL)
 
-	if timeRef.IsZero() && !withVersions {
-		deleteTags(ctx, clnt, versionID)
-	} else {
-		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
-			if content.Err != nil {
-				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
-			}
-			deleteTags(ctx, clnt, content.VersionID)
+	alias, urlStr, _ := mustExpandAlias(targetURL)
+	if timeRef.IsZero() && !withVersions && !recursive {
+		err := deleteTagsSingle(ctx, alias, urlStr, versionID)
+		fatalIf(err.Trace(), "Unable to remove tags on `%s`", targetURL)
+		return nil
+	}
+	for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions, Recursive: recursive}) {
+		if content.Err != nil {
+			fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+		}
+
+		// Skip if its delete marker
+		if content.IsDeleteMarker {
+			continue
+		}
+
+		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+			break
+		}
+
+		err := deleteTagsSingle(ctx, alias, content.URL.String(), content.VersionID)
+		if err != nil {
+			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
+			continue
 		}
 	}
 	return nil
