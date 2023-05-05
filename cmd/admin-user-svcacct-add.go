@@ -20,6 +20,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"strings"
 	"time"
@@ -75,6 +76,8 @@ FLAGS:
 EXAMPLES:
   1. Add a new service account for user 'foobar' to MinIO server.
      {{.Prompt}} {{.HelpName}} myminio foobar
+  2. Add a new service account using the specified access-key and secret-key for user 'foobar' to MinIO server.
+     {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey" --secret-key "mysecretkey"
 `,
 }
 
@@ -184,6 +187,14 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	secretKey := ctx.String("secret-key")
 	policyPath := ctx.String("policy")
 	comment := ctx.String("comment")
+
+	if len(accessKey) > 0 && len(secretKey) <= 0 {
+		fatalIf(probe.NewError(errors.New("Secret key must be set with access key same time.")), "Unable to add a new service account")
+	}
+
+	if len(accessKey) <= 0 && len(secretKey) > 0 {
+		fatalIf(probe.NewError(errors.New("Access key must be set with secret key same time.")), "Unable to add a new service account")
+	}
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
