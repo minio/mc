@@ -162,18 +162,66 @@ func metadataEqual(m1, m2 map[string]string) bool {
 }
 
 func objectDifference(ctx context.Context, sourceClnt, targetClnt Client, isMetadata bool) (diffCh chan diffMessage) {
-	return difference(ctx, sourceClnt, targetClnt, isMetadata, true, false, DirNone)
+	sourceURL := sourceClnt.GetURL().String()
+	sourceCh := sourceClnt.List(ctx, ListOptions{Recursive: true, WithMetadata: isMetadata, ShowDir: DirNone})
+
+	targetURL := targetClnt.GetURL().String()
+	targetCh := targetClnt.List(ctx, ListOptions{Recursive: true, WithMetadata: isMetadata, ShowDir: DirNone})
+
+	return difference(sourceURL, sourceCh, targetURL, targetCh, isMetadata, false)
 }
 
-func dirDifference(ctx context.Context, sourceClnt, targetClnt Client) (diffCh chan diffMessage) {
-	return difference(ctx, sourceClnt, targetClnt, false, false, true, DirFirst)
+func bucketDifference(ctx context.Context, sourceClnt, targetClnt Client) (diffCh chan diffMessage) {
+	sourceURL := sourceClnt.GetURL().String()
+	sourceCh := make(chan *ClientContent)
+
+	go func() {
+		defer close(sourceCh)
+		buckets, err := sourceClnt.ListBuckets(ctx)
+		if err != nil {
+			select {
+			case <-ctx.Done():
+			case sourceCh <- &ClientContent{Err: err}:
+			}
+			return
+		}
+		for _, b := range buckets {
+			select {
+			case <-ctx.Done():
+				return
+			case sourceCh <- b:
+			}
+		}
+	}()
+
+	targetURL := targetClnt.GetURL().String()
+	targetCh := make(chan *ClientContent)
+	go func() {
+		defer close(targetCh)
+		buckets, err := targetClnt.ListBuckets(ctx)
+		if err != nil {
+			select {
+			case <-ctx.Done():
+			case targetCh <- &ClientContent{Err: err}:
+			}
+			return
+		}
+		for _, b := range buckets {
+			select {
+			case <-ctx.Done():
+				return
+			case targetCh <- b:
+			}
+		}
+	}()
+
+	return difference(sourceURL, sourceCh, targetURL, targetCh, false, false)
 }
 
-func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt, diffCh chan<- diffMessage) *probe.Error {
-	// Set default values for listing.
-	srcCh := sourceClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
-	tgtCh := targetClnt.List(ctx, ListOptions{Recursive: isRecursive, WithMetadata: isMetadata, ShowDir: dirOpt})
-
+func differenceInternal(sourceURL string, srcCh <-chan *ClientContent, targetURL string, tgtCh <-chan *ClientContent,
+	cmpMetadata, returnSimilar bool, diffCh chan<- diffMessage,
+) *probe.Error {
+	// Pop first entries from the source and targets
 	srcCtnt, srcOk := <-srcCh
 	tgtCtnt, tgtOk := <-tgtCh
 
@@ -189,11 +237,11 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, isMe
 		}
 
 		if !srcEOF && srcCtnt.Err != nil {
-			return srcCtnt.Err.Trace(sourceClnt.GetURL().String(), targetClnt.GetURL().String())
+			return srcCtnt.Err.Trace(sourceURL, targetURL)
 		}
 
 		if !tgtEOF && tgtCtnt.Err != nil {
-			return tgtCtnt.Err.Trace(sourceClnt.GetURL().String(), targetClnt.GetURL().String())
+			return tgtCtnt.Err.Trace(sourceURL, targetURL)
 		}
 
 		// If source doesn't have objects anymore, comparison becomes obvious
@@ -218,11 +266,11 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, isMe
 			continue
 		}
 
-		srcSuffix := strings.TrimPrefix(srcCtnt.URL.String(), sourceClnt.GetURL().String())
-		tgtSuffix := strings.TrimPrefix(tgtCtnt.URL.String(), targetClnt.GetURL().String())
+		srcSuffix := strings.TrimPrefix(srcCtnt.URL.String(), sourceURL)
+		tgtSuffix := strings.TrimPrefix(tgtCtnt.URL.String(), targetURL)
 
-		current := urlJoinPath(targetClnt.GetURL().String(), srcSuffix)
-		expected := urlJoinPath(targetClnt.GetURL().String(), tgtSuffix)
+		current := urlJoinPath(targetURL, srcSuffix)
+		expected := urlJoinPath(targetURL, tgtSuffix)
 
 		if !utf8.ValidString(srcSuffix) {
 			// Error. Keys must be valid UTF-8.
@@ -284,7 +332,7 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, isMe
 					firstContent:  srcCtnt,
 					secondContent: tgtCtnt,
 				}
-			} else if isMetadata &&
+			} else if cmpMetadata &&
 				!metadataEqual(srcCtnt.UserMetadata, tgtCtnt.UserMetadata) &&
 				!metadataEqual(srcCtnt.Metadata, tgtCtnt.Metadata) {
 
@@ -327,17 +375,17 @@ func differenceInternal(ctx context.Context, sourceClnt, targetClnt Client, isMe
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func difference(ctx context.Context, sourceClnt, targetClnt Client, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
+func difference(sourceURL string, sourceCh <-chan *ClientContent, targetURL string, targetCh <-chan *ClientContent, cmpMetadata, returnSimilar bool) (diffCh chan diffMessage) {
 	diffCh = make(chan diffMessage, 10000)
 
 	go func() {
 		defer close(diffCh)
 
-		err := differenceInternal(ctx, sourceClnt, targetClnt, isMetadata, isRecursive, returnSimilar, dirOpt, diffCh)
+		err := differenceInternal(sourceURL, sourceCh, targetURL, targetCh, cmpMetadata, returnSimilar, diffCh)
 		if err != nil {
 			// handle this specifically for filesystem related errors.
 			switch v := err.ToGoError().(type) {
-			case PathNotFound, PathInsufficientPermission:
+			case PathNotFound, PathInsufficientPermission, PathNotADirectory:
 				diffCh <- diffMessage{
 					Error: err,
 				}

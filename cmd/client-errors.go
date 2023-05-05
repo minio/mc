@@ -115,39 +115,46 @@ type GenericFileError struct {
 	Path string
 }
 
+// PathNotADirectory - this path does not correspond to a directory
+type PathNotADirectory GenericFileError
+
+func (e PathNotADirectory) Error() string {
+	return "Requested path `" + e.Path + "` not a directory"
+}
+
 // PathNotFound (ENOENT) - file not found.
 type PathNotFound GenericFileError
 
 func (e PathNotFound) Error() string {
-	return "Requested file `" + e.Path + "` not found"
+	return "Requested path `" + e.Path + "` not found"
 }
 
 // PathIsNotRegular (ENOTREG) - file is not a regular file.
 type PathIsNotRegular GenericFileError
 
 func (e PathIsNotRegular) Error() string {
-	return "Requested file `" + e.Path + "` is not a regular file."
+	return "Requested path `" + e.Path + "` is not a regular file."
 }
 
 // PathInsufficientPermission (EPERM) - permission denied.
 type PathInsufficientPermission GenericFileError
 
 func (e PathInsufficientPermission) Error() string {
-	return "Insufficient permissions to access this file `" + e.Path + "`"
+	return "Insufficient permissions to access this path `" + e.Path + "`"
 }
 
 // BrokenSymlink (ENOTENT) - file has broken symlink.
 type BrokenSymlink GenericFileError
 
 func (e BrokenSymlink) Error() string {
-	return "Requested file `" + e.Path + "` has broken symlink"
+	return "Requested path `" + e.Path + "` has broken symlink"
 }
 
 // TooManyLevelsSymlink (ELOOP) - file has too many levels of symlinks.
 type TooManyLevelsSymlink GenericFileError
 
 func (e TooManyLevelsSymlink) Error() string {
-	return "Requested file `" + e.Path + "` has too many levels of symlinks"
+	return "Requested path `" + e.Path + "` has too many levels of symlinks"
 }
 
 // EmptyPath (EINVAL) - invalid argument.
