@@ -41,6 +41,10 @@ var tagSetFlags = []cli.Flag{
 		Name:  "versions",
 		Usage: "set tags on multiple versions for an object",
 	},
+	cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "recursivley set tags for all objects of subdirs",
+	},
 }
 
 var tagSetCmd = cli.Command{
@@ -73,6 +77,12 @@ EXAMPLES:
 
   4. Assign tags to a bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket "key1=value1&key2=value2&key3=value3"
+
+  5. Assign tags recursively to all the objects of subdirs of bucket.
+     {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive "key1=value1&key2=value2&key3=value3"
+
+  6. Assign tags recursively to all versions of all objects of subdirs of bucket.
+  	 {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive --versions "key1=value1&key2=value2&key3=value3"
 `,
 }
 
@@ -101,7 +111,7 @@ func (t tagSetMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string) {
+func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string, recursive bool) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
@@ -111,6 +121,7 @@ func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef t
 	versionID = ctx.String("version-id")
 	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
+	recursive = ctx.Bool("recursive")
 
 	if versionID != "" && (rewind != "" || withVersions) {
 		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
@@ -139,13 +150,23 @@ func setTags(ctx context.Context, clnt Client, versionID, tags string) {
 	})
 }
 
+func setTagsSingle(ctx context.Context, alias, url, versionID, tags string) *probe.Error {
+	newClnt, err := newClientFromAlias(alias, url)
+	if err != nil {
+		return err
+	}
+
+	setTags(ctx, newClnt, versionID, tags)
+	return nil
+}
+
 func mainSetTag(cliCtx *cli.Context) error {
 	ctx, cancelSetTag := context.WithCancel(globalContext)
 	defer cancelSetTag()
 
 	console.SetColor("List", color.New(color.FgGreen))
 
-	targetURL, versionID, timeRef, withVersions, tags := parseSetTagSyntax(cliCtx)
+	targetURL, versionID, timeRef, withVersions, tags, recursive := parseSetTagSyntax(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
@@ -153,14 +174,31 @@ func mainSetTag(cliCtx *cli.Context) error {
 	clnt, err := newClient(targetURL)
 	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
-	if timeRef.IsZero() && !withVersions {
-		setTags(ctx, clnt, versionID, tags)
-	} else {
-		for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions}) {
-			if content.Err != nil {
-				fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
-			}
-			setTags(ctx, clnt, content.VersionID, tags)
+	alias, urlStr, _ := mustExpandAlias(targetURL)
+	if timeRef.IsZero() && !withVersions && !recursive {
+		err := setTagsSingle(ctx, alias, urlStr, versionID, tags)
+		fatalIf(err.Trace(), "Unable to set tags on `%s`", targetURL)
+		return nil
+	}
+	for content := range clnt.List(ctx, ListOptions{TimeRef: timeRef, WithOlderVersions: withVersions, Recursive: recursive}) {
+		if content.Err != nil {
+			fatalIf(content.Err.Trace(), "Unable to list target "+targetURL)
+			continue
+		}
+
+		// Dont set tag for the delete marker
+		if content.IsDeleteMarker {
+			continue
+		}
+
+		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+			break
+		}
+
+		err := setTagsSingle(ctx, alias, content.URL.String(), content.VersionID, tags)
+		if err != nil {
+			errorIf(err.Trace(clnt.GetURL().String()), "Invalid URL")
+			continue
 		}
 	}
 

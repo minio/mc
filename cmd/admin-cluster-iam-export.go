@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/fatih/color"
@@ -67,7 +68,9 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
+	aliasedURL := filepath.ToSlash(args.Get(0))
+	aliasedURL = filepath.Clean(aliasedURL)
+
 	console.SetColor("File", color.New(color.FgWhite, color.Bold))
 
 	// Create a new MinIO Admin Client

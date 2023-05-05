@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/klauspost/compress/zip"
 	"github.com/minio/cli"
@@ -66,7 +67,9 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
+	aliasedURL := filepath.ToSlash(args.Get(0))
+	aliasedURL = filepath.Clean(aliasedURL)
+
 	var r io.Reader
 	var sz int64
 	f, e := os.Open(args.Get(1))

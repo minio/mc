@@ -917,7 +917,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 	if mirrorSrcBuckets || createDstBuckets {
 		// Synchronize buckets using dirDifference function
-		for d := range dirDifference(ctx, srcClt, dstClt) {
+		for d := range bucketDifference(ctx, srcClt, dstClt) {
 			if d.Error != nil {
 				if mj.opts.activeActive {
 					errorIf(d.Error, "Failed to start mirroring.. retrying")
@@ -928,7 +928,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 			if d.Diff == differInSecond {
 				diffBucket := strings.TrimPrefix(d.SecondURL, dstClt.GetURL().String())
-				if isRemove {
+				if !isFake && isRemove {
 					aliasedDstBucket := path.Join(dstURL, diffBucket)
 					err := deleteBucket(ctx, aliasedDstBucket, false)
 					mj.status.fatalIf(err, "Failed to start mirroring.")
