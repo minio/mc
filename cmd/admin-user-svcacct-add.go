@@ -77,7 +77,7 @@ FLAGS:
 EXAMPLES:
   1. Add a new service account for user 'foobar' to MinIO server.
      {{.Prompt}} {{.HelpName}} myminio foobar
-  2. Add a new service account using the specified access key and secret key for user 'foobar' to MinIO server.
+  2. Add a new service account to MinIO server with specified access key and secret key for user'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey" --secret-key "mysecretkey"
   3. Add a new service account to MinIO server with specified access key and random secret key for user'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey"
