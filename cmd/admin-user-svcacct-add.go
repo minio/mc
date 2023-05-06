@@ -19,8 +19,9 @@ package cmd
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 	"time"
@@ -119,6 +120,21 @@ const (
 	svcAccOpSet
 
 	stsAccOpInfo
+
+	// Maximum length for MinIO access key.
+	// There is no max length enforcement for access keys
+	accessKeyMaxLen = 20
+
+	// Alpha numeric table used for generating access keys.
+	alphaNumericTable = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	// Total length of the alpha numeric table.
+	alphaNumericTableLen = byte(len(alphaNumericTable))
+
+	// Maximum secret key length for MinIO, this
+	// is used when autogenerating new credentials.
+	// There is no max length enforcement for secret keys
+	secretKeyMaxLen = 40
 )
 
 func (u acctMessage) String() string {
@@ -164,6 +180,42 @@ func (u acctMessage) String() string {
 	return ""
 }
 
+// generateCredentials - creates randomly generated credentials of maximum
+// allowed length.
+func generateCredentials() (accessKey, secretKey string, err error) {
+	readBytes := func(size int) (data []byte, err error) {
+		data = make([]byte, size)
+		var n int
+		if n, err = rand.Read(data); err != nil {
+			return nil, err
+		} else if n != size {
+			return nil, fmt.Errorf("Not enough data. Expected to read: %v bytes, got: %v bytes", size, n)
+		}
+		return data, nil
+	}
+
+	// Generate access key.
+	keyBytes, err := readBytes(accessKeyMaxLen)
+	if err != nil {
+		return "", "", err
+	}
+	for i := 0; i < accessKeyMaxLen; i++ {
+		keyBytes[i] = alphaNumericTable[keyBytes[i]%alphaNumericTableLen]
+	}
+	accessKey = string(keyBytes)
+
+	// Generate secret key.
+	keyBytes, err = readBytes(secretKeyMaxLen)
+	if err != nil {
+		return "", "", err
+	}
+
+	secretKey = strings.ReplaceAll(string([]byte(base64.StdEncoding.EncodeToString(keyBytes))[:secretKeyMaxLen]),
+		"/", "+")
+
+	return accessKey, secretKey, nil
+}
+
 func (u acctMessage) JSON() string {
 	u.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(u, "", " ")
@@ -188,12 +240,18 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	policyPath := ctx.String("policy")
 	comment := ctx.String("comment")
 
-	if len(accessKey) > 0 && len(secretKey) <= 0 {
-		fatalIf(probe.NewError(errors.New("Secret key must be set with access key same time.")), "Unable to add a new service account")
-	}
-
-	if len(accessKey) <= 0 && len(secretKey) > 0 {
-		fatalIf(probe.NewError(errors.New("Access key must be set with secret key same time.")), "Unable to add a new service account")
+	// generate access key and secret key
+	if len(accessKey) <= 0 || len(secretKey) <= 0 {
+		randomAccessKey, randomSecretKey, err := generateCredentials()
+		if err != nil {
+			fatalIf(probe.NewError(err), "Unable to add a new service account")
+		}
+		if len(accessKey) <= 0 {
+			accessKey = randomAccessKey
+		}
+		if len(secretKey) <= 0 {
+			secretKey = randomSecretKey
+		}
 	}
 
 	// Create a new MinIO Admin Client
