@@ -1812,6 +1812,19 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, opts Li
 	}
 }
 
+// ListBuckets - list buckets
+func (c *S3Client) ListBuckets(ctx context.Context) ([]*ClientContent, *probe.Error) {
+	buckets, err := c.api.ListBuckets(ctx)
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+	bucketsList := make([]*ClientContent, 0, len(buckets))
+	for _, b := range buckets {
+		bucketsList = append(bucketsList, c.bucketInfo2ClientContent(b))
+	}
+	return bucketsList, nil
+}
+
 // List - list at delimited path, if not recursive.
 func (c *S3Client) List(ctx context.Context, opts ListOptions) <-chan *ClientContent {
 	c.Lock()
