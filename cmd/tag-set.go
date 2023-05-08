@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -44,6 +45,10 @@ var tagSetFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "recursive, r",
 		Usage: "recursivley set tags for all objects of subdirs",
+	},
+	cli.BoolFlag{
+		Name:  "exclude-folders",
+		Usage: "exclude setting tags on folder objects",
 	},
 }
 
@@ -82,7 +87,10 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive "key1=value1&key2=value2&key3=value3"
 
   6. Assign tags recursively to all versions of all objects of subdirs of bucket.
-  	 {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive --versions "key1=value1&key2=value2&key3=value3"
+     {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive --versions "key1=value1&key2=value2&key3=value3"
+
+  7. Assign tags to all the objects of bucket, exclusing subdirs
+     {{.Prompt}} {{.HelpName}} myminio/testbucket --exclude-folders --recursive "key1=value1&key2=value2&key3=value3"
 `,
 }
 
@@ -111,7 +119,7 @@ func (t tagSetMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string, recursive bool) {
+func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, tags string, recursive bool, excludeFolders bool) {
 	if len(ctx.Args()) != 2 || ctx.Args().Get(1) == "" {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
@@ -122,9 +130,14 @@ func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef t
 	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
 	recursive = ctx.Bool("recursive")
+	excludeFolders = ctx.Bool("exclude-folders")
 
 	if versionID != "" && (rewind != "" || withVersions) {
 		fatalIf(errDummy().Trace(), "You cannot specify both --version-id and --rewind or --versions flags at the same time")
+	}
+
+	if excludeFolders && !recursive {
+		fatalIf(errDummy().Trace(), "Flag --exclude-folders can be used with --recursive only")
 	}
 
 	timeRef = parseRewindFlag(rewind)
@@ -166,7 +179,7 @@ func mainSetTag(cliCtx *cli.Context) error {
 
 	console.SetColor("List", color.New(color.FgGreen))
 
-	targetURL, versionID, timeRef, withVersions, tags, recursive := parseSetTagSyntax(cliCtx)
+	targetURL, versionID, timeRef, withVersions, tags, recursive, excludeFolders := parseSetTagSyntax(cliCtx)
 	if timeRef.IsZero() && withVersions {
 		timeRef = time.Now().UTC()
 	}
@@ -175,7 +188,7 @@ func mainSetTag(cliCtx *cli.Context) error {
 	fatalIf(err.Trace(cliCtx.Args()...), "Unable to initialize target "+targetURL)
 
 	alias, urlStr, _ := mustExpandAlias(targetURL)
-	if timeRef.IsZero() && !withVersions && !recursive {
+	if timeRef.IsZero() && !withVersions && !recursive && !excludeFolders {
 		err := setTagsSingle(ctx, alias, urlStr, versionID, tags)
 		fatalIf(err.Trace(), "Unable to set tags on `%s`", targetURL)
 		return nil
@@ -188,6 +201,12 @@ func mainSetTag(cliCtx *cli.Context) error {
 
 		// Dont set tag for the delete marker
 		if content.IsDeleteMarker {
+			continue
+		}
+
+		// if excludeFolders dont set tags for subdirs
+		_, objName := url2BucketAndObject(&content.URL)
+		if strings.Index(objName, string(content.URL.Separator)) > 0 && excludeFolders {
 			continue
 		}
 
