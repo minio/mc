@@ -66,8 +66,9 @@ mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 			Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
 		},
 		cli.StringFlag{
-			Name:  "api-key",
-			Usage: "API Key of the account on SUBNET",
+			Name:   "api-key",
+			Usage:  "API Key of the account on SUBNET",
+			EnvVar: "_MC_SUBNET_API_KEY",
 		},
 	}
 )
@@ -215,7 +216,7 @@ func subnetReqDo(r *http.Request, headers map[string]string) (string, error) {
 	if resp.StatusCode == http.StatusOK {
 		return respStr, nil
 	}
-	return respStr, fmt.Errorf("Request failed with code %d and error: %s", resp.StatusCode, respStr)
+	return respStr, fmt.Errorf("Request failed with code %d with error: %s", resp.StatusCode, respStr)
 }
 
 func subnetGetReq(reqURL string, headers map[string]string) (string, error) {
@@ -293,8 +294,19 @@ func setGlobalSubnetProxyFromConfig(alias string) error {
 		return nil
 	}
 
+	var (
+		proxy     string
+		supported bool
+	)
+
+	if env, ok := os.LookupEnv("_MC_SUBNET_PROXY_URL"); ok {
+		proxy = env
+		supported = env != ""
+	} else {
+		proxy, supported = getKeyFromSubnetConfig(alias, "proxy")
+	}
+
 	// get the subnet proxy config from MinIO if available
-	proxy, supported := getKeyFromSubnetConfig(alias, "proxy")
 	if supported && len(proxy) > 0 {
 		proxyURL, e := url.Parse(proxy)
 		if e != nil {
