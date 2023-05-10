@@ -50,8 +50,17 @@ var adminUserSvcAcctAddFlags = []cli.Flag{
 		Usage: "path to a JSON policy file",
 	},
 	cli.StringFlag{
-		Name:  "comment",
-		Usage: "personal note for the service account",
+		Name:  "name",
+		Usage: "friendly name for the service account",
+	},
+	cli.StringFlag{
+		Name:  "description",
+		Usage: "description for the service account",
+	},
+	cli.StringFlag{
+		Name:   "comment",
+		Hidden: true,
+		Usage:  "description for the service account (DEPRECATED: use --description instead)",
 	},
 }
 
@@ -69,14 +78,14 @@ USAGE:
   {{.HelpName}} ALIAS ACCOUNT
 
 ACCOUNT:
-  An account could be a regular MinIO user, STS ou LDAP user.
+  An account could be a regular MinIO user, STS or LDAP user.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Add a new service account for user 'foobar' to MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio foobar
+  1. Add a new service account for user 'foobar' to MinIO server with a name and description.
+     {{.Prompt}} {{.HelpName}} myminio foobar --name uploaderKey --description "foobar uploader scripts"
   2. Add a new service account to MinIO server with specified access key and secret key for user'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey" --secret-key "mysecretkey"
   3. Add a new service account to MinIO server with specified access key and random secret key for user'foobar'.
@@ -102,7 +111,8 @@ type acctMessage struct {
 	ParentUser    string          `json:"parentUser,omitempty"`
 	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
 	Policy        json.RawMessage `json:"policy,omitempty"`
-	Comment       string          `json:"comment,omitempty"`
+	Name          string          `json:"name,omitempty"`
+	Description   string          `json:"description,omitempty"`
 	AccountStatus string          `json:"accountStatus,omitempty"`
 	MemberOf      []string        `json:"memberOf,omitempty"`
 	Expiration    *time.Time      `json:"expiration,omitempty"`
@@ -160,7 +170,8 @@ func (u acctMessage) String() string {
 				fmt.Sprintf("AccessKey: %s", u.AccessKey),
 				fmt.Sprintf("ParentUser: %s", u.ParentUser),
 				fmt.Sprintf("Status: %s", u.AccountStatus),
-				fmt.Sprintf("Comment: %s", u.Comment),
+				fmt.Sprintf("Name: %s", u.Name),
+				fmt.Sprintf("Description: %s", u.Description),
 				fmt.Sprintf("Policy: %s", policyField),
 				func() string {
 					if u.Expiration != nil {
@@ -242,7 +253,11 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	accessKey := ctx.String("access-key")
 	secretKey := ctx.String("secret-key")
 	policyPath := ctx.String("policy")
-	comment := ctx.String("comment")
+	name := ctx.String("name")
+	description := ctx.String("description")
+	if description == "" {
+		description = ctx.String("comment")
+	}
 
 	// generate access key and secret key
 	if len(accessKey) <= 0 || len(secretKey) <= 0 {
@@ -276,11 +291,12 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	}
 
 	opts := madmin.AddServiceAccountReq{
-		Policy:     policyBytes,
-		AccessKey:  accessKey,
-		SecretKey:  secretKey,
-		Comment:    comment,
-		TargetUser: user,
+		Policy:      policyBytes,
+		AccessKey:   accessKey,
+		SecretKey:   secretKey,
+		Name:        name,
+		Description: description,
+		TargetUser:  user,
 	}
 
 	creds, e := client.AddServiceAccount(globalContext, opts)
