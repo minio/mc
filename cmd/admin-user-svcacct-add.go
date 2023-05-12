@@ -216,10 +216,9 @@ func (u acctMessage) String() string {
 		if u.Expiration != nil && !u.Expiration.IsZero() && !u.Expiration.Equal(timeSentinel) {
 			return console.Colorize("AccMessage",
 				fmt.Sprintf("Access Key: %s\nSecret Key: %s\nExpiration: %s", u.AccessKey, u.SecretKey, *u.Expiration))
-		} else {
-			return console.Colorize("AccMessage",
-				fmt.Sprintf("Access Key: %s\nSecret Key: %s\nExpiration: no-expiry", u.AccessKey, u.SecretKey))
 		}
+		return console.Colorize("AccMessage",
+			fmt.Sprintf("Access Key: %s\nSecret Key: %s\nExpiration: no-expiry", u.AccessKey, u.SecretKey))
 	case svcAccOpSet:
 		return console.Colorize("AccMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
@@ -331,7 +330,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
 		}
 
-		var patternMatched = false
+		patternMatched := false
 		for _, format := range supportedTimeFormats {
 			t, e := time.ParseInLocation(format, expiry, location)
 			if e == nil {

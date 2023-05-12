@@ -121,7 +121,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
 		}
 
-		var patternMatched = false
+		patternMatched := false
 		for _, format := range supportedTimeFormats {
 			t, e := time.ParseInLocation(format, expiry, location)
 			if e == nil {
