@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go/v2"
 )
 
 var adminIDPRmCmd = cli.Command{
@@ -31,35 +30,13 @@ var adminIDPRmCmd = cli.Command{
 	Hidden:       true,
 	OnUsageError: onUsageError,
 	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `This command is DEPRECATED.
 
-USAGE:
-  {{.HelpName}} TARGET IDP_TYPE CFG_NAME
-
-  **DEPRECATED**: This command will be removed in a future version. Please use
-  "mc admin idp ldap|openid" instead.
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Remove an OpenID configuration from the server.
-     {{.Prompt}} {{.HelpName}} play/ openid myidp
-  2. Remove default LDAP configuration from the server.
-     {{.Prompt}} {{.HelpName}} play/ ldap _
+Please use "mc admin idp ldap|openid" instead.
 `,
 }
 
-func mainAdminIDPRemove(ctx *cli.Context) error {
-	if len(ctx.Args()) != 3 {
-		showCommandHelpAndExit(ctx, 1)
-	}
-
-	args := ctx.Args()
-	idpType := args.Get(1)
-	validateIDType(idpType)
-
-	cfgName := args.Get(2)
-	return adminIDPRemove(ctx, idpType == madmin.OpenidIDPCfg, cfgName)
+func mainAdminIDPRemove(_ *cli.Context) error {
+	deprecatedError("mc admin idp ldap|openid")
+	return nil
 }
