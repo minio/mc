@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go/v2"
 )
 
 var adminIDPLsCmd = cli.Command{
@@ -31,39 +30,13 @@ var adminIDPLsCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Hidden:       true,
 	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `This command is DEPRECATED.
 
-USAGE:
-  {{.HelpName}} TARGET ID_TYPE
-
-  **DEPRECATED**: This command will be removed in a future version. Please use
-  "mc admin idp ldap|openid" instead.
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. List the available openid configurations.
-     {{.Prompt}} {{.HelpName}} play/ openid
-  2. List the available ldap configurations.
-     {{.Prompt}} {{.HelpName}} play/ ldap
+Please use  "mc admin idp ldap|openid" instead.
 `,
 }
 
-func mainAdminIDPList(ctx *cli.Context) error {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, 1)
-	}
-
-	args := ctx.Args()
-	idpType := args.Get(1)
-	validateIDType(idpType)
-
-	isOpenID := false
-	if idpType == madmin.OpenidIDPCfg {
-		isOpenID = true
-	}
-
-	return adminIDPListCommon(ctx, isOpenID)
+func mainAdminIDPList(_ *cli.Context) error {
+	deprecatedError("mc admin idp ldap|openid")
+	return nil
 }

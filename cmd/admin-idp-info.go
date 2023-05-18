@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go/v2"
 )
 
 var adminIDPInfoCmd = cli.Command{
@@ -30,44 +29,13 @@ var adminIDPInfoCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Hidden:       true,
 	Flags:        globalFlags,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
+	CustomHelpTemplate: `This command is DEPRECATED.
 
-USAGE:
-  {{.HelpName}} TARGET ID_TYPE [CFG_NAME]
-
-  ID_TYPE must be one of 'ldap' or 'openid'.
-
-  **DEPRECATED**: This command will be removed in a future version. Please use
-  "mc admin idp ldap|openid" instead.
-
-FLAGS:
-   {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Show configuration info for default (un-named) openid configuration.
-     {{.Prompt}} {{.HelpName}} play/ openid
-  2. Show configuration info for openid configuration named "dex_test".
-     {{.Prompt}} {{.HelpName}} play/ openid dex_test
-  3. Show configuration info for ldap.
-     {{.Prompt}} {{.HelpName}} play/ ldap
+Please use "mc admin idp ldap|openid" instead.
 `,
 }
 
-func mainAdminIDPGet(ctx *cli.Context) error {
-	if len(ctx.Args()) < 2 || len(ctx.Args()) > 3 {
-		showCommandHelpAndExit(ctx, 1)
-	}
-
-	args := ctx.Args()
-	idpType := args.Get(1)
-	validateIDType(idpType)
-	isOpenID := idpType == madmin.OpenidIDPCfg
-
-	var cfgName string
-	if len(args) == 3 {
-		cfgName = args.Get(2)
-	}
-
-	return adminIDPInfo(ctx, isOpenID, cfgName)
+func mainAdminIDPGet(_ *cli.Context) error {
+	deprecatedError("mc admin idp ldap|openid")
+	return nil
 }
