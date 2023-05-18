@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,26 +17,25 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var adminIDPRmCmd = cli.Command{
-	Name:         "remove",
-	ShortName:    "rm",
-	Usage:        "Remove an IDP configuration",
-	Before:       setGlobalsFromContext,
-	Action:       mainAdminIDPRemove,
-	Hidden:       true,
-	OnUsageError: onUsageError,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `This command is DEPRECATED.
-
-Please use "mc admin idp ldap|openid" instead.
-`,
+var idpLdapPolicySubcommands = []cli.Command{
+	idpLdapPolicyAttachCmd,
+	idpLdapPolicyDetachCmd,
+	idpLdapPolicyEntitiesCmd,
 }
 
-func mainAdminIDPRemove(_ *cli.Context) error {
-	deprecatedError("mc admin idp ldap|openid")
+var idpLdapPolicyCmd = cli.Command{
+	Name:            "policy",
+	Usage:           "manage policy assignments for LDAP",
+	Action:          mainIDPLDAPPolicy,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     idpLdapPolicySubcommands,
+	HideHelpCommand: true,
+}
+
+func mainIDPLDAPPolicy(ctx *cli.Context) error {
+	commandNotFound(ctx, idpLdapPolicySubcommands)
 	return nil
 }

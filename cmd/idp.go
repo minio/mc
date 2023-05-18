@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,25 +17,24 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var adminIDPSetCmd = cli.Command{
-	Name:         "set",
-	Usage:        "Create/Update an IDP server configuration",
-	Before:       setGlobalsFromContext,
-	Action:       mainAdminIDPSet,
-	Hidden:       true,
-	OnUsageError: onUsageError,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `This command is DEPRECATED.
-
-Please use commands under 'mc admin idp ldap|openid' instead.
-`,
+var idpSubcommands = []cli.Command{
+	idpOpenidCmd,
+	idpLdapCmd,
 }
 
-func mainAdminIDPSet(_ *cli.Context) error {
-	deprecatedError("mc admin idp ldap|openid")
+var idpCmd = cli.Command{
+	Name:            "idp",
+	Usage:           "manage MinIO IDentity Provider server configuration",
+	Action:          mainIDP,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     idpSubcommands,
+	HideHelpCommand: true,
+}
+
+func mainIDP(ctx *cli.Context) error {
+	commandNotFound(ctx, idpSubcommands)
 	return nil
 }
