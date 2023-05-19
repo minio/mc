@@ -139,6 +139,9 @@ const (
 	// There is no max length enforcement for access keys
 	accessKeyMaxLen = 20
 
+	// Maximum length for Expiration timestamp
+	expirationMaxLen = 29
+
 	// Alpha numeric table used for generating access keys.
 	alphaNumericTable = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -155,9 +158,15 @@ func (u acctMessage) String() string {
 	switch u.op {
 	case svcAccOpList:
 		// Create a new pretty table with cols configuration
-		return newPrettyTable("  ",
+		return newPrettyTable(" | ",
 			Field{"AccessKey", accessFieldMaxLen},
-		).buildRow(u.AccessKey)
+			Field{"Expiration", expirationMaxLen},
+		).buildRow(u.AccessKey, func() string {
+			if u.Expiration != nil && !u.Expiration.IsZero() && !u.Expiration.Equal(timeSentinel) {
+				return (*u.Expiration).String()
+			}
+			return "no-expiry"
+		}())
 	case stsAccOpInfo, svcAccOpInfo:
 		policyField := ""
 		if u.ImpliedPolicy {
