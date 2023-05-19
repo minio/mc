@@ -33,7 +33,8 @@ type topDriveUI struct {
 	spinner  spinner.Model
 	quitting bool
 
-	sortBy        sortIOStat
+	sortBy        drivesSorter
+	sortAsc       bool
 	count         int
 	pool, maxPool int
 
@@ -103,10 +104,14 @@ func (m *topDriveUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.sortBy = sortByRead
 		case "w":
 			m.sortBy = sortByWrite
-		case "A":
+		case "d":
+			m.sortBy = sortByDiscard
+		case "a":
 			m.sortBy = sortByAwait
 		case "U":
 			m.sortBy = sortByUtil
+		case "o", "O":
+			m.sortAsc = !m.sortAsc
 		}
 
 		return m, nil
@@ -160,10 +165,10 @@ func generateDriveStat(disk madmin.Disk, curr, prev madmin.DiskIOStats, interval
 	return d
 }
 
-type sortIOStat int
+type drivesSorter int
 
 const (
-	sortByName sortIOStat = iota
+	sortByName drivesSorter = iota
 	sortByUsed
 	sortByAwait
 	sortByUtil
@@ -173,7 +178,7 @@ const (
 	sortByTps
 )
 
-func (s sortIOStat) String() string {
+func (s drivesSorter) String() string {
 	switch s {
 	case sortByName:
 		return "name"
@@ -193,6 +198,47 @@ func (s sortIOStat) String() string {
 		return "tps"
 	}
 	return "unknown"
+}
+
+func cmp[V float64 | uint64 | string](v1, v2 V) int {
+	switch {
+	case v1 < v2:
+		return -1
+	case v1 > v2:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func sortDriveIOStat(sortBy drivesSorter, asc bool, data []driveIOStat) {
+	sort.SliceStable(data, func(i, j int) bool {
+		c := 0
+		switch sortBy {
+		case sortByName:
+			c = cmp(data[i].endpoint, data[j].endpoint)
+		case sortByUsed:
+			c = cmp(data[i].used, data[j].used)
+		case sortByAwait:
+			c = cmp(data[i].await, data[j].await)
+		case sortByUtil:
+			c = cmp(data[i].util, data[j].util)
+		case sortByRead:
+			c = cmp(data[i].readMBs, data[j].readMBs)
+		case sortByWrite:
+			c = cmp(data[i].writeMBs, data[j].writeMBs)
+		case sortByDiscard:
+			c = cmp(data[i].discardMBs, data[j].discardMBs)
+		case sortByTps:
+			c = cmp(data[i].tps, data[j].tps)
+		}
+
+		less := c < 0
+		if sortBy != sortByName && !asc {
+			less = !less
+		}
+		return less
+	})
 }
 
 func (m *topDriveUI) View() string {
@@ -225,27 +271,7 @@ func (m *topDriveUI) View() string {
 		data = append(data, generateDriveStat(m.drivesInfo[disk], m.currTopMap[disk], m.prevTopMap[disk], 1000))
 	}
 
-	sort.Slice(data, func(i, j int) bool {
-		switch m.sortBy {
-		case sortByName:
-			return data[i].endpoint < data[j].endpoint
-		case sortByUsed:
-			return data[i].used > data[j].used
-		case sortByAwait:
-			return data[i].await > data[j].await
-		case sortByUtil:
-			return data[i].util > data[j].util
-		case sortByRead:
-			return data[i].readMBs < data[j].readMBs
-		case sortByWrite:
-			return data[i].writeMBs < data[j].writeMBs
-		case sortByDiscard:
-			return data[i].discardMBs > data[j].discardMBs
-		case sortByTps:
-			return data[i].tps < data[j].tps
-		}
-		return false
-	})
+	sortDriveIOStat(m.sortBy, m.sortAsc, data)
 
 	if len(data) > m.count {
 		data = data[:m.count]
@@ -281,7 +307,12 @@ func (m *topDriveUI) View() string {
 	table.Render()
 
 	if !m.quitting {
-		s.WriteString(fmt.Sprintf("\n%s \u25C0 Pool %d \u25B6 | Sort By: %s (u,t,r,w,d,A,U)", m.spinner.View(), m.pool+1, m.sortBy))
+		order := "DESC"
+		if m.sortAsc {
+			order = "ASC"
+		}
+
+		s.WriteString(fmt.Sprintf("\n%s \u25C0 Pool %d \u25B6 | Sort By: %s (u,t,r,w,d,a,U) | (O)rder: %s ", m.spinner.View(), m.pool+1, m.sortBy, order))
 	}
 	return s.String() + "\n"
 }
