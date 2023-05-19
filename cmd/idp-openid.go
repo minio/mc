@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,26 +17,31 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
+import "github.com/minio/cli"
+
+var (
+	idpOpenidSubcommands = []cli.Command{
+		idpOpenidAddCmd,
+		idpOpenidUpdateCmd,
+		idpOpenidRemoveCmd,
+		idpOpenidListCmd,
+		idpOpenidInfoCmd,
+		idpOpenidEnableCmd,
+		idpOpenidDisableCmd,
+		// TODO: idpOpenidPolicyCmd,
+	}
+	idpOpenidCmd = cli.Command{
+		Name:            "openid",
+		Usage:           "manage OpenID IDP server configuration",
+		Action:          mainIDPOpenID,
+		Before:          setGlobalsFromContext,
+		Flags:           globalFlags,
+		Subcommands:     idpOpenidSubcommands,
+		HideHelpCommand: true,
+	}
 )
 
-var adminIDPLsCmd = cli.Command{
-	Name:         "list",
-	ShortName:    "ls",
-	Usage:        "List IDP configurations",
-	Before:       setGlobalsFromContext,
-	Action:       mainAdminIDPList,
-	OnUsageError: onUsageError,
-	Hidden:       true,
-	Flags:        globalFlags,
-	CustomHelpTemplate: `This command is DEPRECATED.
-
-Please use  "mc admin idp ldap|openid" instead.
-`,
-}
-
-func mainAdminIDPList(_ *cli.Context) error {
-	deprecatedError("mc admin idp ldap|openid")
+func mainIDPOpenID(ctx *cli.Context) error {
+	commandNotFound(ctx, idpOpenidSubcommands)
 	return nil
 }
