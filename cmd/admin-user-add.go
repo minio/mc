@@ -83,15 +83,21 @@ func checkAdminUserAddSyntax(ctx *cli.Context) {
 	}
 }
 
+// userGroup container for content message structure
+type userGroup struct {
+	Name     string   `json:"name,omitempty"`
+	Policies []string `json:"policies,omitempty"`
+}
+
 // userMessage container for content message structure
 type userMessage struct {
 	op         string
-	Status     string   `json:"status"` // TODO: remove this?
-	AccessKey  string   `json:"accessKey,omitempty"`
-	SecretKey  string   `json:"secretKey,omitempty"`
-	PolicyName string   `json:"policyName,omitempty"`
-	UserStatus string   `json:"userStatus,omitempty"`
-	MemberOf   []string `json:"memberOf,omitempty"`
+	Status     string      `json:"status"` // TODO: remove this?
+	AccessKey  string      `json:"accessKey,omitempty"`
+	SecretKey  string      `json:"secretKey,omitempty"`
+	PolicyName string      `json:"policyName,omitempty"`
+	UserStatus string      `json:"userStatus,omitempty"`
+	MemberOf   []userGroup `json:"memberOf,omitempty"`
 }
 
 func (u userMessage) String() string {
@@ -108,12 +114,16 @@ func (u userMessage) String() string {
 			Field{"PolicyName", policyFieldMaxLen},
 		).buildRow(u.UserStatus, u.AccessKey, u.PolicyName)
 	case "info":
+		memberOf := []string{}
+		for _, group := range u.MemberOf {
+			memberOf = append(memberOf, group.Name)
+		}
 		return console.Colorize("UserMessage", strings.Join(
 			[]string{
 				fmt.Sprintf("AccessKey: %s", u.AccessKey),
 				fmt.Sprintf("Status: %s", u.UserStatus),
 				fmt.Sprintf("PolicyName: %s", u.PolicyName),
-				fmt.Sprintf("MemberOf: %s", strings.Join(u.MemberOf, ",")),
+				fmt.Sprintf("MemberOf: %s", memberOf),
 			}, "\n"))
 	case "remove":
 		return console.Colorize("UserMessage", "Removed user `"+u.AccessKey+"` successfully.")
