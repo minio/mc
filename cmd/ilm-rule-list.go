@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -78,10 +79,11 @@ EXAMPLES:
 }
 
 type ilmListMessage struct {
-	Status  string                   `json:"status"`
-	Target  string                   `json:"target"`
-	Context *cli.Context             `json:"-"`
-	Config  *lifecycle.Configuration `json:"config"`
+	Status    string                   `json:"status"`
+	Target    string                   `json:"target"`
+	Context   *cli.Context             `json:"-"`
+	Config    *lifecycle.Configuration `json:"config"`
+	UpdatedAt time.Time                `json:"updatedAt,omitempty"`
 }
 
 func (i ilmListMessage) String() string {
@@ -143,7 +145,7 @@ func mainILMList(cliCtx *cli.Context) error {
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
 
-	ilmCfg, err := client.GetLifecycle(ctx)
+	ilmCfg, updatedAt, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(args...), "Unable to get lifecycle")
 
 	if len(ilmCfg.Rules) == 0 {
@@ -153,10 +155,11 @@ func mainILMList(cliCtx *cli.Context) error {
 
 	if globalJSON {
 		printMsg(ilmListMessage{
-			Status:  "success",
-			Target:  urlStr,
-			Context: cliCtx,
-			Config:  ilmCfg,
+			Status:    "success",
+			Target:    urlStr,
+			Context:   cliCtx,
+			Config:    ilmCfg,
+			UpdatedAt: updatedAt,
 		})
 		return nil
 	}
