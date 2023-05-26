@@ -86,8 +86,8 @@ func (u groupMessage) String() string {
 	case "enable":
 		return console.Colorize("GroupMessage", "Enabled group `"+u.GroupName+"` successfully.")
 	case "add":
-		membersStr := fmt.Sprintf("{%s}", strings.Join(u.Members, ","))
-		return console.Colorize("GroupMessage", "Added members "+membersStr+" to group "+u.GroupName+" successfully.")
+		membersStr := fmt.Sprintf("`%s`", strings.Join(u.Members, ","))
+		return console.Colorize("GroupMessage", "Added members "+membersStr+" to group `"+u.GroupName+"` successfully.")
 	case "remove":
 		if len(u.Members) > 0 {
 			membersStr := fmt.Sprintf("{%s}", strings.Join(u.Members, ","))
