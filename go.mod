@@ -19,7 +19,7 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.4
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v2 v2.1.3
+	github.com/minio/madmin-go/v2 v2.2.0
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.55-0.20230525060734-b7836f021bfb
 	github.com/minio/pkg v1.6.5
