@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -20,28 +20,28 @@ package cmd
 import "github.com/minio/cli"
 
 var (
-	adminIDPOpenidSubcommands = []cli.Command{
-		adminIDPOpenidAddCmd,
-		adminIDPOpenidUpdateCmd,
-		adminIDPOpenidRemoveCmd,
-		adminIDPOpenidListCmd,
-		adminIDPOpenidInfoCmd,
-		adminIDPOpenidEnableCmd,
-		adminIDPOpenidDisableCmd,
-		// TODO: adminIDPOpenidPolicyCmd,
+	idpOpenidSubcommands = []cli.Command{
+		idpOpenidAddCmd,
+		idpOpenidUpdateCmd,
+		idpOpenidRemoveCmd,
+		idpOpenidListCmd,
+		idpOpenidInfoCmd,
+		idpOpenidEnableCmd,
+		idpOpenidDisableCmd,
+		// TODO: idpOpenidPolicyCmd,
 	}
-	adminIDPOpenidCmd = cli.Command{
+	idpOpenidCmd = cli.Command{
 		Name:            "openid",
 		Usage:           "manage OpenID IDP server configuration",
-		Action:          mainAdminIDPOpenID,
+		Action:          mainIDPOpenID,
 		Before:          setGlobalsFromContext,
 		Flags:           globalFlags,
-		Subcommands:     adminIDPOpenidSubcommands,
+		Subcommands:     idpOpenidSubcommands,
 		HideHelpCommand: true,
 	}
 )
 
-func mainAdminIDPOpenID(ctx *cli.Context) error {
-	commandNotFound(ctx, adminIDPOpenidSubcommands)
+func mainIDPOpenID(ctx *cli.Context) error {
+	commandNotFound(ctx, idpOpenidSubcommands)
 	return nil
 }

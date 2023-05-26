@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -76,11 +78,24 @@ func mainAdminUserList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list user")
 
 	for k, v := range users {
+		memberOf := []userGroup{}
+		for _, group := range v.MemberOf {
+			gd, e := client.GetGroupDescription(globalContext, group)
+			fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch group info")
+			policies := []string{}
+			if gd.Policy != "" {
+				policies = strings.Split(gd.Policy, ",")
+			}
+			memberOf = append(memberOf, userGroup{
+				Name:     gd.Name,
+				Policies: policies,
+			})
+		}
 		printMsg(userMessage{
 			op:         ctx.Command.Name,
 			AccessKey:  k,
 			PolicyName: v.PolicyName,
-			MemberOf:   v.MemberOf,
+			MemberOf:   memberOf,
 			UserStatus: string(v.Status),
 		})
 	}

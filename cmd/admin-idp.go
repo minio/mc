@@ -19,26 +19,21 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminIDPSubcommands = []cli.Command{
-	adminIDPOpenidCmd,
-	adminIDPLdapCmd,
-	adminIDPSetCmd,
-	adminIDPInfoCmd,
-	adminIDPLsCmd,
-	adminIDPRmCmd,
-}
-
 var adminIDPCmd = cli.Command{
 	Name:            "idp",
 	Usage:           "manage MinIO IDentity Provider server configuration",
 	Action:          mainAdminIDP,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminIDPSubcommands,
 	HideHelpCommand: true,
+	Hidden:          true,
+	CustomHelpTemplate: `This command's functionality has moved and this command is DEPRECATED.
+
+Please use commands under 'mc idp ldap|openid' instead.
+`,
 }
 
-func mainAdminIDP(ctx *cli.Context) error {
-	commandNotFound(ctx, adminIDPSubcommands)
+func mainAdminIDP(_ *cli.Context) error {
+	deprecatedError("mc idp ldap|openid")
 	return nil
 }

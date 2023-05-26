@@ -453,6 +453,7 @@ var appCmds = []cli.Command{
 	diffCmd,
 	replicateCmd,
 	adminCmd,
+	idpCmd,
 	configCmd,
 	updateCmd,
 	readyCmd,
