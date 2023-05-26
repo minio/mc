@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,33 +19,29 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminIDPLdapListCmd = cli.Command{
-	Name:         "list",
-	ShortName:    "ls",
-	Usage:        "list LDAP IDP server configuration(s)",
-	Action:       mainAdminIDPLDAPList,
-	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
-	OnUsageError: onUsageError,
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. List configurations for LDAP IDP.
-     {{.Prompt}} {{.HelpName}} play/
-`,
-}
-
-func mainAdminIDPLDAPList(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
-		showCommandHelpAndExit(ctx, 1)
+var (
+	idpLdapSubcommands = []cli.Command{
+		idpLdapAddCmd,
+		idpLdapUpdateCmd,
+		idpLdapRemoveCmd,
+		idpLdapListCmd,
+		idpLdapInfoCmd,
+		idpLdapEnableCmd,
+		idpLdapDisableCmd,
+		idpLdapPolicyCmd,
 	}
+	idpLdapCmd = cli.Command{
+		Name:            "ldap",
+		Usage:           "manage Ldap IDP server configuration",
+		Action:          mainIDPLdap,
+		Before:          setGlobalsFromContext,
+		Flags:           globalFlags,
+		Subcommands:     idpLdapSubcommands,
+		HideHelpCommand: true,
+	}
+)
 
-	return adminIDPListCommon(ctx, false)
+func mainIDPLdap(ctx *cli.Context) error {
+	commandNotFound(ctx, idpLdapSubcommands)
+	return nil
 }

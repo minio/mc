@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,23 +19,22 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminIDPLdapPolicySubcommands = []cli.Command{
-	adminIDPLdapPolicyAttachCmd,
-	adminIDPLdapPolicyDetachCmd,
-	adminIDPLdapPolicyEntitiesCmd,
+var idpSubcommands = []cli.Command{
+	idpOpenidCmd,
+	idpLdapCmd,
 }
 
-var adminIDPLdapPolicyCmd = cli.Command{
-	Name:            "policy",
-	Usage:           "manage policy assignments for LDAP",
-	Action:          mainAdminIDPLDAPPolicy,
+var idpCmd = cli.Command{
+	Name:            "idp",
+	Usage:           "manage MinIO IDentity Provider server configuration",
+	Action:          mainIDP,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     adminIDPLdapPolicySubcommands,
+	Subcommands:     idpSubcommands,
 	HideHelpCommand: true,
 }
 
-func mainAdminIDPLDAPPolicy(ctx *cli.Context) error {
-	commandNotFound(ctx, adminIDPLdapPolicySubcommands)
+func mainIDP(ctx *cli.Context) error {
+	commandNotFound(ctx, idpSubcommands)
 	return nil
 }
