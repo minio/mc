@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -70,12 +72,26 @@ func mainAdminUserInfo(ctx *cli.Context) error {
 	user, e := client.GetUserInfo(globalContext, args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
+	memberOf := []userGroup{}
+	for _, group := range user.MemberOf {
+		gd, e := client.GetGroupDescription(globalContext, group)
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch group info")
+		policies := []string{}
+		if gd.Policy != "" {
+			policies = strings.Split(gd.Policy, ",")
+		}
+		memberOf = append(memberOf, userGroup{
+			Name:     gd.Name,
+			Policies: policies,
+		})
+	}
+
 	printMsg(userMessage{
 		op:         ctx.Command.Name,
 		AccessKey:  args.Get(1),
 		PolicyName: user.PolicyName,
 		UserStatus: string(user.Status),
-		MemberOf:   user.MemberOf,
+		MemberOf:   memberOf,
 	})
 
 	return nil

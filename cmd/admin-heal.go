@@ -380,7 +380,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 					stateText = console.Colorize("DiskFailed", d.State)
 				}
 				fmt.Fprintf(&msg, "  +  %s : %s\n", d.DrivePath, stateText)
-				if d.Healing {
+				if d.Healing && d.HealInfo != nil {
 					now := time.Now().UTC()
 					scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
 					remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
