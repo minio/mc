@@ -152,7 +152,7 @@ type Client interface {
 	DeleteTags(ctx context.Context, versionID string) *probe.Error
 
 	// Lifecycle operations
-	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error)
+	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, time.Time, *probe.Error)
 	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
 
 	// Versioning operations

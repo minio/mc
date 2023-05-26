@@ -212,7 +212,7 @@ func mainILMAdd(cliCtx *cli.Context) error {
 	fatalIf(err.Trace(urlStr), "Unable to initialize client for "+urlStr)
 
 	// Configuration that is already set.
-	lfcCfg, err := client.GetLifecycle(ctx)
+	lfcCfg, _, err := client.GetLifecycle(ctx)
 	if err != nil {
 		if e := err.ToGoError(); minio.ToErrorResponse(e).Code == "NoSuchLifecycleConfiguration" {
 			lfcCfg = lifecycle.NewConfiguration()

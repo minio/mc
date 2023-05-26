@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -53,9 +54,10 @@ EXAMPLES:
 }
 
 type ilmExportMessage struct {
-	Status string                   `json:"status"`
-	Target string                   `json:"target"`
-	Config *lifecycle.Configuration `json:"config"`
+	Status    string                   `json:"status"`
+	Target    string                   `json:"target"`
+	Config    *lifecycle.Configuration `json:"config"`
+	UpdatedAt time.Time                `json:"updatedAt,omitempty"`
 }
 
 func (i ilmExportMessage) String() string {
@@ -92,7 +94,7 @@ func mainILMExport(cliCtx *cli.Context) error {
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(args...), "Unable to initialize client for "+urlStr+".")
 
-	ilmCfg, err := client.GetLifecycle(ctx)
+	ilmCfg, updatedAt, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(args...), "Unable to get lifecycle configuration")
 	if len(ilmCfg.Rules) == 0 {
 		fatalIf(probe.NewError(errors.New("lifecycle configuration not set")).Trace(urlStr),
@@ -100,9 +102,10 @@ func mainILMExport(cliCtx *cli.Context) error {
 	}
 
 	printMsg(ilmExportMessage{
-		Status: "success",
-		Target: urlStr,
-		Config: ilmCfg,
+		Status:    "success",
+		Target:    urlStr,
+		Config:    ilmCfg,
+		UpdatedAt: updatedAt,
 	})
 
 	return nil

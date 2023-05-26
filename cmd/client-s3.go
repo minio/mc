@@ -2618,18 +2618,18 @@ func (c *S3Client) DeleteTags(ctx context.Context, versionID string) *probe.Erro
 }
 
 // GetLifecycle - Get current lifecycle configuration.
-func (c *S3Client) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error) {
+func (c *S3Client) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, time.Time, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
-		return nil, probe.NewError(BucketNameEmpty{})
+		return nil, time.Time{}, probe.NewError(BucketNameEmpty{})
 	}
 
-	config, e := c.api.GetBucketLifecycle(ctx, bucket)
+	config, updatedAt, e := c.api.GetBucketLifecycleWithInfo(ctx, bucket)
 	if e != nil {
-		return nil, probe.NewError(e)
+		return nil, time.Time{}, probe.NewError(e)
 	}
 
-	return config, nil
+	return config, updatedAt, nil
 }
 
 // SetLifecycle - Set lifecycle configuration on a bucket
@@ -2903,7 +2903,7 @@ func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 	if tags, err := c.GetTags(ctx, ""); err == nil {
 		b.Tagging = tags
 	}
-	if lfc, err := c.GetLifecycle(ctx); err == nil {
+	if lfc, _, err := c.GetLifecycle(ctx); err == nil {
 		b.ILM.Config = lfc
 	}
 	if nfc, err := c.api.GetBucketNotification(ctx, bucket); err == nil {
