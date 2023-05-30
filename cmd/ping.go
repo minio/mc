@@ -45,6 +45,10 @@ var pingFlags = []cli.Flag{
 		Name:  "error-count, e",
 		Usage: "exit after N consecutive ping errors",
 	},
+	cli.BoolFlag{
+		Name:  "exit, x",
+		Usage: "exit when server(s) responds and reports being online",
+	},
 	cli.IntFlag{
 		Name:  "interval, i",
 		Usage: "wait interval between each request in seconds",
@@ -203,10 +207,12 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	if cliCtx.Bool("distributed") {
 		servers = admInfo.Servers
 	}
+	allOK := true
 
 	for result := range anonClient.Alive(ctx, madmin.AliveOpts{}, servers...) {
 		stat := pingStats(cliCtx, result, endPointMap)
 
+		allOK = allOK && result.Online
 		endPointStat := EndPointStats{
 			Endpoint:  result.Endpoint,
 			Min:       trimToTwoDecimal(time.Duration(stat.min)),
@@ -221,13 +227,16 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		endPointMap[result.Endpoint.Host] = stat
 
 	}
+	stop = stop || cliCtx.Bool("exit") && allOK
+
 	printMsg(PingResult{
 		Status:         "success",
 		Counter:        pad(strconv.Itoa(index), " ", 3-len(strconv.Itoa(index)), true),
 		EndPointsStats: endPointStats,
 	})
-
-	time.Sleep(time.Duration(cliCtx.Int("interval")) * time.Second)
+	if !stop {
+		time.Sleep(time.Duration(cliCtx.Int("interval")) * time.Second)
+	}
 }
 
 func trimToTwoDecimal(d time.Duration) string {
