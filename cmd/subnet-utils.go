@@ -129,18 +129,9 @@ func subnetMFAURL() string {
 }
 
 func checkURLReachable(url string) *probe.Error {
-	clnt := httpClient(10 * time.Second)
-	req, e := http.NewRequest(http.MethodHead, url, nil)
+	_, e := subnetHeadReq(url, nil)
 	if e != nil {
 		return probe.NewError(e).Trace(url)
-	}
-	resp, e := clnt.Do(req)
-	if e != nil {
-		return probe.NewError(e).Trace(url)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return probe.NewError(errors.New(resp.Status)).Trace(url)
 	}
 	return nil
 }
@@ -217,6 +208,14 @@ func subnetReqDo(r *http.Request, headers map[string]string) (string, error) {
 		return respStr, nil
 	}
 	return respStr, fmt.Errorf("Request failed with code %d with error: %s", resp.StatusCode, respStr)
+}
+
+func subnetHeadReq(reqURL string, headers map[string]string) (string, error) {
+	r, e := http.NewRequest(http.MethodHead, reqURL, nil)
+	if e != nil {
+		return "", e
+	}
+	return subnetReqDo(r, headers)
 }
 
 func subnetGetReq(reqURL string, headers map[string]string) (string, error) {
