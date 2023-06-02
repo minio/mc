@@ -105,6 +105,7 @@ var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
 	"scanner":   func(o *madmin.ServiceTraceOpts) string { o.Scanner = true; return "Trace Scanner calls" },
 	"bootstrap": func(o *madmin.ServiceTraceOpts) string { o.Bootstrap = true; return "Trace Bootstrap operations" },
 	"ilm":       func(o *madmin.ServiceTraceOpts) string { o.ILM = true; return "Trace ILM operations" },
+	"ftp":       func(o *madmin.ServiceTraceOpts) string { o.FTP = true; return "Trace FTP operations" },
 
 	"healing": func(o *madmin.ServiceTraceOpts) string {
 		o.Healing = true
