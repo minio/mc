@@ -19,8 +19,9 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v2"
@@ -91,20 +92,43 @@ type supportCallhomeMessage struct {
 
 // String colorized callhome command output message.
 func (s supportCallhomeMessage) String() string {
-	var msg string
 	if s.Action == "status" {
-		msgs := []string{}
+		columns := []table.Column{
+			{Title: "Features", Width: 20},
+			{Title: "", Width: 15},
+		}
+
+		rows := []table.Row{}
+
 		if len(s.Diag) > 0 {
-			msgs = append(msgs, "Diagnostics is "+s.Diag)
+			rows = append(rows, table.Row{licInfoField("Diagnostics"), licInfoVal(s.Diag)})
 		}
 		if len(s.Logs) > 0 {
-			msgs = append(msgs, "Logs is "+s.Logs)
+			rows = append(rows, table.Row{licInfoField("Logs"), licInfoVal(s.Logs)})
 		}
-		msg = strings.Join(msgs, "\n")
-	} else {
-		msg = s.Feature + " is now " + s.Action
+
+		t := table.New(
+			table.WithColumns(columns),
+			table.WithRows(rows),
+			table.WithFocused(true),
+			table.WithHeight(len(rows)),
+		)
+
+		s := table.DefaultStyles()
+		s.Header = s.Header.
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			BorderBottom(true).
+			Bold(false)
+		s.Selected = s.Selected.Bold(false)
+		t.SetStyles(s)
+
+		return lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240")).Render(t.View())
 	}
-	return console.Colorize(supportSuccessMsgTag, msg)
+
+	return console.Colorize(supportSuccessMsgTag, s.Feature+" is now "+s.Action)
 }
 
 // JSON jsonified callhome command output message.
@@ -121,6 +145,8 @@ func isDiagCallhomeEnabled(alias string) bool {
 }
 
 func mainCallhome(ctx *cli.Context) error {
+	initLicInfoColors()
+
 	setSuccessMessageColor()
 	alias, arg := checkToggleCmdSyntax(ctx)
 
