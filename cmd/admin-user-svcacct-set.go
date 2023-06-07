@@ -18,7 +18,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v2"
@@ -42,6 +44,10 @@ var adminUserSvcAcctSetFlags = []cli.Flag{
 		Name:  "description",
 		Usage: "description for the service account",
 	},
+	cli.StringFlag{
+		Name:  "expiry",
+		Usage: "time of expiration for the service account",
+	},
 }
 
 var adminUserSvcAcctSetCmd = cli.Command{
@@ -64,6 +70,12 @@ FLAGS:
 EXAMPLES:
   1. Change the secret key of the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
      {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --secret-key 'xxxxxxx'
+	2. Change the expiry of the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
+     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24
+     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00
+     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00:00
+     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00:00Z
+     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00:00-07:00
 `,
 }
 
@@ -87,6 +99,7 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	policyPath := ctx.String("policy")
 	name := ctx.String("name")
 	description := ctx.String("description")
+	expiry := ctx.String("expiry")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -99,11 +112,37 @@ func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
 	}
 
+	var expiryTime time.Time
+	var expiryPointer *time.Time
+
+	if expiry != "" {
+		location, e := time.LoadLocation("Local")
+		if e != nil {
+			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
+		}
+
+		patternMatched := false
+		for _, format := range supportedTimeFormats {
+			t, e := time.ParseInLocation(format, expiry, location)
+			if e == nil {
+				patternMatched = true
+				expiryTime = t
+				expiryPointer = &expiryTime
+				break
+			}
+		}
+
+		if !patternMatched {
+			fatalIf(probe.NewError(fmt.Errorf("expiry argument is not matching any of the supported patterns")), "unable to parse the expiry argument.")
+		}
+	}
+
 	opts := madmin.UpdateServiceAccountReq{
 		NewPolicy:      buf,
 		NewSecretKey:   secretKey,
 		NewName:        name,
 		NewDescription: description,
+		NewExpiration:  expiryPointer,
 	}
 
 	e := client.UpdateServiceAccount(globalContext, svcAccount, opts)

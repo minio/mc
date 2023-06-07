@@ -195,7 +195,10 @@ func (p *ParallelManager) enoughMemForUpload(uploadSize int64) bool {
 	}
 
 	smem := runtime.MemStats{}
-	runtime.GC()
+	if uploadSize > 50<<20 {
+		// GC if upload is bigger than 50MB.
+		runtime.GC()
+	}
 	runtime.ReadMemStats(&smem)
 
 	return estimateNeededMemoryForUpload(uploadSize)+smem.Alloc < p.maxMem

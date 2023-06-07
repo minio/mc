@@ -1348,8 +1348,8 @@ func (f *fsClient) DeleteTags(_ context.Context, _ string) *probe.Error {
 }
 
 // Get lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, *probe.Error) {
-	return nil, probe.NewError(APINotImplemented{
+func (f *fsClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, time.Time, *probe.Error) {
+	return nil, time.Time{}, probe.NewError(APINotImplemented{
 		API:     "GetLifecycle",
 		APIType: "filesystem",
 	})

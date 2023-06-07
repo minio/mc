@@ -62,6 +62,10 @@ var adminUserSvcAcctAddFlags = []cli.Flag{
 		Hidden: true,
 		Usage:  "description for the service account (DEPRECATED: use --description instead)",
 	},
+	cli.StringFlag{
+		Name:  "expiry",
+		Usage: "time of expiration for the service account",
+	},
 }
 
 var adminUserSvcAcctAddCmd = cli.Command{
@@ -86,12 +90,18 @@ FLAGS:
 EXAMPLES:
   1. Add a new service account for user 'foobar' to MinIO server with a name and description.
      {{.Prompt}} {{.HelpName}} myminio foobar --name uploaderKey --description "foobar uploader scripts"
-  2. Add a new service account to MinIO server with specified access key and secret key for user'foobar'.
+  2. Add a new service account to MinIO server with specified access key and secret key for user 'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey" --secret-key "mysecretkey"
-  3. Add a new service account to MinIO server with specified access key and random secret key for user'foobar'.
+  3. Add a new service account to MinIO server with specified access key and random secret key for user 'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey"
-  4. Add a new service account to MinIO server with specified secret key and random access key for user'foobar'.
+  4. Add a new service account to MinIO server with specified secret key and random access key for user 'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --secret-key "mysecretkey"
+	5. Add a new service account to MinIO server with specified expiry date in the future for user 'foobar'.
+     {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24
+		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00
+		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00
+		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00Z
+		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00-07:00
 `,
 }
 
@@ -139,6 +149,9 @@ const (
 	// There is no max length enforcement for access keys
 	accessKeyMaxLen = 20
 
+	// Maximum length for Expiration timestamp
+	expirationMaxLen = 29
+
 	// Alpha numeric table used for generating access keys.
 	alphaNumericTable = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -151,13 +164,26 @@ const (
 	secretKeyMaxLen = 40
 )
 
+var supportedTimeFormats = []string{
+	"2006-01-02",
+	"2006-01-02T15:04",
+	"2006-01-02T15:04:05",
+	time.RFC3339,
+}
+
 func (u acctMessage) String() string {
 	switch u.op {
 	case svcAccOpList:
 		// Create a new pretty table with cols configuration
-		return newPrettyTable("  ",
+		return newPrettyTable(" | ",
 			Field{"AccessKey", accessFieldMaxLen},
-		).buildRow(u.AccessKey)
+			Field{"Expiration", expirationMaxLen},
+		).buildRow(u.AccessKey, func() string {
+			if u.Expiration != nil && !u.Expiration.IsZero() && !u.Expiration.Equal(timeSentinel) {
+				return (*u.Expiration).String()
+			}
+			return "no-expiry"
+		}())
 	case stsAccOpInfo, svcAccOpInfo:
 		policyField := ""
 		if u.ImpliedPolicy {
@@ -187,8 +213,12 @@ func (u acctMessage) String() string {
 	case svcAccOpEnable:
 		return console.Colorize("AccMessage", "Enabled service account `"+u.AccessKey+"` successfully.")
 	case svcAccOpAdd:
+		if u.Expiration != nil && !u.Expiration.IsZero() && !u.Expiration.Equal(timeSentinel) {
+			return console.Colorize("AccMessage",
+				fmt.Sprintf("Access Key: %s\nSecret Key: %s\nExpiration: %s", u.AccessKey, u.SecretKey, *u.Expiration))
+		}
 		return console.Colorize("AccMessage",
-			fmt.Sprintf("Access Key: %s\nSecret Key: %s", u.AccessKey, u.SecretKey))
+			fmt.Sprintf("Access Key: %s\nSecret Key: %s\nExpiration: no-expiry", u.AccessKey, u.SecretKey))
 	case svcAccOpSet:
 		return console.Colorize("AccMessage", "Edited service account `"+u.AccessKey+"` successfully.")
 	}
@@ -258,6 +288,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	if description == "" {
 		description = ctx.String("comment")
 	}
+	expiry := ctx.String("expiry")
 
 	// generate access key and secret key
 	if len(accessKey) <= 0 || len(secretKey) <= 0 {
@@ -290,6 +321,31 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		}
 	}
 
+	var expiryTime time.Time
+	var expiryPointer *time.Time
+
+	if expiry != "" {
+		location, e := time.LoadLocation("Local")
+		if e != nil {
+			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
+		}
+
+		patternMatched := false
+		for _, format := range supportedTimeFormats {
+			t, e := time.ParseInLocation(format, expiry, location)
+			if e == nil {
+				patternMatched = true
+				expiryTime = t
+				expiryPointer = &expiryTime
+				break
+			}
+		}
+
+		if !patternMatched {
+			fatalIf(probe.NewError(fmt.Errorf("expiry argument is not matching any of the supported patterns")), "unable to parse the expiry argument.")
+		}
+	}
+
 	opts := madmin.AddServiceAccountReq{
 		Policy:      policyBytes,
 		AccessKey:   accessKey,
@@ -297,15 +353,17 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		Name:        name,
 		Description: description,
 		TargetUser:  user,
+		Expiration:  expiryPointer,
 	}
 
 	creds, e := client.AddServiceAccount(globalContext, opts)
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account")
+	fatalIf(probe.NewError(e).Trace(args...), "Unable to add a new service account.")
 
 	printMsg(acctMessage{
 		op:            svcAccOpAdd,
 		AccessKey:     creds.AccessKey,
 		SecretKey:     creds.SecretKey,
+		Expiration:    &creds.Expiration,
 		AccountStatus: "enabled",
 	})
 
