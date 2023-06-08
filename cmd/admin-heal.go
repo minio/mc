@@ -74,6 +74,10 @@ var adminHealFlags = []cli.Flag{
 		Usage: "rewrite objects from older to newer format",
 	},
 	cli.BoolFlag{
+		Name:  "update-parity",
+		Usage: "Update the parity of an object with the new server parity configuration",
+	},
+	cli.BoolFlag{
 		Name:  "verbose, v",
 		Usage: "show verbose information",
 	},
@@ -660,11 +664,12 @@ func mainAdminHeal(ctx *cli.Context) error {
 	}
 
 	opts := madmin.HealOpts{
-		ScanMode:  transformScanArg(ctx.String("scan")),
-		Remove:    ctx.Bool("remove"),
-		Recursive: ctx.Bool("recursive"),
-		DryRun:    ctx.Bool("dry-run"),
-		Recreate:  ctx.Bool("rewrite"),
+		ScanMode:     transformScanArg(ctx.String("scan")),
+		Remove:       ctx.Bool("remove"),
+		Recursive:    ctx.Bool("recursive"),
+		DryRun:       ctx.Bool("dry-run"),
+		Recreate:     ctx.Bool("rewrite"),
+		UpdateParity: ctx.Bool("update-parity"),
 	}
 
 	forceStart := ctx.Bool("force-start")
