@@ -75,7 +75,7 @@ var adminHealFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "update-parity",
-		Usage: "Update the parity of objects with the new server parity configuration",
+		Usage: "Update the parity of object(s) with the new server parity configuration",
 	},
 	cli.BoolFlag{
 		Name:  "verbose, v",
