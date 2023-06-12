@@ -554,9 +554,11 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				} else {
 					// Print the copy resume summary once in start
 					if startContinue && cli.Bool("continue") {
-						startSize := humanize.IBytes(uint64(pg.(*progressBar).Start().Get()))
-						totalSize := humanize.IBytes(uint64(pg.(*progressBar).Total))
-						console.Println("Resuming copy from ", startSize, " / ", totalSize)
+						if pb, ok := pg.(*progressBar); ok {
+							startSize := humanize.IBytes(uint64(pb.Start().Get()))
+							totalSize := humanize.IBytes(uint64(pb.Total))
+							console.Println("Resuming copy from ", startSize, " / ", totalSize)
+						}
 						startContinue = false
 					}
 					parallel.queueTask(func() URLs {
