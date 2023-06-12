@@ -117,14 +117,8 @@ func (stat statMessage) String() (msg string) {
 		}
 	}
 
-	if maxKeyEncrypted > 0 {
-		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Encrypted") + "\n")
-		for k, v := range stat.Metadata {
-			if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
-				msgBuilder.WriteString(fmt.Sprintf("  %-*.*s: %s ", maxKeyEncrypted, maxKeyEncrypted, k, v) + "\n")
-			}
-		}
-	}
+	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s\n", "Server side encryption", strings.ToUpper(strings.Split(stat.Key, "/")[1])))
+
 	if stat.ReplicationStatus != "" {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))
 	}
