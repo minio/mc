@@ -412,6 +412,10 @@ func (i idpConfig) JSON() string {
 }
 
 func (i idpConfig) String() string {
+	if len(i.Info) == 0 {
+		return "Not configured."
+	}
+
 	// Determine required width for key column.
 	fieldColWidth := 0
 	for _, kv := range i.Info {
