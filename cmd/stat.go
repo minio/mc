@@ -107,16 +107,14 @@ func (stat statMessage) String() (msg string) {
 			}
 		}
 	}
-	encryptionTypeSlice := strings.Split(stat.Key, "/")
-	encryptionType := strings.ToUpper(encryptionTypeSlice[len(encryptionTypeSlice)-1])
+
 	if maxKeyEncrypted > 0 {
-		switch encryptionType {
-		case "S3":
-			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", encryptionType))
-		case "KMS":
-			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", encryptionType))
-		case "SSE-C":
-			msgBuilder.WriteString(fmt.Sprintf("%-10s: %s\n", "Encryption", encryptionType))
+		if keyID, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"]; ok {
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s (%s)\n", "Encryption", "KMS", keyID))
+		} else if _, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Customer-Key-Md5"]; ok {
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "C"))
+		} else {
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "S3"))
 		}
 	}
 
