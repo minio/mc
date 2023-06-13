@@ -107,6 +107,19 @@ func (stat statMessage) String() (msg string) {
 			}
 		}
 	}
+	encryptionTypeSlice := strings.Split(stat.Key, "/")
+	encryptionType := strings.ToUpper(encryptionTypeSlice[len(encryptionTypeSlice)-1])
+	if maxKeyEncrypted > 0 {
+		switch encryptionType {
+		case "S3":
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", encryptionType))
+		case "KMS":
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", encryptionType))
+		case "SSE-C":
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: %s\n", "Encryption", encryptionType))
+		}
+	}
+
 	if maxKeyMetadata > 0 {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Metadata") + "\n")
 		for k, v := range stat.Metadata {
@@ -116,8 +129,6 @@ func (stat statMessage) String() (msg string) {
 			}
 		}
 	}
-
-	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s\n", "Server side encryption", strings.ToUpper(strings.Split(stat.Key, "/")[1])))
 
 	if stat.ReplicationStatus != "" {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))

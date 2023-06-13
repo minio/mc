@@ -21,7 +21,12 @@ package cmd
 
 import "os"
 
-func increasePipeBufferSize(f *os.File, desiredPipeSize int) error {
+// func increasePipeBufferSize(f *os.File, desiredPipeSize int) error {
+// 	// this is not supported on non-Linux platforms.
+// 	return nil
+// }
+
+func increasePipeBufferSize(_ *os.File, _ int) error {
 	// this is not supported on non-Linux platforms.
 	return nil
 }
