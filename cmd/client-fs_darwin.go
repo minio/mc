@@ -35,7 +35,7 @@ var (
 )
 
 // IsGetEvent checks if the event return is a get event.
-func IsGetEvent(event notify.Event) bool {
+func IsGetEvent(_ notify.Event) bool {
 	return false
 }
 
