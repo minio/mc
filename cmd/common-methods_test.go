@@ -43,9 +43,9 @@ func TestGetDecodedKey(t *testing.T) {
 		// success scenario using a mix of normal string and encoded string
 		{"play/documents/=32byteslongsecretkeymustbegiven1,s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=", "play/documents/=32byteslongsecretkeymustbegiven1,s3/documents/=32byteslongsecreabcdefg	givenn21", nil, true},
 		// decoded key less than 32 char and conatin non printable (tab) character
-		{"s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE", "", errors.New("Encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"), false},
+		{"s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE", "", errors.New("encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"), false},
 		// normal key less than 32 character
-		{"s3/documents/=32byteslongsecretkeymustbegiven", "", errors.New("Encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"), false},
+		{"s3/documents/=32byteslongsecretkeymustbegiven", "", errors.New("encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"), false},
 	}
 
 	for idx, testCase := range getDecodeCases {
