@@ -851,8 +851,7 @@ function test_copy_object_with_sse_rewrite()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
-function test_copy_object_with_sse_dest()
-{
+function test_copy_object_with_sse_dest() {
     # test server side copy and remove operation - target is encrypted with different key
     show "${FUNCNAME[0]}"
     start_time=$(get_time)
@@ -864,20 +863,21 @@ function test_copy_object_with_sse_dest()
 
     # create encrypted object on server
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
-    # now do a server side copy and store it eith different encryption key.
+    # now do a server side copy and store it with a different encryption key.
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1},${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     # cat the destination object with the new key. should return data without any error
     "${MC_CMD[@]}" cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
-    # mc rm on src object with first encryption key should pass
+    # mc rm on src object with the first encryption key should pass
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag1}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
-    # mc rm on encrypted destination object with second encryption key should pass
+    # mc rm on the encrypted destination object with the second encryption key should pass
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
+
 
 function test_sse_key_rotation()
 {
