@@ -107,6 +107,17 @@ func (stat statMessage) String() (msg string) {
 			}
 		}
 	}
+
+	if maxKeyEncrypted > 0 {
+		if keyID, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"]; ok {
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s (%s)\n", "Encryption", "KMS", keyID))
+		} else if _, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Customer-Key-Md5"]; ok {
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "C"))
+		} else {
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "S3"))
+		}
+	}
+
 	if maxKeyMetadata > 0 {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Metadata") + "\n")
 		for k, v := range stat.Metadata {
@@ -117,14 +128,6 @@ func (stat statMessage) String() (msg string) {
 		}
 	}
 
-	if maxKeyEncrypted > 0 {
-		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Encrypted") + "\n")
-		for k, v := range stat.Metadata {
-			if strings.HasPrefix(strings.ToLower(k), serverEncryptionKeyPrefix) {
-				msgBuilder.WriteString(fmt.Sprintf("  %-*.*s: %s ", maxKeyEncrypted, maxKeyEncrypted, k, v) + "\n")
-			}
-		}
-	}
 	if stat.ReplicationStatus != "" {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Replication Status", stat.ReplicationStatus))
 	}
