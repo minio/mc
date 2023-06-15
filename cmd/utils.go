@@ -212,11 +212,14 @@ type prefixSSEPair struct {
 }
 
 // parse and validate encryption keys entered on command line
-func parseAndValidateEncryptionKeys(sseKeys string, sse string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+func parseAndValidateEncryptionKeys(sseKeys string, sse string, sseKmsKeyID string, kmsContext interface{}) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+	// SSE-C
 	encMap, err = parseEncryptionKeys(sseKeys)
 	if err != nil {
 		return nil, err
 	}
+
+	// SSE-S3
 	if sse != "" {
 		for _, prefix := range strings.Split(sse, ",") {
 			alias, _ := url2Alias(prefix)
@@ -224,8 +227,22 @@ func parseAndValidateEncryptionKeys(sseKeys string, sse string) (encMap map[stri
 				Prefix: prefix,
 				SSE:    encrypt.NewSSE(),
 			})
+
 		}
 	}
+
+	// SSE-KMS
+	if sseKmsKeyID != "" && kmsContext == nil {
+		sseKms, _ := encrypt.NewSSEKMS(sseKmsKeyID, kmsContext)
+		for _, prefix := range strings.Split(sseKmsKeyID, ",") {
+			alias, _ := url2Alias(prefix)
+			encMap[alias] = append(encMap[alias], prefixSSEPair{
+				Prefix: prefix,
+				SSE:    sseKms,
+			})
+		}
+	}
+
 	for alias, ps := range encMap {
 		if hostCfg := mustGetHostConfig(alias); hostCfg == nil {
 			for _, p := range ps {

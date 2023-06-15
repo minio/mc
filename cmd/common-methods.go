@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -70,25 +71,59 @@ func parseKey(sseKeys string) (sse string, err *probe.Error) {
 	}
 	decodedString, e := base64.StdEncoding.DecodeString(secretValue)
 	if e != nil || len(decodedString) != 32 {
-		return "", probe.NewError(errors.New("Encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"))
+		return "", probe.NewError(errors.New("encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"))
 	}
 	return encryptString[0] + "=" + string(decodedString), nil
 }
 
 // parse and return encryption key pairs per alias.
 func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
+	// SSE-S3
 	sseServer := os.Getenv("MC_ENCRYPT")
-	if prefix := ctx.String("encrypt"); prefix != "" {
-		sseServer = prefix
+	if sseS3 := os.Getenv("MC_SSE_S3"); sseServer != "" {
+		sseServer = sseS3
 	}
-
+	if prefix := ctx.String("encrypt"); prefix != "" {
+		fmt.Println("Warning: --encrypt is deprecated, use --sse-s3 instead")
+		sseServer = prefix
+	} else if sseSPrefix := ctx.String("sse-s3"); sseSPrefix != "" {
+		sseServer = sseSPrefix
+	}
+	// SSE-C
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	if sseC := os.Getenv("MC_SSE_C"); sseKeys != "" {
+		sseKeys = sseC
+	}
 	if keyPrefix := ctx.String("encrypt-key"); keyPrefix != "" {
 		if sseServer != "" && strings.Contains(keyPrefix, sseServer) {
 			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
 		}
+		fmt.Println("Warning: --encrypt-key is deprecated, use --sse-c instead")
 		sseKeys = keyPrefix
+	} else if sseCPrefix := ctx.String("sse-c"); sseCPrefix != "" {
+		if sseServer != "" && strings.Contains(sseCPrefix, sseServer) {
+			return nil, errConflictSSE(sseServer, sseCPrefix).Trace(ctx.Args()...)
+		}
+		sseKeys = sseCPrefix
 	}
+	// SSE-KMS
+	sseKms := ctx.Bool("sse-kms")
+	var (
+		kmsContext interface{}
+		kmsKeyID   string
+	)
+
+	if sseKms {
+		kmsContext = ctx.String("kms-context")
+		if kmsContext == "" {
+			return nil, errMissingKmsDetails("kms-context").Trace(ctx.Args()...)
+		}
+		kmsKeyID = ctx.String("kms-key-id")
+		if kmsKeyID == "" {
+			return nil, errMissingKmsDetails("kms-key-id").Trace(ctx.Args()...)
+		}
+	}
+
 	var err *probe.Error
 	if sseKeys != "" {
 		sseKeys, err = getDecodedKey(sseKeys)
@@ -97,7 +132,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 		}
 	}
 
-	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys, sseServer)
+	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys, sseServer, kmsKeyID, kmsContext)
 	if err != nil {
 		return nil, err.Trace(sseKeys)
 	}

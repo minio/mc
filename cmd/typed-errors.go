@@ -126,3 +126,10 @@ var errConflictSSE = func(sseServer, sseKeys string) *probe.Error {
 	err := fmt.Errorf("SSE alias '%s' overlaps with SSE-C aliases '%s'", sseServer, sseKeys)
 	return probe.NewError(conflictSSEErr(err)).Untrace()
 }
+
+type missingKmsDetailsErr error
+
+var errMissingKmsDetails = func(missingFlag string) *probe.Error {
+	msg := fmt.Sprintf("%s is required when using --sse-kms", missingFlag)
+	return probe.NewError(missingKmsDetailsErr(errors.New(msg))).Untrace()
+}

@@ -75,7 +75,27 @@ var globalFlags = []cli.Flag{
 // Flags common across all I/O commands such as cp, mirror, stat, pipe etc.
 var ioFlags = []cli.Flag{
 	cli.StringFlag{
+		Name:  "sse-s3",
+		Usage: "use server-side encryption with S3 managed keys",
+	},
+	cli.BoolFlag{
+		Name:  "sse-kms",
+		Usage: "use server-side encryption with KMS managed keys",
+	},
+	cli.StringFlag{
+		Name:  "kms-context",
+		Usage: "provide SSE-KMS encryption context",
+	},
+	cli.StringFlag{
+		Name:  "kms-key-id",
+		Usage: "provide SSE-KMS key ID",
+	},
+	cli.StringFlag{
+		Name:  "sse-c",
+		Usage: "use server-side encryption with customer provided keys in the format alias/bucket/prefix=key",
+	},
+	cli.StringFlag{
 		Name:  "encrypt-key",
-		Usage: "encrypt/decrypt objects (using server-side encryption with customer provided keys)",
+		Usage: "(Deprecated, use --sse-c instead) encrypt/decrypt objects (using server-side encryption with customer provided keys)",
 	},
 }

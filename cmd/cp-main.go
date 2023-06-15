@@ -288,7 +288,7 @@ func doCopyFake(cpURLs URLs, pg Progress) URLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
+func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cli *cli.Context, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -300,11 +300,8 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 	versionID := session.Header.CommandStringFlags["version-id"]
 	olderThan := session.Header.CommandStringFlags["older-than"]
 	newerThan := session.Header.CommandStringFlags["newer-than"]
-	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
-	encrypt := session.Header.CommandStringFlags["encrypt"]
-	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys, encrypt)
+	encKeyDB, err := getEncKeys(cli)
 	fatalIf(err, "Unable to parse encryption keys.")
-
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
@@ -405,7 +402,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		isCopied = isLastFactory(session.Header.LastCopied)
 
 		if !session.HasData() {
-			totalBytes, totalObjects = doPrepareCopyURLs(ctx, session, cancelCopy)
+			totalBytes, totalObjects = doPrepareCopyURLs(ctx, session, cli, cancelCopy)
 		} else {
 			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
 		}
