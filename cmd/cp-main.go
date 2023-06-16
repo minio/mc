@@ -406,7 +406,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		isCopied = isLastFactory(session.Header.LastCopied)
 
 		if !session.HasData() {
-			totalBytes, totalObjects = doPrepareCopyURLs(ctx, session, cli, cancelCopy)
+			totalBytes, totalObjects = doPrepareCopyURLs(ctx, session, cancelCopy)
 		} else {
 			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
 		}
