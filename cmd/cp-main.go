@@ -288,7 +288,7 @@ func doCopyFake(cpURLs URLs, pg Progress) URLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cli *cli.Context, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
+func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
