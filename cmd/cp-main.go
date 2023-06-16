@@ -300,7 +300,11 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cli *cli.Context
 	versionID := session.Header.CommandStringFlags["version-id"]
 	olderThan := session.Header.CommandStringFlags["older-than"]
 	newerThan := session.Header.CommandStringFlags["newer-than"]
-	encKeyDB, err := getEncKeys(cli)
+	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
+	encrypt := session.Header.CommandStringFlags["encrypt"]
+	sseKmsKeyID := session.Header.CommandStringFlags["kms-key-id"]
+	kmsContext := session.Header.CommandStringFlags["kms-context"]
+	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys, encrypt, sseKmsKeyID, kmsContext)
 	fatalIf(err, "Unable to parse encryption keys.")
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()

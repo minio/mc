@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -39,6 +38,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/pkg/console"
 	"github.com/minio/pkg/env"
 )
 
@@ -84,7 +84,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 		sseServer = sseS3
 	}
 	if prefix := ctx.String("encrypt"); prefix != "" {
-		fmt.Println("Warning: --encrypt is deprecated, use --sse-s3 instead")
+		console.Infof("Warning: --encrypt is deprecated, use --sse-s3 instead")
 		sseServer = prefix
 	} else if sseSPrefix := ctx.String("sse-s3"); sseSPrefix != "" {
 		sseServer = sseSPrefix
@@ -98,7 +98,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 		if sseServer != "" && strings.Contains(keyPrefix, sseServer) {
 			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
 		}
-		fmt.Println("Warning: --encrypt-key is deprecated, use --sse-c instead")
+		console.Infof("Warning: --encrypt-key is deprecated, use --sse-c instead")
 		sseKeys = keyPrefix
 	} else if sseCPrefix := ctx.String("sse-c"); sseCPrefix != "" {
 		if sseServer != "" && strings.Contains(sseCPrefix, sseServer) {
