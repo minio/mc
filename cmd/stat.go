@@ -29,7 +29,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"

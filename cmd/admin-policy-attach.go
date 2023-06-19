@@ -18,11 +18,9 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
 )
 
 var adminAttachPolicyFlags = []cli.Flag{
@@ -74,19 +72,18 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	if len(ctx.Args()) < 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
-
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-	console.SetColor("Policy", color.New(color.FgBlue))
+	user := ctx.String("user")
+	group := ctx.String("group")
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Put args in PolicyAssociationReq, client checks for validity
+	policies := args[1:]
 	req := madmin.PolicyAssociationReq{
-		User:     ctx.String("user"),
-		Group:    ctx.String("group"),
-		Policies: args.Tail(),
+		User:     user,
+		Group:    group,
+		Policies: policies,
 	}
 
 	// Create a new MinIO Admin Client
@@ -94,37 +91,34 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	var e error
+	var res madmin.PolicyAssociationResp
 	if attach {
-		e = client.AttachPolicy(globalContext, req)
+		res, e = client.AttachPolicy(globalContext, req)
 	} else {
-		e = client.DetachPolicy(globalContext, req)
+		res, e = client.DetachPolicy(globalContext, req)
 	}
+	fatalIf(probe.NewError(e), "Unable to make user/group policy association")
 
-	isGroup := false
-	if req.User == "" {
-		isGroup = true
-	}
-
-	userOrGroup := req.User
-	if isGroup {
-		userOrGroup = req.Group
-	}
-
-	if e == nil {
-		for _, policy := range req.Policies {
-			printMsg(userPolicyMessage{
-				op:          ctx.Command.Name,
-				Policy:      policy,
-				UserOrGroup: userOrGroup,
-				IsGroup:     isGroup,
-			})
-		}
-	} else {
+	var emptyResp madmin.PolicyAssociationResp
+	if res.UpdatedAt == emptyResp.UpdatedAt {
+		// Older minio does not send a result, so we populate res manually to
+		// simulate a result. TODO(aditya): remove this after newer minio is
+		// released in a few months (Older API Deprecated in Jun 2023)
 		if attach {
-			fatalIf(probe.NewError(e), "Unable to attach the policy")
+			res.PoliciesAttached = policies
 		} else {
-			fatalIf(probe.NewError(e), "Unable to detach the policy")
+			res.PoliciesDetached = policies
 		}
 	}
+
+	m := policyAssociationMessage{
+		attach:           attach,
+		Status:           "success",
+		PoliciesAttached: res.PoliciesAttached,
+		PoliciesDetached: res.PoliciesDetached,
+		User:             user,
+		Group:            group,
+	}
+	printMsg(m)
 	return nil
 }

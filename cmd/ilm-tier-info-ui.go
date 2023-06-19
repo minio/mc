@@ -23,7 +23,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/navidys/tvxwidgets"
 	"github.com/rivo/tview"
 )
