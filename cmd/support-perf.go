@@ -196,12 +196,14 @@ type NetTestResults struct {
 	Results []NetTestResult `json:"servers"`
 }
 
+// SiteReplicationTestNodeResult - result of the network performance test for site-replication
 type SiteReplicationTestNodeResult struct {
 	Endpoint string   `json:"endpoint"`
 	Perf     NetStats `json:"perf"`
 	Error    string   `json:"error,omitempty"`
 }
 
+// SiteReplicationTestResults - result of the network performance test across all site-replication
 type SiteReplicationTestResults struct {
 	Results []SiteReplicationTestNodeResult `json:"servers"`
 }
