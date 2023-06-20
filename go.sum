@@ -425,6 +425,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jedib0t/go-pretty/v6 v6.4.6 h1:v6aG9h6Uby3IusSSEjHaZNXpHFhzqMmjXcPq1Rjl9Jw=
 github.com/jedib0t/go-pretty/v6 v6.4.6/go.mod h1:Ndk3ase2CkQbXLLNf5QDHoYb6J9WtVfmHZu9n8rk2xs=
+github.com/jiuker/madmin-go/v3 v3.0.0-20230620152144-2e143615649c h1:oygzqtAiXMK2I8iNZjNvkXhVDecIZtjQ3XIML+bZ6bM=
+github.com/jiuker/madmin-go/v3 v3.0.0-20230620152144-2e143615649c/go.mod h1:lPrMoc1aeiIWmmrxBthkDqzMPQwC/Lu9ByuyM2wenJk=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.10/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
@@ -521,8 +523,6 @@ github.com/minio/colorjson v1.0.4/go.mod h1:ZgE8vYon4xC4yfBPclP/2gqMRYw+p+xRsBbL
 github.com/minio/filepath v1.0.0 h1:fvkJu1+6X+ECRA6G3+JJETj4QeAYO9sV43I79H8ubDY=
 github.com/minio/filepath v1.0.0/go.mod h1:/nRZA2ldl5z6jT9/KQuvZcQlxZIMQoFFQPvEXx9T/Bw=
 github.com/minio/madmin-go v1.6.6/go.mod h1:ATvkBOLiP3av4D++2v1UEHC/QzsGtgXD5kYvvRYzdKs=
-github.com/minio/madmin-go/v3 v3.0.1 h1:+WuNw0q8gYTNHUmV5X1nCox28uYmJkeMT75vh9VKPkA=
-github.com/minio/madmin-go/v3 v3.0.1/go.mod h1:lPrMoc1aeiIWmmrxBthkDqzMPQwC/Lu9ByuyM2wenJk=
 github.com/minio/md5-simd v1.1.2 h1:Gdi1DZK69+ZVMoNHRXJyNcxrMA4dSxoYHZSQbirFg34=
 github.com/minio/md5-simd v1.1.2/go.mod h1:MzdKDxYpY2BT9XQFocsiZf/NKVtR7nkE4RoEpN+20RM=
 github.com/minio/minio-go/v7 v7.0.41/go.mod h1:nCrRzjoSUQh8hgKKtu3Y708OLvRLtuASMg2/nvmbarw=
