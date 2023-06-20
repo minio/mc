@@ -104,7 +104,7 @@ EXAMPLES:
 
 // checkCatSyntax - validate all the passed arguments
 func checkCatSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+	if len(ctx.Args()) == 0 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
