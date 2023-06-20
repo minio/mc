@@ -535,7 +535,7 @@ function test_cat_stdin()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    bucket_name=bucket_name="mc-test-bucket-$RANDOM"
+    bucket_name="mc-test-bucket-$RANDOM"
     "${MC_CMD[@]}" mb "${SERVER_ALIAS}/${bucket_name}"
     echo "testcontent" | "${MC_CMD[@]}" pipe "${SERVER_ALIAS}/${bucket_name}/${object_name}"
     "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${bucket_name}/${object_name}" > stdout.output
