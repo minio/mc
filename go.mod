@@ -127,4 +127,4 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
-replace github.com/minio/madmin-go/v3 => github.com/jiuker/madmin-go support_perf_site_replication
+replace github.com/minio/madmin-go/v3 => github.com/jiuker/madmin-go v0.0.0-20230620152144-2e143615649c
