@@ -113,10 +113,11 @@ EXAMPLES:
 
 // PerfTestOutput - stores the final output of performance test(s)
 type PerfTestOutput struct {
-	ObjectResults *ObjTestResults   `json:"object,omitempty"`
-	NetResults    *NetTestResults   `json:"network,omitempty"`
-	DriveResults  *DriveTestResults `json:"drive,omitempty"`
-	Error         string            `json:"error,omitempty"`
+	ObjectResults          *ObjTestResults             `json:"object,omitempty"`
+	NetResults             *NetTestResults             `json:"network,omitempty"`
+	SiteReplicationResults *SiteReplicationTestResults `json:"site_replication,omitempty"`
+	DriveResults           *DriveTestResults           `json:"drive,omitempty"`
+	Error                  string                      `json:"error,omitempty"`
 }
 
 // DriveTestResult - result of the drive performance test on a given endpoint
@@ -193,6 +194,16 @@ type NetTestResult struct {
 // NetTestResults - result of the network performance test across all endpoints
 type NetTestResults struct {
 	Results []NetTestResult `json:"servers"`
+}
+
+type SiteReplicationTestNodeResult struct {
+	Endpoint string   `json:"endpoint"`
+	Perf     NetStats `json:"perf"`
+	Error    string   `json:"error,omitempty"`
+}
+
+type SiteReplicationTestResults struct {
+	Results []SiteReplicationTestNodeResult `json:"servers"`
 }
 
 func objectTestVerboseResult(result *madmin.SpeedTestResult) (msg string) {
@@ -288,6 +299,27 @@ func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) *DriveT
 	return &r
 }
 
+func convertSiteReplicationTestResults(netResults *madmin.SiteReplicationperfResult) *SiteReplicationTestResults {
+	if netResults == nil {
+		return nil
+	}
+	results := []SiteReplicationTestNodeResult{}
+	for _, nr := range netResults.NodeResults {
+		results = append(results, SiteReplicationTestNodeResult{
+			Endpoint: nr.Endpoint,
+			Error:    nr.Error,
+			Perf: NetStats{
+				TX: nr.TX,
+				RX: nr.RX,
+			},
+		})
+	}
+	r := SiteReplicationTestResults{
+		Results: results,
+	}
+	return &r
+}
+
 func convertNetTestResults(netResults *madmin.NetperfResult) *NetTestResults {
 	if netResults == nil {
 		return nil
@@ -370,6 +402,8 @@ func updatePerfOutput(r PerfTestResult, out *PerfTestOutput) {
 		out.ObjectResults = convertObjTestResults(r.ObjectResult)
 	case NetPerfTest:
 		out.NetResults = convertNetTestResults(r.NetResult)
+	case SiteReplicationPerfTest:
+		out.SiteReplicationResults = convertSiteReplicationTestResults(r.SiteReplicationResult)
 	default:
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid test type %d", r.Type))
 	}
@@ -460,6 +494,8 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 			mainAdminSpeedTestObject(ctx, aliasedURL, resultCh)
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
+		case "site-replication":
+			mainAdminSpeedTestSiteReplications(ctx, aliasedURL, resultCh)
 		default:
 			showCommandHelpAndExit(ctx, 1) // last argument is exit code
 		}

@@ -48,6 +48,7 @@ const (
 	NetPerfTest PerfTestType = 1 << iota
 	DrivePerfTest
 	ObjectPerfTest
+	SiteReplicationPerfTest
 )
 
 // Name - returns name of the performance test
@@ -59,18 +60,21 @@ func (p PerfTestType) Name() string {
 		return "DrivePerf"
 	case ObjectPerfTest:
 		return "ObjectPerf"
+	case SiteReplicationPerfTest:
+		return "SiteReplication"
 	}
 	return "<unknown>"
 }
 
 // PerfTestResult - stores the result of a performance test
 type PerfTestResult struct {
-	Type         PerfTestType                  `json:"type"`
-	ObjectResult *madmin.SpeedTestResult       `json:"object,omitempty"`
-	NetResult    *madmin.NetperfResult         `json:"network,omitempty"`
-	DriveResult  []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
-	Err          string                        `json:"err,omitempty"`
-	Final        bool                          `json:"final,omitempty"`
+	Type                  PerfTestType                      `json:"type"`
+	ObjectResult          *madmin.SpeedTestResult           `json:"object,omitempty"`
+	NetResult             *madmin.NetperfResult             `json:"network,omitempty"`
+	SiteReplicationResult *madmin.SiteReplicationperfResult `json:"site_replication,omitempty"`
+	DriveResult           []madmin.DriveSpeedTestResult     `json:"drive,omitempty"`
+	Err                   string                            `json:"err,omitempty"`
+	Final                 bool                              `json:"final,omitempty"`
 }
 
 func initSpeedTestUI() *speedTestUI {
