@@ -71,7 +71,7 @@ type PerfTestResult struct {
 	Type                  PerfTestType                      `json:"type"`
 	ObjectResult          *madmin.SpeedTestResult           `json:"object,omitempty"`
 	NetResult             *madmin.NetperfResult             `json:"network,omitempty"`
-	SiteReplicationResult *madmin.SiteReplicationperfResult `json:"site_replication,omitempty"`
+	SiteReplicationResult *madmin.SiteReplicationPerfResult `json:"site_replication,omitempty"`
 	DriveResult           []madmin.DriveSpeedTestResult     `json:"drive,omitempty"`
 	Err                   string                            `json:"err,omitempty"`
 	Final                 bool                              `json:"final,omitempty"`

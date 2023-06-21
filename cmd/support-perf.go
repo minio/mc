@@ -301,7 +301,7 @@ func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) *DriveT
 	return &r
 }
 
-func convertSiteReplicationTestResults(netResults *madmin.SiteReplicationperfResult) *SiteReplicationTestResults {
+func convertSiteReplicationTestResults(netResults *madmin.SiteReplicationPerfResult) *SiteReplicationTestResults {
 	if netResults == nil {
 		return nil
 	}
