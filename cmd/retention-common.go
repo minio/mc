@@ -174,7 +174,6 @@ func fatalIfBucketLockNotSupported(ctx context.Context, aliasedURL string) {
 	_, err := getBucketLockStatus(ctx, aliasedURL)
 	if err != nil {
 		fatalIf(errDummy().Trace(), "Remote bucket `%s` does not support locking", aliasedURL)
-
 	}
 }
 
