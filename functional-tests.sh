@@ -851,7 +851,8 @@ function test_copy_object_with_sse_rewrite()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
-function test_copy_object_with_sse_dest() {
+function test_copy_object_with_sse_dest() 
+{
     # test server side copy and remove operation - target is encrypted with different key
     show "${FUNCNAME[0]}"
     start_time=$(get_time)

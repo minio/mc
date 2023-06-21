@@ -80,9 +80,11 @@ func parseKey(sseKeys string) (sse string, err *probe.Error) {
 func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 	// SSE-S3
 	sseServer := os.Getenv("MC_ENCRYPT")
-	if sseS3 := os.Getenv("MC_SSE_S3"); sseServer != "" {
-		sseServer = sseS3
+	// If both MC_ENCRYPT and MC_SSE_S3 are set, MC_ENCRYPT takes precedence.
+	if sseServer == "" {
+		sseServer = os.Getenv("MC_SSE_S3")
 	}
+
 	if prefix := ctx.String("encrypt"); prefix != "" {
 		console.Infof("Warning: --encrypt is deprecated, use --sse-s3 instead")
 		sseServer = prefix
@@ -91,9 +93,11 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 	}
 	// SSE-C
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if sseC := os.Getenv("MC_SSE_C"); sseKeys != "" {
-		sseKeys = sseC
+	// If both MC_ENCRYPT_KEY and MC_SSE_C are set, MC_ENCRYPT_KEY takes precedence.
+	if sseKeys == "" {
+		sseKeys = os.Getenv("MC_SSE_C")
 	}
+
 	if keyPrefix := ctx.String("encrypt-key"); keyPrefix != "" {
 		if sseServer != "" && strings.Contains(keyPrefix, sseServer) {
 			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
