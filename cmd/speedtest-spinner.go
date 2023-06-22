@@ -138,6 +138,7 @@ func (m *speedTestUI) View() string {
 
 	ores := m.result.ObjectResult
 	nres := m.result.NetResult
+	sres := m.result.SiteReplicationResult
 	dres := m.result.DriveResult
 
 	trailerIfGreaterThan := func(in string, max int) string {
@@ -217,6 +218,51 @@ func (m *speedTestUI) View() string {
 						trailerIfGreaterThan(nodeResult.Endpoint, 64),
 						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX))) + "/s",
 						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX))) + "/s",
+						"",
+					})
+				}
+			}
+		}
+
+		sort.Slice(data, func(i, j int) bool {
+			return data[i][0] < data[j][0]
+		})
+
+		table.AppendBulk(data)
+		table.Render()
+	} else if sres != nil {
+		table.SetHeader([]string{"Node", "RX", "RxDurMs", "TX", "TxDurMs", "TotalConn", ""})
+		data := make([][]string, 0, len(sres.NodeResults))
+		if len(sres.NodeResults) == 0 {
+			data = append(data, []string{
+				"...",
+				whiteStyle.Render("-- MiB"),
+				whiteStyle.Render("-- ms"),
+				whiteStyle.Render("-- MiB"),
+				whiteStyle.Render("-- ms"),
+				whiteStyle.Render("-- "),
+				"",
+			})
+		} else {
+			for _, nodeResult := range sres.NodeResults {
+				if nodeResult.Error != "" {
+					data = append(data, []string{
+						trailerIfGreaterThan(nodeResult.Endpoint, 64),
+						crossTickCell,
+						crossTickCell,
+						crossTickCell,
+						crossTickCell,
+						crossTickCell,
+						"Err: " + nodeResult.Error,
+					})
+				} else {
+					data = append(data, []string{
+						trailerIfGreaterThan(nodeResult.Endpoint, 64),
+						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX))),
+						whiteStyle.Render(fmt.Sprintf("%d", nodeResult.RxDurMs)) + " ms",
+						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX))),
+						whiteStyle.Render(fmt.Sprintf("%d", nodeResult.TxDurMs)) + " ms",
+						whiteStyle.Render(fmt.Sprintf("%d", nodeResult.TotalConn)),
 						"",
 					})
 				}
