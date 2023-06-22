@@ -196,11 +196,20 @@ type NetTestResults struct {
 	Results []NetTestResult `json:"servers"`
 }
 
+// SiteNetStats - status for siteNet
+type SiteNetStats struct {
+	TX        uint64 `json:"tx"`
+	TxDurMs   uint64 `json:"txDurMs"`
+	RX        uint64 `json:"rx"`
+	RxDurMs   uint64 `json:"rxDurMs"`
+	TotalConn uint64 `json:"totalConn"`
+}
+
 // SiteReplicationTestNodeResult - result of the network performance test for site-replication
 type SiteReplicationTestNodeResult struct {
-	Endpoint string   `json:"endpoint"`
-	Perf     NetStats `json:"perf"`
-	Error    string   `json:"error,omitempty"`
+	Endpoint string       `json:"endpoint"`
+	Perf     SiteNetStats `json:"perf"`
+	Error    string       `json:"error,omitempty"`
 }
 
 // SiteReplicationTestResults - result of the network performance test across all site-replication
@@ -310,9 +319,12 @@ func convertSiteReplicationTestResults(netResults *madmin.SiteNetPerfResult) *Si
 		results = append(results, SiteReplicationTestNodeResult{
 			Endpoint: nr.Endpoint,
 			Error:    nr.Error,
-			Perf: NetStats{
-				TX: nr.TX,
-				RX: nr.RX,
+			Perf: SiteNetStats{
+				TX:        nr.TX,
+				TxDurMs:   nr.TxDurMs,
+				RX:        nr.RX,
+				RxDurMs:   nr.RxDurMs,
+				TotalConn: nr.TotalConn,
 			},
 		})
 	}
