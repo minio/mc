@@ -231,7 +231,7 @@ func (m *speedTestUI) View() string {
 		table.AppendBulk(data)
 		table.Render()
 	} else if sres != nil {
-		table.SetHeader([]string{"Node", "RX", "RxDurMs", "TX", "TxDurMs", "TotalConn", ""})
+		table.SetHeader([]string{"Endpoint", "RX", "RxDurMs", "TX", "TxDurMs", "TotalConn", ""})
 		data := make([][]string, 0, len(sres.NodeResults))
 		if len(sres.NodeResults) == 0 {
 			data = append(data, []string{
