@@ -48,7 +48,7 @@ func mainAdminSpeedTestSiteReplications(ctx *cli.Context, aliasedURL string, out
 		return nil
 	}
 
-	resultCh := make(chan madmin.SiteReplicationPerfResult)
+	resultCh := make(chan madmin.SiteNetPerfResult)
 	errorCh := make(chan error)
 	go func() {
 		defer close(resultCh)
@@ -117,7 +117,7 @@ func mainAdminSpeedTestSiteReplications(ctx *cli.Context, aliasedURL string, out
 			default:
 				p.Send(PerfTestResult{
 					Type:                  SiteReplicationPerfTest,
-					SiteReplicationResult: &madmin.SiteReplicationPerfResult{},
+					SiteReplicationResult: &madmin.SiteNetPerfResult{},
 				})
 				time.Sleep(100 * time.Millisecond)
 			}

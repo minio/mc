@@ -68,13 +68,13 @@ func (p PerfTestType) Name() string {
 
 // PerfTestResult - stores the result of a performance test
 type PerfTestResult struct {
-	Type                  PerfTestType                      `json:"type"`
-	ObjectResult          *madmin.SpeedTestResult           `json:"object,omitempty"`
-	NetResult             *madmin.NetperfResult             `json:"network,omitempty"`
-	SiteReplicationResult *madmin.SiteReplicationPerfResult `json:"site_replication,omitempty"`
-	DriveResult           []madmin.DriveSpeedTestResult     `json:"drive,omitempty"`
-	Err                   string                            `json:"err,omitempty"`
-	Final                 bool                              `json:"final,omitempty"`
+	Type                  PerfTestType                  `json:"type"`
+	ObjectResult          *madmin.SpeedTestResult       `json:"object,omitempty"`
+	NetResult             *madmin.NetperfResult         `json:"network,omitempty"`
+	SiteReplicationResult *madmin.SiteNetPerfResult     `json:"site_replication,omitempty"`
+	DriveResult           []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
+	Err                   string                        `json:"err,omitempty"`
+	Final                 bool                          `json:"final,omitempty"`
 }
 
 func initSpeedTestUI() *speedTestUI {
