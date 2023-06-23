@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -198,11 +199,11 @@ type NetTestResults struct {
 
 // SiteNetStats - status for siteNet
 type SiteNetStats struct {
-	TX        uint64 `json:"tx"`
-	TxDurMs   uint64 `json:"txDurMs"`
-	RX        uint64 `json:"rx"`
-	RxDurMs   uint64 `json:"rxDurMs"`
-	TotalConn uint64 `json:"totalConn"`
+	TX              uint64        `json:"tx"` // transfer rate in bytes
+	TXTotalDuration time.Duration `json:"txTotalDuration"`
+	RX              uint64        `json:"rx"` // received rate in bytes
+	RXTotalDuration time.Duration `json:"rxTotalDuration"`
+	TotalConn       uint64        `json:"totalConn"`
 }
 
 // SiteReplicationTestNodeResult - result of the network performance test for site-replication
@@ -320,11 +321,11 @@ func convertSiteReplicationTestResults(netResults *madmin.SiteNetPerfResult) *Si
 			Endpoint: nr.Endpoint,
 			Error:    nr.Error,
 			Perf: SiteNetStats{
-				TX:        nr.TX,
-				TxDurMs:   nr.TxDurMs,
-				RX:        nr.RX,
-				RxDurMs:   nr.RxDurMs,
-				TotalConn: nr.TotalConn,
+				TX:              nr.TX,
+				TXTotalDuration: nr.TXTotalDuration,
+				RX:              nr.RX,
+				RXTotalDuration: nr.RXTotalDuration,
+				TotalConn:       nr.TotalConn,
 			},
 		})
 	}

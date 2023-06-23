@@ -231,16 +231,13 @@ func (m *speedTestUI) View() string {
 		table.AppendBulk(data)
 		table.Render()
 	} else if sres != nil {
-		table.SetHeader([]string{"Endpoint", "RX", "RxDurMs", "TX", "TxDurMs", "TotalConn", ""})
+		table.SetHeader([]string{"Endpoint", "RX", "TX", ""})
 		data := make([][]string, 0, len(sres.NodeResults))
 		if len(sres.NodeResults) == 0 {
 			data = append(data, []string{
 				"...",
 				whiteStyle.Render("-- MiB"),
-				whiteStyle.Render("-- ms"),
 				whiteStyle.Render("-- MiB"),
-				whiteStyle.Render("-- ms"),
-				whiteStyle.Render("-- "),
 				"",
 			})
 		} else {
@@ -250,19 +247,13 @@ func (m *speedTestUI) View() string {
 						trailerIfGreaterThan(nodeResult.Endpoint, 64),
 						crossTickCell,
 						crossTickCell,
-						crossTickCell,
-						crossTickCell,
-						crossTickCell,
 						"Err: " + nodeResult.Error,
 					})
 				} else {
 					data = append(data, []string{
 						trailerIfGreaterThan(nodeResult.Endpoint, 64),
-						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX))),
-						whiteStyle.Render(fmt.Sprintf("%d", nodeResult.RxDurMs)) + " ms",
-						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX))),
-						whiteStyle.Render(fmt.Sprintf("%d", nodeResult.TxDurMs)) + " ms",
-						whiteStyle.Render(fmt.Sprintf("%d", nodeResult.TotalConn)),
+						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))) + "/s",
+						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX/uint64(nodeResult.TXTotalDuration.Seconds())))) + "/s",
 						"",
 					})
 				}
