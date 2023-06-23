@@ -21,8 +21,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -82,16 +84,14 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 	aliasedURL = filepath.ToSlash(aliasedURL)
 	aliasedURL = filepath.Clean(aliasedURL)
 	_, bucket := url2Alias(aliasedURL)
-
 	r, e := client.ExportBucketMetadata(context.Background(), bucket)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to export bucket metadata.")
 
 	if bucket == "" {
 		bucket = "bucket"
 	}
-
 	// Create bucket metadata zip file
-	tmpFile, e := os.CreateTemp("", fmt.Sprintf("%s-%s-metadata-", aliasedURL, bucket))
+	tmpFile, e := os.CreateTemp("", fmt.Sprintf("%s-%s-metadata-", strings.ReplaceAll(aliasedURL, "/", "-"), bucket))
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 
 	ext := "zip"
@@ -105,6 +105,12 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 
 	// We use 4 bytes of the 32 bytes to identify the file.
 	downloadPath := fmt.Sprintf("%s-%s-metadata.%s", aliasedURL, bucket, ext)
+	// Create necessary directories.
+	dir := filepath.Dir(downloadPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Fatal(err)
+	}
+
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
@@ -114,7 +120,6 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 			fatal(probe.NewError(e), "Unable to download file data")
 		}
 	}
-
 	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to rename downloaded data, file exists at %s", tmpFile.Name())
 
 	if !globalJSON {
