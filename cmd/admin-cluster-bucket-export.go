@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,8 +104,8 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 	downloadPath := fmt.Sprintf("%s-%s-metadata.%s", aliasedURL, bucket, ext)
 	// Create necessary directories.
 	dir := filepath.Dir(downloadPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		log.Fatal(err)
+	if e := os.MkdirAll(dir, 0o755); e != nil {
+		fatalIf(probe.NewError(e).Trace(dir), "Unable to create download directory")
 	}
 
 	fi, e := os.Stat(downloadPath)
