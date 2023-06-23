@@ -98,16 +98,14 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 	// Copy zip content to target download file
 	_, e = io.Copy(tmpFile, r)
 	fatalIf(probe.NewError(e), "Unable to download bucket metadata.")
-
 	// Close everything
 	r.Close()
 	tmpFile.Close()
-
 	// We use 4 bytes of the 32 bytes to identify the file.
 	downloadPath := fmt.Sprintf("%s-%s-metadata.%s", aliasedURL, bucket, ext)
 	// Create necessary directories.
 	dir := filepath.Dir(downloadPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		log.Fatal(err)
 	}
 
@@ -126,7 +124,6 @@ func mainClusterBucketExport(ctx *cli.Context) error {
 		console.Infof("Bucket metadata successfully downloaded as %s\n", downloadPath)
 		return nil
 	}
-
 	v := struct {
 		File string `json:"file"`
 		Key  string `json:"key,omitempty"`
