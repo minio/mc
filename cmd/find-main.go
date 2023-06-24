@@ -85,6 +85,10 @@ var (
 			Name:  "watch",
 			Usage: "monitor a specified path for newly created object(s)",
 		},
+		cli.BoolFlag{
+			Name:  "count",
+			Usage: "only print count numbers for matched object(s)",
+		},
 		cli.StringSliceFlag{
 			Name:  "metadata",
 			Usage: "match metadata with RE2 regex pattern. Specify each with key=regex. MinIO server only.",
@@ -218,6 +222,7 @@ type findContext struct {
 	newerThan         string
 	largerSize        uint64
 	smallerSize       uint64
+	count             bool
 	watch             bool
 	withOlderVersions bool
 	matchMeta         map[string]*regexp.Regexp
@@ -309,6 +314,7 @@ func mainFind(cliCtx *cli.Context) error {
 		largerSize:        largerSize,
 		smallerSize:       smallerSize,
 		watch:             cliCtx.Bool("watch"),
+		count:             cliCtx.Bool("count"),
 		targetAlias:       targetAlias,
 		targetURL:         args[0],
 		targetFullURL:     targetFullURL,

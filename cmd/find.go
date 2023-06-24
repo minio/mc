@@ -33,6 +33,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 
@@ -58,6 +59,27 @@ func (f findMessage) String() string {
 // JSON formats output to be JSON output.
 func (f findMessage) JSON() string {
 	return f.contentMessage.JSON()
+}
+
+// findMessageMatchCount holds JSON and string values for printing find --count command output.
+type findMessageMatchCount struct {
+	TotalMatchNumbers     uint64 `json:"totalMatchNumbers,omitempty"`
+	VersionIDMatchNumbers uint64 `json:"versionIDMatchNumbers,omitempty"`
+}
+
+// String calls tells the console what to print and how to print it.
+func (f findMessageMatchCount) String() string {
+	if f.VersionIDMatchNumbers == 0 {
+		return console.Colorize("", fmt.Sprintf("%d", f.TotalMatchNumbers))
+	}
+	return console.Colorize("", fmt.Sprintf("%d(%d)", f.TotalMatchNumbers, f.VersionIDMatchNumbers))
+}
+
+// JSON formats output to be JSON output.
+func (f findMessageMatchCount) JSON() string {
+	jsonMessageBytes, e := json.MarshalIndent(f, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
 }
 
 // nameMatch is similar to filepath.Match but only matches the
@@ -278,6 +300,8 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 		WithMetadata:      len(ctx.matchMeta) > 0 || len(ctx.matchTags) > 0,
 	}
 
+	totalMatchNumbers := uint64(0)
+	versionIDMatchNumbers := uint64(0)
 	// iterate over all content which is within the given directory
 	for content := range ctx.clnt.List(globalContext, lstOptions) {
 		if content.Err != nil {
@@ -326,10 +350,18 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 		if ctx.printFmt != "" {
 			fileContent.Key = stringsReplace(ctxCtx, ctx.printFmt, fileContent)
 		}
-
-		printMsg(findMessage{fileContent})
+		if !ctx.count {
+			printMsg(findMessage{fileContent})
+		} else {
+			totalMatchNumbers += 1
+			if fileContent.VersionID != "" {
+				versionIDMatchNumbers += 1
+			}
+		}
 	}
-
+	if ctx.count {
+		printMsg(findMessageMatchCount{totalMatchNumbers, versionIDMatchNumbers})
+	}
 	// Success, notice watch will execute in defer only if enabled and this call
 	// will return after watch is canceled.
 	return nil
