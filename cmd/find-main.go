@@ -175,6 +175,9 @@ EXAMPLES:
 
   11. Copy all versions of all objects in bucket in the local machine
       {{.Prompt}} {{.HelpName}} s3/bucket --versions --exec "mc cp --version-id {version} {} /tmp/dir/{}.{version}"
+
+  12. Count list all objects up to 3 levels sub-directory deep under "s3/bucket".
+      {{.Prompt}} {{.HelpName}} s3/bucket --maxdepth 3 --count
 `,
 }
 
