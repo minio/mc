@@ -353,9 +353,9 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 		if !ctx.count {
 			printMsg(findMessage{fileContent})
 		} else {
-			totalMatchNumbers += 1
+			totalMatchNumbers++
 			if fileContent.VersionID != "" {
-				versionIDMatchNumbers += 1
+				versionIDMatchNumbers++
 			}
 		}
 	}
