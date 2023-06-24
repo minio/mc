@@ -172,7 +172,7 @@ type catOpts struct {
 func parseCatSyntax(ctx *cli.Context) catOpts {
 	// Validate command-line arguments.
 	checkCatSyntax(ctx)
-  
+
 	var o catOpts
 	o.args = ctx.Args()
 
