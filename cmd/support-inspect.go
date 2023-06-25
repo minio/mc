@@ -197,8 +197,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 		return nil
 	}
 
-	clr := color.New(color.FgGreen, color.Bold)
-	clr.Println("uploaded successfully to SUBNET.")
+	console.Infof("Object inspection data for '%s' uploaded to SUBNET successfully\n", aliasedURL)
 	return nil
 }
 
