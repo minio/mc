@@ -32,8 +32,8 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
-	iampolicy "github.com/minio/pkg/iam/policy"
+	"github.com/minio/pkg/v2/console"
+	iampolicy "github.com/minio/pkg/v2/policy"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{

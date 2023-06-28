@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/mimedb"
+	"github.com/minio/pkg/v2/mimedb"
 )
 
 // ClientURL url client url structure

@@ -2,6 +2,8 @@ module github.com/minio/mc
 
 go 1.19
 
+replace github.com/minio/pkg/v2 => github.com/donatello/pkg/v2 v2.0.0-20230629195245-5d9d0e106eee
+
 require (
 	github.com/charmbracelet/bubbletea v0.23.2
 	github.com/cheggaaa/pb v1.0.29
@@ -21,7 +23,7 @@ require (
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.57
-	github.com/minio/pkg v1.7.5
+	github.com/minio/pkg/v2 v2.0.0
 	github.com/minio/selfupdate v0.6.0
 	github.com/minio/sha256-simd v1.0.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -61,6 +63,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/minio/mux v1.9.0 // indirect
+	github.com/minio/pkg v1.7.5 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.5 // indirect
 	go.uber.org/goleak v1.2.0 // indirect

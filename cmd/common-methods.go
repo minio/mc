@@ -38,7 +38,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/pkg/env"
+	"github.com/minio/pkg/v2/env"
 )
 
 // decode if the key is encoded key and returns the key
