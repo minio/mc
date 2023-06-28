@@ -47,7 +47,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
-	github.com/minio/madmin-go/v3 v3.0.2
+	github.com/minio/madmin-go/v3 v3.0.5
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -126,5 +126,3 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
-
-replace github.com/minio/madmin-go/v3 => github.com/jiuker/madmin-go/v3 v3.0.0-20230623151832-5b8e706eb968
