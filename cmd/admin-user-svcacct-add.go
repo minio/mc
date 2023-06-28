@@ -179,7 +179,7 @@ func (u acctMessage) String() string {
 			Field{"AccessKey", accessFieldMaxLen},
 			Field{"Expiration", expirationMaxLen},
 		).buildRow(u.AccessKey, func() string {
-			if u.Expiration != nil && !u.Expiration.IsZero() && !u.Expiration.Equal(timeSentinel) {
+			if u.Expiration != nil && !u.Expiration.IsZero() {
 				return (*u.Expiration).String()
 			}
 			return "no-expiry"
