@@ -102,6 +102,13 @@ EXAMPLES:
 `,
 }
 
+// checkCatSyntax - validate all the passed arguments
+func checkCatSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) == 0 {
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+}
+
 // prettyStdout replaces some non printable characters
 // with <hex> format to be better viewable by the user
 type prettyStdout struct {
@@ -163,6 +170,9 @@ type catOpts struct {
 
 // parseCatSyntax performs command-line input validation for cat command.
 func parseCatSyntax(ctx *cli.Context) catOpts {
+	// Validate command-line arguments.
+	checkCatSyntax(ctx)
+
 	var o catOpts
 	o.args = ctx.Args()
 

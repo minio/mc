@@ -148,7 +148,7 @@ func mainRetentionSet(cliCtx *cli.Context) error {
 
 	target, versionID, recursive, rewind, withVersions, mode, validity, unit, bypass, bucketMode := parseSetRetentionArgs(cliCtx)
 
-	fatalIfBucketLockNotEnabled(ctx, target)
+	fatalIfBucketLockNotSupported(ctx, target)
 
 	if bucketMode {
 		return setBucketLock(target, mode, validity, unit)
