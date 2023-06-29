@@ -80,7 +80,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} set public s3/public-commons/images
 
   5. Set a custom prefix based bucket anonymous on Amazon S3 cloud storage using a JSON file.
-     {{.Prompt}} {{.HelpName}} set-json /path/to/anonymous.json s3/public-commons/images
+     {{.Prompt}} {{.HelpName}} set-json s3/public-commons/images /path/to/anonymous.json
 
   6. Get bucket permissions.
      {{.Prompt}} {{.HelpName}} get s3/shared
@@ -481,7 +481,7 @@ func mainAnonymous(ctx *cli.Context) error {
 	switch ctx.Args().First() {
 	case "set", "set-json", "get", "get-json":
 		// anonymous set [private|public|download|upload] alias/bucket/prefix
-		// anonymous set-json path-to-anonymous-json-file alias/bucket/prefix
+		// anonymous set-json alias/bucket/prefix path-to-anonymous-json-file
 		// anonymous get alias/bucket/prefix
 		// anonymous get-json alias/bucket/prefix
 		runAnonymousCmd(ctx.Args())
