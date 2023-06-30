@@ -185,7 +185,7 @@ func urlJoinPath(url1, url2 string) string {
 	return joinURLs(u1, u2).String()
 }
 
-// url2Stat returns stat info for URL - supports bucket, object and a prefixe with or without a trailing slash
+// url2Stat returns stat info for URL - supports bucket, object and a directories with or without a trailing delimeter. Does not support prefixes
 func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {

@@ -297,7 +297,7 @@ function teardown()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${BUCKET_NAME}"
 }
 
-# Test mc ls on a S3 prefix where a lower similar prefix exists as well e.g. dir-foo/ and dir/
+# Test mc ls on a S3 directory where a lower similar directory exists as well e.g. dir-foo/ and dir/
 function test_list_dir()
 {
     show "${FUNCNAME[0]}"
@@ -311,6 +311,27 @@ function test_list_dir()
     # Cleanup
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir-foo/${object_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/dir/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+# Test mc ls on a prefix with directories
+function test_list_prefix()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/prefix-object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/prefix-object2"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/prefix/dir-object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/prefix-with-extra-object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/prefix-with-extra/dir-object2"
+    #diff -bB <(echo "object2")  <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${BUCKET_NAME}/dir" |  jq -r '.key')  >/dev/null 2>&1
+    #WIP
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unexpected prefix diff"
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm -r --force "${SERVER_ALIAS}/${BUCKET_NAME}/prefix"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -773,6 +794,62 @@ function test_copy_directory()
 
     # Cleanup
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm -r --force "${SERVER_ALIAS}/${BUCKET_NAME}/${random_dir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+# Test "mc cp -r" command of a prefix
+function test_copy_prefix()
+{
+    show "${FUNCNAME[0]}"
+
+    random_prefix="prefix-$RANDOM-$RANDOM"
+    tmpdir="$(mktemp -d)"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}-object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}-object2"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}-object3"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to upload objects"
+
+    # Copy a prefix
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp -r "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}" "${tmpdir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to copy a prefix"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}-object1"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}-object2"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}-object3"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}/**"
+
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm -r --force "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+# Test "mc cp -r" command of a prefix with "difficult" objects
+function test_copy_prefix_difficult()
+{
+    random_prefix="prefix-diff-$RANDOM-$RANDOM"
+    tmpdir="$(mktemp -d)"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}-object"     #normal prefix
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}/dir-object" #file that lives under the prefix under a directory   #WIP these two cannot co-exist
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}"            #file with the name of the prefix                     #
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}.ext"        #file with the name of the prefix with an extention
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to upload objects"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp -r "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}" "${tmpdir}/"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to copy a prefix"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}-object"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}/dir-object"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${tmpdir}/${random_prefix}.ext"
+    assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}/**"
+
+    # Cleanup
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm -r --force "${SERVER_ALIAS}/${BUCKET_NAME}/${random_prefix}"
     assert_success "$start_time" "${FUNCNAME[0]}" rm -r "${tmpdir}"
 
     log_success "$start_time" "${FUNCNAME[0]}"

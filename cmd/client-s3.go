@@ -1562,7 +1562,7 @@ func (c *S3Client) statIncompleteUpload(ctx context.Context, bucket, object stri
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata. It also returns
-// a DIR type content if a prefix does exist in the server.
+// a DIR type content if the object is a directory.
 func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, *probe.Error) {
 	c.Lock()
 	defer c.Unlock()
@@ -1593,7 +1593,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		return c.statIncompleteUpload(ctx, bucket, path)
 	}
 
-	// The following code tries to calculate if a given prefix/object does really exist
+	// The following code tries to calculate if a given directory/object does really exist
 	// using minio-go listing API. The following inputs are supported:
 	//     - /path/to/existing/object
 	//     - /path/to/existing_directory
@@ -1602,7 +1602,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	//     - /path/to/directory_marker/
 
 	// Start with a HEAD request first to return object metadata information.
-	// If the object is not found, continue to look for a directory marker or a prefix
+	// If the object is not found, continue to look for a directory marker with the defined delimiter
 	if !strings.HasSuffix(path, string(c.targetURL.Separator)) && opts.timeRef.IsZero() {
 		o := minio.StatObjectOptions{ServerSideEncryption: opts.sse, VersionID: opts.versionID}
 		if opts.isZip {
@@ -1631,8 +1631,8 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 			return c.objectInfo2ClientContent(bucket, objectStat), nil
 		}
 		if strings.HasPrefix(objectStat.Key, path) {
-			// An object inside the prefix is found, then the prefix exists.
-			return c.prefixInfo2ClientContent(bucket, path), nil
+			// An object inside the directory is found, then the directory exists.
+			return c.directoryPrefixInfo2ClientContent(bucket, path), nil
 		}
 	}
 
@@ -2150,7 +2150,7 @@ func (c *S3Client) bucketInfo2ClientContent(bucket minio.BucketInfo) *ClientCont
 }
 
 // Convert objectInfo to ClientContent
-func (c *S3Client) prefixInfo2ClientContent(bucket string, prefix string) *ClientContent {
+func (c *S3Client) directoryPrefixInfo2ClientContent(bucket string, prefix string) *ClientContent {
 	// Join bucket and incoming object key.
 	if bucket == "" {
 		panic("should never happen, bucket cannot be empty")

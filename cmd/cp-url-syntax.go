@@ -113,21 +113,18 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
 	}
 
+	//only type D is allowed to have multiple srcURLs
+	if len(srcURLs) != 1 && copyURLsType != copyURLsTypeD {
+		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
+	}
+
 	switch copyURLsType {
 	case copyURLsTypeA: // File -> File.
-		// Check source.
-		if len(srcURLs) != 1 {
-			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-		}
 		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, encKeyDB, isZip, timeRef)
 	case copyURLsTypeB: // File -> Folder.
-		// Check source.
-		if len(srcURLs) != 1 {
-			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-		}
 		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, timeRef)
 	case copyURLsTypeC: // Folder... -> Folder.
-		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, isZip, encKeyDB, isMvCmd, timeRef)
+		checkCopySyntaxTypeC(ctx, srcURLs[0], tgtURL, isRecursive, isZip, encKeyDB, isMvCmd, timeRef)
 	case copyURLsTypeD: // File1...FileN -> Folder.
 		checkCopySyntaxTypeD(ctx, tgtURL, encKeyDB, timeRef)
 	default:
@@ -167,13 +164,8 @@ func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL 
 	}
 }
 
-// checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid folder.
-func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, isRecursive, isZip bool, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
-	// Check source.
-	if len(srcURLs) != 1 {
-		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-	}
-
+// checkCopySyntaxTypeC verifies if the source is valid for recursion and the target is a valid directory.
+func checkCopySyntaxTypeC(ctx context.Context, srcURL, tgtURL string, isRecursive, isZip bool, keys map[string][]prefixSSEPair, isMvCmd bool, timeRef time.Time) {
 	// Check target.
 	if _, tgtContent, err := url2Stat(ctx, tgtURL, "", false, keys, timeRef, false); err == nil {
 		if !tgtContent.Type.IsDir() {
@@ -181,29 +173,40 @@ func checkCopySyntaxTypeC(ctx context.Context, srcURLs []string, tgtURL string, 
 		}
 	}
 
-	for _, srcURL := range srcURLs {
-		c, srcContent, err := url2Stat(ctx, srcURL, "", false, keys, timeRef, isZip)
+	// Check source
+	var c Client
+	if isRecursive {
+		//they spesified isRecursive, but is the srcUrl valid for recursion?
+		var err *probe.Error
+		c, _, err = firstURL2Stat(ctx, srcURL, timeRef, isZip)
+		fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
+	} else {
+		//they did not spesify isRecursive, is the srcURL actually a directory?
+		var srcDirContent *ClientContent
+		var err *probe.Error
+		c, srcDirContent, err = url2Stat(ctx, srcURL, "", false, keys, timeRef, isZip)
 		fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
-		if srcContent.Type.IsDir() {
+		if srcDirContent.Type.IsDir() {
 			// Require --recursive flag if we are copying a directory
-			if !isRecursive {
-				operation := "copy"
-				if isMvCmd {
-					operation = "move"
-				}
-				fatalIf(errInvalidArgument().Trace(srcURL), fmt.Sprintf("To %v a folder requires --recursive flag.", operation))
+			operation := "copy"
+			if isMvCmd {
+				operation = "move"
 			}
-
-			// Check if we are going to copy a directory into itself
-			if isURLContains(srcURL, tgtURL, string(c.GetURL().Separator)) {
-				operation := "Copying"
-				if isMvCmd {
-					operation = "Moving"
-				}
-				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%v a folder into itself is not allowed.", operation))
-			}
+			fatalIf(errInvalidArgument().Trace(srcURL), fmt.Sprintf("To %v a folder requires the --recursive flag.", operation))
+		} else {
+			//src is neither recursible nor a directory
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%v is not a valid source for recursion.", srcURL))
 		}
+	}
+
+	// Check if we are going to copy the src into itself
+	if isURLContains(srcURL, tgtURL, string(c.GetURL().Separator)) {
+		operation := "Copying"
+		if isMvCmd {
+			operation = "Moving"
+		}
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%v '%v' into itself is not allowed.", operation, srcURL))
 	}
 }
 
