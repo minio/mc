@@ -23,9 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
@@ -197,23 +196,21 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias stri
 		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	}
 
-	console.Infof("Profiling '%s' for %d seconds... ", alias, duration)
+	console.Infof("Profiling '%s' for %d seconds... \n", alias, duration)
 	data, e := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
 	fatalIf(probe.NewError(e), "Unable to save profile data")
 
 	saveProfileFile(data)
 
-	successClr := color.New(color.FgGreen, color.Bold)
-	failureClr := color.New(color.FgRed, color.Bold)
 	if !globalAirgapped {
-		_, e := uploadFileToSubnet(alias, profileFile, reqURL, headers)
+		_, e = uploadFileToSubnet(alias, profileFile, reqURL, headers)
 		if e != nil {
-			failureClr.Println("\nUnable to upload profile file to SUBNET:", e.Error())
-			successClr.Printf("Profiling data are saved locally at '%s'\n", profileFile)
+			errorIf(probe.NewError(e), "Unable to upload profile file to SUBNET")
+			console.Infof("Profiling data saved locally at '%s'\n", profileFile)
 			return
 		}
-		successClr.Println("uploaded successfully to SUBNET.")
+		console.Infoln("Profiling data uploaded to SUBNET successfully")
 	} else {
-		successClr.Printf("saved successfully at '%s'\n", profileFile)
+		console.Infoln("Profiling data saved successfully at", profileFile)
 	}
 }

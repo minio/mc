@@ -535,10 +535,13 @@ function test_cat_stdin()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    echo "testcontent" | "${MC_CMD[@]}" cat > stdin.output
+    bucket_name="mc-test-bucket-$RANDOM"
+    "${MC_CMD[@]}" mb "${SERVER_ALIAS}/${bucket_name}"
+    echo "testcontent" | "${MC_CMD[@]}" pipe "${SERVER_ALIAS}/${bucket_name}/${object_name}"
+    "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${bucket_name}/${object_name}" > stdout.output
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to redirect stdin to stdout using 'mc cat'"
-    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "42ed9fb3563d8e9c7bb522be443033f4" stdin.output
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm stdin.output
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "42ed9fb3563d8e9c7bb522be443033f4" stdout.output
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm stdout.output
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }

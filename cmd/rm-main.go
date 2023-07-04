@@ -172,22 +172,31 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	Status       string `json:"status"`
-	Key          string `json:"key"`
-	DeleteMarker bool   `json:"deleteMarker"`
-	VersionID    string `json:"versionID"`
+	Status       string     `json:"status"`
+	Key          string     `json:"key"`
+	DeleteMarker bool       `json:"deleteMarker"`
+	VersionID    string     `json:"versionID"`
+	ModTime      *time.Time `json:"modTime"`
+	DryRun       bool       `json:"dryRun"`
 }
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
 	msg := "Removed "
+	if r.DryRun {
+		msg = "DRYRUN: Removing "
+	}
 
 	if r.DeleteMarker {
 		msg = "Created delete marker "
 	}
+
 	msg += console.Colorize("Removed", fmt.Sprintf("`%s`", r.Key))
 	if r.VersionID != "" {
 		msg += fmt.Sprintf(" (versionId=%s)", r.VersionID)
+		if r.ModTime != nil {
+			msg += fmt.Sprintf(" (modTime=%s)", r.ModTime.Format(printDate))
+		}
 	}
 	msg += "."
 	return msg
@@ -322,8 +331,8 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 		return nil
 	}
 
+	targetAlias, targetURL, _ := mustExpandAlias(url)
 	if !opts.isFake {
-		targetAlias, targetURL, _ := mustExpandAlias(url)
 		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 		if pErr != nil {
 			errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
@@ -361,7 +370,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 			printMsg(msg)
 		}
 	} else {
-		printDryRunMsg(content, opts.withVersions)
+		printDryRunMsg(targetAlias, content, opts.withVersions)
 	}
 	return nil
 }
@@ -381,15 +390,20 @@ type removeOpts struct {
 	encKeyDB          map[string][]prefixSSEPair
 }
 
-func printDryRunMsg(content *ClientContent, printModTime bool) {
-	if globalJSON || content == nil {
+func printDryRunMsg(targetAlias string, content *ClientContent, printModTime bool) {
+	if content == nil {
 		return
+	}
+	msg := rmMessage{
+		Status:    "success",
+		DryRun:    true,
+		Key:       targetAlias + getKey(content),
+		VersionID: content.VersionID,
 	}
 	if printModTime {
-		fmt.Println("DRYRUN: Removing ", content.VersionID, content.Time.Format(printDate), content.URL.Path)
-		return
+		msg.ModTime = &content.Time
 	}
-	fmt.Println("DRYRUN: Removing ", content.URL.Path)
+	printMsg(msg)
 }
 
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
@@ -472,7 +486,7 @@ func listAndRemove(url string, opts removeOpts) error {
 					}
 
 					if opts.isFake {
-						printDryRunMsg(content, true)
+						printDryRunMsg(targetAlias, content, true)
 						continue
 					}
 
@@ -568,7 +582,7 @@ func listAndRemove(url string, opts removeOpts) error {
 				}
 			}
 		} else {
-			printDryRunMsg(content, opts.withVersions)
+			printDryRunMsg(targetAlias, content, opts.withVersions)
 		}
 	}
 
@@ -593,7 +607,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			}
 
 			if opts.isFake {
-				printDryRunMsg(content, true)
+				printDryRunMsg(targetAlias, content, true)
 				continue
 			}
 

@@ -30,7 +30,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 	iampolicy "github.com/minio/pkg/iam/policy"
@@ -179,7 +179,7 @@ func (u acctMessage) String() string {
 			Field{"AccessKey", accessFieldMaxLen},
 			Field{"Expiration", expirationMaxLen},
 		).buildRow(u.AccessKey, func() string {
-			if u.Expiration != nil && !u.Expiration.IsZero() && !u.Expiration.Equal(timeSentinel) {
+			if u.Expiration != nil && !u.Expiration.IsZero() {
 				return (*u.Expiration).String()
 			}
 			return "no-expiry"

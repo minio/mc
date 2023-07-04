@@ -22,9 +22,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/console"
 )
 
 var adminUserSvcAcctSetFlags = []cli.Flag{
@@ -89,6 +91,8 @@ func checkAdminUserSvcAcctSetSyntax(ctx *cli.Context) {
 // mainAdminUserSvcAcctSet is the handle for "mc admin user svcacct set" command.
 func mainAdminUserSvcAcctSet(ctx *cli.Context) error {
 	checkAdminUserSvcAcctSetSyntax(ctx)
+
+	console.SetColor("AccMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

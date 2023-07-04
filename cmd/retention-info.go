@@ -381,7 +381,7 @@ func mainRetentionInfo(cliCtx *cli.Context) error {
 
 	target, versionID, recursive, rewind, withVersions, bucketMode := parseInfoRetentionArgs(cliCtx)
 
-	fatalIfBucketLockNotEnabled(ctx, target)
+	fatalIfBucketLockNotSupported(ctx, target)
 
 	if bucketMode {
 		return showBucketLock(target)

@@ -34,7 +34,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -197,8 +197,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 		return nil
 	}
 
-	clr := color.New(color.FgGreen, color.Bold)
-	clr.Println("uploaded successfully to SUBNET.")
+	console.Infof("Object inspection data for '%s' uploaded to SUBNET successfully\n", aliasedURL)
 	return nil
 }
 
