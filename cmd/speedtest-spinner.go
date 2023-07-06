@@ -250,12 +250,27 @@ func (m *speedTestUI) View() string {
 						"Err: " + nodeResult.Error,
 					})
 				} else {
-					data = append(data, []string{
-						trailerIfGreaterThan(nodeResult.Endpoint, 64),
-						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))) + "/s",
-						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX/uint64(nodeResult.TXTotalDuration.Seconds())))) + "/s",
-						"",
-					})
+					dataItem := []string{}
+					dataError := ""
+					// show endpoint
+					dataItem = append(dataItem, trailerIfGreaterThan(nodeResult.Endpoint, 64))
+					// show RX
+					if nodeResult.RXTotalDuration.Seconds() == 0 {
+						dataError += "- RXTotalDuration are zero"
+						dataItem = append(dataItem, crossTickCell)
+					} else {
+						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))+"/s")
+					}
+					// show TX
+					if nodeResult.TXTotalDuration.Seconds() == 0 {
+						dataError += "- TXTotalDuration are zero"
+						dataItem = append(dataItem, crossTickCell)
+					} else {
+						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.TX/uint64(nodeResult.TXTotalDuration.Seconds())))+"/s")
+					}
+					// show message
+					dataItem = append(dataItem, dataError)
+					data = append(data, dataItem)
 				}
 			}
 		}
