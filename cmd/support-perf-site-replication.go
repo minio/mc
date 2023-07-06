@@ -28,7 +28,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-func mainAdminSpeedTestSiteReplications(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
+func mainAdminSpeedTestSiteReplication(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
