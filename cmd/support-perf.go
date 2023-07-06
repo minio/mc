@@ -270,7 +270,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 	switch len(args) {
 	case 1:
 		// cannot use alias by the name 'drive' or 'net'
-		if args[0] == "drive" || args[0] == "net" || args[0] == "object" {
+		if args[0] == "drive" || args[0] == "net" || args[0] == "object" || args[0] == "site-replication" {
 			showCommandHelpAndExit(ctx, 1)
 		}
 		aliasedURL = args[0]
