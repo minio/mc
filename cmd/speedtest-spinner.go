@@ -256,7 +256,7 @@ func (m *speedTestUI) View() string {
 					dataItem = append(dataItem, trailerIfGreaterThan(nodeResult.Endpoint, 64))
 					// show RX
 					if nodeResult.RXTotalDuration.Seconds() == 0 {
-						dataError += "- RXTotalDuration are zero"
+						dataError += "- RXTotalDuration are zero "
 						dataItem = append(dataItem, crossTickCell)
 					} else {
 						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))+"/s")
