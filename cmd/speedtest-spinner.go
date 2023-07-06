@@ -71,7 +71,7 @@ type PerfTestResult struct {
 	Type                  PerfTestType                  `json:"type"`
 	ObjectResult          *madmin.SpeedTestResult       `json:"object,omitempty"`
 	NetResult             *madmin.NetperfResult         `json:"network,omitempty"`
-	SiteReplicationResult *madmin.SiteNetPerfResult     `json:"site_replication,omitempty"`
+	SiteReplicationResult *madmin.SiteNetPerfResult     `json:"siteReplication,omitempty"`
 	DriveResult           []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
 	Err                   string                        `json:"err,omitempty"`
 	Final                 bool                          `json:"final,omitempty"`
@@ -256,7 +256,7 @@ func (m *speedTestUI) View() string {
 					dataItem = append(dataItem, trailerIfGreaterThan(nodeResult.Endpoint, 64))
 					// show RX
 					if uint64(nodeResult.RXTotalDuration.Seconds()) == 0 {
-						dataError += "- RXTotalDuration are zero"
+						dataError += "- RXTotalDuration are zero "
 						dataItem = append(dataItem, crossTickCell)
 					} else {
 						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))+"/s")

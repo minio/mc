@@ -115,7 +115,7 @@ EXAMPLES:
 type PerfTestOutput struct {
 	ObjectResults          *ObjTestResults             `json:"object,omitempty"`
 	NetResults             *NetTestResults             `json:"network,omitempty"`
-	SiteReplicationResults *SiteReplicationTestResults `json:"site_replication,omitempty"`
+	SiteReplicationResults *SiteReplicationTestResults `json:"siteReplication,omitempty"`
 	DriveResults           *DriveTestResults           `json:"drive,omitempty"`
 	Error                  string                      `json:"error,omitempty"`
 }
