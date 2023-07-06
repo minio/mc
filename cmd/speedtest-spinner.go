@@ -255,14 +255,14 @@ func (m *speedTestUI) View() string {
 					// show endpoint
 					dataItem = append(dataItem, trailerIfGreaterThan(nodeResult.Endpoint, 64))
 					// show RX
-					if nodeResult.RXTotalDuration.Seconds() == 0 {
-						dataError += "- RXTotalDuration are zero "
+					if uint64(nodeResult.RXTotalDuration.Seconds()) == 0 {
+						dataError += "- RXTotalDuration are zero"
 						dataItem = append(dataItem, crossTickCell)
 					} else {
 						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))+"/s")
 					}
 					// show TX
-					if nodeResult.TXTotalDuration.Seconds() == 0 {
+					if uint64(nodeResult.TXTotalDuration.Seconds()) == 0 {
 						dataError += "- TXTotalDuration are zero"
 						dataItem = append(dataItem, crossTickCell)
 					} else {
