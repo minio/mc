@@ -508,7 +508,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
 		case "site-replication":
-			mainAdminSpeedTestSiteReplications(ctx, aliasedURL, resultCh)
+			mainAdminSpeedTestSiteReplication(ctx, aliasedURL, resultCh)
 		default:
 			showCommandHelpAndExit(ctx, 1) // last argument is exit code
 		}
