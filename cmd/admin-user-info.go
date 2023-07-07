@@ -18,10 +18,12 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -87,12 +89,26 @@ func mainAdminUserInfo(ctx *cli.Context) error {
 	}
 
 	printMsg(userMessage{
-		op:         ctx.Command.Name,
-		AccessKey:  args.Get(1),
-		PolicyName: user.PolicyName,
-		UserStatus: string(user.Status),
-		MemberOf:   memberOf,
+		op:             ctx.Command.Name,
+		AccessKey:      args.Get(1),
+		PolicyName:     user.PolicyName,
+		UserStatus:     string(user.Status),
+		MemberOf:       memberOf,
+		Authentication: authInfoToUserMessage(user.AuthInfo),
 	})
 
 	return nil
+}
+
+func authInfoToUserMessage(a *madmin.UserAuthInfo) string {
+	if a == nil {
+		return ""
+	}
+
+	authServer := ""
+	if a.Type != madmin.BuiltinUserAuthType {
+		authServer = "/" + a.AuthServer
+	}
+
+	return fmt.Sprintf("%s%s (%s)", a.Type, authServer, a.AuthServerUserID)
 }
