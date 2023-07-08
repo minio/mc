@@ -23,6 +23,7 @@ var supportTopSubcommands = []cli.Command{
 	supportTopAPICmd,
 	supportTopDriveCmd,
 	supportTopLocksCmd,
+	supportTopNetCmd,
 }
 
 var supportTopCmd = cli.Command{
