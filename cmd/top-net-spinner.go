@@ -94,7 +94,7 @@ func (m *topNetUI) View() string {
 	table.SetBorder(false)
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	table.SetHeader([]string{"Host", "EndPoint", "Face", "RECEIVE(bytes)", "TRANSMIT(bytes)"})
+	table.SetHeader([]string{"Host", "EndPoint", "Face", "RECEIVE", "TRANSMIT"})
 
 	var data []*madmin.NetMetrics
 
