@@ -79,6 +79,11 @@ func (m *topNetUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
+type metricNetMetricsWrap struct {
+	*madmin.NetMetrics
+	EndPoint string
+}
+
 func (m *topNetUI) View() string {
 	var s strings.Builder
 	// Set table header
@@ -94,12 +99,12 @@ func (m *topNetUI) View() string {
 	table.SetBorder(false)
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	table.SetHeader([]string{"Host", "EndPoint", "Face", "RECEIVE", "TRANSMIT"})
+	table.SetHeader([]string{"SERVER", "Face", "RECEIVE", "TRANSMIT"})
 
-	var data []*madmin.NetMetrics
+	var data []metricNetMetricsWrap
 
-	for _, metric := range m.currTopMap {
-		data = append(data, metric)
+	for endPoint, metric := range m.currTopMap {
+		data = append(data, metricNetMetricsWrap{NetMetrics: metric, EndPoint: endPoint})
 	}
 
 	sort.Slice(data, func(i, j int) bool {
@@ -115,11 +120,7 @@ func (m *topNetUI) View() string {
 
 	dataRender := make([][]string, 0, len(data))
 	for _, d := range data {
-		if d.Host == "" {
-			d.Host = "---"
-		}
 		dataRender = append(dataRender, []string{
-			d.Host,
 			d.EndPoint,
 			whiteStyle.Render(d.InterfaceName),
 			whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(uint64(d.NetStats.RxBytes)))),

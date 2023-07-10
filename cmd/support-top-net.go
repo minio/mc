@@ -96,16 +96,16 @@ func mainSupportTopNet(ctx *cli.Context) error {
 	opts := madmin.MetricsOptions{
 		Type:     madmin.MetricNet,
 		Interval: time.Second,
-		ByDisk:   true,
+		ByHost:   true,
 		N:        ctx.Int("count"),
 	}
 
 	p := tea.NewProgram(initTopNetUI(endpoint, ctx.Int("count")))
 	go func() {
 		out := func(m madmin.RealtimeMetrics) {
-			for _, metric := range m.ByNet {
+			for endPoint, metric := range m.ByNet {
 				p.Send(topNetResult{
-					endPoint: metric.EndPoint,
+					endPoint: endPoint,
 					stats:    metric,
 				})
 			}
