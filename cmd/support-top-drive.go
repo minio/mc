@@ -97,6 +97,7 @@ func mainSupportTopDrive(ctx *cli.Context) error {
 		Type:     madmin.MetricsDisk,
 		Interval: time.Second,
 		ByDisk:   true,
+		N:        ctx.Int("count"),
 	}
 
 	p := tea.NewProgram(initTopDriveUI(disks, ctx.Int("count")))
@@ -114,6 +115,7 @@ func mainSupportTopDrive(ctx *cli.Context) error {
 		if e != nil {
 			fatalIf(probe.NewError(e), "Unable to fetch top drives events")
 		}
+		p.Quit()
 	}()
 
 	if _, e := p.Run(); e != nil {
