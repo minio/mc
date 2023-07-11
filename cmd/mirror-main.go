@@ -234,6 +234,9 @@ var (
 
 const uaMirrorAppName = "mc-mirror"
 
+// store the same delete event used to determine invalidity.
+var mirrorDeleteCache = make(map[string]int)
+
 type mirrorJob struct {
 	stopCh chan struct{}
 
@@ -620,6 +623,15 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		} else if event.Type == notification.ObjectRemovedDelete {
 			if targetAlias != "" && strings.Contains(event.UserAgent, uaMirrorAppName+":"+targetAlias) {
 				// Ignore delete cascading delete events if cyclical.
+				continue
+			}
+			// Ignore delete events if recevied 3 times same delete events.
+			if _, ok := mirrorDeleteCache[event.Path]; !ok {
+				mirrorDeleteCache[event.Path] = 0
+			} else {
+				mirrorDeleteCache[event.Path]++
+			}
+			if mirrorDeleteCache[event.Path] == 3 {
 				continue
 			}
 			mirrorURL := URLs{
