@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -30,8 +30,13 @@ import (
 var supportTopNetFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "count, c",
-		Usage: "show up to N Nets",
+		Usage: "show top count interfaces",
 		Value: 10,
+	},
+	cli.IntFlag{
+		Name:  "interval",
+		Usage: "interval between requests in seconds",
+		Value: 1,
 	},
 }
 
@@ -95,18 +100,26 @@ func mainSupportTopNet(ctx *cli.Context) error {
 	// MetricsOptions are options provided to Metrics call.
 	opts := madmin.MetricsOptions{
 		Type:     madmin.MetricNet,
-		Interval: time.Second,
+		Interval: time.Duration(ctx.Int("interval")) * time.Second,
 		ByHost:   true,
 		N:        ctx.Int("count"),
 	}
 
-	p := tea.NewProgram(initTopNetUI(endpoint, ctx.Int("count")))
+	p := tea.NewProgram(initTopNetUI())
 	go func() {
 		out := func(m madmin.RealtimeMetrics) {
-			for endPoint, metric := range m.ByNet {
+			for endPoint, metric := range m.ByHost {
+				if metric.Net != nil {
+					p.Send(topNetResult{
+						endPoint: endPoint,
+						stats:    *metric.Net,
+					})
+				}
+			}
+			if len(m.Errors) != 0 && len(m.Hosts) != 0 {
 				p.Send(topNetResult{
-					endPoint: endPoint,
-					stats:    metric,
+					endPoint: m.Hosts[0],
+					error:    m.Errors[0],
 				})
 			}
 		}

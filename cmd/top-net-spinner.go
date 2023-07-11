@@ -34,18 +34,20 @@ type topNetUI struct {
 	spinner  spinner.Model
 	quitting bool
 
-	sortAsc   bool
-	count     int
-	endPoints []string
+	sortAsc bool
 
-	prevTopMap map[string]*madmin.NetMetrics
-	currTopMap map[string]*madmin.NetMetrics
+	currTopMap map[string]topNetResult
 }
 
 type topNetResult struct {
 	final    bool
 	endPoint string
+	error    string
 	stats    madmin.NetMetrics
+}
+
+func (t topNetResult) GetTotalBytes() uint64 {
+	return t.stats.NetStats.RxBytes + t.stats.NetStats.TxBytes
 }
 
 func (m *topNetUI) Init() tea.Cmd {
@@ -62,8 +64,7 @@ func (m *topNetUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case topNetResult:
-		m.prevTopMap[msg.endPoint] = m.currTopMap[msg.endPoint]
-		m.currTopMap[msg.endPoint] = &msg.stats
+		m.currTopMap[msg.endPoint] = msg
 		if msg.final {
 			m.quitting = true
 			return m, tea.Quit
@@ -77,11 +78,6 @@ func (m *topNetUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		return m, nil
 	}
-}
-
-type metricNetMetricsWrap struct {
-	*madmin.NetMetrics
-	EndPoint string
 }
 
 func (m *topNetUI) View() string {
@@ -99,48 +95,53 @@ func (m *topNetUI) View() string {
 	table.SetBorder(false)
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	table.SetHeader([]string{"SERVER", "Face", "RECEIVE", "TRANSMIT"})
+	table.SetHeader([]string{"SERVER", "Face", "RECEIVE", "TRANSMIT", ""})
 
-	var data []metricNetMetricsWrap
+	data := make([]topNetResult, 0, len(m.currTopMap))
 
-	for endPoint, metric := range m.currTopMap {
-		data = append(data, metricNetMetricsWrap{NetMetrics: metric, EndPoint: endPoint})
+	for _, metric := range m.currTopMap {
+		data = append(data, metric)
 	}
 
 	sort.Slice(data, func(i, j int) bool {
 		if m.sortAsc {
-			return data[i].NetStats.RxBytes < data[j].NetStats.RxBytes
+			return data[i].GetTotalBytes() < data[j].GetTotalBytes()
 		}
-		return data[i].NetStats.RxBytes >= data[j].NetStats.RxBytes
+		return data[i].GetTotalBytes() >= data[j].GetTotalBytes()
 	})
-
-	if len(data) > m.count {
-		data = data[:m.count]
-	}
 
 	dataRender := make([][]string, 0, len(data))
 	for _, d := range data {
-		dataRender = append(dataRender, []string{
-			d.EndPoint,
-			whiteStyle.Render(d.InterfaceName),
-			whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(uint64(d.NetStats.RxBytes)))),
-			whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(uint64(d.NetStats.TxBytes)))),
-		})
+		if d.error == "" {
+			dataRender = append(dataRender, []string{
+				d.endPoint,
+				whiteStyle.Render(d.stats.InterfaceName),
+				whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(d.stats.NetStats.RxBytes))),
+				whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(d.stats.NetStats.TxBytes))),
+				"",
+			})
+		} else {
+			dataRender = append(dataRender, []string{
+				d.endPoint,
+				whiteStyle.Render(d.stats.NetStats.Name),
+				crossTickCell,
+				crossTickCell,
+				d.error,
+			})
+		}
 	}
+
 	table.AppendBulk(dataRender)
 	table.Render()
 	return s.String()
 }
 
-func initTopNetUI(endpoint []string, count int) *topNetUI {
+func initTopNetUI() *topNetUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	return &topNetUI{
-		count:      count,
-		endPoints:  endpoint,
 		spinner:    s,
-		prevTopMap: make(map[string]*madmin.NetMetrics),
-		currTopMap: make(map[string]*madmin.NetMetrics),
+		currTopMap: make(map[string]topNetResult),
 	}
 }
