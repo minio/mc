@@ -95,7 +95,7 @@ func (m *topNetUI) View() string {
 	table.SetBorder(false)
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	table.SetHeader([]string{"SERVER", "Face", "RECEIVE", "TRANSMIT", ""})
+	table.SetHeader([]string{"SERVER", "INTERFACE", "RECEIVE", "TRANSMIT", ""})
 
 	data := make([]topNetResult, 0, len(m.currTopMap))
 
