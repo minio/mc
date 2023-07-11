@@ -89,13 +89,8 @@ func mainSupportTopNet(ctx *cli.Context) error {
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
-	info, e := client.ServerInfo(ctxt)
+	_, e := client.ServerInfo(ctxt)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to initialize admin client.")
-
-	var endpoint []string
-	for _, srv := range info.Servers {
-		endpoint = append(endpoint, srv.Endpoint)
-	}
 
 	// MetricsOptions are options provided to Metrics call.
 	opts := madmin.MetricsOptions{
