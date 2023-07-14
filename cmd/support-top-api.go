@@ -83,7 +83,7 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
-	validateClusterRegistered(alias, false)
+	validateClusterRegistered(alias)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)

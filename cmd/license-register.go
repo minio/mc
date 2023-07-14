@@ -33,12 +33,12 @@ const (
 	licRegisterLinkTag = "licenseRegisterLink"
 )
 
-var licenseRegisterFlags = append([]cli.Flag{
+var licenseRegisterFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "name",
 		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},
-}, subnetCommonFlags...)
+}
 
 var licenseRegisterCmd = cli.Command{
 	Name:         "register",

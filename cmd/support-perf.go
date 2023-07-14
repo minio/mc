@@ -33,7 +33,7 @@ import (
 	"github.com/minio/pkg/console"
 )
 
-var supportPerfFlags = append([]cli.Flag{
+var supportPerfFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "size",
 		Usage: "size of the object used for uploads/downloads",
@@ -83,7 +83,7 @@ var supportPerfFlags = append([]cli.Flag{
 		Usage:  "run tests on drive(s) one-by-one",
 		Hidden: true,
 	},
-}, subnetCommonFlags...)
+}
 
 var supportPerfCmd = cli.Command{
 	Name:            "perf",
@@ -440,8 +440,8 @@ func convertPerfResults(results []PerfTestResult) PerfTestOutput {
 func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
-		// api key not passed as flag. Check that the cluster is registered.
-		apiKey = validateClusterRegistered(alias, true)
+		// api key not passed as flag. Check if the cluster is registered.
+		apiKey = validateClusterRegistered(alias)
 	}
 
 	results := runPerfTests(ctx, aliasedURL, perfType)

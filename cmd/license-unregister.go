@@ -36,7 +36,7 @@ var licenseUnregisterCmd = cli.Command{
 	Action:       mainLicenseUnregister,
 	Before:       setGlobalsFromContext,
 	Hidden:       true,
-	Flags:        append(supportGlobalFlags, subnetCommonFlags...),
+	Flags:        supportGlobalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -85,8 +85,8 @@ func mainLicenseUnregister(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, false)
 	if len(apiKey) == 0 {
-		// api key not passed as flag. Check that the cluster is registered.
-		apiKey = validateClusterRegistered(alias, true)
+		// api key not passed as flag. Check if the cluster is registered.
+		apiKey = validateClusterRegistered(alias)
 	}
 
 	if !globalAirgapped {

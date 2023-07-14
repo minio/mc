@@ -44,12 +44,12 @@ const (
 	inspectOutputFilename = "inspect-data.enc"
 )
 
-var supportInspectFlags = append(subnetCommonFlags,
+var supportInspectFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "legacy",
 		Usage: "use the older inspect format",
 	},
-)
+}
 
 var supportInspectCmd = cli.Command{
 	Name:            "inspect",
@@ -124,8 +124,8 @@ func mainSupportInspect(ctx *cli.Context) error {
 
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
-		// api key not passed as flag. Check that the cluster is registered.
-		apiKey = validateClusterRegistered(alias, true)
+		// api key not passed as flag. Check if the cluster is registered.
+		apiKey = validateClusterRegistered(alias)
 	}
 
 	console.SetColor("File", color.New(color.FgWhite, color.Bold))

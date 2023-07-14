@@ -32,13 +32,12 @@ import (
 var supportTopLocksFlag = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "stale",
-		Usage: "list stale locks   ask",
+		Usage: "list stale locks",
 	},
 	cli.IntFlag{
-		Name:   "count",
-		Usage:  "number of top locks",
-		Hidden: true,
-		Value:  10,
+		Name:  "count",
+		Usage: "number of top locks",
+		Value: 10,
 	},
 }
 
@@ -59,8 +58,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get a list of the 10 oldest locks on a MinIO cluster.
+  1. Get a list of 10 oldest locks on a MinIO cluster.
      {{.Prompt}} {{.HelpName}} myminio/
+
+  2. Get a list of 1000 oldest locks on a MinIO cluster.
+     {{.Prompt}} {{.HelpName}} --count 1000 myminio/
 `,
 }
 
@@ -150,18 +152,18 @@ func mainSupportTopLocks(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 	alias, _ := url2Alias(aliasedURL)
-	validateClusterRegistered(alias, false)
+	validateClusterRegistered(alias)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
+	fatalIf(err, "Unable to initialize admin connection")
 
 	// Call top locks API
 	entries, e := client.TopLocksWithOpts(globalContext, madmin.TopLockOpts{
 		Count: ctx.Int("count"),
 		Stale: ctx.Bool("stale"),
 	})
-	fatalIf(probe.NewError(e), "Unable to get server locks list.")
+	fatalIf(probe.NewError(e), "Unable to list top locks on the server")
 
 	console.SetColor("StaleLock", color.New(color.FgRed, color.Bold))
 	console.SetColor("Lock", color.New(color.FgBlue, color.Bold))

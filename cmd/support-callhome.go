@@ -195,7 +195,7 @@ func toggleCallhome(alias string, enable bool, diag bool, logs bool) {
 	}
 
 	if enable {
-		validateClusterRegistered(alias, true)
+		validateClusterRegistered(alias)
 	}
 
 	if diag {
@@ -248,7 +248,7 @@ func configureSubnetWebhook(alias string, enable bool) {
 
 	var input string
 	if enable {
-		apiKey := validateClusterRegistered(alias, true)
+		apiKey := validateClusterRegistered(alias)
 		input = fmt.Sprintf("logger_webhook:subnet endpoint=%s auth_token=%s enable=on",
 			subnetLogWebhookURL(), apiKey)
 	} else {

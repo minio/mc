@@ -21,12 +21,12 @@ import (
 	"github.com/minio/cli"
 )
 
-var supportRegisterFlags = append([]cli.Flag{
+var supportRegisterFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "name",
 		Usage: "Specify the name to associate to this MinIO cluster in SUBNET",
 	},
-}, subnetCommonFlags...)
+}
 
 var supportRegisterCmd = cli.Command{
 	Name:               "register",

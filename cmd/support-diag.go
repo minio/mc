@@ -41,7 +41,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var supportDiagFlags = append([]cli.Flag{
+var supportDiagFlags = []cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
 		Usage:  "choose specific diagnostics to run [" + options.String() + "]",
@@ -64,7 +64,7 @@ var supportDiagFlags = append([]cli.Flag{
 		Usage:  "Specify the name to associate to this MinIO cluster in SUBNET",
 		Hidden: true, // deprecated may 2022
 	},
-}, subnetCommonFlags...)
+}
 
 var supportDiagCmd = cli.Command{
 	Name:         "diag",
@@ -161,8 +161,8 @@ func mainSupportDiag(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
-		// api key not passed as flag. Check that the cluster is registered.
-		apiKey = validateClusterRegistered(alias, true)
+		// api key not passed as flag. Check if the cluster is registered.
+		apiKey = validateClusterRegistered(alias)
 	}
 
 	// Create a new MinIO Admin Client

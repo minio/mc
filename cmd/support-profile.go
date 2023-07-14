@@ -32,7 +32,7 @@ import (
 
 // profile command flags.
 var (
-	profileFlags = append([]cli.Flag{
+	profileFlags = []cli.Flag{
 		cli.IntFlag{
 			Name:  "duration",
 			Usage: "profile for the specified duration in seconds",
@@ -43,7 +43,7 @@ var (
 			Usage: "profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
 			Value: "cpu,mem,block,mutex,goroutines",
 		},
-	}, subnetCommonFlags...)
+	}
 )
 
 const profileFile = "profile.zip"
@@ -171,8 +171,8 @@ func mainSupportProfile(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
-		// api key not passed as flag. Check that the cluster is registered.
-		apiKey = validateClusterRegistered(alias, true)
+		// api key not passed as flag. Check if the cluster is registered.
+		apiKey = validateClusterRegistered(alias)
 	}
 
 	// Create a new MinIO Admin Client

@@ -50,27 +50,18 @@ const (
 )
 
 var (
+	// https://subnet.min.io/downloads/license-pubkey.pem
 	subnetPublicKeyProd = `-----BEGIN PUBLIC KEY-----
 MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEaK31xujr6/rZ7ZfXZh3SlwovjC+X8wGq
 qkltaKyTLRENd4w3IRktYYCRgzpDLPn/nrf7snV/ERO5qcI7fkEES34IVEr+2Uff
 JkO2PfyyAYEO/5dBlPh1Undu9WQl6J7B
------END PUBLIC KEY-----` // https://subnet.min.io/downloads/license-pubkey.pem
+-----END PUBLIC KEY-----`
+	// https://localhost:9000/downloads/license-pubkey.pem
 	subnetPublicKeyDev = `-----BEGIN PUBLIC KEY-----
 MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEbo+e1wpBY4tBq9AONKww3Kq7m6QP/TBQ
 mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 9NKlTdQFGF3+aO6jbQ4hX/S5qPyF+a3z
------END PUBLIC KEY-----` // https://localhost:9000/downloads/license-pubkey.pem
-	subnetCommonFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "airgap",
-			Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
-		},
-		cli.StringFlag{
-			Name:   "api-key",
-			Usage:  "API Key of the account on SUBNET",
-			EnvVar: "_MC_SUBNET_API_KEY",
-		},
-	}
+-----END PUBLIC KEY-----`
 )
 
 func subnetOfflinePublicKey() string {
@@ -503,9 +494,7 @@ func getSubnetCreds(alias string) (string, string, error) {
 	apiKey := getSubnetAPIKeyFromConfig(alias)
 	lic := getSubnetLicenseFromConfig(alias)
 
-	if (len(apiKey) > 0 && len(lic) > 0) ||
-		(len(apiKey) == 0 && len(lic) == 0) ||
-		globalAirgapped {
+	if globalAirgapped {
 		return apiKey, lic, nil
 	}
 

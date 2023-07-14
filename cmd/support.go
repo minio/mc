@@ -31,11 +31,22 @@ import (
 
 const supportSuccessMsgTag = "SupportSuccessMessage"
 
-var supportGlobalFlags = append(globalFlags, cli.BoolFlag{
-	Name:   "dev",
-	Usage:  "Development mode",
-	Hidden: true,
-})
+var supportGlobalFlags = append(globalFlags,
+	cli.BoolFlag{
+		Name:   "dev",
+		Usage:  "Development mode",
+		Hidden: true,
+	},
+	cli.BoolFlag{
+		Name:  "airgap",
+		Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+	},
+	cli.StringFlag{
+		Name:   "api-key",
+		Usage:  "API Key of the account on SUBNET",
+		Hidden: true,
+		EnvVar: "_MC_SUBNET_API_KEY",
+	})
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
@@ -95,17 +106,13 @@ func featureStatusStr(enabled bool) string {
 	return "disabled"
 }
 
-func validateClusterRegistered(alias string, cmdTalksToSubnet bool) string {
-	// Non-registered execution allowed only in following scenarios
-	// command doesn't talk to subnet: dev mode (`--dev` passed)
-	// command talks to subnet: dev+airgapped mode (both `--dev` and `--airgap` passed)
-	requireRegistration := !globalDevMode
-	if cmdTalksToSubnet {
-		requireRegistration = !(globalDevMode && globalAirgapped)
+func validateClusterRegistered(alias string) string {
+	apiKey, e := getSubnetAPIKey(alias)
+	if globalDevMode {
+		return apiKey
 	}
 
-	apiKey, e := getSubnetAPIKey(alias)
-	if requireRegistration {
+	if !globalAirgapped {
 		fatalIf(probe.NewError(e), "")
 	}
 
