@@ -54,7 +54,7 @@ var supportProfileCmd = cli.Command{
 	Action:          mainSupportProfile,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(profileFlags, supportGlobalFlags...),
+	Flags:           profileFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

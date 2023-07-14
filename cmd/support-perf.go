@@ -91,7 +91,7 @@ var supportPerfCmd = cli.Command{
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportPerfFlags, supportGlobalFlags...),
+	Flags:           supportPerfFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

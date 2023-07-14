@@ -31,11 +31,17 @@ import (
 
 const supportSuccessMsgTag = "SupportSuccessMessage"
 
-var supportGlobalFlags = append(globalFlags, cli.BoolFlag{
-	Name:   "dev",
-	Usage:  "Development mode",
-	Hidden: true,
-})
+var supportGlobalFlags = append(globalFlags,
+	cli.BoolFlag{
+		Name:   "dev",
+		Usage:  "Development mode",
+		Hidden: true,
+	},
+	cli.BoolFlag{
+		Name:  "airgap",
+		Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+	},
+)
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,

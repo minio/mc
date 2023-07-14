@@ -60,17 +60,11 @@ MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEbo+e1wpBY4tBq9AONKww3Kq7m6QP/TBQ
 mr/cKCUyBL7rcAvg0zNq1vcSrUSGlAmY3SEDCu3GOKnjG/U4E7+p957ocWSV+mQU
 9NKlTdQFGF3+aO6jbQ4hX/S5qPyF+a3z
 -----END PUBLIC KEY-----` // https://localhost:9000/downloads/license-pubkey.pem
-	subnetCommonFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "airgap",
-			Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
-		},
-		cli.StringFlag{
-			Name:   "api-key",
-			Usage:  "API Key of the account on SUBNET",
-			EnvVar: "_MC_SUBNET_API_KEY",
-		},
-	}
+	subnetCommonFlags = append(supportGlobalFlags, cli.StringFlag{
+		Name:   "api-key",
+		Usage:  "API Key of the account on SUBNET",
+		EnvVar: "_MC_SUBNET_API_KEY",
+	})
 )
 
 func subnetOfflinePublicKey() string {
