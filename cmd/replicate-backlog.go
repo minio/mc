@@ -234,7 +234,7 @@ func newKeyMap() keyMap {
 	}
 }
 
-func initReplicateBacklogUI(arn string, op string, diffCh interface{}) *replicateBacklogUI {
+func initReplicateBacklogUI(arn, op string, diffCh interface{}) *replicateBacklogUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))

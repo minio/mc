@@ -311,7 +311,7 @@ func getLatestReleaseTime(customReleaseURL string, timeout time.Duration) (sha25
 	return parseReleaseData(data)
 }
 
-func getDownloadURL(customReleaseURL string, releaseTag string) (downloadURL string) {
+func getDownloadURL(customReleaseURL, releaseTag string) (downloadURL string) {
 	// Check if we are docker environment, return docker update command
 	if IsDocker() {
 		// Construct release tag name.
@@ -331,7 +331,7 @@ func getDownloadURL(customReleaseURL string, releaseTag string) (downloadURL str
 	return u.String()
 }
 
-func getUpdateInfo(customReleaseURL string, timeout time.Duration) (updateMsg string, sha256Hex string, currentReleaseTime, latestReleaseTime time.Time, releaseTag string, err *probe.Error) {
+func getUpdateInfo(customReleaseURL string, timeout time.Duration) (updateMsg, sha256Hex string, currentReleaseTime, latestReleaseTime time.Time, releaseTag string, err *probe.Error) {
 	currentReleaseTime, err = GetCurrentReleaseTime()
 	if err != nil {
 		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, releaseTag, err.Trace()
@@ -422,7 +422,7 @@ func getUpdateReaderFromURL(u *url.URL, transport http.RoundTripper) (io.ReadClo
 	return newProgressReader(resp.Body, "mc", resp.ContentLength), nil
 }
 
-func doUpdate(customReleaseURL string, sha256Hex string, latestReleaseTime time.Time, releaseTag string, ok bool) (updateStatusMsg string, err *probe.Error) {
+func doUpdate(customReleaseURL, sha256Hex string, latestReleaseTime time.Time, releaseTag string, ok bool) (updateStatusMsg string, err *probe.Error) {
 	fmtReleaseTime := latestReleaseTime.Format(mcReleaseTagTimeLayout)
 	if !ok {
 		updateStatusMsg = colorGreenBold("mc update to version %s canceled.",

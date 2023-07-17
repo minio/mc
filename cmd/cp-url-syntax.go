@@ -151,7 +151,7 @@ func checkCopySyntaxTypeA(ctx context.Context, srcURL, versionID string, keys ma
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
-func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID string, tgtURL string, keys map[string][]prefixSSEPair, isZip bool, timeRef time.Time) {
+func checkCopySyntaxTypeB(ctx context.Context, srcURL, versionID, tgtURL string, keys map[string][]prefixSSEPair, isZip bool, timeRef time.Time) {
 	_, srcContent, err := url2Stat(ctx, srcURL, versionID, false, keys, timeRef, isZip)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 

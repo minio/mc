@@ -119,7 +119,7 @@ func performLicenseRenew(alias string) licUpdateMessage {
 	}
 }
 
-func performLicenseUpdate(licFile string, alias string) licUpdateMessage {
+func performLicenseUpdate(licFile, alias string) licUpdateMessage {
 	lum := licUpdateMessage{
 		Alias:  alias,
 		Status: "success",

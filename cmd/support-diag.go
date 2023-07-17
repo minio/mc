@@ -90,7 +90,7 @@ func checkSupportDiagSyntax(ctx *cli.Context) {
 }
 
 // compress and tar MinIO diagnostics output
-func tarGZ(healthInfo interface{}, version string, filename string) error {
+func tarGZ(healthInfo interface{}, version, filename string) error {
 	f, e := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o666)
 	if e != nil {
 		return e
@@ -164,7 +164,7 @@ func mainSupportDiag(ctx *cli.Context) error {
 	return nil
 }
 
-func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias string, apiKey string) {
+func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey string) {
 	var reqURL string
 	var headers map[string]string
 
@@ -224,7 +224,7 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 
 	startSpinner := func(s string) func() {
 		ctx, cancel := context.WithCancel(cont)
-		printText := func(t string, sp string, rewind int) {
+		printText := func(t, sp string, rewind int) {
 			console.RewindLines(rewind)
 
 			dot := infoText(dot)

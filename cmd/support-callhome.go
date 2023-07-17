@@ -163,7 +163,7 @@ func mainCallhome(ctx *cli.Context) error {
 	return nil
 }
 
-func parseCallhomeFlags(ctx *cli.Context) (diag bool, logs bool) {
+func parseCallhomeFlags(ctx *cli.Context) (diag, logs bool) {
 	diag = ctx.Bool("diag")
 	logs = ctx.Bool("logs")
 
@@ -176,7 +176,7 @@ func parseCallhomeFlags(ctx *cli.Context) (diag bool, logs bool) {
 	return diag, logs
 }
 
-func printCallhomeStatus(alias string, diag bool, logs bool) {
+func printCallhomeStatus(alias string, diag, logs bool) {
 	resultMsg := supportCallhomeMessage{Action: "status"}
 	if diag {
 		resultMsg.Diag = featureStatusStr(isDiagCallhomeEnabled(alias))
@@ -188,7 +188,7 @@ func printCallhomeStatus(alias string, diag bool, logs bool) {
 	printMsg(resultMsg)
 }
 
-func toggleCallhome(alias string, apiKey string, enable bool, diag bool, logs bool) {
+func toggleCallhome(alias, apiKey string, enable, diag, logs bool) {
 	newStatus := featureStatusStr(enable)
 	resultMsg := supportCallhomeMessage{
 		Action:  newStatus,
@@ -208,7 +208,7 @@ func toggleCallhome(alias string, apiKey string, enable bool, diag bool, logs bo
 	printMsg(resultMsg)
 }
 
-func getFeature(diag bool, logs bool) string {
+func getFeature(diag, logs bool) string {
 	if diag && logs {
 		return "Diagnostics and logs callhome"
 	}
@@ -238,7 +238,7 @@ func setCallhomeConfig(alias string, enableCallhome bool) {
 	fatalIf(probe.NewError(e), "Unable to set callhome config on minio")
 }
 
-func configureSubnetWebhook(alias string, apiKey string, enable bool) {
+func configureSubnetWebhook(alias, apiKey string, enable bool) {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")

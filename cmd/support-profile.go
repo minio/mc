@@ -183,7 +183,7 @@ func mainSupportProfile(ctx *cli.Context) error {
 	return nil
 }
 
-func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias string, apiKey string) {
+func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey string) {
 	var reqURL string
 	var headers map[string]string
 	profilers := ctx.String("type")
