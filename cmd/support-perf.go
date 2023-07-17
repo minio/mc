@@ -437,7 +437,7 @@ func convertPerfResults(results []PerfTestResult) PerfTestOutput {
 	return out
 }
 
-func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
+func execSupportPerf(ctx *cli.Context, aliasedURL, perfType string) {
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
@@ -481,14 +481,14 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	}
 }
 
-func savePerfResultFile(tmpFileName string, resultFileNamePfx string) {
+func savePerfResultFile(tmpFileName, resultFileNamePfx string) {
 	zipFileName := resultFileNamePfx + ".zip"
 	e := moveFile(tmpFileName, zipFileName)
 	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to move %s -> %s", tmpFileName, zipFileName))
 	console.Infof("MinIO performance report saved at %s, please upload to SUBNET portal manually\n", zipFileName)
 }
 
-func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTestResult {
+func runPerfTests(ctx *cli.Context, aliasedURL, perfType string) []PerfTestResult {
 	resultCh := make(chan PerfTestResult)
 	results := []PerfTestResult{}
 	defer close(resultCh)

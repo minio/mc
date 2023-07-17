@@ -58,7 +58,7 @@ func (fs fsComplete) Predict(a complete.Args) []string {
 	return complete.PredictFiles("*").Predict(a)
 }
 
-func completeAdminConfigKeys(aliasPath string, keyPrefix string) (prediction []string) {
+func completeAdminConfigKeys(aliasPath, keyPrefix string) (prediction []string) {
 	// Convert alias/bucket/incompl to alias/bucket/ to list its contents
 	parentDirPath := filepath.Dir(aliasPath) + "/"
 	clnt, err := newAdminClient(parentDirPath)
