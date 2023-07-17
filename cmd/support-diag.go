@@ -54,16 +54,6 @@ var supportDiagFlags = append([]cli.Flag{
 		Value:  1 * time.Hour,
 		Hidden: true,
 	},
-	cli.StringFlag{
-		Name:   "license",
-		Usage:  "SUBNET license key",
-		Hidden: true, // deprecated dec 2021
-	},
-	cli.StringFlag{
-		Name:   "name",
-		Usage:  "Specify the name to associate to this MinIO cluster in SUBNET",
-		Hidden: true, // deprecated may 2022
-	},
 }, subnetCommonFlags...)
 
 var supportDiagCmd = cli.Command{
@@ -73,7 +63,7 @@ var supportDiagCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainSupportDiag,
 	Before:       setGlobalsFromContext,
-	Flags:        append(supportDiagFlags, supportGlobalFlags...),
+	Flags:        supportDiagFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

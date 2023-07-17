@@ -149,6 +149,7 @@ func mainCallhome(ctx *cli.Context) error {
 
 	setSuccessMessageColor()
 	alias, arg := checkToggleCmdSyntax(ctx)
+	apiKey := validateClusterRegistered(alias, true)
 
 	diag, logs := parseCallhomeFlags(ctx)
 
@@ -157,7 +158,7 @@ func mainCallhome(ctx *cli.Context) error {
 		return nil
 	}
 
-	toggleCallhome(alias, arg == "enable", diag, logs)
+	toggleCallhome(alias, apiKey, arg == "enable", diag, logs)
 
 	return nil
 }
@@ -187,15 +188,11 @@ func printCallhomeStatus(alias string, diag bool, logs bool) {
 	printMsg(resultMsg)
 }
 
-func toggleCallhome(alias string, enable bool, diag bool, logs bool) {
+func toggleCallhome(alias string, apiKey string, enable bool, diag bool, logs bool) {
 	newStatus := featureStatusStr(enable)
 	resultMsg := supportCallhomeMessage{
 		Action:  newStatus,
 		Feature: getFeature(diag, logs),
-	}
-
-	if enable {
-		validateClusterRegistered(alias, true)
 	}
 
 	if diag {
@@ -204,7 +201,7 @@ func toggleCallhome(alias string, enable bool, diag bool, logs bool) {
 	}
 
 	if logs {
-		configureSubnetWebhook(alias, enable)
+		configureSubnetWebhook(alias, apiKey, enable)
 		resultMsg.Logs = newStatus
 	}
 
@@ -241,14 +238,13 @@ func setCallhomeConfig(alias string, enableCallhome bool) {
 	fatalIf(probe.NewError(e), "Unable to set callhome config on minio")
 }
 
-func configureSubnetWebhook(alias string, enable bool) {
+func configureSubnetWebhook(alias string, apiKey string, enable bool) {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(alias)
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	var input string
 	if enable {
-		apiKey := validateClusterRegistered(alias, true)
 		input = fmt.Sprintf("logger_webhook:subnet endpoint=%s auth_token=%s enable=on",
 			subnetLogWebhookURL(), apiKey)
 	} else {
