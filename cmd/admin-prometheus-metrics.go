@@ -39,24 +39,30 @@ var adminPrometheusMetricsCmd = cli.Command{
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [METRIC-TYPE]
+METRIC-TYPE:
+  valid values are ['node', 'bucket']. Defaults to 'cluster' if not passed.
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. List of metrics reported cluster wide.
      {{.Prompt}} {{.HelpName}} play
+  2. List of metrics reported at node level.
+     {{.Prompt}} {{.HelpName}} play node
+  3. List of metrics reported at bucket level.
+     {{.Prompt}} {{.HelpName}} play bucket
 `,
 }
 
 const (
 	metricsRespBodyLimit = 10 << 20 // 10 MiB
-	metricsEndPoint      = "/minio/v2/metrics/cluster"
+	metricsEndPointRoot  = "/minio/v2/metrics/"
 )
 
 // checkSupportMetricsSyntax - validate arguments passed by a user
 func checkSupportMetricsSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
+	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
@@ -79,8 +85,17 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 	if e != nil {
 		return e
 	}
+	var metricsSubSystem string
+	switch args.Get(1) {
+	case "node":
+		metricsSubSystem = "node"
+	case "bucket":
+		metricsSubSystem = "bucket"
+	default:
+		metricsSubSystem = "cluster"
+	}
 
-	req, e := http.NewRequest(http.MethodGet, hostConfig.URL+metricsEndPoint, nil)
+	req, e := http.NewRequest(http.MethodGet, hostConfig.URL+metricsEndPointRoot+metricsSubSystem, nil)
 	if e != nil {
 		return e
 	}
