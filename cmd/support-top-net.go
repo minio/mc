@@ -134,7 +134,6 @@ func mainSupportTopNet(ctx *cli.Context) error {
 			}
 			p.Quit()
 		}
-
 	}()
 
 	if _, e := p.Run(); e != nil {
