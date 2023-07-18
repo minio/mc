@@ -35,7 +35,7 @@ import "github.com/rjeczalik/notify"
 // BenchmarkPipeChan1K-4             100000            550623 ns/op
 
 // PipeChan builds a new dynamically sized channel
-func PipeChan(capacity int) (inputCh chan notify.EventInfo, outputCh chan notify.EventInfo) {
+func PipeChan(capacity int) (inputCh, outputCh chan notify.EventInfo) {
 	// A set of channels which store all elements received from input
 	channels := make(chan chan notify.EventInfo, 1000)
 

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
@@ -90,7 +91,7 @@ var supportPerfCmd = cli.Command{
 	Action:          mainSupportPerf,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportPerfFlags, supportGlobalFlags...),
+	Flags:           supportPerfFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -112,10 +113,11 @@ EXAMPLES:
 
 // PerfTestOutput - stores the final output of performance test(s)
 type PerfTestOutput struct {
-	ObjectResults *ObjTestResults   `json:"object,omitempty"`
-	NetResults    *NetTestResults   `json:"network,omitempty"`
-	DriveResults  *DriveTestResults `json:"drive,omitempty"`
-	Error         string            `json:"error,omitempty"`
+	ObjectResults          *ObjTestResults             `json:"object,omitempty"`
+	NetResults             *NetTestResults             `json:"network,omitempty"`
+	SiteReplicationResults *SiteReplicationTestResults `json:"siteReplication,omitempty"`
+	DriveResults           *DriveTestResults           `json:"drive,omitempty"`
+	Error                  string                      `json:"error,omitempty"`
 }
 
 // DriveTestResult - result of the drive performance test on a given endpoint
@@ -194,6 +196,27 @@ type NetTestResults struct {
 	Results []NetTestResult `json:"servers"`
 }
 
+// SiteNetStats - status for siteNet
+type SiteNetStats struct {
+	TX              uint64        `json:"tx"` // transfer rate in bytes
+	TXTotalDuration time.Duration `json:"txTotalDuration"`
+	RX              uint64        `json:"rx"` // received rate in bytes
+	RXTotalDuration time.Duration `json:"rxTotalDuration"`
+	TotalConn       uint64        `json:"totalConn"`
+}
+
+// SiteReplicationTestNodeResult - result of the network performance test for site-replication
+type SiteReplicationTestNodeResult struct {
+	Endpoint string       `json:"endpoint"`
+	Perf     SiteNetStats `json:"perf"`
+	Error    string       `json:"error,omitempty"`
+}
+
+// SiteReplicationTestResults - result of the network performance test across all site-replication
+type SiteReplicationTestResults struct {
+	Results []SiteReplicationTestNodeResult `json:"servers"`
+}
+
 func objectTestVerboseResult(result *madmin.SpeedTestResult) (msg string) {
 	msg += "PUT:\n"
 	for _, node := range result.PUTStats.Servers {
@@ -247,7 +270,7 @@ func mainSupportPerf(ctx *cli.Context) error {
 	switch len(args) {
 	case 1:
 		// cannot use alias by the name 'drive' or 'net'
-		if args[0] == "drive" || args[0] == "net" || args[0] == "object" {
+		if args[0] == "drive" || args[0] == "net" || args[0] == "object" || args[0] == "site-replication" {
 			showCommandHelpAndExit(ctx, 1)
 		}
 		aliasedURL = args[0]
@@ -282,6 +305,30 @@ func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) *DriveT
 		results = append(results, convertDriveTestResult(dr))
 	}
 	r := DriveTestResults{
+		Results: results,
+	}
+	return &r
+}
+
+func convertSiteReplicationTestResults(netResults *madmin.SiteNetPerfResult) *SiteReplicationTestResults {
+	if netResults == nil {
+		return nil
+	}
+	results := []SiteReplicationTestNodeResult{}
+	for _, nr := range netResults.NodeResults {
+		results = append(results, SiteReplicationTestNodeResult{
+			Endpoint: nr.Endpoint,
+			Error:    nr.Error,
+			Perf: SiteNetStats{
+				TX:              nr.TX,
+				TXTotalDuration: nr.TXTotalDuration,
+				RX:              nr.RX,
+				RXTotalDuration: nr.RXTotalDuration,
+				TotalConn:       nr.TotalConn,
+			},
+		})
+	}
+	r := SiteReplicationTestResults{
 		Results: results,
 	}
 	return &r
@@ -369,6 +416,8 @@ func updatePerfOutput(r PerfTestResult, out *PerfTestOutput) {
 		out.ObjectResults = convertObjTestResults(r.ObjectResult)
 	case NetPerfTest:
 		out.NetResults = convertNetTestResults(r.NetResult)
+	case SiteReplicationPerfTest:
+		out.SiteReplicationResults = convertSiteReplicationTestResults(r.SiteReplicationResult)
 	default:
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid test type %d", r.Type))
 	}
@@ -388,7 +437,7 @@ func convertPerfResults(results []PerfTestResult) PerfTestOutput {
 	return out
 }
 
-func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
+func execSupportPerf(ctx *cli.Context, aliasedURL, perfType string) {
 	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
@@ -432,14 +481,14 @@ func execSupportPerf(ctx *cli.Context, aliasedURL string, perfType string) {
 	}
 }
 
-func savePerfResultFile(tmpFileName string, resultFileNamePfx string) {
+func savePerfResultFile(tmpFileName, resultFileNamePfx string) {
 	zipFileName := resultFileNamePfx + ".zip"
 	e := moveFile(tmpFileName, zipFileName)
 	fatalIf(probe.NewError(e), fmt.Sprintf("Unable to move %s -> %s", tmpFileName, zipFileName))
 	console.Infof("MinIO performance report saved at %s, please upload to SUBNET portal manually\n", zipFileName)
 }
 
-func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTestResult {
+func runPerfTests(ctx *cli.Context, aliasedURL, perfType string) []PerfTestResult {
 	resultCh := make(chan PerfTestResult)
 	results := []PerfTestResult{}
 	defer close(resultCh)
@@ -458,6 +507,8 @@ func runPerfTests(ctx *cli.Context, aliasedURL string, perfType string) []PerfTe
 			mainAdminSpeedTestObject(ctx, aliasedURL, resultCh)
 		case "net":
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
+		case "site-replication":
+			mainAdminSpeedTestSiteReplication(ctx, aliasedURL, resultCh)
 		default:
 			showCommandHelpAndExit(ctx, 1) // last argument is exit code
 		}

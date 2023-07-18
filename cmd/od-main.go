@@ -121,7 +121,7 @@ func getOdUrls(ctx context.Context, args argKVS) (odURLs URLs, e error) {
 	return odURLs, nil
 }
 
-func prepareOdUrls(ctx context.Context, sourceURL, sourceVersion string, targetURL string) URLs {
+func prepareOdUrls(ctx context.Context, sourceURL, sourceVersion, targetURL string) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.

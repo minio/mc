@@ -91,13 +91,14 @@ type userGroup struct {
 
 // userMessage container for content message structure
 type userMessage struct {
-	op         string
-	Status     string      `json:"status"` // TODO: remove this?
-	AccessKey  string      `json:"accessKey,omitempty"`
-	SecretKey  string      `json:"secretKey,omitempty"`
-	PolicyName string      `json:"policyName,omitempty"`
-	UserStatus string      `json:"userStatus,omitempty"`
-	MemberOf   []userGroup `json:"memberOf,omitempty"`
+	op             string
+	Status         string      `json:"status"` // TODO: remove this?
+	AccessKey      string      `json:"accessKey,omitempty"`
+	SecretKey      string      `json:"secretKey,omitempty"`
+	PolicyName     string      `json:"policyName,omitempty"`
+	UserStatus     string      `json:"userStatus,omitempty"`
+	MemberOf       []userGroup `json:"memberOf,omitempty"`
+	Authentication string      `json:"authentication,omitempty"`
 }
 
 func (u userMessage) String() string {
@@ -118,13 +119,16 @@ func (u userMessage) String() string {
 		for _, group := range u.MemberOf {
 			memberOf = append(memberOf, group.Name)
 		}
-		return console.Colorize("UserMessage", strings.Join(
-			[]string{
-				fmt.Sprintf("AccessKey: %s", u.AccessKey),
-				fmt.Sprintf("Status: %s", u.UserStatus),
-				fmt.Sprintf("PolicyName: %s", u.PolicyName),
-				fmt.Sprintf("MemberOf: %s", memberOf),
-			}, "\n"))
+		lines := []string{
+			fmt.Sprintf("AccessKey: %s", u.AccessKey),
+			fmt.Sprintf("Status: %s", u.UserStatus),
+			fmt.Sprintf("PolicyName: %s", u.PolicyName),
+			fmt.Sprintf("MemberOf: %s", memberOf),
+		}
+		if u.Authentication != "" {
+			lines = append(lines, fmt.Sprintf("Authentication: %s", u.Authentication))
+		}
+		return console.Colorize("UserMessage", strings.Join(lines, "\n"))
 	case "remove":
 		return console.Colorize("UserMessage", "Removed user `"+u.AccessKey+"` successfully.")
 	case "disable":

@@ -82,6 +82,8 @@ func mainSupportProxyShow(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	alias, _ := url2Alias(aliasedURL)
 
+	validateClusterRegistered(alias, false)
+
 	// Main execution
 	// get the subnet proxy config from MinIO if available
 	proxy, supported := getKeyFromSubnetConfig(alias, "proxy")

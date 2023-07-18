@@ -69,7 +69,7 @@ func getScheme(rawurl string) (scheme, path string) {
 // Assuming s is of the form [s delimiter s].
 // If so, return s, [delimiter]s or return s, s if cutdelimiter == true
 // If no delimiter found return s, "".
-func splitSpecial(s string, delimiter string, cutdelimiter bool) (string, string) {
+func splitSpecial(s, delimiter string, cutdelimiter bool) (string, string) {
 	i := strings.Index(s, delimiter)
 	if i < 0 {
 		// if delimiter not found return as is.

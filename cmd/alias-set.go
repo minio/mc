@@ -100,7 +100,7 @@ EXAMPLES:
 }
 
 // checkAliasSetSyntax - verifies input arguments to 'alias set'.
-func checkAliasSetSyntax(ctx *cli.Context, accessKey string, secretKey string, deprecated bool) {
+func checkAliasSetSyntax(ctx *cli.Context, accessKey, secretKey string, deprecated bool) {
 	args := ctx.Args()
 	argsNr := len(args)
 
