@@ -308,7 +308,8 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:
 			ignoreStatError = true
 		default:
-			ignoreStatError = st == http.StatusServiceUnavailable && opts.isForce && opts.isForceDel
+			_, ok := pErr.ToGoError().(ObjectMissing)
+			ignoreStatError = (st == http.StatusServiceUnavailable || ok || st == http.StatusNotFound) && (opts.isForce && opts.isForceDel)
 			if !ignoreStatError {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 				return exitStatus(globalErrorExitStatus)
