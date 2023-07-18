@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -102,28 +103,38 @@ func mainSupportTopNet(ctx *cli.Context) error {
 
 	p := tea.NewProgram(initTopNetUI())
 	go func() {
-		out := func(m madmin.RealtimeMetrics) {
-			for endPoint, metric := range m.ByHost {
-				if metric.Net != nil {
+		if globalJSON {
+			e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+				printMsg(metricsMessage{RealtimeMetrics: metrics})
+			})
+			if e != nil && !errors.Is(e, context.Canceled) {
+				fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+			}
+		} else {
+			out := func(m madmin.RealtimeMetrics) {
+				for endPoint, metric := range m.ByHost {
+					if metric.Net != nil {
+						p.Send(topNetResult{
+							endPoint: endPoint,
+							stats:    *metric.Net,
+						})
+					}
+				}
+				if len(m.Errors) != 0 && len(m.Hosts) != 0 {
 					p.Send(topNetResult{
-						endPoint: endPoint,
-						stats:    *metric.Net,
+						endPoint: m.Hosts[0],
+						error:    m.Errors[0],
 					})
 				}
 			}
-			if len(m.Errors) != 0 && len(m.Hosts) != 0 {
-				p.Send(topNetResult{
-					endPoint: m.Hosts[0],
-					error:    m.Errors[0],
-				})
+
+			e := client.Metrics(ctxt, opts, out)
+			if e != nil {
+				fatalIf(probe.NewError(e), "Unable to fetch top net events")
 			}
+			p.Quit()
 		}
 
-		e := client.Metrics(ctxt, opts, out)
-		if e != nil {
-			fatalIf(probe.NewError(e), "Unable to fetch top net events")
-		}
-		p.Quit()
 	}()
 
 	if _, e := p.Run(); e != nil {
