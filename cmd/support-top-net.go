@@ -132,8 +132,8 @@ func mainSupportTopNet(ctx *cli.Context) error {
 			if e != nil {
 				fatalIf(probe.NewError(e), "Unable to fetch top net events")
 			}
-			p.Quit()
 		}
+		p.Quit()
 	}()
 
 	if _, e := p.Run(); e != nil {
