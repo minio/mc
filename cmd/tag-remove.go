@@ -113,7 +113,7 @@ func (t tagRemoveMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions bool, recursive bool) {
+func parseRemoveTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions, recursive bool) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}

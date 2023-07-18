@@ -147,7 +147,7 @@ func (t tagListMessage) String() string {
 }
 
 // parseTagListSyntax performs command-line input validation for tag list command.
-func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions bool, recursive bool) {
+func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions, recursive bool) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}

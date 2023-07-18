@@ -336,7 +336,7 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 }
 
 // RemoveNotificationConfig - Remove bucket notification
-func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn string, event string, prefix string, suffix string) *probe.Error {
+func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn, event, prefix, suffix string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	// Remove all notification configs if arn is empty
 	if arn == "" {
@@ -1140,7 +1140,7 @@ func (c *S3Client) removeIncompleteObjects(ctx context.Context, bucket string, o
 }
 
 // AddUserAgent - add custom user agent.
-func (c *S3Client) AddUserAgent(app string, version string) {
+func (c *S3Client) AddUserAgent(app, version string) {
 	c.api.SetAppInfo(app, version)
 }
 
@@ -1508,7 +1508,7 @@ func (c *S3Client) SetAccess(ctx context.Context, bucketPolicy string, isJSON bo
 }
 
 // listObjectWrapper - select ObjectList mode depending on arguments
-func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers bool, metadata bool, maxKeys int, zip bool) <-chan minio.ObjectInfo {
+func (c *S3Client) listObjectWrapper(ctx context.Context, bucket, object string, isRecursive bool, timeRef time.Time, withVersions, withDeleteMarkers, metadata bool, maxKeys int, zip bool) <-chan minio.ObjectInfo {
 	if !timeRef.IsZero() || withVersions {
 		return c.listVersions(ctx, bucket, object, ListOptions{Recursive: isRecursive, TimeRef: timeRef, WithOlderVersions: withVersions, WithDeleteMarkers: withDeleteMarkers})
 	}
@@ -2150,7 +2150,7 @@ func (c *S3Client) bucketInfo2ClientContent(bucket minio.BucketInfo) *ClientCont
 }
 
 // Convert objectInfo to ClientContent
-func (c *S3Client) prefixInfo2ClientContent(bucket string, prefix string) *ClientContent {
+func (c *S3Client) prefixInfo2ClientContent(bucket, prefix string) *ClientContent {
 	// Join bucket and incoming object key.
 	if bucket == "" {
 		panic("should never happen, bucket cannot be empty")
@@ -2815,7 +2815,7 @@ func (c *S3Client) GetEncryption(ctx context.Context) (algorithm, keyID string, 
 }
 
 // SetEncryption - Set encryption configuration on a bucket
-func (c *S3Client) SetEncryption(ctx context.Context, encType string, kmsKeyID string) *probe.Error {
+func (c *S3Client) SetEncryption(ctx context.Context, encType, kmsKeyID string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})

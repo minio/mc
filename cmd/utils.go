@@ -212,7 +212,7 @@ type prefixSSEPair struct {
 }
 
 // parse and validate encryption keys entered on command line
-func parseAndValidateEncryptionKeys(sseKeys string, sse string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+func parseAndValidateEncryptionKeys(sseKeys, sse string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
 	encMap, err = parseEncryptionKeys(sseKeys)
 	if err != nil {
 		return nil, err

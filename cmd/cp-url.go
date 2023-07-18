@@ -91,7 +91,7 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (copyURLsType,
 
 // SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeA(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair, isZip bool) URLs {
+func prepareCopyURLsTypeA(ctx context.Context, sourceURL, sourceVersion, targetURL string, encKeyDB map[string][]prefixSSEPair, isZip bool) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
@@ -112,7 +112,7 @@ func prepareCopyURLsTypeA(ctx context.Context, sourceURL, sourceVersion string, 
 }
 
 // prepareCopyContentTypeA - makes CopyURLs content for copying.
-func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targetAlias string, targetURL string) URLs {
+func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targetAlias, targetURL string) URLs {
 	targetContent := ClientContent{URL: *newClientURL(targetURL)}
 	return URLs{
 		SourceAlias:   sourceAlias,
@@ -124,7 +124,7 @@ func makeCopyContentTypeA(sourceAlias string, sourceContent *ClientContent, targ
 
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
 // prepareCopyURLsTypeB - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeB(ctx context.Context, sourceURL, sourceVersion string, targetURL string, encKeyDB map[string][]prefixSSEPair, isZip bool) URLs {
+func prepareCopyURLsTypeB(ctx context.Context, sourceURL, sourceVersion, targetURL string, encKeyDB map[string][]prefixSSEPair, isZip bool) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
@@ -149,7 +149,7 @@ func prepareCopyURLsTypeB(ctx context.Context, sourceURL, sourceVersion string, 
 }
 
 // makeCopyContentTypeB - CopyURLs content for copying.
-func makeCopyContentTypeB(sourceAlias string, sourceContent *ClientContent, targetAlias string, targetURL string) URLs {
+func makeCopyContentTypeB(sourceAlias string, sourceContent *ClientContent, targetAlias, targetURL string) URLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	targetURLParse := newClientURL(targetURL)
 	targetURLParse.Path = filepath.ToSlash(filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path)))
@@ -193,7 +193,7 @@ func prepareCopyURLsTypeC(ctx context.Context, sourceURL, targetURL string, isRe
 }
 
 // makeCopyContentTypeC - CopyURLs content for copying.
-func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent *ClientContent, targetAlias string, targetURL string) URLs {
+func makeCopyContentTypeC(sourceAlias string, sourceURL ClientURL, sourceContent *ClientContent, targetAlias, targetURL string) URLs {
 	newSourceURL := sourceContent.URL
 	pathSeparatorIndex := strings.LastIndex(sourceURL.Path, string(sourceURL.Separator))
 	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)
