@@ -244,7 +244,7 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a single file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd bool, preserve, isZip bool) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd, preserve, isZip bool) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs

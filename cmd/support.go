@@ -31,11 +31,17 @@ import (
 
 const supportSuccessMsgTag = "SupportSuccessMessage"
 
-var supportGlobalFlags = append(globalFlags, cli.BoolFlag{
-	Name:   "dev",
-	Usage:  "Development mode",
-	Hidden: true,
-})
+var supportGlobalFlags = append(globalFlags,
+	cli.BoolFlag{
+		Name:   "dev",
+		Usage:  "Development mode",
+		Hidden: true,
+	},
+	cli.BoolFlag{
+		Name:  "airgap",
+		Usage: "use in environments without network access to SUBNET (e.g. airgapped, firewalled, etc.)",
+	},
+)
 
 var supportSubcommands = []cli.Command{
 	supportRegisterCmd,
@@ -122,7 +128,7 @@ func validateClusterRegistered(alias string, cmdTalksToSubnet bool) string {
 // - given subsystem is not supported by the version of MinIO
 // - the given target doesn't exist in the config
 // - `enable` is set to `off`
-func isFeatureEnabled(alias string, subSys string, target string) bool {
+func isFeatureEnabled(alias, subSys, target string) bool {
 	client, err := newAdminClient(alias)
 	// Create a new MinIO Admin Client
 	fatalIf(err, "Unable to initialize admin connection.")

@@ -214,7 +214,7 @@ type mirrorOptions struct {
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(ctx context.Context, sourceURL string, targetURL string, opts mirrorOptions) <-chan URLs {
+func prepareMirrorURLs(ctx context.Context, sourceURL, targetURL string, opts mirrorOptions) <-chan URLs {
 	URLsCh := make(chan URLs)
 	go deltaSourceTarget(ctx, sourceURL, targetURL, opts, URLsCh)
 	return URLsCh

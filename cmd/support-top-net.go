@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,23 +28,28 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var supportTopDriveFlags = []cli.Flag{
+var supportTopNetFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "count, c",
-		Usage: "show up to N drives",
+		Usage: "show top count interfaces",
 		Value: 10,
+	},
+	cli.IntFlag{
+		Name:  "interval",
+		Usage: "interval between requests in seconds",
+		Value: 1,
 	},
 }
 
-var supportTopDriveCmd = cli.Command{
-	Name:            "drive",
-	Aliases:         []string{"disk"},
+var supportTopNetCmd = cli.Command{
+	Name:            "net",
+	Aliases:         []string{"network"},
 	HiddenAliases:   true,
-	Usage:           "show real-time drive metrics",
-	Action:          mainSupportTopDrive,
+	Usage:           "show real-time net metrics",
+	Action:          mainSupportTopNet,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportTopDriveFlags, supportGlobalFlags...),
+	Flags:           append(supportTopNetFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -55,20 +61,20 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Display drive metrics
+   1. Display net metrics
       {{.Prompt}} {{.HelpName}} myminio/
 `,
 }
 
-// checkSupportTopDriveSyntax - validate all the passed arguments
-func checkSupportTopDriveSyntax(ctx *cli.Context) {
+// checkSupportTopNetSyntax - validate all the passed arguments
+func checkSupportTopNetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
-func mainSupportTopDrive(ctx *cli.Context) error {
-	checkSupportTopDriveSyntax(ctx)
+func mainSupportTopNet(ctx *cli.Context) error {
+	checkSupportTopNetSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
@@ -83,44 +89,59 @@ func mainSupportTopDrive(ctx *cli.Context) error {
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
-
 	info, e := client.ServerInfo(ctxt)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to initialize admin client.")
-
-	var disks []madmin.Disk
-	for _, srv := range info.Servers {
-		disks = append(disks, srv.Disks...)
+	hosts := make([]string, 0, len(info.Servers))
+	for _, s := range info.Servers {
+		hosts = append(hosts, s.Endpoint)
 	}
-
 	// MetricsOptions are options provided to Metrics call.
 	opts := madmin.MetricsOptions{
-		Type:     madmin.MetricsDisk,
-		Interval: time.Second,
-		ByDisk:   true,
+		Type:     madmin.MetricNet,
+		Interval: time.Duration(ctx.Int("interval")) * time.Second,
+		ByHost:   true,
 		N:        ctx.Int("count"),
+		Hosts:    hosts,
 	}
 
-	p := tea.NewProgram(initTopDriveUI(disks, ctx.Int("count")))
+	p := tea.NewProgram(initTopNetUI())
 	go func() {
-		out := func(m madmin.RealtimeMetrics) {
-			for name, metric := range m.ByDisk {
-				p.Send(topDriveResult{
-					diskName: name,
-					stats:    metric.IOStats,
-				})
+		if globalJSON {
+			e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+				printMsg(metricsMessage{RealtimeMetrics: metrics})
+			})
+			if e != nil && !errors.Is(e, context.Canceled) {
+				fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
 			}
-		}
+		} else {
+			out := func(m madmin.RealtimeMetrics) {
+				for endPoint, metric := range m.ByHost {
+					if metric.Net != nil {
+						p.Send(topNetResult{
+							endPoint: endPoint,
+							stats:    *metric.Net,
+						})
+					}
+				}
+				if len(m.Errors) != 0 && len(m.Hosts) != 0 {
+					p.Send(topNetResult{
+						endPoint: m.Hosts[0],
+						error:    m.Errors[0],
+					})
+				}
+			}
 
-		e := client.Metrics(ctxt, opts, out)
-		if e != nil {
-			fatalIf(probe.NewError(e), "Unable to fetch top drives events")
+			e := client.Metrics(ctxt, opts, out)
+			if e != nil {
+				fatalIf(probe.NewError(e), "Unable to fetch top net events")
+			}
 		}
 		p.Quit()
 	}()
 
 	if _, e := p.Run(); e != nil {
 		cancel()
-		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top drive events")
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top net events")
 	}
 
 	return nil

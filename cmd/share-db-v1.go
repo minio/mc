@@ -55,7 +55,7 @@ func newShareDBV1() *shareDBV1 {
 }
 
 // Set upload info for each share.
-func (s *shareDBV1) Set(objectURL string, shareURL string, expiry time.Duration, contentType string) {
+func (s *shareDBV1) Set(objectURL, shareURL string, expiry time.Duration, contentType string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

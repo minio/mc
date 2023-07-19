@@ -925,7 +925,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent) {
 }
 
 // List files recursively using non-recursive mode.
-func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete bool, _ bool, dirOpt DirOpt) {
+func (f *fsClient) listDirOpt(contentCh chan *ClientContent, isIncomplete, _ bool, dirOpt DirOpt) {
 	defer close(contentCh)
 
 	// Trim trailing / or \.
@@ -1191,7 +1191,7 @@ func (f *fsClient) GetObjectLegalHold(_ context.Context, _ string) (minio.LegalH
 }
 
 // GetAccess - get access policy permissions.
-func (f *fsClient) GetAccess(_ context.Context) (access string, policyJSON string, err *probe.Error) {
+func (f *fsClient) GetAccess(_ context.Context) (access, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
 	if runtime.GOOS == "windows" {
 		return "", "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})

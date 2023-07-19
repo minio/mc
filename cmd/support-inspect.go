@@ -57,7 +57,7 @@ var supportInspectCmd = cli.Command{
 	Action:          mainSupportInspect,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportInspectFlags, supportGlobalFlags...),
+	Flags:           supportInspectFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

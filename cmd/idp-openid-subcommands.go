@@ -488,7 +488,7 @@ func mainIDPOpenIDEnable(ctx *cli.Context) error {
 	return idpEnableDisable(ctx, isOpenID, enable)
 }
 
-func idpEnableDisable(ctx *cli.Context, isOpenID bool, enable bool) error {
+func idpEnableDisable(ctx *cli.Context, isOpenID, enable bool) error {
 	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1)
 	}
