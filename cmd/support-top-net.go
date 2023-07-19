@@ -100,7 +100,6 @@ func mainSupportTopNet(ctx *cli.Context) error {
 		Type:     madmin.MetricNet,
 		Interval: time.Duration(ctx.Int("interval")) * time.Second,
 		ByHost:   true,
-		N:        ctx.Int("count"),
 		Hosts:    hosts,
 	}
 
