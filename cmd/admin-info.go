@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -284,6 +284,9 @@ func (u clusterStruct) String() (msg string) {
 			english.Plural(int(u.Info.Objects.Count), "Object", ""))
 		if u.Info.Versions.Count > 0 {
 			msg += ", " + english.Plural(int(u.Info.Versions.Count), "Version", "")
+		}
+		if u.Info.DeleteMarkers.Count > 0 {
+			msg += ", " + english.Plural(int(u.Info.DeleteMarkers.Count), "Delete Marker", "")
 		}
 		msg += "\n"
 	}
