@@ -86,10 +86,10 @@ func (m *topNetUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *topNetUI) calculationRate(prev, curr uint64, dur time.Duration) uint64 {
-	if prev < curr {
+	if curr < prev {
 		return uint64(float64(math.MaxUint64-prev+curr) / dur.Seconds())
 	}
-	return uint64(float64(prev-curr) / dur.Seconds())
+	return uint64(float64(curr-prev) / dur.Seconds())
 }
 
 func (m *topNetUI) View() string {
