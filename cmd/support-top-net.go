@@ -89,16 +89,19 @@ func mainSupportTopNet(ctx *cli.Context) error {
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
-
-	_, e := client.ServerInfo(ctxt)
+	hosts := []string{}
+	info, e := client.ServerInfo(ctxt)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to initialize admin client.")
-
+	for _, s := range info.Servers {
+		hosts = append(hosts, s.Endpoint)
+	}
 	// MetricsOptions are options provided to Metrics call.
 	opts := madmin.MetricsOptions{
 		Type:     madmin.MetricNet,
 		Interval: time.Duration(ctx.Int("interval")) * time.Second,
 		ByHost:   true,
 		N:        ctx.Int("count"),
+		Hosts:    hosts,
 	}
 
 	p := tea.NewProgram(initTopNetUI())
