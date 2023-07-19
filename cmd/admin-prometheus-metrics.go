@@ -40,16 +40,20 @@ var adminPrometheusMetricsCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 USAGE:
   {{.HelpName}} TARGET [METRIC-TYPE]
+
 METRIC-TYPE:
-  valid values are ['node', 'bucket']. Defaults to 'cluster' if not passed.
+  valid values are ['cluster', 'node', 'bucket']. Defaults to 'cluster' if not specified.
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. List of metrics reported cluster wide.
      {{.Prompt}} {{.HelpName}} play
+
   2. List of metrics reported at node level.
      {{.Prompt}} {{.HelpName}} play node
+
   3. List of metrics reported at bucket level.
      {{.Prompt}} {{.HelpName}} play bucket
 `,
