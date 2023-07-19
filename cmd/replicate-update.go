@@ -309,6 +309,9 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 	for _, rule := range rcfg.Rules {
 		if rule.ID == cliCtx.String("id") {
 			arn = rule.Destination.Bucket
+			if rcfg.Role != "" {
+				arn = rcfg.Role
+			}
 			break
 		}
 	}
