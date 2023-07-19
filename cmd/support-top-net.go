@@ -89,9 +89,9 @@ func mainSupportTopNet(ctx *cli.Context) error {
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
-	hosts := make([]string, 0, len(info.Servers))
 	info, e := client.ServerInfo(ctxt)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to initialize admin client.")
+	hosts := make([]string, 0, len(info.Servers))
 	for _, s := range info.Servers {
 		hosts = append(hosts, s.Endpoint)
 	}
