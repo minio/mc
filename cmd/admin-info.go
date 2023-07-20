@@ -59,11 +59,12 @@ EXAMPLES:
 }
 
 type poolSummary struct {
-	index          int
-	setsCount      int
-	drivesPerSet   int
-	driveTolerance int
-	endpoints      set.StringSet
+	index              int
+	setsCount          int
+	drivesPerSet       int
+	driveTolerance     int
+	endpoints          set.StringSet
+	deleteMarkersCount uint64
 }
 
 type clusterInfo map[int]*poolSummary
@@ -98,6 +99,7 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 		for _, pool := range summary {
 			pool.setsCount = info.Backend.TotalSets[pool.index]
 			pool.drivesPerSet = info.Backend.DrivesPerSet[pool.index]
+			pool.deleteMarkersCount = info.Pools[pool.index][0].DeleteMarkersCount // assuming '0' is always a valid key here
 		}
 	}
 	return summary
@@ -268,8 +270,8 @@ func (u clusterStruct) String() (msg string) {
 	if backendType == madmin.Erasure {
 		msg += "Pools:\n"
 		for pool, summary := range clusterSummary {
-			msg += fmt.Sprintf("   %s, Erasure sets: %d, Drives per erasure set: %d\n",
-				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.drivesPerSet)
+			msg += fmt.Sprintf("   %s, Erasure sets: %d, Drives per erasure set: %d, Delete markers count: %d\n",
+				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.drivesPerSet, summary.deleteMarkersCount)
 		}
 	}
 
