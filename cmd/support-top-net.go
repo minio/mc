@@ -30,11 +30,6 @@ import (
 
 var supportTopNetFlags = []cli.Flag{
 	cli.IntFlag{
-		Name:  "count, c",
-		Usage: "show top count interfaces",
-		Value: 10,
-	},
-	cli.IntFlag{
 		Name:  "interval",
 		Usage: "interval between requests in seconds",
 		Value: 1,
@@ -100,7 +95,6 @@ func mainSupportTopNet(ctx *cli.Context) error {
 		Type:     madmin.MetricNet,
 		Interval: time.Duration(ctx.Int("interval")) * time.Second,
 		ByHost:   true,
-		N:        ctx.Int("count"),
 		Hosts:    hosts,
 	}
 

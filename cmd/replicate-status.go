@@ -225,13 +225,15 @@ func (s replicateStatusMessage) String() string {
 			rows += r
 			rows += "\n"
 			bwStat, ok := s.ReplicationStatus.Stats[arn]
-			if ok && bwStat.BandWidthLimitInBytesPerSecond > 0 {
-				limit := humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
-				current := humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
-				if bwStat.BandWidthLimitInBytesPerSecond == 0 {
-					limit = "N/A" // N/A means cluster bandwidth is not configured
+			if ok {
+				limit := "N/A"   // N/A means cluster bandwidth is not configured
+				current := "N/A" // N/A means there is
+				if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
+					current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
 				}
-
+				if bwStat.BandWidthLimitInBytesPerSecond > 0 {
+					limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
+				}
 				r = console.Colorize("THeaderBold", newPrettyTable("",
 					Field{"B/w limit Hdr", 80},
 				).buildRow("  Configured Max Bandwidth (Bps): "+console.Colorize("Values", limit)))

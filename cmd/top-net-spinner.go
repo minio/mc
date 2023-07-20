@@ -19,8 +19,10 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,6 +30,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/minio/madmin-go/v3"
 	"github.com/olekukonko/tablewriter"
+	"github.com/prometheus/procfs"
 )
 
 type topNetUI struct {
@@ -36,6 +39,7 @@ type topNetUI struct {
 
 	sortAsc bool
 
+	prevTopMap map[string]topNetResult
 	currTopMap map[string]topNetResult
 }
 
@@ -64,6 +68,7 @@ func (m *topNetUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case topNetResult:
+		m.prevTopMap[msg.endPoint] = m.currTopMap[msg.endPoint]
 		m.currTopMap[msg.endPoint] = msg
 		if msg.final {
 			m.quitting = true
@@ -78,6 +83,13 @@ func (m *topNetUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		return m, nil
 	}
+}
+
+func (m *topNetUI) calculationRate(prev, curr uint64, dur time.Duration) uint64 {
+	if curr < prev {
+		return uint64(float64(math.MaxUint64-prev+curr) / dur.Seconds())
+	}
+	return uint64(float64(curr-prev) / dur.Seconds())
 }
 
 func (m *topNetUI) View() string {
@@ -99,8 +111,22 @@ func (m *topNetUI) View() string {
 
 	data := make([]topNetResult, 0, len(m.currTopMap))
 
-	for _, metric := range m.currTopMap {
-		data = append(data, metric)
+	for endPoint, curr := range m.currTopMap {
+		if prev, ok := m.prevTopMap[endPoint]; ok {
+			data = append(data, topNetResult{
+				final:    curr.final,
+				endPoint: curr.endPoint,
+				error:    curr.error,
+				stats: madmin.NetMetrics{
+					CollectedAt:   curr.stats.CollectedAt,
+					InterfaceName: curr.stats.InterfaceName,
+					NetStats: procfs.NetDevLine{
+						RxBytes: m.calculationRate(prev.stats.NetStats.RxBytes, curr.stats.NetStats.RxBytes, curr.stats.CollectedAt.Sub(prev.stats.CollectedAt)),
+						TxBytes: m.calculationRate(prev.stats.NetStats.TxBytes, curr.stats.NetStats.TxBytes, curr.stats.CollectedAt.Sub(prev.stats.CollectedAt)),
+					},
+				},
+			})
+		}
 	}
 
 	sort.Slice(data, func(i, j int) bool {
@@ -143,5 +169,6 @@ func initTopNetUI() *topNetUI {
 	return &topNetUI{
 		spinner:    s,
 		currTopMap: make(map[string]topNetResult),
+		prevTopMap: make(map[string]topNetResult),
 	}
 }
