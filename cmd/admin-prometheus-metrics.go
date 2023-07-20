@@ -89,16 +89,13 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 	if e != nil {
 		return e
 	}
-	var metricsSubSystem string
-	switch args.Get(1) {
-	case "node":
-		metricsSubSystem = "node"
-	case "bucket":
-		metricsSubSystem = "bucket"
+	metricsSubSystem := args.Get(1)
+	switch metricsSubSystem {
+	case "node", "bucket", "cluster":
 	case "":
 		metricsSubSystem = "cluster"
 	default:
-		fatalIf(errInvalidArgument().Trace(), "invalid metric type '%v'", args.Get(1))
+		fatalIf(errInvalidArgument().Trace(), "invalid metric type '%v'", metricsSubSystem)
 	}
 
 	req, e := http.NewRequest(http.MethodGet, hostConfig.URL+metricsEndPointRoot+metricsSubSystem, nil)
