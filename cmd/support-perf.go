@@ -197,6 +197,7 @@ type NetTestResults struct {
 	Results []NetTestResult `json:"servers"`
 }
 
+// ClientResult - result of the network from client to server
 type ClientResult struct {
 	Tx       uint64 `json:"tx"`
 	Endpoint string `json:"endpoint"`
