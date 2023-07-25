@@ -53,13 +53,11 @@ func mainAdminSpeedTestClientPerf(ctx *cli.Context, aliasedURL string, outCh cha
 	go func() {
 		defer close(resultCh)
 		defer close(errorCh)
-		for i := 0; i < 10; i++ {
-			result, e := client.ClientPerf(ctxt, duration)
-			if e != nil {
-				errorCh <- e
-			}
-			resultCh <- result
+		result, e := client.ClientPerf(ctxt, duration)
+		if e != nil {
+			errorCh <- e
 		}
+		resultCh <- result
 	}()
 	if globalJSON {
 		var rsl PerfTestOutput
