@@ -35,7 +35,7 @@ func mainAdminSpeedTestClientPerf(ctx *cli.Context, aliasedURL string, outCh cha
 		return nil
 	}
 
-	ctxt, cancel := context.WithCancel(globalContext)
+	ctxtop, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
 	duration, e := time.ParseDuration(ctx.String("duration"))
@@ -48,12 +48,15 @@ func mainAdminSpeedTestClientPerf(ctx *cli.Context, aliasedURL string, outCh cha
 		return nil
 	}
 
+	ctxt, cancel := context.WithTimeout(ctxtop, duration)
+	defer cancel()
+
 	resultCh := make(chan madmin.ClientPerfResult)
 	errorCh := make(chan error)
 	go func() {
 		defer close(resultCh)
 		defer close(errorCh)
-		result, e := client.ClientPerf(ctxt, duration)
+		result, e := client.ClientPerf(ctxt)
 		if e != nil {
 			errorCh <- e
 		}
