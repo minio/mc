@@ -486,6 +486,7 @@ type shortTraceMsg struct {
 	Client     string            `json:"client"`
 	CallStats  *callStats        `json:"callStats,omitempty"`
 	Duration   time.Duration     `json:"duration"`
+	TTFB       time.Duration     `json:"timeToFirstByte"`
 	FuncName   string            `json:"api"`
 	Path       string            `json:"path"`
 	Query      string            `json:"query"`
@@ -523,7 +524,7 @@ type callStats struct {
 	Rx       int           `json:"rx"`
 	Tx       int           `json:"tx"`
 	Duration time.Duration `json:"duration"`
-	Ttfb     time.Duration `json:"timeToFirstByte"`
+	TTFB     time.Duration `json:"timeToFirstByte"`
 }
 
 type verboseTrace struct {
@@ -571,6 +572,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 		s.CallStats.Duration = t.Duration
 		s.CallStats.Rx = t.HTTP.CallStats.InputBytes
 		s.CallStats.Tx = t.HTTP.CallStats.OutputBytes
+		s.CallStats.TTFB = t.HTTP.CallStats.TimeToFirstByte
 	}
 	return s
 }
@@ -637,8 +639,12 @@ func (s shortTraceMsg) String() string {
 
 	spaces := 15 - len(s.Client)
 	fmt.Fprintf(b, "%*s", spaces, " ")
-	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
+	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf(" %2s", s.CallStats.Duration.Round(time.Microsecond))))
 	spaces = 12 - len(fmt.Sprintf("%2s", s.CallStats.Duration.Round(time.Microsecond)))
+	fmt.Fprintf(b, "%*s", spaces, " ")
+	fmt.Fprint(b, console.Colorize("Stat", " ⇣ "))
+	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf(" %2s", s.CallStats.TTFB.Round(time.Nanosecond))))
+	spaces = 10 - len(fmt.Sprintf("%2s", s.CallStats.TTFB.Round(time.Nanosecond)))
 	fmt.Fprintf(b, "%*s", spaces, " ")
 	fmt.Fprint(b, console.Colorize("Stat", " ↑ "))
 	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Rx))))
@@ -706,7 +712,7 @@ func (t traceMessage) JSON() string {
 			Duration: t.Trace.Duration,
 			Rx:       t.Trace.HTTP.CallStats.InputBytes,
 			Tx:       t.Trace.HTTP.CallStats.OutputBytes,
-			Ttfb:     t.Trace.HTTP.CallStats.TimeToFirstByte,
+			TTFB:     t.Trace.HTTP.CallStats.TimeToFirstByte,
 		}
 	}
 	buf := &bytes.Buffer{}
@@ -776,7 +782,8 @@ func (t traceMessage) String() string {
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", "[RESPONSE] "))
 	fmt.Fprintf(b, "[%s] ", rs.Time.Local().Format(traceTimeFormat))
-	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.Duration.Round(time.Microsecond), humanize.IBytes(uint64(trc.HTTP.CallStats.InputBytes)), humanize.IBytes(uint64(trc.HTTP.CallStats.OutputBytes)))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s TTFB %2s ↑ %s  ↓ %s ]\n", trc.Duration.Round(time.Microsecond), trc.HTTP.CallStats.TimeToFirstByte.Round(time.Nanosecond),
+		humanize.IBytes(uint64(trc.HTTP.CallStats.InputBytes)), humanize.IBytes(uint64(trc.HTTP.CallStats.OutputBytes)))))
 
 	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
 	if rs.StatusCode != http.StatusOK {
