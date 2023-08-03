@@ -80,18 +80,18 @@ func mainBatchGenerate(ctx *cli.Context) error {
 	adminClient, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	switch jobType {
-	case string(madmin.BatchJobReplicate):
-	case string(madmin.BatchJobKeyRotate):
-	default:
-		fatalIf(errInvalidArgument().Trace(jobType), "Unable to generate a job template for the specified job type")
+	for _, supJobType := range madmin.SupportedJobTypes {
+		if jobType == string(supJobType) {
+			out, e := adminClient.GenerateBatchJob(globalContext, madmin.GenerateBatchJobOpts{
+				Type: madmin.BatchJobType(jobType),
+			})
+			fatalIf(probe.NewError(e), "Unable to generate %s", args.Get(1))
+
+			fmt.Println(string(out))
+			return nil
+		}
 	}
 
-	out, e := adminClient.GenerateBatchJob(globalContext, madmin.GenerateBatchJobOpts{
-		Type: madmin.BatchJobType(jobType),
-	})
-	fatalIf(probe.NewError(e), "Unable to generate %s", args.Get(1))
-
-	fmt.Println(string(out))
+	fatalIf(errInvalidArgument().Trace(jobType), "Unable to generate a job template for the specified job type")
 	return nil
 }
