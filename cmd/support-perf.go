@@ -483,8 +483,8 @@ func writeJSONObjToZip(zipWriter *zip.Writer, obj interface{}, filename string) 
 
 // compress MinIO performance output
 func zipPerfResult(perfOutput PerfTestOutput, resultFilename string, regInfo ClusterRegistrationInfo) (string, error) {
-	// Create profile zip file
-	tmpArchive, e := os.CreateTemp("", "mc-perf-")
+	// Create perf results zip file
+	tmpArchive, e := os.CreateTemp("", "mc-perf-*.zip")
 
 	if e != nil {
 		return "", e

@@ -59,6 +59,7 @@ EXAMPLES:
 }
 
 type poolSummary struct {
+	index          int
 	setsCount      int
 	drivesPerSet   int
 	driveTolerance int
@@ -75,26 +76,29 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 			pool := summary[disk.PoolIndex]
 			if pool == nil {
 				pool = &poolSummary{
+					index:          disk.PoolIndex,
 					endpoints:      set.NewStringSet(),
 					driveTolerance: info.StandardParity(),
 				}
 			}
+			// Deprecated calculation based on disk location
+			if disk.SetIndex+1 > pool.setsCount {
+				pool.setsCount = disk.SetIndex + 1
+			}
+			// Deprecated calculation based on disk location
+			if disk.DiskIndex+1 > pool.drivesPerSet {
+				pool.drivesPerSet = disk.DiskIndex + 1
+			}
 			pool.endpoints.Add(srv.Endpoint)
-			if disk.SetIndex > pool.setsCount {
-				pool.setsCount = disk.SetIndex
-			}
-			if disk.DiskIndex > pool.drivesPerSet {
-				pool.drivesPerSet = disk.DiskIndex
-			}
-
 			summary[disk.PoolIndex] = pool
 		}
 	}
-	// We calculated max set index and max disk index
-	// increase by one to show the number of sets and drives
-	for _, pool := range summary {
-		pool.setsCount++
-		pool.drivesPerSet++
+
+	if len(info.Backend.TotalSets) > 0 { // Check if this is a recent enough MinIO version
+		for _, pool := range summary {
+			pool.setsCount = info.Backend.TotalSets[pool.index]
+			pool.drivesPerSet = info.Backend.DrivesPerSet[pool.index]
+		}
 	}
 	return summary
 }
@@ -143,8 +147,7 @@ func (u clusterStruct) String() (msg string) {
 	}
 
 	// Initialization
-	var totalOnlineDrivesCluster int
-	var totalOfflineDrivesCluster int
+	var totalOfflineNodes int
 
 	// Color palette initialization
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
@@ -166,12 +169,12 @@ func (u clusterStruct) String() (msg string) {
 
 	// Loop through each server and put together info for each one
 	for _, srv := range u.Info.Servers {
-		// Check if MinIO server is offline ("Mode" field),
-		// If offline, error out
-		if srv.State == "offline" {
+		// Check if MinIO server is not online ("Mode" field),
+		if srv.State != string(madmin.ItemOnline) {
+			totalOfflineNodes++
 			// "PrintB" is color blue in console library package
 			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
-			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
+			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", srv.State))
 
 			if backendType == madmin.Erasure {
 				// Info about drives on a server, only available for non-FS types
@@ -188,8 +191,6 @@ func (u clusterStruct) String() (msg string) {
 				}
 
 				totalDrivesPerServer := OnDrives + OffDrives
-				totalOnlineDrivesCluster += OnDrives
-				totalOfflineDrivesCluster += OffDrives
 
 				dispNoOfDrives = strconv.Itoa(OnDrives) + "/" + strconv.Itoa(totalDrivesPerServer)
 				msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDrives, console.Colorize("InfoFail", "OK "))
@@ -246,8 +247,6 @@ func (u clusterStruct) String() (msg string) {
 			}
 
 			totalDrivesPerServer := OnDrives + OffDrives
-			totalOnlineDrivesCluster += OnDrives
-			totalOfflineDrivesCluster += OffDrives
 			clr := "Info"
 			if OnDrives != totalDrivesPerServer {
 				clr = "InfoWarning"
@@ -289,18 +288,14 @@ func (u clusterStruct) String() (msg string) {
 		msg += "\n"
 	}
 	if backendType == madmin.Erasure {
+		if totalOfflineNodes != 0 {
+			msg += fmt.Sprintf("%s offline, ", english.Plural(totalOfflineNodes, "node", ""))
+		}
 		// Summary on total no of online and total
 		// number of offline drives at the Cluster level
-		bkInfo, ok := u.Info.Backend.(madmin.ErasureBackend)
-		if ok {
-			msg += fmt.Sprintf("%s online, %s offline\n",
-				english.Plural(bkInfo.OnlineDisks, "drive", ""),
-				english.Plural(bkInfo.OfflineDisks, "drive", ""))
-		} else {
-			msg += fmt.Sprintf("%s online, %s offline\n",
-				english.Plural(totalOnlineDrivesCluster, "drive", ""),
-				english.Plural(totalOfflineDrivesCluster, "drive", ""))
-		}
+		msg += fmt.Sprintf("%s online, %s offline\n",
+			english.Plural(u.Info.Backend.OnlineDisks, "drive", ""),
+			english.Plural(u.Info.Backend.OfflineDisks, "drive", ""))
 	}
 
 	// Remove the last new line if any

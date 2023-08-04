@@ -661,6 +661,65 @@ func (f *fsClient) Remove(_ context.Context, isIncomplete, _, _, _ bool, content
 	return resultCh
 }
 
+// ListBuckets returns the list of directories inside a base path
+func (f *fsClient) ListBuckets(_ context.Context) ([]*ClientContent, *probe.Error) {
+	// save pathURL and file path for further usage.
+	pathURL := *f.PathURL
+	path := pathURL.Path
+
+	st, e := os.Stat(path)
+	if e != nil {
+		if os.IsNotExist(e) {
+			return nil, probe.NewError(PathNotFound{Path: path})
+		}
+		return nil, probe.NewError(e)
+	}
+
+	if !st.Mode().IsDir() {
+		return nil, probe.NewError(PathNotADirectory{Path: path})
+	}
+
+	// List directories (buckets) inside path in a sorted way
+	files, e := readDir(path)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	bucketsList := make([]*ClientContent, 0, len(files))
+
+	for _, file := range files {
+		fi := file
+		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			fp := filepath.Join(path, fi.Name())
+			fi, e = os.Stat(fp)
+			if e != nil {
+				// Ignore all errors on symlinks
+				continue
+			}
+		}
+
+		if isIgnoredFile(fi.Name()) {
+			continue
+		}
+
+		if !fi.Mode().IsDir() {
+			continue
+		}
+
+		pathURL = *f.PathURL
+		pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
+
+		bucketsList = append(bucketsList, &ClientContent{
+			URL:  pathURL,
+			Time: fi.ModTime(),
+			Type: fi.Mode(),
+			Err:  nil,
+		})
+	}
+
+	return bucketsList, nil
+}
+
 // List - list files and folders.
 func (f *fsClient) List(_ context.Context, opts ListOptions) <-chan *ClientContent {
 	contentCh := make(chan *ClientContent, 1)
@@ -1289,8 +1348,8 @@ func (f *fsClient) DeleteTags(_ context.Context, _ string) *probe.Error {
 }
 
 // Get lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, *probe.Error) {
-	return nil, probe.NewError(APINotImplemented{
+func (f *fsClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, time.Time, *probe.Error) {
+	return nil, time.Time{}, probe.NewError(APINotImplemented{
 		API:     "GetLifecycle",
 		APIType: "filesystem",
 	})

@@ -106,6 +106,7 @@ type Client interface {
 	// Bucket operations
 	MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error
 	RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error
+	ListBuckets(ctx context.Context) ([]*ClientContent, *probe.Error)
 
 	// Object lock config
 	SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error
@@ -151,7 +152,7 @@ type Client interface {
 	DeleteTags(ctx context.Context, versionID string) *probe.Error
 
 	// Lifecycle operations
-	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error)
+	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, time.Time, *probe.Error)
 	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
 
 	// Versioning operations
