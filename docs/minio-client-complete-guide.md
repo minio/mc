@@ -167,7 +167,7 @@ Finally, the url will be the **public endpoint specific to the region/resiliency
 mc alias set ibm https://s3.us-east.cloud-object-storage.appdomain.cloud BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v4
 ```
 
-**Note**: The service ID you create must have an access policy granting it access to your Object Storage instance(s).
+**Note**: The service ID you create must have an access policy granting it access to your Object Storage instance(s). 
 
 ### Example - Specify keys using standard input
 
@@ -331,7 +331,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 
 
 
-###  Command `ls`
+###  Command `ls`  
 `ls` command lists files, buckets and objects. Use `--incomplete` flag to list partially copied content.
 
 ```
