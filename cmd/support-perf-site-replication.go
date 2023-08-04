@@ -1,4 +1,4 @@
-// Copyright (c) 2022 MinIO, Inc.
+// Copyright (c) 2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -28,7 +28,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
+func mainAdminSpeedTestSiteReplication(ctx *cli.Context, aliasedURL string, outCh chan<- PerfTestResult) error {
 	client, perr := newAdminClient(aliasedURL)
 	if perr != nil {
 		fatalIf(perr.Trace(aliasedURL), "Unable to initialize admin client.")
@@ -48,13 +48,13 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 		return nil
 	}
 
-	resultCh := make(chan madmin.NetperfResult)
+	resultCh := make(chan madmin.SiteNetPerfResult)
 	errorCh := make(chan error)
 	go func() {
 		defer close(resultCh)
 		defer close(errorCh)
 
-		result, e := client.Netperf(ctxt, duration)
+		result, e := client.SiteReplicationPerf(ctxt, duration)
 		if e != nil {
 			errorCh <- e
 		}
@@ -65,15 +65,15 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 		select {
 		case e := <-errorCh:
 			printMsg(convertPerfResult(PerfTestResult{
-				Type:  NetPerfTest,
+				Type:  SiteReplicationPerfTest,
 				Err:   e.Error(),
 				Final: true,
 			}))
 		case result := <-resultCh:
 			printMsg(convertPerfResult(PerfTestResult{
-				Type:      NetPerfTest,
-				NetResult: &result,
-				Final:     true,
+				Type:                  SiteReplicationPerfTest,
+				SiteReplicationResult: &result,
+				Final:                 true,
 			}))
 		}
 		return nil
@@ -94,7 +94,7 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 			select {
 			case e := <-errorCh:
 				r := PerfTestResult{
-					Type:  NetPerfTest,
+					Type:  SiteReplicationPerfTest,
 					Err:   e.Error(),
 					Final: true,
 				}
@@ -105,9 +105,9 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 				return
 			case result := <-resultCh:
 				r := PerfTestResult{
-					Type:      NetPerfTest,
-					NetResult: &result,
-					Final:     true,
+					Type:                  SiteReplicationPerfTest,
+					SiteReplicationResult: &result,
+					Final:                 true,
 				}
 				p.Send(r)
 				if outCh != nil {
@@ -116,8 +116,8 @@ func mainAdminSpeedTestNetperf(ctx *cli.Context, aliasedURL string, outCh chan<-
 				return
 			default:
 				p.Send(PerfTestResult{
-					Type:      NetPerfTest,
-					NetResult: &madmin.NetperfResult{},
+					Type:                  SiteReplicationPerfTest,
+					SiteReplicationResult: &madmin.SiteNetPerfResult{},
 				})
 				time.Sleep(100 * time.Millisecond)
 			}

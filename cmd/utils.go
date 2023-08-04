@@ -35,7 +35,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-ieproxy"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 
@@ -212,7 +212,7 @@ type prefixSSEPair struct {
 }
 
 // parse and validate encryption keys entered on command line
-func parseAndValidateEncryptionKeys(sseKeys string, sse string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+func parseAndValidateEncryptionKeys(sseKeys, sse string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
 	encMap, err = parseEncryptionKeys(sseKeys)
 	if err != nil {
 		return nil, err

@@ -58,7 +58,7 @@ func (fs fsComplete) Predict(a complete.Args) []string {
 	return complete.PredictFiles("*").Predict(a)
 }
 
-func completeAdminConfigKeys(aliasPath string, keyPrefix string) (prediction []string) {
+func completeAdminConfigKeys(aliasPath, keyPrefix string) (prediction []string) {
 	// Convert alias/bucket/incompl to alias/bucket/ to list its contents
 	parentDirPath := filepath.Dir(aliasPath) + "/"
 	clnt, err := newAdminClient(parentDirPath)
@@ -266,12 +266,12 @@ var completeCmds = map[string]complete.Predictor{
 	"/encrypt/info":  s3Complete{deepLevel: 2},
 	"/encrypt/clear": s3Complete{deepLevel: 2},
 
-	"/replicate/add":    s3Complete{deepLevel: 2},
-	"/replicate/edit":   s3Complete{deepLevel: 2},
-	"/replicate/update": s3Complete{deepLevel: 2},
-	"/replicate/list":   s3Complete{deepLevel: 2},
-	"/replicate/remove": s3Complete{deepLevel: 2},
-	"/replicate/diff":   s3Complete{deepLevel: 2},
+	"/replicate/add":     s3Complete{deepLevel: 2},
+	"/replicate/edit":    s3Complete{deepLevel: 2},
+	"/replicate/update":  s3Complete{deepLevel: 2},
+	"/replicate/list":    s3Complete{deepLevel: 2},
+	"/replicate/remove":  s3Complete{deepLevel: 2},
+	"/replicate/backlog": s3Complete{deepLevel: 2},
 
 	"/replicate/export":        s3Complete{deepLevel: 2},
 	"/replicate/import":        s3Complete{deepLevel: 2},
@@ -478,6 +478,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/support/top/api":      aliasCompleter,
 	"/support/top/drive":    aliasCompleter,
 	"/support/top/disk":     aliasCompleter,
+	"/support/top/net":      aliasCompleter,
 
 	"/license/register": aliasCompleter,
 	"/license/info":     aliasCompleter,

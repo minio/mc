@@ -128,7 +128,7 @@ func mainILMRemove(cliCtx *cli.Context) error {
 	client, err := newClient(urlStr)
 	fatalIf(err.Trace(args...), "Unable to initialize client for "+urlStr+".")
 
-	ilmCfg, err := client.GetLifecycle(ctx)
+	ilmCfg, _, err := client.GetLifecycle(ctx)
 	fatalIf(err.Trace(urlStr), "Unable to fetch lifecycle rules")
 
 	ilmAll := cliCtx.Bool("all")

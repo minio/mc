@@ -310,7 +310,7 @@ func expandAliasFromEnv(envURL string) (*aliasConfigV10, *probe.Error) {
 }
 
 // expandAlias expands aliased URL if any match is found, returns as is otherwise.
-func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *aliasConfigV10, err *probe.Error) {
+func expandAlias(aliasedURL string) (alias, urlStr string, aliasCfg *aliasConfigV10, err *probe.Error) {
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
 
@@ -336,7 +336,7 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *alia
 }
 
 // mustExpandAlias expands aliased URL if any match is found, returns as is otherwise.
-func mustExpandAlias(aliasedURL string) (alias string, urlStr string, aliasCfg *aliasConfigV10) {
+func mustExpandAlias(aliasedURL string) (alias, urlStr string, aliasCfg *aliasConfigV10) {
 	alias, urlStr, aliasCfg, _ = expandAlias(aliasedURL)
 	return alias, urlStr, aliasCfg
 }

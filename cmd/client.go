@@ -113,7 +113,7 @@ type Client interface {
 	GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
-	GetAccess(ctx context.Context) (access string, policyJSON string, error *probe.Error)
+	GetAccess(ctx context.Context) (access, policyJSON string, error *probe.Error)
 	GetAccessRules(ctx context.Context) (policyRules map[string]string, error *probe.Error)
 	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
@@ -152,7 +152,7 @@ type Client interface {
 	DeleteTags(ctx context.Context, versionID string) *probe.Error
 
 	// Lifecycle operations
-	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, *probe.Error)
+	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, time.Time, *probe.Error)
 	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
 
 	// Versioning operations

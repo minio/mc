@@ -28,7 +28,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
@@ -309,6 +309,9 @@ func mainReplicateUpdate(cliCtx *cli.Context) error {
 	for _, rule := range rcfg.Rules {
 		if rule.ID == cliCtx.String("id") {
 			arn = rule.Destination.Bucket
+			if rcfg.Role != "" {
+				arn = rcfg.Role
+			}
 			break
 		}
 	}

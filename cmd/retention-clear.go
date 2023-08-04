@@ -132,7 +132,7 @@ func mainRetentionClear(cliCtx *cli.Context) error {
 
 	target, versionID, rewind, withVersions, recursive, bucketMode := parseClearRetentionArgs(cliCtx)
 
-	fatalIfBucketLockNotEnabled(ctx, target)
+	fatalIfBucketLockNotSupported(ctx, target)
 
 	if bucketMode {
 		return clearBucketLock(target)

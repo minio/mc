@@ -23,7 +23,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/navidys/tvxwidgets"
 	"github.com/rivo/tview"
 )
@@ -93,7 +93,7 @@ func (t tierInfos) TableUI() *tview.Table {
 	return table
 }
 
-func (t tierInfos) Barcharts(tier string) (objects *tvxwidgets.BarChart, versions *tvxwidgets.BarChart) {
+func (t tierInfos) Barcharts(tier string) (objects, versions *tvxwidgets.BarChart) {
 	var maxObj int
 	var maxVer int
 	for _, t := range t {
