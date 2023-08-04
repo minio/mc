@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"math"
 	"sort"
 
@@ -33,13 +34,21 @@ import (
 	"github.com/minio/pkg/console"
 )
 
+var replicateStatusFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "backlog,b",
+		Usage: "show most recent failures for one or more nodes. Valid values are 'all', or node name",
+		Value: "all",
+	},
+}
+
 var replicateStatusCmd = cli.Command{
 	Name:         "status",
 	Usage:        "show server side replication status",
 	Action:       mainReplicateStatus,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, replicateStatusFlags...),
 	CustomHelpTemplate: `NAME:
    {{.HelpName}} - {{.Usage}}
 
@@ -52,6 +61,9 @@ FLAGS:
 EXAMPLES:
   1. Get server side replication metrics for bucket "mybucket" for alias "myminio".
        {{.Prompt}} {{.HelpName}} myminio/mybucket
+
+  2. Get most recent replication failures for bucket "mybucket" for alias "myminio".
+	   {{.Prompt}} {{.HelpName}} --backlog "all" myminio/mybucket
 `,
 }
 
@@ -213,13 +225,15 @@ func (s replicateStatusMessage) String() string {
 			rows += r
 			rows += "\n"
 			bwStat, ok := s.ReplicationStatus.Stats[arn]
-			if ok && bwStat.BandWidthLimitInBytesPerSecond > 0 {
-				limit := humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
-				current := humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
-				if bwStat.BandWidthLimitInBytesPerSecond == 0 {
-					limit = "N/A" // N/A means cluster bandwidth is not configured
+			if ok {
+				limit := "N/A"   // N/A means cluster bandwidth is not configured
+				current := "N/A" // N/A means there is
+				if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
+					current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
 				}
-
+				if bwStat.BandWidthLimitInBytesPerSecond > 0 {
+					limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
+				}
 				r = console.Colorize("THeaderBold", newPrettyTable("",
 					Field{"B/w limit Hdr", 80},
 				).buildRow("  Configured Max Bandwidth (Bps): "+console.Colorize("Values", limit)))
@@ -270,7 +284,11 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 
 	console.SetColor("Replica", color.New(color.FgCyan))
 	console.SetColor("Failed", color.New(color.Bold, color.FgRed))
-
+	console.SetColor("Object", color.New(color.FgWhite))
+	console.SetColor("Count", color.New(color.FgWhite))
+	for _, c := range colors {
+		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
+	}
 	checkReplicateStatusSyntax(cliCtx)
 
 	// Get the alias parameter from cli
@@ -279,12 +297,27 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	// Create a new Client
 	client, err := newClient(aliasedURL)
 	fatalIf(err, "Unable to initialize connection.")
-	replicateStatus, err := client.GetReplicationMetrics(ctx)
-	fatalIf(err.Trace(args...), "Unable to get replication status")
 	// Create a new MinIO Admin Client
 	admClient, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 	_, sourceBucket := url2Alias(args[0])
+
+	if cliCtx.IsSet("backlog") {
+		mrfCh := admClient.BucketReplicationMRF(ctx, sourceBucket, cliCtx.String("backlog"))
+		for mrf := range mrfCh {
+			if mrf.Err != "" {
+				fatalIf(probe.NewError(fmt.Errorf("%s", mrf.Err)), "Unable to fetch replication backlog.")
+			}
+			printMsg(replicateMRFMessage{
+				Op:             cliCtx.Command.Name,
+				Status:         "success",
+				ReplicationMRF: mrf,
+			})
+		}
+		return nil
+	}
+	replicateStatus, err := client.GetReplicationMetrics(ctx)
+	fatalIf(err.Trace(args...), "Unable to get replication status")
 	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch remote target.")
 	cfg, err := client.GetReplication(ctx)
@@ -299,4 +332,34 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	})
 
 	return nil
+}
+
+type replicateMRFMessage struct {
+	Op     string `json:"op"`
+	Status string `json:"status"`
+	madmin.ReplicationMRF
+}
+
+func (m replicateMRFMessage) JSON() string {
+	m.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
+}
+
+func (m replicateMRFMessage) String() string {
+	return console.Colorize("", newPrettyTable(" | ",
+		Field{getNodeTheme(m.ReplicationMRF.NodeName), len(m.ReplicationMRF.NodeName) + 3},
+		Field{"Count", 7},
+		Field{"Object", -1},
+	).buildRow(m.ReplicationMRF.NodeName, fmt.Sprintf("Retry=%d", m.ReplicationMRF.RetryCount), fmt.Sprintf("%s (%s)", m.ReplicationMRF.Object, m.ReplicationMRF.VersionID)))
+}
+
+// colorize node name
+func getNodeTheme(nodeName string) string {
+	nodeHash := fnv.New32a()
+	nodeHash.Write([]byte(nodeName))
+	nHashSum := nodeHash.Sum32()
+	idx := nHashSum % uint32(len(colors))
+	return fmt.Sprintf("Node%d", colors[idx])
 }

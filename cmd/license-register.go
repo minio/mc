@@ -19,12 +19,15 @@ package cmd
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/console"
 )
 
@@ -46,7 +49,7 @@ var licenseRegisterCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Action:       mainLicenseRegister,
 	Before:       setGlobalsFromContext,
-	Flags:        append(licenseRegisterFlags, supportGlobalFlags...),
+	Flags:        licenseRegisterFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -149,6 +152,43 @@ type SubnetMFAReq struct {
 	Token    string `json:"token"`
 }
 
+func isPlay(endpoint url.URL) (bool, error) {
+	aliasIPs, e := net.LookupHost(endpoint.Hostname())
+	if e != nil {
+		return false, e
+	}
+	aliasIPSet := set.CreateStringSet(aliasIPs...)
+
+	playURL, e := url.Parse("https://play.min.io")
+	if e != nil {
+		return false, e
+	}
+
+	playIPs, e := net.LookupHost(playURL.Hostname())
+	if e != nil {
+		return false, e
+	}
+
+	playIPSet := set.CreateStringSet(playIPs...)
+	return !aliasIPSet.Intersection(playIPSet).IsEmpty(), nil
+}
+
+func validateNotPlay(aliasedURL string) {
+	client := getClient(aliasedURL)
+	endpoint := client.GetEndpointURL()
+	if endpoint == nil {
+		fatal(errDummy().Trace(), "invalid endpoint on alias "+aliasedURL)
+		return
+	}
+
+	isplay, e := isPlay(*endpoint)
+	fatalIf(probe.NewError(e), "error checking if endpoint is play:")
+
+	if isplay {
+		fatal(errDummy().Trace(), "play is a public demo cluster; cannot be registered")
+	}
+}
+
 func mainLicenseRegister(ctx *cli.Context) error {
 	console.SetColor(licRegisterMsgTag, color.New(color.FgGreen, color.Bold))
 	console.SetColor(licRegisterLinkTag, color.New(color.FgWhite, color.Bold))
@@ -156,6 +196,8 @@ func mainLicenseRegister(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
+	validateNotPlay(aliasedURL)
+
 	alias, accAPIKey := initSubnetConnectivity(ctx, aliasedURL, true)
 
 	clusterName := ctx.String("name")

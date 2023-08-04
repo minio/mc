@@ -243,6 +243,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 		fatalIf(errDummy().Trace(),
 			"You cannot specify --purge with --recursive.")
 	}
+
 	if isForceDel && (isNoncurrentVersion || isVersions || cliCtx.IsSet("older-than") || cliCtx.IsSet("newer-than") || versionID != "") {
 		fatalIf(errDummy().Trace(),
 			"You cannot specify --purge flag with any flag(s) other than --force.")
@@ -303,12 +304,16 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 
 	_, content, pErr := url2Stat(ctx, url, versionID, false, opts.encKeyDB, time.Time{}, false)
 	if pErr != nil {
-		switch minio.ToErrorResponse(pErr.ToGoError()).StatusCode {
+		switch st := minio.ToErrorResponse(pErr.ToGoError()).StatusCode; st {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:
 			ignoreStatError = true
 		default:
-			errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
-			return exitStatus(globalErrorExitStatus)
+			_, ok := pErr.ToGoError().(ObjectMissing)
+			ignoreStatError = (st == http.StatusServiceUnavailable || ok || st == http.StatusNotFound) && (opts.isForce && opts.isForceDel)
+			if !ignoreStatError {
+				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
+				return exitStatus(globalErrorExitStatus)
+			}
 		}
 	} else {
 		isDir = content.Type.IsDir()
