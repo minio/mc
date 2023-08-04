@@ -29,7 +29,7 @@ import (
 
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/mattn/go-ieproxy"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/credentials"

@@ -24,7 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 )
@@ -39,9 +39,16 @@ var adminReplicateUpdateFlags = []cli.Flag{
 		Usage: "endpoint for the site",
 	},
 	cli.StringFlag{
-		Name:  "sync",
-		Usage: "enable synchronous replication for this target, valid values are ['enable', 'disable'].",
-		Value: "disable",
+		Name:  "mode",
+		Usage: "change mode of replication for this target, valid values are ['sync', 'async'].",
+		Value: "",
+	},
+	cli.StringFlag{
+		Name:   "sync",
+		Usage:  "enable synchronous replication for this target, valid values are ['enable', 'disable'].",
+		Value:  "disable",
+		Hidden: true, // deprecated Jul 2023
+
 	},
 }
 
@@ -115,16 +122,32 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	if !ctx.IsSet("deployment-id") {
 		fatalIf(errInvalidArgument(), "--deployment-id is a required flag")
 	}
-	if !ctx.IsSet("endpoint") && !ctx.IsSet("sync") {
-		fatalIf(errInvalidArgument(), "--endpoint or --sync is a required flag")
+	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") {
+		fatalIf(errInvalidArgument(), "--endpoint or --mode is a required flag")
 	}
+	if ctx.IsSet("mode") && ctx.IsSet("sync") {
+		fatalIf(errInvalidArgument(), "either --sync or --mode flag should be specified")
+	}
+
 	var syncState string
-	if ctx.IsSet("sync") {
+	if ctx.IsSet("sync") { // for backward compatibility - deprecated Jul 2023
 		syncState = strings.ToLower(ctx.String("sync"))
 		switch syncState {
 		case "enable", "disable":
 		default:
 			fatalIf(errInvalidArgument().Trace(args...), "--sync can be either [enable|disable]")
+		}
+	}
+
+	if ctx.IsSet("mode") {
+		mode := strings.ToLower(ctx.String("mode"))
+		switch mode {
+		case "sync":
+			syncState = "enable"
+		case "async":
+			syncState = "disable"
+		default:
+			fatalIf(errInvalidArgument().Trace(args...), "--mode can be either [sync|async]")
 		}
 	}
 	var ep string

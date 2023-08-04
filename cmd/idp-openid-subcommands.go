@@ -24,7 +24,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v2"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -412,6 +412,10 @@ func (i idpConfig) JSON() string {
 }
 
 func (i idpConfig) String() string {
+	if len(i.Info) == 0 {
+		return "Not configured."
+	}
+
 	// Determine required width for key column.
 	fieldColWidth := 0
 	for _, kv := range i.Info {
@@ -484,7 +488,7 @@ func mainIDPOpenIDEnable(ctx *cli.Context) error {
 	return idpEnableDisable(ctx, isOpenID, enable)
 }
 
-func idpEnableDisable(ctx *cli.Context, isOpenID bool, enable bool) error {
+func idpEnableDisable(ctx *cli.Context, isOpenID, enable bool) error {
 	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1)
 	}

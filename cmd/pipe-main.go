@@ -169,15 +169,17 @@ func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPai
 	return err.Trace(targetURL)
 }
 
-// check pipe input arguments.
+// checkPipeSyntax - validate arguments passed by user
 func checkPipeSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) > 1 {
+	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code.
 	}
 }
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) error {
+	// validate pipe input arguments.
+	checkPipeSyntax(ctx)
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
