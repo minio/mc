@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -326,8 +327,11 @@ func (m *speedTestUI) View() string {
 	} else if cres != nil {
 		table.SetHeader([]string{"Endpoint", "Tx"})
 		data := make([][]string, 0, 2)
-
-		if cres.TX == 0 {
+		tx := uint64(0)
+		if cres.TimeSpent > 0 {
+			tx = uint64(float64(cres.BytesSend) / time.Duration(cres.TimeSpent).Seconds())
+		}
+		if tx == 0 {
 			data = append(data, []string{
 				"...",
 				whiteStyle.Render("-- KiB/s"),
@@ -336,7 +340,7 @@ func (m *speedTestUI) View() string {
 		} else {
 			data = append(data, []string{
 				cres.Endpoint,
-				whiteStyle.Render(humanize.IBytes(cres.TX)) + "/s",
+				whiteStyle.Render(humanize.IBytes(tx)) + "/s",
 				cres.Error,
 			})
 		}

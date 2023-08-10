@@ -199,9 +199,10 @@ type NetTestResults struct {
 
 // ClientResult - result of the network from client to server
 type ClientResult struct {
-	Tx       uint64 `json:"tx"`
-	Endpoint string `json:"endpoint"`
-	Error    string `json:"error"`
+	BytesSend uint64
+	TimeSpent int64
+	Endpoint  string `json:"endpoint"`
+	Error     string `json:"error"`
 }
 
 // SiteNetStats - status for siteNet
@@ -319,13 +320,14 @@ func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) *DriveT
 }
 
 func convertClientResult(result *madmin.ClientPerfResult) *ClientResult {
-	if result == nil {
+	if result == nil || result.TimeSpent <= 0 {
 		return nil
 	}
 	return &ClientResult{
-		Tx:       result.TX,
-		Endpoint: result.Endpoint,
-		Error:    result.Error,
+		BytesSend: result.BytesSend,
+		TimeSpent: result.TimeSpent,
+		Endpoint:  result.Endpoint,
+		Error:     result.Error,
 	}
 }
 
