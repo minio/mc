@@ -153,13 +153,18 @@ type SubnetMFAReq struct {
 }
 
 func isPlay(endpoint url.URL) (bool, error) {
+	playEndpoint := "https://play.min.io"
+	if globalAirgapped {
+		return endpoint.String() == playEndpoint, nil
+	}
+
 	aliasIPs, e := net.LookupHost(endpoint.Hostname())
 	if e != nil {
 		return false, e
 	}
 	aliasIPSet := set.CreateStringSet(aliasIPs...)
 
-	playURL, e := url.Parse("https://play.min.io")
+	playURL, e := url.Parse(playEndpoint)
 	if e != nil {
 		return false, e
 	}
