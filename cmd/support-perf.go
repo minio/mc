@@ -199,8 +199,8 @@ type NetTestResults struct {
 
 // ClientResult - result of the network from client to server
 type ClientResult struct {
-	BytesSend uint64
-	TimeSpent int64
+	BytesSent uint64 `json:"bytesSent"`
+	TimeSpent int64  `json:"timeSpent"`
 	Endpoint  string `json:"endpoint"`
 	Error     string `json:"error"`
 }
@@ -324,7 +324,7 @@ func convertClientResult(result *madmin.ClientPerfResult) *ClientResult {
 		return nil
 	}
 	return &ClientResult{
-		BytesSend: result.BytesSend,
+		BytesSent: result.BytesSend,
 		TimeSpent: result.TimeSpent,
 		Endpoint:  result.Endpoint,
 		Error:     result.Error,
