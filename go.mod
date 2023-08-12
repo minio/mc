@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/json-iterator/go v1.1.12
-	github.com/klauspost/compress v1.16.5
+	github.com/klauspost/compress v1.16.7
 	github.com/mattn/go-ieproxy v0.0.1
 	github.com/mattn/go-isatty v0.0.18
 	github.com/minio/cli v1.24.2
@@ -33,9 +33,9 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/tidwall/gjson v1.14.4
-	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/net v0.10.0
-	golang.org/x/text v0.9.0
+	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/net v0.12.0
+	golang.org/x/text v0.11.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.4.0
@@ -53,7 +53,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.3.0
 	github.com/rivo/tview v0.0.0-20230406072732-e22ce9588bb4
-	golang.org/x/term v0.8.0
+	golang.org/x/term v0.10.0
 )
 
 require (
@@ -80,7 +80,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.4.6
-	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
@@ -106,7 +106,7 @@ require (
 	github.com/prometheus/procfs v0.9.0
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/secure-io/sio-go v0.3.1 // indirect
-	github.com/sirupsen/logrus v1.9.2 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
@@ -120,9 +120,11 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.8.0
+	golang.org/x/sys v0.10.0
 	google.golang.org/genproto v0.0.0-20230403163135-c38d8f061ccd // indirect
 	google.golang.org/grpc v1.54.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+//replace github.com/minio/minio-go/v7 => ../minio-go

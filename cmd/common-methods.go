@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -298,6 +299,7 @@ func putTargetRetention(ctx context.Context, alias, urlStr string, metadata map[
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
+
 	lockModeStr, ok := metadata[AmzObjectLockMode]
 	lockMode := minio.RetentionMode("")
 	if ok {
@@ -341,6 +343,7 @@ func putTargetStream(ctx context.Context, alias, urlStr, mode, until, legalHold 
 		return n, err.Trace(alias, urlStr)
 	}
 	return n, nil
+	// return 0, nil
 }
 
 // putTargetStreamWithURL writes to URL from reader. If length=-1, read until EOF.
@@ -612,6 +615,141 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	}
 
 	return urls.WithError(nil)
+}
+
+// uploadMultipleSourcesToTargetURL - upload multiple files to targetURL from source.
+func uploadMultipleSourcesToTargetURL(ctx context.Context, allUrls []URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair, preserve bool) URLs {
+	var (
+		readers       []io.Reader
+		sizes         []int64
+		putOpts       []PutOptions
+		e             error
+		multipartSize uint64
+	)
+
+	formatError := func(err interface{}) URLs {
+		returningUrl := URLs{
+			TotalCount: int64(len(allUrls)),
+			TotalSize:  0,
+			Error:      nil,
+		}
+
+		for _, s := range allUrls {
+			returningUrl.TotalSize += s.TotalSize
+		}
+
+		if err == nil {
+			return returningUrl
+		}
+
+		// Check if err is already of type probe.Error
+		if pErr, ok := err.(*probe.Error); ok {
+			returningUrl.Error = pErr
+			return returningUrl
+		}
+
+		// If err is of type error, convert it to probe.Error
+		if errn, ok := err.(error); ok {
+			pErr := probe.NewError(errn)
+			returningUrl.Error = pErr
+			return returningUrl
+		}
+
+		return returningUrl
+	}
+
+	metadata := map[string]string{}
+	if v := env.Get("MC_UPLOAD_MULTIPART_SIZE", ""); v != "" {
+		multipartSize, e = humanize.ParseBytes(v)
+		if e != nil {
+			return formatError(e)
+		}
+	}
+
+	multipartThreads, e := strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
+	if e != nil {
+		return formatError(e)
+	}
+
+	var allSourceUrls []string
+	for _, cpUrl := range allUrls {
+		sourceAlias := cpUrl.SourceAlias
+		sourceURL := cpUrl.SourceContent.URL
+		allSourceUrls = append(allSourceUrls, sourceURL.String())
+		sourceVersion := cpUrl.SourceContent.VersionID
+		targetAlias := cpUrl.TargetAlias
+		targetPath := filepath.ToSlash(filepath.Join(targetAlias, cpUrl.TargetContent.URL.Path))
+		tgtSSE := getSSE(targetPath, encKeyDB[targetAlias])
+		targetURL := cpUrl.TargetContent.URL
+		sizes = append(sizes, cpUrl.SourceContent.Size)
+		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, cpUrl.SourceContent.URL.Path))
+
+		srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
+		var err *probe.Error
+
+		for k, v := range cpUrl.SourceContent.UserMetadata {
+			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+		for k, v := range cpUrl.SourceContent.Metadata {
+			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+
+		var reader io.ReadCloser
+		// Proceed with regular stream copy.
+		reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), getSourceOpts{
+			GetOptions: GetOptions{
+				VersionID: sourceVersion,
+				SSE:       srcSSE,
+				Zip:       false,
+			},
+			fetchStat: true,
+			preserve:  preserve,
+		})
+		if err != nil {
+			return formatError(err)
+		}
+		defer reader.Close()
+		readers = append(readers, reader)
+
+		// Get metadata from target content as well
+		for k, v := range cpUrl.TargetContent.Metadata {
+			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+
+		// Get userMetadata from target content as well
+		for k, v := range cpUrl.TargetContent.UserMetadata {
+			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+
+		opts := PutOptions{
+			metadata:         filterMetadata(metadata),
+			sse:              tgtSSE,
+			storageClass:     allUrls[0].TargetContent.StorageClass,
+			md5:              false,
+			disableMultipart: true,
+			isPreserve:       preserve,
+			multipartSize:    multipartSize,
+			multipartThreads: uint(multipartThreads),
+			targetUrl:        targetURL,
+		}
+		putOpts = append(putOpts, opts)
+	}
+
+	targetClient, err := newClientFromAlias(allUrls[0].TargetAlias, putOpts[0].targetUrl.String())
+	if err != nil {
+		return formatError(err)
+	}
+
+	if reflect.TypeOf(targetClient) != reflect.TypeOf(&S3Client{}) {
+		return formatError(errors.New("for multi upload api the only type allowed is s3client"))
+	}
+
+	_, err = targetClient.PutMultiple(ctx, readers, sizes, progress, putOpts)
+	if err != nil {
+		return formatError(err)
+	}
+
+	return formatError(nil)
 }
 
 // newClientFromAlias gives a new client interface for matching

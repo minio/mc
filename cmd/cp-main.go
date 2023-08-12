@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -106,6 +107,10 @@ var (
 		cli.BoolFlag{
 			Name:  "zip",
 			Usage: "Extract from remote zip file (MinIO server source only)",
+		},
+		cli.BoolFlag{
+			Name:  "usemultiupload",
+			Usage: "use multi upload end point for the multi file uploads to zs3server",
 		},
 	}
 )
@@ -275,6 +280,40 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[st
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
 	}
 
+	return urls
+}
+
+// doMultipleCopy - Copy multiple files from source to destination
+func doMultipleCopy(ctx context.Context, cpURLs []URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, preserve bool) URLs {
+	for _, cpUrl := range cpURLs {
+		if cpUrl.Error != nil {
+			cpUrl.Error = cpUrl.Error.Trace()
+			return cpUrl
+		}
+	}
+
+	for _, cpUrl := range cpURLs {
+		sourceAlias := cpUrl.SourceAlias
+		sourceURL := cpUrl.SourceContent.URL
+		targetAlias := cpUrl.TargetAlias
+		targetURL := cpUrl.TargetContent.URL
+		length := cpUrl.SourceContent.Size
+		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+		if progressReader, ok := pg.(*progressBar); ok {
+			progressReader.SetCaption(cpUrl.SourceContent.URL.String() + ":")
+		} else {
+			targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
+			printMsg(copyMessage{
+				Source:     sourcePath,
+				Target:     targetPath,
+				Size:       length,
+				TotalCount: cpUrl.TotalCount,
+				TotalSize:  cpUrl.TotalSize,
+			})
+		}
+	}
+
+	urls := uploadMultipleSourcesToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve)
 	return urls
 }
 
@@ -482,22 +521,24 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	statusCh := make(chan URLs)
 
 	parallel := newParallelManager(statusCh)
-
+	useMultiUpload := cli.Bool("usemultiupload")
+	var urls []URLs
+	var wg sync.WaitGroup
+	wg.Add(1)
+	gracefulStop := func() {
+		parallel.stopAndWait()
+		close(statusCh)
+	}
 	go func() {
-		gracefulStop := func() {
-			parallel.stopAndWait()
-			close(statusCh)
-		}
+		defer wg.Done()
 
 		startContinue := true
 		for {
 			select {
 			case <-quitCh:
-				gracefulStop()
 				return
 			case cpURLs, ok := <-cpURLsCh:
 				if !ok {
-					gracefulStop()
 					return
 				}
 
@@ -561,12 +602,31 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						}
 						startContinue = false
 					}
-					parallel.queueTask(func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve, isZip)
-					}, cpURLs.SourceContent.Size)
+
+					// if multiUpload enabled then append URL to multi upload in one go.
+					if useMultiUpload {
+						urls = append(urls, cpURLs)
+					} else {
+						parallel.queueTask(func() URLs {
+							return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve, isZip)
+						}, cpURLs.SourceContent.Size)
+					}
 				}
 			}
 		}
+	}()
+
+	wg.Wait()
+	if useMultiUpload {
+		if len(urls) > 0 {
+			parallel.queueTask(func() URLs {
+				return doMultipleCopy(ctx, urls, pg, encKeyDB, cli.Bool("preserve"))
+			}, totalBytes)
+		}
+	}
+
+	go func() {
+		gracefulStop()
 	}()
 
 	var retErr error
@@ -684,6 +744,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	retentionDuration := cliCtx.String(rdFlag)
 	legalHold := strings.ToUpper(cliCtx.String(lhFlag))
 	tags := cliCtx.String("tags")
+	multiupload := cliCtx.Bool("usemultiupload")
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := cliCtx.String("encrypt-key"); key != "" {
 		sseKeys = key
@@ -718,6 +779,7 @@ func mainCopy(cliCtx *cli.Context) error {
 			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 			session.Header.CommandStringFlags["encrypt"] = sse
 			session.Header.CommandBoolFlags["session"] = cliCtx.Bool("continue")
+			session.Header.CommandBoolFlags["usemultiupload"] = multiupload
 
 			if cliCtx.Bool("preserve") {
 				session.Header.CommandBoolFlags["preserve"] = cliCtx.Bool("preserve")

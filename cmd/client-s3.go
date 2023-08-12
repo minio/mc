@@ -62,6 +62,7 @@ type S3Client struct {
 	targetURL    *ClientURL
 	api          *minio.Client
 	virtualStyle bool
+	zcnClient    *ZcnClient
 }
 
 const (
@@ -157,14 +158,8 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		defer mutex.Unlock()
 		var api *minio.Client
 		var found bool
-		if api, found = clientCache[confSum]; !found {
-			// if Signature version '4' use NewV4 directly.
-			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
-			// if Signature version '2' use NewV2 directly.
-			if strings.ToUpper(config.Signature) == "S3V2" {
-				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
-			}
 
+		getTransport := func() http.RoundTripper {
 			var transport http.RoundTripper
 
 			if config.Transport != nil {
@@ -223,6 +218,16 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				}
 			}
 
+			return transport
+		}
+		if api, found = clientCache[confSum]; !found {
+			// if Signature version '4' use NewV4 directly.
+			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
+			// if Signature version '2' use NewV2 directly.
+			if strings.ToUpper(config.Signature) == "S3V2" {
+				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
+			}
+
 			// Not found. Instantiate a new MinIO
 			var e error
 
@@ -231,7 +236,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				Secure:       useTLS,
 				Region:       os.Getenv("MC_REGION"),
 				BucketLookup: config.Lookup,
-				Transport:    transport,
+				Transport:    getTransport(),
 			}
 
 			api, e = minio.New(hostName, &options)
@@ -253,6 +258,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 
 		// Store the new api object.
 		s3Clnt.api = api
+		s3Clnt.zcnClient = NewZcnClient(config, getTransport(), targetURL)
 
 		return s3Clnt, nil
 	}
@@ -978,6 +984,55 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
 
+	opts, err := c.getMinioPutOptions(putOpts, progress)
+	if err != nil {
+		return 0, err
+	}
+
+	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
+	// ui, e := c.api.PutMultipleObjects(ctx, bucket, []io.Reader{reader}, []int64{size}, []minio.PutObjectOptions{opts})
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
+		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
+			return ui.Size, probe.NewError(UnexpectedEOF{
+				TotalSize:    size,
+				TotalWritten: ui.Size,
+			})
+		}
+		if errResponse.Code == "AccessDenied" {
+			return ui.Size, probe.NewError(PathInsufficientPermission{
+				Path: c.targetURL.String(),
+			})
+		}
+		if errResponse.Code == "MethodNotAllowed" {
+			return ui.Size, probe.NewError(ObjectAlreadyExists{
+				Object: object,
+			})
+		}
+		if errResponse.Code == "XMinioObjectExistsAsDirectory" {
+			return ui.Size, probe.NewError(ObjectAlreadyExistsAsDirectory{
+				Object: object,
+			})
+		}
+		if errResponse.Code == "NoSuchBucket" {
+			return ui.Size, probe.NewError(BucketDoesNotExist{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "InvalidBucketName" {
+			return ui.Size, probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" {
+			return ui.Size, probe.NewError(ObjectMissing{})
+		}
+		return ui.Size, probe.NewError(e)
+	}
+	return ui.Size, nil
+}
+
+func (c *S3Client) getMinioPutOptions(putOpts PutOptions, progress io.Reader) (minio.PutObjectOptions, *probe.Error) {
 	metadata := make(map[string]string, len(putOpts.metadata))
 	for k, v := range putOpts.metadata {
 		metadata[k] = v
@@ -1019,7 +1074,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	if ok {
 		tagsSet, e := tags.Parse(tagsHdr, true)
 		if e != nil {
-			return 0, probe.NewError(e)
+			return minio.PutObjectOptions{}, probe.NewError(e)
 		}
 		tagsMap = tagsSet.ToMap()
 		delete(metadata, "X-Amz-Tagging")
@@ -1044,8 +1099,8 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	opts := minio.PutObjectOptions{
 		UserMetadata:          metadata,
 		UserTags:              tagsMap,
-		Progress:              progress,
 		ContentType:           contentType,
+		Progress:              progress,
 		CacheControl:          cacheControl,
 		ContentDisposition:    contentDisposition,
 		ContentEncoding:       contentEncoding,
@@ -1074,12 +1129,32 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		opts.SendContentMd5 = true
 	}
 
-	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
+	return opts, nil
+}
+
+func (c *S3Client) PutMultiple(ctx context.Context, readers []io.Reader, sizes []int64, progress io.Reader, putOpts []PutOptions) (int64, *probe.Error) {
+	// do not use the object name from here.
+	bucket, _ := c.url2BucketAndObject()
+	if bucket == "" {
+		return 0, probe.NewError(BucketNameEmpty{})
+	}
+
+	opts, e := c.getMinioPutOptions(putOpts[0], progress)
 	if e != nil {
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
+		return 0, e
+	}
+
+	var objects []string
+	for _, opt := range putOpts {
+		_, object := url2BucketAndObject(&opt.targetUrl)
+		objects = append(objects, object)
+	}
+	ui, err := c.zcnClient.PutMultipleObjects(ctx, bucket, objects, readers, sizes, opts)
+	if err != nil {
+		errResponse := minio.ToErrorResponse(err)
+		if errResponse.Code == "UnexpectedEOF" || err == io.EOF {
 			return ui.Size, probe.NewError(UnexpectedEOF{
-				TotalSize:    size,
+				TotalSize:    sizes[0],
 				TotalWritten: ui.Size,
 			})
 		}
@@ -1088,14 +1163,9 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 				Path: c.targetURL.String(),
 			})
 		}
-		if errResponse.Code == "MethodNotAllowed" {
-			return ui.Size, probe.NewError(ObjectAlreadyExists{
-				Object: object,
-			})
-		}
 		if errResponse.Code == "XMinioObjectExistsAsDirectory" {
 			return ui.Size, probe.NewError(ObjectAlreadyExistsAsDirectory{
-				Object: object,
+				Object: objects[0],
 			})
 		}
 		if errResponse.Code == "NoSuchBucket" {
@@ -1111,8 +1181,9 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		if errResponse.Code == "NoSuchKey" {
 			return ui.Size, probe.NewError(ObjectMissing{})
 		}
-		return ui.Size, probe.NewError(e)
+		return ui.Size, probe.NewError(err)
 	}
+
 	return ui.Size, nil
 }
 
@@ -1740,7 +1811,7 @@ func (c *S3Client) splitPath(path string) (bucketName, objectName string) {
 	return tokens[0], tokens[1]
 }
 
-/// Bucket API operations.
+// / Bucket API operations.
 
 func (c *S3Client) listVersions(ctx context.Context, b, o string, opts ListOptions) chan minio.ObjectInfo {
 	objectInfoCh := make(chan minio.ObjectInfo)

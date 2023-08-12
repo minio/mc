@@ -276,7 +276,7 @@ func preserveAttributes(fd *os.File, attr map[string]string) *probe.Error {
 	return nil
 }
 
-/// Object operations.
+// / Object operations.
 
 func (f *fsClient) put(_ context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
@@ -390,6 +390,10 @@ func (f *fsClient) put(_ context.Context, reader io.Reader, size int64, progress
 // Put - create a new file with metadata.
 func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	return f.put(ctx, reader, size, progress, opts)
+}
+
+func (f *fsClient) PutMultiple(ctx context.Context, readers []io.Reader, sizes []int64, progress io.Reader, opts []PutOptions) (n int64, err *probe.Error) {
+	panic("fsClient does not implement PutMultiple method. Try Put method.")
 }
 
 func (f *fsClient) putN(_ context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
@@ -1030,7 +1034,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *ClientContent) {
 			return nil
 		}
 
-		/// In following situations we need to handle listing properly.
+		// / In following situations we need to handle listing properly.
 		// - When filepath is '/usr' and prefix is '/usr/bi'
 		// - When filepath is '/usr/bin/subdir' and prefix is '/usr/bi'
 		// - Do not check filePrefix if its '.'
