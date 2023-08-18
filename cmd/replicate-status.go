@@ -229,10 +229,12 @@ func (s replicateStatusMessage) String() string {
 				limit := "N/A"   // N/A means cluster bandwidth is not configured
 				current := "N/A" // N/A means there is
 				if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
-					current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
+					current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond * 8))
+					current = fmt.Sprintf("%sb/s", current[:len(current)-1])
 				}
 				if bwStat.BandWidthLimitInBytesPerSecond > 0 {
-					limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
+					limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond * 8))
+					limit = fmt.Sprintf("%sb/s", limit[:len(limit)-1])
 				}
 				r = console.Colorize("THeaderBold", newPrettyTable("",
 					Field{"B/w limit Hdr", 80},
