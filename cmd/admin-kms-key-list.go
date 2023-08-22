@@ -19,8 +19,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -68,25 +71,46 @@ func mainAdminKMSKeyList(ctx *cli.Context) error {
 	keys, e := client.ListKeys(globalContext, "*")
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list KMS keys")
 
-	for _, k := range keys {
-		printMsg(kmsKeyMsg{
-			Key: k.Name,
-		})
+	var rows []table.Row
+	kmsKeys := []string{}
+	for idx, k := range keys {
+		rows = append(rows, table.Row{idx + 1, k.Name})
+		kmsKeys = append(kmsKeys, k.Name)
 	}
+
+	if globalJSON {
+		printMsg(kmsKeysMsg{
+			Status: "success",
+			Target: aliasedURL,
+			Keys:   kmsKeys,
+		})
+		return nil
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetColumnConfigs([]table.ColumnConfig{{Align: text.AlignCenter}})
+	t.SetTitle("KMS Keys")
+	t.AppendHeader(table.Row{"S N", "Name"})
+	t.AppendRows(rows)
+	t.SetStyle(table.StyleLight)
+	t.Render()
 	return nil
 }
 
-type kmsKeyMsg struct {
-	Key string `json:"key"`
+type kmsKeysMsg struct {
+	Status string   `json:"status"`
+	Target string   `json:"target"`
+	Keys   []string `json:"keys"`
 }
 
-func (k kmsKeyMsg) JSON() string {
+func (k kmsKeysMsg) JSON() string {
 	kmsBytes, e := json.MarshalIndent(k, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(kmsBytes)
 }
 
-func (k kmsKeyMsg) String() string {
-	return fmt.Sprintf("Key: %s\n", k.Key)
+func (k kmsKeysMsg) String() string {
+	return fmt.Sprintf("Keys: %s\n", k.Keys)
 }
