@@ -885,7 +885,6 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 		got.CallStatsCount++
 		got.CallStats.Rx += t.Trace.HTTP.CallStats.InputBytes
 		got.CallStats.Tx += t.Trace.HTTP.CallStats.OutputBytes
-		got.CallStats.Ttfb += t.Trace.HTTP.CallStats.TimeToFirstByte
 	}
 	s.Calls[id] = got
 }
