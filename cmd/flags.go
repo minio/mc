@@ -26,56 +26,67 @@ import (
 // Collection of mc flags currently supported
 var globalFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "config-dir, C",
-		Value: mustGetMcConfigDir(),
-		Usage: "path to configuration folder",
+		Name:   "config-dir, C",
+		Value:  mustGetMcConfigDir(),
+		Usage:  "path to configuration folder",
+		EnvVar: "MINIO_CLIENT_CONFIG_DIR",
 	},
 	cli.BoolFlag{
-		Name:  "quiet, q",
-		Usage: "disable progress bar display",
+		Name:   "quiet, q",
+		Usage:  "disable progress bar display",
+		EnvVar: "MINIO_CLIENT_QUIET",
 	},
 	cli.BoolFlag{
-		Name:  "no-color",
-		Usage: "disable color theme",
+		Name:   "no-color",
+		Usage:  "disable color theme",
+		EnvVar: "MINIO_CLIENT_NO_COLOR",
 	},
 	cli.BoolFlag{
-		Name:  "json",
-		Usage: "enable JSON lines formatted output",
+		Name:   "json",
+		Usage:  "enable JSON lines formatted output",
+		EnvVar: "MINIO_CLIENT_JSON",
 	},
 	cli.BoolFlag{
-		Name:  "debug",
-		Usage: "enable debug output",
+		Name:   "debug",
+		Usage:  "enable debug output",
+		EnvVar: "MINIO_CLIENT_DEBUG",
 	},
 	cli.BoolFlag{
-		Name:  "insecure",
-		Usage: "disable SSL certificate verification",
+		Name:   "insecure",
+		Usage:  "disable SSL certificate verification",
+		EnvVar: "MINIO_CLIENT_INSECURE",
 	},
 	cli.StringFlag{
-		Name:  "limit-upload",
-		Usage: "limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)",
+		Name:   "limit-upload",
+		Usage:  "limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)",
+		EnvVar: "MINIO_CLIENT_LIMIT_UPLOAD",
 	},
 	cli.StringFlag{
-		Name:  "limit-download",
-		Usage: "limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)",
+		Name:   "limit-download",
+		Usage:  "limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)",
+		EnvVar: "MINIO_CLIENT_DOWNLOAD",
 	},
 	cli.DurationFlag{
 		Name:   "conn-read-deadline",
 		Usage:  "custom connection READ deadline",
 		Hidden: true,
 		Value:  10 * time.Minute,
+		EnvVar: "MINIO_CLIENT_CONN_READ_DEADLINE",
 	},
 	cli.DurationFlag{
 		Name:   "conn-write-deadline",
 		Usage:  "custom connection WRITE deadline",
 		Hidden: true,
 		Value:  10 * time.Minute,
+		EnvVar: "MINIO_CLIENT_CONN_WRITE_DEADLINE",
 	},
 }
 
 // Flags common across all I/O commands such as cp, mirror, stat, pipe etc.
 var ioFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "encrypt-key",
-		Usage: "encrypt/decrypt objects (using server-side encryption with customer provided keys)",
+		Name:   "encrypt-key",
+		Usage:  "encrypt/decrypt objects (using server-side encryption with customer provided keys)",
+		EnvVar: "MINIO_CLIENT_ENCRYPT_KEY",
 	},
 }
