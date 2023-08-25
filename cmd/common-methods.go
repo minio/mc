@@ -293,7 +293,7 @@ func getSourceStream(ctx context.Context, alias, urlStr string, opts getSourceOp
 }
 
 // putTargetRetention sets retention headers if any
-func putTargetRetention(ctx context.Context, alias string, urlStr string, metadata map[string]string) *probe.Error {
+func putTargetRetention(ctx context.Context, alias, urlStr string, metadata map[string]string) *probe.Error {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)

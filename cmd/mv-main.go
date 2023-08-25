@@ -238,18 +238,6 @@ func mainMove(cliCtx *cli.Context) error {
 		}
 	}
 
-	// Check if source URLs does not have object locking enabled
-	// since we cannot move them (remove them from the source)
-	for _, urlStr := range cliCtx.Args()[:cliCtx.NArg()-1] {
-		enabled, err := isBucketLockEnabled(ctx, urlStr)
-		if err != nil {
-			fatalIf(err.Trace(), "Unable to get bucket lock configuration of `%s`", urlStr)
-		}
-		if enabled {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
-		}
-	}
-
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 

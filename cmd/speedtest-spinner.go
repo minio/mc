@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -48,6 +49,8 @@ const (
 	NetPerfTest PerfTestType = 1 << iota
 	DrivePerfTest
 	ObjectPerfTest
+	SiteReplicationPerfTest
+	ClientPerfTest
 )
 
 // Name - returns name of the performance test
@@ -59,18 +62,24 @@ func (p PerfTestType) Name() string {
 		return "DrivePerf"
 	case ObjectPerfTest:
 		return "ObjectPerf"
+	case SiteReplicationPerfTest:
+		return "SiteReplication"
+	case ClientPerfTest:
+		return "Client"
 	}
 	return "<unknown>"
 }
 
 // PerfTestResult - stores the result of a performance test
 type PerfTestResult struct {
-	Type         PerfTestType                  `json:"type"`
-	ObjectResult *madmin.SpeedTestResult       `json:"object,omitempty"`
-	NetResult    *madmin.NetperfResult         `json:"network,omitempty"`
-	DriveResult  []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
-	Err          string                        `json:"err,omitempty"`
-	Final        bool                          `json:"final,omitempty"`
+	Type                  PerfTestType                  `json:"type"`
+	ObjectResult          *madmin.SpeedTestResult       `json:"object,omitempty"`
+	NetResult             *madmin.NetperfResult         `json:"network,omitempty"`
+	SiteReplicationResult *madmin.SiteNetPerfResult     `json:"siteReplication,omitempty"`
+	ClientResult          *madmin.ClientPerfResult      `json:"client,omitempty"`
+	DriveResult           []madmin.DriveSpeedTestResult `json:"drive,omitempty"`
+	Err                   string                        `json:"err,omitempty"`
+	Final                 bool                          `json:"final,omitempty"`
 }
 
 func initSpeedTestUI() *speedTestUI {
@@ -134,7 +143,9 @@ func (m *speedTestUI) View() string {
 
 	ores := m.result.ObjectResult
 	nres := m.result.NetResult
+	sres := m.result.SiteReplicationResult
 	dres := m.result.DriveResult
+	cres := m.result.ClientResult
 
 	trailerIfGreaterThan := func(in string, max int) string {
 		if len(in) < max {
@@ -225,6 +236,57 @@ func (m *speedTestUI) View() string {
 
 		table.AppendBulk(data)
 		table.Render()
+	} else if sres != nil {
+		table.SetHeader([]string{"Endpoint", "RX", "TX", ""})
+		data := make([][]string, 0, len(sres.NodeResults))
+		if len(sres.NodeResults) == 0 {
+			data = append(data, []string{
+				"...",
+				whiteStyle.Render("-- MiB"),
+				whiteStyle.Render("-- MiB"),
+				"",
+			})
+		} else {
+			for _, nodeResult := range sres.NodeResults {
+				if nodeResult.Error != "" {
+					data = append(data, []string{
+						trailerIfGreaterThan(nodeResult.Endpoint, 64),
+						crossTickCell,
+						crossTickCell,
+						"Err: " + nodeResult.Error,
+					})
+				} else {
+					dataItem := []string{}
+					dataError := ""
+					// show endpoint
+					dataItem = append(dataItem, trailerIfGreaterThan(nodeResult.Endpoint, 64))
+					// show RX
+					if uint64(nodeResult.RXTotalDuration.Seconds()) == 0 {
+						dataError += "- RXTotalDuration are zero "
+						dataItem = append(dataItem, crossTickCell)
+					} else {
+						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.RX/uint64(nodeResult.RXTotalDuration.Seconds())))+"/s")
+					}
+					// show TX
+					if uint64(nodeResult.TXTotalDuration.Seconds()) == 0 {
+						dataError += "- TXTotalDuration are zero"
+						dataItem = append(dataItem, crossTickCell)
+					} else {
+						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.TX/uint64(nodeResult.TXTotalDuration.Seconds())))+"/s")
+					}
+					// show message
+					dataItem = append(dataItem, dataError)
+					data = append(data, dataItem)
+				}
+			}
+		}
+
+		sort.Slice(data, func(i, j int) bool {
+			return data[i][0] < data[j][0]
+		})
+
+		table.AppendBulk(data)
+		table.Render()
 	} else if dres != nil {
 		table.SetHeader([]string{"Node", "Path", "Read", "Write", ""})
 		data := make([][]string, 0, len(dres))
@@ -259,6 +321,28 @@ func (m *speedTestUI) View() string {
 					}
 				}
 			}
+		}
+		table.AppendBulk(data)
+		table.Render()
+	} else if cres != nil {
+		table.SetHeader([]string{"Endpoint", "Tx"})
+		data := make([][]string, 0, 2)
+		tx := uint64(0)
+		if cres.TimeSpent > 0 {
+			tx = uint64(float64(cres.BytesSend) / time.Duration(cres.TimeSpent).Seconds())
+		}
+		if tx == 0 {
+			data = append(data, []string{
+				"...",
+				whiteStyle.Render("-- KiB/s"),
+				"",
+			})
+		} else {
+			data = append(data, []string{
+				cres.Endpoint,
+				whiteStyle.Render(humanize.IBytes(tx)) + "/s",
+				cres.Error,
+			})
 		}
 		table.AppendBulk(data)
 		table.Render()

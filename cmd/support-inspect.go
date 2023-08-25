@@ -57,7 +57,7 @@ var supportInspectCmd = cli.Command{
 	Action:          mainSupportInspect,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportInspectFlags, supportGlobalFlags...),
+	Flags:           supportInspectFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -197,8 +197,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 		return nil
 	}
 
-	clr := color.New(color.FgGreen, color.Bold)
-	clr.Println("uploaded successfully to SUBNET.")
+	console.Infof("Object inspection data for '%s' uploaded to SUBNET successfully\n", aliasedURL)
 	return nil
 }
 

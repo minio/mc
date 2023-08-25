@@ -36,7 +36,7 @@ var licenseUnregisterCmd = cli.Command{
 	Action:       mainLicenseUnregister,
 	Before:       setGlobalsFromContext,
 	Hidden:       true,
-	Flags:        append(supportGlobalFlags, subnetCommonFlags...),
+	Flags:        subnetCommonFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

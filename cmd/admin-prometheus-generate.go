@@ -32,7 +32,11 @@ import (
 
 const (
 	defaultJobName     = "minio-job"
+	nodeJobName        = "minio-job-node"
+	bucketJobName      = "minio-job-bucket"
 	defaultMetricsPath = "/minio/v2/metrics/cluster"
+	nodeMetricsPath    = "/minio/v2/metrics/node"
+	bucketMetricsPath  = "/minio/v2/metrics/bucket"
 )
 
 var prometheusFlags = []cli.Flag{
@@ -54,7 +58,10 @@ var adminPrometheusGenerateCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [METRIC-TYPE]
+
+METRIC-TYPE:
+  valid values are ['cluster', 'node', 'bucket']. Defaults to 'cluster' if not specified.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -63,6 +70,11 @@ EXAMPLES:
   1. Generate a default prometheus config.
      {{.Prompt}} {{.HelpName}} myminio
 
+  2. Generate prometheus config for node metrics.
+     {{.Prompt}} {{.HelpName}} play node
+
+  3. Generate prometheus config for bucket metrics.
+     {{.Prompt}} {{.HelpName}} play bucket
 `,
 }
 
@@ -119,23 +131,9 @@ const (
 	defaultPrometheusJWTExpiry = 100 * 365 * 24 * time.Hour
 )
 
-var defaultConfig = PrometheusConfig{
-	ScrapeConfigs: []ScrapeConfig{
-		{
-			JobName:     defaultJobName,
-			MetricsPath: defaultMetricsPath,
-			StaticConfigs: []StatConfig{
-				{
-					Targets: []string{""},
-				},
-			},
-		},
-	},
-}
-
 // checkAdminPrometheusSyntax - validate all the passed arguments
 func checkAdminPrometheusSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
+	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
@@ -160,18 +158,67 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 		return e
 	}
 
+	metricsSubSystem := args.Get(1)
+	var config PrometheusConfig
+	switch metricsSubSystem {
+	case "node":
+		config = PrometheusConfig{
+			ScrapeConfigs: []ScrapeConfig{
+				{
+					JobName:     nodeJobName,
+					MetricsPath: nodeMetricsPath,
+					StaticConfigs: []StatConfig{
+						{
+							Targets: []string{""},
+						},
+					},
+				},
+			},
+		}
+	case "bucket":
+		config = PrometheusConfig{
+			ScrapeConfigs: []ScrapeConfig{
+				{
+					JobName:     bucketJobName,
+					MetricsPath: bucketMetricsPath,
+					StaticConfigs: []StatConfig{
+						{
+							Targets: []string{""},
+						},
+					},
+				},
+			},
+		}
+	case "", "cluster":
+		config = PrometheusConfig{
+			ScrapeConfigs: []ScrapeConfig{
+				{
+					JobName:     defaultJobName,
+					MetricsPath: defaultMetricsPath,
+					StaticConfigs: []StatConfig{
+						{
+							Targets: []string{""},
+						},
+					},
+				},
+			},
+		}
+	default:
+		fatalIf(errInvalidArgument().Trace(), "invalid metric type '%v'", metricsSubSystem)
+	}
+
 	if !ctx.Bool("public") {
 		token, e := getPrometheusToken(hostConfig)
 		if e != nil {
 			return e
 		}
 		// Setting the values
-		defaultConfig.ScrapeConfigs[0].BearerToken = token
+		config.ScrapeConfigs[0].BearerToken = token
 	}
-	defaultConfig.ScrapeConfigs[0].Scheme = u.Scheme
-	defaultConfig.ScrapeConfigs[0].StaticConfigs[0].Targets[0] = u.Host
+	config.ScrapeConfigs[0].Scheme = u.Scheme
+	config.ScrapeConfigs[0].StaticConfigs[0].Targets[0] = u.Host
 
-	printMsg(defaultConfig)
+	printMsg(config)
 
 	return nil
 }
