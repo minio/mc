@@ -169,7 +169,7 @@ func mainAdminScannerTrace(ctx *cli.Context) error {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
-		if matchTrace(mopts, traceInfo) {
+		if mopts.matches(traceInfo) {
 			printTrace(verbose, traceInfo)
 		}
 	}
