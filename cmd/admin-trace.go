@@ -864,7 +864,7 @@ func (s *statTrace) JSON() string {
 	return strings.TrimSuffix(buf.String(), "\n")
 }
 
-func (s statTrace) String() string {
+func (s *statTrace) String() string {
 	return ""
 }
 
@@ -949,7 +949,6 @@ func (m *traceStatsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	return m, nil
-
 }
 
 func (m *traceStatsUI) View() string {
