@@ -297,6 +297,9 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 		case "ilm":
 			nc.AddEvents(notification.EventType("s3:ObjectRestore:*"))
 			nc.AddEvents(notification.EventType("s3:ObjectTransition:*"))
+		case "scanner":
+			nc.AddEvents(notification.EventType("s3:Scanner:ManyVersions"))
+			nc.AddEvents(notification.EventType("s3:Scanner:BigPrefix"))
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -375,6 +378,9 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn, event, pre
 			case "ilm":
 				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectRestore:*"))
 				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectTransition:*"))
+			case "scanner":
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Scanner:ManyVersions"))
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Scanner:BigPrefix"))
 			default:
 				return errInvalidArgument().Trace(events...)
 			}
@@ -785,6 +791,8 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 			events = append(events, string(notification.BucketCreatedAll))
 		case "bucket-removal":
 			events = append(events, string(notification.BucketRemovedAll))
+		case "scanner":
+			events = append(events, "s3:Scanner:ManyVersions", "s3:Scanner:BigPrefix")
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
