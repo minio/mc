@@ -425,6 +425,7 @@ var completeCmds = map[string]complete.Predictor{
 
 	"/admin/kms/key/create": aliasCompleter,
 	"/admin/kms/key/status": aliasCompleter,
+	"/admin/kms/key/list":   aliasCompleter,
 
 	"/admin/subnet/health":   aliasCompleter,
 	"/admin/subnet/register": aliasCompleter,
