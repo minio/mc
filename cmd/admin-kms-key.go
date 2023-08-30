@@ -22,6 +22,7 @@ import "github.com/minio/cli"
 var adminKMSKeySubcommands = []cli.Command{
 	adminKMSCreateKeyCmd,
 	adminKMSKeyStatusCmd,
+	adminKMSKeyListCmd,
 }
 
 var adminKMSKeyCmd = cli.Command{
