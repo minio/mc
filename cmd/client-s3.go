@@ -2759,15 +2759,15 @@ func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config, 
 }
 
 // GetReplicationMetrics - Get replication metrics for a given bucket.
-func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error) {
+func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.MetricsV2, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
-		return replication.Metrics{}, probe.NewError(BucketNameEmpty{})
+		return replication.MetricsV2{}, probe.NewError(BucketNameEmpty{})
 	}
 
-	metrics, e := c.api.GetBucketReplicationMetrics(ctx, bucket)
+	metrics, e := c.api.GetBucketReplicationMetricsV2(ctx, bucket)
 	if e != nil {
-		return replication.Metrics{}, probe.NewError(e)
+		return replication.MetricsV2{}, probe.NewError(e)
 	}
 	return metrics, nil
 }

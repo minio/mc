@@ -95,6 +95,27 @@ func checkReplicateBacklogSyntax(ctx *cli.Context) {
 	}
 }
 
+type replicateMRFMessage struct {
+	Op     string `json:"op"`
+	Status string `json:"status"`
+	madmin.ReplicationMRF
+}
+
+func (m replicateMRFMessage) JSON() string {
+	m.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
+}
+
+func (m replicateMRFMessage) String() string {
+	return console.Colorize("", newPrettyTable(" | ",
+		Field{getNodeTheme(m.ReplicationMRF.NodeName), len(m.ReplicationMRF.NodeName) + 3},
+		Field{"Count", 7},
+		Field{"Object", -1},
+	).buildRow(m.ReplicationMRF.NodeName, fmt.Sprintf("Retry=%d", m.ReplicationMRF.RetryCount), fmt.Sprintf("%s (%s)", m.ReplicationMRF.Object, m.ReplicationMRF.VersionID)))
+}
+
 type replicateBacklogMessage struct {
 	Op       string                `json:"op"`
 	Diff     madmin.DiffInfo       `json:"diff,omitempty"`
