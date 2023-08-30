@@ -70,14 +70,14 @@ var replicateBacklogCmd = cli.Command{
 	Before:        setGlobalsFromContext,
 	Flags:         append(globalFlags, replicateBacklogFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} TARGET
+  {{.HelpName}} TARGET
 
 FLAGS:
-   {{range .VisibleFlags}}{{.}}
-   {{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
 EXAMPLES:
   1. Show most recent replication failures on "myminio" alias for objects in bucket "mybucket"
      {{.Prompt}} {{.HelpName}} myminio/mybucket
