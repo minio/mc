@@ -237,7 +237,7 @@ func (m *speedTestUI) View() string {
 		table.AppendBulk(data)
 		table.Render()
 	} else if sres != nil {
-		table.SetHeader([]string{"Endpoint", "RX", "TX", ""})
+		table.SetHeader([]string{"Endpoint", "RX", "TX", "", "LAT", "4KRESP", ""})
 		data := make([][]string, 0, len(sres.NodeResults))
 		if len(sres.NodeResults) == 0 {
 			data = append(data, []string{
@@ -245,12 +245,18 @@ func (m *speedTestUI) View() string {
 				whiteStyle.Render("-- MiB"),
 				whiteStyle.Render("-- MiB"),
 				"",
+				whiteStyle.Render("-- us"),
+				whiteStyle.Render("-- us"),
+				"",
 			})
 		} else {
 			for _, nodeResult := range sres.NodeResults {
 				if nodeResult.Error != "" {
 					data = append(data, []string{
 						trailerIfGreaterThan(nodeResult.Endpoint, 64),
+						crossTickCell,
+						crossTickCell,
+						"Err: " + nodeResult.Error,
 						crossTickCell,
 						crossTickCell,
 						"Err: " + nodeResult.Error,
@@ -276,6 +282,20 @@ func (m *speedTestUI) View() string {
 					}
 					// show message
 					dataItem = append(dataItem, dataError)
+					// show TimeToFirstByte
+					if nodeResult.Latency.TotalRequest > 0 {
+						dataItem = append(dataItem, whiteStyle.Render(time.Duration(float64(nodeResult.Latency.TimeToFirstByte)/float64(nodeResult.Latency.TotalRequest)).String()))
+					} else {
+						dataItem = append(dataItem, crossTickCell)
+					}
+					// show TotalResponseTime
+					if nodeResult.Latency.TotalRequest > 0 {
+						dataItem = append(dataItem, whiteStyle.Render(time.Duration(float64(nodeResult.Latency.TotalResponseTime)/float64(nodeResult.Latency.TotalRequest)).String()))
+					} else {
+						dataItem = append(dataItem, crossTickCell)
+					}
+					// show Latency error
+					dataItem = append(dataItem, nodeResult.Latency.Error)
 					data = append(data, dataItem)
 				}
 			}

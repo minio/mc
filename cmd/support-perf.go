@@ -216,9 +216,10 @@ type SiteNetStats struct {
 
 // SiteReplicationTestNodeResult - result of the network performance test for site-replication
 type SiteReplicationTestNodeResult struct {
-	Endpoint string       `json:"endpoint"`
-	Perf     SiteNetStats `json:"perf"`
-	Error    string       `json:"error,omitempty"`
+	Endpoint string                              `json:"endpoint"`
+	Perf     SiteNetStats                        `json:"perf"`
+	Latency  madmin.SiteNetPerfNodeLatencyResult `json:"latency"`
+	Error    string                              `json:"error,omitempty"`
 }
 
 // SiteReplicationTestResults - result of the network performance test across all site-replication
@@ -347,6 +348,7 @@ func convertSiteReplicationTestResults(netResults *madmin.SiteNetPerfResult) *Si
 				RXTotalDuration: nr.RXTotalDuration,
 				TotalConn:       nr.TotalConn,
 			},
+			Latency: nr.Latency,
 		})
 	}
 	r := SiteReplicationTestResults{
