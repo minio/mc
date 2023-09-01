@@ -98,7 +98,9 @@ func mainAdminReplicationResyncStatus(ctx *cli.Context) error {
 	}
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
-
+	if _, e := client.SiteReplicationResyncInfo(ctxt, peer.DeploymentID); e != nil && !errors.Is(e, context.Canceled) {
+		fatalIf(probe.NewError(e).Trace(ctx.Args()...), "Unable to get resync status")
+	}
 	ui := tea.NewProgram(initResyncMetricsUI(peer.DeploymentID))
 	go func() {
 		opts := madmin.MetricsOptions{
