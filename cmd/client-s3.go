@@ -48,7 +48,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/sse"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/pkg/mimedb"
+	"github.com/minio/pkg/v2/mimedb"
 
 	"github.com/minio/mc/pkg/deadlineconn"
 	"github.com/minio/mc/pkg/httptracer"

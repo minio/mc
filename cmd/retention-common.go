@@ -26,7 +26,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 // Structured message depending on the type of console.

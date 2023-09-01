@@ -21,7 +21,6 @@ require (
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.63
-	github.com/minio/pkg v1.7.5
 	github.com/minio/selfupdate v0.6.0
 	github.com/minio/sha256-simd v1.0.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -48,6 +47,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
 	github.com/minio/madmin-go/v3 v3.0.17
+	github.com/minio/pkg/v2 v2.0.0
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -61,6 +61,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/minio/mux v1.9.0 // indirect
+	github.com/minio/pkg v1.7.5 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	go.uber.org/goleak v1.2.0 // indirect

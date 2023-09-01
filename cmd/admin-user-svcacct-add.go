@@ -32,8 +32,8 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
-	iampolicy "github.com/minio/pkg/iam/policy"
+	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v2/policy"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{
@@ -314,7 +314,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		var e error
 		policyBytes, e = os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
-		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
+		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
 		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
 		if p.IsEmpty() {
 			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
