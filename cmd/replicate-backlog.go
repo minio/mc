@@ -37,7 +37,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var replicateBacklogFlags = []cli.Flag{
@@ -93,6 +93,27 @@ func checkReplicateBacklogSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
+}
+
+type replicateMRFMessage struct {
+	Op     string `json:"op"`
+	Status string `json:"status"`
+	madmin.ReplicationMRF
+}
+
+func (m replicateMRFMessage) JSON() string {
+	m.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(jsonMessageBytes)
+}
+
+func (m replicateMRFMessage) String() string {
+	return console.Colorize("", newPrettyTable(" | ",
+		Field{getNodeTheme(m.ReplicationMRF.NodeName), len(m.ReplicationMRF.NodeName) + 3},
+		Field{"Count", 7},
+		Field{"Object", -1},
+	).buildRow(m.ReplicationMRF.NodeName, fmt.Sprintf("Retry=%d", m.ReplicationMRF.RetryCount), fmt.Sprintf("%s (%s)", m.ReplicationMRF.Object, m.ReplicationMRF.VersionID)))
 }
 
 type replicateBacklogMessage struct {

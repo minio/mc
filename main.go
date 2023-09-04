@@ -21,7 +21,7 @@ import (
 	"os"
 
 	mc "github.com/minio/mc/cmd"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 func main() {

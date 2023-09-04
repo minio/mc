@@ -23,6 +23,8 @@ import (
 	"hash/fnv"
 	"math"
 	"sort"
+	"strings"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -31,7 +33,8 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
+	"github.com/olekukonko/tablewriter"
 )
 
 var replicateStatusFlags = []cli.Flag{
@@ -39,6 +42,10 @@ var replicateStatusFlags = []cli.Flag{
 		Name:  "backlog,b",
 		Usage: "show most recent failures for one or more nodes. Valid values are 'all', or node name",
 		Value: "all",
+	},
+	cli.BoolFlag{
+		Name:  "nodes,n",
+		Usage: "show replication speed for all nodes",
 	},
 }
 
@@ -60,10 +67,10 @@ FLAGS:
    {{end}}
 EXAMPLES:
   1. Get server side replication metrics for bucket "mybucket" for alias "myminio".
-       {{.Prompt}} {{.HelpName}} myminio/mybucket
+		{{.Prompt}} {{.HelpName}} myminio/mybucket
 
-  2. Get most recent replication failures for bucket "mybucket" for alias "myminio".
-	   {{.Prompt}} {{.HelpName}} --backlog "all" myminio/mybucket
+  2. Get replication speed across nodes for bucket "mybucket" for alias "myminio".
+		{{.Prompt}} {{.HelpName}} --nodes  myminio/mybucket
 `,
 }
 
@@ -75,12 +82,12 @@ func checkReplicateStatusSyntax(ctx *cli.Context) {
 }
 
 type replicateStatusMessage struct {
-	Op                string                `json:"op"`
-	URL               string                `json:"url"`
-	Status            string                `json:"status"`
-	ReplicationStatus replication.Metrics   `json:"replicationStatus"`
-	Targets           []madmin.BucketTarget `json:"remoteTargets"`
-	cfg               replication.Config    `json:"-"`
+	Op      string                `json:"op"`
+	URL     string                `json:"url"`
+	Status  string                `json:"status"`
+	Metrics replication.MetricsV2 `json:"replicationstats"`
+	Targets []madmin.BucketTarget `json:"remoteTargets"`
+	cfg     replication.Config    `json:"-"`
 }
 
 func (s replicateStatusMessage) JSON() string {
@@ -91,23 +98,22 @@ func (s replicateStatusMessage) JSON() string {
 }
 
 func (s replicateStatusMessage) String() string {
-	if s.ReplicationStatus.FailedSize == 0 &&
-		s.ReplicationStatus.ReplicaSize == 0 &&
-		s.ReplicationStatus.ReplicatedSize == 0 {
-		return "Replication status not available."
+	q := s.Metrics.QueueStats
+	rs := s.Metrics.CurrentStats
+
+	if s.cfg.Empty() {
+		return "Replication is not configured."
 	}
 
-	coloredDot := console.Colorize("Headers", dot)
-
-	maxLen := 15
-	var contents [][]string
 	var (
-		failCount = s.ReplicationStatus.FailedCount
-		failedSz  = s.ReplicationStatus.FailedSize
-		replSz    = s.ReplicationStatus.ReplicatedSize
-		replicaSz = s.ReplicationStatus.ReplicaSize
+		replSz       = rs.ReplicatedSize
+		replCount    = rs.ReplicatedCount
+		replicaCount = rs.ReplicaCount
+		replicaSz    = rs.ReplicaSize
+		failed       = rs.Errors
+		qs           = q.QStats()
 	)
-	for arn, st := range s.ReplicationStatus.Stats { // Remove stale ARNs from stats
+	for arn, st := range rs.Stats { // Remove stale ARNs from stats
 		staleARN := true
 		for _, r := range s.cfg.Rules {
 			if r.Destination.Bucket == arn {
@@ -116,79 +122,61 @@ func (s replicateStatusMessage) String() string {
 			}
 		}
 		if staleARN {
-			failCount -= st.FailedCount
-			failedSz -= st.FailedSize
-			replicaSz -= st.ReplicaSize
 			replSz -= st.ReplicatedSize
+			replCount -= int64(st.ReplicatedCount)
 		}
 	}
 	// normalize stats, avoid negative values
-	failCount = uint64(math.Max(float64(failCount), 0))
-	failedSz = uint64(math.Max(float64(failedSz), 0))
-	replicaSz = uint64(math.Max(float64(replicaSz), 0))
 	replSz = uint64(math.Max(float64(replSz), 0))
-
-	var rows string
-	arntheme := []string{"Headers"}
-	theme := []string{"Failed", "Replicated", "Replica"}
-	contents = append(contents, []string{"Failed", humanize.IBytes(failedSz), humanize.Comma(int64(failCount))})
-	contents = append(contents, []string{"Replicated", humanize.IBytes(replSz), ""})
-	contents = append(contents, []string{"Replica", humanize.IBytes(replicaSz), ""})
-	var th string
-
-	r := console.Colorize("THeaderBold", newPrettyTable(" | ",
-		Field{"Summary", 95},
-	).buildRow("Summary: "))
-	rows += r
-	rows += "\n"
-	hIdx := 0
-	for i, row := range contents {
-		if i%3 == 0 {
-			if hIdx > 0 {
-				rows += "\n"
-			}
-			hIdx++
-			rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
-				Field{"Status", 21},
-				Field{"Size", maxLen},
-				Field{"Count", maxLen},
-			).buildRow("Replication Status   ", "Size (Bytes)", "Count"))
-			rows += "\n"
-		}
-
-		idx := i % 3
-		th = theme[idx]
-		r := console.Colorize(th, newPrettyTable(" | ",
-			Field{"Status", 21},
-			Field{"Size", maxLen},
-			Field{"Count", maxLen},
-		).buildRow("   "+row[0], row[1], row[2])+"\n")
-		rows += r
+	if replCount < 0 {
+		replCount = 0
 	}
+	// for queue stats
+	qtots := rs.QStats
+	coloredDot := console.Colorize("qStatusOK", dot)
+	if qtots.Curr.Count > qtots.Avg.Count {
+		coloredDot = console.Colorize("qStatusWarn", dot)
+	}
+	var sb strings.Builder
 
-	tgtDetails := make(map[string][][]string)
+	// Set table header
+	table := tablewriter.NewWriter(&sb)
+	table.SetAutoWrapText(false)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetRowLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+
+	uiFn := func(theme string) func(string) string {
+		return func(s string) string {
+			return console.Colorize(theme, s)
+		}
+	}
+	titleui := uiFn("title")
+	valueui := uiFn("value")
+	hdrui := uiFn("THeaderBold")
+	keyui := uiFn("key")
+	maxui := uiFn("Peak")
+	avgui := uiFn("Avg")
+
+	addRowF := func(format string, vals ...interface{}) {
+		s := fmt.Sprintf(format, vals...)
+		table.Append([]string{s})
+	}
 	var arns []string
-	for arn, st := range s.ReplicationStatus.Stats {
-		var tgtDetail [][]string
-		tgtDetail = append(tgtDetail, []string{"Failed", humanize.IBytes(st.FailedSize), humanize.Comma(int64(st.FailedCount))})
-		tgtDetail = append(tgtDetail, []string{"Replicated", humanize.IBytes(st.ReplicatedSize), ""})
-		tgtDetails[arn] = tgtDetail
+	for arn := range rs.Stats {
 		arns = append(arns, arn)
 	}
 	sort.Strings(arns)
-	if len(arns) > 0 {
-		rows += "\n"
-		r := console.Colorize("THeaderBold", newPrettyTable(" | ",
-			Field{"Target statuses", 120},
-		).buildRow("Remote Target Statuses: "))
-		rows += r
-		rows += "\n"
-	}
+	addRowF(titleui("Replication status since %s"), humanize.RelTime(time.Now(), time.Now().Add(time.Duration(s.Metrics.Uptime)*time.Second), "", "ago"))
+	singleTgt := len(arns) == 1
+	staleARN := false
 	for i, arn := range arns {
-		if i > 0 {
-			rows += "\n"
+		if i > 0 && !staleARN {
+			addRowF("\n")
 		}
-		staleARN := true
+		staleARN = true
 		for _, r := range s.cfg.Rules {
 			if r.Destination.Bucket == arn {
 				staleARN = false
@@ -199,95 +187,118 @@ func (s replicateStatusMessage) String() string {
 			continue // skip historic metrics for deleted targets
 		}
 		var ep string
+		var tgt madmin.BucketTarget
 		for _, t := range s.Targets {
 			if t.Arn == arn {
 				ep = t.Endpoint
+				tgt = t
 				break
 			}
 		}
-		th = arntheme[0]
-		var hdrStr, hdrDet string
-		hdrStr = ep
-		if hdrStr != "" {
-			hdrDet = console.Colorize("Values", arn)
-		} else {
-			hdrStr = arn
+		nodeName := ep
+		if nodeName == "" {
+			nodeName = arn
 		}
-		r := console.Colorize(th, newPrettyTable(" | ",
-			Field{"Ep", 100},
-		).buildRow(fmt.Sprintf("%s %s", coloredDot, hdrStr)))
-		rows += r
-		rows += "\n"
-		if hdrDet != "" {
-			r = console.Colorize("THeader", newPrettyTable(" | ",
-				Field{"Arn", 100},
-			).buildRow("  "+"ARN: "+hdrDet))
-			rows += r
-			rows += "\n"
-			bwStat, ok := s.ReplicationStatus.Stats[arn]
-			if ok {
-				limit := "N/A"   // N/A means cluster bandwidth is not configured
-				current := "N/A" // N/A means there is
-				if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
-					current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
-				}
-				if bwStat.BandWidthLimitInBytesPerSecond > 0 {
-					limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
-				}
-				r = console.Colorize("THeaderBold", newPrettyTable("",
-					Field{"B/w limit Hdr", 80},
-				).buildRow("  Configured Max Bandwidth (Bps): "+console.Colorize("Values", limit)))
-				rows += r
-				rows += "\n"
-				r = console.Colorize("THeaderBold", newPrettyTable("",
-					Field{"B/w limit Hdr", 80},
-				).buildRow("  Current Bandwidth (Bps): "+console.Colorize("Values", current)))
-				rows += r
-			}
-			rows += "\n"
+		nodeui := uiFn(getNodeTheme(nodeName))
+		currDowntime := time.Duration(0)
+		if !tgt.Online && !tgt.LastOnline.IsZero() {
+			currDowntime = UTCNow().Sub(tgt.LastOnline)
 		}
-		rows += console.Colorize("TgtHeaders", newPrettyTable(" | ",
-			Field{"Status", 21},
-			Field{"Size", maxLen},
-			Field{"Count", maxLen},
-		).buildRow("Replication Status   ", "Size (Bytes)", "Count"))
-		rows += "\n"
-
-		tgtDetail, ok := tgtDetails[arn]
+		// normalize because total downtime is calculated at server side at heartbeat interval, may be slightly behind
+		totalDowntime := tgt.TotalDowntime
+		if currDowntime > totalDowntime {
+			totalDowntime = currDowntime
+		}
+		nodeStr := nodeui(nodeName)
+		addRowF(nodeui(nodeStr))
+		stat, ok := rs.Stats[arn]
 		if ok {
-			for i, row := range tgtDetail {
-				idx := i % 2
-				th = theme[idx]
-				r := console.Colorize(th, newPrettyTable(" | ",
-					Field{"Status", 21},
-					Field{"Size", maxLen},
-					Field{"Count", maxLen},
-				).buildRow("   "+row[0], row[1], row[2])+"\n")
-				rows += r
-			}
+			addRowF(titleui("Replicated:                   ")+humanize.Comma(int64(stat.ReplicatedCount))+keyui(" objects")+" (%s", valueui(humanize.IBytes(stat.ReplicatedSize))+")")
 		}
+		healthDot := console.Colorize("online", dot)
+		if !tgt.Online {
+			healthDot = console.Colorize("offline", dot)
+		}
+
+		var linkStatus string
+		if tgt.Online {
+			linkStatus = healthDot + fmt.Sprintf(" online (total downtime: %s)", valueui(timeDurationToHumanizedDuration(totalDowntime).String()))
+		} else {
+			linkStatus = healthDot + fmt.Sprintf(" offline %s (total downtime: %s)", valueui(timeDurationToHumanizedDuration(currDowntime).String()), valueui(timeDurationToHumanizedDuration(totalDowntime).String()))
+		}
+		if singleTgt { // for single target - combine summary section into the target section
+			addRowF(titleui("Queued:                       ") + coloredDot + " " + humanize.Comma(int64(qtots.Curr.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Curr.Bytes))) +
+				" (" + avgui("avg") + ": " + humanize.Comma(int64(qtots.Avg.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Avg.Bytes))) +
+				" ; " + maxui("max:") + " " + humanize.Comma(int64(qtots.Max.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Max.Bytes))) + ")")
+			addRowF(titleui("Workers:                      ") + valueui(humanize.Comma(int64(qs.Workers.Curr))) + avgui(" (avg: ") + humanize.Comma(int64(qs.Workers.Avg)) + maxui("; max: ") + humanize.Comma(int64(qs.Workers.Max)) + ")")
+		}
+		tgtXfer := qs.TgtXferStats[arn][replication.Total]
+		addRowF(titleui("Transfer Rate:                ")+"%s/s ("+keyui("avg: ")+"%s/s"+keyui("; max: ")+"%s/s", valueui(humanize.Bytes(uint64(tgtXfer.CurrRate))), valueui(humanize.Bytes(uint64(tgtXfer.AvgRate))), valueui(humanize.Bytes(uint64(tgtXfer.PeakRate))))
+		addRowF(titleui("Latency:                      ")+"%s ("+keyui("avg: ")+"%s"+keyui("; max: ")+"%s)", valueui(tgt.Latency.Curr.Round(time.Millisecond).String()), valueui(tgt.Latency.Avg.Round(time.Millisecond).String()), valueui(tgt.Latency.Max.Round(time.Millisecond).String()))
+
+		addRowF(titleui("Link:                         %s"), linkStatus)
+		addRowF(titleui("Errors:                       ")+"%s in last 1 minute; %s in last 1hr; %s since uptime", valueui(humanize.Comma(int64(stat.Failed.LastMinute.Count))), valueui(humanize.Comma(int64(stat.Failed.LastHour.Count))), valueui(humanize.Comma(int64(stat.Failed.Totals.Count))))
+
+		bwStat, ok := rs.Stats[arn]
+		if ok && bwStat.BandWidthLimitInBytesPerSecond > 0 {
+			limit := "N/A"   // N/A means cluster bandwidth is not configured
+			current := "N/A" // N/A means cluster bandwidth is not configured
+			if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
+				current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond * 8))
+				current = fmt.Sprintf("%sb/s", current[:len(current)-1])
+			}
+			if bwStat.BandWidthLimitInBytesPerSecond > 0 {
+				limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond * 8))
+				limit = fmt.Sprintf("%sb/s", limit[:len(limit)-1])
+			}
+			addRowF(titleui("Configured Max Bandwidth (Bps): ")+"%s"+titleui("   Current Bandwidth (Bps): ")+"%s", valueui(limit), valueui(current))
+		}
+
 	}
-	return console.Colorize("replicateStatusMessage", rows)
+	if !singleTgt {
+		xfer := qs.XferStats[replication.Total]
+		addRowF(hdrui("\nSummary:"))
+		addRowF(titleui("Replicated:                   ")+humanize.Comma(int64(replCount))+keyui(" objects")+" (%s", valueui(humanize.IBytes(replSz))+")")
+		addRowF(titleui("Queued:                       ") + coloredDot + " " + humanize.Comma(int64(qtots.Curr.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Curr.Bytes))) +
+			" (" + avgui("avg") + ": " + humanize.Comma(int64(qtots.Avg.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Avg.Bytes))) +
+			" ; " + maxui("max:") + " " + humanize.Comma(int64(qtots.Max.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Max.Bytes))) + ")")
+		addRowF(titleui("Workers:                      ") + valueui(humanize.Comma(int64(qs.Workers.Curr))) + avgui(" (avg: ") + humanize.Comma(int64(qs.Workers.Avg)) + maxui("; max: ") + humanize.Comma(int64(qs.Workers.Max)) + ")")
+		addRowF(titleui("Received:                     ")+"%s"+keyui(" objects")+" (%s)", humanize.Comma(int64(replicaCount)), valueui(humanize.IBytes(uint64(replicaSz))))
+		addRowF(titleui("Transfer Rate:                ")+"%s/s"+avgui(" (avg: ")+"%s/s"+maxui("; max: ")+"%s/s)", valueui(humanize.Bytes(uint64(xfer.CurrRate))), valueui(humanize.Bytes(uint64(xfer.AvgRate))), valueui(humanize.Bytes(uint64(xfer.PeakRate))))
+		addRowF(titleui("Errors:                       ")+"%s in last 1 minute; %s in last 1hr; %s since uptime", valueui(humanize.Comma(int64(failed.LastMinute.Count))), valueui(humanize.Comma(int64(failed.LastHour.Count))), valueui(humanize.Comma(int64(failed.Totals.Count))))
+	}
+
+	table.Render()
+	return sb.String()
 }
 
 func mainReplicateStatus(cliCtx *cli.Context) error {
 	ctx, cancelReplicateStatus := context.WithCancel(globalContext)
 	defer cancelReplicateStatus()
 
-	console.SetColor("THeader", color.New(color.FgWhite))
+	console.SetColor("title", color.New(color.FgCyan))
+	console.SetColor("value", color.New(color.FgWhite, color.Bold))
 
-	console.SetColor("Headers", color.New(color.Bold, color.FgGreen))
-	console.SetColor("Values", color.New(color.FgGreen))
-	console.SetColor("THeaderBold", color.New(color.FgWhite))
-
-	console.SetColor("TgtHeaders", color.New(color.Bold, color.FgCyan))
-
+	console.SetColor("key", color.New(color.FgWhite))
+	console.SetColor("THeaderBold", color.New(color.Bold, color.FgWhite))
 	console.SetColor("Replica", color.New(color.FgCyan))
 	console.SetColor("Failed", color.New(color.Bold, color.FgRed))
-	console.SetColor("Object", color.New(color.FgWhite))
-	console.SetColor("Count", color.New(color.FgWhite))
 	for _, c := range colors {
 		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
+	}
+	console.SetColor("Replicated", color.New(color.FgCyan))
+	console.SetColor("In-Queue", color.New(color.Bold, color.FgYellow))
+	console.SetColor("Avg", color.New(color.FgCyan))
+	console.SetColor("Peak", color.New(color.FgYellow))
+	console.SetColor("Current", color.New(color.FgCyan))
+	console.SetColor("Uptime", color.New(color.FgWhite))
+	console.SetColor("qStatusWarn", color.New(color.FgYellow, color.Bold))
+	console.SetColor("qStatusOK", color.New(color.FgGreen, color.Bold))
+	console.SetColor("online", color.New(color.FgGreen, color.Bold))
+	console.SetColor("offline", color.New(color.FgRed, color.Bold))
+
+	for _, c := range colors {
+		console.SetColor(fmt.Sprintf("Node%d", c), color.New(color.Bold, c))
 	}
 	checkReplicateStatusSyntax(cliCtx)
 
@@ -302,20 +313,6 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	fatalIf(cerr, "Unable to initialize admin connection.")
 	_, sourceBucket := url2Alias(args[0])
 
-	if cliCtx.IsSet("backlog") {
-		mrfCh := admClient.BucketReplicationMRF(ctx, sourceBucket, cliCtx.String("backlog"))
-		for mrf := range mrfCh {
-			if mrf.Err != "" {
-				fatalIf(probe.NewError(fmt.Errorf("%s", mrf.Err)), "Unable to fetch replication backlog.")
-			}
-			printMsg(replicateMRFMessage{
-				Op:             cliCtx.Command.Name,
-				Status:         "success",
-				ReplicationMRF: mrf,
-			})
-		}
-		return nil
-	}
 	replicateStatus, err := client.GetReplicationMetrics(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication status")
 	targets, e := admClient.ListRemoteTargets(globalContext, sourceBucket, "")
@@ -323,36 +320,88 @@ func mainReplicateStatus(cliCtx *cli.Context) error {
 	cfg, err := client.GetReplication(ctx)
 	fatalIf(err.Trace(args...), "Unable to fetch replication configuration.")
 
+	if cliCtx.IsSet("nodes") {
+		printMsg(replicateXferMessage{
+			Op:             cliCtx.Command.Name,
+			Status:         "success",
+			ReplQueueStats: replicateStatus.QueueStats,
+		})
+		return nil
+	}
+
 	printMsg(replicateStatusMessage{
-		Op:                cliCtx.Command.Name,
-		URL:               aliasedURL,
-		ReplicationStatus: replicateStatus,
-		Targets:           targets,
-		cfg:               cfg,
+		Op:      cliCtx.Command.Name,
+		URL:     aliasedURL,
+		Metrics: replicateStatus,
+		Targets: targets,
+		cfg:     cfg,
 	})
 
 	return nil
 }
 
-type replicateMRFMessage struct {
+type replicateXferMessage struct {
 	Op     string `json:"op"`
 	Status string `json:"status"`
-	madmin.ReplicationMRF
+	replication.ReplQueueStats
 }
 
-func (m replicateMRFMessage) JSON() string {
+func (m replicateXferMessage) JSON() string {
 	m.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
-func (m replicateMRFMessage) String() string {
-	return console.Colorize("", newPrettyTable(" | ",
-		Field{getNodeTheme(m.ReplicationMRF.NodeName), len(m.ReplicationMRF.NodeName) + 3},
-		Field{"Count", 7},
-		Field{"Object", -1},
-	).buildRow(m.ReplicationMRF.NodeName, fmt.Sprintf("Retry=%d", m.ReplicationMRF.RetryCount), fmt.Sprintf("%s (%s)", m.ReplicationMRF.Object, m.ReplicationMRF.VersionID)))
+func (m replicateXferMessage) String() string {
+	var rows []string
+	maxLen := 0
+
+	for _, rqs := range m.ReplQueueStats.Nodes {
+		if len(rqs.NodeName) > maxLen {
+			maxLen = len(rqs.NodeName)
+		}
+		lrgX := rqs.XferStats[replication.Large]
+		smlX := rqs.XferStats[replication.Small]
+		rows = append(rows, console.Colorize("", newPrettyTable(" | ",
+			Field{getNodeTheme(rqs.NodeName), len(rqs.NodeName) + 3},
+			Field{"Uptime:", 15},
+			Field{"Lbl", 25},
+			Field{"Avg", 12},
+			Field{"Peak", 12},
+			Field{"Current", 12},
+			Field{"Workers", 10},
+		).buildRow(rqs.NodeName, humanize.RelTime(time.Now(), time.Now().Add(time.Duration(rqs.Uptime)*time.Second), "", ""), "Large Objects (>=128 MiB)", fmt.Sprintf("%s/s", humanize.Bytes(uint64(lrgX.AvgRate))), fmt.Sprintf("%s/s", humanize.Bytes(uint64(lrgX.PeakRate))), fmt.Sprintf("%s/s", humanize.Bytes(uint64(lrgX.CurrRate))), fmt.Sprintf("%d", int(rqs.Workers.Avg)))))
+
+		rows = append(rows, console.Colorize("", newPrettyTable(" | ",
+			Field{getNodeTheme(rqs.NodeName), len(rqs.NodeName) + 3},
+			Field{"Uptime:", 15},
+			Field{"Lbl", 25},
+			Field{"Avg", 12},
+			Field{"Peak", 12},
+			Field{"Current", 12},
+			Field{"Workers", 10},
+		).buildRow(rqs.NodeName, humanize.RelTime(time.Now(), time.Now().Add(time.Duration(rqs.Uptime)*time.Second), "", ""), "Small Objects (<128 MiB)", fmt.Sprintf("%s/s", humanize.Bytes(uint64(smlX.AvgRate))), fmt.Sprintf("%s/s", humanize.Bytes(uint64(smlX.PeakRate))), fmt.Sprintf("%s/s", humanize.Bytes(uint64(smlX.CurrRate))), fmt.Sprintf("%d", int(rqs.Workers.Avg)))))
+	}
+
+	hdrSlc := []string{
+		console.Colorize("THeaderBold", newPrettyTable(" | ",
+			Field{"", maxLen + 3},
+			Field{"Uptime:", 15},
+			Field{"Lbl", 25},
+			Field{"XferRate", 42},
+			Field{"Workers", 12}).buildRow("Node Name", "Uptime", "Label", "         Transfer Rate      ", "Workers")),
+		console.Colorize("THeaderBold", newPrettyTable(" | ",
+			Field{"", maxLen + 3},
+			Field{"Uptime:", 15},
+			Field{"Lbl", 25},
+			Field{"Avg", 12},
+			Field{"Peak", 12},
+			Field{"Current", 12},
+			Field{"Workers", 10}).buildRow("", "", "", "Avg", "Peak", "Current", "")),
+	}
+
+	return strings.Join(append(hdrSlc, rows...), "\n")
 }
 
 // colorize node name

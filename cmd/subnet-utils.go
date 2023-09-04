@@ -37,7 +37,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/licverifier"
+	"github.com/minio/pkg/v2/licverifier"
 	"github.com/tidwall/gjson"
 	"golang.org/x/term"
 )

@@ -24,7 +24,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var adminKMSKeyStatusCmd = cli.Command{
@@ -59,6 +59,7 @@ func mainAdminKMSKeyStatus(ctx *cli.Context) error {
 
 	console.SetColor("StatusSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("StatusError", color.New(color.FgRed, color.Bold))
+	console.SetColor("StatusUnknown", color.New(color.FgYellow, color.Bold))
 
 	client, err := newAdminClient(ctx.Args().Get(0))
 	fatalIf(err, "Unable to get a configured admin connection.")
@@ -72,8 +73,6 @@ func mainAdminKMSKeyStatus(ctx *cli.Context) error {
 
 	printMsg(kmsKeyStatusMsg{
 		KeyID:         status.KeyID,
-		Encryption:    status.EncryptionErr == "",
-		Decryption:    status.DecryptionErr == "",
 		EncryptionErr: status.EncryptionErr,
 		DecryptionErr: status.DecryptionErr,
 	})
@@ -82,8 +81,6 @@ func mainAdminKMSKeyStatus(ctx *cli.Context) error {
 
 type kmsKeyStatusMsg struct {
 	KeyID         string `json:"keyId"`
-	Encryption    bool   `json:"encryption"`
-	Decryption    bool   `json:"decryption"`
 	EncryptionErr string `json:"encryptionError,omitempty"`
 	DecryptionErr string `json:"decryptionError,omitempty"`
 	Status        string `json:"status"`
@@ -91,9 +88,6 @@ type kmsKeyStatusMsg struct {
 
 func (s kmsKeyStatusMsg) JSON() string {
 	s.Status = "success"
-	if !s.Encryption && !s.Decryption {
-		s.Status = "error"
-	}
 	kmsBytes, e := json.MarshalIndent(s, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -102,16 +96,25 @@ func (s kmsKeyStatusMsg) JSON() string {
 
 func (s kmsKeyStatusMsg) String() string {
 	msg := fmt.Sprintf("Key: %s\n", s.KeyID)
-	if s.Encryption {
-		msg += "   - Encryption " + console.Colorize("StatusSuccess", "✔") + "\n"
-	} else {
-		msg += fmt.Sprintf("   - Encryption %s (%s)\n", console.Colorize("StatusError", "✗"), s.EncryptionErr)
+
+	success := console.Colorize("StatusSuccess", "✔")
+	failure := console.Colorize("StatusError", "✗")
+	dunno := console.Colorize("StatusUnknown", "?")
+
+	formatStatus := func(name string, unknown bool, err string) string {
+		st := ""
+		switch {
+		case !unknown && err == "":
+			st = success
+		case unknown:
+			st = dunno
+		case err != "":
+			st = fmt.Sprintf("%s (%s)", failure, err)
+		}
+		return fmt.Sprintf("   - %s %s\n", name, st)
 	}
 
-	if s.Decryption {
-		msg += "   - Decryption " + console.Colorize("StatusSuccess", "✔") + "\n"
-	} else {
-		msg += fmt.Sprintf("   - Decryption %s (%s)\n", console.Colorize("StatusError", "✗"), s.DecryptionErr)
-	}
+	msg += formatStatus("Encryption", false, s.EncryptionErr)
+	msg += formatStatus("Decryption", s.EncryptionErr != "", s.DecryptionErr)
 	return msg
 }

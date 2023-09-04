@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
-	"github.com/minio/pkg/quick"
+	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v2/quick"
 )
 
 func fixConfig() {
