@@ -34,6 +34,10 @@ var quotaSetFlags = []cli.Flag{
 		Name:  "size",
 		Usage: "set a hard quota, disallowing writes after quota is reached",
 	},
+	cli.StringFlag{
+		Name:  "rate",
+		Usage: "set a maximum igress and egress bandwidth for a bucket",
+	},
 }
 
 var quotaSetCmd = cli.Command{
@@ -70,21 +74,52 @@ type quotaMessage struct {
 	op        string
 	Status    string `json:"status"`
 	Bucket    string `json:"bucket"`
-	Quota     uint64 `json:"quota,omitempty"`
+	Quota     uint64 `json:"quota,omitempty"` // Deprecated Sep 2023
+	Size      uint64 `json:"size,omitempty"`
+	Rate      uint64 `json:"rate,omitempty"`
 	QuotaType string `json:"type,omitempty"`
 }
 
 func (q quotaMessage) String() string {
 	switch q.op {
 	case "set":
-		return console.Colorize("QuotaMessage",
-			fmt.Sprintf("Successfully set bucket quota of %s on `%s`", humanize.IBytes(q.Quota), q.Bucket))
+		if q.Size > 0 {
+			return console.Colorize("QuotaMessage",
+				fmt.Sprintf("Successfully set bucket size quota of %s on `%s`", humanize.IBytes(q.Size), q.Bucket))
+		}
+		if q.Rate > 0 {
+			return console.Colorize("QuotaMessage",
+				fmt.Sprintf("Successfully set bucket r/w bandwidth quota of %s on `%s`", humanize.Bytes(q.Rate), q.Bucket))
+		}
+		return console.Colorize("QuotaMessage", fmt.Sprintf("No parameters for bucket size quota or bandwidth quota to set on %s bucket", q.Bucket))
 	case "clear":
-		return console.Colorize("QuotaMessage",
-			fmt.Sprintf("Successfully cleared bucket quota configured on `%s`", q.Bucket))
+		if q.Size == 0 && q.Rate == 0 {
+			return console.Colorize("QuotaMessage",
+				fmt.Sprintf("Successfully cleared all bucket quota settings on `%s`", q.Bucket))
+		}
+		if q.Size == 0 {
+			return console.Colorize("QuotaMessage",
+				fmt.Sprintf("Successfully cleared bucket size quota configured on `%s`", q.Bucket))
+		}
+		if q.Rate == 0 {
+			return console.Colorize("QuotaMessage",
+				fmt.Sprintf("Successfully cleared bucket r/w bandwidth quota configured on `%s`", q.Bucket))
+		}
+		return console.Colorize("QuotaMessage", fmt.Sprintf("Unable to clear any quota settings for %s", q.Bucket))
 	default:
-		return console.Colorize("QuotaInfo",
-			fmt.Sprintf("Bucket `%s` has %s quota of %s", q.Bucket, q.QuotaType, humanize.IBytes(q.Quota)))
+		quotaSize := q.Quota
+		if quotaSize == 0 {
+			quotaSize = q.Size
+		}
+		if quotaSize > 0 {
+			return console.Colorize("QuotaInfo",
+				fmt.Sprintf("Bucket `%s` has %s size quota of %s", q.Bucket, q.QuotaType, humanize.IBytes(quotaSize)))
+		}
+		if q.Rate > 0 {
+			return console.Colorize("QuotaInfo",
+				fmt.Sprintf("Bucket `%s` has r/w bandwidth quota of %s", q.Bucket, humanize.Bytes(q.Rate)))
+		}
+		return console.Colorize("QuotaMessage", fmt.Sprintf("No size or bandwidth quotas are configured for %s bucket", q.Bucket))
 	}
 }
 
@@ -118,25 +153,28 @@ func mainQuotaSet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	_, targetURL := url2Alias(args[0])
-	if !ctx.IsSet("size") {
-		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"--size flag needs to be set.")
+	quotaCfg := &madmin.BucketQuota{
+		Type: madmin.HardQuota,
 	}
-	qType := madmin.HardQuota
-	quotaStr := ctx.String("size")
-	quota, e := humanize.ParseBytes(quotaStr)
-	fatalIf(probe.NewError(e).Trace(quotaStr), "Unable to parse quota")
+	var e error
+	if quotaStr := ctx.String("size"); quotaStr != "" {
+		quotaCfg.Size, e = humanize.ParseBytes(quotaStr)
+		fatalIf(probe.NewError(e).Trace(quotaStr), "Unable to parse quota")
+	}
 
-	fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{
-		Quota: quota,
-		Type:  qType,
-	})).Trace(args...), "Unable to set bucket quota")
+	if rateStr := ctx.String("rate"); rateStr != "" {
+		quotaCfg.Rate, e = humanize.ParseBytes(rateStr)
+		fatalIf(probe.NewError(e).Trace(rateStr), "Unable to parse rate")
+	}
+
+	fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, quotaCfg)).Trace(args...), "Unable to set bucket quota")
 
 	printMsg(quotaMessage{
 		op:        ctx.Command.Name,
 		Bucket:    targetURL,
-		Quota:     quota,
-		QuotaType: string(qType),
+		Size:      quotaCfg.Size,
+		Rate:      quotaCfg.Rate,
+		QuotaType: string(quotaCfg.Type),
 		Status:    "success",
 	})
 
