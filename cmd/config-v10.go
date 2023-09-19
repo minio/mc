@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/quick"
+	"github.com/minio/pkg/v2/quick"
 )
 
 const (

@@ -34,7 +34,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var adminTraceFlags = []cli.Flag{
@@ -159,7 +159,7 @@ func traceCallsHelp() string {
 
 var adminTraceCmd = cli.Command{
 	Name:            "trace",
-	Usage:           "show http trace for MinIO server",
+	Usage:           "Show HTTP call trace for all incoming and internode on MinIO",
 	Action:          mainAdminTrace,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -174,7 +174,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 CALL TYPES:
 ` + traceCallsHelp() + `
 
