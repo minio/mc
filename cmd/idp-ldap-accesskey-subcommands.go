@@ -41,6 +41,10 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 		Name:  "permanent-only, p",
 		Usage: "only list permanent access keys/service accounts",
 	},
+	cli.BoolFlag{
+		Name:  "self",
+		Usage: "only list access keys for the current user (only neccessary if current user is admin)",
+	},
 }
 
 var idpLdapAccesskeyListCmd = cli.Command{
@@ -94,6 +98,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	usersOnly := ctx.Bool("users")
 	tempOnly := ctx.Bool("temp-only")
 	permanentOnly := ctx.Bool("permanent-only")
+	self := ctx.Bool("self")
 
 	if (usersOnly && permanentOnly) || (usersOnly && tempOnly) || (permanentOnly && tempOnly) {
 		e := errors.New("only one of --users, --temp-only, or --permanent-only can be specified")
@@ -107,17 +112,22 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	// Assume admin access, change to user if ListUsers fails
-	users, e := client.ListUsers(globalContext)
-	if e != nil {
-		if e.Error() == "Access Denied." {
-			// If user does not have ListUsers permission, only get current user's access keys
+	var e error
+	var users map[string]madmin.UserInfo
+	if !self {
+		// Assume admin access, change to user if ListUsers fails
+		users, e = client.ListUsers(globalContext)
+	}
+	if self || e != nil {
+		if self || e.Error() == "Access Denied." {
+			// If user does not have ListUsers permission, or self is specified, only get current user's access keys
 			users = make(map[string]madmin.UserInfo)
 			users[""] = madmin.UserInfo{}
 		} else {
 			fatalIf(probe.NewError(e), "Unable to retrieve users.")
 		}
 	}
+
 	var accessKeyList []LDAPUserAccessKeys
 
 	for dn := range users {
@@ -281,7 +291,10 @@ func (m credentialsMessage) String() string {
 	secretKey := m.SecretKey
 	sessionToken := m.SessionToken
 	expiration := m.Expiration
-	expirationS := expiration.Format(time.RFC3339)
+	expirationS := "NONE"
+	if expiration == (time.Unix(0, 0)) {
+		expirationS = expiration.Format(time.RFC3339)
+	}
 
 	return fmt.Sprintf("TODO: clean this\nAccess Key: %s\nSecret Key: %s\nSession Token: %s\nExpiration: %s\n", accessKey, secretKey, sessionToken, expirationS)
 }
@@ -384,30 +397,33 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
-	// TODO: add support for multiple access keys
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	accessKey := args.Get(1)
+	accessKeys := args.Tail()
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	res, e := client.InfoServiceAccount(globalContext, accessKey)
-	fatalIf(probe.NewError(e), "Unable to add service account.")
+	for _, accessKey := range accessKeys {
+		res, e := client.InfoServiceAccount(globalContext, accessKey)
+		if e != nil {
+			errorIf(probe.NewError(e), "Unable to retrieve access key "+accessKey+" info.")
+		} else {
+			m := LdapAcesskeyInfoMessage{
+				Status:        "success",
+				ParentUser:    res.ParentUser,
+				AccountStatus: res.AccountStatus,
+				ImpliedPolicy: res.ImpliedPolicy,
+				Policy:        res.Policy,
+				Name:          res.Name,
+				Description:   res.Description,
+				Expiration:    res.Expiration,
+			}
 
-	m := LdapAcesskeyInfoMessage{
-		Status:        "success",
-		ParentUser:    res.ParentUser,
-		AccountStatus: res.AccountStatus,
-		ImpliedPolicy: res.ImpliedPolicy,
-		Policy:        res.Policy,
-		Name:          res.Name,
-		Description:   res.Description,
-		Expiration:    res.Expiration,
+			printMsg(m)
+		}
 	}
-
-	printMsg(m)
 
 	return nil
 }
