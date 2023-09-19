@@ -43,7 +43,7 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "self",
-		Usage: "only list access keys for the current user (only neccessary if current user is admin)",
+		Usage: "only list access keys for the current user (only necessary if current user is admin)",
 	},
 }
 
@@ -68,22 +68,22 @@ EXAMPLES:
 	`,
 }
 
-type LDAPUsersList struct {
+type ldapUsersList struct {
 	Status string               `json:"status"`
-	Result []LDAPUserAccessKeys `json:"result"`
+	Result []ldapUserAccessKeys `json:"result"`
 }
 
-type LDAPUserAccessKeys struct {
+type ldapUserAccessKeys struct {
 	DN                  string                      `json:"dn"`
 	TempAccessKeys      []madmin.ServiceAccountInfo `json:"tempAccessKeys,omitempty"`
 	PermanentAccessKeys []madmin.ServiceAccountInfo `json:"permanentAccessKeys,omitempty"`
 }
 
-func (m LDAPUsersList) String() string {
-	return fmt.Sprintf("TODO: make string, use --json for now")
+func (m ldapUsersList) String() string {
+	return "TODO: make string, use --json for now"
 }
 
-func (m LDAPUsersList) JSON() string {
+func (m ldapUsersList) JSON() string {
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -128,7 +128,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 		}
 	}
 
-	var accessKeyList []LDAPUserAccessKeys
+	var accessKeyList []ldapUserAccessKeys
 
 	for dn := range users {
 		if !usersOnly {
@@ -152,7 +152,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 				dn = name.AccountName
 			}
 
-			userAccessKeys := LDAPUserAccessKeys{
+			userAccessKeys := ldapUserAccessKeys{
 				DN: dn,
 			}
 			if !tempOnly {
@@ -171,13 +171,13 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 				dn = name.AccountName
 			}
 
-			accessKeyList = append(accessKeyList, LDAPUserAccessKeys{
+			accessKeyList = append(accessKeyList, ldapUserAccessKeys{
 				DN: dn,
 			})
 		}
 	}
 
-	m := LDAPUsersList{
+	m := ldapUsersList{
 		Status: "success",
 		Result: accessKeyList,
 	}
@@ -208,16 +208,16 @@ EXAMPLES:
 	`,
 }
 
-type LDAPDeleteMsg struct {
+type ldapAccesskeyDeleteMsg struct {
 	Status    string `json:"status"`
 	AccessKey string `json:"accessKey"`
 }
 
-func (m LDAPDeleteMsg) String() string {
+func (m ldapAccesskeyDeleteMsg) String() string {
 	return fmt.Sprintf("Successfully deleted access key %s", m.AccessKey)
 }
 
-func (m LDAPDeleteMsg) JSON() string {
+func (m ldapAccesskeyDeleteMsg) JSON() string {
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -240,7 +240,10 @@ func mainIDPLdapAccesskeyDelete(ctx *cli.Context) error {
 	e := client.DeleteServiceAccount(globalContext, accessKey)
 	fatalIf(probe.NewError(e), "Unable to delete service account.")
 
-	m := credentialsMessage{}
+	m := ldapAccesskeyDeleteMsg{
+		Status:    "success",
+		AccessKey: accessKey,
+	}
 
 	printMsg(m)
 
@@ -276,7 +279,7 @@ EXAMPLES:
 	`,
 }
 
-type credentialsMessage struct {
+type ldapCredentialsMessage struct {
 	Status       string    `json:"status,omitempty"`
 	AccessKey    string    `json:"accessKey,omitempty"`
 	ParentUser   string    `json:"parentUser,omitempty"`
@@ -285,8 +288,7 @@ type credentialsMessage struct {
 	Expiration   time.Time `json:"expiration,omitempty"`
 }
 
-func (m credentialsMessage) String() string {
-
+func (m ldapCredentialsMessage) String() string {
 	accessKey := m.AccessKey
 	secretKey := m.SecretKey
 	sessionToken := m.SessionToken
@@ -299,7 +301,7 @@ func (m credentialsMessage) String() string {
 	return fmt.Sprintf("TODO: clean this\nAccess Key: %s\nSecret Key: %s\nSession Token: %s\nExpiration: %s\n", accessKey, secretKey, sessionToken, expirationS)
 }
 
-func (m credentialsMessage) JSON() string {
+func (m ldapCredentialsMessage) JSON() string {
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -336,7 +338,7 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 		})
 	fatalIf(probe.NewError(e), "Unable to add service account.")
 
-	m := credentialsMessage{
+	m := ldapCredentialsMessage{
 		Status:       "success",
 		AccessKey:    res.AccessKey,
 		SecretKey:    res.SecretKey,
@@ -370,7 +372,7 @@ EXAMPLES:
 	`,
 }
 
-type LdapAcesskeyInfoMessage struct {
+type ldapAcesskeyInfoMessage struct {
 	Status        string     `json:"status,omitempty"`
 	ParentUser    string     `json:"parentUser"`
 	AccountStatus string     `json:"accountStatus"`
@@ -381,11 +383,11 @@ type LdapAcesskeyInfoMessage struct {
 	Expiration    *time.Time `json:"expiration,omitempty"`
 }
 
-func (m LdapAcesskeyInfoMessage) String() string {
-	return fmt.Sprintf("TODO: write this, use --json for now")
+func (m ldapAcesskeyInfoMessage) String() string {
+	return "TODO: write this, use --json for now"
 }
 
-func (m LdapAcesskeyInfoMessage) JSON() string {
+func (m ldapAcesskeyInfoMessage) JSON() string {
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -410,7 +412,7 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 		if e != nil {
 			errorIf(probe.NewError(e), "Unable to retrieve access key "+accessKey+" info.")
 		} else {
-			m := LdapAcesskeyInfoMessage{
+			m := ldapAcesskeyInfoMessage{
 				Status:        "success",
 				ParentUser:    res.ParentUser,
 				AccountStatus: res.AccountStatus,

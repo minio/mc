@@ -381,6 +381,11 @@ var completeCmds = map[string]complete.Predictor{
 	"/idp/ldap/policy/attach":   aliasCompleter,
 	"/idp/ldap/policy/detach":   aliasCompleter,
 
+	"/idp/ldap/accesskey/create": aliasCompleter,
+	"/idp/ldap/accesskey/list":   aliasCompleter,
+	"/idp/ldap/accesskey/delete": aliasCompleter,
+	"/idp/ldap/accesskey/info":   aliasCompleter,
+
 	"/admin/policy/info":     aliasCompleter,
 	"/admin/policy/update":   aliasCompleter,
 	"/admin/policy/add":      aliasCompleter,
