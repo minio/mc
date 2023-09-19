@@ -884,16 +884,13 @@ mc admin decommission cancel myminio/
 ```
 
 <a name="heal"></a>
-### Command `heal` - heal bucket(s) and object(s) on MinIO server
-Healing is automatic on server side which runs on a continuous basis on a low priority thread.
-
-<a name="heal"></a>
-### Command `heal` - heal bucket(s) and object(s) on MinIO server
-Healing is automatic on server side which runs on a continuous basis on a low priority thread.
+### Command `heal` - monitor healing of bucket(s) and object(s) on MinIO Server
+Healing is automatic on server side which runs on a continuous basis on a low priority thread, this
+command allows you to monitor the running heals on the server side.
 
 ```
 NAME:
-  mc admin heal - heal bucket(s) and object(s) on MinIO server
+  mc admin heal - monitor healing of bucket(s) and object(s) on MinIO Server
 
 USAGE:
   mc admin heal [FLAGS] TARGET
@@ -905,16 +902,16 @@ FLAGS:
 *Example: Monitor healing status on a running server at alias 'myminio'.*
 
 ```
- mc admin heal myminio/
+mc admin heal myminio/
 ```
 
 <a name="trace"></a>
-### Command `trace` - Show http trace for MinIO server
-`trace` command displays server http trace of one or all MinIO servers (under distributed cluster)
+### Command `trace` - Show HTTP call trace for all incoming and internode on MinIO
+`trace` command displays server HTTP trace of one or all MinIO servers (under distributed cluster)
 
 ```sh
 NAME:
-  mc admin trace - show http trace for MinIO server
+  mc admin trace - Show HTTP call trace for all incoming and internode on MinIO
 
 FLAGS:
   --verbose, -v                 print verbose trace
@@ -932,12 +929,15 @@ FLAGS:
   --response-duration 5ms       trace calls only with response duration greater than this threshold (e.g. 5ms) (default: 0s)
   --filter-size value           filter size, use with filter (see UNITS)
   --help, -h                    show help
-  
+
 CALL TYPES:
+  batch-keyrotation:   Trace Batch KeyRotation (alias: brot)
   batch-replication:   Trace Batch Replication (alias: brep)
   bootstrap:           Trace Bootstrap operations
   decommission:        Trace Decommission operations (alias: decom)
+  ftp:                 Trace FTP operations
   healing:             Trace Healing operations (alias: heal)
+  ilm:                 Trace ILM operations
   internal:            Trace Internal RPC calls
   os:                  Trace Operating System calls
   rebalance:           Trace Server Pool Rebalancing operations
