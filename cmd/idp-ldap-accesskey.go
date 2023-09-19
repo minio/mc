@@ -19,30 +19,24 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	idpLdapSubcommands = []cli.Command{
-		idpLdapAddCmd,
-		idpLdapUpdateCmd,
-		idpLdapRemoveCmd,
-		idpLdapListCmd,
-		idpLdapInfoCmd,
-		idpLdapEnableCmd,
-		idpLdapDisableCmd,
-		idpLdapPolicyCmd,
-		idpLdapAccesskeyCmd,
-	}
-	idpLdapCmd = cli.Command{
-		Name:            "ldap",
-		Usage:           "manage Ldap IDP server configuration",
-		Action:          mainIDPLdap,
-		Before:          setGlobalsFromContext,
-		Flags:           globalFlags,
-		Subcommands:     idpLdapSubcommands,
-		HideHelpCommand: true,
-	}
-)
+var idpLdapAccesskeySubcommands = []cli.Command{
+	idpLdapAccesskeyListCmd,
+	idpLdapAccesskeyDeleteCmd,
+	idpLdapAccesskeyCreateCmd,
+	idpLdapAccesskeyInfoCmd,
+}
 
-func mainIDPLdap(ctx *cli.Context) error {
-	commandNotFound(ctx, idpLdapSubcommands)
+var idpLdapAccesskeyCmd = cli.Command{
+	Name:            "accesskey",
+	Usage:           "manage LDAP access key pairs",
+	Action:          mainIDPLDAPAccesskey,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     idpLdapAccesskeySubcommands,
+	HideHelpCommand: true,
+}
+
+func mainIDPLDAPAccesskey(ctx *cli.Context) error {
+	commandNotFound(ctx, idpLdapAccesskeySubcommands)
 	return nil
 }
