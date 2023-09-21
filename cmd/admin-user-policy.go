@@ -80,30 +80,31 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 
 	policyNames := strings.Split(user.PolicyName, ",")
 
+	if len(policyNames) == 1 {
+		policyInfo, err := getPolicyInfo(client, policyNames[0])
+		if err != nil {
+			fatalIf(probe.NewError(err).Trace(), "Unable to fetch user policy document")
+		}
+		fmt.Println(string(policyInfo.Policy))
+		return nil
+	}
+
 	var policies []policy.Policy
 	for _, policyName := range policyNames {
 		policyInfo, err := getPolicyInfo(client, policyName)
 		if err != nil {
 			fatalIf(probe.NewError(err).Trace(), "Unable to fetch user policy document for policy "+policyName)
-			return nil
-		}
-
-		if len(policyNames) == 1 {
-			fmt.Println(string(policyInfo.Policy))
-			return nil
 		}
 
 		var policyObj policy.Policy
 		if err := json.Unmarshal(policyInfo.Policy, &policyObj); err != nil {
 			fatalIf(probe.NewError(err).Trace(), "Unable to unmarshal policy")
-			return nil
 		}
 		policies = append(policies, policyObj)
 	}
 
 	mergedPolicy := policy.MergePolicies(policies...)
 	policyStr, _ := json.Marshal(mergedPolicy)
-
 	fmt.Println(string(policyStr))
 
 	return nil
