@@ -25,8 +25,8 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
-	iampolicy "github.com/minio/pkg/iam/policy"
+	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v2/policy"
 )
 
 var adminUserSTSAcctSubcommands = []cli.Command{
@@ -107,7 +107,7 @@ func mainAdminUserSTSAcctInfo(ctx *cli.Context) error {
 		if stsInfo.Policy == "" {
 			fatalIf(errDummy().Trace(args...), "No policy found associated to the specified service account. Check the policy of its parent user.")
 		}
-		p, e := iampolicy.ParseConfig(strings.NewReader(stsInfo.Policy))
+		p, e := policy.ParseConfig(strings.NewReader(stsInfo.Policy))
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to parse policy.")
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", " ")

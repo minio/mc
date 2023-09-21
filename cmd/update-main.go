@@ -39,7 +39,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/env"
+	"github.com/minio/pkg/v2/env"
 	"github.com/minio/selfupdate"
 	_ "github.com/minio/sha256-simd" // Needed for sha256 hash verifier.
 )

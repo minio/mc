@@ -48,7 +48,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/sse"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/pkg/mimedb"
+	"github.com/minio/pkg/v2/mimedb"
 
 	"github.com/minio/mc/pkg/deadlineconn"
 	"github.com/minio/mc/pkg/httptracer"
@@ -297,6 +297,9 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 		case "ilm":
 			nc.AddEvents(notification.EventType("s3:ObjectRestore:*"))
 			nc.AddEvents(notification.EventType("s3:ObjectTransition:*"))
+		case "scanner":
+			nc.AddEvents(notification.EventType("s3:Scanner:ManyVersions"))
+			nc.AddEvents(notification.EventType("s3:Scanner:BigPrefix"))
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -375,6 +378,9 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn, event, pre
 			case "ilm":
 				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectRestore:*"))
 				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectTransition:*"))
+			case "scanner":
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Scanner:ManyVersions"))
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Scanner:BigPrefix"))
 			default:
 				return errInvalidArgument().Trace(events...)
 			}
@@ -785,6 +791,8 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 			events = append(events, string(notification.BucketCreatedAll))
 		case "bucket-removal":
 			events = append(events, string(notification.BucketRemovedAll))
+		case "scanner":
+			events = append(events, "s3:Scanner:ManyVersions", "s3:Scanner:BigPrefix")
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -2751,15 +2759,15 @@ func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config, 
 }
 
 // GetReplicationMetrics - Get replication metrics for a given bucket.
-func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error) {
+func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.MetricsV2, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
-		return replication.Metrics{}, probe.NewError(BucketNameEmpty{})
+		return replication.MetricsV2{}, probe.NewError(BucketNameEmpty{})
 	}
 
-	metrics, e := c.api.GetBucketReplicationMetrics(ctx, bucket)
+	metrics, e := c.api.GetBucketReplicationMetricsV2(ctx, bucket)
 	if e != nil {
-		return replication.Metrics{}, probe.NewError(e)
+		return replication.MetricsV2{}, probe.NewError(e)
 	}
 	return metrics, nil
 }

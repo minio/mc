@@ -27,6 +27,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/console"
 	"github.com/minio/pkg/v2/policy"
+
 )
 
 var adminUserPolicyCmd = cli.Command{
@@ -78,6 +79,7 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 	}
 
+
 	policyNames := strings.Split(user.PolicyName, ",")
 
 	var policies []policy.Policy
@@ -105,6 +107,7 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	policyStr, _ := json.Marshal(mergedPolicy)
 
 	fmt.Println(string(policyStr))
+
 
 	return nil
 }

@@ -44,7 +44,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/replication"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 // filesystem client
@@ -1404,8 +1404,8 @@ func (f *fsClient) RemoveReplication(_ context.Context) *probe.Error {
 }
 
 // GetReplicationMetrics - Get replication metrics for a given bucket, not implemented.
-func (f *fsClient) GetReplicationMetrics(_ context.Context) (replication.Metrics, *probe.Error) {
-	return replication.Metrics{}, probe.NewError(APINotImplemented{
+func (f *fsClient) GetReplicationMetrics(_ context.Context) (replication.MetricsV2, *probe.Error) {
+	return replication.MetricsV2{}, probe.NewError(APINotImplemented{
 		API:     "GetReplicationMetrics",
 		APIType: "filesystem",
 	})

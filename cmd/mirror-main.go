@@ -36,7 +36,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/notification"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -100,6 +100,10 @@ var (
 		cli.StringSliceFlag{
 			Name:  "exclude",
 			Usage: "exclude object(s) that match specified object name pattern",
+		},
+		cli.StringSliceFlag{
+			Name:  "exclude-storageclass",
+			Usage: "exclude object(s) that match the specified storage class",
 		},
 		cli.StringFlag{
 			Name:  "older-than",
@@ -581,6 +585,20 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			continue
 		}
 
+		sc, ok := event.UserMetadata["x-amz-storage-class"]
+		if ok {
+			var found bool
+			for _, esc := range mj.opts.excludeStorageClasses {
+				if esc == sc {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+		}
+
 		targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
 
 		// newClient needs the unexpanded  path, newCLientURL needs the expanded path
@@ -890,20 +908,21 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 	isFake := cli.Bool("fake") || cli.Bool("dry-run")
 
 	mopts := mirrorOptions{
-		isFake:           isFake,
-		isRemove:         isRemove,
-		isOverwrite:      isOverwrite,
-		isWatch:          isWatch,
-		isMetadata:       isMetadata,
-		md5:              cli.Bool("md5"),
-		disableMultipart: cli.Bool("disable-multipart"),
-		excludeOptions:   cli.StringSlice("exclude"),
-		olderThan:        cli.String("older-than"),
-		newerThan:        cli.String("newer-than"),
-		storageClass:     cli.String("storage-class"),
-		userMetadata:     userMetadata,
-		encKeyDB:         encKeyDB,
-		activeActive:     isWatch,
+		isFake:                isFake,
+		isRemove:              isRemove,
+		isOverwrite:           isOverwrite,
+		isWatch:               isWatch,
+		isMetadata:            isMetadata,
+		md5:                   cli.Bool("md5"),
+		disableMultipart:      cli.Bool("disable-multipart"),
+		excludeOptions:        cli.StringSlice("exclude"),
+		excludeStorageClasses: cli.StringSlice("exclude-storageclass"),
+		olderThan:             cli.String("older-than"),
+		newerThan:             cli.String("newer-than"),
+		storageClass:          cli.String("storage-class"),
+		userMetadata:          userMetadata,
+		encKeyDB:              encKeyDB,
+		activeActive:          isWatch,
 	}
 
 	// Create a new mirror job and execute it
