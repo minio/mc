@@ -23,8 +23,10 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v2/policy"
 )
 
 var adminUserPolicyCmd = cli.Command{
@@ -76,12 +78,33 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 	}
 
-	policies := strings.Split(user.PolicyName, ",")
-	for _, policy := range policies {
-		pinfo, e := getPolicyInfo(client, policy)
-		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document for policy "+policy)
-		fmt.Println(string(pinfo.Policy))
+	policyNames := strings.Split(user.PolicyName, ",")
+
+	var policies []policy.Policy
+	for _, policyName := range policyNames {
+		policyInfo, err := getPolicyInfo(client, policyName)
+		if err != nil {
+			fatalIf(probe.NewError(err).Trace(), "Unable to fetch user policy document for policy "+policyName)
+			return nil
+		}
+
+		if len(policyNames) == 1 {
+			fmt.Println(string(policyInfo.Policy))
+			return nil
+		}
+
+		var policyObj policy.Policy
+		if err := json.Unmarshal(policyInfo.Policy, &policyObj); err != nil {
+			fatalIf(probe.NewError(err).Trace(), "Unable to unmarshal policy")
+			return nil
+		}
+		policies = append(policies, policyObj)
 	}
+
+	mergedPolicy := policy.MergePolicies(policies...)
+	policyStr, _ := json.Marshal(mergedPolicy)
+
+	fmt.Println(string(policyStr))
 
 	return nil
 }
