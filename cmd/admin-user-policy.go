@@ -80,17 +80,11 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 
 	policyNames := strings.Split(user.PolicyName, ",")
 
-	if len(policyNames) == 1 {
-		policyInfo, err := getPolicyInfo(client, policyNames[0])
-		if err != nil {
-			fatalIf(probe.NewError(err).Trace(), "Unable to fetch user policy document")
-		}
-		fmt.Println(string(policyInfo.Policy))
-		return nil
-	}
-
 	var policies []policy.Policy
 	for _, policyName := range policyNames {
+		if policyName == "" {
+			continue
+		}
 		policyInfo, err := getPolicyInfo(client, policyName)
 		if err != nil {
 			fatalIf(probe.NewError(err).Trace(), "Unable to fetch user policy document for policy "+policyName)
