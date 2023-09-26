@@ -273,26 +273,24 @@ func (m *scannerMetricsUI) View() string {
 		addRowF(title("Current cycle:") + "         (between cycles)")
 		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
 	}
+	getRate := func(x madmin.TimedAction) string {
+		if x.AccTime > 0 {
+			return fmt.Sprintf("; Rate: %v/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
+		}
+		return ""
+	}
 	addRow("-------------------------------------- Last Minute Statistics ---------------------------------------")
 	objs := uint64(0)
 	x := sc.LastMinute.Actions["ScanObject"]
 	{
 		avg := x.Avg()
-		rate := ""
-		if x.AccTime > 0 {
-			rate = fmt.Sprintf("; Rate: %v/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
-		}
-		addRowF(title("Objects Scanned:")+"       %s objects; Avg: %v%s", ui(x.Count), metricsDuration(avg), rate)
+		addRowF(title("Objects Scanned:")+"       %s objects; Avg: %v%s", ui(x.Count), metricsDuration(avg), getRate(x))
 		objs = x.Count
 	}
 	x = sc.LastMinute.Actions["ApplyVersion"]
 	{
 		avg := x.Avg()
-		rate := ""
-		if x.AccTime > 0 {
-			rate = fmt.Sprintf("; Rate: %s/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
-		}
-		addRowF(title("Versions Scanned:")+"      %s versions; Avg: %v%s", ui(x.Count), metricsDuration(avg), rate)
+		addRowF(title("Versions Scanned:")+"      %s versions; Avg: %v%s", ui(x.Count), metricsDuration(avg), getRate(x))
 	}
 	x = sc.LastMinute.Actions["HealCheck"]
 	{
@@ -315,6 +313,15 @@ func (m *scannerMetricsUI) View() string {
 	}
 	x = sc.LastMinute.Actions["CheckMissing"]
 	addRowF(title("Verify Deleted:")+"        %s folders; Avg: %v", ui(x.Count), metricsDuration(x.Avg()))
+	x = sc.LastMinute.Actions["HealAbandonedObject"]
+	if x.Count > 0 {
+		addRowF(title(" Missing Objects:")+"      %s objects healed; Avg: %v%s", ui(x.Count), metricsDuration(x.Avg()), getRate(x))
+	}
+	x = sc.LastMinute.Actions["HealAbandonedVersion"]
+	if x.Count > 0 {
+		addRowF(title(" Missing Versions:")+"     %s versions healed; Avg: %v%s; %v bytes/v", ui(x.Count), metricsDuration(x.Avg()), getRate(x), ui(x.AvgBytes()))
+	}
+
 	for k, x := range sc.LastMinute.ILM {
 		const length = 17
 		k += ":"
