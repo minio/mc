@@ -18,12 +18,10 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
@@ -66,35 +64,6 @@ FLAGS:
 EXAMPLES:
   TODO: add examples	
 	`,
-}
-
-type ldapCredentialsMessage struct {
-	Status       string    `json:"status,omitempty"`
-	AccessKey    string    `json:"accessKey,omitempty"`
-	ParentUser   string    `json:"parentUser,omitempty"`
-	SecretKey    string    `json:"secretKey,omitempty"`
-	SessionToken string    `json:"sessionToken,omitempty"`
-	Expiration   time.Time `json:"expiration,omitempty"`
-}
-
-func (m ldapCredentialsMessage) String() string {
-	accessKey := m.AccessKey
-	secretKey := m.SecretKey
-	sessionToken := m.SessionToken
-	expiration := m.Expiration
-	expirationS := "NONE"
-	if expiration == (time.Unix(0, 0)) {
-		expirationS = expiration.Format(time.RFC3339)
-	}
-
-	return fmt.Sprintf("TODO: clean this\nAccess Key: %s\nSecret Key: %s\nSession Token: %s\nExpiration: %s\n", accessKey, secretKey, sessionToken, expirationS)
-}
-
-func (m ldapCredentialsMessage) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
 }
 
 func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {

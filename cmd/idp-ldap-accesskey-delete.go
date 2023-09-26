@@ -18,11 +18,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
 )
@@ -46,22 +43,6 @@ FLAGS:
 EXAMPLES:
   TODO: add examples
 	`,
-}
-
-type ldapAccesskeyDeleteMsg struct {
-	Status    string `json:"status"`
-	AccessKey string `json:"accessKey"`
-}
-
-func (m ldapAccesskeyDeleteMsg) String() string {
-	return fmt.Sprintf("Successfully deleted access key %s", m.AccessKey)
-}
-
-func (m ldapAccesskeyDeleteMsg) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
 }
 
 func mainIDPLdapAccesskeyDelete(ctx *cli.Context) error {
