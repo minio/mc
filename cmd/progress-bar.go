@@ -25,7 +25,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 // progress extender.

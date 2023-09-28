@@ -26,7 +26,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var adminUserSvcAcctSetFlags = []cli.Flag{
@@ -72,11 +72,8 @@ FLAGS:
 EXAMPLES:
   1. Change the secret key of the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
      {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --secret-key 'xxxxxxx'
-	2. Change the expiry of the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24
-     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00
-     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00:00
-     {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00:00Z
+
+  2. Change the expiry of the service account 'J123C4ZXEQN8RK6ND35I' in MinIO server.
      {{.Prompt}} {{.HelpName}} myminio/ 'J123C4ZXEQN8RK6ND35I' --expiry 2023-06-24T10:00:00-07:00
 `,
 }

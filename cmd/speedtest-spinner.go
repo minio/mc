@@ -212,21 +212,12 @@ func (m *speedTestUI) View() string {
 			})
 		} else {
 			for _, nodeResult := range nres.NodeResults {
-				if nodeResult.Error != "" {
-					data = append(data, []string{
-						trailerIfGreaterThan(nodeResult.Endpoint, 64),
-						crossTickCell,
-						crossTickCell,
-						"Err: " + nodeResult.Error,
-					})
-				} else {
-					data = append(data, []string{
-						trailerIfGreaterThan(nodeResult.Endpoint, 64),
-						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX))) + "/s",
-						whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX))) + "/s",
-						"",
-					})
-				}
+				data = append(data, []string{
+					trailerIfGreaterThan(nodeResult.Endpoint, 64),
+					whiteStyle.Render(humanize.IBytes(uint64(nodeResult.RX))) + "/s",
+					whiteStyle.Render(humanize.IBytes(uint64(nodeResult.TX))) + "/s",
+					"Err: " + nodeResult.Error,
+				})
 			}
 		}
 

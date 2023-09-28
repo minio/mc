@@ -32,8 +32,8 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
-	iampolicy "github.com/minio/pkg/iam/policy"
+	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v2/policy"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{
@@ -79,7 +79,7 @@ var adminUserSvcAcctAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS ACCOUNT
+  {{.HelpName}} ALIAS ACCOUNT [FLAGS]
 
 ACCOUNT:
   An account could be a regular MinIO user, STS or LDAP user.
@@ -90,18 +90,18 @@ FLAGS:
 EXAMPLES:
   1. Add a new service account for user 'foobar' to MinIO server with a name and description.
      {{.Prompt}} {{.HelpName}} myminio foobar --name uploaderKey --description "foobar uploader scripts"
+
   2. Add a new service account to MinIO server with specified access key and secret key for user 'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey" --secret-key "mysecretkey"
+
   3. Add a new service account to MinIO server with specified access key and random secret key for user 'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --access-key "myaccesskey"
+
   4. Add a new service account to MinIO server with specified secret key and random access key for user 'foobar'.
      {{.Prompt}} {{.HelpName}} myminio foobar --secret-key "mysecretkey"
-	5. Add a new service account to MinIO server with specified expiry date in the future for user 'foobar'.
-     {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24
-		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00
-		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00
-		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00Z
-		 {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00-07:00
+
+  5. Add a new service account to MinIO server with specified expiry date in the future for user 'foobar'.
+     {{.Prompt}} {{.HelpName}} myminio foobar --expiry 2023-06-24T10:00:00-07:00
 `,
 }
 
@@ -314,7 +314,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 		var e error
 		policyBytes, e = os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "Unable to open the policy document.")
-		p, e := iampolicy.ParseConfig(bytes.NewReader(policyBytes))
+		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
 		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
 		if p.IsEmpty() {
 			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
