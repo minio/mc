@@ -893,12 +893,13 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
+	s.Spinner.FPS = time.Second / 4
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	console.SetColor("metrics-duration", color.New(color.FgWhite))
 	console.SetColor("metrics-dur", color.New(color.FgGreen))
 	console.SetColor("metrics-dur-med", color.New(color.FgYellow))
 	console.SetColor("metrics-dur-high", color.New(color.FgRed))
-	console.SetColor("metrics-error", color.New(color.FgRed))
+	console.SetColor("metrics-error", color.New(color.FgYellow))
 	console.SetColor("metrics-title", color.New(color.FgCyan))
 	console.SetColor("metrics-top-title", color.New(color.FgHiCyan))
 	console.SetColor("metrics-number", color.New(color.FgWhite))
