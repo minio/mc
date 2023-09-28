@@ -28,13 +28,20 @@ import (
 	"github.com/minio/pkg/v2/console"
 )
 
+var adminReplicateAddFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "replicate-ilm-expiry",
+		Usage: "replicate ILM expiry rules",
+	},
+}
+
 var adminReplicateAddCmd = cli.Command{
 	Name:         "add",
 	Usage:        "add one or more sites for replication",
 	Action:       mainAdminReplicateAdd,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, adminReplicateAddFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -48,6 +55,9 @@ FLAGS:
 EXAMPLES:
   1. Add a site for cluster-level replication:
      {{.Prompt}} {{.HelpName}} minio1 minio2
+
+  2. Add a site for cluster-level replication with replication of ILM expiry rules:
+     {{.Prompt}} {{.HelpName}} minio1 minio2 --replicate-ilm-expiry
 `,
 }
 
@@ -106,7 +116,9 @@ func mainAdminReplicateAdd(ctx *cli.Context) error {
 		})
 	}
 
-	res, e := client.SiteReplicationAdd(globalContext, ps, madmin.SRAddOptions{})
+	var opts madmin.SRAddOptions
+	opts.ReplicateILMExpiry = ctx.Bool("replicate-ilm-expiry")
+	res, e := client.SiteReplicationAdd(globalContext, ps, opts)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add sites for replication")
 
 	printMsg(successMessage(res))
