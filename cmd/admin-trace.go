@@ -424,14 +424,16 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 	}
 
 	for _, api := range apis {
-		fn, ok := traceCallTypes[api]
-		if !ok {
-			fn, ok = traceCallTypeAliases[api]
+		for _, api := range strings.Split(api, ",") {
+			fn, ok := traceCallTypes[api]
+			if !ok {
+				fn, ok = traceCallTypeAliases[api]
+			}
+			if !ok {
+				return madmin.ServiceTraceOpts{}, fmt.Errorf("unknown call name: `%s`", api)
+			}
+			fn(&opts)
 		}
-		if !ok {
-			return madmin.ServiceTraceOpts{}, fmt.Errorf("unknown call name: `%s`", api)
-		}
-		fn(&opts)
 	}
 	return
 }
