@@ -186,7 +186,7 @@ func (m *traceUI) View() string {
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesTX())),
 			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
 			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPIErrors())),
-			whiteStyle.Render(fmt.Sprintf("%.06f s", time.Duration(stats.loadAPIDurationNanos()/stats.loadAPICall()).Seconds())),
+			whiteStyle.Render(fmt.Sprintf("%.03f s", time.Duration(stats.loadAPIDurationNanos()/stats.loadAPICall()).Seconds())),
 			whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(uint64(bytes/secs)))),
 		})
 	}
