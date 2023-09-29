@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -38,6 +39,8 @@ type topAPIStats struct {
 	TotalBytesTX       uint64
 	TotalErrors        uint64
 	TotalDurationNanos uint64
+	MaxDurationNanos   uint64
+	MinDurationNanos   uint64
 }
 
 func (s *topAPIStats) addAPICall(n int) {
@@ -58,6 +61,11 @@ func (s *topAPIStats) addAPIErrors(n int) {
 
 func (s *topAPIStats) addAPIDurationNanos(n int64) {
 	atomic.AddUint64(&s.TotalDurationNanos, uint64(n))
+	if s.MinDurationNanos == 0 {
+		s.MinDurationNanos = uint64(n)
+	}
+	s.MinDurationNanos = uint64(math.Min(float64(n), float64(s.MinDurationNanos)))
+	s.MaxDurationNanos = uint64(math.Max(float64(n), float64(s.MaxDurationNanos)))
 }
 
 func (s *topAPIStats) loadAPICall() uint64 {
@@ -78,6 +86,14 @@ func (s *topAPIStats) loadAPIErrors() uint64 {
 
 func (s *topAPIStats) loadAPIDurationNanos() uint64 {
 	return atomic.LoadUint64(&s.TotalDurationNanos)
+}
+
+func (s *topAPIStats) loadAPIMinDurationNanos() uint64 {
+	return atomic.LoadUint64(&s.MinDurationNanos)
+}
+
+func (s *topAPIStats) loadAPIMaxDurationNanos() uint64 {
+	return atomic.LoadUint64(&s.MaxDurationNanos)
 }
 
 type traceUI struct {
@@ -174,7 +190,7 @@ func (m *traceUI) View() string {
 		m.apiStatsMap[res.Trace.FuncName] = traceSt
 	}
 
-	table.SetHeader([]string{"API", "RX", "TX", "CALLS", "ERRORS", "ART", "ATP"})
+	table.SetHeader([]string{"API", "RX", "TX", "CALLS", "ERRORS", "MinRT", "MaxRT", "AvgRT", "AvgTP"})
 	data := make([][]string, 0, len(m.apiStatsMap))
 
 	for k, stats := range m.apiStatsMap {
@@ -186,6 +202,8 @@ func (m *traceUI) View() string {
 			whiteStyle.Render(humanize.IBytes(stats.loadAPIBytesTX())),
 			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPICall())),
 			whiteStyle.Render(fmt.Sprintf("%d", stats.loadAPIErrors())),
+			whiteStyle.Render(fmt.Sprintf("%.03f s", time.Duration(stats.loadAPIMinDurationNanos()).Seconds())),
+			whiteStyle.Render(fmt.Sprintf("%.03f s", time.Duration(stats.loadAPIMaxDurationNanos()).Seconds())),
 			whiteStyle.Render(fmt.Sprintf("%.03f s", time.Duration(stats.loadAPIDurationNanos()/stats.loadAPICall()).Seconds())),
 			whiteStyle.Render(fmt.Sprintf("%s/s", humanize.IBytes(uint64(bytes/secs)))),
 		})
