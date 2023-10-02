@@ -229,14 +229,19 @@ func (m *scannerMetricsUI) View() string {
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(true)
 	table.SetRowLine(false)
+
+	writtenRows := 0
 	addRow := func(s string) {
 		table.Append([]string{s})
+		writtenRows++
 	}
 	_ = addRow
 	addRowF := func(format string, vals ...interface{}) {
 		s := fmt.Sprintf(format, vals...)
 		table.Append([]string{s})
+		writtenRows++
 	}
+
 	sc := m.current.Aggregated.Scanner
 	if sc == nil {
 		s.WriteString("(waiting for data)")
@@ -338,12 +343,25 @@ func (m *scannerMetricsUI) View() string {
 		}
 		addRowF(title("Yield:")+"                 %v total; Avg: %s", metricsDuration(time.Duration(x.AccTime)), avg)
 	}
+	if errs := m.current.Errors; len(errs) > 0 {
+		addRow("------------------------------------------- Errors --------------------------------------------------")
+		for _, s := range errs {
+			addRow(console.Colorize("metrics-error", s))
+		}
+	}
 
 	if m.maxPaths != 0 && len(sc.ActivePaths) > 0 {
 		addRow("------------------------------------- Currently Scanning Paths --------------------------------------")
-		const length = 100
+		length := 100
+		if globalTermWidth > 5 {
+			length = globalTermWidth
+		}
 		for i, s := range sc.ActivePaths {
 			if i == m.maxPaths {
+				break
+			}
+			if globalTermHeight > 5 && writtenRows >= globalTermHeight-5 {
+				addRow(console.Colorize("metrics-path", fmt.Sprintf("( ... hiding %d more disk(s) .. )", len(sc.ActivePaths)-i)))
 				break
 			}
 			if len(s) > length {
@@ -351,12 +369,6 @@ func (m *scannerMetricsUI) View() string {
 			}
 			s = strings.ReplaceAll(s, "\\", "/")
 			addRow(console.Colorize("metrics-path", s))
-		}
-	}
-	if errs := m.current.Errors; len(errs) > 0 {
-		addRow("------------------------------------------- Errors --------------------------------------------------")
-		for _, s := range errs {
-			addRow(console.Colorize("metrics-error", s))
 		}
 	}
 	table.Render()

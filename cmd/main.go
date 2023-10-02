@@ -33,7 +33,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/inconshreveable/mousetrap"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -42,6 +41,7 @@ import (
 	"github.com/minio/pkg/v2/env"
 	"github.com/minio/pkg/v2/trie"
 	"github.com/minio/pkg/v2/words"
+	"golang.org/x/term"
 
 	completeinstall "github.com/posener/complete/cmd/install"
 )
@@ -117,10 +117,10 @@ func Main(args []string) error {
 
 	// Fetch terminal size, if not available, automatically
 	// set globalQuiet to true.
-	if w, e := pb.GetTerminalWidth(); e != nil {
+	if w, h, e := term.GetSize(int(os.Stdin.Fd())); e != nil {
 		globalQuiet = true
 	} else {
-		globalTermWidth = w
+		globalTermWidth, globalTermHeight = w, h
 	}
 
 	// Set the mc app name.
