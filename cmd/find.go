@@ -96,10 +96,10 @@ func nameMatch(pattern, path string) bool {
 	return matched
 }
 
-func headerMatch(pattern, header string) bool {
+func patternMatch(pattern, match string) bool {
 	pattern = strings.ToLower(pattern)
-	header = strings.ToLower(header)
-	return wildcard.Match(pattern, header)
+	match = strings.ToLower(match)
+	return wildcard.Match(pattern, match)
 }
 
 // pathMatch reports whether path matches the wildcard pattern.
