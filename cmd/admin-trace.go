@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
+	"net/url"
 	"path"
 	"sort"
 	"strings"
@@ -73,6 +74,10 @@ var adminTraceFlags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "request-header",
 		Usage: "trace only matching request headers",
+	},
+	cli.StringSliceFlag{
+		Name:  "request-query",
+		Usage: "trace only matching request queries",
 	},
 	cli.BoolFlag{
 		Name:  "errors, e",
@@ -251,6 +256,7 @@ type matchOpts struct {
 	apiPaths     []string
 	nodes        []string
 	reqHeaders   []matchString
+	reqQueries   []matchString
 	requestSize  uint64
 	responseSize uint64
 }
@@ -334,7 +340,7 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 			headerFound := false
 			for traceHdr, traceVals := range traceInfo.Trace.HTTP.ReqInfo.Headers {
 				for _, traceVal := range traceVals {
-					if headerMatch(hdr.val, traceHdr+": "+traceVal) {
+					if patternMatch(hdr.val, traceHdr+": "+traceVal) {
 						headerFound = true
 						goto exitFindingHeader
 					}
@@ -347,6 +353,34 @@ func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
 			}
 		}
 	exitMatchingHeader:
+		if !matched {
+			return false
+		}
+	}
+
+	if len(opts.reqQueries) > 0 && traceInfo.Trace.HTTP != nil {
+		matched := false
+		for _, qry := range opts.reqQueries {
+			queryFound := false
+			v, err := url.ParseQuery(traceInfo.Trace.HTTP.ReqInfo.RawQuery)
+			if err != nil {
+				continue
+			}
+			for traceQuery, traceVals := range v {
+				for _, traceVal := range traceVals {
+					if patternMatch(qry.val, traceQuery+"="+traceVal) {
+						queryFound = true
+						goto exitFindingQuery
+					}
+				}
+			}
+		exitFindingQuery:
+			if !qry.reverse && queryFound || qry.reverse && !queryFound {
+				matched = true
+				goto exitMatchingQuery
+			}
+		}
+	exitMatchingQuery:
 		if !matched {
 			return false
 		}
@@ -370,11 +404,18 @@ func matchingOpts(ctx *cli.Context) (opts matchOpts) {
 	opts.apiPaths = ctx.StringSlice("path")
 	opts.nodes = ctx.StringSlice("node")
 	for _, s := range ctx.StringSlice("request-header") {
-		ms := matchString{}
-		ms.reverse = strings.HasPrefix(s, "!")
-		ms.val = strings.TrimPrefix(s, "!")
-		opts.reqHeaders = append(opts.reqHeaders, ms)
+		opts.reqHeaders = append(opts.reqHeaders, matchString{
+			reverse: strings.HasPrefix(s, "!"),
+			val:     strings.TrimPrefix(s, "!"),
+		})
 	}
+	for _, s := range ctx.StringSlice("request-query") {
+		opts.reqQueries = append(opts.reqQueries, matchString{
+			reverse: strings.HasPrefix(s, "!"),
+			val:     strings.TrimPrefix(s, "!"),
+		})
+	}
+
 	var e error
 	var requestSize, responseSize uint64
 	if ctx.Bool("filter-request") && ctx.String("filter-size") != "" {
