@@ -32,7 +32,7 @@ import (
 type accounter struct {
 	current int64
 
-	Total        int64
+	total        int64
 	startTime    time.Time
 	startValue   int64
 	refreshRate  time.Duration
@@ -44,7 +44,7 @@ type accounter struct {
 // Instantiate a new accounter.
 func newAccounter(total int64) *accounter {
 	acct := &accounter{
-		Total:        total,
+		total:        total,
 		startTime:    time.Now(),
 		startValue:   0,
 		refreshRate:  time.Millisecond * 200,
@@ -112,7 +112,7 @@ func (a *accounter) Stat() accountStat {
 	var acntStat accountStat
 	a.finishOnce.Do(func() {
 		close(a.isFinished)
-		acntStat.Total = a.Total
+		acntStat.Total = a.total
 		acntStat.Transferred = atomic.LoadInt64(&a.current)
 		acntStat.Speed = a.write(atomic.LoadInt64(&a.current))
 	})
@@ -139,7 +139,8 @@ func (a *accounter) Get() int64 {
 	return atomic.LoadInt64(&a.current)
 }
 
-func (a *accounter) SetTotal(int64) {
+func (a *accounter) SetTotal(n int64) {
+	atomic.StoreInt64(&a.total, n)
 }
 
 // Add add to current value atomically.
@@ -149,6 +150,13 @@ func (a *accounter) Add(n int64) int64 {
 
 // Read implements Reader which internally updates current value.
 func (a *accounter) Read(p []byte) (n int, err error) {
+	defer func() {
+		// Upload retry can read one object twice; Avoid read to be greater than Total
+		if n, t := a.Get(), atomic.LoadInt64(&a.total); t > 0 && n > t {
+			a.Set(t)
+		}
+	}()
+
 	n = len(p)
 	a.Add(int64(n))
 	return

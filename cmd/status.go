@@ -87,7 +87,7 @@ func (qs *QuietStatus) AddCounts(v int64) {
 
 // SetTotal sets the total of the progressbar, ignored for quietstatus
 func (qs *QuietStatus) SetTotal(v int64) Status {
-	qs.accounter.Set(v)
+	qs.accounter.SetTotal(v)
 	return qs
 }
 
