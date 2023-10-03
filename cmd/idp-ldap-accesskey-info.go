@@ -23,7 +23,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	humanize "github.com/dustin/go-humanize"
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -68,24 +67,6 @@ type ldapAccesskeyMessage struct {
 func (m ldapAccesskeyMessage) String() string {
 	switch m.op {
 	case "info":
-		// t := newPrettyRecord(2,
-		// 	Row{"AccessKey", "AccessKey"},
-		// 	Row{"ParentUser", "ParentUser"},
-		// 	Row{"Policy", "Policy"},
-		// 	Row{"Name", "Name"},
-		// 	Row{"Description", "Description"},
-		// 	Row{"Expiration", "Expiration"},
-		// )
-		// expirationStr := "NONE"
-		// if m.Expiration != nil && !m.Expiration.IsZero() && !m.Expiration.Equal(timeSentinel) {
-		// 	expirationStr = humanize.Time(*m.Expiration)
-		// }
-		// policyStr := "embedded"
-		// if m.ImpliedPolicy {
-		// 	policyStr = "implied"
-		// }
-		// return t.buildRecord(m.AccessKey, m.ParentUser, policyStr, m.Name, m.Description, expirationStr)
-
 		expirationStr := "NONE"
 		if m.Expiration != nil && !m.Expiration.IsZero() && !m.Expiration.Equal(timeSentinel) {
 			expirationStr = humanize.Time(*m.Expiration)
@@ -108,19 +89,6 @@ func (m ldapAccesskeyMessage) String() string {
 		return o.String()
 
 	case "create":
-		// t := newPrettyRecord(2,
-		// 	Row{"Title", "Title"},
-		// 	Row{"AccessKey", "AccessKey"},
-		// 	Row{"SecretKey", "SecretKey"},
-		// 	Row{"Expiration", "Expiration"},
-		// )
-		// titleStr := "Added new access key for LDAP user " + m.ParentUser
-		// expirationStr := "NONE"
-		// if m.Expiration != nil && !m.Expiration.IsZero() && !m.Expiration.Equal(timeSentinel) {
-		// 	expirationStr = fmt.Sprintf("%s", m.Expiration)
-		// }
-		// return t.buildRecord(titleStr, m.AccessKey, m.SecretKey, expirationStr)
-
 		expirationStr := "NONE"
 		if m.Expiration != nil && !m.Expiration.IsZero() && !m.Expiration.Equal(timeSentinel) {
 			expirationStr = m.Expiration.String()
@@ -136,7 +104,7 @@ func (m ldapAccesskeyMessage) String() string {
 
 		return o.String()
 	case "delete":
-		return console.Colorize("DeleteAccessKey", "Successfully deleted access key "+m.AccessKey)
+		return console.Colorize("DeleteAccessKey", "Successfully deleted access key `"+m.AccessKey+"`.")
 	}
 	return ""
 }
@@ -152,12 +120,6 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 	if len(ctx.Args()) < 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
-
-	console.SetColor("AccessKey", color.New(color.FgCyan, color.Bold))
-	console.SetColor("ParentUser", color.New(color.FgCyan))
-	console.SetColor("Expiration", color.New(color.FgYellow))
-	console.SetColor("Policy", color.New(color.FgGreen))
-	console.SetColor("Name", color.New(color.FgGreen))
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)

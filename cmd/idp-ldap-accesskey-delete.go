@@ -50,7 +50,7 @@ func mainIDPLdapAccesskeyDelete(ctx *cli.Context) error {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
-	console.SetColor("DeleteAccessKey", color.New(color.FgGreen, color.Bold))
+	console.SetColor("DeleteAccessKey", color.New(color.FgGreen))
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
@@ -63,8 +63,8 @@ func mainIDPLdapAccesskeyDelete(ctx *cli.Context) error {
 	e := client.DeleteServiceAccount(globalContext, accessKey)
 	fatalIf(probe.NewError(e), "Unable to delete service account.")
 
-	m := acctMessage{
-		op:        svcAccOpRemove,
+	m := ldapAccesskeyMessage{
+		op:        "delete",
 		Status:    "success",
 		AccessKey: accessKey,
 	}

@@ -20,11 +20,9 @@ package cmd
 import (
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
 )
 
 var idpLdapAccesskeyCreateFlags = []cli.Flag{
@@ -70,11 +68,6 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
-
-	console.SetColor("Title", color.New(color.FgGreen))
-	console.SetColor("AccessKey", color.New(color.FgCyan))
-	console.SetColor("SecretKey", color.New(color.FgCyan))
-	console.SetColor("Expiration", color.New(color.FgYellow))
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)

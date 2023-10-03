@@ -49,6 +49,7 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 
 var idpLdapAccesskeyListCmd = cli.Command{
 	Name:         "list",
+	ShortName:    "ls",
 	Usage:        "list access key pairs for LDAP",
 	Action:       mainIDPLdapAccesskeyList,
 	Before:       setGlobalsFromContext,
