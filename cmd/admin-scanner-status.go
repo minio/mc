@@ -229,14 +229,19 @@ func (m *scannerMetricsUI) View() string {
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(true)
 	table.SetRowLine(false)
+
+	writtenRows := 0
 	addRow := func(s string) {
 		table.Append([]string{s})
+		writtenRows++
 	}
 	_ = addRow
 	addRowF := func(format string, vals ...interface{}) {
 		s := fmt.Sprintf(format, vals...)
 		table.Append([]string{s})
+		writtenRows++
 	}
+
 	sc := m.current.Aggregated.Scanner
 	if sc == nil {
 		s.WriteString("(waiting for data)")
@@ -273,26 +278,24 @@ func (m *scannerMetricsUI) View() string {
 		addRowF(title("Current cycle:") + "         (between cycles)")
 		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
 	}
+	getRate := func(x madmin.TimedAction) string {
+		if x.AccTime > 0 {
+			return fmt.Sprintf("; Rate: %v/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
+		}
+		return ""
+	}
 	addRow("-------------------------------------- Last Minute Statistics ---------------------------------------")
 	objs := uint64(0)
 	x := sc.LastMinute.Actions["ScanObject"]
 	{
 		avg := x.Avg()
-		rate := ""
-		if x.AccTime > 0 {
-			rate = fmt.Sprintf("; Rate: %v/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
-		}
-		addRowF(title("Objects Scanned:")+"       %s objects; Avg: %v%s", ui(x.Count), metricsDuration(avg), rate)
+		addRowF(title("Objects Scanned:")+"       %s objects; Avg: %v%s", ui(x.Count), metricsDuration(avg), getRate(x))
 		objs = x.Count
 	}
 	x = sc.LastMinute.Actions["ApplyVersion"]
 	{
 		avg := x.Avg()
-		rate := ""
-		if x.AccTime > 0 {
-			rate = fmt.Sprintf("; Rate: %s/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
-		}
-		addRowF(title("Versions Scanned:")+"      %s versions; Avg: %v%s", ui(x.Count), metricsDuration(avg), rate)
+		addRowF(title("Versions Scanned:")+"      %s versions; Avg: %v%s", ui(x.Count), metricsDuration(avg), getRate(x))
 	}
 	x = sc.LastMinute.Actions["HealCheck"]
 	{
@@ -315,6 +318,15 @@ func (m *scannerMetricsUI) View() string {
 	}
 	x = sc.LastMinute.Actions["CheckMissing"]
 	addRowF(title("Verify Deleted:")+"        %s folders; Avg: %v", ui(x.Count), metricsDuration(x.Avg()))
+	x = sc.LastMinute.Actions["HealAbandonedObject"]
+	if x.Count > 0 {
+		addRowF(title(" Missing Objects:")+"      %s objects healed; Avg: %v%s", ui(x.Count), metricsDuration(x.Avg()), getRate(x))
+	}
+	x = sc.LastMinute.Actions["HealAbandonedVersion"]
+	if x.Count > 0 {
+		addRowF(title(" Missing Versions:")+"     %s versions healed; Avg: %v%s; %v bytes/v", ui(x.Count), metricsDuration(x.Avg()), getRate(x), ui(x.AvgBytes()))
+	}
+
 	for k, x := range sc.LastMinute.ILM {
 		const length = 17
 		k += ":"
@@ -331,12 +343,25 @@ func (m *scannerMetricsUI) View() string {
 		}
 		addRowF(title("Yield:")+"                 %v total; Avg: %s", metricsDuration(time.Duration(x.AccTime)), avg)
 	}
+	if errs := m.current.Errors; len(errs) > 0 {
+		addRow("------------------------------------------- Errors --------------------------------------------------")
+		for _, s := range errs {
+			addRow(console.Colorize("metrics-error", s))
+		}
+	}
 
 	if m.maxPaths != 0 && len(sc.ActivePaths) > 0 {
 		addRow("------------------------------------- Currently Scanning Paths --------------------------------------")
-		const length = 100
+		length := 100
+		if globalTermWidth > 5 {
+			length = globalTermWidth
+		}
 		for i, s := range sc.ActivePaths {
 			if i == m.maxPaths {
+				break
+			}
+			if globalTermHeight > 5 && writtenRows >= globalTermHeight-5 {
+				addRow(console.Colorize("metrics-path", fmt.Sprintf("( ... hiding %d more disk(s) .. )", len(sc.ActivePaths)-i)))
 				break
 			}
 			if len(s) > length {
@@ -344,12 +369,6 @@ func (m *scannerMetricsUI) View() string {
 			}
 			s = strings.ReplaceAll(s, "\\", "/")
 			addRow(console.Colorize("metrics-path", s))
-		}
-	}
-	if errs := m.current.Errors; len(errs) > 0 {
-		addRow("------------------------------------------- Errors --------------------------------------------------")
-		for _, s := range errs {
-			addRow(console.Colorize("metrics-error", s))
 		}
 	}
 	table.Render()

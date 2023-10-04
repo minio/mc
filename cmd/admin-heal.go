@@ -41,37 +41,45 @@ const (
 
 var adminHealFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "scan",
-		Usage: "select the healing scan mode (normal/deep)",
-		Value: scanNormalMode,
+		Name:   "scan",
+		Usage:  "select the healing scan mode (normal/deep)",
+		Value:  scanNormalMode,
+		Hidden: true,
 	},
 	cli.BoolFlag{
-		Name:  "recursive, r",
-		Usage: "heal recursively",
+		Name:   "recursive, r",
+		Usage:  "heal recursively",
+		Hidden: true,
 	},
 	cli.BoolFlag{
-		Name:  "dry-run, n",
-		Usage: "only inspect data, but do not mutate",
+		Name:   "dry-run, n",
+		Usage:  "only inspect data, but do not mutate",
+		Hidden: true,
 	},
 	cli.BoolFlag{
-		Name:  "force-start, f",
-		Usage: "force start a new heal sequence",
+		Name:   "force-start, f",
+		Usage:  "force start a new heal sequence",
+		Hidden: true,
 	},
 	cli.BoolFlag{
-		Name:  "force-stop, s",
-		Usage: "force stop a running heal sequence",
+		Name:   "force-stop, s",
+		Usage:  "force stop a running heal sequence",
+		Hidden: true,
 	},
 	cli.BoolFlag{
-		Name:  "remove",
-		Usage: "remove dangling objects in heal sequence",
+		Name:   "remove",
+		Usage:  "remove dangling objects in heal sequence",
+		Hidden: true,
 	},
 	cli.StringFlag{
-		Name:  "storage-class",
-		Usage: "show server/drives failure tolerance with the given storage class",
+		Name:   "storage-class",
+		Usage:  "show server/drives failure tolerance with the given storage class",
+		Hidden: true,
 	},
 	cli.BoolFlag{
-		Name:  "rewrite",
-		Usage: "rewrite objects from older to newer format",
+		Name:   "rewrite",
+		Usage:  "rewrite objects from older to newer format",
+		Hidden: true,
 	},
 	cli.BoolFlag{
 		Name:  "verbose, v",
@@ -81,7 +89,7 @@ var adminHealFlags = []cli.Flag{
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "heal bucket(s) and object(s) on MinIO server",
+	Usage:           "monitor healing for bucket(s) and object(s) on MinIO server",
 	Action:          mainAdminHeal,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -650,13 +658,6 @@ func mainAdminHeal(ctx *cli.Context) error {
 			})
 		}
 		return nil
-	}
-
-	for content := range clnt.List(globalContext, ListOptions{Recursive: false, ShowDir: DirNone}) {
-		if content.Err != nil {
-			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to heal bucket `"+bucket+"`.")
-			return nil
-		}
 	}
 
 	opts := madmin.HealOpts{

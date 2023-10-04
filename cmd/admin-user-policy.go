@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -70,13 +71,17 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	user, e := client.GetUserInfo(globalContext, args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get user info")
 
-	pinfo, e := getPolicyInfo(client, user.PolicyName)
 	if user.PolicyName == "" {
-		e = fmt.Errorf("Policy not found for user %s", args.Get(1))
+		e = fmt.Errorf("policy not found for user %s", args.Get(1))
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 	}
-	fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document")
 
-	fmt.Println(string(pinfo.Policy))
+	policies := strings.Split(user.PolicyName, ",")
+	for _, policy := range policies {
+		pinfo, e := getPolicyInfo(client, policy)
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to fetch user policy document for policy "+policy)
+		fmt.Println(string(pinfo.Policy))
+	}
 
 	return nil
 }

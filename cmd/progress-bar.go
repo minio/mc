@@ -105,11 +105,9 @@ func (p *progressBar) Set64(length int64) *progressBar {
 
 func (p *progressBar) Read(buf []byte) (n int, err error) {
 	defer func() {
-		// After updating the internal progress bar, make sure that its
-		// current progress doesn't exceed the specified total progress
-		currentProgress := p.ProgressBar.Get()
-		if currentProgress > p.ProgressBar.Total {
-			p.ProgressBar.Set64(p.ProgressBar.Total)
+		// Upload retry can read one object twice; Avoid read to be greater than Total
+		if n, t := p.ProgressBar.Get(), p.ProgressBar.Total; t > 0 && n > t {
+			p.ProgressBar.Set64(t)
 		}
 	}()
 
