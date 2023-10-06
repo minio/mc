@@ -105,7 +105,7 @@ func getOdUrls(ctx context.Context, args argKVS) (odURLs URLs, e error) {
 		sourceURLs: []string{inFile},
 		targetURL:  outFile,
 	}
-	odType, _, err := guessCopyURLType(ctx, opts)
+	odType, _, _, _, err := guessCopyURLType(ctx, opts)
 	fatalIf(err, "Unable to guess copy URL type")
 
 	// Get content of inFile, set up URLs.

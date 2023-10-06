@@ -288,7 +288,7 @@ func doCopyFake(cpURLs URLs, pg Progress) URLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64) {
+func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64, errSeen bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -333,16 +333,10 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 				done = true
 				break
 			}
+
 			if cpURLs.Error != nil {
-				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-				if !globalQuiet && !globalJSON {
-					console.Eraseline()
-				}
-				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
-					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use `...` suffix.")
-				} else {
-					errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
-				}
+				printCopyURLsError(&cpURLs)
+				errSeen = true
 				break
 			}
 
@@ -377,11 +371,30 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 	return
 }
 
+func printCopyURLsError(cpURLs *URLs) {
+
+	// Print in new line and adjust to top so that we
+	// don't print over the ongoing scan bar
+	if !globalQuiet && !globalJSON {
+		console.Eraseline()
+	}
+
+	if strings.Contains(cpURLs.Error.ToGoError().Error(),
+		" is a folder.") {
+		errorIf(cpURLs.Error.Trace(),
+			"Folder cannot be copied. Please use `...` suffix.")
+	} else {
+		errorIf(cpURLs.Error.Trace(),
+			"Unable to prepare URL for copying.")
+	}
+}
+
 func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
 
 	cpURLsCh := make(chan URLs, 10000)
+	errSeen := false
 
 	// Store a progress bar or an accounter
 	var pg ProgressReader
@@ -405,7 +418,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 		isCopied = isLastFactory(session.Header.LastCopied)
 
 		if !session.HasData() {
-			totalBytes, totalObjects = doPrepareCopyURLs(ctx, session, cancelCopy)
+			totalBytes, totalObjects, errSeen = doPrepareCopyURLs(ctx, session, cancelCopy)
 		} else {
 			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
 		}
@@ -431,6 +444,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				cpURLsCh <- cpURLs
 			}
 		}()
+
 	} else {
 		// Access recursive flag inside the session header.
 		isRecursive := cli.Bool("recursive")
@@ -452,23 +466,14 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				versionID:   versionID,
 				isZip:       cli.Bool("zip"),
 			}
+
 			for cpURLs := range prepareCopyURLs(ctx, opts) {
 				if cpURLs.Error != nil {
-					// Print in new line and adjust to top so that we
-					// don't print over the ongoing scan bar
-					if !globalQuiet && !globalJSON {
-						console.Eraseline()
-					}
-					if strings.Contains(cpURLs.Error.ToGoError().Error(),
-						" is a folder.") {
-						errorIf(cpURLs.Error.Trace(),
-							"Folder cannot be copied. Please use `...` suffix.")
-					} else {
-						errorIf(cpURLs.Error.Trace(),
-							"Unable to start copying.")
-					}
+					errSeen = true
+					printCopyURLsError(&cpURLs)
 					break
 				}
+
 				totalBytes += cpURLs.SourceContent.Size
 				pg.SetTotal(totalBytes)
 				totalObjects++
@@ -570,7 +575,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	}()
 
 	var retErr error
-	errSeen := false
 	cpAllFilesErr := true
 
 loop:
@@ -639,14 +643,24 @@ loop:
 	}
 
 	if progressReader, ok := pg.(*progressBar); ok {
-		if (errSeen && totalObjects == 1) || (cpAllFilesErr && totalObjects > 1) {
-			console.Eraseline()
+		if errSeen || (cpAllFilesErr && totalObjects > 0) {
+			// We only erase a line if we are displaying a progress bar
+			if !globalQuiet && !globalJSON {
+				console.Eraseline()
+			}
 		} else if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {
 		if accntReader, ok := pg.(*accounter); ok {
-			printMsg(accntReader.Stat())
+			if errSeen || (cpAllFilesErr && totalObjects > 0) {
+				// We only erase a line if we are displaying a progress bar
+				if !globalQuiet && !globalJSON {
+					console.Eraseline()
+				}
+			} else {
+				printMsg(accntReader.Stat())
+			}
 		}
 	}
 
@@ -670,7 +684,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB, false)
+	checkCopySyntax(ctx, cliCtx, encKeyDB)
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 

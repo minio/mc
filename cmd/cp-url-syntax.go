@@ -24,15 +24,10 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
 )
 
-func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) {
+func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if len(cliCtx.Args()) < 2 {
-		if isMvCmd {
-			showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
-		}
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
 
@@ -44,9 +39,7 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	srcURLs := URLs[:len(URLs)-1]
 	tgtURL := URLs[len(URLs)-1]
-	isRecursive := cliCtx.Bool("recursive")
 	isZip := cliCtx.Bool("zip")
-	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 	versionID := cliCtx.String("version-id")
 
 	if versionID != "" && len(srcURLs) > 1 {
@@ -55,24 +48,6 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	if isZip && cliCtx.String("rewind") != "" {
 		fatalIf(errDummy().Trace(cliCtx.Args()...), "--zip and --rewind cannot be used together")
-	}
-
-	// Verify if source(s) exists.
-	for _, srcURL := range srcURLs {
-		var err *probe.Error
-		if !isRecursive {
-			_, _, err = url2Stat(ctx, srcURL, versionID, false, encKeyDB, timeRef, isZip)
-		} else {
-			_, _, err = firstURL2Stat(ctx, srcURL, timeRef, isZip)
-		}
-		if err != nil {
-			msg := "Unable to validate source `" + srcURL + "`"
-			if versionID != "" {
-				msg += " (" + versionID + ")"
-			}
-			msg += ": " + err.ToGoError().Error()
-			console.Fatalln(msg)
-		}
 	}
 
 	// Check if bucket name is passed for URL type arguments.
@@ -89,49 +64,6 @@ func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 
 	if cliCtx.String(rdFlag) == "" && cliCtx.String(rmFlag) != "" {
 		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Both object retention flags `--%s` and `--%s` are required.\n", rdFlag, rmFlag))
-	}
-
-	operation := "copy"
-	if isMvCmd {
-		operation = "move"
-	}
-
-	// Guess CopyURLsType based on source and target URLs.
-	opts := prepareCopyURLsOpts{
-		sourceURLs:  srcURLs,
-		targetURL:   tgtURL,
-		isRecursive: isRecursive,
-		encKeyDB:    encKeyDB,
-		olderThan:   "",
-		newerThan:   "",
-		timeRef:     timeRef,
-		versionID:   versionID,
-		isZip:       isZip,
-	}
-	copyURLsType, _, err := guessCopyURLType(ctx, opts)
-	if err != nil {
-		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
-	}
-
-	switch copyURLsType {
-	case copyURLsTypeA: // File -> File.
-		// Check source.
-		if len(srcURLs) != 1 {
-			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-		}
-		checkCopySyntaxTypeA(ctx, srcURLs[0], versionID, encKeyDB, isZip, timeRef)
-	case copyURLsTypeB: // File -> Folder.
-		// Check source.
-		if len(srcURLs) != 1 {
-			fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
-		}
-		checkCopySyntaxTypeB(ctx, srcURLs[0], versionID, tgtURL, encKeyDB, isZip, timeRef)
-	case copyURLsTypeC: // Folder... -> Folder.
-		checkCopySyntaxTypeC(ctx, srcURLs, tgtURL, isRecursive, isZip, encKeyDB, isMvCmd, timeRef)
-	case copyURLsTypeD: // File1...FileN -> Folder.
-		checkCopySyntaxTypeD(ctx, tgtURL, encKeyDB, timeRef)
-	default:
-		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of "+operation+" operation.")
 	}
 
 	// Preserve functionality not supported for windows

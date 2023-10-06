@@ -227,7 +227,7 @@ func mainMove(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB, true)
+	checkCopySyntax(ctx, cliCtx, encKeyDB)
 
 	if cliCtx.NArg() == 2 {
 		args := cliCtx.Args()
