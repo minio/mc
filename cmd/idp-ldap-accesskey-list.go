@@ -65,7 +65,16 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  TODO: add examples
+  1. Get list of all users and associated access keys in local server (if admin).
+ 	 {{.Prompt}} {{.HelpName}} local/
+  2. Get list of users in local server (if admin).
+ 	 {{.Prompt}} {{.HelpName}} local/ --users
+  3. Get list of all users and associated temporary access keys in local server (if admin).
+	 {{.Prompt}} {{.HelpName}} local/ --temp-only
+  4. Get authenticated user and associated access keys in local server (if not admin).
+	 {{.Prompt}} {{.HelpName}} local/
+  5. Get authenticated user and associated access keys in local server (if admin).
+	 {{.Prompt}} {{.HelpName}} local/ --self
 	`,
 }
 
@@ -81,7 +90,7 @@ type ldapUserAccessKeys struct {
 }
 
 func (m ldapUsersList) String() string {
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
 	for _, u := range m.Result {

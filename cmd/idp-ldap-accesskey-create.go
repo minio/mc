@@ -60,7 +60,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  TODO: add examples	
+  1. Create a new access key pair with the same policy as the authenticated user
+     {{.Prompt}} {{.HelpName}} local/
 	`,
 }
 

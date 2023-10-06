@@ -46,7 +46,10 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  TODO: add examples
+  1. Get info for the access key "testkey"
+	 {{.Prompt}} {{.HelpName}} local/ testkey
+  2. Get info for the access keys "testkey" and "testkey2"
+	 {{.Prompt}} {{.HelpName}} local/ testkey testkey2
 	`,
 }
 

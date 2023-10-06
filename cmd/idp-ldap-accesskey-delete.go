@@ -41,7 +41,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  TODO: add examples
+  1. Delete the access key "testkey" from local server
+	 {{.Prompt}} {{.HelpName}} local/ testkey
 	`,
 }
 
