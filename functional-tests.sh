@@ -315,6 +315,16 @@ function test_list_dir()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_od_object() {
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd od if="${FILE_1_MB}" of="${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd od of="${FILE_1_MB}" if="${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
 
 function test_put_object()
 {
@@ -984,9 +994,6 @@ function test_admin_users()
     username=foo
     password=foobar12345
     test_alias="aliasx"
-		
-		# Remove user incase the user was created and not removed due to a failed test
-    mc_cmd admin user remove "$SERVER_ALIAS" "$username"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user add "$SERVER_ALIAS" "$username" "$password"
 
@@ -1019,7 +1026,6 @@ function test_admin_users()
     rv=$?
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure ${rv} "user ${username} did NOT have the readwrite policy attached"
 
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${test_alias}/${BUCKET_NAME}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that the user cannot write objects with readonly policy
@@ -1074,6 +1080,7 @@ function run_test()
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
+    test_od_object
     test_mv_object
     test_presigned_post_policy_error
     test_presigned_put_object
