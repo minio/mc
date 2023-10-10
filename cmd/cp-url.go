@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -187,7 +186,6 @@ func makeCopyContentTypeB(cc copyURLsContent) URLs {
 func prepareCopyURLsTypeC(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) <-chan URLs {
 	copyURLsCh := make(chan URLs, 1)
 
-	fmt.Printf("POINTER TO CC: %p >> URL: %s\n", &cc, cc.sourceURL)
 	returnErrorAndCloseChannel := func(err *probe.Error) chan URLs {
 		copyURLsCh <- URLs{Error: err}
 		close(copyURLsCh)
