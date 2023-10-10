@@ -20,7 +20,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -325,18 +324,14 @@ func prepareCopyURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 
 		switch copyURLsContent.copyType {
 		case copyURLsTypeA:
-			log.Println("TYPE A")
 			copyURLsCh <- prepareCopyURLsTypeA(ctx, *copyURLsContent, o)
 		case copyURLsTypeB:
-			log.Println("TYPE B")
 			copyURLsCh <- prepareCopyURLsTypeB(ctx, *copyURLsContent, o)
 		case copyURLsTypeC:
-			log.Println("TYPE C")
 			for cURLs := range prepareCopyURLsTypeC(ctx, *copyURLsContent, o) {
 				copyURLsCh <- cURLs
 			}
 		case copyURLsTypeD:
-			log.Println("TYPE D")
 			for cURLs := range prepareCopyURLsTypeD(ctx, *copyURLsContent, o) {
 				copyURLsCh <- cURLs
 			}
