@@ -224,12 +224,6 @@ func prepareCopyURLsTypeC(ctx context.Context, sourceContent, targetContent *Cli
 		}
 	}
 
-	// if !isRecursive {
-	// 	copyURLsCh <- makeCopyContentTypeC(sourceAlias, c.GetURL(), sourceContent, targetAlias, targetURL)
-	// 	close(copyURLsCh)
-	// 	return copyURLsCh
-	// }
-
 	go func(sourceClient Client, sourceURL, targetURL string, copyURLsCh chan URLs) {
 		defer close(copyURLsCh)
 
