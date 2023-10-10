@@ -1198,7 +1198,7 @@ function validate_dependencies() {
 
 function main()
 {
-		validate_dependencies
+    validate_dependencies
 
     ( run_test )
     rv=$?
