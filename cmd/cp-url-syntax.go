@@ -18,14 +18,13 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"runtime"
 
 	"github.com/minio/cli"
 )
 
-func checkCopySyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+func checkCopySyntax(cliCtx *cli.Context) {
 	if len(cliCtx.Args()) < 2 {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}

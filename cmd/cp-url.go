@@ -248,7 +248,6 @@ func prepareCopyURLsTypeC(ctx context.Context, sourceContent, targetContent *Cli
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 			copyURLsCh <- makeCopyContentTypeC(sourceAlias, sourceClient.GetURL(), sourceContent, targetAlias, targetURL)
 		}
-
 	}(c, sourceURL, targetURL, copyURLsCh)
 
 	return copyURLsCh

@@ -111,11 +111,11 @@ var errRequiresRecursive = func(URL string) *probe.Error {
 	return probe.NewError(requiresRecuriveErr(errors.New(msg))).Untrace()
 }
 
-type CopyIntoSelfErr error
+type copyIntoSelfErr error
 
 var errCopyIntoSelf = func(URL string) *probe.Error {
 	msg := "Copying or moving '" + URL + "' into itself is not allowed."
-	return probe.NewError(CopyIntoSelfErr(errors.New(msg))).Untrace()
+	return probe.NewError(copyIntoSelfErr(errors.New(msg))).Untrace()
 }
 
 type targetNotFoundErr error

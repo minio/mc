@@ -372,7 +372,6 @@ func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy conte
 }
 
 func printCopyURLsError(cpURLs *URLs) {
-
 	// Print in new line and adjust to top so that we
 	// don't print over the ongoing scan bar
 	if !globalQuiet && !globalJSON {
@@ -684,7 +683,7 @@ func mainCopy(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB)
+	checkCopySyntax(cliCtx)
 	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
