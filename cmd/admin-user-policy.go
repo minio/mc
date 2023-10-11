@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -85,21 +86,17 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 		if policyName == "" {
 			continue
 		}
-		policyInfo, err := getPolicyInfo(client, policyName)
-		if err != nil {
-			fatalIf(probe.NewError(err).Trace(), "Unable to fetch user policy document for policy "+policyName)
-		}
+		policyInfo, e := getPolicyInfo(client, policyName)
+		fatalIf(probe.NewError(e).Trace(), "Unable to fetch user policy document for policy "+policyName)
 
 		var policyObj policy.Policy
-		if err := json.Unmarshal(policyInfo.Policy, &policyObj); err != nil {
-			fatalIf(probe.NewError(err).Trace(), "Unable to unmarshal policy")
+		if e := json.Unmarshal(policyInfo.Policy, &policyObj); e != nil {
+			fatalIf(probe.NewError(e).Trace(), "Unable to unmarshal policy")
 		}
 		policies = append(policies, policyObj)
 	}
 
 	mergedPolicy := policy.MergePolicies(policies...)
-	policyStr, _ := json.Marshal(mergedPolicy)
-	fmt.Println(string(policyStr))
-
+	json.NewEncoder(os.Stdout).Encode(mergedPolicy)
 	return nil
 }
