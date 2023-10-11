@@ -296,6 +296,7 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	diskHw := spinner("Disk Info", madmin.HealthDataTypeSysDriveHw)
 	osInfo := spinner("OS Info", madmin.HealthDataTypeSysOsInfo)
 	mem := spinner("Mem Info", madmin.HealthDataTypeSysMem)
+	netInfo := spinner("Net Info", madmin.HealthDataTypeSysNet)
 	process := spinner("Process Info", madmin.HealthDataTypeSysLoad)
 	config := spinner("Server Config", madmin.HealthDataTypeMinioConfig)
 	syserr := spinner("System Errors", madmin.HealthDataTypeSysErrors)
@@ -325,9 +326,23 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 			admin(len(info.Minio.Info.Servers) > 0)
 	}
 
+	progressV3 := func(info madmin.HealthInfoV3) {
+		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
+			diskHw(len(info.Sys.Partitions) > 0) &&
+			osInfo(len(info.Sys.OSInfo) > 0) &&
+			mem(len(info.Sys.MemInfo) > 0) &&
+			process(len(info.Sys.ProcInfo) > 0) &&
+			config(info.Minio.Config.Config != nil) &&
+			syserr(len(info.Sys.SysErrs) > 0) &&
+			syssrv(len(info.Sys.SysServices) > 0) &&
+			sysconfig(len(info.Sys.SysConfig) > 0) &&
+			admin(len(info.Minio.Info.Servers) > 0)
+	}
+
 	progress := func(info madmin.HealthInfo) {
 		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
 			diskHw(len(info.Sys.Partitions) > 0) &&
+			netInfo(len(info.Sys.NetInfo) > 0) &&
 			osInfo(len(info.Sys.OSInfo) > 0) &&
 			mem(len(info.Sys.MemInfo) > 0) &&
 			process(len(info.Sys.ProcInfo) > 0) &&
@@ -386,6 +401,20 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 			}
 
 			progressV2(info)
+		}
+		healthInfo = info
+	case madmin.HealthInfoVersion3:
+		info := madmin.HealthInfoV3{}
+		for {
+			if e = decoder.Decode(&info); e != nil {
+				if errors.Is(e, io.EOF) {
+					e = nil
+				}
+
+				break
+			}
+
+			progressV3(info)
 		}
 		healthInfo = info
 	case madmin.HealthInfoVersion:
