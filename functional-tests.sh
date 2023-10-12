@@ -315,6 +315,16 @@ function test_list_dir()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_od_object() {
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd od if="${FILE_1_MB}" of="${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd od of="${FILE_1_MB}" if="${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
 
 function test_put_object()
 {
@@ -983,6 +993,8 @@ function test_admin_users()
     # create a user
     username=foo
     password=foobar12345
+    test_alias="aliasx"
+
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user add "$SERVER_ALIAS" "$username" "$password"
 
     # check that user appears in the user list
@@ -993,49 +1005,60 @@ function test_admin_users()
     # setup temporary alias to make requests as the created user.
     scheme="https"
     if [ "$ENABLE_HTTPS" != "1" ]; then
-	scheme="http"
+	  scheme="http"
     fi
     object1_name="mc-test-object-$RANDOM"
     object2_name="mc-test-object-$RANDOM"
-    export MC_HOST_foo="${scheme}://${username}:${password}@${SERVER_ENDPOINT}"
+
+    # Adding an alias for the $test_alias
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd alias set $test_alias "${scheme}://${SERVER_ENDPOINT}" ${username} ${password} 
+
+    # check that alias appears in the alias list
+    "${MC_CMD[@]}" --json alias list | jq -r '.alias' | grep --quiet "^${test_alias}$"
+    rv=$?
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure ${rv} "alias ${test_alias} did NOT appear in the list of aliases returned by server"
 
     # check that the user can write objects with readwrite policy
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy attach "$SERVER_ALIAS" readwrite --user="${username}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object1_name}"
+
+    # Validate that the correct policy has been added to the user
+    "${MC_CMD[@]}" --json admin user list "${SERVER_ALIAS}" | jq -r '.policyName' | grep --quiet "^readwrite$"
+    rv=$?
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure ${rv} "user ${username} did NOT have the readwrite policy attached"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that the user cannot write objects with readonly policy
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy detach "$SERVER_ALIAS" readwrite --user="${username}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy attach "$SERVER_ALIAS" readonly --user="${username}"
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object2_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "${test_alias}/${BUCKET_NAME}/${object2_name}"
 
     # check that the user can read with readonly policy
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that user can delete with readwrite policy
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin policy attach "$SERVER_ALIAS" readwrite --user="${username}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "foo/${BUCKET_NAME}/${object1_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that user cannot perform admin actions with readwrite policy
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd admin info "foo"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd admin info $test_alias
 
     # create object1_name for subsequent tests.
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "foo/${BUCKET_NAME}/${object1_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_1_MB" "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that user can be disabled
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user disable "$SERVER_ALIAS" "$username"
 
     # check that disabled cannot perform any action
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that user can be enabled and can then perform an allowed action
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user enable "$SERVER_ALIAS" "$username"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     # check that user can be removed, and then is no longer available
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd admin user remove "$SERVER_ALIAS" "$username"
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat "foo/${BUCKET_NAME}/${object1_name}"
-
-    unset MC_HOST_foo
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat "${test_alias}/${BUCKET_NAME}/${object1_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -1057,6 +1080,7 @@ function run_test()
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
+    test_od_object
     test_mv_object
     test_presigned_post_policy_error
     test_presigned_put_object
@@ -1162,8 +1186,20 @@ function __init__()
     set +e
 }
 
+function validate_dependencies() {
+	jqVersion=$(jq --version)
+	if [[ $jqVersion == *"jq"* ]]; then
+		echo "Dependency validation complete"
+	else
+		echo "jq is missing, please install: 'sudo apt install jq'"
+		exit 1
+	fi
+}
+
 function main()
 {
+    validate_dependencies
+
     ( run_test )
     rv=$?
 
