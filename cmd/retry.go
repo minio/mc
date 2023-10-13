@@ -56,9 +56,8 @@ func (r *retryManager) encapsulateWithRetry(action func(*retryManager) *probe.Er
 			return
 		}
 
-		_ = <-time.After(r.retryInterval)
+		<-time.After(r.retryInterval)
 
 		r.retries++
 	}
-	return
 }
