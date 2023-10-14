@@ -435,7 +435,8 @@ func httpClient(reqTimeout time.Duration) *http.Client {
 			}).DialContext,
 			Proxy: ieproxy.GetProxyFunc(),
 			TLSClientConfig: &tls.Config{
-				RootCAs: globalRootCAs,
+				RootCAs:            globalRootCAs,
+				InsecureSkipVerify: globalInsecure,
 				// Can't use SSLv3 because of POODLE and BEAST
 				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
 				// Can't use TLSv1.1 because of RC4 cipher usage
