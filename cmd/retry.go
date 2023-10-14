@@ -45,7 +45,7 @@ func (r retryMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-func (r *retryManager) encapsulateWithRetry(action func(*retryManager) *probe.Error) {
+func (r *retryManager) retry(action func(context.Context, *retryManager) *probe.Error) {
 	for r.retries <= r.maxRetries {
 		if r.shouldStop {
 			return
