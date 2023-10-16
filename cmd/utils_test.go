@@ -167,6 +167,30 @@ func TestRemoveOverlappingPrefixes(t *testing.T) {
 		Out []string
 	}, 0)
 
+	testMap["no-overlapping"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix",
+		},
+		Out: []string{"alias1/bucket1/prefix"},
+	}
+
+	testMap["no-overlapping-2x-sources"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix",
+			"alias2/bucket1/prefix",
+		},
+		Out: []string{
+			"alias1/bucket1/prefix",
+			"alias2/bucket1/prefix",
+		},
+	}
+
 	testMap["basic-overlapping"] = struct {
 		In  []string
 		Out []string
