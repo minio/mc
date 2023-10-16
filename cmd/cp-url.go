@@ -269,6 +269,7 @@ func makeCopyContentTypeC(cc copyURLsContent, sourceClientURL ClientURL) URLs {
 // prepareCopyURLsTypeE - prepares target and source clientURLs for copying.
 func prepareCopyURLsTypeD(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) <-chan URLs {
 	copyURLsCh := make(chan URLs, 1)
+	o.sourceURLs = removeOverlappingPrefixes(o.sourceURLs)
 
 	go func(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) {
 		defer close(copyURLsCh)

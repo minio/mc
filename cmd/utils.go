@@ -461,3 +461,27 @@ func getPrometheusToken(hostConfig *aliasConfigV10) (string, error) {
 	}
 	return token, nil
 }
+
+func removeOverlappingPrefixes(prefixList []string) (cleanList []string) {
+	cleanList = make([]string, 0)
+	for _, url := range prefixList {
+		foundPrefix := false
+		for _, url2 := range prefixList {
+			if strings.HasPrefix(url, url2) && url != url2 {
+				foundPrefix = true
+			}
+		}
+		if !foundPrefix {
+			alreadyAdded := false
+			for _, url3 := range cleanList {
+				if url == url3 {
+					alreadyAdded = true
+				}
+			}
+			if !alreadyAdded {
+				cleanList = append(cleanList, url)
+			}
+		}
+	}
+	return
+}

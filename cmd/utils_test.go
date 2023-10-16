@@ -160,3 +160,135 @@ func TestParseAttribute(t *testing.T) {
 
 	}
 }
+
+func TestRemoveOverlappingPrefixes(t *testing.T) {
+	testMap := make(map[string]struct {
+		In  []string
+		Out []string
+	}, 0)
+
+	testMap["basic-overlapping"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix-1",
+			"alias1/bucket1/prefix-2",
+		},
+		Out: []string{"alias1/bucket1/prefix"},
+	}
+
+	testMap["basic-overlapping-2x-prefix"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix-1",
+			"alias1/bucket1/prefix-2",
+			"alias1/bucket1/another",
+		},
+		Out: []string{
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/another",
+		},
+	}
+
+	testMap["same-prefix-twice"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix-2",
+			"alias1/bucket1/prefix-2",
+		},
+		Out: []string{"alias1/bucket1/prefix"},
+	}
+
+	testMap["basic-overlapping-different-order"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix-3",
+			"alias1/bucket1/prefix-2",
+			"alias1/bucket1/prefix-1",
+			"alias1/bucket1/prefix",
+		},
+		Out: []string{"alias1/bucket1/prefix"},
+	}
+
+	testMap["same-prefix-X-times-different-order"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix-3",
+			"alias1/bucket1/prefix-2",
+			"alias1/bucket1/prefix-1",
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix",
+		},
+		Out: []string{"alias1/bucket1/prefix"},
+	}
+
+	testMap["various-buckets-and-prefixes"] = struct {
+		In  []string
+		Out []string
+	}{
+		In: []string{
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/prefix-1",
+			"alias1/bucket1/prefix-2",
+			"alias1/bucket1/another",
+			"alias1/bucket1/another-1",
+			"alias1/bucket1/another-2",
+
+			"alias2/bucket1/prefix",
+			"alias2/bucket1/prefix-1",
+			"alias2/bucket1/another",
+			"alias2/bucket1/another-1",
+			"alias2/bucket1/another-2",
+			"alias2/bucket1/another-3",
+
+			"alias3/bucket1/prefix",
+			"alias3/bucket1/prefix-1",
+			"alias3/bucket1/prefix-2",
+			"alias3/bucket1/prefix-3",
+			"alias3/bucket1/another",
+			"alias3/bucket1/another-1",
+
+			"alias3/bucket2/prefix",
+			"alias3/bucket2/prefix-1",
+			"alias3/bucket2/another",
+			"alias3/bucket2/another-1",
+			"alias3/bucket2/another-2",
+			"alias3/bucket2/another-3",
+			"alias3/bucket2/another-4",
+		},
+		Out: []string{
+			"alias1/bucket1/prefix",
+			"alias1/bucket1/another",
+
+			"alias2/bucket1/prefix",
+			"alias2/bucket1/another",
+
+			"alias3/bucket1/prefix",
+			"alias3/bucket1/another",
+
+			"alias3/bucket2/prefix",
+			"alias3/bucket2/another",
+		},
+	}
+
+	for i, v := range testMap {
+		v.In = removeOverlappingPrefixes(v.In)
+		if !reflect.DeepEqual(v.In, v.Out) {
+			t.Fatal("Test", i, "failed.. expected:", v.Out, "but got:", v.In)
+		}
+	}
+}
