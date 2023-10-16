@@ -6,7 +6,7 @@ $ cd $GOPATH/src/github.com/minio
 $ git clone https://github.com/$USER_ID/mc
 $ cd mc
 $ make
-$ mc --help
+$ ./mc --help
 ```
 
 ###  Developer Guidelines
