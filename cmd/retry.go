@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	json "github.com/minio/colorjson"
@@ -13,15 +14,19 @@ type retryManager struct {
 	retries       int
 	maxRetries    int
 	retryInterval time.Duration
-	shouldStop    bool
-	ctx           context.Context
+	commandCtx    context.Context
+	retryCtx      context.Context
+	cancelRetry   context.CancelFunc
 }
 
 func newRetryManager(ctx context.Context, retryInterval time.Duration, maxRetries int) *retryManager {
+	retryCtx, cancelFunc := context.WithCancel(context.Background())
 	return &retryManager{
 		retryInterval: retryInterval,
 		maxRetries:    maxRetries,
-		ctx:           ctx,
+		commandCtx:    ctx,
+		retryCtx:      retryCtx,
+		cancelRetry:   cancelFunc,
 	}
 }
 
@@ -29,10 +34,6 @@ type retryMessage struct {
 	SourceURL string `json:"sourceURL"`
 	TargetURL string `json:"targetURL"`
 	Retries   int    `json:"retries"`
-}
-
-func (r *retryManager) Stop() {
-	r.shouldStop = true
 }
 
 func (r retryMessage) String() string {
@@ -45,19 +46,23 @@ func (r retryMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-func (r *retryManager) retry(action func(context.Context, *retryManager) *probe.Error) {
+func (r *retryManager) retry(action func(rm *retryManager) *probe.Error) {
+	defer r.cancelRetry()
 	for r.retries <= r.maxRetries {
-		if r.shouldStop {
-			return
-		}
 
 		err := action(r)
-		if err == nil || r.ctx.Err() != nil {
+		if err == nil {
 			return
 		}
 
-		<-time.After(r.retryInterval/2 + time.Duration(rand.Int63n(int64(r.retryInterval))))
+		select {
+		case <-r.retryCtx.Done():
+			return
+		case <-r.commandCtx.Done():
+			return
+		case <-time.After(r.retryInterval/2 + time.Duration(rand.Int63n(int64(r.retryInterval)))):
+			r.retries++
+		}
 
-		r.retries++
 	}
 }

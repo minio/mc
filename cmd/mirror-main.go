@@ -488,7 +488,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 		return ret
 	}
 
-	newRetryManager(ctx, time.Second, 3).encapsulateWithRetry(func(rm *retryManager) *probe.Error {
+	newRetryManager(ctx, time.Second, 3).retry(func(rm *retryManager) *probe.Error {
 		if rm.retries > 0 {
 			printMsg(retryMessage{
 				SourceURL: sURLs.SourceContent.URL.String(),
