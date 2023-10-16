@@ -77,12 +77,8 @@ func parseKey(sseKeys string) (sse string, err *probe.Error) {
 
 // parse and return encryption key pairs per alias.
 func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
-	sseServer := os.Getenv("MC_ENCRYPT")
-	if prefix := ctx.String("encrypt"); prefix != "" {
-		sseServer = prefix
-	}
-
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	sseServer := ctx.String("encrypt")
+	var sseKeys string
 	if keyPrefix := ctx.String("encrypt-key"); keyPrefix != "" {
 		if sseServer != "" && strings.Contains(keyPrefix, sseServer) {
 			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
