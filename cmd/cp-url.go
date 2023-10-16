@@ -269,10 +269,10 @@ func makeCopyContentTypeC(cc copyURLsContent, sourceClientURL ClientURL) URLs {
 // prepareCopyURLsTypeE - prepares target and source clientURLs for copying.
 func prepareCopyURLsTypeD(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) <-chan URLs {
 	copyURLsCh := make(chan URLs, 1)
-	o.sourceURLs = removeOverlappingPrefixes(o.sourceURLs)
+	copyURLsFilterCh := make(chan URLs, 1)
 
 	go func(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) {
-		defer close(copyURLsCh)
+		defer close(copyURLsFilterCh)
 
 		for _, sourceURL := range o.sourceURLs {
 			// Clone CC
@@ -280,6 +280,24 @@ func prepareCopyURLsTypeD(ctx context.Context, cc copyURLsContent, o prepareCopy
 			newCC.sourceURL = sourceURL
 
 			for cpURLs := range prepareCopyURLsTypeC(ctx, newCC, o) {
+				copyURLsFilterCh <- cpURLs
+			}
+		}
+	}(ctx, cc, o)
+
+	go func(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) {
+		defer close(copyURLsCh)
+		filter := make(map[string]struct{})
+		for cpURLs := range copyURLsFilterCh {
+			if cpURLs.Error != nil || cpURLs.TargetContent == nil {
+				copyURLsCh <- cpURLs
+				continue
+			}
+
+			url := cpURLs.TargetContent.URL.String()
+			_, ok := filter[url]
+			if !ok {
+				filter[url] = struct{}{}
 				copyURLsCh <- cpURLs
 			}
 		}
