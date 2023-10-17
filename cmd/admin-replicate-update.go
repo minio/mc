@@ -57,6 +57,10 @@ var adminReplicateUpdateFlags = []cli.Flag{
 		Name:  "disable-ilm-expiry-replication",
 		Usage: "disable ILM expiry rules replication",
 	},
+	cli.BoolFlag{
+		Name:  "enable-ilm-expiry-replication",
+		Usage: "enable ILM expiry rules replication",
+	},
 }
 
 var adminReplicateUpdateCmd = cli.Command{
@@ -87,6 +91,9 @@ EXAMPLES:
 
   3. Disable replication of ILM expiry in cluster-level replication:
      {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --disable-ilm-expiry-replication
+
+  4. Enable replication of ILM expiry in cluster-level replication:
+     {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --enable-ilm-expiry-replication
 `,
 }
 
@@ -135,11 +142,14 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	if !ctx.IsSet("deployment-id") {
 		fatalIf(errInvalidArgument(), "--deployment-id is a required flag")
 	}
-	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") && !ctx.IsSet("bucket-bandwidth") && !ctx.IsSet("disable-ilm-expiry-replication") {
-		fatalIf(errInvalidArgument(), "--endpoint, --mode, --bucket-bandwidth or --disable-ilm-expiry-replication is a required flag")
+	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") && !ctx.IsSet("bucket-bandwidth") && !ctx.IsSet("disable-ilm-expiry-replication") && !ctx.IsSet("enable-ilm-expiry-replication") {
+		fatalIf(errInvalidArgument(), "--endpoint, --mode, --bucket-bandwidth, --disable-ilm-expiry-replication or --enable-ilm-expiry-replication is a required flag")
 	}
 	if ctx.IsSet("mode") && ctx.IsSet("sync") {
 		fatalIf(errInvalidArgument(), "either --sync or --mode flag should be specified")
+	}
+	if ctx.IsSet("disable-ilm-expiry-replication") && ctx.IsSet("enable-ilm-expiry-replication") {
+		fatalIf(errInvalidArgument(), "either --disable-ilm-expiry-replication or --enable-ilm-expiry-replication flag should be specified")
 	}
 
 	var syncState string
@@ -184,6 +194,7 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	}
 	var opts madmin.SREditOptions
 	opts.DisableILMExpiryReplication = ctx.Bool("disable-ilm-expiry-replication")
+	opts.EnableILMExpiryReplication = ctx.Bool("enable-ilm-expiry-replication")
 	res, e := client.SiteReplicationEdit(globalContext, madmin.PeerInfo{
 		DeploymentID:     ctx.String("deployment-id"),
 		Endpoint:         ep,
