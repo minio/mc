@@ -224,13 +224,20 @@ func (m *scannerMetricsUI) View() string {
 		s.WriteString(fmt.Sprintf("%s %s\n", console.Colorize("metrics-top-title", "Scanner Activity:"), m.spinner.View()))
 	}
 
-	// Set table header
+	// Set table header - akin to k8s style
+	// https://github.com/olekukonko/tablewriter#example-10---set-nowhitespace-and-tablepadding-option
 	table := tablewriter.NewWriter(&s)
 	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetBorder(true)
-	table.SetRowLine(false)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+	table.SetNoWhiteSpace(true)
 
 	writtenRows := 0
 	addRow := func(s string) {
@@ -253,9 +260,12 @@ func (m *scannerMetricsUI) View() string {
 	title := metricsTitle
 	ui := metricsUint64
 	const wantCycles = 16
+	addRow("")
 	if len(sc.CyclesCompletedAt) < 2 {
-		addRow("Scan time:             Unknown (not enough data)")
+		addRow("Last full scan time:             Unknown (not enough data)")
 	} else {
+		addRow("Overall Statistics")
+		addRow("------------------")
 		sort.Slice(sc.CyclesCompletedAt, func(i, j int) bool {
 			return sc.CyclesCompletedAt[i].After(sc.CyclesCompletedAt[j])
 		})
@@ -286,7 +296,9 @@ func (m *scannerMetricsUI) View() string {
 		}
 		return ""
 	}
-	addRow("-------------------------------------- Last Minute Statistics ---------------------------------------")
+	addRow("")
+	addRow("Last Minute Statistics")
+	addRow("----------------------")
 	objs := uint64(0)
 	x := sc.LastMinute.Actions["ScanObject"]
 	{
