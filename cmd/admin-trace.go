@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -526,17 +527,26 @@ func mainAdminTrace(ctx *cli.Context) error {
 	traceCh := client.ServiceTrace(ctxt, opts)
 	if stats {
 		filteredTraces := make(chan madmin.ServiceTraceInfo, 1)
+		ui := tea.NewProgram(initTraceStatsUI(ctx.Int("stats-n"), filteredTraces))
+		var te error
 		go func() {
 			for t := range traceCh {
+				if t.Err != nil {
+					te = t.Err
+					ui.Kill()
+					return
+				}
 				if mopts.matches(t) {
 					filteredTraces <- t
 				}
 			}
 		}()
-		ui := tea.NewProgram(initTraceStatsUI(ctx.Int("stats-n"), filteredTraces))
 		if _, e := ui.Run(); e != nil {
 			cancel()
-			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+			if te != nil {
+				e = te
+			}
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch http trace statistics")
 		}
 		return nil
 	}
@@ -884,6 +894,8 @@ type statItem struct {
 	Errors         int           `json:"errors,omitempty"`
 	CallStatsCount int           `json:"callStatsCount,omitempty"`
 	CallStats      callStats     `json:"callStats,omitempty"`
+	MaxDur         time.Duration `json:"maxDuration"`
+	MinDur         time.Duration `json:"minDuration"`
 }
 
 type statTrace struct {
@@ -917,6 +929,15 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 	got := s.Calls[id]
 	if got.Name == "" {
 		got.Name = id
+	}
+	if got.MaxDur < t.Trace.Duration {
+		got.MaxDur = t.Trace.Duration
+	}
+	if got.MinDur <= 0 {
+		got.MinDur = t.Trace.Duration
+	}
+	if got.MinDur > t.Trace.Duration {
+		got.MinDur = t.Trace.Duration
 	}
 	got.Count++
 	got.Duration += t.Trace.Duration
@@ -977,7 +998,6 @@ func (m *traceStatsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
@@ -997,17 +1017,23 @@ func (m *traceStatsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *traceStatsUI) View() string {
 	var s strings.Builder
 
-	if !m.quitting {
-		s.WriteString(fmt.Sprintf("%s %s\n", console.Colorize("metrics-top-title", "Duration: "+time.Since(m.current.Started).Round(time.Second).String()), m.spinner.View()))
-	}
+	s.WriteString(fmt.Sprintf("%s %s\n",
+		console.Colorize("metrics-top-title", "Duration: "+time.Since(m.current.Started).Round(time.Second).String()), m.spinner.View()))
 
-	// Set table header
+	// Set table header - akin to k8s style
+	// https://github.com/olekukonko/tablewriter#example-10---set-nowhitespace-and-tablepadding-option
 	table := tablewriter.NewWriter(&s)
 	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetBorder(true)
-	table.SetRowLine(false)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+	table.SetNoWhiteSpace(true)
 	addRow := func(s string) {
 		table.Append([]string{s})
 	}
@@ -1045,6 +1071,8 @@ func (m *traceStatsUI) View() string {
 		console.Colorize("metrics-top-title", "Count"),
 		console.Colorize("metrics-top-title", "RPM"),
 		console.Colorize("metrics-top-title", "Avg Time"),
+		console.Colorize("metrics-top-title", "Min Time"),
+		console.Colorize("metrics-top-title", "Max Time"),
 		console.Colorize("metrics-top-title", "Errors"),
 		console.Colorize("metrics-top-title", "RX Avg"),
 		console.Colorize("metrics-top-title", "TX Avg"),
@@ -1055,7 +1083,7 @@ func (m *traceStatsUI) View() string {
 		}
 		errs := "0"
 		if v.Errors > 0 {
-			errs = console.Colorize("metrics-error", fmt.Sprintf("%v", v.Errors))
+			errs = console.Colorize("metrics-error", strconv.Itoa(v.Errors))
 		}
 		avg := v.Duration / time.Duration(v.Count)
 		avgColor := "metrics-dur"
@@ -1064,6 +1092,21 @@ func (m *traceStatsUI) View() string {
 		} else if avg > time.Second {
 			avgColor = "metrics-dur-med"
 		}
+
+		minColor := "metrics-dur"
+		if v.MinDur > 10*time.Second {
+			minColor = "metrics-dur-high"
+		} else if v.MinDur > time.Second {
+			minColor = "metrics-dur-med"
+		}
+
+		maxColor := "metrics-dur"
+		if v.MaxDur > 10*time.Second {
+			maxColor = "metrics-dur-high"
+		} else if v.MaxDur > time.Second {
+			maxColor = "metrics-dur-med"
+		}
+
 		rx := "-"
 		tx := "-"
 		if v.CallStatsCount > 0 {
@@ -1076,6 +1119,8 @@ func (m *traceStatsUI) View() string {
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
 			console.Colorize("metrics-number", fmt.Sprintf("%0.1f", float64(v.Count)/dur.Minutes())),
 			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
+			console.Colorize(minColor, v.MinDur),
+			console.Colorize(maxColor, v.MaxDur),
 			errs,
 			rx,
 			tx,
