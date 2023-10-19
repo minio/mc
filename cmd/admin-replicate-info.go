@@ -106,6 +106,7 @@ func (i srInfo) String() string {
 			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint, chk, limit))
 			messages = append(messages, r)
 		}
+		messages = append(messages, fmt.Sprintf("\nILM Expiry Replication: %v\n", info.ReplicateILMExpiry))
 	} else {
 		messages = []string{"SiteReplication is not enabled"}
 	}
