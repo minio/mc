@@ -218,6 +218,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 type mirrorOptions struct {
 	isFake, isOverwrite, activeActive     bool
 	isWatch, isRemove, isMetadata         bool
+	isRetriable                           bool
 	excludeOptions, excludeStorageClasses []string
 	encKeyDB                              map[string][]prefixSSEPair
 	md5, disableMultipart                 bool
