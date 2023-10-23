@@ -132,3 +132,5 @@ require (
 )
 
 replace github.com/minio/madmin-go/v3 v3.0.21 => github.com/shtripat/madmin-go/v3 v3.0.0-20231020072222-a21f11ac3241
+
+replace github.com/minio/minio-go/v7 v7.0.63 => github.com/shtripat/minio-go/v7 v7.0.0-20231023110439-74a68457cc04

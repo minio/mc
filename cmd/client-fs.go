@@ -1356,7 +1356,7 @@ func (f *fsClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, ti
 }
 
 // Set lifecycle configuration for a given bucket, not implemented.
-func (f *fsClient) SetLifecycle(_ context.Context, _ *lifecycle.Configuration) *probe.Error {
+func (f *fsClient) SetLifecycle(_ context.Context, _ *lifecycle.Configuration, _ bool) *probe.Error {
 	return probe.NewError(APINotImplemented{
 		API:     "SetLifecycle",
 		APIType: "filesystem",

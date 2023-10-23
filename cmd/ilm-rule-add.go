@@ -230,7 +230,7 @@ func mainILMAdd(cliCtx *cli.Context) error {
 
 	lfcCfg.Rules = append(lfcCfg.Rules, newRule)
 
-	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to add this lifecycle rule")
+	fatalIf(client.SetLifecycle(ctx, lfcCfg, false).Trace(urlStr), "Unable to add this lifecycle rule")
 
 	printMsg(ilmAddMessage{
 		Status: "success",
