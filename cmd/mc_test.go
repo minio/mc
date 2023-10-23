@@ -23,90 +23,90 @@ import (
 	"testing"
 	"time"
 
-	. "gopkg.in/check.v1"
+	checkv1 "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { checkv1.TestingT(t) }
 
 type TestSuite struct{}
 
-var _ = Suite(&TestSuite{})
+var _ = checkv1.Suite(&TestSuite{})
 
-func (s *TestSuite) SetUpSuite(_ *C) {
+func (s *TestSuite) SetUpSuite(_ *checkv1.C) {
 }
 
-func (s *TestSuite) TearDownSuite(_ *C) {
+func (s *TestSuite) TearDownSuite(_ *checkv1.C) {
 }
 
-func (s *TestSuite) TestValidPERMS(c *C) {
+func (s *TestSuite) TestValidPERMS(c *checkv1.C) {
 	perms := accessPerms("none")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "none")
+	c.Assert(perms.isValidAccessPERM(), checkv1.Equals, true)
+	c.Assert(string(perms), checkv1.Equals, "none")
 	perms = accessPerms("public")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "public")
+	c.Assert(perms.isValidAccessPERM(), checkv1.Equals, true)
+	c.Assert(string(perms), checkv1.Equals, "public")
 	perms = accessPerms("private")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "private")
+	c.Assert(perms.isValidAccessPERM(), checkv1.Equals, true)
+	c.Assert(string(perms), checkv1.Equals, "private")
 	perms = accessPerms("download")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "download")
+	c.Assert(perms.isValidAccessPERM(), checkv1.Equals, true)
+	c.Assert(string(perms), checkv1.Equals, "download")
 	perms = accessPerms("upload")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "upload")
+	c.Assert(perms.isValidAccessPERM(), checkv1.Equals, true)
+	c.Assert(string(perms), checkv1.Equals, "upload")
 }
 
-func (s *TestSuite) TestInvalidPERMS(c *C) {
+func (s *TestSuite) TestInvalidPERMS(c *checkv1.C) {
 	perms := accessPerms("invalid")
-	c.Assert(perms.isValidAccessPERM(), Equals, false)
+	c.Assert(perms.isValidAccessPERM(), checkv1.Equals, false)
 }
 
-func (s *TestSuite) TestGetMcConfigDir(c *C) {
+func (s *TestSuite) TestGetMcConfigDir(c *checkv1.C) {
 	dir, err := getMcConfigDir()
-	c.Assert(err, IsNil)
-	c.Assert(dir, Not(Equals), "")
-	c.Assert(mustGetMcConfigDir(), Equals, dir)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(dir, checkv1.Not(checkv1.Equals), "")
+	c.Assert(mustGetMcConfigDir(), checkv1.Equals, dir)
 }
 
-func (s *TestSuite) TestGetMcConfigPath(c *C) {
+func (s *TestSuite) TestGetMcConfigPath(c *checkv1.C) {
 	dir, err := getMcConfigPath()
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	switch runtime.GOOS {
 	case "linux", "freebsd", "darwin", "solaris":
-		c.Assert(dir, Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
+		c.Assert(dir, checkv1.Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
 	case "windows":
-		c.Assert(dir, Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
+		c.Assert(dir, checkv1.Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
 	default:
 		c.Fail()
 	}
-	c.Assert(mustGetMcConfigPath(), Equals, dir)
+	c.Assert(mustGetMcConfigPath(), checkv1.Equals, dir)
 }
 
-func (s *TestSuite) TestIsvalidAliasName(c *C) {
-	c.Check(isValidAlias("helloWorld0"), Equals, true)
-	c.Check(isValidAlias("hello_World0"), Equals, true)
-	c.Check(isValidAlias("h0SFD2k24Fdsa"), Equals, true)
-	c.Check(isValidAlias("fdslka-4"), Equals, true)
-	c.Check(isValidAlias("fdslka-"), Equals, true)
-	c.Check(isValidAlias("helloWorld$"), Equals, false)
-	c.Check(isValidAlias("h0SFD2k2#Fdsa"), Equals, false)
-	c.Check(isValidAlias("0dslka-4"), Equals, false)
-	c.Check(isValidAlias("-fdslka"), Equals, false)
+func (s *TestSuite) TestIsvalidAliasName(c *checkv1.C) {
+	c.Check(isValidAlias("helloWorld0"), checkv1.Equals, true)
+	c.Check(isValidAlias("hello_World0"), checkv1.Equals, true)
+	c.Check(isValidAlias("h0SFD2k24Fdsa"), checkv1.Equals, true)
+	c.Check(isValidAlias("fdslka-4"), checkv1.Equals, true)
+	c.Check(isValidAlias("fdslka-"), checkv1.Equals, true)
+	c.Check(isValidAlias("helloWorld$"), checkv1.Equals, false)
+	c.Check(isValidAlias("h0SFD2k2#Fdsa"), checkv1.Equals, false)
+	c.Check(isValidAlias("0dslka-4"), checkv1.Equals, false)
+	c.Check(isValidAlias("-fdslka"), checkv1.Equals, false)
 }
 
-func (s *TestSuite) TestHumanizedTime(c *C) {
+func (s *TestSuite) TestHumanizedTime(c *checkv1.C) {
 	hTime := timeDurationToHumanizedDuration(time.Duration(10) * time.Second)
-	c.Assert(hTime.Minutes, Equals, int64(0))
-	c.Assert(hTime.Hours, Equals, int64(0))
-	c.Assert(hTime.Days, Equals, int64(0))
+	c.Assert(hTime.Minutes, checkv1.Equals, int64(0))
+	c.Assert(hTime.Hours, checkv1.Equals, int64(0))
+	c.Assert(hTime.Days, checkv1.Equals, int64(0))
 
 	hTime = timeDurationToHumanizedDuration(time.Duration(10) * time.Minute)
-	c.Assert(hTime.Hours, Equals, int64(0))
-	c.Assert(hTime.Days, Equals, int64(0))
+	c.Assert(hTime.Hours, checkv1.Equals, int64(0))
+	c.Assert(hTime.Days, checkv1.Equals, int64(0))
 
 	hTime = timeDurationToHumanizedDuration(time.Duration(10) * time.Hour)
-	c.Assert(hTime.Days, Equals, int64(0))
+	c.Assert(hTime.Days, checkv1.Equals, int64(0))
 
 	hTime = timeDurationToHumanizedDuration(time.Duration(24) * time.Hour)
-	c.Assert(hTime.Days, Not(Equals), int64(0))
+	c.Assert(hTime.Days, checkv1.Not(checkv1.Equals), int64(0))
 }

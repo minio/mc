@@ -20,14 +20,14 @@ package httptracer
 import (
 	"testing"
 
-	. "gopkg.in/check.v1"
+	check "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
 type MySuite struct{}
 
-var _ = Suite(&MySuite{})
+var _ = check.Suite(&MySuite{})
 
-func (s *MySuite) TestHTTPTracer(_ *C) {
+func (s *MySuite) TestHTTPTracer(_ *check.C) {
 }
