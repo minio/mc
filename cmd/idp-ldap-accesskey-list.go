@@ -30,20 +30,16 @@ import (
 
 var idpLdapAccesskeyListFlags = []cli.Flag{
 	cli.BoolFlag{
-		Name:  "users, u",
+		Name:  "users-only",
 		Usage: "only list user DNs",
 	},
 	cli.BoolFlag{
-		Name:  "temp-only, t",
+		Name:  "temp-only",
 		Usage: "only list temporary access keys",
 	},
 	cli.BoolFlag{
-		Name:  "permanent-only, p",
+		Name:  "permanent-only",
 		Usage: "only list permanent access keys/service accounts",
-	},
-	cli.BoolFlag{
-		Name:  "self",
-		Usage: "only list access keys for the current user (only necessary if current user is admin)",
 	},
 }
 
@@ -59,28 +55,30 @@ var idpLdapAccesskeyListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET
+  {{.HelpName}} [FLAGS] TARGET [DN...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get list of all users and associated access keys in local server (if admin).
+  1. Get list of all users and associated access keys in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/
-  2. Get list of users in local server (if admin).
+  2. Get list of users in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/ --users
-  3. Get list of all users and associated temporary access keys in local server (if admin).
-	 {{.Prompt}} {{.HelpName}} local/ --temp-only
-  4. Get authenticated user and associated access keys in local server (if not admin).
+  3. Get list of all users and associated temporary access keys in play server (if admin)
+	 {{.Prompt}} {{.HelpName}} play/ --temp-only
+  4. Get list of access keys associated with user 'bobfisher'
+  	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io
+  5. Get list of access keys associated with users 'bobfisher' and 'cody3'
+  	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io uid=cody3,dc=min,dc=io
+  6. Get authenticated user and associated access keys in local server (if not admin)
 	 {{.Prompt}} {{.HelpName}} local/
-  5. Get authenticated user and associated access keys in local server (if admin).
-	 {{.Prompt}} {{.HelpName}} local/ --self
 	`,
 }
 
 type ldapUsersList struct {
-	Status string               `json:"status"`
-	Result []ldapUserAccessKeys `json:"result"`
+	Status string             `json:"status"`
+	Result ldapUserAccessKeys `json:"result"`
 }
 
 type ldapUserAccessKeys struct {
@@ -93,22 +91,21 @@ func (m ldapUsersList) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
-	for _, u := range m.Result {
-		o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+u.DN)))
-		if len(u.TempAccessKeys) > 0 {
-			o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Temporary Access Keys:")))
-			for _, k := range u.TempAccessKeys {
-				o.WriteString(iFmt(4, "%s\n", k.AccessKey))
-			}
+	u := m.Result
+	o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+u.DN)))
+	if len(u.TempAccessKeys) > 0 {
+		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Temporary Access Keys:")))
+		for _, k := range u.TempAccessKeys {
+			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
 		}
-		if len(u.PermanentAccessKeys) > 0 {
-			o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Permanent Access Keys:")))
-			for _, k := range u.PermanentAccessKeys {
-				o.WriteString(iFmt(4, "%s\n", k.AccessKey))
-			}
-		}
-		o.WriteString("\n")
 	}
+	if len(u.PermanentAccessKeys) > 0 {
+		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Permanent Access Keys:")))
+		for _, k := range u.PermanentAccessKeys {
+			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
+		}
+	}
+	o.WriteString("\n")
 
 	return o.String()
 }
@@ -121,22 +118,22 @@ func (m ldapUsersList) JSON() string {
 }
 
 func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
+	if len(ctx.Args()) == 0 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
-	usersOnly := ctx.Bool("users")
+	usersOnly := ctx.Bool("users-only")
 	tempOnly := ctx.Bool("temp-only")
 	permanentOnly := ctx.Bool("permanent-only")
-	self := ctx.Bool("self")
 
 	if (usersOnly && permanentOnly) || (usersOnly && tempOnly) || (permanentOnly && tempOnly) {
-		e := errors.New("only one of --users, --temp-only, or --permanent-only can be specified")
+		e := errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
 		fatalIf(probe.NewError(e), "Invalid flags.")
 	}
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	userArg := args.Tail()
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -144,21 +141,30 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 
 	var e error
 	var users map[string]madmin.UserInfo
-	if !self {
-		// Assume admin access, change to user if ListUsers fails
+
+	// If no users given, attempt to list all users
+	if len(userArg) == 0 {
 		users, e = client.ListUsers(globalContext)
+	} else {
+		users = make(map[string]madmin.UserInfo)
+		for _, user := range userArg {
+			// Check existence of each user
+			if _, e = client.GetUserInfo(globalContext, user); e != nil {
+				errorIf(probe.NewError(e), "User '"+user+"' invalid")
+			} else {
+				users[user] = madmin.UserInfo{}
+			}
+		}
 	}
-	if self || e != nil {
-		if self || e.Error() == "Access Denied." {
-			// If user does not have ListUsers permission, or self is specified, only get current user's access keys
+	if e != nil {
+		if e.Error() == "Access Denied." {
+			// If user does not have ListUsers permission, only get current user's access keys
 			users = make(map[string]madmin.UserInfo)
 			users[""] = madmin.UserInfo{}
 		} else {
 			fatalIf(probe.NewError(e), "Unable to retrieve users.")
 		}
 	}
-
-	var accessKeyList []ldapUserAccessKeys
 
 	for dn := range users {
 		if !usersOnly {
@@ -182,9 +188,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 				dn = name.AccountName
 			}
 
-			userAccessKeys := ldapUserAccessKeys{
-				DN: dn,
-			}
+			userAccessKeys := ldapUserAccessKeys{DN: dn}
 			if !tempOnly {
 				userAccessKeys.PermanentAccessKeys = permanentAccessKeys
 			}
@@ -192,27 +196,27 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 				userAccessKeys.TempAccessKeys = tempAccessKeys
 			}
 
-			accessKeyList = append(accessKeyList, userAccessKeys)
+			m := ldapUsersList{
+				Status: "success",
+				Result: userAccessKeys,
+			}
+			printMsg(m)
+
 		} else {
-			// if dn is blank, it means we are listing the current user's access keys
+			// If dn is blank, it means we are listing the current user's access keys
 			if dn == "" {
 				name, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
 				fatalIf(probe.NewError(e), "Unable to retrieve account name.")
 				dn = name.AccountName
 			}
 
-			accessKeyList = append(accessKeyList, ldapUserAccessKeys{
-				DN: dn,
-			})
+			m := ldapUsersList{
+				Status: "success",
+				Result: ldapUserAccessKeys{DN: dn},
+			}
+			printMsg(m)
 		}
 	}
-
-	m := ldapUsersList{
-		Status: "success",
-		Result: accessKeyList,
-	}
-
-	printMsg(m)
 
 	return nil
 }

@@ -21,7 +21,7 @@ import "github.com/minio/cli"
 
 var idpLdapAccesskeySubcommands = []cli.Command{
 	idpLdapAccesskeyListCmd,
-	idpLdapAccesskeyDeleteCmd,
+	idpLdapAccesskeyRemoveCmd,
 	idpLdapAccesskeyCreateCmd,
 	idpLdapAccesskeyInfoCmd,
 }

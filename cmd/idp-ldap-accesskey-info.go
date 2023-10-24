@@ -34,7 +34,7 @@ var idpLdapAccesskeyInfoCmd = cli.Command{
 	Usage:        "info about given access key pairs for LDAP",
 	Action:       mainIDPLdapAccesskeyInfo,
 	Before:       setGlobalsFromContext,
-	Flags:        append(idpLdapPolicyAttachFlags, globalFlags...),
+	Flags:        globalFlags,
 	OnUsageError: onUsageError,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -85,8 +85,12 @@ func (m ldapAccesskeyMessage) String() string {
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Parent User:"), m.ParentUser))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Policy:"), policyStr))
-		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
-		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
+		if m.Name != "" {
+			o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
+		}
+		if m.Description != "" {
+			o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
+		}
 		o.WriteString(iFmt(0, "%s %s\n\n", labelStyle.Render("Expiration:"), expirationStr))
 
 		return o.String()
@@ -106,8 +110,8 @@ func (m ldapAccesskeyMessage) String() string {
 		o.WriteString(iFmt(0, "%s %s\n\n", labelStyle.Render("Expiration:"), expirationStr))
 
 		return o.String()
-	case "delete":
-		return console.Colorize("DeleteAccessKey", "Successfully deleted access key `"+m.AccessKey+"`.")
+	case "remove":
+		return console.Colorize("RemoveAccessKey", "Successfully removed access key `"+m.AccessKey+"`.")
 	}
 	return ""
 }
