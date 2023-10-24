@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2023 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -325,19 +325,6 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 			admin(len(info.Minio.Info.Servers) > 0)
 	}
 
-	progress := func(info madmin.HealthInfo) {
-		_ = cpu(len(info.Sys.CPUInfo) > 0) &&
-			diskHw(len(info.Sys.Partitions) > 0) &&
-			osInfo(len(info.Sys.OSInfo) > 0) &&
-			mem(len(info.Sys.MemInfo) > 0) &&
-			process(len(info.Sys.ProcInfo) > 0) &&
-			config(info.Minio.Config.Config != nil) &&
-			syserr(len(info.Sys.SysErrs) > 0) &&
-			syssrv(len(info.Sys.SysServices) > 0) &&
-			sysconfig(len(info.Sys.SysConfig) > 0) &&
-			admin(len(info.Minio.Info.Servers) > 0)
-	}
-
 	// Fetch info of all servers (cluster or single server)
 	resp, version, e := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"))
 	if e != nil {
@@ -389,19 +376,7 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 		}
 		healthInfo = info
 	case madmin.HealthInfoVersion:
-		info := madmin.HealthInfo{}
-		for {
-			if e = decoder.Decode(&info); e != nil {
-				if errors.Is(e, io.EOF) {
-					e = nil
-				}
-
-				break
-			}
-
-			progress(info)
-		}
-		healthInfo = info
+		healthInfo, e = receiveHealthInfo(decoder)
 	}
 
 	// cancel the context if supportDiagChan has returned.

@@ -53,11 +53,14 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_model v0.4.0
 	github.com/rivo/tview v0.0.0-20230909130259-ba6a2a345459
+	github.com/vbauerster/mpb/v8 v8.6.2
 	golang.org/x/term v0.13.0
 )
 
 require (
 	aead.dev/minisign v0.2.0 // indirect
+	github.com/VividCortex/ewma v1.2.0 // indirect
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/minio/mux v1.9.0 // indirect
