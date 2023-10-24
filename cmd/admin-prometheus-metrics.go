@@ -42,7 +42,7 @@ USAGE:
   {{.HelpName}} TARGET [METRIC-TYPE]
 
 METRIC-TYPE:
-  valid values are ['cluster', 'node', 'bucket']. Defaults to 'cluster' if not specified.
+  valid values are ['cluster', 'node', 'bucket', 'resource']. Defaults to 'cluster' if not specified.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -56,6 +56,9 @@ EXAMPLES:
 
   3. List of metrics reported at bucket level.
      {{.Prompt}} {{.HelpName}} play bucket
+
+  4. List of resource metrics.
+     {{.Prompt}} {{.HelpName}} play resource
 `,
 }
 
@@ -91,7 +94,7 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 	}
 	metricsSubSystem := args.Get(1)
 	switch metricsSubSystem {
-	case "node", "bucket", "cluster":
+	case "node", "bucket", "cluster", "resource":
 	case "":
 		metricsSubSystem = "cluster"
 	default:

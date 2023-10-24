@@ -208,11 +208,13 @@ func (m *scannerMetricsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		return m, nil
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
 
-	var cmd tea.Cmd
-	m.spinner, cmd = m.spinner.Update(msg)
-	return m, cmd
+	return m, nil
 }
 
 func (m *scannerMetricsUI) View() string {
@@ -222,21 +224,33 @@ func (m *scannerMetricsUI) View() string {
 		s.WriteString(fmt.Sprintf("%s %s\n", console.Colorize("metrics-top-title", "Scanner Activity:"), m.spinner.View()))
 	}
 
-	// Set table header
+	// Set table header - akin to k8s style
+	// https://github.com/olekukonko/tablewriter#example-10---set-nowhitespace-and-tablepadding-option
 	table := tablewriter.NewWriter(&s)
 	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetBorder(true)
-	table.SetRowLine(false)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+	table.SetNoWhiteSpace(true)
+
+	writtenRows := 0
 	addRow := func(s string) {
 		table.Append([]string{s})
+		writtenRows++
 	}
 	_ = addRow
 	addRowF := func(format string, vals ...interface{}) {
 		s := fmt.Sprintf(format, vals...)
 		table.Append([]string{s})
+		writtenRows++
 	}
+
 	sc := m.current.Aggregated.Scanner
 	if sc == nil {
 		s.WriteString("(waiting for data)")
@@ -246,9 +260,12 @@ func (m *scannerMetricsUI) View() string {
 	title := metricsTitle
 	ui := metricsUint64
 	const wantCycles = 16
+	addRow("")
 	if len(sc.CyclesCompletedAt) < 2 {
-		addRow("Scan time:             Unknown (not enough data)")
+		addRow("Last full scan time:             Unknown (not enough data)")
 	} else {
+		addRow("Overall Statistics")
+		addRow("------------------")
 		sort.Slice(sc.CyclesCompletedAt, func(i, j int) bool {
 			return sc.CyclesCompletedAt[i].After(sc.CyclesCompletedAt[j])
 		})
@@ -279,7 +296,9 @@ func (m *scannerMetricsUI) View() string {
 		}
 		return ""
 	}
-	addRow("-------------------------------------- Last Minute Statistics ---------------------------------------")
+	addRow("")
+	addRow("Last Minute Statistics")
+	addRow("----------------------")
 	objs := uint64(0)
 	x := sc.LastMinute.Actions["ScanObject"]
 	{
@@ -338,12 +357,25 @@ func (m *scannerMetricsUI) View() string {
 		}
 		addRowF(title("Yield:")+"                 %v total; Avg: %s", metricsDuration(time.Duration(x.AccTime)), avg)
 	}
+	if errs := m.current.Errors; len(errs) > 0 {
+		addRow("------------------------------------------- Errors --------------------------------------------------")
+		for _, s := range errs {
+			addRow(console.Colorize("metrics-error", s))
+		}
+	}
 
 	if m.maxPaths != 0 && len(sc.ActivePaths) > 0 {
 		addRow("------------------------------------- Currently Scanning Paths --------------------------------------")
-		const length = 100
+		length := 100
+		if globalTermWidth > 5 {
+			length = globalTermWidth
+		}
 		for i, s := range sc.ActivePaths {
 			if i == m.maxPaths {
+				break
+			}
+			if globalTermHeight > 5 && writtenRows >= globalTermHeight-5 {
+				addRow(console.Colorize("metrics-path", fmt.Sprintf("( ... hiding %d more disk(s) .. )", len(sc.ActivePaths)-i)))
 				break
 			}
 			if len(s) > length {
@@ -351,12 +383,6 @@ func (m *scannerMetricsUI) View() string {
 			}
 			s = strings.ReplaceAll(s, "\\", "/")
 			addRow(console.Colorize("metrics-path", s))
-		}
-	}
-	if errs := m.current.Errors; len(errs) > 0 {
-		addRow("------------------------------------------- Errors --------------------------------------------------")
-		for _, s := range errs {
-			addRow(console.Colorize("metrics-error", s))
 		}
 	}
 	table.Render()

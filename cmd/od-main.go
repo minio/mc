@@ -105,13 +105,13 @@ func getOdUrls(ctx context.Context, args argKVS) (odURLs URLs, e error) {
 		sourceURLs: []string{inFile},
 		targetURL:  outFile,
 	}
-	odType, _, err := guessCopyURLType(ctx, opts)
+	copyURLsContent, err := guessCopyURLType(ctx, opts)
 	fatalIf(err, "Unable to guess copy URL type")
 
 	// Get content of inFile, set up URLs.
-	switch odType {
+	switch copyURLsContent.copyType {
 	case copyURLsTypeA:
-		odURLs = prepareOdUrls(ctx, inFile, "", outFile)
+		odURLs = makeCopyContentTypeA(*copyURLsContent)
 	case copyURLsTypeB:
 		return URLs{}, fmt.Errorf("invalid source path %s, destination cannot be a directory", outFile)
 	default:
@@ -119,25 +119,6 @@ func getOdUrls(ctx context.Context, args argKVS) (odURLs URLs, e error) {
 	}
 
 	return odURLs, nil
-}
-
-func prepareOdUrls(ctx context.Context, sourceURL, sourceVersion, targetURL string) URLs {
-	// Extract alias before fiddling with the clientURL.
-	sourceAlias, _, _ := mustExpandAlias(sourceURL)
-	// Find alias and expanded clientURL.
-	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
-
-	// Placeholder encryption key database
-	var encKeyDB map[string][]prefixSSEPair
-
-	_, sourceContent, err := url2Stat(ctx, sourceURL, sourceVersion, false, encKeyDB, time.Time{}, false)
-	if err != nil {
-		// Source does not exist or insufficient privileges.
-		return URLs{Error: err}
-	}
-
-	// All OK.. We can proceed. Type A
-	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURL)
 }
 
 // odCheckType checks if request is a download or upload and calls the appropriate function

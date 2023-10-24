@@ -82,8 +82,8 @@ var (
 )
 
 var (
-	// Terminal width
-	globalTermWidth int
+	// Terminal height/width, zero if not found
+	globalTermWidth, globalTermHeight int
 
 	globalHelpPager *termPager
 
