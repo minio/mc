@@ -27,7 +27,7 @@ import (
 	"strconv"
 
 	minio "github.com/minio/minio-go/v7"
-	. "gopkg.in/check.v1"
+	checkv1 "gopkg.in/check.v1"
 )
 
 type bucketHandler struct {
@@ -157,7 +157,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Test bucket operations.
-func (s *TestSuite) TestBucketOperations(c *C) {
+func (s *TestSuite) TestBucketOperations(c *checkv1.C) {
 	bucket := bucketHandler{
 		resource: "/bucket/",
 	}
@@ -170,41 +170,41 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	conf.SecretKey = "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"
 	conf.Signature = "S3v4"
 	s3c, err := S3New(conf)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	err = s3c.MakeBucket(context.Background(), "us-east-1", true, false)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	conf.HostURL = server.URL + string(s3c.GetURL().Separator)
 	s3c, err = S3New(conf)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	for content := range s3c.List(globalContext, ListOptions{ShowDir: DirNone}) {
-		c.Assert(content.Err, IsNil)
-		c.Assert(content.Type.IsDir(), Equals, true)
+		c.Assert(content.Err, checkv1.IsNil)
+		c.Assert(content.Type.IsDir(), checkv1.Equals, true)
 	}
 
 	conf.HostURL = server.URL + "/bucket"
 	s3c, err = S3New(conf)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	for content := range s3c.List(globalContext, ListOptions{ShowDir: DirNone}) {
-		c.Assert(content.Err, IsNil)
-		c.Assert(content.Type.IsDir(), Equals, true)
+		c.Assert(content.Err, checkv1.IsNil)
+		c.Assert(content.Type.IsDir(), checkv1.Equals, true)
 	}
 
 	conf.HostURL = server.URL + "/bucket/"
 	s3c, err = S3New(conf)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	for content := range s3c.List(globalContext, ListOptions{ShowDir: DirNone}) {
-		c.Assert(content.Err, IsNil)
-		c.Assert(content.Type.IsRegular(), Equals, true)
+		c.Assert(content.Err, checkv1.IsNil)
+		c.Assert(content.Type.IsRegular(), checkv1.Equals, true)
 	}
 }
 
 // Test all object operations.
-func (s *TestSuite) TestObjectOperations(c *C) {
+func (s *TestSuite) TestObjectOperations(c *checkv1.C) {
 	object := objectHandler{
 		resource: "/bucket/object",
 		data:     []byte("Hello, World"),
@@ -218,7 +218,7 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	conf.SecretKey = "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"
 	conf.Signature = "S3v4"
 	s3c, err := S3New(conf)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	var reader io.Reader
 	reader = bytes.NewReader(object.data)
@@ -227,16 +227,16 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(object.data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(object.data)))
 
 	reader, err = s3c.Get(context.Background(), GetOptions{})
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	var buffer bytes.Buffer
 	{
 		_, err := io.Copy(&buffer, reader)
-		c.Assert(err, IsNil)
-		c.Assert(buffer.Bytes(), DeepEquals, object.data)
+		c.Assert(err, checkv1.IsNil)
+		c.Assert(buffer.Bytes(), checkv1.DeepEquals, object.data)
 	}
 }
 
@@ -258,9 +258,9 @@ var testSelectCompressionTypeCases = []struct {
 
 // TestSelectCompressionType - tests compression type returned
 // by method
-func (s *TestSuite) TestSelectCompressionType(c *C) {
+func (s *TestSuite) TestSelectCompressionType(c *checkv1.C) {
 	for _, test := range testSelectCompressionTypeCases {
 		cType := selectCompressionType(test.opts, test.object)
-		c.Assert(cType, DeepEquals, test.compressionType)
+		c.Assert(cType, checkv1.DeepEquals, test.compressionType)
 	}
 }

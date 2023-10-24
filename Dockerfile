@@ -1,27 +1,22 @@
-FROM golang:1.19-alpine as builder
+FROM golang:1.21-alpine as build
 
 LABEL maintainer="MinIO Inc <dev@min.io>"
 
 ENV GOPATH /go
 ENV CGO_ENABLED 0
-ENV GO111MODULE on
 
-RUN  \
-     apk add --no-cache git && \
-     git clone https://github.com/minio/mc && cd mc && \
-     go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8
+RUN apk add -U --no-cache ca-certificates
+RUN apk add -U curl
+RUN curl -s -q https://raw.githubusercontent.com/minio/mc/master/LICENSE -o /go/LICENSE
+RUN curl -s -q https://raw.githubusercontent.com/minio/mc/master/CREDITS -o /go/CREDITS
+RUN go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" "github.com/minio/mc@latest"
 
-ARG TARGETARCH
+FROM scratch
 
-COPY --from=builder /go/bin/mc /usr/bin/mc
-COPY --from=builder /go/mc/CREDITS /licenses/CREDITS
-COPY --from=builder /go/mc/LICENSE /licenses/LICENSE
-
-RUN  \
-     microdnf update --nodocs && \
-     microdnf install ca-certificates --nodocs && \
-     microdnf clean all
+COPY --from=build /go/bin/mc  /usr/bin/mc
+COPY --from=build /go/CREDITS /licenses/CREDITS
+COPY --from=build /go/LICENSE /licenses/LICENSE
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENTRYPOINT ["mc"]

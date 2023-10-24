@@ -21,14 +21,14 @@ import (
 	"bytes"
 	"testing"
 
-	. "gopkg.in/check.v1"
+	check "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
 type MySuite struct{}
 
-var _ = Suite(&MySuite{})
+var _ = check.Suite(&MySuite{})
 
 // customReader - implements custom progress reader.
 type customReader struct {
@@ -41,16 +41,16 @@ func (c *customReader) Read(b []byte) (n int, err error) {
 }
 
 // Tests hook reader implementation.
-func (s *MySuite) TestHookReader(c *C) {
+func (s *MySuite) TestHookReader(c *check.C) {
 	var buffer bytes.Buffer
 	writer := &buffer
 	_, err := writer.Write([]byte("Hello"))
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	progress := &customReader{}
 	reader := NewHook(&buffer, progress)
 	b := make([]byte, 3)
 	n, err := reader.Read(b)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, 3)
-	c.Assert(progress.readBytes, Equals, 3)
+	c.Assert(err, check.IsNil)
+	c.Assert(n, check.Equals, 3)
+	c.Assert(progress.readBytes, check.Equals, 3)
 }
