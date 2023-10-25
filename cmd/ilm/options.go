@@ -159,7 +159,6 @@ func (opts LifecycleOptions) ToILMRule() (lifecycle.Rule, *probe.Error) {
 			StorageClass:            nonCurrentVersionTransitionStorageClass,
 		},
 	}
-
 	if err := validateILMRule(newRule); err != nil {
 		return lifecycle.Rule{}, err
 	}
@@ -254,8 +253,8 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if tier != nil && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
 		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
 	}
-	if noncurrentTier != nil && !ctx.IsSet("noncurrentversion-transition-days") && !ctx.IsSet("noncurrent-transition-days") {
-		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set"))
+	if noncurrentTier != nil && !ctx.IsSet("noncurrentversion-transition-days") && !ctx.IsSet("noncurrent-transition-days") && !ctx.IsSet("noncurrent-transition-newer") {
+		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set or noncurrent version count must be set"))
 	}
 	// for MinIO transition storage-class is same as label defined on
 	// `mc admin bucket remote add --service ilm --label` command
