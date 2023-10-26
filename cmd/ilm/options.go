@@ -253,8 +253,8 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if tier != nil && !ctx.IsSet("transition-days") && !ctx.IsSet("transition-date") {
 		return LifecycleOptions{}, probe.NewError(errors.New("transition-date or transition-days must be set"))
 	}
-	if noncurrentTier != nil && !ctx.IsSet("noncurrentversion-transition-days") && !ctx.IsSet("noncurrent-transition-days") && !ctx.IsSet("noncurrent-transition-newer") {
-		return LifecycleOptions{}, probe.NewError(errors.New("noncurrentversion-transition-days must be set or noncurrent version count must be set"))
+	if noncurrentTier != nil && !ctx.IsSet("noncurrent-transition-days") && !ctx.IsSet("noncurrent-transition-newer") {
+		return LifecycleOptions{}, probe.NewError(errors.New("noncurrent-transition-days or noncurrent-transition-newer must be set"))
 	}
 	// for MinIO transition storage-class is same as label defined on
 	// `mc admin bucket remote add --service ilm --label` command
@@ -298,9 +298,6 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	}
 	if f := "noncurrent-expire-newer"; ctx.IsSet(f) {
 		newerNoncurrentExpirationVersions = intPtr(ctx.Int(f))
-	}
-	if ctx.IsSet("noncurrentversion-transition-days") {
-		noncurrentVersionTransitionDays = intPtr(ctx.Int("noncurrentversion-transition-days"))
 	}
 	if f := "noncurrent-transition-days"; ctx.IsSet(f) {
 		noncurrentVersionTransitionDays = intPtr(ctx.Int(f))
