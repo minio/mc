@@ -18,9 +18,9 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -31,12 +31,13 @@ import (
 
 var supportTopLocksFlag = []cli.Flag{
 	cli.BoolFlag{
-		Name:  "stale",
-		Usage: "list stale locks   ask",
+		Name:   "stale",
+		Usage:  "list all stale locks",
+		Hidden: true,
 	},
 	cli.IntFlag{
 		Name:   "count",
-		Usage:  "number of top locks",
+		Usage:  "list N number of locks",
 		Hidden: true,
 		Value:  10,
 	},
@@ -44,7 +45,7 @@ var supportTopLocksFlag = []cli.Flag{
 
 var supportTopLocksCmd = cli.Command{
 	Name:         "locks",
-	Usage:        "get a list of the 10 oldest locks on a MinIO cluster.",
+	Usage:        "list all active locks on a MinIO cluster",
 	Before:       setGlobalsFromContext,
 	Action:       mainSupportTopLocks,
 	OnUsageError: onUsageError,
@@ -59,7 +60,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get a list of the 10 oldest locks on a MinIO cluster.
+  1. List oldest locks on a MinIO cluster.
      {{.Prompt}} {{.HelpName}} myminio/
 `,
 }
@@ -70,27 +71,8 @@ type lockMessage struct {
 	Lock   madmin.LockEntry `json:"locks"`
 }
 
-func getLockDuration(duration time.Duration) (string, string) {
-	hours := int(duration.Hours())
-	minutes := int(duration.Minutes()) % 60
-	seconds := int(duration.Seconds()) % 60
-	if hours == 0 {
-		if minutes == 0 {
-			return "Lock", fmt.Sprint(seconds, " seconds")
-		}
-		return "Lock", fmt.Sprint(minutes, " minutes")
-	}
-	return "StaleLock", fmt.Sprint(hours, " hours")
-}
-
 // String colorized oldest locks message.
 func (u lockMessage) String() string {
-	const (
-		timeFieldMaxLen     = 20
-		resourceFieldMaxLen = -1
-		typeFieldMaxLen     = 6
-	)
-
 	elapsed := u.Lock.Elapsed
 	// elapsed can be zero with older MinIO versions,
 	// so this code is deprecated and can be removed later.
@@ -98,12 +80,18 @@ func (u lockMessage) String() string {
 		elapsed = time.Now().UTC().Sub(u.Lock.Timestamp)
 	}
 
-	lockState, timeDiff := getLockDuration(elapsed)
+	stale := u.Lock.Quorum > len(u.Lock.ServerList)
+	lockState := "Lock"
+	if stale {
+		lockState = "StaleLock"
+	}
+
 	return console.Colorize(lockState, newPrettyTable("  ",
-		Field{"Time", timeFieldMaxLen},
+		Field{"Since", timeFieldMaxLen},
 		Field{"Type", typeFieldMaxLen},
+		Field{"Owner", timeFieldMaxLen},
 		Field{"Resource", resourceFieldMaxLen},
-	).buildRow(timeDiff, u.Lock.Type, u.Lock.Resource))
+	).buildRow(humanize.Time(time.Now().UTC().Add(-elapsed)), u.Lock.Type, u.Lock.Owner, u.Lock.Resource))
 }
 
 // JSON jsonified top oldest locks message.
@@ -118,7 +106,8 @@ func (u lockMessage) JSON() string {
 		Owner      string    `json:"owner"`      // Owner UUID indicates server owns the lock.
 		ID         string    `json:"id"`         // UID to uniquely identify request of client.
 		// Represents quorum number of servers required to hold this lock, used to look for stale locks.
-		Quorum int `json:"quorum"`
+		Quorum int  `json:"quorum"`
+		Stale  bool // Represents if the lock is stale.
 	}
 
 	le := lockEntry{
@@ -131,6 +120,7 @@ func (u lockMessage) JSON() string {
 		Owner:      u.Lock.Owner,
 		ID:         u.Lock.ID,
 		Quorum:     u.Lock.Quorum,
+		Stale:      u.Lock.Quorum > len(u.Lock.ServerList),
 	}
 	statusJSONBytes, e := json.MarshalIndent(le, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -152,6 +142,10 @@ func mainSupportTopLocks(ctx *cli.Context) error {
 	alias, _ := url2Alias(aliasedURL)
 	validateClusterRegistered(alias, false)
 
+	console.SetColor("StaleLock", color.New(color.FgRed, color.Bold))
+	console.SetColor("Lock", color.New(color.FgBlue, color.Bold))
+	console.SetColor("Headers", color.New(color.FgGreen, color.Bold))
+
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
@@ -163,24 +157,24 @@ func mainSupportTopLocks(ctx *cli.Context) error {
 	})
 	fatalIf(probe.NewError(e), "Unable to get server locks list.")
 
-	console.SetColor("StaleLock", color.New(color.FgRed, color.Bold))
-	console.SetColor("Lock", color.New(color.FgBlue, color.Bold))
-	console.SetColor("Headers", color.New(color.FgGreen, color.Bold))
-
 	// Print
 	printLocks(entries)
 	return nil
 }
 
+const (
+	timeFieldMaxLen     = 20
+	typeFieldMaxLen     = 6
+	resourceFieldMaxLen = 150
+)
+
 func printHeaders() {
-	timeFieldMaxLen := 20
-	resourceFieldMaxLen := -1
-	typeFieldMaxLen := 6
 	console.Println(console.Colorize("Headers", newPrettyTable("  ",
-		Field{"Time", timeFieldMaxLen},
+		Field{"Since", timeFieldMaxLen},
 		Field{"Type", typeFieldMaxLen},
+		Field{"Owner", timeFieldMaxLen},
 		Field{"Resource", resourceFieldMaxLen},
-	).buildRow("Time", "Type", "Resource")))
+	).buildRow("Since", "Type", "Owner", "Resource")))
 }
 
 // Prints oldest locks.
