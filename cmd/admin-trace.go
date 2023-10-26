@@ -26,9 +26,14 @@ import (
 	"net/url"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -36,6 +41,7 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
+	"github.com/olekukonko/tablewriter"
 )
 
 var adminTraceFlags = []cli.Flag{
@@ -82,6 +88,16 @@ var adminTraceFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "errors, e",
 		Usage: "trace only failed requests",
+	},
+	cli.BoolFlag{
+		Name:  "stats",
+		Usage: "accumulate stats",
+	},
+	cli.IntFlag{
+		Name:   "stats-n",
+		Usage:  "maximum number of stat entries",
+		Value:  15,
+		Hidden: true,
 	},
 	cli.BoolFlag{
 		Name:  "filter-request",
@@ -260,7 +276,7 @@ type matchOpts struct {
 	responseSize uint64
 }
 
-func matchTrace(opts matchOpts, traceInfo madmin.ServiceTraceInfo) bool {
+func (opts matchOpts) matches(traceInfo madmin.ServiceTraceInfo) bool {
 	// Filter request path if passed by the user
 	if len(opts.apiPaths) > 0 {
 		matched := false
@@ -450,14 +466,16 @@ func tracingOpts(ctx *cli.Context, apis []string) (opts madmin.ServiceTraceOpts,
 	}
 
 	for _, api := range apis {
-		fn, ok := traceCallTypes[api]
-		if !ok {
-			fn, ok = traceCallTypeAliases[api]
+		for _, api := range strings.Split(api, ",") {
+			fn, ok := traceCallTypes[api]
+			if !ok {
+				fn, ok = traceCallTypeAliases[api]
+			}
+			if !ok {
+				return madmin.ServiceTraceOpts{}, fmt.Errorf("unknown call name: `%s`", api)
+			}
+			fn(&opts)
 		}
-		if !ok {
-			return madmin.ServiceTraceOpts{}, fmt.Errorf("unknown call name: `%s`", api)
-		}
-		fn(&opts)
 	}
 	return
 }
@@ -468,6 +486,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	checkAdminTraceSyntax(ctx)
 
 	verbose := ctx.Bool("verbose")
+	stats := ctx.Bool("stats")
 	aliasedURL := ctx.Args().Get(0)
 
 	console.SetColor("Stat", color.New(color.FgYellow))
@@ -506,11 +525,36 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 	// Start listening on all trace activity.
 	traceCh := client.ServiceTrace(ctxt, opts)
+	if stats {
+		filteredTraces := make(chan madmin.ServiceTraceInfo, 1)
+		ui := tea.NewProgram(initTraceStatsUI(ctx.Int("stats-n"), filteredTraces))
+		var te error
+		go func() {
+			for t := range traceCh {
+				if t.Err != nil {
+					te = t.Err
+					ui.Kill()
+					return
+				}
+				if mopts.matches(t) {
+					filteredTraces <- t
+				}
+			}
+		}()
+		if _, e := ui.Run(); e != nil {
+			cancel()
+			if te != nil {
+				e = te
+			}
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch http trace statistics")
+		}
+		return nil
+	}
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
-		if matchTrace(mopts, traceInfo) {
+		if mopts.matches(traceInfo) {
 			printTrace(verbose, traceInfo)
 		}
 	}
@@ -841,4 +885,252 @@ func (t traceMessage) String() string {
 	fmt.Fprintf(b, "%s%s\n", nodeNameStr, console.Colorize("Body", string(rs.Body)))
 	fmt.Fprint(b, nodeNameStr)
 	return b.String()
+}
+
+type statItem struct {
+	Name           string
+	Count          int           `json:"count"`
+	Duration       time.Duration `json:"duration"`
+	Errors         int           `json:"errors,omitempty"`
+	CallStatsCount int           `json:"callStatsCount,omitempty"`
+	CallStats      callStats     `json:"callStats,omitempty"`
+	TTFB           time.Duration `json:"ttfb,omitempty"`
+	MaxDur         time.Duration `json:"maxDuration"`
+	MinDur         time.Duration `json:"minDuration"`
+}
+
+type statTrace struct {
+	Calls   map[string]statItem `json:"calls"`
+	Started time.Time
+	mu      sync.Mutex
+}
+
+func (s *statTrace) JSON() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", " ")
+	// Disable escaping special chars to display XML tags correctly
+	enc.SetEscapeHTML(false)
+	fatalIf(probe.NewError(enc.Encode(s)), "Unable to marshal into JSON.")
+
+	// strip off extra newline added by json encoder
+	return strings.TrimSuffix(buf.String(), "\n")
+}
+
+func (s *statTrace) String() string {
+	return ""
+}
+
+func (s *statTrace) add(t madmin.ServiceTraceInfo) {
+	id := t.Trace.FuncName
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	got := s.Calls[id]
+	if got.Name == "" {
+		got.Name = id
+	}
+	if got.MaxDur < t.Trace.Duration {
+		got.MaxDur = t.Trace.Duration
+	}
+	if got.MinDur <= 0 {
+		got.MinDur = t.Trace.Duration
+	}
+	if got.MinDur > t.Trace.Duration {
+		got.MinDur = t.Trace.Duration
+	}
+	got.Count++
+	got.Duration += t.Trace.Duration
+	if t.Trace.Error != "" {
+		got.Errors++
+	}
+	if t.Trace.HTTP != nil {
+		got.CallStatsCount++
+		got.CallStats.Rx += t.Trace.HTTP.CallStats.InputBytes
+		got.CallStats.Tx += t.Trace.HTTP.CallStats.OutputBytes
+		got.TTFB += t.Trace.HTTP.CallStats.TimeToFirstByte
+	}
+	s.Calls[id] = got
+}
+
+func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
+	s := spinner.New()
+	s.Spinner = spinner.Points
+	s.Spinner.FPS = time.Second / 4
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	console.SetColor("metrics-duration", color.New(color.FgWhite))
+	console.SetColor("metrics-dur", color.New(color.FgGreen))
+	console.SetColor("metrics-dur-med", color.New(color.FgYellow))
+	console.SetColor("metrics-dur-high", color.New(color.FgRed))
+	console.SetColor("metrics-error", color.New(color.FgYellow))
+	console.SetColor("metrics-title", color.New(color.FgCyan))
+	console.SetColor("metrics-top-title", color.New(color.FgHiCyan))
+	console.SetColor("metrics-number", color.New(color.FgWhite))
+	console.SetColor("metrics-number-secondary", color.New(color.FgBlue))
+	console.SetColor("metrics-zero", color.New(color.FgWhite))
+	stats := &statTrace{Calls: make(map[string]statItem, 20), Started: time.Now()}
+	go func() {
+		for t := range traces {
+			stats.add(t)
+		}
+	}()
+	return &traceStatsUI{
+		started:    time.Now(),
+		spinner:    s,
+		maxEntries: maxEntries,
+		current:    stats,
+	}
+}
+
+type traceStatsUI struct {
+	current    *statTrace
+	started    time.Time
+	spinner    spinner.Model
+	quitting   bool
+	maxEntries int
+}
+
+func (m *traceStatsUI) Init() tea.Cmd {
+	return m.spinner.Tick
+}
+
+func (m *traceStatsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.quitting {
+		return m, tea.Quit
+	}
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "esc", "ctrl+c":
+			m.quitting = true
+			return m, tea.Quit
+		default:
+			return m, nil
+		}
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+	return m, nil
+}
+
+func (m *traceStatsUI) View() string {
+	var s strings.Builder
+
+	s.WriteString(fmt.Sprintf("%s %s\n",
+		console.Colorize("metrics-top-title", "Duration: "+time.Since(m.current.Started).Round(time.Second).String()), m.spinner.View()))
+
+	// Set table header - akin to k8s style
+	// https://github.com/olekukonko/tablewriter#example-10---set-nowhitespace-and-tablepadding-option
+	table := tablewriter.NewWriter(&s)
+	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+	table.SetNoWhiteSpace(true)
+	addRow := func(s string) {
+		table.Append([]string{s})
+	}
+	_ = addRow
+	addRowF := func(format string, vals ...interface{}) {
+		s := fmt.Sprintf(format, vals...)
+		table.Append([]string{s})
+	}
+	_ = addRowF
+	var entries []statItem
+	m.current.mu.Lock()
+	totalCnt := 0
+	dur := time.Since(m.current.Started)
+	for _, v := range m.current.Calls {
+		totalCnt += v.Count
+		entries = append(entries, v)
+	}
+	m.current.mu.Unlock()
+	if len(entries) == 0 {
+		s.WriteString("(waiting for data)")
+		return s.String()
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].Count == entries[j].Count {
+			return entries[i].Name < entries[j].Name
+		}
+		return entries[i].Count > entries[j].Count
+	})
+	if m.maxEntries > 0 && len(entries) > m.maxEntries {
+		entries = entries[:m.maxEntries]
+	}
+
+	table.Append([]string{
+		console.Colorize("metrics-top-title", "Call"),
+		console.Colorize("metrics-top-title", "Count"),
+		console.Colorize("metrics-top-title", "RPM"),
+		console.Colorize("metrics-top-title", "Avg Time"),
+		console.Colorize("metrics-top-title", "TTFB Time"),
+		console.Colorize("metrics-top-title", "Min Time"),
+		console.Colorize("metrics-top-title", "Max Time"),
+		console.Colorize("metrics-top-title", "Errors"),
+		console.Colorize("metrics-top-title", "RX Avg"),
+		console.Colorize("metrics-top-title", "TX Avg"),
+	})
+	for _, v := range entries {
+		if v.Count <= 0 {
+			continue
+		}
+		errs := "0"
+		if v.Errors > 0 {
+			errs = console.Colorize("metrics-error", strconv.Itoa(v.Errors))
+		}
+		avg := v.Duration / time.Duration(v.Count)
+		avgTTFB := v.TTFB / time.Duration(v.Count)
+		avgColor := "metrics-dur"
+		if avg > 10*time.Second {
+			avgColor = "metrics-dur-high"
+		} else if avg > time.Second {
+			avgColor = "metrics-dur-med"
+		}
+
+		minColor := "metrics-dur"
+		if v.MinDur > 10*time.Second {
+			minColor = "metrics-dur-high"
+		} else if v.MinDur > time.Second {
+			minColor = "metrics-dur-med"
+		}
+
+		maxColor := "metrics-dur"
+		if v.MaxDur > 10*time.Second {
+			maxColor = "metrics-dur-high"
+		} else if v.MaxDur > time.Second {
+			maxColor = "metrics-dur-med"
+		}
+
+		rx := "-"
+		tx := "-"
+		if v.CallStatsCount > 0 {
+			rx = humanize.IBytes(uint64(v.CallStats.Rx / v.CallStatsCount))
+			tx = humanize.IBytes(uint64(v.CallStats.Tx / v.CallStatsCount))
+		}
+		table.Append([]string{
+			console.Colorize("metrics-title", metricsTitle(v.Name)),
+			console.Colorize("metrics-number", fmt.Sprintf("%d ", v.Count)) +
+				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
+			console.Colorize("metrics-number", fmt.Sprintf("%0.1f", float64(v.Count)/dur.Minutes())),
+			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
+			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
+			console.Colorize(minColor, v.MinDur),
+			console.Colorize(maxColor, v.MaxDur),
+			errs,
+			rx,
+			tx,
+		})
+	}
+	table.Render()
+	return s.String()
 }

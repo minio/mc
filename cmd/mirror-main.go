@@ -118,16 +118,16 @@ var (
 			Usage: "specify storage class for new object(s) on target",
 		},
 		cli.StringFlag{
-			Name:  "encrypt",
-			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
-		},
-		cli.StringFlag{
 			Name:  "attr",
 			Usage: "add custom metadata for all objects",
 		},
 		cli.StringFlag{
 			Name:  "monitoring-address",
 			Usage: "if specified, a new prometheus endpoint will be created to report mirroring activity. (eg: localhost:8081)",
+		},
+		cli.BoolFlag{
+			Name:  "retry",
+			Usage: "if specified, will enable retrying on a per object basis if errors occur",
 		},
 	}
 )
@@ -471,12 +471,38 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 	sURLs.MD5 = mj.opts.md5
 	sURLs.DisableMultipart = mj.opts.disableMultipart
 
-	now := time.Now()
-	ret := uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata, false)
-	if ret.Error == nil {
-		durationMs := time.Since(now).Milliseconds()
-		mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
+	var ret URLs
+
+	if !mj.opts.isRetriable {
+		now := time.Now()
+		ret = uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata, false)
+		if ret.Error == nil {
+			durationMs := time.Since(now).Milliseconds()
+			mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
+		}
+
+		return ret
 	}
+
+	newRetryManager(ctx, time.Second, 3).retry(func(rm *retryManager) *probe.Error {
+		if rm.retries > 0 {
+			printMsg(retryMessage{
+				SourceURL: sURLs.SourceContent.URL.String(),
+				TargetURL: sURLs.TargetContent.URL.String(),
+				Retries:   rm.retries,
+			})
+		}
+
+		now := time.Now()
+		ret = uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata, false)
+		if ret.Error == nil {
+			durationMs := time.Since(now).Milliseconds()
+			mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
+		}
+
+		return ret.Error
+	})
+
 	return ret
 }
 
@@ -913,6 +939,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isOverwrite:           isOverwrite,
 		isWatch:               isWatch,
 		isMetadata:            isMetadata,
+		isRetriable:           cli.Bool("retry"),
 		md5:                   cli.Bool("md5"),
 		disableMultipart:      cli.Bool("disable-multipart"),
 		excludeOptions:        cli.StringSlice("exclude"),

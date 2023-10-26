@@ -39,6 +39,13 @@ var errInvalidArgument = func() *probe.Error {
 	return probe.NewError(invalidArgumentErr(errors.New(msg))).Untrace()
 }
 
+type unableToGuessErr error
+
+var errUnableToGuess = func() *probe.Error {
+	msg := "Unable to guess the type of copy operation."
+	return probe.NewError(unableToGuessErr(errors.New(msg)))
+}
+
 type unrecognizedDiffTypeErr error
 
 var errUnrecognizedDiffType = func(diff differType) *probe.Error {
@@ -97,6 +104,20 @@ var errInvalidTarget = func(URL string) *probe.Error {
 	return probe.NewError(invalidTargetErr(errors.New(msg))).Untrace()
 }
 
+type requiresRecuriveErr error
+
+var errRequiresRecursive = func(URL string) *probe.Error {
+	msg := "To copy or move '" + URL + "' the --recursive flag is required."
+	return probe.NewError(requiresRecuriveErr(errors.New(msg))).Untrace()
+}
+
+type copyIntoSelfErr error
+
+var errCopyIntoSelf = func(URL string) *probe.Error {
+	msg := "Copying or moving '" + URL + "' into itself is not allowed."
+	return probe.NewError(copyIntoSelfErr(errors.New(msg))).Untrace()
+}
+
 type targetNotFoundErr error
 
 var errTargetNotFound = func(URL string) *probe.Error {
@@ -111,6 +132,13 @@ type overwriteNotAllowedErr struct {
 var errOverWriteNotAllowed = func(URL string) *probe.Error {
 	msg := "Overwrite not allowed for `" + URL + "`. Use `--overwrite` to override this behavior."
 	return probe.NewError(overwriteNotAllowedErr{errors.New(msg)})
+}
+
+type targetIsNotDirErr error
+
+var errTargetIsNotDir = func(URL string) *probe.Error {
+	msg := "Target `" + URL + "` is not a folder."
+	return probe.NewError(targetIsNotDirErr(errors.New(msg))).Untrace()
 }
 
 type sourceIsDirErr error

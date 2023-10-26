@@ -109,7 +109,7 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 			if apiCallInfo.Err != nil {
 				fatalIf(probe.NewError(apiCallInfo.Err), "Unable to fetch top API events")
 			}
-			if matchTrace(mopts, apiCallInfo) {
+			if mopts.matches(apiCallInfo) {
 				p.Send(topAPIResult{
 					apiCallInfo: apiCallInfo,
 				})

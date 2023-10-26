@@ -116,9 +116,9 @@ func Main(args []string) error {
 	probe.SetAppInfo("Commit", ShortCommitID)
 
 	// Fetch terminal size, if not available, automatically
-	// set globalQuiet to true.
+	// set globalQuiet to true on non-window.
 	if w, h, e := term.GetSize(int(os.Stdin.Fd())); e != nil {
-		globalQuiet = true
+		globalQuiet = runtime.GOOS != "windows"
 	} else {
 		globalTermWidth, globalTermHeight = w, h
 	}

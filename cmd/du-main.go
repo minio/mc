@@ -243,8 +243,10 @@ func mainDu(cliCtx *cli.Context) error {
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 
 	var duErr error
+	var isDir bool
 	for _, urlStr := range cliCtx.Args() {
-		if !isAliasURLDir(ctx, urlStr, nil, time.Time{}) {
+		isDir, _ = isAliasURLDir(ctx, urlStr, nil, time.Time{})
+		if !isDir {
 			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}
 
