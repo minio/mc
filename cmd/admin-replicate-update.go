@@ -180,7 +180,7 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 		Endpoint:         ep,
 		SyncState:        madmin.SyncStatus(syncState),
 		DefaultBandwidth: bwDefaults,
-	})
+	}, madmin.SREditOptions{})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit cluster replication site endpoint")
 
 	printMsg(updateSuccessMessage(res))
