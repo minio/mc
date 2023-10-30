@@ -152,7 +152,7 @@ func mainILMEdit(cliCtx *cli.Context) error {
 	err = ilm.ApplyRuleFields(rule, opts)
 	fatalIf(err.Trace(args...), "Unable to generate new lifecycle rules for the input")
 
-	fatalIf(client.SetLifecycle(ctx, lfcCfg, false).Trace(urlStr), "Unable to set new lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, lfcCfg).Trace(urlStr), "Unable to set new lifecycle rules")
 
 	printMsg(ilmEditMessage{
 		Status: "success",

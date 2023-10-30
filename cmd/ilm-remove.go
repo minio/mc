@@ -134,15 +134,14 @@ func mainILMRemove(cliCtx *cli.Context) error {
 	ilmAll := cliCtx.Bool("all")
 	ilmForce := cliCtx.Bool("force")
 
-	var expiryRuleRemoved bool
 	if ilmAll && ilmForce {
 		ilmCfg.Rules = nil // Remove all rules
 	} else {
-		ilmCfg, expiryRuleRemoved, err = ilm.RemoveILMRule(ilmCfg, cliCtx.String("id"))
+		ilmCfg, err = ilm.RemoveILMRule(ilmCfg, cliCtx.String("id"))
 		fatalIf(err.Trace(urlStr, cliCtx.String("id")), "Unable to remove rule by id")
 	}
 
-	fatalIf(client.SetLifecycle(ctx, ilmCfg, expiryRuleRemoved).Trace(urlStr), "Unable to set lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, ilmCfg).Trace(urlStr), "Unable to set lifecycle rules")
 
 	printMsg(ilmRmMessage{
 		Status: "success",

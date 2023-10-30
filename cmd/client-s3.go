@@ -2731,13 +2731,13 @@ func (c *S3Client) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, 
 }
 
 // SetLifecycle - Set lifecycle configuration on a bucket
-func (c *S3Client) SetLifecycle(ctx context.Context, config *lifecycle.Configuration, expiryRuleRemoved bool) *probe.Error {
+func (c *S3Client) SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
 
-	if e := c.api.SetBucketLifecycle(ctx, bucket, config, expiryRuleRemoved); e != nil {
+	if e := c.api.SetBucketLifecycle(ctx, bucket, config); e != nil {
 		return probe.NewError(e)
 	}
 

@@ -111,7 +111,7 @@ func mainILMImport(cliCtx *cli.Context) error {
 		fatalIf(errDummy(), "The provided ILM configuration does not contain any rule, aborting.")
 	}
 
-	fatalIf(client.SetLifecycle(ctx, ilmCfg, false).Trace(urlStr), "Unable to set new lifecycle rules")
+	fatalIf(client.SetLifecycle(ctx, ilmCfg).Trace(urlStr), "Unable to set new lifecycle rules")
 
 	printMsg(ilmImportMessage{
 		Status: "success",

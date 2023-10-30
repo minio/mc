@@ -32,12 +32,12 @@ import (
 const defaultILMDateFormat string = "2006-01-02"
 
 // RemoveILMRule - Remove the ILM rule (with ilmID) from the configuration in XML that is provided.
-func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Configuration, bool, *probe.Error) {
+func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Configuration, *probe.Error) {
 	if lfcCfg == nil {
-		return lfcCfg, false, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
+		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
 	}
 	if len(lfcCfg.Rules) == 0 {
-		return lfcCfg, false, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
+		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
 	}
 	n := 0
 	var expiryRuleRemoved bool
@@ -54,10 +54,11 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 	if n == len(lfcCfg.Rules) && len(lfcCfg.Rules) > 0 {
 		// if there was no filtering then rules will be of same length, means we didn't find
 		// our ilm id return an error here.
-		return lfcCfg, false, probe.NewError(fmt.Errorf("lifecycle rule for id '%s' not found", ilmID))
+		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle rule for id '%s' not found", ilmID))
 	}
 	lfcCfg.Rules = lfcCfg.Rules[:n]
-	return lfcCfg, expiryRuleRemoved, nil
+	lfcCfg.ExpiryRuleRemoved = &expiryRuleRemoved
+	return lfcCfg, nil
 }
 
 // LifecycleOptions is structure to encapsulate

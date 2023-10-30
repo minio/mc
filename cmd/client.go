@@ -153,7 +153,7 @@ type Client interface {
 
 	// Lifecycle operations
 	GetLifecycle(ctx context.Context) (*lifecycle.Configuration, time.Time, *probe.Error)
-	SetLifecycle(ctx context.Context, config *lifecycle.Configuration, expiryRuleRemoved bool) *probe.Error
+	SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error
 
 	// Versioning operations
 	GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error)
