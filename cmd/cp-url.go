@@ -285,7 +285,7 @@ func prepareCopyURLsTypeD(ctx context.Context, cc copyURLsContent, o prepareCopy
 		}
 	}(ctx, cc, o)
 
-	go func(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) {
+	go func() {
 		defer close(copyURLsCh)
 		filter := make(map[string]struct{})
 		for cpURLs := range copyURLsFilterCh {
@@ -301,7 +301,7 @@ func prepareCopyURLsTypeD(ctx context.Context, cc copyURLsContent, o prepareCopy
 				copyURLsCh <- cpURLs
 			}
 		}
-	}(ctx, cc, o)
+	}()
 
 	return copyURLsCh
 }

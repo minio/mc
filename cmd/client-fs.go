@@ -881,7 +881,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *ClientContent) {
 	switch fst.Mode().IsDir() {
 	case true:
 		files, e := readDir(fpath)
-		if err != nil {
+		if e != nil {
 			contentCh <- &ClientContent{Err: probe.NewError(e)}
 			return
 		}
