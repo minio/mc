@@ -326,7 +326,8 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	}
 
 	// Fetch info of all servers (cluster or single server)
-	resp, version, e := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"))
+	// TODO: allow configurable "anonymize" inputs
+	resp, version, e := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"), "standard")
 	if e != nil {
 		cancel()
 		return nil, "", e
