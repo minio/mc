@@ -207,11 +207,12 @@ type ClientResult struct {
 
 // SiteNetStats - status for siteNet
 type SiteNetStats struct {
-	TX              uint64        `json:"tx"` // transfer rate in bytes
-	TXTotalDuration time.Duration `json:"txTotalDuration"`
-	RX              uint64        `json:"rx"` // received rate in bytes
-	RXTotalDuration time.Duration `json:"rxTotalDuration"`
-	TotalConn       uint64        `json:"totalConn"`
+	TX                   uint64        `json:"tx"` // transfer rate in bytes
+	TXTotalDuration      time.Duration `json:"txTotalDuration"`
+	TXTotalSpentDuration time.Duration `json:"txTotalSpentDuration"`
+	RX                   uint64        `json:"rx"` // received rate in bytes
+	RXTotalDuration      time.Duration `json:"rxTotalDuration"`
+	TotalConn            uint64        `json:"totalConn"`
 }
 
 // SiteReplicationTestNodeResult - result of the network performance test for site-replication
@@ -341,11 +342,12 @@ func convertSiteReplicationTestResults(netResults *madmin.SiteNetPerfResult) *Si
 			Endpoint: nr.Endpoint,
 			Error:    nr.Error,
 			Perf: SiteNetStats{
-				TX:              nr.TX,
-				TXTotalDuration: nr.TXTotalDuration,
-				RX:              nr.RX,
-				RXTotalDuration: nr.RXTotalDuration,
-				TotalConn:       nr.TotalConn,
+				TX:                   nr.TX,
+				TXTotalDuration:      nr.TXTotalDuration,
+				TXTotalSpentDuration: nr.TXTotalSpentDuration,
+				RX:                   nr.RX,
+				RXTotalDuration:      nr.RXTotalDuration,
+				TotalConn:            nr.TotalConn,
 			},
 		})
 	}

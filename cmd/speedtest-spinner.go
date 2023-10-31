@@ -232,13 +232,14 @@ func (m *speedTestUI) View() string {
 		table.AppendBulk(data)
 		table.Render()
 	} else if sres != nil {
-		table.SetHeader([]string{"Endpoint", "RX", "TX", ""})
+		table.SetHeader([]string{"Endpoint", "RX", "TX", "TTFB", ""})
 		data := make([][]string, 0, len(sres.NodeResults))
 		if len(sres.NodeResults) == 0 {
 			data = append(data, []string{
 				"...",
 				whiteStyle.Render("-- MiB"),
 				whiteStyle.Render("-- MiB"),
+				"",
 				"",
 			})
 		} else {
@@ -268,6 +269,13 @@ func (m *speedTestUI) View() string {
 						dataItem = append(dataItem, crossTickCell)
 					} else {
 						dataItem = append(dataItem, whiteStyle.Render(humanize.IBytes(nodeResult.TX/uint64(nodeResult.TXTotalDuration.Seconds())))+"/s")
+					}
+					// show TTFB
+					if uint64(nodeResult.RX) == 0 {
+						dataError += "- RXTotalDuration are zero"
+						dataItem = append(dataItem, crossTickCell)
+					} else {
+						dataItem = append(dataItem, whiteStyle.Render(fmt.Sprintf("%.2f ns", float64(nodeResult.TXTotalSpentDuration.Nanoseconds())/float64(nodeResult.RX))))
 					}
 					// show message
 					dataItem = append(dataItem, dataError)
