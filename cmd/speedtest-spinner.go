@@ -275,7 +275,7 @@ func (m *speedTestUI) View() string {
 						dataError += "- N/A"
 						dataItem = append(dataItem, crossTickCell)
 					} else {
-						ttfb := int64((float64(nodeResult.TXTotalSpentDuration)/float64(nodeResult.RX))*100) / 100
+						ttfb := int64((float64(nodeResult.TXTotalSpentDuration) / float64(nodeResult.RX)))
 						dataItem = append(dataItem, whiteStyle.Render(time.Duration(ttfb).String()))
 					}
 					// show message
