@@ -137,9 +137,29 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	for _, accessKey := range accessKeys {
+		// Assume service account by default
 		res, e := client.InfoServiceAccount(globalContext, accessKey)
 		if e != nil {
-			errorIf(probe.NewError(e), "Unable to retrieve access key "+accessKey+" info.")
+			// If not a service account must be sts
+			tempRes, e := client.TemporaryAccountInfo(globalContext, accessKey)
+			if e != nil {
+				errorIf(probe.NewError(e), "Unable to retrieve access key "+accessKey+" info.")
+			} else {
+				m := ldapAccesskeyMessage{
+					op:            "info",
+					AccessKey:     accessKey,
+					Status:        "success",
+					ParentUser:    tempRes.ParentUser,
+					AccountStatus: tempRes.AccountStatus,
+					ImpliedPolicy: tempRes.ImpliedPolicy,
+					Policy:        json.RawMessage(tempRes.Policy),
+					Name:          tempRes.Name,
+					Description:   tempRes.Description,
+					Expiration:    tempRes.Expiration,
+				}
+
+				printMsg(m)
+			}
 		} else {
 			m := ldapAccesskeyMessage{
 				op:            "info",
