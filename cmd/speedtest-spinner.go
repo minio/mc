@@ -272,10 +272,11 @@ func (m *speedTestUI) View() string {
 					}
 					// show TTFB
 					if uint64(nodeResult.RX) == 0 {
-						dataError += "- RXTotalDuration are zero"
+						dataError += "- N/A"
 						dataItem = append(dataItem, crossTickCell)
 					} else {
-						dataItem = append(dataItem, whiteStyle.Render(fmt.Sprintf("%.2f ns", float64(nodeResult.TXTotalSpentDuration.Nanoseconds())/float64(nodeResult.RX))))
+						ttfb := int64((float64(nodeResult.TXTotalSpentDuration)/float64(nodeResult.RX))*100) / 100
+						dataItem = append(dataItem, whiteStyle.Render(time.Duration(ttfb).String()))
 					}
 					// show message
 					dataItem = append(dataItem, dataError)
