@@ -149,12 +149,8 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	} else {
 		users = make(map[string]madmin.UserInfo)
 		for _, user := range userArg {
-			// Check existence of each user
-			if _, e = client.GetUserInfo(globalContext, user); e != nil {
-				errorIf(probe.NewError(e), "User '"+user+"' invalid")
-			} else {
-				users[user] = madmin.UserInfo{}
-			}
+			users[user] = madmin.UserInfo{}
+
 		}
 	}
 	if e != nil {

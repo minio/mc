@@ -108,6 +108,12 @@ func (m ldapAccesskeyMessage) String() string {
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Secret Key:"), m.SecretKey))
 		o.WriteString(iFmt(0, "%s %s\n\n", labelStyle.Render("Expiration:"), expirationStr))
+		if m.Name != "" {
+			o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
+		}
+		if m.Description != "" {
+			o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
+		}
 
 		return o.String()
 	case "remove":

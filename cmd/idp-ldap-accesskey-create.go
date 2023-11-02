@@ -18,21 +18,25 @@
 package cmd
 
 import (
+	"bytes"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/v2/policy"
 )
 
 var idpLdapAccesskeyCreateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "access-key",
-		Usage: "set an access key for the service account",
+		Usage: "set an access key for the account",
 	},
 	cli.StringFlag{
 		Name:  "secret-key",
-		Usage: "set a secret key for the service account",
+		Usage: "set a secret key for the  account",
 	},
 	cli.StringFlag{
 		Name:  "policy",
@@ -40,15 +44,19 @@ var idpLdapAccesskeyCreateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "name",
-		Usage: "friendly name for the service account",
+		Usage: "friendly name for the account",
 	},
 	cli.StringFlag{
 		Name:  "description",
-		Usage: "description for the service account",
+		Usage: "description for the account",
+	},
+	cli.StringFlag{
+		Name:  "expiry-duration",
+		Usage: "duration before the access key expires",
 	},
 	cli.StringFlag{
 		Name:  "expiry",
-		Usage: "time of expiration for the service account",
+		Usage: "expiry date for the access key",
 	},
 }
 
@@ -83,18 +91,62 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	targetUser := args.Get(1)
 
-	expVal := ctx.Duration("expiry")
-	exp := time.Now().Add(expVal)
-	accessVal := ctx.String("accesskey")
-	secretVal := ctx.String("secretkey")
+	accessVal := ctx.String("access-key")
+	secretVal := ctx.String("secret-key")
+	name := ctx.String("name")
+	description := ctx.String("description")
+	policyPath := ctx.String("policy")
 
-	if expVal == 0 {
+	expDurVal := ctx.Duration("expiry-duration")
+	expVal := ctx.String("expiry")
+	if expVal != "" && expDurVal != 0 {
+		e := fmt.Errorf("Only one of --expiry or --expiry-duration can be specified")
+		fatalIf(probe.NewError(e), "Invalid flags.")
+	}
+
+	var exp time.Time
+	if expVal != "" {
+		location, e := time.LoadLocation("Local")
+		if e != nil {
+			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
+		}
+
+		patternMatched := false
+		for _, format := range supportedTimeFormats {
+			t, e := time.ParseInLocation(format, expVal, location)
+			if e == nil {
+				patternMatched = true
+				exp = t
+				break
+			}
+		}
+
+		if !patternMatched {
+			e := fmt.Errorf("invalid expiry date format '%s'", expVal)
+			fatalIf(probe.NewError(e), "unable to parse the expiry argument.")
+		}
+	} else if expDurVal != 0 {
+		exp = time.Now().Add(expDurVal)
+	} else {
 		exp = time.Unix(0, 0)
 	}
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
+
+	var policyBytes []byte
+	if policyPath != "" {
+		// Validate the policy document and ensure it has at least when statement
+		var e error
+		policyBytes, e = os.ReadFile(policyPath)
+		fatalIf(probe.NewError(e), "Unable to open the policy document.")
+		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
+		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
+		if p.IsEmpty() {
+			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
+		}
+	}
 
 	accessKey, secretKey, e := generateCredentials()
 	fatalIf(probe.NewError(e), "Unable to generate credentials.")
@@ -109,10 +161,13 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 
 	res, e := client.AddServiceAccountLDAP(globalContext,
 		madmin.AddServiceAccountReq{
-			TargetUser: targetUser,
-			AccessKey:  accessKey,
-			SecretKey:  secretKey,
-			Expiration: &exp,
+			Policy:      policyBytes,
+			TargetUser:  targetUser,
+			AccessKey:   accessKey,
+			SecretKey:   secretKey,
+			Name:        name,
+			Description: description,
+			Expiration:  &exp,
 		})
 	fatalIf(probe.NewError(e), "Unable to add service account.")
 
