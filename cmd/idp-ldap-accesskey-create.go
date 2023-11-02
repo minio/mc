@@ -83,7 +83,7 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	targetUser := args.Get(1)
 
-	expVal := ctx.Duration("expiration")
+	expVal := ctx.Duration("expiry")
 	exp := time.Now().Add(expVal)
 	accessVal := ctx.String("accesskey")
 	secretVal := ctx.String("secretkey")
@@ -115,13 +115,6 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 			Expiration: &exp,
 		})
 	fatalIf(probe.NewError(e), "Unable to add service account.")
-
-	// If target user is not provided, use the authenticated user
-	if targetUser == "" {
-		parentUser, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
-		fatalIf(probe.NewError(e), "Unable to get account info.")
-		targetUser = parentUser.AccountName
-	}
 
 	m := ldapAccesskeyMessage{
 		op:         "create",
