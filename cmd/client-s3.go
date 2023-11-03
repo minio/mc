@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/minio/pkg/v2/env"
 	"hash/fnv"
 	"io"
 	"net"
@@ -158,12 +159,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		var api *minio.Client
 		var found bool
 		if api, found = clientCache[confSum]; !found {
-			// if Signature version '4' use NewV4 directly.
-			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
-			// if Signature version '2' use NewV2 directly.
-			if strings.ToUpper(config.Signature) == "S3V2" {
-				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
-			}
 
 			var transport http.RoundTripper
 
@@ -220,6 +215,30 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
 				} else if strings.EqualFold(config.Signature, "S3v2") {
 					transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
+				}
+			}
+
+			var creds *credentials.Credentials
+
+			// if an STS endpoint is set, we will use that for credentials
+			stsEndpoint := env.Get("STS_ENDPOINT", "")
+			if stsEndpoint != "" {
+				stsEndpointURL, err := url.Parse(stsEndpoint)
+				if err != nil {
+					return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+				}
+				creds = credentials.New(&credentials.IAM{
+					Client: &http.Client{
+						Transport: transport,
+					},
+					Endpoint: stsEndpointURL.String(),
+				})
+			} else {
+				// if Signature version '4' use NewV4 directly.
+				creds = credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
+				// if Signature version '2' use NewV2 directly.
+				if strings.ToUpper(config.Signature) == "S3V2" {
+					creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 				}
 			}
 
