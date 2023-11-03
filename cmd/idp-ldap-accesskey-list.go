@@ -34,8 +34,8 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 		Usage: "only list user DNs",
 	},
 	cli.BoolFlag{
-		Name:  "sts-only",
-		Usage: "only list sts access keys",
+		Name:  "temp-only",
+		Usage: "only list temporary access keys",
 	},
 	cli.BoolFlag{
 		Name:  "svcacc-only",
@@ -69,9 +69,11 @@ EXAMPLES:
 	 {{.Prompt}} {{.HelpName}} play/ --temp-only
   4. Get list of access keys associated with user 'bobfisher'
   	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io
-  5. Get list of access keys associated with users 'bobfisher' and 'cody3'
+  5. Get list of access keys associated with user 'bobfisher' (alt)
+	 {{.Prompt}} {{.HelpName}} play/ bobfisher
+  6. Get list of access keys associated with users 'bobfisher' and 'cody3'
   	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io uid=cody3,dc=min,dc=io
-  6. Get authenticated user and associated access keys in local server (if not admin)
+  7. Get authenticated user and associated access keys in local server (if not admin)
 	 {{.Prompt}} {{.HelpName}} local/
 	`,
 }

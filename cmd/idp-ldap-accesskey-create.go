@@ -79,6 +79,14 @@ FLAGS:
 EXAMPLES:
   1. Create a new access key pair with the same policy as the authenticated user
      {{.Prompt}} {{.HelpName}} local/
+  2. Create a new access key pair with custom access key and secret key
+	 {{.Prompt}} {{.HelpName}} local/ --access-key myaccesskey --secret-key mysecretkey
+  3. Create a new access key pair for user with DN "uid=james,dc=min,dc=io" with a custom policy
+	 {{.Prompt}} {{.HelpName}} uid=james,dc=min,dc=io --policy policy.json
+  4. Create a new access key pair for user with username "james" that expires in 1 day
+	 {{.Prompt}} {{.HelpName}} james --expiry-duration 24h
+  5. Create a new access key pair for authenticated user that expires on 2021-01-01
+	 {{.Prompt}} {{.HelpName}} --expiry 2021-01-01
 	`,
 }
 
