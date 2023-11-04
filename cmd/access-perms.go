@@ -29,7 +29,12 @@ func (b accessPerms) isValidAccessPERM() bool {
 }
 
 func (b accessPerms) isValidAccessFile() bool {
-	return filepath.Ext(string(b)) == ".json"
+	res := filepath.Ext(string(b)) == ".json"
+	if !res {
+		fatalIf(errDummy().Trace(), "Invalid access file extension. Only .json files are supported.")
+		return false
+	}
+	return true
 }
 
 // accessPerms - access level.
