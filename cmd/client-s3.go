@@ -218,29 +218,46 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				}
 			}
 
-			var creds *credentials.Credentials
+			var credsChain []credentials.Provider
 
-			// if an STS endpoint is set, we will use that for credentials
-			stsEndpoint := env.Get("STS_ENDPOINT", "")
+			// if an STS endpoint is set, we will add that to the chain
+			stsEndpoint := env.Get("MC_STS_ENDPOINT", "")
 			if stsEndpoint != "" {
 				stsEndpointURL, err := url.Parse(stsEndpoint)
 				if err != nil {
 					return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
 				}
-				creds = credentials.New(&credentials.IAM{
+				credsSts := &credentials.IAM{
 					Client: &http.Client{
 						Transport: transport,
 					},
 					Endpoint: stsEndpointURL.String(),
-				})
-			} else {
-				// if Signature version '4' use NewV4 directly.
-				creds = credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
-				// if Signature version '2' use NewV2 directly.
-				if strings.ToUpper(config.Signature) == "S3V2" {
-					creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 				}
+				credsChain = append(credsChain, credsSts)
 			}
+
+			// V4 Credentials
+			credsV4 := &credentials.Static{
+				Value: credentials.Value{
+					AccessKeyID:     config.AccessKey,
+					SecretAccessKey: config.SecretKey,
+					SessionToken:    config.SessionToken,
+					SignerType:      credentials.SignatureV4,
+				},
+			}
+			credsChain = append(credsChain, credsV4)
+			// V2 Credentials
+			credsV2 := &credentials.Static{
+				Value: credentials.Value{
+					AccessKeyID:     config.AccessKey,
+					SecretAccessKey: config.SecretKey,
+					SessionToken:    "",
+					SignerType:      credentials.SignatureV2,
+				},
+			}
+			credsChain = append(credsChain, credsV2)
+
+			creds := credentials.NewChainCredentials(credsChain)
 
 			// Not found. Instantiate a new MinIO
 			var e error
