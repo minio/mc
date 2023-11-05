@@ -222,12 +222,10 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			var credsChain []credentials.Provider
 
 			// if an STS endpoint is set, we will add that to the chain
-			stsEndpoint := env.Get("MC_STS_ENDPOINT", "")
-			if stsEndpoint != "" {
+			if stsEndpoint := env.Get("MC_STS_ENDPOINT", ""); stsEndpoint != "" {
 				// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
-				mcWebIdentityTokenFile := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", "")
-				if mcWebIdentityTokenFile != "" {
-					os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", mcWebIdentityTokenFile)
+				if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", ""); val != "" {
+					os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
 				}
 
 				stsEndpointURL, err := url.Parse(stsEndpoint)
