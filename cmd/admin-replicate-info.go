@@ -76,7 +76,7 @@ func (i srInfo) String() string {
 			Field{"Endpoint", 46},
 			Field{"Sync", 4},
 			Field{"Bandwidth", 10},
-			Field{"ILM Expiry Replication", 20},
+			Field{"ILM Expiry Replication", 25},
 		).buildRow("Deployment ID", "Site Name", "Endpoint", "Sync", "Bandwidth", "ILM Expiry Replication"))
 		messages = append(messages, r)
 
@@ -87,7 +87,7 @@ func (i srInfo) String() string {
 			Field{"Endpoint", 46},
 			Field{"Sync", 4},
 			Field{"Bandwidth", 10},
-			Field{"ILM Expiry Replication", 20},
+			Field{"ILM Expiry Replication", 25},
 		).buildRow("", "", "", "", "Per Bucket", ""))
 		messages = append(messages, r)
 		for _, peer := range info.Sites {
@@ -106,7 +106,7 @@ func (i srInfo) String() string {
 				Field{"Endpoint", 46},
 				Field{"Sync", 4},
 				Field{"Bandwidth", 10},
-				Field{"ILM Expiry Replication", 20},
+				Field{"ILM Expiry Replication", 25},
 			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint, chk, limit, strconv.FormatBool(peer.ReplicateILMExpiry)))
 			messages = append(messages, r)
 		}
