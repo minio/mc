@@ -90,10 +90,10 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --bucket-bandwidth "2G"
 
   3. Disable replication of ILM expiry in cluster-level replication:
-     {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --disable-ilm-expiry-replication
+     {{.Prompt}} {{.HelpName}} myminio --disable-ilm-expiry-replication
 
   4. Enable replication of ILM expiry in cluster-level replication:
-     {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --enable-ilm-expiry-replication
+     {{.Prompt}} {{.HelpName}} myminio --enable-ilm-expiry-replication
 `,
 }
 
@@ -139,7 +139,7 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	if !ctx.IsSet("deployment-id") {
+	if !ctx.IsSet("deployment-id") && !ctx.IsSet("disable-ilm-expiry-replication") && !ctx.IsSet("enable-ilm-expiry-replication") {
 		fatalIf(errInvalidArgument(), "--deployment-id is a required flag")
 	}
 	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") && !ctx.IsSet("bucket-bandwidth") && !ctx.IsSet("disable-ilm-expiry-replication") && !ctx.IsSet("enable-ilm-expiry-replication") {
@@ -150,6 +150,9 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	}
 	if ctx.IsSet("disable-ilm-expiry-replication") && ctx.IsSet("enable-ilm-expiry-replication") {
 		fatalIf(errInvalidArgument(), "either --disable-ilm-expiry-replication or --enable-ilm-expiry-replication flag should be specified")
+	}
+	if (ctx.IsSet("disable-ilm-expiry-replication") || ctx.IsSet("enable-ilm-expiry-replication")) && ctx.IsSet("deployment-id") {
+		fatalIf(errInvalidArgument(), "--deployment-id should not be set with --disable-ilm-expiry-replication or --enable-ilm-expiry-replication")
 	}
 
 	var syncState string
