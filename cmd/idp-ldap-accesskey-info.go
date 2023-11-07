@@ -104,7 +104,6 @@ func (m ldapAccesskeyMessage) String() string {
 		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
 		o := strings.Builder{}
 
-		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("User DN:   "), m.ParentUser))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Secret Key:"), m.SecretKey))
 		o.WriteString(iFmt(0, "%s %s\n\n", labelStyle.Render("Expiration:"), expirationStr))

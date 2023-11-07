@@ -23,10 +23,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/pkg/v2/console"
 	"github.com/minio/pkg/v2/policy"
+	"golang.org/x/term"
 )
 
 var idpLdapAccesskeyCreateFlags = []cli.Flag{
@@ -57,6 +61,10 @@ var idpLdapAccesskeyCreateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "expiry",
 		Usage: "expiry date for the access key",
+	},
+	cli.BoolFlag{
+		Name:  "login",
+		Usage: "log in using ldap credentials to generate access key par for future use",
 	},
 }
 
@@ -99,6 +107,7 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	targetUser := args.Get(1)
 
+	login := ctx.Bool("login")
 	accessVal := ctx.String("access-key")
 	secretVal := ctx.String("secret-key")
 	name := ctx.String("name")
@@ -139,10 +148,6 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 		exp = time.Unix(0, 0)
 	}
 
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
 	var policyBytes []byte
 	if policyPath != "" {
 		// Validate the policy document and ensure it has at least when statement
@@ -154,6 +159,29 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 		if p.IsEmpty() {
 			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
 		}
+	}
+
+	var client *madmin.AdminClient
+
+	// If login flag is set, use LDAP credentials to generate access key pair
+	if login {
+		if targetUser != "" {
+			fatalIf(errInvalidArgument().Trace(targetUser), "login flag cannot be used with a target user")
+		}
+		isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
+		if !isTerminal {
+
+			//e := fmt.Errorf("login flag cannot be used with non-interactive terminal")
+			//fatalIf(probe.NewError(e), "Invalid flags.")
+		}
+
+		// For login, aliasedURL is not aliased, but the actual server URL
+		client = loginLDAPAccesskey(aliasedURL)
+	} else {
+		var err *probe.Error
+		// If login flag is not set, continue normally
+		client, err = newAdminClient(aliasedURL)
+		fatalIf(err, "Unable to initialize admin connection.")
 	}
 
 	accessKey, secretKey, e := generateCredentials()
@@ -189,4 +217,48 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	printMsg(m)
 
 	return nil
+}
+
+func loginLDAPAccesskey(URL string) *madmin.AdminClient {
+	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+	// reader := bufio.NewReader(os.Stdin)
+
+	// fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Username: "))
+	// value, _, _ := reader.ReadLine()
+	// accessVal := string(value)
+
+	// fmt.Printf("%s", console.Colorize(cred, "Enter Password: "))
+	// bytePassword, _ := term.ReadPassword(int(os.Stdin.Fd()))
+	// fmt.Printf("\n")
+	// secretVal := string(bytePassword)
+
+	accessVal := "james"
+	secretVal := "theduke123"
+
+	ldapID, e := credentials.NewLDAPIdentity(URL, accessVal, secretVal)
+	fatalIf(probe.NewError(e), "Unable to initialize LDAP identity.")
+
+	creds, e := ldapID.Get()
+	fatalIf(probe.NewError(e), "Unable to get LDAP credentials.")
+
+	//var cert *x509.Certificate
+	//cert, err := promptTrustSelfSignedCert(globalContext, URL, "")
+	//fatalIf(err.Trace(URL), "Certificate error.")
+
+	//s3Config, err := BuildS3Config(globalContext, URL, creds.AccessKeyID, creds.SecretAccessKey, "", "", cert)
+	//fatalIf(err.Trace(URL), "Unable to parse the provided URL.")
+
+	// Create a new MinIO Admin Client
+	client, err := newExpandedClient(aliasConfigV10{
+		URL:          URL,
+		AccessKey:    creds.AccessKeyID,
+		SecretKey:    creds.SecretAccessKey,
+		SessionToken: creds.SessionToken,
+		API:          "S3v4",
+		Path:         "",
+	})
+
+	fatalIf(err, "Unable to initialize admin connection.")
+	return client
+
 }
