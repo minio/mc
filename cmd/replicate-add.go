@@ -284,6 +284,20 @@ func mainReplicateAdd(cliCtx *cli.Context) error {
 	fatalIf(cerr, "unable to initialize admin connection.")
 
 	bktTarget := fetchRemoteTarget(cliCtx)
+
+	// Check if target url is MinIO
+	healthClt, e := madmin.NewAnonymousClient(bktTarget.Endpoint, bktTarget.Secure)
+	fatalIf(probe.NewError(e).Trace(bktTarget.Endpoint), "unable to parse remote target")
+	res := <-healthClt.Alive(globalContext, madmin.AliveOpts{Readiness: true})
+	if !res.Online {
+		if res.Error != nil {
+			fatalIf(probe.NewError(res.Error), "unable to parse remote target")
+		} else {
+			fatalIf(probe.NewError(fmt.Errorf("target is not MinIO server")).Trace(bktTarget.Endpoint),
+				"unable to parse remote target")
+		}
+	}
+
 	arn, e := admclient.SetRemoteTarget(globalContext, sourceBucket, bktTarget)
 	fatalIf(probe.NewError(e).Trace(args...), "unable to configure remote target")
 
