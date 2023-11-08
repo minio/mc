@@ -33,6 +33,7 @@ func (b accessPerms) isValidAccessPERM() bool {
 	return false
 }
 
+// PolicyDocument represents the JSON structure of IAM policy with its conditions and permissions.
 type PolicyDocument struct {
 	Version   string `json:"Version"`
 	Statement []struct {
@@ -44,7 +45,6 @@ type PolicyDocument struct {
 }
 
 func (b accessPerms) isValidAccessFile() bool {
-
 	if filepath.Ext(string(b)) != ".json" {
 		fatalIf(errDummy().Trace(), "Invalid access file extension. Only .json files are supported.")
 		return false
