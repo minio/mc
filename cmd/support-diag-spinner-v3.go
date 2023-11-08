@@ -59,6 +59,7 @@ func receiveHealthInfo(decoder *json.Decoder) (info madmin.HealthInfo, e error) 
 
 	createSpinner("CPU Info", func(info madmin.HealthInfo) bool { return len(info.Sys.CPUInfo) > 0 })
 	createSpinner("Disk Info", func(info madmin.HealthInfo) bool { return len(info.Sys.Partitions) > 0 })
+	createSpinner("Net Info", func(info madmin.HealthInfo) bool { return len(info.Sys.NetInfo) > 0 })
 	createSpinner("OS Info", func(info madmin.HealthInfo) bool { return len(info.Sys.OSInfo) > 0 })
 	createSpinner("Mem Info", func(info madmin.HealthInfo) bool { return len(info.Sys.MemInfo) > 0 })
 	createSpinner("Process Info", func(info madmin.HealthInfo) bool { return len(info.Sys.ProcInfo) > 0 })
