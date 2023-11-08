@@ -17,7 +17,12 @@
 
 package cmd
 
-import "path/filepath"
+import (
+	"os"
+	"path/filepath"
+
+	json "github.com/minio/colorjson"
+)
 
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
@@ -28,12 +33,50 @@ func (b accessPerms) isValidAccessPERM() bool {
 	return false
 }
 
+type PolicyDocument struct {
+	Version   string `json:"Version"`
+	Statement []struct {
+		Effect    string    `json:"Effect"`
+		Action    []string  `json:"Action"`
+		Resource  []string  `json:"Resource"`
+		Condition Condition `json:"Condition"`
+	} `json:"Statement"`
+}
+
+type Condition map[string]map[string]interface{}
+
 func (b accessPerms) isValidAccessFile() bool {
-	res := filepath.Ext(string(b)) == ".json"
-	if !res {
+
+	if filepath.Ext(string(b)) != ".json" {
 		fatalIf(errDummy().Trace(), "Invalid access file extension. Only .json files are supported.")
 		return false
 	}
+
+	file, err := os.Open(string(b))
+	if err != nil {
+		fatalIf(errDummy().Trace(), "Unable to open access file.")
+		return false
+	}
+	defer file.Close()
+
+	var policy PolicyDocument
+	if json.NewDecoder(file).Decode(&policy) != nil {
+		fatalIf(errDummy().Trace(), "Unable to parse access file.")
+		return false
+	}
+
+	if policy.Version != "2012-10-17" {
+		fatalIf(errDummy().Trace(), "Invalid policy version. Only 2012-10-17 is supported.")
+		return false
+	}
+
+	for _, statement := range policy.Statement {
+		if statement.Effect != "Allow" && statement.Effect != "Deny" {
+			fatalIf(errDummy().Trace(), "Invalid policy effect. Only Allow and Deny are supported.")
+			return false
+		}
+	}
+
 	return true
 }
 
