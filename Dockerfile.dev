@@ -7,8 +7,8 @@ COPY CREDITS /licenses/CREDITS
 COPY LICENSE /licenses/LICENSE
 
 RUN  \
-     microdnf update --nodocs && \
-     microdnf install ca-certificates --nodocs && \
+     microdnf update -y --nodocs && \
+     microdnf install -y ca-certificates --nodocs && \
      microdnf clean all
 
 ENTRYPOINT ["mc"]
