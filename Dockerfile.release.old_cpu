@@ -1,8 +1,8 @@
-FROM --platform=linux/amd64 registry.access.redhat.com/ubi9/ubi-minimal:latest as build
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi8/ubi-minimal:latest as build
 
 RUN microdnf update --nodocs --assumeyes  && microdnf install ca-certificates --nodocs --assumeyes 
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:latest
+FROM registry.access.redhat.com/ubi8/ubi-micro:latest
 
 ARG TARGETARCH
 ARG RELEASE
