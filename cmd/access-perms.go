@@ -36,14 +36,12 @@ func (b accessPerms) isValidAccessPERM() bool {
 type PolicyDocument struct {
 	Version   string `json:"Version"`
 	Statement []struct {
-		Effect    string    `json:"Effect"`
-		Action    []string  `json:"Action"`
-		Resource  []string  `json:"Resource"`
-		Condition Condition `json:"Condition"`
+		Effect    string                            `json:"Effect"`
+		Action    []string                          `json:"Action"`
+		Resource  []string                          `json:"Resource"`
+		Condition map[string]map[string]interface{} `json:"Condition"`
 	} `json:"Statement"`
 }
-
-type Condition map[string]map[string]interface{}
 
 func (b accessPerms) isValidAccessFile() bool {
 
