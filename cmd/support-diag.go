@@ -41,6 +41,12 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+const (
+	anonymizeFlag     = "anonymize"
+	anonymizeStandard = "standard"
+	anonymizeStrict   = "strict"
+)
+
 var supportDiagFlags = append([]cli.Flag{
 	HealthDataTypeFlag{
 		Name:   "test",
@@ -53,6 +59,11 @@ var supportDiagFlags = append([]cli.Flag{
 		Usage:  "maximum duration diagnostics should be allowed to run",
 		Value:  1 * time.Hour,
 		Hidden: true,
+	},
+	cli.StringFlag{
+		Name:  anonymizeFlag,
+		Usage: "Data anonymization mode (standard|strict)",
+		Value: anonymizeStandard,
 	},
 }, subnetCommonFlags...)
 
@@ -79,6 +90,9 @@ EXAMPLES:
 
   2. Generate MinIO diagnostics report for cluster with alias 'myminio', save and upload to SUBNET manually
      {{.Prompt}} {{.HelpName}} myminio --airgap
+
+  3. Upload MinIO diagnostics report for cluster with alias 'myminio' to SUBNET, with strict anonymization
+     {{.Prompt}} {{.HelpName}} myminio --anonymize=strict
 `,
 }
 
@@ -86,6 +100,11 @@ EXAMPLES:
 func checkSupportDiagSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+
+	anon := ctx.String(anonymizeFlag)
+	if anon != anonymizeStandard && anon != anonymizeStrict {
+		fatal(errDummy().Trace(), "Invalid anonymization mode. Valid options are 'standard' or 'strict'.")
 	}
 }
 
@@ -326,8 +345,7 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	}
 
 	// Fetch info of all servers (cluster or single server)
-	// TODO: allow configurable "anonymize" inputs
-	resp, version, e := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"), "standard")
+	resp, version, e := client.ServerHealthInfo(cont, *opts, ctx.Duration("deadline"), ctx.String(anonymizeFlag))
 	if e != nil {
 		cancel()
 		return nil, "", e
