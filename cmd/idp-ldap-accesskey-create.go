@@ -172,9 +172,8 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 		}
 		isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
 		if !isTerminal {
-
-			//e := fmt.Errorf("login flag cannot be used with non-interactive terminal")
-			//fatalIf(probe.NewError(e), "Invalid flags.")
+			e := fmt.Errorf("login flag cannot be used with non-interactive terminal")
+			fatalIf(probe.NewError(e), "Invalid flags.")
 		}
 
 		// For login, aliasedURL is not aliased, but the actual server URL
