@@ -40,15 +40,10 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle configuration not set"))
 	}
 	n := 0
-	var expiryRuleRemoved bool
 	for _, rule := range lfcCfg.Rules {
 		if rule.ID != ilmID {
 			lfcCfg.Rules[n] = rule
 			n++
-		} else {
-			if !rule.Expiration.IsNull() {
-				expiryRuleRemoved = true
-			}
 		}
 	}
 	if n == len(lfcCfg.Rules) && len(lfcCfg.Rules) > 0 {
@@ -57,7 +52,6 @@ func RemoveILMRule(lfcCfg *lifecycle.Configuration, ilmID string) (*lifecycle.Co
 		return lfcCfg, probe.NewError(fmt.Errorf("lifecycle rule for id '%s' not found", ilmID))
 	}
 	lfcCfg.Rules = lfcCfg.Rules[:n]
-	lfcCfg.ExpiryRuleRemoved = &expiryRuleRemoved
 	return lfcCfg, nil
 }
 

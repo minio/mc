@@ -140,10 +140,10 @@ github.com/minio/colorjson v1.0.6 h1:m7TUvpvt0u7FBmVIEQNIa0T4NBQlxrcMBp4wJKsg2Ik
 github.com/minio/colorjson v1.0.6/go.mod h1:LUXwS5ZGNb6Eh9f+t+3uJiowD3XsIWtsvTriUBeqgYs=
 github.com/minio/filepath v1.0.0 h1:fvkJu1+6X+ECRA6G3+JJETj4QeAYO9sV43I79H8ubDY=
 github.com/minio/filepath v1.0.0/go.mod h1:/nRZA2ldl5z6jT9/KQuvZcQlxZIMQoFFQPvEXx9T/Bw=
-github.com/minio/madmin-go/v3 v3.0.29 h1:3bNLArtxIFud5wyb5/DnF5DGLBvcSJyzCA44EclX1Ow=
-github.com/minio/madmin-go/v3 v3.0.29/go.mod h1:4QN2NftLSV7MdlT50dkrenOMmNVHluxTvlqJou3hte8=
 github.com/minio/md5-simd v1.1.2 h1:Gdi1DZK69+ZVMoNHRXJyNcxrMA4dSxoYHZSQbirFg34=
 github.com/minio/md5-simd v1.1.2/go.mod h1:MzdKDxYpY2BT9XQFocsiZf/NKVtR7nkE4RoEpN+20RM=
+github.com/minio/minio-go/v7 v7.0.63 h1:GbZ2oCvaUdgT5640WJOpyDhhDxvknAJU2/T3yurwcbQ=
+github.com/minio/minio-go/v7 v7.0.63/go.mod h1:Q6X7Qjb7WMhvG65qKf4gUgA5XaiSox74kR1uAEjxRS4=
 github.com/minio/mux v1.9.0 h1:dWafQFyEfGhJvK6AwLOt83bIG5bxKxKJnKMCi0XAaoA=
 github.com/minio/mux v1.9.0/go.mod h1:1pAare17ZRL5GpmNL+9YmqHoWnLmMZF9C/ioUCfy0BQ=
 github.com/minio/pkg/v2 v2.0.2 h1:cytXmC21fBNS+0NVKEE5FuYmQfY+HFTqis6Kkj3U9ac=
@@ -220,8 +220,8 @@ github.com/shoenig/go-m1cpu v0.1.6 h1:nxdKQNcEB6vzgA2E2bvzKIYRuNj7XNJ4S/aRSwKzFt
 github.com/shoenig/go-m1cpu v0.1.6/go.mod h1:1JJMcUBvfNwpq05QDQVAnx3gUHr9IYF7GNg9SUEw2VQ=
 github.com/shoenig/test v0.6.4 h1:kVTaSd7WLz5WZ2IaoM0RSzRsUD+m8wRR+5qvntpn4LU=
 github.com/shoenig/test v0.6.4/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnjqq0k=
-github.com/shtripat/minio-go/v7 v7.0.0-20231030110736-a9dfa761680d h1:3jzj/WaarUWBCNMh8dm13QDfvwcan61563FER6imVEo=
-github.com/shtripat/minio-go/v7 v7.0.0-20231030110736-a9dfa761680d/go.mod h1:R4WVUR6ZTedlCcGwZRauLMIKjgyaWxhs4Mqi/OMPmEc=
+github.com/shtripat/madmin-go/v3 v3.0.0-20231106154306-e5c6ea8bfc24 h1:JyR2XNG8CRFsrL8HnxLdqBbtZZZhmwh/xBemQt4lBeY=
+github.com/shtripat/madmin-go/v3 v3.0.0-20231106154306-e5c6ea8bfc24/go.mod h1:4QN2NftLSV7MdlT50dkrenOMmNVHluxTvlqJou3hte8=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
