@@ -24,13 +24,17 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/minio/pkg/v2/env"
 
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/mattn/go-ieproxy"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/httptracer"
+	"github.com/minio/mc/pkg/limiter"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -67,8 +71,74 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var api *madmin.AdminClient
 		var found bool
 		if api, found = clientCache[confSum]; !found {
+			var credsChain []credentials.Provider
+
+			var transport http.RoundTripper
+
+			if config.Transport != nil {
+				transport = config.Transport
+			} else {
+				tr := &http.Transport{
+					Proxy:                 http.ProxyFromEnvironment,
+					DialContext:           newCustomDialContext(config),
+					MaxIdleConnsPerHost:   1024,
+					WriteBufferSize:       32 << 10, // 32KiB moving up from 4KiB default
+					ReadBufferSize:        32 << 10, // 32KiB moving up from 4KiB default
+					IdleConnTimeout:       90 * time.Second,
+					TLSHandshakeTimeout:   10 * time.Second,
+					ExpectContinueTimeout: 10 * time.Second,
+					DisableCompression:    true,
+				}
+				if useTLS {
+					// Keep TLS config.
+					tlsConfig := &tls.Config{
+						RootCAs: globalRootCAs,
+						// Can't use SSLv3 because of POODLE and BEAST
+						// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+						// Can't use TLSv1.1 because of RC4 cipher usage
+						MinVersion: tls.VersionTLS12,
+					}
+					if config.Insecure {
+						tlsConfig.InsecureSkipVerify = true
+					}
+					tr.TLSClientConfig = tlsConfig
+				}
+				transport = tr
+			}
+
+			transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
+			// if an STS endpoint is set, we will add that to the chain
+			if stsEndpoint := env.Get("MC_STS_ENDPOINT", ""); stsEndpoint != "" {
+				// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
+				if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", ""); val != "" {
+					os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
+				}
+
+				stsEndpointURL, err := url.Parse(stsEndpoint)
+				if err != nil {
+					return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+				}
+				credsSts := &credentials.IAM{
+					Client: &http.Client{
+						Transport: transport,
+					},
+					Endpoint: stsEndpointURL.String(),
+				}
+				credsChain = append(credsChain, credsSts)
+			}
+
+			// V4 Credentials
+			credsV4 := &credentials.Static{
+				Value: credentials.Value{
+					AccessKeyID:     config.AccessKey,
+					SecretAccessKey: config.SecretKey,
+					SessionToken:    config.SessionToken,
+					SignerType:      credentials.SignatureV4,
+				},
+			}
+			credsChain = append(credsChain, credsV4)
 			// Admin API only supports signature v4.
-			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
+			creds := credentials.NewChainCredentials(credsChain)
 
 			// Not found. Instantiate a new MinIO
 			var e error
@@ -92,7 +162,7 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 				tlsConfig.InsecureSkipVerify = true
 			}
 
-			var transport http.RoundTripper = &http.Transport{
+			transport = &http.Transport{
 				Proxy:                 ieproxy.GetProxyFunc(),
 				DialContext:           newCustomDialContext(config),
 				MaxIdleConnsPerHost:   256,
