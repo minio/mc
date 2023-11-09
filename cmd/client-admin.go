@@ -24,8 +24,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/minio/pkg/v2/env"
 
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/mattn/go-ieproxy"
@@ -67,19 +70,6 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var api *madmin.AdminClient
 		var found bool
 		if api, found = clientCache[confSum]; !found {
-			// Admin API only supports signature v4.
-			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
-
-			// Not found. Instantiate a new MinIO
-			var e error
-			api, e = madmin.NewWithOptions(hostName, &madmin.Options{
-				Creds:  creds,
-				Secure: useTLS,
-			})
-			if e != nil {
-				return nil, probe.NewError(e)
-			}
-
 			// Keep TLS config.
 			tlsConfig := &tls.Config{
 				RootCAs: globalRootCAs,
@@ -91,7 +81,6 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			if config.Insecure {
 				tlsConfig.InsecureSkipVerify = true
 			}
-
 			var transport http.RoundTripper = &http.Transport{
 				Proxy:                 ieproxy.GetProxyFunc(),
 				DialContext:           newCustomDialContext(config),
@@ -106,6 +95,51 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 
 			if config.Debug {
 				transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
+			}
+
+			var credsChain []credentials.Provider
+
+			// if an STS endpoint is set, we will add that to the chain
+			if stsEndpoint := env.Get("MC_STS_ENDPOINT", ""); stsEndpoint != "" {
+				// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
+				if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", ""); val != "" {
+					os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
+				}
+
+				stsEndpointURL, err := url.Parse(stsEndpoint)
+				if err != nil {
+					return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+				}
+				credsSts := &credentials.IAM{
+					Client: &http.Client{
+						Transport: transport,
+					},
+					Endpoint: stsEndpointURL.String(),
+				}
+				credsChain = append(credsChain, credsSts)
+			}
+
+			// Admin API only supports signature v4.
+			credsV4 := &credentials.Static{
+				Value: credentials.Value{
+					AccessKeyID:     config.AccessKey,
+					SecretAccessKey: config.SecretKey,
+					SessionToken:    config.SessionToken,
+					SignerType:      credentials.SignatureV4,
+				},
+			}
+			credsChain = append(credsChain, credsV4)
+
+			creds := credentials.NewChainCredentials(credsChain)
+
+			// Not found. Instantiate a new MinIO
+			var e error
+			api, e = madmin.NewWithOptions(hostName, &madmin.Options{
+				Creds:  creds,
+				Secure: useTLS,
+			})
+			if e != nil {
+				return nil, probe.NewError(e)
 			}
 
 			// Set custom transport.
