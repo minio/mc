@@ -18,8 +18,10 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 
@@ -221,44 +223,29 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 
 func loginLDAPAccesskey(URL string) *madmin.AdminClient {
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
-	// reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(os.Stdin)
 
-	// fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Username: "))
-	// value, _, _ := reader.ReadLine()
-	// accessVal := string(value)
+	fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Username: "))
+	value, _, _ := reader.ReadLine()
+	username := string(value)
 
-	// fmt.Printf("%s", console.Colorize(cred, "Enter Password: "))
-	// bytePassword, _ := term.ReadPassword(int(os.Stdin.Fd()))
-	// fmt.Printf("\n")
-	// secretVal := string(bytePassword)
+	fmt.Printf("%s", console.Colorize(cred, "Enter Password: "))
+	bytePassword, _ := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Printf("\n")
+	password := string(bytePassword)
 
-	accessVal := "james"
-	secretVal := "theduke123"
-
-	ldapID, e := credentials.NewLDAPIdentity(URL, accessVal, secretVal)
+	ldapID, e := credentials.NewLDAPIdentity(URL, username, password)
 	fatalIf(probe.NewError(e), "Unable to initialize LDAP identity.")
 
-	creds, e := ldapID.Get()
-	fatalIf(probe.NewError(e), "Unable to get LDAP credentials.")
+	u, e := url.Parse(URL)
+	fatalIf(probe.NewError(e), "Unable to parse server URL.")
 
-	//var cert *x509.Certificate
-	//cert, err := promptTrustSelfSignedCert(globalContext, URL, "")
-	//fatalIf(err.Trace(URL), "Certificate error.")
-
-	//s3Config, err := BuildS3Config(globalContext, URL, creds.AccessKeyID, creds.SecretAccessKey, "", "", cert)
-	//fatalIf(err.Trace(URL), "Unable to parse the provided URL.")
-
-	// Create a new MinIO Admin Client
-	client, err := newExpandedClient(aliasConfigV10{
-		URL:          URL,
-		AccessKey:    creds.AccessKeyID,
-		SecretKey:    creds.SecretAccessKey,
-		SessionToken: creds.SessionToken,
-		API:          "S3v4",
-		Path:         "",
+	client, e := madmin.NewWithOptions(u.Host, &madmin.Options{
+		Creds:  ldapID,
+		Secure: u.Scheme == "https",
 	})
+	fatalIf(probe.NewError(e), "Unable to initialize admin connection.")
 
-	fatalIf(err, "Unable to initialize admin connection.")
 	return client
 
 }
