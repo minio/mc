@@ -19,9 +19,9 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	json "github.com/minio/colorjson"
+	"github.com/minio/minio-go/v7/pkg/policy"
 )
 
 // isValidAccessPERM - is provided access perm string supported.
@@ -33,22 +33,7 @@ func (b accessPerms) isValidAccessPERM() bool {
 	return false
 }
 
-// PolicyDocument represents the JSON structure of IAM policy with its conditions and permissions.
-type PolicyDocument struct {
-	Version   string `json:"Version"`
-	Statement []struct {
-		Effect    string                            `json:"Effect"`
-		Action    []string                          `json:"Action"`
-		Resource  []string                          `json:"Resource"`
-		Condition map[string]map[string]interface{} `json:"Condition"`
-	} `json:"Statement"`
-}
-
 func (b accessPerms) isValidAccessFile() bool {
-	if filepath.Ext(string(b)) != ".json" {
-		fatalIf(errDummy().Trace(), "Invalid access file extension. Only .json files are supported.")
-		return false
-	}
 
 	file, err := os.Open(string(b))
 	if err != nil {
@@ -57,7 +42,7 @@ func (b accessPerms) isValidAccessFile() bool {
 	}
 	defer file.Close()
 
-	var policy PolicyDocument
+	var policy policy.BucketAccessPolicy
 	if json.NewDecoder(file).Decode(&policy) != nil {
 		fatalIf(errDummy().Trace(), "Unable to parse access file.")
 		return false
@@ -68,7 +53,7 @@ func (b accessPerms) isValidAccessFile() bool {
 		return false
 	}
 
-	for _, statement := range policy.Statement {
+	for _, statement := range policy.Statements {
 		if statement.Effect != "Allow" && statement.Effect != "Deny" {
 			fatalIf(errDummy().Trace(), "Invalid policy effect. Only Allow and Deny are supported.")
 			return false
