@@ -156,8 +156,9 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.IntFlag{
-		Name:  "noncurrent-transition-newer",
-		Usage: "number of noncurrent versions to retain in hot tier",
+		Name:   "noncurrent-transition-newer",
+		Usage:  "number of noncurrent versions to retain in hot tier",
+		Hidden: true,
 	},
 	cli.StringFlag{
 		Name:   "noncurrentversion-transition-storage-class",
