@@ -20,13 +20,14 @@ package cmd
 import (
 	"bytes"
 	"context"
-	checkv1 "gopkg.in/check.v1"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strconv"
+
+	checkv1 "gopkg.in/check.v1"
 )
 
 type adminPolicyHandler struct {
