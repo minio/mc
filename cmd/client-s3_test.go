@@ -82,11 +82,6 @@ type objectHandler struct {
 }
 
 func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := ParseForm(r); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	if ak := r.Header.Get("Authorization"); len(ak) == 0 {
 		w.WriteHeader(http.StatusForbidden)
 		return
