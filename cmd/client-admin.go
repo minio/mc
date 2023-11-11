@@ -20,6 +20,7 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/klauspost/compress/gzhttp"
 	"hash/fnv"
 	"net"
 	"net/http"
@@ -30,7 +31,6 @@ import (
 
 	"github.com/minio/pkg/v2/env"
 
-	"github.com/klauspost/compress/gzhttp"
 	"github.com/mattn/go-ieproxy"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/httptracer"
@@ -71,7 +71,6 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var api *madmin.AdminClient
 		var found bool
 		if api, found = clientCache[confSum]; !found {
-			var credsChain []credentials.Provider
 
 			var transport http.RoundTripper
 
@@ -88,6 +87,12 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 					TLSHandshakeTimeout:   10 * time.Second,
 					ExpectContinueTimeout: 10 * time.Second,
 					DisableCompression:    true,
+					// Set this value so that the underlying transport round-tripper
+					// doesn't try to auto decode the body of objects with
+					// content-encoding set to `gzip`.
+					//
+					// Refer:
+					//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
 				}
 				if useTLS {
 					// Keep TLS config.
@@ -102,11 +107,29 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 						tlsConfig.InsecureSkipVerify = true
 					}
 					tr.TLSClientConfig = tlsConfig
+
+					// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
+					// See https://github.com/golang/go/issues/14275
+					//
+					// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
+					//
+					// if e = http2.ConfigureTransport(tr); e != nil {
+					// 	return nil, probe.NewError(e)
+					// }
 				}
 				transport = tr
 			}
 
 			transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
+
+			if config.Debug {
+				transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
+			}
+
+			transport = gzhttp.Transport(transport)
+
+			var credsChain []credentials.Provider
+
 			// if an STS endpoint is set, we will add that to the chain
 			if stsEndpoint := env.Get("MC_STS_ENDPOINT", ""); stsEndpoint != "" {
 				// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
@@ -148,34 +171,6 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			})
 			if e != nil {
 				return nil, probe.NewError(e)
-			}
-
-			// Keep TLS config.
-			tlsConfig := &tls.Config{
-				RootCAs: globalRootCAs,
-				// Can't use SSLv3 because of POODLE and BEAST
-				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
-				// Can't use TLSv1.1 because of RC4 cipher usage
-				MinVersion: tls.VersionTLS12,
-			}
-			if config.Insecure {
-				tlsConfig.InsecureSkipVerify = true
-			}
-
-			transport = &http.Transport{
-				Proxy:                 ieproxy.GetProxyFunc(),
-				DialContext:           newCustomDialContext(config),
-				MaxIdleConnsPerHost:   256,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 10 * time.Second,
-				TLSClientConfig:       tlsConfig,
-				DisableCompression:    true,
-			}
-			transport = gzhttp.Transport(transport)
-
-			if config.Debug {
-				transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
 			}
 
 			// Set custom transport.

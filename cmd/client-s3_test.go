@@ -169,7 +169,7 @@ type stsHandler struct {
 }
 
 func (h stsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := ParseForm(r); err != nil {
+	if err := parseForm(r); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -348,16 +348,4 @@ func (s *TestSuite) TestSelectCompressionType(c *checkv1.C) {
 		cType := selectCompressionType(test.opts, test.object)
 		c.Assert(cType, checkv1.DeepEquals, test.compressionType)
 	}
-}
-
-func ParseForm(r *http.Request) error {
-	if err := r.ParseForm(); err != nil {
-		return err
-	}
-	for k, v := range r.PostForm {
-		if _, ok := r.Form[k]; !ok {
-			r.Form[k] = v
-		}
-	}
-	return nil
 }
