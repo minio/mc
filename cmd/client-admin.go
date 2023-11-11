@@ -20,7 +20,6 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/klauspost/compress/gzhttp"
 	"hash/fnv"
 	"net"
 	"net/http"
@@ -28,6 +27,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/klauspost/compress/gzhttp"
 
 	"github.com/minio/pkg/v2/env"
 
