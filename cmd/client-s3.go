@@ -132,13 +132,19 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			useTLS = false
 		}
 
+		// Save if target supports virtual host style.
+		hostName := targetURL.Host
+
+		// Generate a hash out of s3Conf.
+		confHash := fnv.New32a()
+		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
+		confSum := confHash.Sum32()
+
 		// Instantiate s3
 		s3Clnt := &S3Client{}
 		// Save the target URL.
 		s3Clnt.targetURL = targetURL
 
-		// Save if target supports virtual host style.
-		hostName := targetURL.Host
 		s3Clnt.virtualStyle = isVirtualHostStyle(hostName, config.Lookup)
 		isS3AcceleratedEndpoint := isAmazonAccelerated(hostName)
 
@@ -148,11 +154,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				hostName = googleHostName
 			}
 		}
-
-		// Generate a hash out of s3Conf.
-		confHash := fnv.New32a()
-		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
-		confSum := confHash.Sum32()
 
 		// Lookup previous cache by hash.
 		mutex.Lock()

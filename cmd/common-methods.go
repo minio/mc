@@ -654,3 +654,16 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 	}
 	return newClientFromAlias(alias, urlStrFull)
 }
+
+// ParseForm parses a http.Request form and populates the array
+func ParseForm(r *http.Request) error {
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+	for k, v := range r.PostForm {
+		if _, ok := r.Form[k]; !ok {
+			r.Form[k] = v
+		}
+	}
+	return nil
+}
