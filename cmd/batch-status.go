@@ -221,7 +221,7 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("Versions: ", m.current.Replicate.Objects)
 		addLine("FailedObjects: ", m.current.Replicate.ObjectsFailed)
 		if accElapsedTime > 0 {
-			bytesTransferredPerSec := float64(int64(time.Second)*m.current.Replicate.BytesTransferred) / float64(accElapsedTime)
+			bytesTransferredPerSec := float64(time.Second) / float64(accElapsedTime) * float64(m.current.Replicate.BytesTransferred)
 			objectsPerSec := float64(int64(time.Second)*m.current.Replicate.Objects) / float64(accElapsedTime)
 			addLine("Throughput: ", fmt.Sprintf("%s/s", humanize.IBytes(uint64(bytesTransferredPerSec))))
 			addLine("IOPs: ", fmt.Sprintf("%.2f objs/s", objectsPerSec))
