@@ -77,12 +77,8 @@ func parseKey(sseKeys string) (sse string, err *probe.Error) {
 
 // parse and return encryption key pairs per alias.
 func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
-	sseServer := os.Getenv("MC_ENCRYPT")
-	if prefix := ctx.String("encrypt"); prefix != "" {
-		sseServer = prefix
-	}
-
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	sseServer := ctx.String("encrypt")
+	var sseKeys string
 	if keyPrefix := ctx.String("encrypt-key"); keyPrefix != "" {
 		if sseServer != "" && strings.Contains(keyPrefix, sseServer) {
 			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
@@ -108,12 +104,12 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 // Check if the passed URL represents a folder. It may or may not exist yet.
 // If it exists, we can easily check if it is a folder, if it doesn't exist,
 // we can guess if the url is a folder from how it looks.
-func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefixSSEPair, timeRef time.Time) bool {
+func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefixSSEPair, timeRef time.Time) (bool, *ClientContent) {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
 	_, targetContent, err := url2Stat(ctx, aliasURL, "", false, keys, timeRef, false)
 	if err == nil {
-		return targetContent.Type.IsDir()
+		return targetContent.Type.IsDir(), targetContent
 	}
 
 	_, expandedURL, _ := mustExpandAlias(aliasURL)
@@ -121,7 +117,7 @@ func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefi
 	// Check if targetURL is an FS or S3 aliased url
 	if expandedURL == aliasURL {
 		// This is an FS url, check if the url has a separator at the end
-		return strings.HasSuffix(aliasURL, string(filepath.Separator))
+		return strings.HasSuffix(aliasURL, string(filepath.Separator)), targetContent
 	}
 
 	// This is an S3 url, then:
@@ -134,14 +130,14 @@ func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefi
 	switch len(fields) {
 	// Nothing or alias format
 	case 0, 1:
-		return false
+		return false, targetContent
 	// alias/bucket format
 	case 2:
-		return true
+		return true, targetContent
 	} // default case..
 
 	// alias/bucket/prefix format
-	return strings.HasSuffix(pathURL, "/")
+	return strings.HasSuffix(pathURL, "/"), targetContent
 }
 
 // getSourceStreamMetadataFromURL gets a reader from URL.
@@ -657,4 +653,17 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
 	return newClientFromAlias(alias, urlStrFull)
+}
+
+// ParseForm parses a http.Request form and populates the array
+func ParseForm(r *http.Request) error {
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+	for k, v := range r.PostForm {
+		if _, ok := r.Form[k]; !ok {
+			r.Form[k] = v
+		}
+	}
+	return nil
 }

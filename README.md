@@ -88,7 +88,9 @@ mc --help
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
 |GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
-||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
+|GNU/Linux|64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
+|GNU/Linux|64-bit ARM|https://dl.min.io/client/mc/release/linux-arm64/mc |
+|Linux/s390x|S390X|https://dl.min.io/client/mc/release/linux-s390x/mc |
 
 ```
 wget https://dl.min.io/client/mc/release/linux-amd64/mc

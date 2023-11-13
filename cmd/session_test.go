@@ -22,14 +22,13 @@ import (
 	"os"
 	"regexp"
 
-	. "gopkg.in/check.v1"
+	checkv1 "gopkg.in/check.v1"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // newRandomID generates a random id of regular lower case and uppercase english characters.
 func newRandomID(n int) string {
-	rand.Seed(UTCNow().UnixNano())
 	sid := make([]rune, n)
 	for i := range sid {
 		sid[i] = letters[rand.Intn(len(letters))]
@@ -37,38 +36,38 @@ func newRandomID(n int) string {
 	return string(sid)
 }
 
-func (s *TestSuite) TestValidSessionID(c *C) {
+func (s *TestSuite) TestValidSessionID(c *checkv1.C) {
 	validSid := regexp.MustCompile("^[a-zA-Z]+$")
 	sid := newRandomID(8)
-	c.Assert(len(sid), Equals, 8)
-	c.Assert(validSid.MatchString(sid), Equals, true)
+	c.Assert(len(sid), checkv1.Equals, 8)
+	c.Assert(validSid.MatchString(sid), checkv1.Equals, true)
 }
 
-func (s *TestSuite) TestSession(c *C) {
+func (s *TestSuite) TestSession(c *checkv1.C) {
 	err := createSessionDir()
-	c.Assert(err, IsNil)
-	c.Assert(isSessionDirExists(), Equals, true)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(isSessionDirExists(), checkv1.Equals, true)
 
 	session := newSessionV8(getHash("cp", []string{"mybucket", "myminio/mybucket"}))
-	c.Assert(session.Header.CommandArgs, IsNil)
-	c.Assert(len(session.SessionID) >= 8, Equals, true)
+	c.Assert(session.Header.CommandArgs, checkv1.IsNil)
+	c.Assert(len(session.SessionID) >= 8, checkv1.Equals, true)
 	_, e := os.Stat(session.DataFP.Name())
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 
 	err = session.Close()
-	c.Assert(err, IsNil)
-	c.Assert(isSessionExists(session.SessionID), Equals, true)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(isSessionExists(session.SessionID), checkv1.Equals, true)
 
 	savedSession, err := loadSessionV8(session.SessionID)
-	c.Assert(err, IsNil)
-	c.Assert(session.SessionID, Equals, savedSession.SessionID)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(session.SessionID, checkv1.Equals, savedSession.SessionID)
 
 	err = savedSession.Close()
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	err = savedSession.Delete()
-	c.Assert(err, IsNil)
-	c.Assert(isSessionExists(session.SessionID), Equals, false)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(isSessionExists(session.SessionID), checkv1.Equals, false)
 	_, e = os.Stat(session.DataFP.Name())
-	c.Assert(e, NotNil)
+	c.Assert(e, checkv1.NotNil)
 }

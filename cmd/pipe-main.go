@@ -36,10 +36,6 @@ func defaultPartSize() string {
 
 var pipeFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "encrypt",
-		Usage: "encrypt objects (using server-side encryption with server managed keys)",
-	},
-	cli.StringFlag{
 		Name:  "storage-class, sc",
 		Usage: "set storage class for new object(s) on target",
 	},

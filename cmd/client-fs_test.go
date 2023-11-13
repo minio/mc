@@ -25,19 +25,19 @@ import (
 	"path/filepath"
 	"runtime"
 
-	. "gopkg.in/check.v1"
+	checkv1 "gopkg.in/check.v1"
 )
 
 // Test list files in a folder.
-func (s *TestSuite) TestList(c *C) {
+func (s *TestSuite) TestList(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	// Create multiple files.
 	objectPath := filepath.Join(root, "object1")
 	fsClient, err := fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	data := "hello"
 
@@ -49,12 +49,12 @@ func (s *TestSuite) TestList(c *C) {
 		},
 	},
 	)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	objectPath = filepath.Join(root, "object2")
 	fsClient, err = fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	reader = bytes.NewReader([]byte(data))
 	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
@@ -62,11 +62,11 @@ func (s *TestSuite) TestList(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	fsClient, err = fsNew(root)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	// Verify previously create files and list them.
 	var contents []*ClientContent
@@ -77,14 +77,14 @@ func (s *TestSuite) TestList(c *C) {
 		}
 		contents = append(contents, content)
 	}
-	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 1)
-	c.Assert(contents[0].Type.IsDir(), Equals, true)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(len(contents), checkv1.Equals, 1)
+	c.Assert(contents[0].Type.IsDir(), checkv1.Equals, true)
 
 	// Create another file.
 	objectPath = filepath.Join(root, "test1/newObject1")
 	fsClient, err = fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	reader = bytes.NewReader([]byte(data))
 	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
@@ -92,11 +92,11 @@ func (s *TestSuite) TestList(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	fsClient, err = fsNew(root)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	contents = nil
 	// List non recursive to list only top level files.
@@ -107,12 +107,12 @@ func (s *TestSuite) TestList(c *C) {
 		}
 		contents = append(contents, content)
 	}
-	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 1)
-	c.Assert(contents[0].Type.IsDir(), Equals, true)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(len(contents), checkv1.Equals, 1)
+	c.Assert(contents[0].Type.IsDir(), checkv1.Equals, true)
 
 	fsClient, err = fsNew(root)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	contents = nil
 	// List recursively all files and verify.
@@ -124,8 +124,8 @@ func (s *TestSuite) TestList(c *C) {
 		contents = append(contents, content)
 	}
 
-	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 3)
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(len(contents), checkv1.Equals, 3)
 
 	var regularFiles int
 	var regularDirs int
@@ -140,13 +140,13 @@ func (s *TestSuite) TestList(c *C) {
 			continue
 		}
 	}
-	c.Assert(regularDirs, Equals, 0)
-	c.Assert(regularFiles, Equals, 3)
+	c.Assert(regularDirs, checkv1.Equals, 0)
+	c.Assert(regularFiles, checkv1.Equals, 3)
 
 	// Create an ignored file and list to verify if its ignored.
 	objectPath = filepath.Join(root, "test1/.DS_Store")
 	fsClient, err = fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	reader = bytes.NewReader([]byte(data))
 	n, err = fsClient.Put(context.Background(), reader, int64(len(data)), nil, PutOptions{
@@ -154,11 +154,11 @@ func (s *TestSuite) TestList(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	fsClient, err = fsNew(root)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	contents = nil
 	// List recursively all files and verify.
@@ -170,12 +170,12 @@ func (s *TestSuite) TestList(c *C) {
 		contents = append(contents, content)
 	}
 
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	switch runtime.GOOS {
 	case "darwin":
-		c.Assert(len(contents), Equals, 3)
+		c.Assert(len(contents), checkv1.Equals, 3)
 	default:
-		c.Assert(len(contents), Equals, 4)
+		c.Assert(len(contents), checkv1.Equals, 4)
 	}
 
 	regularFiles = 0
@@ -188,72 +188,72 @@ func (s *TestSuite) TestList(c *C) {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		c.Assert(regularFiles, Equals, 3)
+		c.Assert(regularFiles, checkv1.Equals, 3)
 	default:
-		c.Assert(regularFiles, Equals, 4)
+		c.Assert(regularFiles, checkv1.Equals, 4)
 	}
 }
 
 // Test put bucket aka 'mkdir()' operation.
-func (s *TestSuite) TestPutBucket(c *C) {
+func (s *TestSuite) TestPutBucket(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
 	fsClient, err := fsNew(bucketPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 }
 
 // Test stat bucket aka 'stat()' operation.
-func (s *TestSuite) TestStatBucket(c *C) {
+func (s *TestSuite) TestStatBucket(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
 
 	fsClient, err := fsNew(bucketPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	_, err = fsClient.Stat(context.Background(), StatOptions{})
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 }
 
 // Test bucket acl fails for directories.
-func (s *TestSuite) TestBucketACLFails(c *C) {
+func (s *TestSuite) TestBucketACLFails(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
 	fsClient, err := fsNew(bucketPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	err = fsClient.MakeBucket(context.Background(), "us-east-1", true, false)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	// On windows setting permissions is not supported.
 	if runtime.GOOS != "windows" {
 		err = fsClient.SetAccess(context.Background(), "readonly", false)
-		c.Assert(err, IsNil)
+		c.Assert(err, checkv1.IsNil)
 
 		_, _, err = fsClient.GetAccess(context.Background())
-		c.Assert(err, IsNil)
+		c.Assert(err, checkv1.IsNil)
 	}
 }
 
 // Test creating a file.
-func (s *TestSuite) TestPut(c *C) {
+func (s *TestSuite) TestPut(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
 	fsClient, err := fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	data := "hello"
 	reader := bytes.NewReader([]byte(data))
@@ -265,19 +265,19 @@ func (s *TestSuite) TestPut(c *C) {
 	},
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 }
 
 // Test read a file.
-func (s *TestSuite) TestGet(c *C) {
+func (s *TestSuite) TestGet(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
 	fsClient, err := fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	data := "hello"
 	var reader io.Reader
@@ -287,26 +287,26 @@ func (s *TestSuite) TestGet(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	reader, err = fsClient.Get(context.Background(), GetOptions{})
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	var results bytes.Buffer
 	_, e = io.Copy(&results, reader)
-	c.Assert(e, IsNil)
-	c.Assert([]byte(data), DeepEquals, results.Bytes())
+	c.Assert(e, checkv1.IsNil)
+	c.Assert([]byte(data), checkv1.DeepEquals, results.Bytes())
 }
 
 // Test get range in a file.
-func (s *TestSuite) TestGetRange(c *C) {
+func (s *TestSuite) TestGetRange(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
 	fsClient, err := fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	data := "hello world"
 	var reader io.Reader
@@ -316,30 +316,30 @@ func (s *TestSuite) TestGetRange(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	reader, err = fsClient.Get(context.Background(), GetOptions{})
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	var results bytes.Buffer
 	buf := make([]byte, 5)
 	m, e := reader.(io.ReaderAt).ReadAt(buf, 0)
-	c.Assert(e, IsNil)
-	c.Assert(m, Equals, 5)
+	c.Assert(e, checkv1.IsNil)
+	c.Assert(m, checkv1.Equals, 5)
 	_, e = results.Write(buf)
-	c.Assert(e, IsNil)
-	c.Assert([]byte("hello"), DeepEquals, results.Bytes())
+	c.Assert(e, checkv1.IsNil)
+	c.Assert([]byte("hello"), checkv1.DeepEquals, results.Bytes())
 }
 
 // Test stat file.
-func (s *TestSuite) TestStatObject(c *C) {
+func (s *TestSuite) TestStatObject(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
 	fsClient, err := fsNew(objectPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	data := "hello"
 	dataLen := len(data)
@@ -350,25 +350,25 @@ func (s *TestSuite) TestStatObject(c *C) {
 		},
 	},
 	)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 
 	content, err := fsClient.Stat(context.Background(), StatOptions{})
-	c.Assert(err, IsNil)
-	c.Assert(content.Size, Equals, int64(dataLen))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(content.Size, checkv1.Equals, int64(dataLen))
 }
 
 // Test copy.
-func (s *TestSuite) TestCopy(c *C) {
+func (s *TestSuite) TestCopy(c *checkv1.C) {
 	root, e := os.MkdirTemp(os.TempDir(), "fs-")
-	c.Assert(e, IsNil)
+	c.Assert(e, checkv1.IsNil)
 	defer os.RemoveAll(root)
 	sourcePath := filepath.Join(root, "source")
 	targetPath := filepath.Join(root, "target")
 	fsClientTarget, err := fsNew(targetPath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 	fsClientSource, err := fsNew(sourcePath)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 
 	data := "hello world"
 	reader := bytes.NewReader([]byte(data))
@@ -377,8 +377,8 @@ func (s *TestSuite) TestCopy(c *C) {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, int64(len(data)))
+	c.Assert(err, checkv1.IsNil)
+	c.Assert(n, checkv1.Equals, int64(len(data)))
 	err = fsClientTarget.Copy(context.Background(), sourcePath, CopyOptions{size: int64(len(data))}, nil)
-	c.Assert(err, IsNil)
+	c.Assert(err, checkv1.IsNil)
 }

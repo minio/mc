@@ -106,7 +106,7 @@ func mainAdminReplicateAdd(ctx *cli.Context) error {
 		})
 	}
 
-	res, e := client.SiteReplicationAdd(globalContext, ps)
+	res, e := client.SiteReplicationAdd(globalContext, ps, madmin.SRAddOptions{})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add sites for replication")
 
 	printMsg(successMessage(res))

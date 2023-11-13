@@ -31,12 +31,14 @@ import (
 )
 
 const (
-	defaultJobName     = "minio-job"
-	nodeJobName        = "minio-job-node"
-	bucketJobName      = "minio-job-bucket"
-	defaultMetricsPath = "/minio/v2/metrics/cluster"
-	nodeMetricsPath    = "/minio/v2/metrics/node"
-	bucketMetricsPath  = "/minio/v2/metrics/bucket"
+	defaultJobName      = "minio-job"
+	nodeJobName         = "minio-job-node"
+	bucketJobName       = "minio-job-bucket"
+	defaultMetricsPath  = "/minio/v2/metrics/cluster"
+	nodeMetricsPath     = "/minio/v2/metrics/node"
+	bucketMetricsPath   = "/minio/v2/metrics/bucket"
+	resourceJobName     = "minio-job-resource"
+	resourceMetricsPath = "/minio/v2/metrics/resource"
 )
 
 var prometheusFlags = []cli.Flag{
@@ -75,6 +77,9 @@ EXAMPLES:
 
   3. Generate prometheus config for bucket metrics.
      {{.Prompt}} {{.HelpName}} play bucket
+
+  4. Generate prometheus config for resource metrics.
+     {{.Prompt}} {{.HelpName}} play resource
 `,
 }
 
@@ -181,6 +186,20 @@ func generatePrometheusConfig(ctx *cli.Context) error {
 				{
 					JobName:     bucketJobName,
 					MetricsPath: bucketMetricsPath,
+					StaticConfigs: []StatConfig{
+						{
+							Targets: []string{""},
+						},
+					},
+				},
+			},
+		}
+	case "resource":
+		config = PrometheusConfig{
+			ScrapeConfigs: []ScrapeConfig{
+				{
+					JobName:     resourceJobName,
+					MetricsPath: resourceMetricsPath,
 					StaticConfigs: []StatConfig{
 						{
 							Targets: []string{""},

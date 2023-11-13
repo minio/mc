@@ -49,10 +49,6 @@ var (
 			Usage: "set storage class for new object(s) on target",
 		},
 		cli.StringFlag{
-			Name:  "encrypt",
-			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
-		},
-		cli.StringFlag{
 			Name:  "attr",
 			Usage: "add custom metadata for the object",
 		},
@@ -227,7 +223,7 @@ func mainMove(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB, true)
+	checkCopySyntax(cliCtx)
 
 	if cliCtx.NArg() == 2 {
 		args := cliCtx.Args()

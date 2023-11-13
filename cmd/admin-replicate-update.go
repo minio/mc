@@ -48,7 +48,10 @@ var adminReplicateUpdateFlags = []cli.Flag{
 		Usage:  "enable synchronous replication for this target, valid values are ['enable', 'disable'].",
 		Value:  "disable",
 		Hidden: true, // deprecated Jul 2023
-
+	},
+	cli.StringFlag{
+		Name:  "bucket-bandwidth",
+		Usage: "Set default bandwidth limit for bucket in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
 }
 
@@ -74,6 +77,9 @@ FLAGS:
 EXAMPLES:
   1. Edit a site endpoint participating in cluster-level replication:
      {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --endpoint https://minio2:9000
+
+  2. Edit a site in cluster-level replication to set default bandwidth limit for bucket:
+     {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --bucket-bandwidth "2G"
 `,
 }
 
@@ -122,8 +128,8 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	if !ctx.IsSet("deployment-id") {
 		fatalIf(errInvalidArgument(), "--deployment-id is a required flag")
 	}
-	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") {
-		fatalIf(errInvalidArgument(), "--endpoint or --mode is a required flag")
+	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") && !ctx.IsSet("bucket-bandwidth") {
+		fatalIf(errInvalidArgument(), "--endpoint, --mode or --bucket-bandwidth is a required flag")
 	}
 	if ctx.IsSet("mode") && ctx.IsSet("sync") {
 		fatalIf(errInvalidArgument(), "either --sync or --mode flag should be specified")
@@ -150,6 +156,16 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 			fatalIf(errInvalidArgument().Trace(args...), "--mode can be either [sync|async]")
 		}
 	}
+
+	var bwDefaults madmin.BucketBandwidth
+	if ctx.IsSet("bucket-bandwidth") {
+		bandwidthStr := ctx.String("bucket-bandwidth")
+		bandwidth, e := getBandwidthInBytes(bandwidthStr)
+		fatalIf(probe.NewError(e).Trace(bandwidthStr), "invalid bandwidth value")
+
+		bwDefaults.Limit = bandwidth
+		bwDefaults.IsSet = true
+	}
 	var ep string
 	if ctx.IsSet("endpoint") {
 		parsedURL := ctx.String("endpoint")
@@ -160,10 +176,11 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 		ep = u.String()
 	}
 	res, e := client.SiteReplicationEdit(globalContext, madmin.PeerInfo{
-		DeploymentID: ctx.String("deployment-id"),
-		Endpoint:     ep,
-		SyncState:    madmin.SyncStatus(syncState),
-	})
+		DeploymentID:     ctx.String("deployment-id"),
+		Endpoint:         ep,
+		SyncState:        madmin.SyncStatus(syncState),
+		DefaultBandwidth: bwDefaults,
+	}, madmin.SREditOptions{})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit cluster replication site endpoint")
 
 	printMsg(updateSuccessMessage(res))
