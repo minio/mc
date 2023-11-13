@@ -41,7 +41,7 @@ import (
 
 	jwtgo "github.com/golang-jwt/jwt/v4"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 func isErrIgnored(err *probe.Error) (ignored bool) {
@@ -435,7 +435,8 @@ func httpClient(reqTimeout time.Duration) *http.Client {
 			}).DialContext,
 			Proxy: ieproxy.GetProxyFunc(),
 			TLSClientConfig: &tls.Config{
-				RootCAs: globalRootCAs,
+				RootCAs:            globalRootCAs,
+				InsecureSkipVerify: globalInsecure,
 				// Can't use SSLv3 because of POODLE and BEAST
 				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
 				// Can't use TLSv1.1 because of RC4 cipher usage

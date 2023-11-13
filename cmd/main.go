@@ -33,15 +33,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/inconshreveable/mousetrap"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/pkg/console"
-	"github.com/minio/pkg/env"
-	"github.com/minio/pkg/trie"
-	"github.com/minio/pkg/words"
+	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v2/env"
+	"github.com/minio/pkg/v2/trie"
+	"github.com/minio/pkg/v2/words"
+	"golang.org/x/term"
 
 	completeinstall "github.com/posener/complete/cmd/install"
 )
@@ -116,11 +116,11 @@ func Main(args []string) error {
 	probe.SetAppInfo("Commit", ShortCommitID)
 
 	// Fetch terminal size, if not available, automatically
-	// set globalQuiet to true.
-	if w, e := pb.GetTerminalWidth(); e != nil {
-		globalQuiet = true
+	// set globalQuiet to true on non-window.
+	if w, h, e := term.GetSize(int(os.Stdin.Fd())); e != nil {
+		globalQuiet = runtime.GOOS != "windows"
 	} else {
-		globalTermWidth = w
+		globalTermWidth, globalTermHeight = w, h
 	}
 
 	// Set the mc app name.

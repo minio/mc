@@ -25,7 +25,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var adminReplicateAddCmd = cli.Command{
@@ -106,7 +106,7 @@ func mainAdminReplicateAdd(ctx *cli.Context) error {
 		})
 	}
 
-	res, e := client.SiteReplicationAdd(globalContext, ps)
+	res, e := client.SiteReplicationAdd(globalContext, ps, madmin.SRAddOptions{})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to add sites for replication")
 
 	printMsg(successMessage(res))

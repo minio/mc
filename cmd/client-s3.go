@@ -38,6 +38,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/minio/pkg/v2/env"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
@@ -48,7 +50,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/sse"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/pkg/mimedb"
+	"github.com/minio/pkg/v2/mimedb"
 
 	"github.com/minio/mc/pkg/deadlineconn"
 	"github.com/minio/mc/pkg/httptracer"
@@ -130,13 +132,19 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			useTLS = false
 		}
 
+		// Save if target supports virtual host style.
+		hostName := targetURL.Host
+
+		// Generate a hash out of s3Conf.
+		confHash := fnv.New32a()
+		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
+		confSum := confHash.Sum32()
+
 		// Instantiate s3
 		s3Clnt := &S3Client{}
 		// Save the target URL.
 		s3Clnt.targetURL = targetURL
 
-		// Save if target supports virtual host style.
-		hostName := targetURL.Host
 		s3Clnt.virtualStyle = isVirtualHostStyle(hostName, config.Lookup)
 		isS3AcceleratedEndpoint := isAmazonAccelerated(hostName)
 
@@ -147,23 +155,12 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 		}
 
-		// Generate a hash out of s3Conf.
-		confHash := fnv.New32a()
-		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey + config.SessionToken))
-		confSum := confHash.Sum32()
-
 		// Lookup previous cache by hash.
 		mutex.Lock()
 		defer mutex.Unlock()
 		var api *minio.Client
 		var found bool
 		if api, found = clientCache[confSum]; !found {
-			// if Signature version '4' use NewV4 directly.
-			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, config.SessionToken)
-			// if Signature version '2' use NewV2 directly.
-			if strings.ToUpper(config.Signature) == "S3V2" {
-				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
-			}
 
 			var transport http.RoundTripper
 
@@ -222,6 +219,51 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 					transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
 				}
 			}
+
+			var credsChain []credentials.Provider
+
+			// if an STS endpoint is set, we will add that to the chain
+			if stsEndpoint := env.Get("MC_STS_ENDPOINT", ""); stsEndpoint != "" {
+				// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
+				if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", ""); val != "" {
+					os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
+				}
+
+				stsEndpointURL, err := url.Parse(stsEndpoint)
+				if err != nil {
+					return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+				}
+				credsSts := &credentials.IAM{
+					Client: &http.Client{
+						Transport: transport,
+					},
+					Endpoint: stsEndpointURL.String(),
+				}
+				credsChain = append(credsChain, credsSts)
+			}
+
+			// V4 Credentials
+			credsV4 := &credentials.Static{
+				Value: credentials.Value{
+					AccessKeyID:     config.AccessKey,
+					SecretAccessKey: config.SecretKey,
+					SessionToken:    config.SessionToken,
+					SignerType:      credentials.SignatureV4,
+				},
+			}
+			credsChain = append(credsChain, credsV4)
+			// V2 Credentials
+			credsV2 := &credentials.Static{
+				Value: credentials.Value{
+					AccessKeyID:     config.AccessKey,
+					SecretAccessKey: config.SecretKey,
+					SessionToken:    "",
+					SignerType:      credentials.SignatureV2,
+				},
+			}
+			credsChain = append(credsChain, credsV2)
+
+			creds := credentials.NewChainCredentials(credsChain)
 
 			// Not found. Instantiate a new MinIO
 			var e error
@@ -297,6 +339,9 @@ func (c *S3Client) AddNotificationConfig(ctx context.Context, arn string, events
 		case "ilm":
 			nc.AddEvents(notification.EventType("s3:ObjectRestore:*"))
 			nc.AddEvents(notification.EventType("s3:ObjectTransition:*"))
+		case "scanner":
+			nc.AddEvents(notification.EventType("s3:Scanner:ManyVersions"))
+			nc.AddEvents(notification.EventType("s3:Scanner:BigPrefix"))
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -375,6 +420,9 @@ func (c *S3Client) RemoveNotificationConfig(ctx context.Context, arn, event, pre
 			case "ilm":
 				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectRestore:*"))
 				eventsTyped = append(eventsTyped, notification.EventType("s3:ObjectTransition:*"))
+			case "scanner":
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Scanner:ManyVersions"))
+				eventsTyped = append(eventsTyped, notification.EventType("s3:Scanner:BigPrefix"))
 			default:
 				return errInvalidArgument().Trace(events...)
 			}
@@ -785,6 +833,8 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 			events = append(events, string(notification.BucketCreatedAll))
 		case "bucket-removal":
 			events = append(events, string(notification.BucketRemovedAll))
+		case "scanner":
+			events = append(events, "s3:Scanner:ManyVersions", "s3:Scanner:BigPrefix")
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -2751,15 +2801,15 @@ func (c *S3Client) SetReplication(ctx context.Context, cfg *replication.Config, 
 }
 
 // GetReplicationMetrics - Get replication metrics for a given bucket.
-func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error) {
+func (c *S3Client) GetReplicationMetrics(ctx context.Context) (replication.MetricsV2, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 	if bucket == "" {
-		return replication.Metrics{}, probe.NewError(BucketNameEmpty{})
+		return replication.MetricsV2{}, probe.NewError(BucketNameEmpty{})
 	}
 
-	metrics, e := c.api.GetBucketReplicationMetrics(ctx, bucket)
+	metrics, e := c.api.GetBucketReplicationMetricsV2(ctx, bucket)
 	if e != nil {
-		return replication.Metrics{}, probe.NewError(e)
+		return replication.MetricsV2{}, probe.NewError(e)
 	}
 	return metrics, nil
 }

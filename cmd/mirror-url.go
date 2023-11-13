@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/pkg/wildcard"
+	"github.com/minio/pkg/v2/wildcard"
 )
 
 //
@@ -147,6 +147,19 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 			continue
 		}
 
+		if diffMsg.firstContent != nil {
+			var found bool
+			for _, esc := range opts.excludeStorageClasses {
+				if esc == diffMsg.firstContent.StorageClass {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+		}
+
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.
@@ -203,14 +216,15 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 }
 
 type mirrorOptions struct {
-	isFake, isOverwrite, activeActive bool
-	isWatch, isRemove, isMetadata     bool
-	excludeOptions                    []string
-	encKeyDB                          map[string][]prefixSSEPair
-	md5, disableMultipart             bool
-	olderThan, newerThan              string
-	storageClass                      string
-	userMetadata                      map[string]string
+	isFake, isOverwrite, activeActive     bool
+	isWatch, isRemove, isMetadata         bool
+	isRetriable                           bool
+	excludeOptions, excludeStorageClasses []string
+	encKeyDB                              map[string][]prefixSSEPair
+	md5, disableMultipart                 bool
+	olderThan, newerThan                  string
+	storageClass                          string
+	userMetadata                          map[string]string
 }
 
 // Prepares urls that need to be copied or removed based on requested options.

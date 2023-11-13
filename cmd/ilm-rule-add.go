@@ -26,7 +26,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var ilmAddCmd = cli.Command{
@@ -156,8 +156,9 @@ var ilmAddFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.IntFlag{
-		Name:  "noncurrent-transition-newer",
-		Usage: "number of noncurrent versions to retain in hot tier",
+		Name:   "noncurrent-transition-newer",
+		Usage:  "number of noncurrent versions to retain in hot tier",
+		Hidden: true,
 	},
 	cli.StringFlag{
 		Name:   "noncurrentversion-transition-storage-class",

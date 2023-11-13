@@ -34,10 +34,10 @@ import (
 	"github.com/google/shlex"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 
 	// golang does not support flat keys for path matching, find does
-	"github.com/minio/pkg/wildcard"
+	"github.com/minio/pkg/v2/wildcard"
 )
 
 // findMessage holds JSON and string values for printing find command output.
@@ -96,10 +96,10 @@ func nameMatch(pattern, path string) bool {
 	return matched
 }
 
-func headerMatch(pattern, header string) bool {
+func patternMatch(pattern, match string) bool {
 	pattern = strings.ToLower(pattern)
-	header = strings.ToLower(header)
-	return wildcard.Match(pattern, header)
+	match = strings.ToLower(match)
+	return wildcard.Match(pattern, match)
 }
 
 // pathMatch reports whether path matches the wildcard pattern.

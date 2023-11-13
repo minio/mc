@@ -24,7 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var adminScannerTraceFlags = []cli.Flag{
@@ -169,7 +169,7 @@ func mainAdminScannerTrace(ctx *cli.Context) error {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Unable to listen to http trace")
 		}
-		if matchTrace(mopts, traceInfo) {
+		if mopts.matches(traceInfo) {
 			printTrace(verbose, traceInfo)
 		}
 	}

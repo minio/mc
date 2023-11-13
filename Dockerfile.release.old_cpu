@@ -1,0 +1,24 @@
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi8/ubi-minimal:latest as build
+
+RUN microdnf update --nodocs --assumeyes  && microdnf install ca-certificates --nodocs --assumeyes 
+
+FROM registry.access.redhat.com/ubi8/ubi-micro:latest
+
+ARG TARGETARCH
+ARG RELEASE
+
+LABEL maintainer="MinIO Inc <dev@min.io>"
+
+# On RHEL the certificate bundle is located at:
+# - /etc/pki/tls/certs/ca-bundle.crt (RHEL 6)
+# - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem (RHEL 7)
+COPY --from=build /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/pki/ca-trust/extracted/pem/
+
+COPY CREDITS /licenses/CREDITS
+COPY LICENSE /licenses/LICENSE
+
+ADD https://dl.minio.io/client/mc/release/linux-${TARGETARCH}/archive/mc.${RELEASE} /usr/bin/mc
+
+RUN chmod +x /usr/bin/mc
+
+ENTRYPOINT ["mc"]

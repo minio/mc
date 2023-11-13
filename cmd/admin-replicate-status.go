@@ -21,13 +21,16 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/minio-go/v7/pkg/replication"
+	"github.com/minio/pkg/v2/console"
 )
 
 var adminReplicateStatusFlags = []cli.Flag{
@@ -122,7 +125,9 @@ func (i srStatus) JSON() string {
 
 func (i srStatus) String() string {
 	var messages []string
-
+	ms := i.Metrics
+	q := i.Metrics.Queued
+	w := i.Metrics.ActiveWorkers
 	// Color palette initialization
 	console.SetColor("Summary", color.New(color.FgWhite, color.Bold))
 	console.SetColor("SummaryHdr", color.New(color.FgCyan, color.Bold))
@@ -174,7 +179,7 @@ func (i srStatus) String() string {
 					ss := ssMap[dID]
 					switch {
 					case !ss.HasBucket:
-						details = append(details, fmt.Sprintf("%s Bucket", blankCell))
+						details = append(details, fmt.Sprintf("%s ", blankCell))
 					case ss.OLockConfigMismatch, ss.PolicyMismatch, ss.QuotaCfgMismatch, ss.ReplicationCfgMismatch, ss.TagMismatch:
 						details = append(details, fmt.Sprintf("%s in-sync", crossTickCell))
 					default:
@@ -212,7 +217,7 @@ func (i srStatus) String() string {
 					ss := ssMap[dID]
 					switch {
 					case !ss.HasPolicy:
-						details = append(details, fmt.Sprintf("%s Policy", blankCell))
+						details = append(details, blankCell)
 					case ss.PolicyMismatch:
 						details = append(details, fmt.Sprintf("%s in-sync", crossTickCell))
 					default:
@@ -319,7 +324,86 @@ func (i srStatus) String() string {
 		messages = append(messages, i.getGroupStatusSummary(siteNames, nameIDMap, "Group")...)
 
 	}
+	if i.opts.Metrics {
+		uiFn := func(theme string) func(string) string {
+			return func(s string) string {
+				return console.Colorize(theme, s)
+			}
+		}
+		singleTgt := len(ms.Metrics) == 1
+		maxui := uiFn("Peak")
+		avgui := uiFn("Avg")
+		valueui := uiFn("Value")
+		messages = append(messages,
+			console.Colorize("SummaryHdr", "Object replication status:"))
 
+		messages = append(messages, console.Colorize("UptimeStr", fmt.Sprintf("Replication status since %s", uiFn("Uptime")(humanize.RelTime(time.Now(), time.Now().Add(time.Duration(ms.Uptime)*time.Second), "", "ago")))))
+		// for queue stats
+		coloredDot := console.Colorize("qStatusOK", dot)
+		if q.Curr.Count > q.Avg.Count {
+			coloredDot = console.Colorize("qStatusWarn", dot)
+		}
+
+		var replicatedCount, replicatedSize int64
+		for _, m := range ms.Metrics {
+			nodeName := m.Endpoint
+			nodeui := uiFn(getNodeTheme(nodeName))
+			messages = append(messages, nodeui(nodeName))
+			messages = append(messages, fmt.Sprintf("Replicated:    %s objects (%s)", humanize.Comma(int64(m.ReplicatedCount)), valueui(humanize.IBytes(uint64(m.ReplicatedSize)))))
+
+			if singleTgt { // for single target - combine summary section into the target section
+				messages = append(messages, fmt.Sprintf("Received:      %s objects (%s)", humanize.Comma(int64(ms.ReplicaCount)), humanize.IBytes(uint64(ms.ReplicaSize))))
+				messages = append(messages, fmt.Sprintf("Queued:        %s %s objects, (%s) (%s: %s objects, %s; %s: %s objects, %s)", coloredDot, humanize.Comma(int64(q.Curr.Count)), valueui(humanize.IBytes(uint64(q.Curr.Bytes))), avgui("avg"),
+					humanize.Comma(int64(q.Avg.Count)), valueui(humanize.IBytes(uint64(q.Avg.Bytes))), maxui("max"),
+					humanize.Comma(int64(q.Max.Count)), valueui(humanize.IBytes(uint64(q.Max.Bytes)))))
+				messages = append(messages, fmt.Sprintf("Workers:       %s (%s: %s; %s %s) ", humanize.Comma(int64(w.Curr)), avgui("avg"), humanize.Comma(int64(w.Avg)), maxui("max"), humanize.Comma(int64(w.Max))))
+			} else {
+				replicatedCount += m.ReplicatedCount
+				replicatedSize += m.ReplicatedSize
+			}
+
+			if m.XferStats != nil {
+				tgtXfer, ok := m.XferStats[replication.Total]
+				if ok {
+					messages = append(messages, fmt.Sprintf("Transfer Rate: %s/s (avg: %s/s; max %s/s)", valueui(humanize.Bytes(uint64(tgtXfer.CurrRate))), valueui(humanize.Bytes(uint64(tgtXfer.AvgRate))), valueui(humanize.Bytes(uint64(tgtXfer.PeakRate)))))
+					messages = append(messages, fmt.Sprintf("Latency:       %s (avg: %s; max %s)", valueui(m.Latency.Curr.Round(time.Millisecond).String()), valueui(m.Latency.Avg.Round(time.Millisecond).String()), valueui(m.Latency.Max.Round(time.Millisecond).String())))
+				}
+			}
+
+			healthDot := console.Colorize("online", dot)
+			if !m.Online {
+				healthDot = console.Colorize("offline", dot)
+			}
+			currDowntime := time.Duration(0)
+			if !m.Online && !m.LastOnline.IsZero() {
+				currDowntime = UTCNow().Sub(m.LastOnline)
+			}
+			// normalize because total downtime is calculated at server side at heartbeat interval, may be slightly behind
+			totalDowntime := m.TotalDowntime
+			if currDowntime > totalDowntime {
+				totalDowntime = currDowntime
+			}
+			var linkStatus string
+			if m.Online {
+				linkStatus = healthDot + fmt.Sprintf(" online (total downtime: %s)", timeDurationToHumanizedDuration(totalDowntime).String())
+			} else {
+				linkStatus = healthDot + fmt.Sprintf(" offline %s (total downtime: %s)", timeDurationToHumanizedDuration(currDowntime).String(), valueui(timeDurationToHumanizedDuration(totalDowntime).String()))
+			}
+			messages = append(messages, fmt.Sprintf("Link:          %s", linkStatus))
+			messages = append(messages, fmt.Sprintf("Errors:        %s in last 1 minute; %s in last 1hr; %s since uptime", valueui(humanize.Comma(int64(m.Failed.LastMinute.Count))), valueui(humanize.Comma(int64(m.Failed.LastHour.Count))), valueui(humanize.Comma(int64(m.Failed.Totals.Count)))))
+			messages = append(messages, "")
+		}
+		if !singleTgt {
+			messages = append(messages,
+				console.Colorize("SummaryHdr", "Summary:"))
+			messages = append(messages, fmt.Sprintf("Replicated:    %s objects (%s)", humanize.Comma(int64(replicatedCount)), valueui(humanize.IBytes(uint64(replicatedSize)))))
+			messages = append(messages, fmt.Sprintf("Queued:        %s %s objects, (%s) (%s: %s objects, %s; %s: %s objects, %s)", coloredDot, humanize.Comma(int64(q.Curr.Count)), valueui(humanize.IBytes(uint64(q.Curr.Bytes))), avgui("avg"),
+				humanize.Comma(int64(q.Avg.Count)), valueui(humanize.IBytes(uint64(q.Avg.Bytes))), maxui("max"),
+				humanize.Comma(int64(q.Max.Count)), valueui(humanize.IBytes(uint64(q.Max.Bytes)))))
+
+			messages = append(messages, fmt.Sprintf("Received:      %s objects (%s)", humanize.Comma(int64(ms.ReplicaCount)), humanize.IBytes(uint64(ms.ReplicaSize))))
+		}
+	}
 	return console.Colorize("UserMessage", strings.Join(messages, "\n"))
 }
 
@@ -443,6 +527,7 @@ func (i srStatus) getBucketStatusSummary(siteNames []string, nameIDMap map[strin
 		}
 	}
 	messages = append(messages, rows...)
+
 	return messages
 }
 
@@ -646,6 +731,7 @@ func srStatusOpts(ctx *cli.Context) (opts madmin.SRStatusOptions) {
 		opts.Users = true
 		opts.Groups = true
 		opts.Policies = true
+		opts.Metrics = true
 		return
 	}
 	opts.Buckets = ctx.Bool("buckets")
@@ -691,6 +777,23 @@ func mainAdminReplicationStatus(ctx *cli.Context) error {
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 	console.SetColor("WarningMessage", color.New(color.FgYellow))
+	for _, c := range colors {
+		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c, color.Bold))
+	}
+	console.SetColor("Replicated", color.New(color.FgCyan))
+	console.SetColor("In-Queue", color.New(color.Bold, color.FgYellow))
+	console.SetColor("Avg", color.New(color.FgCyan))
+	console.SetColor("Peak", color.New(color.FgYellow))
+	console.SetColor("Value", color.New(color.FgWhite, color.Bold))
+
+	console.SetColor("Current", color.New(color.FgCyan))
+	console.SetColor("Uptime", color.New(color.Bold, color.FgWhite))
+	console.SetColor("UptimeStr", color.New(color.FgHiWhite))
+
+	console.SetColor("qStatusWarn", color.New(color.FgYellow, color.Bold))
+	console.SetColor("qStatusOK", color.New(color.FgGreen, color.Bold))
+	console.SetColor("online", color.New(color.FgGreen, color.Bold))
+	console.SetColor("offline", color.New(color.FgRed, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

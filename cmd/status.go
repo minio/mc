@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 // Status implements a interface that can be used in quit mode or with progressbar.
@@ -87,7 +87,7 @@ func (qs *QuietStatus) AddCounts(v int64) {
 
 // SetTotal sets the total of the progressbar, ignored for quietstatus
 func (qs *QuietStatus) SetTotal(v int64) Status {
-	qs.accounter.Set(v)
+	qs.accounter.SetTotal(v)
 	return qs
 }
 

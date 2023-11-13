@@ -30,7 +30,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 var supportPerfFlags = append([]cli.Flag{
@@ -117,6 +117,7 @@ type PerfTestOutput struct {
 	NetResults             *NetTestResults             `json:"network,omitempty"`
 	SiteReplicationResults *SiteReplicationTestResults `json:"siteReplication,omitempty"`
 	DriveResults           *DriveTestResults           `json:"drive,omitempty"`
+	ClientResults          *ClientResult               `json:"client,omitempty"`
 	Error                  string                      `json:"error,omitempty"`
 }
 
@@ -194,6 +195,14 @@ type NetTestResult struct {
 // NetTestResults - result of the network performance test across all endpoints
 type NetTestResults struct {
 	Results []NetTestResult `json:"servers"`
+}
+
+// ClientResult - result of the network from client to server
+type ClientResult struct {
+	BytesSent uint64 `json:"bytesSent"`
+	TimeSpent int64  `json:"timeSpent"`
+	Endpoint  string `json:"endpoint"`
+	Error     string `json:"error"`
 }
 
 // SiteNetStats - status for siteNet
@@ -310,6 +319,18 @@ func convertDriveTestResults(driveResults []madmin.DriveSpeedTestResult) *DriveT
 	return &r
 }
 
+func convertClientResult(result *madmin.ClientPerfResult) *ClientResult {
+	if result == nil || result.TimeSpent <= 0 {
+		return nil
+	}
+	return &ClientResult{
+		BytesSent: result.BytesSend,
+		TimeSpent: result.TimeSpent,
+		Endpoint:  result.Endpoint,
+		Error:     result.Error,
+	}
+}
+
 func convertSiteReplicationTestResults(netResults *madmin.SiteNetPerfResult) *SiteReplicationTestResults {
 	if netResults == nil {
 		return nil
@@ -418,6 +439,8 @@ func updatePerfOutput(r PerfTestResult, out *PerfTestOutput) {
 		out.NetResults = convertNetTestResults(r.NetResult)
 	case SiteReplicationPerfTest:
 		out.SiteReplicationResults = convertSiteReplicationTestResults(r.SiteReplicationResult)
+	case ClientPerfTest:
+		out.ClientResults = convertClientResult(r.ClientResult)
 	default:
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid test type %d", r.Type))
 	}
@@ -496,7 +519,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL, perfType string) []PerfTestResul
 	tests := []string{perfType}
 	if len(perfType) == 0 {
 		// by default run all tests
-		tests = []string{"net", "drive", "object"}
+		tests = []string{"net", "drive", "object", "client"}
 	}
 
 	for _, t := range tests {
@@ -509,6 +532,8 @@ func runPerfTests(ctx *cli.Context, aliasedURL, perfType string) []PerfTestResul
 			mainAdminSpeedTestNetperf(ctx, aliasedURL, resultCh)
 		case "site-replication":
 			mainAdminSpeedTestSiteReplication(ctx, aliasedURL, resultCh)
+		case "client":
+			mainAdminSpeedTestClientPerf(ctx, aliasedURL, resultCh)
 		default:
 			showCommandHelpAndExit(ctx, 1) // last argument is exit code
 		}

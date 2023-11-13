@@ -28,7 +28,7 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 const (
@@ -153,13 +153,18 @@ type SubnetMFAReq struct {
 }
 
 func isPlay(endpoint url.URL) (bool, error) {
+	playEndpoint := "https://play.min.io"
+	if globalAirgapped {
+		return endpoint.String() == playEndpoint, nil
+	}
+
 	aliasIPs, e := net.LookupHost(endpoint.Hostname())
 	if e != nil {
 		return false, e
 	}
 	aliasIPSet := set.CreateStringSet(aliasIPs...)
 
-	playURL, e := url.Parse("https://play.min.io")
+	playURL, e := url.Parse(playEndpoint)
 	if e != nil {
 		return false, e
 	}

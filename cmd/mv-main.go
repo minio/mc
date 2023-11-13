@@ -26,7 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/console"
+	"github.com/minio/pkg/v2/console"
 )
 
 // mv command flags.
@@ -47,10 +47,6 @@ var (
 		cli.StringFlag{
 			Name:  "storage-class, sc",
 			Usage: "set storage class for new object(s) on target",
-		},
-		cli.StringFlag{
-			Name:  "encrypt",
-			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
 		},
 		cli.StringFlag{
 			Name:  "attr",
@@ -227,7 +223,7 @@ func mainMove(cliCtx *cli.Context) error {
 	}
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx, cliCtx, encKeyDB, true)
+	checkCopySyntax(cliCtx)
 
 	if cliCtx.NArg() == 2 {
 		args := cliCtx.Args()
@@ -235,18 +231,6 @@ func mainMove(cliCtx *cli.Context) error {
 		dstURL := args.Get(1)
 		if srcURL == dstURL {
 			fatalIf(errDummy().Trace(), fmt.Sprintf("Source and destination urls cannot be the same: %v.", srcURL))
-		}
-	}
-
-	// Check if source URLs does not have object locking enabled
-	// since we cannot move them (remove them from the source)
-	for _, urlStr := range cliCtx.Args()[:cliCtx.NArg()-1] {
-		enabled, err := isBucketLockEnabled(ctx, urlStr)
-		if err != nil {
-			fatalIf(err.Trace(), "Unable to get bucket lock configuration of `%s`", urlStr)
-		}
-		if enabled {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("Object lock configuration is enabled on the specified bucket in alias %v.", urlStr))
 		}
 	}
 

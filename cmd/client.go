@@ -162,7 +162,7 @@ type Client interface {
 	GetReplication(ctx context.Context) (replication.Config, *probe.Error)
 	SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error
 	RemoveReplication(ctx context.Context) *probe.Error
-	GetReplicationMetrics(ctx context.Context) (replication.Metrics, *probe.Error)
+	GetReplicationMetrics(ctx context.Context) (replication.MetricsV2, *probe.Error)
 	ResetReplication(ctx context.Context, before time.Duration, arn string) (replication.ResyncTargetsInfo, *probe.Error)
 	ReplicationResyncStatus(ctx context.Context, arn string) (rinfo replication.ResyncTargetsInfo, err *probe.Error)
 

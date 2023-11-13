@@ -29,6 +29,7 @@ var (
 		idpLdapEnableCmd,
 		idpLdapDisableCmd,
 		idpLdapPolicyCmd,
+		idpLdapAccesskeyCmd,
 	}
 	idpLdapCmd = cli.Command{
 		Name:            "ldap",
