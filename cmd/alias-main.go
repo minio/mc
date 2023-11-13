@@ -42,6 +42,7 @@ var aliasSubcommands = []cli.Command{
 	aliasListCmd,
 	aliasRemoveCmd,
 	aliasImportCmd,
+	aliasExportCmd,
 }
 
 var aliasCmd = cli.Command{
