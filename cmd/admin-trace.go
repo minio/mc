@@ -895,6 +895,7 @@ type statItem struct {
 	CallStatsCount int           `json:"callStatsCount,omitempty"`
 	CallStats      callStats     `json:"callStats,omitempty"`
 	TTFB           time.Duration `json:"ttfb,omitempty"`
+	MaxTTFB        time.Duration `json:"maxTTFB,omitempty"`
 	MaxDur         time.Duration `json:"maxDuration"`
 	MinDur         time.Duration `json:"minDuration"`
 }
@@ -933,6 +934,9 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 	}
 	if got.MaxDur < t.Trace.Duration {
 		got.MaxDur = t.Trace.Duration
+	}
+	if got.MaxTTFB < t.Trace.HTTP.CallStats.TimeToFirstByte {
+		got.MaxTTFB = t.Trace.HTTP.CallStats.TimeToFirstByte
 	}
 	if got.MinDur <= 0 {
 		got.MinDur = t.Trace.Duration
@@ -1073,9 +1077,10 @@ func (m *traceStatsUI) View() string {
 		console.Colorize("metrics-top-title", "Count"),
 		console.Colorize("metrics-top-title", "RPM"),
 		console.Colorize("metrics-top-title", "Avg Time"),
-		console.Colorize("metrics-top-title", "TTFB Time"),
 		console.Colorize("metrics-top-title", "Min Time"),
 		console.Colorize("metrics-top-title", "Max Time"),
+		console.Colorize("metrics-top-title", "Avg TTFB"),
+		console.Colorize("metrics-top-title", "Max TTFB"),
 		console.Colorize("metrics-top-title", "Errors"),
 		console.Colorize("metrics-top-title", "RX Avg"),
 		console.Colorize("metrics-top-title", "TX Avg"),
@@ -1123,9 +1128,10 @@ func (m *traceStatsUI) View() string {
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
 			console.Colorize("metrics-number", fmt.Sprintf("%0.1f", float64(v.Count)/dur.Minutes())),
 			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
-			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
 			console.Colorize(minColor, v.MinDur),
 			console.Colorize(maxColor, v.MaxDur),
+			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
+			console.Colorize(maxColor, v.MaxTTFB),
 			errs,
 			rx,
 			tx,
