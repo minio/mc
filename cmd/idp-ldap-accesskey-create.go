@@ -246,5 +246,4 @@ func loginLDAPAccesskey(URL string) *madmin.AdminClient {
 	fatalIf(probe.NewError(e), "Unable to initialize admin connection.")
 
 	return client
-
 }

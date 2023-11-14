@@ -158,7 +158,6 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 		users = make(map[string]madmin.UserInfo)
 		for _, user := range userArg {
 			users[user] = madmin.UserInfo{}
-
 		}
 	}
 	if e != nil {
@@ -197,6 +196,5 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 		}
 		printMsg(m)
 	}
-
 	return nil
 }

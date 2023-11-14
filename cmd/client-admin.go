@@ -188,17 +188,6 @@ func newAnonymousClient(aliasedURL string) (*madmin.AnonymousClient, *probe.Erro
 	return anonClient, nil
 }
 
-// newExpandedClient creates client without an alias
-func newExpandedClient(aliasCfg aliasConfigV10) (*madmin.AdminClient, *probe.Error) {
-	s3Config := NewS3Config(aliasCfg.URL, &aliasCfg)
-
-	s3Client, err := s3AdminNew(s3Config)
-	if err != nil {
-		return nil, err.Trace(aliasCfg.URL)
-	}
-	return s3Client, nil
-}
-
 // s3AdminNew returns an initialized minioAdmin structure. If debug is enabled,
 // it also enables an internal trace transport.
 var s3AdminNew = NewAdminFactory()
