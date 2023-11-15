@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -219,6 +220,12 @@ func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) (
 		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
 		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", ""); val != "" {
 			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
+			if val := env.Get("MC_ROLE_ARN", ""); val != "" {
+				os.Setenv("AWS_ROLE_ARN", val)
+			}
+			if val := env.Get("MC_ROLE_SESSION_NAME", randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
+				os.Setenv("AWS_ROLE_SESSION_NAME", val)
+			}
 		}
 
 		stsEndpointURL, err := url.Parse(stsEndpoint)
@@ -312,7 +319,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			options := minio.Options{
 				Creds:        creds,
 				Secure:       useTLS,
-				Region:       os.Getenv("MC_REGION"),
+				Region:       env.Get("MC_REGION", env.Get("AWS_REGION", "")),
 				BucketLookup: config.Lookup,
 				Transport:    transport,
 			}
