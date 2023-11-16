@@ -97,6 +97,8 @@ EXAMPLES:
 	 {{.Prompt}} {{.HelpName}} james --expiry-duration 24h
   5. Create a new access key pair for authenticated user that expires on 2021-01-01
 	 {{.Prompt}} {{.HelpName}} --expiry 2021-01-01
+  6. Create a new access key pair for minio.example.com by logging in with LDAP credentials
+	 {{.Prompt}} {{.HelpName}} --login minio.example.com
 	`,
 }
 
