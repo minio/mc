@@ -935,9 +935,6 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 	if got.MaxDur < t.Trace.Duration {
 		got.MaxDur = t.Trace.Duration
 	}
-	if got.MaxTTFB < t.Trace.HTTP.CallStats.TimeToFirstByte {
-		got.MaxTTFB = t.Trace.HTTP.CallStats.TimeToFirstByte
-	}
 	if got.MinDur <= 0 {
 		got.MinDur = t.Trace.Duration
 	}
@@ -954,6 +951,9 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 		got.CallStats.Rx += t.Trace.HTTP.CallStats.InputBytes
 		got.CallStats.Tx += t.Trace.HTTP.CallStats.OutputBytes
 		got.TTFB += t.Trace.HTTP.CallStats.TimeToFirstByte
+		if got.MaxTTFB < t.Trace.HTTP.CallStats.TimeToFirstByte {
+			got.MaxTTFB = t.Trace.HTTP.CallStats.TimeToFirstByte
+		}
 	}
 	s.Calls[id] = got
 }
