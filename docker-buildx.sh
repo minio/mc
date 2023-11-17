@@ -34,17 +34,17 @@ docker buildx build --push --no-cache \
 docker buildx prune -f
 
 docker buildx build --push --no-cache \
-        --build-arg RELEASE="${release}" \
-        -t "minio/minio:${release}-cpuv1" \
-        -t "quay.io/minio/minio:${release}-cpuv1" \
-        --platform=linux/arm64,linux/amd64,linux/ppc64le,linux/s390x \
-        -f Dockerfile.release.old_cpu .
+	--build-arg RELEASE="${release}" \
+	-t "minio/mc:${release}-cpuv1" \
+	-t "quay.io/minio/mc:${release}-cpuv1" \
+	--platform=linux/arm64,linux/amd64,linux/ppc64le,linux/s390x \
+	-f Dockerfile.release.old_cpu .
 
 docker buildx prune -f
 
 docker buildx build --push --no-cache \
 	--build-arg RELEASE="${release}" \
-	-t "minio/minio:${release}.fips" \
+	-t "minio/mc:${release}.fips" \
 	-t "quay.io/minio/mc:${release}.fips" \
 	--platform=linux/amd64 -f Dockerfile.release.fips .
 
