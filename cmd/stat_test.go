@@ -68,3 +68,24 @@ func TestParseStat(t *testing.T) {
 		})
 	}
 }
+
+func TestHumanizeObjectCounts(t *testing.T) {
+    testCases := []struct {
+        name     string
+        input    int64
+        expected string
+    }{
+        {"Test 1,000", 1000, "1,000"},
+        {"Test 1,500", 1500, "1,500"},
+    }
+
+    for _, tc := range testCases {
+        t.Run(tc.name, func(t *testing.T) {
+            result := humanize.Comma(tc.input)
+            if result != tc.expected {
+                t.Errorf("Expected %s, got %s for input %d", tc.expected, result, tc.input)
+            }
+        })
+    }
+}
+
