@@ -75,3 +75,15 @@ func TestParseStat(t *testing.T) {
 		})
 	}
 }
+
+// Mock data representing a large object count
+func TestHumanizedHistogramOutput(t *testing.T) {
+    largeObjectCount := uint64(1000000000) // 1 billion
+    humanizedCount := humanize.Comma(int64(largeObjectCount))
+    output := fmt.Sprintf("%12s objects", humanizedCount)
+    expected := "1,000,000,000 objects"
+
+    if output != expected {
+        t.Errorf("expected %s, got %s", expected, output)
+    }
+}
