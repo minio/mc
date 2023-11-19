@@ -29,11 +29,11 @@ import (
 func TestParseStat(t *testing.T) {
     localTime := time.Unix(12001, 0).UTC()
     testCases := []struct {
-        content     ClientContent
-        targetAlias string
+        content              ClientContent
+        targetAlias          string
         expectedHumanizedSize string
     }{
-        {ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 1000, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"custom-key": "custom-value"}, Expires: time.Now()}, "play", "1,000"},
+		{ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 1000, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"custom-key": "custom-value"}, Expires: time.Now()}, "play", "1,000"},
 		{ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Now()}, "play"},
 		{ClientContent{URL: *newClientURL("https://play.min.io/testbucket"), Size: 500, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Unix(0, 0).UTC()}, "play"},
 		{ClientContent{URL: *newClientURL("https://s3.amazonaws.com/yrdy"), Size: 0, Time: localTime, Type: 0o644, ETag: "abcdefasaas", Metadata: map[string]string{}}, "s3"},
