@@ -470,7 +470,7 @@ func (v bucketInfoMessage) String() string {
 		for _, tagName := range sortedTags {
 			val, ok := v.Usage.ObjectSizesHistogram[tagName]
 			if ok {
-				fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, histogramTagsDesc[tagName].text)
+				fmt.Fprintf(&b, "   %*s object(s) %s\n", maxDigits, humanize.Comma(int64(val)), histogramTagsDesc[tagName].text)
 			}
 		}
 	}
