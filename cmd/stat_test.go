@@ -18,19 +18,22 @@
 package cmd
 
 import (
-	"os"
-	"reflect"
-	"strings"
-	"testing"
-	"time"
+    "os"
+    "reflect"
+    "strings"
+    "testing"
+    "time"
+    "github.com/dustin/go-humanize"
 )
 
 func TestParseStat(t *testing.T) {
-	localTime := time.Unix(12001, 0).UTC()
-	testCases := []struct {
-		content     ClientContent
-		targetAlias string
-	}{
+    localTime := time.Unix(12001, 0).UTC()
+    testCases := []struct {
+        content     ClientContent
+        targetAlias string
+        expectedHumanizedSize string
+    }{
+        {ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 1000, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"custom-key": "custom-value"}, Expires: time.Now()}, "play", "1,000"},
 		{ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Now()}, "play"},
 		{ClientContent{URL: *newClientURL("https://play.min.io/testbucket"), Size: 500, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Unix(0, 0).UTC()}, "play"},
 		{ClientContent{URL: *newClientURL("https://s3.amazonaws.com/yrdy"), Size: 0, Time: localTime, Type: 0o644, ETag: "abcdefasaas", Metadata: map[string]string{}}, "s3"},
@@ -65,27 +68,10 @@ func TestParseStat(t *testing.T) {
 			if etag != statMsg.ETag {
 				t.Errorf("Expecting %s, got %s", etag, statMsg.ETag)
 			}
+            humanizedSize := humanize.Comma(int64(testCase.content.Size))
+            if humanizedSize != testCase.expectedHumanizedSize {
+                t.Errorf("Expected humanized size %s, got %s for size %d", testCase.expectedHumanizedSize, humanizedSize, testCase.content.Size)
+            }
 		})
 	}
 }
-
-func TestHumanizeObjectCounts(t *testing.T) {
-    testCases := []struct {
-        name     string
-        input    int64
-        expected string
-    }{
-        {"Test 1,000", 1000, "1,000"},
-        {"Test 1,500", 1500, "1,500"},
-    }
-
-    for _, tc := range testCases {
-        t.Run(tc.name, func(t *testing.T) {
-            result := humanize.Comma(tc.input)
-            if result != tc.expected {
-                t.Errorf("Expected %s, got %s for input %d", tc.expected, result, tc.input)
-            }
-        })
-    }
-}
-
