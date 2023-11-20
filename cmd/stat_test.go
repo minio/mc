@@ -18,88 +18,87 @@
 package cmd
 
 import (
-    "os"
-    "fmt"
-    "reflect"
-    "strings"
-    "testing"
-    "time"
-    "github.com/dustin/go-humanize"
+	"fmt"
+	"github.com/dustin/go-humanize"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
 )
 
 func TestParseStat(t *testing.T) {
-    localTime := time.Unix(12001, 0).UTC()
-    testCases := []struct {
-        content              ClientContent
-        targetAlias          string
-        expectedHumanizedSize string
-}{
+	localTime := time.Unix(12001, 0).UTC()
+	testCases := []struct {
+		content               ClientContent
+		targetAlias           string
+		expectedHumanizedSize string
+	}{
 		{
-        content: ClientContent{
-            URL: *newClientURL("https://play.min.io/abc"), 
-            Size: 1000, 
-            Time: localTime, 
-            Type: os.ModeDir, 
-            ETag: "blahblah", 
-            Metadata: map[string]string{"custom-key": "custom-value"}, 
-            Expires: time.Now(),
-        }, 
-        targetAlias: "play", 
-        expectedHumanizedSize: "1,000",
-    },
-    {
-        content: ClientContent{
-            URL: *newClientURL("https://play.min.io/abc"), 
-            Size: 0, 
-            Time: localTime, 
-            Type: os.ModeDir, 
-            ETag: "blahblah", 
-            Metadata: map[string]string{"custom-key": "custom-value"}, 
-            Expires: time.Now(),
-        }, 
-        targetAlias: "play", 
-        expectedHumanizedSize: "0",
-    },
-    {
-        content: ClientContent{
-            URL: *newClientURL("https://play.min.io/testbucket"), 
-            Size: 500, 
-            Time: localTime, 
-            Type: os.ModeDir, 
-            ETag: "blahblah", 
-            Metadata: map[string]string{"custom-key": "custom-value"}, 
-            Expires: time.Unix(0, 0).UTC(),
-        }, 
-        targetAlias: "play", 
-        expectedHumanizedSize: "500",
-    },
-    {
-        content: ClientContent{
-            URL: *newClientURL("https://s3.amazonaws.com/yrdy"), 
-            Size: 0, 
-            Time: localTime, 
-            Type: 0o644, 
-            ETag: "abcdefasaas", 
-            Metadata: map[string]string{},
-        }, 
-        targetAlias: "s3", 
-        expectedHumanizedSize: "0",
-    },
-    {
-        content: ClientContent{
-            URL: *newClientURL("https://play.min.io/yrdy"), 
-            Size: 10000, 
-            Time: localTime, 
-            Type: 0o644, 
-            ETag: "blahblah", 
-            Metadata: map[string]string{"custom-key": "custom-value"},
-        }, 
-        targetAlias: "play", 
-        expectedHumanizedSize: "10,000",
-    },
-}
+			content: ClientContent{
+				URL:      *newClientURL("https://play.min.io/abc"),
+				Size:     1000,
+				Time:     localTime,
+				Type:     os.ModeDir,
+				ETag:     "blahblah",
+				Metadata: map[string]string{"custom-key": "custom-value"},
+				Expires:  time.Now(),
+			},
+			targetAlias:           "play",
+			expectedHumanizedSize: "1,000",
+		},
+		{
+			content: ClientContent{
+				URL:      *newClientURL("https://play.min.io/abc"),
+				Size:     0,
+				Time:     localTime,
+				Type:     os.ModeDir,
+				ETag:     "blahblah",
+				Metadata: map[string]string{"custom-key": "custom-value"},
+				Expires:  time.Now(),
+			},
+			targetAlias:           "play",
+			expectedHumanizedSize: "0",
+		},
+		{
+			content: ClientContent{
+				URL:      *newClientURL("https://play.min.io/testbucket"),
+				Size:     500,
+				Time:     localTime,
+				Type:     os.ModeDir,
+				ETag:     "blahblah",
+				Metadata: map[string]string{"custom-key": "custom-value"},
+				Expires:  time.Unix(0, 0).UTC(),
+			},
+			targetAlias:           "play",
+			expectedHumanizedSize: "500",
+		},
+		{
+			content: ClientContent{
+				URL:      *newClientURL("https://s3.amazonaws.com/yrdy"),
+				Size:     0,
+				Time:     localTime,
+				Type:     0o644,
+				ETag:     "abcdefasaas",
+				Metadata: map[string]string{},
+			},
+			targetAlias:           "s3",
+			expectedHumanizedSize: "0",
+		},
+		{
+			content: ClientContent{
+				URL:      *newClientURL("https://play.min.io/yrdy"),
+				Size:     10000,
+				Time:     localTime,
+				Type:     0o644,
+				ETag:     "blahblah",
+				Metadata: map[string]string{"custom-key": "custom-value"},
+			},
+			targetAlias:           "play",
+			expectedHumanizedSize: "10,000",
+		},
+	}
 
-			
 	// 		}{
 	// 	{content: ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 1000, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"custom-key": "custom-value"}, Expires: time.Now()}, "play", "1,000"},
 	// 	{content: ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Now()}, "play"},
@@ -136,22 +135,22 @@ func TestParseStat(t *testing.T) {
 			if etag != statMsg.ETag {
 				t.Errorf("Expecting %s, got %s", etag, statMsg.ETag)
 			}
-            humanizedSize := humanize.Comma(int64(testCase.content.Size))
-            if humanizedSize != testCase.expectedHumanizedSize {
-                t.Errorf("Expected humanized size %s, got %s for size %d", testCase.expectedHumanizedSize, humanizedSize, testCase.content.Size)
-            }
+			humanizedSize := humanize.Comma(int64(testCase.content.Size))
+			if humanizedSize != testCase.expectedHumanizedSize {
+				t.Errorf("Expected humanized size %s, got %s for size %d", testCase.expectedHumanizedSize, humanizedSize, testCase.content.Size)
+			}
 		})
 	}
 }
 
 // Mock data representing a large object count
 func TestHumanizedHistogramOutput(t *testing.T) {
-    largeObjectCount := uint64(1000000000) // 1 billion
-    humanizedCount := humanize.Comma(int64(largeObjectCount))
-    output := fmt.Sprintf("%12s objects", humanizedCount)
-    expected := "1,000,000,000 objects"
+	largeObjectCount := uint64(1000000000) // 1 billion
+	humanizedCount := humanize.Comma(int64(largeObjectCount))
+	output := fmt.Sprintf("%12s objects", humanizedCount)
+	expected := "1,000,000,000 objects"
 
-    if output != expected {
-        t.Errorf("expected %s, got %s", expected, output)
-    }
+	if output != expected {
+		t.Errorf("expected %s, got %s", expected, output)
+	}
 }
