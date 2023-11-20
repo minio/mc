@@ -42,10 +42,10 @@ func TestParseStat(t *testing.T) {
             Type: os.ModeDir, 
             ETag: "blahblah", 
             Metadata: map[string]string{"custom-key": "custom-value"}, 
-            Expires: time.Now()
+            Expires: time.Now(),
         }, 
         targetAlias: "play", 
-        expectedHumanizedSize: "1,000"
+        expectedHumanizedSize: "1,000",
     },
     {
         content: ClientContent{
@@ -55,10 +55,10 @@ func TestParseStat(t *testing.T) {
             Type: os.ModeDir, 
             ETag: "blahblah", 
             Metadata: map[string]string{"custom-key": "custom-value"}, 
-            Expires: time.Now()
+            Expires: time.Now(),
         }, 
         targetAlias: "play", 
-        expectedHumanizedSize: "0"
+        expectedHumanizedSize: "0",
     },
     {
         content: ClientContent{
@@ -68,10 +68,10 @@ func TestParseStat(t *testing.T) {
             Type: os.ModeDir, 
             ETag: "blahblah", 
             Metadata: map[string]string{"custom-key": "custom-value"}, 
-            Expires: time.Unix(0, 0).UTC()
+            Expires: time.Unix(0, 0).UTC(),
         }, 
         targetAlias: "play", 
-        expectedHumanizedSize: "500"
+        expectedHumanizedSize: "500",
     },
     {
         content: ClientContent{
@@ -83,7 +83,7 @@ func TestParseStat(t *testing.T) {
             Metadata: map[string]string{}
         }, 
         targetAlias: "s3", 
-        expectedHumanizedSize: "0"
+        expectedHumanizedSize: "0",
     },
     {
         content: ClientContent{
@@ -95,7 +95,7 @@ func TestParseStat(t *testing.T) {
             Metadata: map[string]string{"custom-key": "custom-value"}
         }, 
         targetAlias: "play", 
-        expectedHumanizedSize: "10,000"
+        expectedHumanizedSize: "10,000",
     },
 }
 
