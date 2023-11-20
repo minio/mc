@@ -80,7 +80,7 @@ func TestParseStat(t *testing.T) {
             Time: localTime, 
             Type: 0o644, 
             ETag: "abcdefasaas", 
-            Metadata: map[string]string{}
+            Metadata: map[string]string{},
         }, 
         targetAlias: "s3", 
         expectedHumanizedSize: "0",
@@ -92,7 +92,7 @@ func TestParseStat(t *testing.T) {
             Time: localTime, 
             Type: 0o644, 
             ETag: "blahblah", 
-            Metadata: map[string]string{"custom-key": "custom-value"}
+            Metadata: map[string]string{"custom-key": "custom-value"},
         }, 
         targetAlias: "play", 
         expectedHumanizedSize: "10,000",
