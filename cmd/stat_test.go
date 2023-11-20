@@ -37,7 +37,7 @@ func TestParseStat(t *testing.T) {
 		{
 			content: ClientContent{
 				URL:      *newClientURL("https://play.min.io/abc"),
-				Size:     1000,
+				Size:     1000000,
 				Time:     localTime,
 				Type:     os.ModeDir,
 				ETag:     "blahblah",
@@ -50,7 +50,7 @@ func TestParseStat(t *testing.T) {
 		{
 			content: ClientContent{
 				URL:      *newClientURL("https://play.min.io/abc"),
-				Size:     0,
+				Size:     10000,
 				Time:     localTime,
 				Type:     os.ModeDir,
 				ETag:     "blahblah",
@@ -88,14 +88,14 @@ func TestParseStat(t *testing.T) {
 		{
 			content: ClientContent{
 				URL:      *newClientURL("https://play.min.io/yrdy"),
-				Size:     10000,
+				Size:     100000,
 				Time:     localTime,
 				Type:     0o644,
 				ETag:     "blahblah",
 				Metadata: map[string]string{"custom-key": "custom-value"},
 			},
 			targetAlias:           "play",
-			expectedHumanizedSize: "10,000",
+			expectedHumanizedSize: "100,000",
 		},
 	}
 	for _, testCase := range testCases {
@@ -134,3 +134,15 @@ func TestParseStat(t *testing.T) {
 		})
 	}
 }
+
+func TestHumanizeLargeBucket(t *testing.T) {
+    // Mocking a large bucket data
+    largeBucketCount := 1000000000 // 1,000,000,000 objects
+    expectedOutput := "1,000,000,000"
+
+    actualOutput := humanize.Comma(int64(largeBucketCount))
+    if actualOutput != expectedOutput {
+        t.Errorf("expected %s, got %s", expectedOutput, actualOutput)
+    }
+}
+
