@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/dustin/go-humanize"
 	"os"
 	"reflect"
