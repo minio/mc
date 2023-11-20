@@ -19,6 +19,7 @@ package cmd
 
 import (
     "os"
+    "fmt"
     "reflect"
     "strings"
     "testing"
@@ -32,13 +33,80 @@ func TestParseStat(t *testing.T) {
         content              ClientContent
         targetAlias          string
         expectedHumanizedSize string
-    }{
-		{ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 1000, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"custom-key": "custom-value"}, Expires: time.Now()}, "play", "1,000"},
-		{ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Now()}, "play"},
-		{ClientContent{URL: *newClientURL("https://play.min.io/testbucket"), Size: 500, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Unix(0, 0).UTC()}, "play"},
-		{ClientContent{URL: *newClientURL("https://s3.amazonaws.com/yrdy"), Size: 0, Time: localTime, Type: 0o644, ETag: "abcdefasaas", Metadata: map[string]string{}}, "s3"},
-		{ClientContent{URL: *newClientURL("https://play.min.io/yrdy"), Size: 10000, Time: localTime, Type: 0o644, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}}, "play"},
-	}
+}{
+		{
+        content: ClientContent{
+            URL: *newClientURL("https://play.min.io/abc"), 
+            Size: 1000, 
+            Time: localTime, 
+            Type: os.ModeDir, 
+            ETag: "blahblah", 
+            Metadata: map[string]string{"custom-key": "custom-value"}, 
+            Expires: time.Now()
+        }, 
+        targetAlias: "play", 
+        expectedHumanizedSize: "1,000"
+    },
+    {
+        content: ClientContent{
+            URL: *newClientURL("https://play.min.io/abc"), 
+            Size: 0, 
+            Time: localTime, 
+            Type: os.ModeDir, 
+            ETag: "blahblah", 
+            Metadata: map[string]string{"custom-key": "custom-value"}, 
+            Expires: time.Now()
+        }, 
+        targetAlias: "play", 
+        expectedHumanizedSize: "0"
+    },
+    {
+        content: ClientContent{
+            URL: *newClientURL("https://play.min.io/testbucket"), 
+            Size: 500, 
+            Time: localTime, 
+            Type: os.ModeDir, 
+            ETag: "blahblah", 
+            Metadata: map[string]string{"custom-key": "custom-value"}, 
+            Expires: time.Unix(0, 0).UTC()
+        }, 
+        targetAlias: "play", 
+        expectedHumanizedSize: "500"
+    },
+    {
+        content: ClientContent{
+            URL: *newClientURL("https://s3.amazonaws.com/yrdy"), 
+            Size: 0, 
+            Time: localTime, 
+            Type: 0o644, 
+            ETag: "abcdefasaas", 
+            Metadata: map[string]string{}
+        }, 
+        targetAlias: "s3", 
+        expectedHumanizedSize: "0"
+    },
+    {
+        content: ClientContent{
+            URL: *newClientURL("https://play.min.io/yrdy"), 
+            Size: 10000, 
+            Time: localTime, 
+            Type: 0o644, 
+            ETag: "blahblah", 
+            Metadata: map[string]string{"custom-key": "custom-value"}
+        }, 
+        targetAlias: "play", 
+        expectedHumanizedSize: "10,000"
+    },
+}
+
+			
+	// 		}{
+	// 	{content: ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 1000, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"custom-key": "custom-value"}, Expires: time.Now()}, "play", "1,000"},
+	// 	{content: ClientContent{URL: *newClientURL("https://play.min.io/abc"), Size: 0, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Now()}, "play"},
+	// 	{content: ClientContent{URL: *newClientURL("https://play.min.io/testbucket"), Size: 500, Time: localTime, Type: os.ModeDir, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}, Expires: time.Unix(0, 0).UTC()}, "play"},
+	// 	{content: ClientContent{URL: *newClientURL("https://s3.amazonaws.com/yrdy"), Size: 0, Time: localTime, Type: 0o644, ETag: "abcdefasaas", Metadata: map[string]string{}}, "s3"},
+	// 	{content: ClientContent{URL: *newClientURL("https://play.min.io/yrdy"), Size: 10000, Time: localTime, Type: 0o644, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}}, "play"},
+	// }
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run("", func(t *testing.T) {
