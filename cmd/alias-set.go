@@ -356,6 +356,9 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 	}
 
 	printMsg(msg)
+	if err != nil {
+		return err.Cause
+	}
 	return nil
 }
 
