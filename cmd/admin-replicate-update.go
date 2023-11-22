@@ -53,6 +53,14 @@ var adminReplicateUpdateFlags = []cli.Flag{
 		Name:  "bucket-bandwidth",
 		Usage: "Set default bandwidth limit for bucket in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
+	cli.BoolFlag{
+		Name:  "disable-ilm-expiry-replication",
+		Usage: "disable ILM expiry rules replication",
+	},
+	cli.BoolFlag{
+		Name:  "enable-ilm-expiry-replication",
+		Usage: "enable ILM expiry rules replication",
+	},
 }
 
 var adminReplicateUpdateCmd = cli.Command{
@@ -80,6 +88,12 @@ EXAMPLES:
 
   2. Edit a site in cluster-level replication to set default bandwidth limit for bucket:
      {{.Prompt}} {{.HelpName}} myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --bucket-bandwidth "2G"
+
+  3. Disable replication of ILM expiry in cluster-level replication:
+     {{.Prompt}} {{.HelpName}} myminio --disable-ilm-expiry-replication
+
+  4. Enable replication of ILM expiry in cluster-level replication:
+     {{.Prompt}} {{.HelpName}} myminio --enable-ilm-expiry-replication
 `,
 }
 
@@ -125,14 +139,20 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	if !ctx.IsSet("deployment-id") {
+	if !ctx.IsSet("deployment-id") && !ctx.IsSet("disable-ilm-expiry-replication") && !ctx.IsSet("enable-ilm-expiry-replication") {
 		fatalIf(errInvalidArgument(), "--deployment-id is a required flag")
 	}
-	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") && !ctx.IsSet("bucket-bandwidth") {
-		fatalIf(errInvalidArgument(), "--endpoint, --mode or --bucket-bandwidth is a required flag")
+	if !ctx.IsSet("endpoint") && !ctx.IsSet("mode") && !ctx.IsSet("sync") && !ctx.IsSet("bucket-bandwidth") && !ctx.IsSet("disable-ilm-expiry-replication") && !ctx.IsSet("enable-ilm-expiry-replication") {
+		fatalIf(errInvalidArgument(), "--endpoint, --mode, --bucket-bandwidth, --disable-ilm-expiry-replication or --enable-ilm-expiry-replication is a required flag")
 	}
 	if ctx.IsSet("mode") && ctx.IsSet("sync") {
 		fatalIf(errInvalidArgument(), "either --sync or --mode flag should be specified")
+	}
+	if ctx.IsSet("disable-ilm-expiry-replication") && ctx.IsSet("enable-ilm-expiry-replication") {
+		fatalIf(errInvalidArgument(), "either --disable-ilm-expiry-replication or --enable-ilm-expiry-replication flag should be specified")
+	}
+	if (ctx.IsSet("disable-ilm-expiry-replication") || ctx.IsSet("enable-ilm-expiry-replication")) && ctx.IsSet("deployment-id") {
+		fatalIf(errInvalidArgument(), "--deployment-id should not be set with --disable-ilm-expiry-replication or --enable-ilm-expiry-replication")
 	}
 
 	var syncState string
@@ -175,12 +195,15 @@ func mainAdminReplicateUpdate(ctx *cli.Context) error {
 		}
 		ep = u.String()
 	}
+	var opts madmin.SREditOptions
+	opts.DisableILMExpiryReplication = ctx.Bool("disable-ilm-expiry-replication")
+	opts.EnableILMExpiryReplication = ctx.Bool("enable-ilm-expiry-replication")
 	res, e := client.SiteReplicationEdit(globalContext, madmin.PeerInfo{
 		DeploymentID:     ctx.String("deployment-id"),
 		Endpoint:         ep,
 		SyncState:        madmin.SyncStatus(syncState),
 		DefaultBandwidth: bwDefaults,
-	}, madmin.SREditOptions{})
+	}, opts)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to edit cluster replication site endpoint")
 
 	printMsg(updateSuccessMessage(res))
