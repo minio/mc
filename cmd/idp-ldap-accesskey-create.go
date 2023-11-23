@@ -225,11 +225,13 @@ func loginLDAPAccesskey(URL string) *madmin.AdminClient {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Username: "))
-	value, _, _ := reader.ReadLine()
+	value, _, e := reader.ReadLine()
+	fatalIf(probe.NewError(e), "Unable to read username")
 	username := string(value)
 
 	fmt.Printf("%s", console.Colorize(cred, "Enter Password: "))
-	bytePassword, _ := term.ReadPassword(int(os.Stdin.Fd()))
+	bytePassword, e := term.ReadPassword(int(os.Stdin.Fd()))
+	fatalIf(probe.NewError(e), "Unable to read password")
 	fmt.Printf("\n")
 	password := string(bytePassword)
 
