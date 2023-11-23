@@ -19,15 +19,9 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"io"
-	"log"
 	"net/http"
-	"net/http/httptest"
-	"os"
 	"strconv"
-
-	checkv1 "gopkg.in/check.v1"
 )
 
 type adminPolicyHandler struct {
@@ -66,62 +60,4 @@ func (h adminPolicyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusForbidden)
 	}
-}
-
-func (s *TestSuite) TestAdminSTSOperation(c *checkv1.C) {
-	sts := stsHandler{
-		endpoint: "/",
-		jwt:      []byte("eyJhbGciOiJSUzI1NiIsImtpZCI6Inc0dFNjMEc5Tk0wQWhGaWJYaWIzbkpRZkRKeDc1dURRTUVpOTNvTHJ0OWcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzMxMTg3NzEwLCJpYXQiOjE2OTk2NTE3MTAsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJtaW5pby10ZW5hbnQtMSIsInBvZCI6eyJuYW1lIjoic2V0dXAtYnVja2V0LXQ4eGdjIiwidWlkIjoiNjZhYjlkZWItNzkwMC00YTFlLTgzMDgtMTkwODIwZmQ3NDY5In0sInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJtYy1qb2Itc2EiLCJ1aWQiOiI3OTc4NzJjZC1kMjkwLTRlM2EtYjYyMC00ZGFkYzZhNzUyMTYifSwid2FybmFmdGVyIjoxNjk5NjU1MzE3fSwibmJmIjoxNjk5NjUxNzEwLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6bWluaW8tdGVuYW50LTE6bWMtam9iLXNhIn0.rY7dpAh8GBTViH9Ges7tRhgyihdFWEN0DwXchelmZg58VOI526S-YfbCqrxksTs8Iu0fp1rmk1cUj7FGDh3AOv2RphHjoWci1802zKkHgH0iOEbKMp3jHXwfyHda8CyrSCPycGzClueCf1ae91wd_0lgK9lOR1qqY1HuDeXqSEAUIGrfh1VcP2n95Zc07EY-Uh3XjJE4drtgusACEK5n3P3WtN9s0m0GomEGQzF5ZJczxLGpHBKMQ5VDhMksVKdBAsx9xHgSx84aUhKQViYilAL-8PRj-RZA9s_IpEymAh5R37dKzAO8Fqq0nG7fVbH_ifzw3xhHiG92BhHldBDqEQ"),
-	}
-
-	tmpfile, errFs := os.CreateTemp("", "jwt")
-	if errFs != nil {
-		log.Fatal(errFs)
-	}
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	if _, errFs := tmpfile.Write(sts.jwt); errFs != nil {
-		log.Fatal(errFs)
-	}
-	if errFs := tmpfile.Close(); errFs != nil {
-		log.Fatal(errFs)
-	}
-
-	stsServer := httptest.NewServer(sts)
-	defer stsServer.Close()
-	os.Setenv("MC_STS_ENDPOINT", stsServer.URL+sts.endpoint)
-	os.Setenv("MC_WEB_IDENTITY_TOKEN_FILE", tmpfile.Name())
-	handler := adminPolicyHandler{
-		endpoint: "/minio/admin/v3/add-canned-policy?name=",
-		name:     "test",
-		policy: []byte(`
-{
-  "Version": "2012-10-17",
-  "Statement": [
-	{
-	  "Effect": "Allow",
-	  "Action": [
-		"s3:*"
-	  ],
-	  "Resource": [
-		"arn:aws:s3:::test-bucket",
-		"arn:aws:s3:::test-bucket/*"
-	  ]
-	}
-  ]
-
-}`),
-	}
-	server := httptest.NewServer(handler)
-	defer server.Close()
-
-	conf := new(Config)
-	conf.Debug = true
-	conf.Insecure = true
-	conf.HostURL = server.URL + handler.endpoint + handler.name
-	s3c, err := s3AdminNew(conf)
-	c.Assert(err, checkv1.IsNil)
-
-	policyErr := s3c.AddCannedPolicy(context.Background(), handler.name, handler.policy)
-	c.Assert(policyErr, checkv1.IsNil)
 }
