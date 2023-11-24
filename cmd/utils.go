@@ -104,7 +104,10 @@ func randString(n int, src rand.Source, prefix string) string {
 	if x == 0 {
 		x = 1
 	}
-	return prefix + string(b[0:x])
+	//return prefix + string(b[0:x])
+
+       // Refer: https://cloud.tencent.com/developer/article/1982033
+       return prefix + string(b[0:30-len(prefix)]) + "-123456"
 }
 
 // printTLSCertInfo prints some fields of the certificates received from the server.
