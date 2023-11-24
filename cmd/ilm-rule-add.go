@@ -49,13 +49,13 @@ DESCRIPTION:
   Add a lifecycle configuration rule.
 
 EXAMPLES:
-  1. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ in mybucket.
+  1. Add a lifecycle rule with a transition and a noncurrent version transition action for objects with prefix doc/ whose size is greater than 1MiB in mybucket.
      Tiers must exist in MinIO. Use existing tiers or add new tiers.
 
      {{.Prompt}} mc ilm tier add minio myminio MINIOTIER-1 --endpoint https://warm-minio-1.com \
          --access-key ACCESSKEY --secret-key SECRETKEY --bucket bucket1 --prefix prefix1
 
-     {{.Prompt}} {{.HelpName}} --prefix "doc/" --transition-days "90" --transition-tier "MINIOTIER-1" \
+     {{.Prompt}} {{.HelpName}} --prefix "doc/" --size-gt 1MiB --transition-days "90" --transition-tier "MINIOTIER-1" \
          --noncurrent-transition-days "45" --noncurrent-transition-tier "MINIOTIER-1" \
          myminio/mybucket/
 
@@ -76,6 +76,14 @@ var ilmAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "tags",
 		Usage: "key value pairs of the form '<key1>=<value1>&<key2>=<value2>&<key3>=<value3>'",
+	},
+	cli.StringFlag{
+		Name:  "size-lt",
+		Usage: "objects with size less than this value will be selected for the lifecycle action",
+	},
+	cli.StringFlag{
+		Name:  "size-gt",
+		Usage: "objects with size greater than this value will be selected for the lifecycle action",
 	},
 	cli.StringFlag{
 		Name:   "expiry-date",
