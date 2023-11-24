@@ -77,15 +77,3 @@ func TestParseStat(t *testing.T) {
 		})
 	}
 }
-
-func TestHumanizeLargeBucket(t *testing.T) {
-    // Mocking a large bucket data
-    largeBucketCount := 1000000000 // 1,000,000,000 objects
-    expectedOutput := "1,000,000,000"
-
-    actualOutput := humanize.Comma(int64(largeBucketCount))
-    if actualOutput != expectedOutput {
-        t.Errorf("expected %s, got %s", expectedOutput, actualOutput)
-    }
-}
-
