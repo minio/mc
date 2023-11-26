@@ -216,14 +216,14 @@ func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
 func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) ([]credentials.Provider, *probe.Error) {
 	var credsChain []credentials.Provider
 	// if an STS endpoint is set, we will add that to the chain
-	if stsEndpoint := env.Get("MC_STS_ENDPOINT", ""); stsEndpoint != "" {
+	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
 		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
-		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE", ""); val != "" {
+		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE_"+config.Alias, ""); val != "" {
 			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
-			if val := env.Get("MC_ROLE_ARN", ""); val != "" {
+			if val := env.Get("MC_ROLE_ARN_"+config.Alias, ""); val != "" {
 				os.Setenv("AWS_ROLE_ARN", val)
 			}
-			if val := env.Get("MC_ROLE_SESSION_NAME", randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
+			if val := env.Get("MC_ROLE_SESSION_NAME_"+config.Alias, randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
 				os.Setenv("AWS_ROLE_SESSION_NAME", val)
 			}
 		}

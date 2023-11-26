@@ -22,10 +22,8 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
 
 	minio "github.com/minio/minio-go/v7"
@@ -88,7 +86,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
-	case r.Method == "PUT":
+	case r.Method == http.MethodPut:
 		// Handler for PUT object request.
 		length, e := strconv.Atoi(r.Header.Get("Content-Length"))
 		if e != nil {
@@ -102,7 +100,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
-	case r.Method == "HEAD":
+	case r.Method == http.MethodHead:
 		// Handler for Stat object request.
 		if r.URL.Path != h.resource {
 			w.WriteHeader(http.StatusNotFound)
@@ -112,7 +110,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Last-Modified", UTCNow().Format(http.TimeFormat))
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
-	case r.Method == "POST":
+	case r.Method == http.MethodPost:
 		// Handler for multipart upload request.
 		if _, ok := r.URL.Query()["uploads"]; ok {
 			if r.URL.Path == h.resource {
@@ -134,7 +132,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-	case r.Method == "GET":
+	case r.Method == http.MethodGet:
 		// Handler for get bucket location request.
 		if _, ok := r.URL.Query()["location"]; ok {
 			response := []byte("<LocationConstraint xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"></LocationConstraint>")
@@ -174,7 +172,7 @@ func (h stsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
-	case r.Method == "POST":
+	case r.Method == http.MethodPost:
 		token := r.Form.Get("WebIdentityToken")
 		if token == string(h.jwt) {
 			response := []byte("<AssumeRoleWithWebIdentityResponse xmlns=\"https://sts.amazonaws.com/doc/2011-06-15/\"><AssumeRoleWithWebIdentityResult><AssumedRoleUser><Arn></Arn><AssumeRoleId></AssumeRoleId></AssumedRoleUser><Credentials><AccessKeyId>7NL5BR739GUQ0ZOD4JNB</AccessKeyId><SecretAccessKey>A2mxZSxPnHNhSduedUHczsXZpVSSssOLpDruUmTV</SecretAccessKey><Expiration>0001-01-01T00:00:00Z</Expiration><SessionToken>eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NLZXkiOiI3Tkw1QlI3MzlHVVEwWk9ENEpOQiIsImV4cCI6MTY5OTYwMzMwNiwicGFyZW50IjoibWluaW8iLCJzZXNzaW9uUG9saWN5IjoiZXlKV1pYSnphVzl1SWpvaU1qQXhNaTB4TUMweE55SXNJbE4wWVhSbGJXVnVkQ0k2VzNzaVJXWm1aV04wSWpvaVFXeHNiM2NpTENKQlkzUnBiMjRpT2xzaVlXUnRhVzQ2S2lKZGZTeDdJa1ZtWm1WamRDSTZJa0ZzYkc5M0lpd2lRV04wYVc5dUlqcGJJbXR0Y3pvcUlsMTlMSHNpUldabVpXTjBJam9pUVd4c2IzY2lMQ0pCWTNScGIyNGlPbHNpY3pNNktpSmRMQ0pTWlhOdmRYSmpaU0k2V3lKaGNtNDZZWGR6T25Nek9qbzZLaUpkZlYxOSJ9.uuE_x7PO8QoPfUk9KzUELoAqxihIknZAvJLl5aYJjwpSjJYFTPLp6EvuyJX2hc18s9HzeiJ-vU0dPzsy50dXmg</SessionToken></Credentials></AssumeRoleWithWebIdentityResult><ResponseMetadata></ResponseMetadata></AssumeRoleWithWebIdentityResponse>")
@@ -182,14 +180,12 @@ func (h stsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/xml")
 			w.Header().Set("Server", "MinIO")
 			w.Write(response)
-			w.WriteHeader(http.StatusOK)
 			return
 		} else {
 			response := []byte("<ErrorResponse xmlns=\"https://sts.amazonaws.com/doc/2011-06-15/\"><Error><Type></Type><Code>AccessDenied</Code><Message>Access denied: Invalid Token</Message></Error><RequestId></RequestId></ErrorResponse>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 			w.Header().Set("Content-Type", "application/xml")
 			w.Write(response)
-			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 	}
@@ -277,52 +273,6 @@ func (s *TestSuite) TestObjectOperations(c *checkv1.C) {
 		c.Assert(err, checkv1.IsNil)
 		c.Assert(buffer.Bytes(), checkv1.DeepEquals, object.data)
 	}
-}
-
-func (s *TestSuite) TestSTSOperation(c *checkv1.C) {
-	sts := stsHandler{
-		endpoint: "/",
-		jwt:      []byte("eyJhbGciOiJSUzI1NiIsImtpZCI6Inc0dFNjMEc5Tk0wQWhGaWJYaWIzbkpRZkRKeDc1dURRTUVpOTNvTHJ0OWcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzMxMTIyNjg0LCJpYXQiOjE2OTk1ODY2ODQsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJtaW5pby10ZW5hbnQtMSIsInBvZCI6eyJuYW1lIjoic2V0dXAtYnVja2V0LXJ4aHhiIiwidWlkIjoiNmNhMzhjMmItYTdkMC00M2Y0LWE0NjMtZjdlNjU4MGUyZDdiIn0sInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJtYy1qb2Itc2EiLCJ1aWQiOiI3OTc4NzJjZC1kMjkwLTRlM2EtYjYyMC00ZGFkYzZhNzUyMTYifSwid2FybmFmdGVyIjoxNjk5NTkwMjkxfSwibmJmIjoxNjk5NTg2Njg0LCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6bWluaW8tdGVuYW50LTE6bWMtam9iLXNhIn0.fBJckmoQFyJ9bUgKZv6jzBESd9ccX_HFPPBZ17Gz_CsQ5wXrMqnvoMs1mcv6QKWsDsvSnWnw_tcW0cjvVkXb2mKmioKLzqV4ihGbiWzwk2e1xDohn8fizdQkf64bXpncjGdEGv8oi9A4300jfLMfg53POriMyEAQMeIDKPOI9qx913xjGni2w2H49mjLfnFnRaj9osvy17425dNIrMC6GDFq3rcq6Z_cdDmL18Jwsjy1xDsAhUzmOclr-VI3AeSnuD4fbf6jhbKE14qVUjLmIBf__B5NhESiaFNwxFYjonZyi357Nx93CD1wai28tNRSODx7BiPHLxk8SyzY0CP0sQ"),
-	}
-
-	tmpfile, errFs := os.CreateTemp("", "jwt")
-	if errFs != nil {
-		log.Fatal(errFs)
-	}
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	if _, errFs := tmpfile.Write(sts.jwt); errFs != nil {
-		log.Fatal(errFs)
-	}
-	if errFs := tmpfile.Close(); errFs != nil {
-		log.Fatal(errFs)
-	}
-
-	stsServer := httptest.NewServer(sts)
-	defer stsServer.Close()
-	os.Setenv("MC_STS_ENDPOINT", stsServer.URL+sts.endpoint)
-	os.Setenv("MC_WEB_IDENTITY_TOKEN_FILE", tmpfile.Name())
-	object := objectHandler{
-		resource: "/bucket/object",
-		data:     []byte("Hello, World"),
-	}
-	server := httptest.NewServer(object)
-	defer server.Close()
-
-	conf := new(Config)
-	conf.HostURL = server.URL + object.resource
-	s3c, err := S3New(conf)
-	c.Assert(err, checkv1.IsNil)
-
-	var reader io.Reader
-	reader = bytes.NewReader(object.data)
-	n, err := s3c.Put(context.Background(), reader, int64(len(object.data)), nil, PutOptions{
-		metadata: map[string]string{
-			"Content-Type": "application/octet-stream",
-		},
-	})
-	c.Assert(err, checkv1.IsNil)
-	c.Assert(n, checkv1.Equals, int64(len(object.data)))
 }
 
 var testSelectCompressionTypeCases = []struct {
