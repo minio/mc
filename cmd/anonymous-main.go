@@ -52,7 +52,7 @@ var anonymousCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS] set PERMISSION TARGET
-  {{.HelpName}} [FLAGS] set-json TARGET FILE
+  {{.HelpName}} [FLAGS] set-json FILE TARGET
   {{.HelpName}} [FLAGS] get TARGET
   {{.HelpName}} [FLAGS] get-json TARGET
   {{.HelpName}} [FLAGS] list TARGET
