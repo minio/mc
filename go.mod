@@ -46,8 +46,8 @@ require (
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
-	github.com/minio/madmin-go/v3 v3.0.32
-	github.com/minio/pkg/v2 v2.0.2
+	github.com/minio/madmin-go/v3 v3.0.34
+	github.com/minio/pkg/v2 v2.0.4
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
