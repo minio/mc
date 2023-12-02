@@ -140,6 +140,11 @@ var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
 		o.BatchKeyRotation = true
 		return "Trace Batch KeyRotation (alias: brot)"
 	},
+	"batch-expiration": func(o *madmin.ServiceTraceOpts) string {
+		o.BatchExpire = true
+		return "Trace Batch Expiration (alias: bexp)"
+	},
+
 	"decommission": func(o *madmin.ServiceTraceOpts) string {
 		o.Decommission = true
 		return "Trace Decommission operations (alias: decom)"
