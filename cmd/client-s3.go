@@ -957,6 +957,8 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 			return nil, probe.NewError(err)
 		}
 	}
+	// Disallow automatic decompression for some objects with content-encoding set.
+	o.Set("Accept-Encoding", "identity")
 
 	reader, e := c.api.GetObject(ctx, bucket, object, o)
 	if e != nil {
