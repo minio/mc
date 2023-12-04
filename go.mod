@@ -130,3 +130,9 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+replace (
+	github.com/minio/cli v1.24.2 => ../minio-cli
+	github.com/minio/madmin-go/v3 v3.0.34 => ../madmin-go
+	github.com/minio/minio-go/v7 v7.0.65-0.20231130060928-54e115c40e66 => ../minio-go
+)

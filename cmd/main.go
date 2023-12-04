@@ -443,6 +443,7 @@ var appCmds = []cli.Command{
 	versionCmd,
 	ilmCmd,
 	quotaCmd,
+	throttleCmd,
 	encryptCmd,
 	eventCmd,
 	watchCmd,
