@@ -72,11 +72,12 @@ func mainQuotaInfo(ctx *cli.Context) error {
 	qCfg, e := client.GetBucketQuota(globalContext, targetURL)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get bucket quota")
 	printMsg(quotaMessage{
-		op:        ctx.Command.Name,
-		Bucket:    targetURL,
-		Quota:     qCfg.Quota,
-		QuotaType: string(qCfg.Type),
-		Status:    "success",
+		op:            ctx.Command.Name,
+		Bucket:        targetURL,
+		Quota:         qCfg.Quota,
+		QuotaType:     string(qCfg.Type),
+		ThrottleRules: qCfg.ThrottleRules,
+		Status:        "success",
 	})
 
 	return nil
