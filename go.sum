@@ -144,14 +144,12 @@ github.com/minio/madmin-go/v3 v3.0.34 h1:MGPQYIWm52liSubofK24FhrznPYnRpQrDNddZJE
 github.com/minio/madmin-go/v3 v3.0.34/go.mod h1:4QN2NftLSV7MdlT50dkrenOMmNVHluxTvlqJou3hte8=
 github.com/minio/md5-simd v1.1.2 h1:Gdi1DZK69+ZVMoNHRXJyNcxrMA4dSxoYHZSQbirFg34=
 github.com/minio/md5-simd v1.1.2/go.mod h1:MzdKDxYpY2BT9XQFocsiZf/NKVtR7nkE4RoEpN+20RM=
-github.com/minio/minio-go/v7 v7.0.65-0.20231122233251-1f7dd6b7e3e1 h1:oGua0HckYk7JuIW/c1IuInHe9MCef1U6Q2Qf9ea/V5U=
-github.com/minio/minio-go/v7 v7.0.65-0.20231122233251-1f7dd6b7e3e1/go.mod h1:R4WVUR6ZTedlCcGwZRauLMIKjgyaWxhs4Mqi/OMPmEc=
 github.com/minio/minio-go/v7 v7.0.65-0.20231130060928-54e115c40e66 h1:9pgbcTmr0yvwlQJHsS72QDyNkZajKXCxnszpJtM5B4I=
 github.com/minio/minio-go/v7 v7.0.65-0.20231130060928-54e115c40e66/go.mod h1:R4WVUR6ZTedlCcGwZRauLMIKjgyaWxhs4Mqi/OMPmEc=
 github.com/minio/mux v1.9.0 h1:dWafQFyEfGhJvK6AwLOt83bIG5bxKxKJnKMCi0XAaoA=
 github.com/minio/mux v1.9.0/go.mod h1:1pAare17ZRL5GpmNL+9YmqHoWnLmMZF9C/ioUCfy0BQ=
-github.com/minio/pkg/v2 v2.0.4 h1:vHQOqxD7AdsJq3X9GylO0PO6WCpcK7aePsVfk0oRYh0=
-github.com/minio/pkg/v2 v2.0.4/go.mod h1:ya1jPY/rtVp3HarxwDQJkclR8Rd2QxwxA9kwS436ovs=
+github.com/minio/pkg/v2 v2.0.5 h1:I5LGA7rMwo/T8qRp3UDoPCZKtnUHDBoXP025TvxUqCc=
+github.com/minio/pkg/v2 v2.0.5/go.mod h1:ya1jPY/rtVp3HarxwDQJkclR8Rd2QxwxA9kwS436ovs=
 github.com/minio/selfupdate v0.6.0 h1:i76PgT0K5xO9+hjzKcacQtO7+MjJ4JKA8Ak8XQ9DDwU=
 github.com/minio/selfupdate v0.6.0/go.mod h1:bO02GTIPCMQFTEvE5h4DjYB58bCoZ35XLeBf0buTDdM=
 github.com/minio/sha256-simd v1.0.1 h1:6kaan5IFmwTNynnKKpDHe6FWHohJOHhCPchzK49dzMM=
