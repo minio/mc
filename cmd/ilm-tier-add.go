@@ -66,6 +66,21 @@ var adminTierAddFlags = []cli.Flag{
 		Usage: "Azure Blob Storage account key",
 	},
 	cli.StringFlag{
+		Name:  "sp-tenant-id",
+		Value: "",
+		Usage: "Directory ID for the service principal account",
+	},
+	cli.StringFlag{
+		Name:  "sp-client-id",
+		Value: "",
+		Usage: "The client ID of the service principal account",
+	},
+	cli.StringFlag{
+		Name:  "sp-client-secret",
+		Value: "",
+		Usage: "The client secret of the service principal account",
+	},
+	cli.StringFlag{
 		Name:  "credentials-file",
 		Value: "",
 		Usage: "path to Google Cloud Storage credentials file",
@@ -237,13 +252,17 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 	case madmin.Azure:
 		accountName := ctx.String("account-name")
 		accountKey := ctx.String("account-key")
-		if accountName == "" || accountKey == "" {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials", tierType))
+		if accountName == "" {
+			fatalIf(errDummy().Trace(), fmt.Sprintf("%s remote tier requires the storage account name", tierType))
+		}
+
+		if accountKey == "" && (ctx.String("sp-tenant-id") == "" || ctx.String("sp-client-id") == "" || ctx.String("sp-client-secret") == "") {
+			fatalIf(errDummy().Trace(), fmt.Sprintf("%s remote tier requires static credentials OR service principal credentials", tierType))
 		}
 
 		bucket := ctx.String("bucket")
 		if bucket == "" {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires target bucket", tierType))
+			fatalIf(errDummy().Trace(), fmt.Sprintf("%s remote tier requires target bucket", tierType))
 		}
 
 		azOpts := []madmin.AzureOptions{}
@@ -260,6 +279,10 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 		prefix := ctx.String("prefix")
 		if prefix != "" {
 			azOpts = append(azOpts, madmin.AzurePrefix(prefix))
+		}
+
+		if ctx.String("sp-tenant-id") != "" || ctx.String("sp-client-id") != "" || ctx.String("sp-client-secret") != "" {
+			azOpts = append(azOpts, madmin.AzureServicePrincipal(ctx.String("sp-tenant-id"), ctx.String("sp-client-id"), ctx.String("sp-client-secret")))
 		}
 
 		azCfg, e := madmin.NewTierAzure(tierName, accountName, accountKey, bucket, azOpts...)
