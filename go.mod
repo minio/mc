@@ -131,4 +131,4 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
-replace github.com/minio/madmin-go/v3 v3.0.34 => github.com/shtripat/madmin-go/v3 v3.0.0-20231205123116-80cebb7cf0f4
+replace github.com/minio/madmin-go/v3 v3.0.34 => github.com/shtripat/madmin-go/v3 v3.0.0-20231212054825-249cd39e1cd5

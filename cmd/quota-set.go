@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -228,7 +229,7 @@ func mainQuotaSet(ctx *cli.Context) error {
 				sort.Slice(eRule.APIs, func(i, j int) bool {
 					return eRule.APIs[i] < eRule.APIs[j]
 				})
-				if testEqual(rule.APIs, eRule.APIs) {
+				if slices.Equal(rule.APIs, eRule.APIs) {
 					qCfg.ThrottleRules[idx].ConcurrentRequestsCount = rule.ConcurrentRequestsCount
 					ruleExists = true
 					break
@@ -257,7 +258,7 @@ func mainQuotaSet(ctx *cli.Context) error {
 			sort.Slice(eRule.APIs, func(i, j int) bool {
 				return eRule.APIs[i] < eRule.APIs[j]
 			})
-			if testEqual(apis, eRule.APIs) {
+			if slices.Equal(apis, eRule.APIs) {
 				qCfg.ThrottleRules[idx].ConcurrentRequestsCount = uint64(concurrentReqCount)
 				ruleExists = true
 				break
@@ -275,16 +276,4 @@ func mainQuotaSet(ctx *cli.Context) error {
 	printMsg(qMsg)
 
 	return nil
-}
-
-func testEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
