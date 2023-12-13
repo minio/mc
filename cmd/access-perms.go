@@ -36,7 +36,6 @@ func (b accessPerms) isValidAccessPERM() bool {
 func (b accessPerms) isValidAccessFile() bool {
 	file, err := os.Open(string(b))
 	if err != nil {
-		fatalIf(errDummy().Trace(), "Unable to open access file.")
 		return false
 	}
 	defer file.Close()
