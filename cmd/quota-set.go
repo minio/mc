@@ -32,6 +32,7 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
+	"github.com/rs/xid"
 )
 
 var quotaSetFlags = []cli.Flag{
@@ -51,6 +52,15 @@ var quotaSetFlags = []cli.Flag{
 		Name:  "throttle-rules-file",
 		Usage: "JSON file containing throttle rules",
 	},
+	cli.StringFlag{
+		Name:  "id",
+		Usage: "ID of existing throttle rule to be updated",
+	},
+	cli.BoolFlag{
+		Name:   "new-rule",
+		Usage:  "create new rule(s) even if APIs pre-exist in older rules",
+		Hidden: true,
+	},
 }
 
 var quotaSetCmd = cli.Command{
@@ -64,7 +74,7 @@ var quotaSetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET [--size QUOTA] [--concurrent-requests-count COUNT --apis API-NAMES] [--throttle-rules-file JSON-FILE]
+  {{.HelpName}} TARGET [--size QUOTA] [--concurrent-requests-count COUNT --apis API-NAMES] [--concurrent-requests-count COUNT --id UNIQUE-ID] [--throttle-rules-file JSON-FILE]
 
 QUOTA
   quota accepts human-readable case-insensitive number
@@ -92,9 +102,12 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/mybucket --size 1GB
 
   2. Set bucket throttle for specific APIs with concurrent no of requets
-     {{.Prompt}} {{.HelpName}} myminio/mybucket --concurrent-requests-count 100 --apis "PutObject,ListObjects"
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --concurrent-requests-count 100 --apis "PutObject,ListObjects" [--id UNIQUE-ID]
 
-  3. Set bucket throttle using JSON file payload
+  3. Update an existing bucket throttle rule
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --concurrent-requests-count 100 --id EXISTING-RULE-ID
+
+  4. Set bucket throttle using JSON file payload
      {{.Prompt}} {{.HelpName}} myminio/mybucket --throttle-rules-file JSON-FILE
 `,
 }
@@ -124,7 +137,10 @@ func (q quotaMessage) String() string {
 				msg += "throttle configuration:"
 			}
 			for _, rule := range q.ThrottleRules {
-				msg += fmt.Sprintf("\n- Concurrent Requests Count: %d, APIs: %s", rule.ConcurrentRequestsCount, strings.Join(rule.APIs[:], ","))
+				msg += fmt.Sprintf("\n- ID: %s, Concurrent Requests Count: %d, APIs: %s",
+					rule.ID,
+					rule.ConcurrentRequestsCount,
+					strings.Join(rule.APIs[:], ","))
 			}
 		}
 		return console.Colorize("QuotaMessage", msg)
@@ -136,7 +152,10 @@ func (q quotaMessage) String() string {
 		if len(q.ThrottleRules) > 0 {
 			msg += "\nThrottle configuration:"
 			for _, rule := range q.ThrottleRules {
-				msg += fmt.Sprintf("\n- Concurrent Requests Count: %d, APIs: %s", rule.ConcurrentRequestsCount, strings.Join(rule.APIs[:], ","))
+				msg += fmt.Sprintf("\n- ID: %s, Concurrent Requests Count: %d, APIs: %s",
+					rule.ID,
+					rule.ConcurrentRequestsCount,
+					strings.Join(rule.APIs[:], ","))
 			}
 		}
 		return console.Colorize("QuotaInfo", msg)
@@ -177,13 +196,17 @@ func mainQuotaSet(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"--size or --concurrent-requests-count with --apis or --throttle-rules-file flag(s) needs to be set.")
 	}
-	if ctx.IsSet("concurrent-requests-count") && !ctx.IsSet("apis") {
+	if ctx.IsSet("concurrent-requests-count") && !ctx.IsSet("apis") && !ctx.IsSet("id") {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-			"--apis needs to be set with --concurrent-requests-count")
+			"either --apis or --id needs to be set with --concurrent-requests-count")
 	}
 	if ctx.IsSet("concurrent-requests-count") && ctx.IsSet("throttle-rules-file") {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"--concurrent-requests-count cannot be set with --throttle-rules-file")
+	}
+	if ctx.IsSet("id") && (!ctx.IsSet("concurrent-requests-count") || ctx.IsSet("throttle-rules-file")) {
+		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
+			"--id should be set with --concurrent-requests-count while creating/updating single rule")
 	}
 
 	// Get existing bucket quota details
@@ -209,6 +232,8 @@ func mainQuotaSet(ctx *cli.Context) error {
 		qMsg.QuotaType = string(qType)
 	}
 
+	var updateThrottleRule bool
+	// multiple rules create scenario with file
 	if ctx.IsSet("throttle-rules-file") {
 		ruleFile := ctx.String("throttle-rules-file")
 		file, err := os.Open(ruleFile)
@@ -221,6 +246,9 @@ func mainQuotaSet(ctx *cli.Context) error {
 			return fmt.Errorf("failed to parse throttle rules file: %s: %v", ruleFile, err)
 		}
 		for _, rule := range rules {
+			if rule.ID == "" {
+				rule.ID = xid.New().String()
+			}
 			sort.Slice(rule.APIs, func(i, j int) bool {
 				return rule.APIs[i] < rule.APIs[j]
 			})
@@ -232,6 +260,7 @@ func mainQuotaSet(ctx *cli.Context) error {
 				if slices.Equal(rule.APIs, eRule.APIs) {
 					qCfg.ThrottleRules[idx].ConcurrentRequestsCount = rule.ConcurrentRequestsCount
 					ruleExists = true
+					updateThrottleRule = true
 					break
 				}
 			}
@@ -241,7 +270,12 @@ func mainQuotaSet(ctx *cli.Context) error {
 		}
 		qMsg.ThrottleRules = rules
 	}
+	// new single rule create scenario
 	if ctx.IsSet("concurrent-requests-count") && ctx.IsSet("apis") {
+		id := ctx.String("id")
+		if id == "" {
+			id = xid.New().String()
+		}
 		countStr := ctx.String("concurrent-requests-count")
 		nCount, err := strconv.Atoi(countStr)
 		if err != nil {
@@ -260,18 +294,62 @@ func mainQuotaSet(ctx *cli.Context) error {
 			})
 			if slices.Equal(apis, eRule.APIs) {
 				qCfg.ThrottleRules[idx].ConcurrentRequestsCount = uint64(concurrentReqCount)
+				id = eRule.ID // update ID to the existing rule's ID as its update scenario
 				ruleExists = true
+				updateThrottleRule = true
 				break
 			}
 		}
-		rule := madmin.BucketThrottleRule{ConcurrentRequestsCount: uint64(concurrentReqCount), APIs: apis}
+		rule := madmin.BucketThrottleRule{ID: id, ConcurrentRequestsCount: uint64(concurrentReqCount), APIs: apis}
 		if !ruleExists {
 			qCfg.ThrottleRules = append(qCfg.ThrottleRules, rule)
 		}
 		qMsg.ThrottleRules = []madmin.BucketThrottleRule{rule}
 	}
+	// existing rule update scenario with ID
+	if ctx.IsSet("id") && ctx.IsSet("concurrent-requests-count") && !ctx.IsSet("apis") {
+		updateThrottleRule = true
+		id := ctx.String("id")
+		countStr := ctx.String("concurrent-requests-count")
+		nCount, err := strconv.Atoi(countStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse concurrent-requests-count: %v", err)
+		}
+		concurrentReqCount := nCount
+		// check if rule with ID exists
+		ruleExists := false
+		for idx, eRule := range qCfg.ThrottleRules {
+			if eRule.ID == id {
+				qCfg.ThrottleRules[idx].ConcurrentRequestsCount = uint64(concurrentReqCount)
+				ruleExists = true
+				qMsg.ThrottleRules = []madmin.BucketThrottleRule{{
+					ID:                      id,
+					ConcurrentRequestsCount: uint64(concurrentReqCount),
+					APIs:                    eRule.APIs,
+				}}
+				break
+			}
+		}
+		if !ruleExists {
+			return fmt.Errorf("no rule with ID: %s found", id)
+		}
+	}
+	createNewRule := ctx.Bool("new-rule")
+	if !createNewRule && !updateThrottleRule {
+		// check for duplicate only if its not update case or
+		// its not a forceful new rule creation
+		if ok, api, id := qCfg.HasDuplicateThrottleRules(); ok {
+			return fmt.Errorf(
+				"throttle rule already set for API: %s under rule ID: %s. Use '--new-rule' to create new or use '--id' to update existing one",
+				api, id)
+		}
+	}
 
-	fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, &qCfg)).Trace(args...), "Unable to set bucket quota")
+	opts := madmin.SetBucketQuotaOptions{
+		CreateNewRule: createNewRule,
+		Update:        updateThrottleRule,
+	}
+	fatalIf(probe.NewError(client.SetBucketQuota(globalContext, targetURL, &qCfg, opts)).Trace(args...), "Unable to set bucket quota")
 
 	printMsg(qMsg)
 

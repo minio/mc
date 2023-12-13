@@ -220,8 +220,8 @@ github.com/shoenig/go-m1cpu v0.1.6 h1:nxdKQNcEB6vzgA2E2bvzKIYRuNj7XNJ4S/aRSwKzFt
 github.com/shoenig/go-m1cpu v0.1.6/go.mod h1:1JJMcUBvfNwpq05QDQVAnx3gUHr9IYF7GNg9SUEw2VQ=
 github.com/shoenig/test v0.6.4 h1:kVTaSd7WLz5WZ2IaoM0RSzRsUD+m8wRR+5qvntpn4LU=
 github.com/shoenig/test v0.6.4/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnjqq0k=
-github.com/shtripat/madmin-go/v3 v3.0.0-20231212054825-249cd39e1cd5 h1:/k3HzxOEjeB6BOwAdZLlViMu6pCT70vLDTpWnmiNBUs=
-github.com/shtripat/madmin-go/v3 v3.0.0-20231212054825-249cd39e1cd5/go.mod h1:4QN2NftLSV7MdlT50dkrenOMmNVHluxTvlqJou3hte8=
+github.com/shtripat/madmin-go/v3 v3.0.0-20231213103602-e8c5c0055b28 h1:t43UcvZa/kgJntOUX1B04k3lBHk6o74w1wyERzNTtew=
+github.com/shtripat/madmin-go/v3 v3.0.0-20231213103602-e8c5c0055b28/go.mod h1:4QN2NftLSV7MdlT50dkrenOMmNVHluxTvlqJou3hte8=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

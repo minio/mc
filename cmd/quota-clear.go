@@ -70,7 +70,7 @@ func mainQuotaClear(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	_, targetURL := url2Alias(args[0])
-	if e := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}); e != nil {
+	if e := client.SetBucketQuota(globalContext, targetURL, &madmin.BucketQuota{}, madmin.SetBucketQuotaOptions{}); e != nil {
 		fatalIf(probe.NewError(e).Trace(args...), "Unable to clear bucket quota config")
 	}
 	printMsg(quotaMessage{
