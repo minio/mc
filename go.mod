@@ -1,6 +1,6 @@
 module github.com/minio/mc
 
-go 1.19
+go 1.21
 
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -130,3 +130,5 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+replace github.com/minio/pkg/v2 => github.com/anjalshireesh/pkg/v2 v2.0.0-20231213135926-9362a8740dc3
