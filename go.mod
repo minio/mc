@@ -1,6 +1,6 @@
 module github.com/minio/mc
 
-go 1.21
+go 1.19
 
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -47,7 +47,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
 	github.com/minio/madmin-go/v3 v3.0.37-0.20231211192618-d20cff0b11d9
-	github.com/minio/pkg/v2 v2.0.5
+	github.com/minio/pkg/v2 v2.0.6
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -130,5 +130,3 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
-
-replace github.com/minio/pkg/v2 => github.com/anjalshireesh/pkg/v2 v2.0.0-20231213135926-9362a8740dc3
