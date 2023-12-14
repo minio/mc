@@ -56,6 +56,14 @@ var adminTierAddFlags = []cli.Flag{
 		Usage: "use AWS S3 role",
 	},
 	cli.StringFlag{
+		Name:  "aws-role-arn",
+		Usage: "use AWS S3 role name",
+	},
+	cli.StringFlag{
+		Name:  "aws-web-identity-file",
+		Usage: "use AWS S3 web identity file",
+	},
+	cli.StringFlag{
 		Name:  "account-name",
 		Value: "",
 		Usage: "Azure Blob Storage account name",
@@ -204,14 +212,25 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 		return minioCfg
 
 	case madmin.S3:
-		accessKey := ctx.String("access-key")
-		secretKey := ctx.String("secret-key")
+		accessKey := ctx.IsSet("access-key")
+		secretKey := ctx.IsSet("secret-key")
 		useAwsRole := ctx.IsSet("use-aws-role")
-		if accessKey == "" && secretKey == "" && !useAwsRole {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials or AWS role", tierType))
-		}
-		if (accessKey != "" || secretKey != "") && useAwsRole {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s remote tier requires access credentials", tierType))
+		awsRoleArn := ctx.IsSet("aws-role-arn")
+		awsWebIdentity := ctx.IsSet("aws-web-identity-file")
+
+		// Extensive flag check
+		switch {
+		case !accessKey && !secretKey && !useAwsRole && !awsRoleArn && !awsWebIdentity:
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s: No authentication mechanism was provided", tierType))
+		case (accessKey || secretKey) && (useAwsRole || awsRoleArn || awsWebIdentity):
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s: Static credentials cannot be combined with AWS role authentication", tierType))
+		case useAwsRole && (awsRoleArn || awsWebIdentity):
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s: --use-aws-role cannot be combined with --aws-role-arn or --aws-web-identity-file", tierType))
+		case (awsRoleArn && !awsWebIdentity) || (!awsRoleArn && awsWebIdentity):
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s: Both --use-aws-role and --aws-web-identity-file are required to enable web identity token based authentication", tierType))
+		case (accessKey && !secretKey) || (!accessKey && secretKey):
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("%s: Both --access-key and --secret-key are required to enable static credentials authentication", tierType))
+
 		}
 
 		bucket := ctx.String("bucket")
@@ -245,7 +264,13 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 		if ctx.IsSet("use-aws-role") {
 			s3Opts = append(s3Opts, madmin.S3AWSRole())
 		}
-		s3Cfg, e := madmin.NewTierS3(tierName, accessKey, secretKey, bucket, s3Opts...)
+		if ctx.IsSet("aws-role-arn") {
+			s3Opts = append(s3Opts, madmin.S3AWSRoleARN(ctx.String("aws-role-arn")))
+		}
+		if ctx.IsSet("aws-web-identity-file") {
+			s3Opts = append(s3Opts, madmin.S3AWSRoleWebIdentityTokenFile(ctx.String("aws-web-identity-file")))
+		}
+		s3Cfg, e := madmin.NewTierS3(tierName, ctx.String("access-key"), ctx.String("secret-key"), bucket, s3Opts...)
 		fatalIf(probe.NewError(e), "Invalid configuration for AWS S3 compatible remote tier")
 
 		return s3Cfg
