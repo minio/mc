@@ -653,7 +653,7 @@ func validateAndSaveLic(lic, alias string, saveAPIKey bool) string {
 func extractAndSaveSubnetCreds(alias, resp string) (string, string, error) {
 	parsedResp := gjson.Parse(resp)
 
-	lic, e := extractSubnetCred("license", parsedResp)
+	lic, e := extractSubnetCred("license_v2", parsedResp)
 	if e != nil {
 		return "", "", e
 	}
