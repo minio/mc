@@ -425,27 +425,34 @@ func runAnonymousCmd(args cli.Args) {
 	ctx, cancelAnonymous := context.WithCancel(globalContext)
 	defer cancelAnonymous()
 
-	var operation, anonymousStr string
+	var targetURL, anonymousStr string
+	var perms accessPerms
 	var probeErr *probe.Error
-	perms := accessPerms(args.Get(1))
-	targetURL := args.Get(2)
-	if perms.isValidAccessPERM() {
-		operation = "set"
+
+	operation := args.First()
+	switch operation {
+	case "set":
+		perms = accessPerms(args.Get(1))
+		if !perms.isValidAccessPERM() {
+			fatalIf(errDummy().Trace(), "Invalid access permission: `"+string(perms)+"`.")
+		}
+		targetURL = args.Get(2)
 		probeErr = doSetAccess(ctx, targetURL, perms)
 		if probeErr == nil {
 			perms, _, probeErr = doGetAccess(ctx, targetURL)
 		}
-	} else if perms.isValidAccessFile() {
-		probeErr = doSetAccessJSON(ctx, targetURL, perms)
-		operation = "set-json"
-	} else {
-		targetURL = args.Get(1)
-		operation = "get"
-		if args.First() == "get-json" {
-			operation = "get-json"
+	case "set-json":
+		perms = accessPerms(args.Get(1))
+		if !perms.isValidAccessFile() {
+			fatalIf(errDummy().Trace(), "Invalid access file: `"+string(perms)+"`.")
 		}
+		targetURL = args.Get(2)
+		probeErr = doSetAccessJSON(ctx, targetURL, perms)
+	case "get", "get-json":
+		targetURL = args.Get(1)
 		perms, anonymousStr, probeErr = doGetAccess(ctx, targetURL)
-
+	default:
+		fatalIf(errDummy().Trace(), "Invalid operation: `"+operation+"`.")
 	}
 	// Upon error exit.
 	if probeErr != nil {
