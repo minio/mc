@@ -461,7 +461,7 @@ func convertPerfResults(results []PerfTestResult) PerfTestOutput {
 }
 
 func execSupportPerf(ctx *cli.Context, aliasedURL, perfType string) {
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)

@@ -782,7 +782,7 @@ func getAPIKeyFlag(ctx *cli.Context) (string, error) {
 	return apiKey, nil
 }
 
-func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool) (string, string) {
+func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool, failOnConnErr bool) (string, string) {
 	e := validateSubnetFlags(ctx, forUpload)
 	fatalIf(probe.NewError(e), "Invalid flags:")
 
@@ -797,7 +797,10 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool)
 		fatalIf(probe.NewError(e), "Error in setting SUBNET proxy:")
 
 		sbu := subnetBaseURL()
-		fatalIf(checkURLReachable(sbu).Trace(aliasedURL), "Unable to reach %s, please use --airgap if there is no connectivity to SUBNET", sbu)
+		err := checkURLReachable(sbu)
+		if err != nil && failOnConnErr {
+			fatal(err.Trace(aliasedURL), "Unable to reach %s, please use --airgap if there is no connectivity to SUBNET", sbu)
+		}
 	}
 
 	return alias, apiKey
