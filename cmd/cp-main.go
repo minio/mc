@@ -659,6 +659,11 @@ loop:
 		}
 	}
 
+	// Source has error
+	if errSeen && totalObjects == 0 && retErr == nil {
+		retErr = exitStatus(globalErrorExitStatus)
+	}
+
 	return retErr
 }
 
