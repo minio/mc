@@ -44,7 +44,7 @@ var licenseRegisterFlags = append([]cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "license",
-		Usage: "License of the account on SUBNET",
+		Usage: "license of the account on SUBNET",
 	},
 }, subnetCommonFlags...)
 
