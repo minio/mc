@@ -361,6 +361,10 @@ func prepareCopyURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 	go func() {
 		defer close(finalCopyURLsCh)
 		for cpURLs := range copyURLsCh {
+			if cpURLs.Error != nil {
+				finalCopyURLsCh <- cpURLs
+				continue
+			}
 			// Skip objects older than --older-than parameter if specified
 			if o.olderThan != "" && isOlder(cpURLs.SourceContent.Time, o.olderThan) {
 				continue
