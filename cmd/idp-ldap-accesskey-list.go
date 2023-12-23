@@ -38,8 +38,8 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 		Usage: "only list temporary access keys",
 	},
 	cli.BoolFlag{
-		Name:  "permanent-only",
-		Usage: "only list permanent access keys/service accounts",
+		Name:  "svcacc-only",
+		Usage: "only list service account access keys",
 	},
 }
 
@@ -63,45 +63,48 @@ FLAGS:
 EXAMPLES:
   1. Get list of all users and associated access keys in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/
+
   2. Get list of users in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/ --users-only
+
   3. Get list of all users and associated temporary access keys in play server (if admin)
 	 {{.Prompt}} {{.HelpName}} play/ --temp-only
+
   4. Get list of access keys associated with user 'bobfisher'
   	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io
-  5. Get list of access keys associated with users 'bobfisher' and 'cody3'
+
+  5. Get list of access keys associated with user 'bobfisher' (alt)
+	 {{.Prompt}} {{.HelpName}} play/ bobfisher
+
+  6. Get list of access keys associated with users 'bobfisher' and 'cody3'
   	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io uid=cody3,dc=min,dc=io
-  6. Get authenticated user and associated access keys in local server (if not admin)
+
+  7. Get authenticated user and associated access keys in local server (if not admin)
 	 {{.Prompt}} {{.HelpName}} local/
-	`,
+`,
 }
 
 type ldapUsersList struct {
-	Status string             `json:"status"`
-	Result ldapUserAccessKeys `json:"result"`
-}
-
-type ldapUserAccessKeys struct {
-	DN                  string                      `json:"dn"`
-	TempAccessKeys      []madmin.ServiceAccountInfo `json:"tempAccessKeys,omitempty"`
-	PermanentAccessKeys []madmin.ServiceAccountInfo `json:"permanentAccessKeys,omitempty"`
+	Status          string                      `json:"status"`
+	DN              string                      `json:"dn"`
+	STSKeys         []madmin.ServiceAccountInfo `json:"stsKeys"`
+	ServiceAccounts []madmin.ServiceAccountInfo `json:"svcaccs"`
 }
 
 func (m ldapUsersList) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
-	u := m.Result
-	o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+u.DN)))
-	if len(u.TempAccessKeys) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Temporary Access Keys:")))
-		for _, k := range u.TempAccessKeys {
+	o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+m.DN)))
+	if len(m.STSKeys) > 0 {
+		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("STS Access Keys:")))
+		for _, k := range m.STSKeys {
 			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
 		}
 	}
-	if len(u.PermanentAccessKeys) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Permanent Access Keys:")))
-		for _, k := range u.PermanentAccessKeys {
+	if len(m.ServiceAccounts) > 0 {
+		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Service Account Access Keys:")))
+		for _, k := range m.ServiceAccounts {
 			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
 		}
 	}
@@ -123,12 +126,18 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	}
 
 	usersOnly := ctx.Bool("users-only")
-	tempOnly := ctx.Bool("temp-only")
-	permanentOnly := ctx.Bool("permanent-only")
+	tempOnly := ctx.Bool("sts-only")
+	permanentOnly := ctx.Bool("svcacc-only")
+	listType := ""
 
 	if (usersOnly && permanentOnly) || (usersOnly && tempOnly) || (permanentOnly && tempOnly) {
 		e := errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
 		fatalIf(probe.NewError(e), "Invalid flags.")
+	}
+	if tempOnly {
+		listType = "sts-only"
+	} else if permanentOnly {
+		listType = "svcacc-only"
 	}
 
 	args := ctx.Args()
@@ -148,12 +157,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	} else {
 		users = make(map[string]madmin.UserInfo)
 		for _, user := range userArg {
-			// Check existence of each user
-			if _, e = client.GetUserInfo(globalContext, user); e != nil {
-				errorIf(probe.NewError(e), "User '"+user+"' invalid")
-			} else {
-				users[user] = madmin.UserInfo{}
-			}
+			users[user] = madmin.UserInfo{}
 		}
 	}
 	if e != nil {
@@ -167,56 +171,30 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	}
 
 	for dn := range users {
-		if !usersOnly {
-			accessKeys, _ := client.ListServiceAccounts(globalContext, dn)
-
-			var tempAccessKeys []madmin.ServiceAccountInfo
-			var permanentAccessKeys []madmin.ServiceAccountInfo
-
-			for _, accessKey := range accessKeys.Accounts {
-				if accessKey.Expiration.Unix() == 0 {
-					permanentAccessKeys = append(permanentAccessKeys, accessKey)
-				} else {
-					tempAccessKeys = append(tempAccessKeys, accessKey)
-				}
-			}
-
-			// if dn is blank, it means we are listing the current user's access keys
-			if dn == "" {
-				name, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
-				fatalIf(probe.NewError(e), "Unable to retrieve account name.")
-				dn = name.AccountName
-			}
-
-			userAccessKeys := ldapUserAccessKeys{DN: dn}
-			if !tempOnly {
-				userAccessKeys.PermanentAccessKeys = permanentAccessKeys
-			}
-			if !permanentOnly {
-				userAccessKeys.TempAccessKeys = tempAccessKeys
-			}
-
-			m := ldapUsersList{
-				Status: "success",
-				Result: userAccessKeys,
-			}
-			printMsg(m)
-
-		} else {
-			// If dn is blank, it means we are listing the current user's access keys
-			if dn == "" {
-				name, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
-				fatalIf(probe.NewError(e), "Unable to retrieve account name.")
-				dn = name.AccountName
-			}
-
-			m := ldapUsersList{
-				Status: "success",
-				Result: ldapUserAccessKeys{DN: dn},
-			}
-			printMsg(m)
+		// if dn is blank, it means we are listing the current user's access keys
+		if dn == "" {
+			name, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
+			fatalIf(probe.NewError(e), "Unable to retrieve account name.")
+			dn = name.AccountName
 		}
-	}
 
+		m := ldapUsersList{
+			Status: "success",
+			DN:     dn,
+		}
+
+		// Get access keys if not listing users only
+		if !usersOnly {
+			accessKeys, e := client.ListAccessKeysLDAP(globalContext, dn, listType)
+			if e != nil {
+				errorIf(probe.NewError(e), "Unable to retrieve access keys for user '"+dn+"'.")
+				continue
+			}
+
+			m.STSKeys = accessKeys.STSKeys
+			m.ServiceAccounts = accessKeys.ServiceAccounts
+		}
+		printMsg(m)
+	}
 	return nil
 }
