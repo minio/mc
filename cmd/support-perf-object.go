@@ -85,12 +85,13 @@ func mainAdminSpeedTestObject(ctx *cli.Context, aliasedURL string, outCh chan<- 
 	autotune := !ctx.IsSet("concurrent")
 
 	resultCh, e := client.Speedtest(ctxt, madmin.SpeedtestOpts{
-		Size:        int(size),
-		Duration:    duration,
-		Concurrency: concurrent,
-		Autotune:    autotune,
-		Bucket:      ctx.String("bucket"), // This is a hidden flag.
-		NoClear:     ctx.Bool("noclear"),
+		Size:         int(size),
+		Duration:     duration,
+		Concurrency:  concurrent,
+		Autotune:     autotune,
+		Bucket:       ctx.String("bucket"), // This is a hidden flag.
+		NoClear:      ctx.Bool("noclear"),
+		EnableSha256: ctx.Bool("enable-sha256-payload"),
 	})
 
 	if globalJSON {

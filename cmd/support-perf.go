@@ -65,6 +65,10 @@ var supportPerfFlags = append([]cli.Flag{
 		Usage:  "do not clear bucket after running object perf test",
 		Hidden: true, // Hidden for now.
 	},
+	cli.BoolFlag{
+		Name:  "enable-sha256-payload",
+		Usage: "enable calculating sha256 for uploads",
+	},
 	// Drive test specific flags.
 	cli.StringFlag{
 		Name:   "filesize",
