@@ -533,8 +533,15 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				if isErrIgnored(sURLs.Error) {
 					ignoreErr = true
 				} else {
-					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					switch sURLs.Error.ToGoError().(type) {
+					case PathInsufficientPermission:
+						// Ignore Permission error.
+						ignoreErr = true
+					}
+					if !ignoreErr {
+						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+							fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					}
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
