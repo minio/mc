@@ -126,6 +126,19 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		URLsCh <- URLs{Error: err.Trace(targetAlias, targetURL)}
 		return
 	}
+	// It will change the expanded alias back to the alias
+	// again, by replacing the sourceUrlFull with the sourceAlias.
+	// This url will be used to mirror.
+	sourceAlias, sourceURLFull, _ := mustExpandAlias(sourceURL)
+
+	// If the passed source URL points to fs, fetch the absolute src path
+	// to correctly calculate targetPath
+	if sourceAlias == "" {
+		tmpSrcURL, e := filepath.Abs(sourceURLFull)
+		if e == nil {
+			sourceURLFull = tmpSrcURL
+		}
+	}
 
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, opts.isMetadata) {
@@ -135,7 +148,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 			continue
 		}
 
-		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
+		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURLFull)
 		// Skip the source object if it matches the Exclude options provided
 		if matchExcludeOptions(opts.excludeOptions, srcSuffix) {
 			continue
@@ -175,7 +188,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 				continue
 			}
 
-			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
+			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURLFull)
 			// Either available only in source or size differs and force is set
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
@@ -188,7 +201,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 			}
 		case differInFirst:
 			// Only in first, always copy.
-			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
+			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURLFull)
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
 			targetContent := &ClientContent{URL: *newClientURL(targetPath)}
