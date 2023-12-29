@@ -471,7 +471,7 @@ func mainSQL(cliCtx *cli.Context) error {
 			continue
 		}
 
-		for content := range clnt.List(ctx, ListOptions{Recursive: cliCtx.Bool("recursive"), ShowDir: DirNone}) {
+		for content := range clnt.List(ctx, ListOptions{Recursive: cliCtx.Bool("recursive"), WithMetadata: true, ShowDir: DirNone}) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue
@@ -480,6 +480,9 @@ func mainSQL(cliCtx *cli.Context) error {
 				query, csvHdrs, selOpts = getAndValidateArgs(cliCtx, encKeyDB, targetAlias+content.URL.Path)
 			}
 			contentType := mimedb.TypeByExtension(filepath.Ext(content.URL.Path))
+			if len(content.UserMetadata) != 0 && content.UserMetadata["content-type"] != "" {
+				contentType = content.UserMetadata["content-type"]
+			}
 			for _, cTypeSuffix := range supportedContentTypes {
 				if strings.Contains(contentType, cTypeSuffix) {
 					errorIf(sqlSelect(targetAlias+content.URL.Path, query,
