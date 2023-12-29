@@ -195,14 +195,14 @@ func doTree(ctx context.Context, url string, timeRef time.Time, level int, branc
 		prefixPath = strings.TrimPrefix(prefixPath, "."+separator)
 
 		if prev.Type.IsDir() {
-			nextUrl := ""
+			nextURL := ""
 			if targetAlias != "" {
-				nextUrl = targetAlias + "/" + contentURL
+				nextURL = targetAlias + "/" + contentURL
 			} else {
-				nextUrl = contentURL
+				nextURL = contentURL
 			}
 
-			if nextUrl == url {
+			if nextURL == url {
 				return nil
 			}
 			printMsg(treeMessage{
