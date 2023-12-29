@@ -127,6 +127,15 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		return
 	}
 
+	// If the passed source URL points to fs, fetch the absolute src path
+	// to correctly calculate targetPath
+	if sourceAlias == "" {
+		tmpSrcURL, e := filepath.Abs(sourceURL)
+		if e == nil {
+			sourceURL = tmpSrcURL
+		}
+	}
+
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(ctx, sourceClnt, targetClnt, opts.isMetadata) {
 		if diffMsg.Error != nil {
