@@ -195,6 +195,16 @@ func doTree(ctx context.Context, url string, timeRef time.Time, level int, branc
 		prefixPath = strings.TrimPrefix(prefixPath, "."+separator)
 
 		if prev.Type.IsDir() {
+			nextURL := ""
+			if targetAlias != "" {
+				nextURL = targetAlias + "/" + contentURL
+			} else {
+				nextURL = contentURL
+			}
+
+			if nextURL == url {
+				return nil
+			}
 			printMsg(treeMessage{
 				Entry:        strings.TrimSuffix(strings.TrimPrefix(contentURL, prefixPath), "/"),
 				IsDir:        true,

@@ -129,6 +129,10 @@ var (
 			Name:  "retry",
 			Usage: "if specified, will enable retrying on a per object basis if errors occur",
 		},
+		cli.BoolFlag{
+			Name:  "summary",
+			Usage: "print a summary of the mirror session",
+		},
 	}
 )
 
@@ -461,13 +465,15 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
-	mj.status.PrintMsg(mirrorMessage{
-		Source:     sourcePath,
-		Target:     targetPath,
-		Size:       length,
-		TotalCount: sURLs.TotalCount,
-		TotalSize:  sURLs.TotalSize,
-	})
+	if !mj.opts.isSummary {
+		mj.status.PrintMsg(mirrorMessage{
+			Source:     sourcePath,
+			Target:     targetPath,
+			Size:       length,
+			TotalCount: sURLs.TotalCount,
+			TotalSize:  sURLs.TotalSize,
+		})
+	}
 	sURLs.MD5 = mj.opts.md5
 	sURLs.DisableMultipart = mj.opts.disableMultipart
 
@@ -533,8 +539,15 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				if isErrIgnored(sURLs.Error) {
 					ignoreErr = true
 				} else {
-					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					switch sURLs.Error.ToGoError().(type) {
+					case PathInsufficientPermission:
+						// Ignore Permission error.
+						ignoreErr = true
+					}
+					if !ignoreErr {
+						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+							fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					}
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
@@ -939,6 +952,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isOverwrite:           isOverwrite,
 		isWatch:               isWatch,
 		isMetadata:            isMetadata,
+		isSummary:             cli.Bool("summary"),
 		isRetriable:           cli.Bool("retry"),
 		md5:                   cli.Bool("md5"),
 		disableMultipart:      cli.Bool("disable-multipart"),
