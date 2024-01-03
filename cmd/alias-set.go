@@ -119,6 +119,10 @@ func checkAliasSetSyntax(ctx *cli.Context, accessKey, secretKey string, deprecat
 	path := ctx.String("path")
 	bucketLookup := ctx.String("lookup")
 
+	if len(alias) < 2 {
+		fatalIf(errInvalidAliasLen(alias), "Invalid alias.")
+	}
+
 	if !isValidAlias(alias) {
 		fatalIf(errInvalidAlias(alias), "Invalid alias.")
 	}
