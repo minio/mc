@@ -17,11 +17,15 @@
 
 package ilm
 
-import "github.com/jedib0t/go-pretty/v6/table"
+import (
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
+)
 
 // Table interface provides methods when implemented allows a []T to be rendered
 // as a table.
 type Table interface {
+	Len() int
 	Title() string
 	Rows() []table.Row
 	ColumnHeaders() table.Row
@@ -39,6 +43,30 @@ const (
 	TransitionOnly
 )
 
+// Apply applies f on rules and filters lifecycle rules matching it
+func (f LsFilter) Apply(rules []lifecycle.Rule) []lifecycle.Rule {
+	check := func(rule lifecycle.Rule) bool {
+		switch f {
+		case ExpiryOnly:
+			return !rule.Expiration.IsNull() || !rule.NoncurrentVersionExpiration.IsDaysNull() ||
+				rule.NoncurrentVersionExpiration.NewerNoncurrentVersions > 0
+		case TransitionOnly:
+			return !rule.Transition.IsNull() || !rule.NoncurrentVersionTransition.IsStorageClassEmpty()
+		}
+		return true
+	}
+
+	var n int
+	for _, rule := range rules {
+		if check(rule) {
+			rules[n] = rule
+			n++
+		}
+	}
+	rules = rules[:n]
+	return rules
+}
+
 type expirationCurrentRow struct {
 	ID              string
 	Status          string
@@ -49,6 +77,10 @@ type expirationCurrentRow struct {
 }
 
 type expirationCurrentTable []expirationCurrentRow
+
+func (e expirationCurrentTable) Len() int {
+	return len(e)
+}
 
 func (e expirationCurrentTable) Title() string {
 	return "Expiration for latest version (Expiration)"
@@ -80,6 +112,10 @@ type expirationNoncurrentRow struct {
 	Tags         string
 	Days         int
 	KeepVersions int
+}
+
+func (e expirationNoncurrentTable) Len() int {
+	return len(e)
 }
 
 func (e expirationNoncurrentTable) Title() string {
@@ -114,6 +150,10 @@ type tierCurrentRow struct {
 	Tier   string
 }
 
+func (t tierCurrentTable) Len() int {
+	return len(t)
+}
+
 func (t tierCurrentTable) Title() string {
 	return "Transition for latest version (Transition)"
 }
@@ -139,6 +179,10 @@ type (
 	tierNoncurrentTable []tierNoncurrentRow
 	tierNoncurrentRow   tierCurrentRow
 )
+
+func (t tierNoncurrentTable) Len() int {
+	return len(t)
+}
 
 func (t tierNoncurrentTable) Title() string {
 	return "Transition for older versions (NoncurrentVersionTransition)"
