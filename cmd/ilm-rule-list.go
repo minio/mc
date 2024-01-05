@@ -98,16 +98,13 @@ func (i ilmListMessage) JSON() string {
 	return string(msgBytes)
 }
 
-// validateILMListFlagSet - Only one of these flags needs to be set for display: --json, --expiry, --transition
+// validateILMListFlagSet - validates ilm list flags
 func validateILMListFlagSet(ctx *cli.Context) bool {
-	flags := [...]bool{ctx.Bool("expiry"), ctx.Bool("transition"), ctx.Bool("json")}
-	found := false
-	for _, flag := range flags {
-		if found && flag {
-			return false
-		} else if flag {
-			found = true
-		}
+	expiryOnly := ctx.Bool("expiry")
+	transitionOnly := ctx.Bool("transition")
+	// Only one of expiry or transition rules can be filtered
+	if expiryOnly && transitionOnly {
+		return false
 	}
 	return true
 }
@@ -153,6 +150,9 @@ func mainILMList(cliCtx *cli.Context) error {
 			"Unable to ls lifecycle configuration")
 	}
 
+	// applies listing filter on ILM rules
+	ilmCfg.Rules = filter.Apply(ilmCfg.Rules)
+
 	if globalJSON {
 		printMsg(ilmListMessage{
 			Status:    "success",
@@ -164,7 +164,7 @@ func mainILMList(cliCtx *cli.Context) error {
 		return nil
 	}
 
-	for _, tbl := range ilm.ToTables(ilmCfg, filter) {
+	for _, tbl := range ilm.ToTables(ilmCfg) {
 		rows := tbl.Rows()
 		if len(rows) == 0 {
 			continue
