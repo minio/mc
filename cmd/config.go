@@ -172,7 +172,7 @@ func cleanAlias(s string) string {
 
 // isValidAlias - Check if alias valid.
 func isValidAlias(alias string) bool {
-	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-_]+$").MatchString(alias)
+	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-_]*$").MatchString(alias)
 }
 
 // getAliasConfig retrieves host specific configuration such as access keys, signature type.
