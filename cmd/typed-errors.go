@@ -67,13 +67,6 @@ var errInvalidAlias = func(alias string) *probe.Error {
 	return probe.NewError(invalidAliasErr(errors.New(msg)))
 }
 
-type invalidAliasLenErr error
-
-var errInvalidAliasLen = func(alias string) *probe.Error {
-	msg := "Alias should be at least 2 characters long"
-	return probe.NewError(invalidAliasLenErr(errors.New(msg)))
-}
-
 type invalidURLErr error
 
 var errInvalidURL = func(URL string) *probe.Error {
