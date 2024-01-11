@@ -85,8 +85,6 @@ var (
 	// Terminal height/width, zero if not found
 	globalTermWidth, globalTermHeight int
 
-	globalHelpPager *termPager
-
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool
 )
