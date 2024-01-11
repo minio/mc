@@ -89,7 +89,7 @@ EXAMPLES:
   6. Assign tags recursively to all versions of all objects of subdirs of bucket.
      {{.Prompt}} {{.HelpName}} myminio/testbucket --recursive --versions "key1=value1&key2=value2&key3=value3"
 
-  7. Assign tags to all the objects of bucket, exclusing subdirs
+  7. Assign tags to all the objects on a bucket, excluding folders
      {{.Prompt}} {{.HelpName}} myminio/testbucket --exclude-folders --recursive "key1=value1&key2=value2&key3=value3"
 `,
 }
@@ -137,7 +137,7 @@ func parseSetTagSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef t
 	}
 
 	if excludeFolders && !recursive {
-		fatalIf(errDummy().Trace(), "Flag --exclude-folders can be used with --recursive only")
+		fatalIf(errDummy().Trace(), "'--exclude-folders' must be used with --recursive only")
 	}
 
 	timeRef = parseRewindFlag(rewind)
