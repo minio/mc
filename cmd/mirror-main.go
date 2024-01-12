@@ -943,7 +943,6 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
-	isOverwrite = isOverwrite || isMetadata
 	isFake := cli.Bool("fake") || cli.Bool("dry-run")
 
 	mopts := mirrorOptions{
