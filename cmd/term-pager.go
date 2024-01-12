@@ -109,12 +109,21 @@ func (m model) footerView() string {
 	percent := percentStyle.Render(fmt.Sprintf("%d%%", int(m.viewport.ScrollPercent()*100)))
 	info := fmt.Sprintf(" %s", percent)
 	totalLength := m.viewport.Width - lipgloss.Width(info)
-	onePart := max(0, totalLength/100)
 	var finishedCount int
-	if !math.IsNaN(m.viewport.ScrollPercent()) {
-		finishedCount = onePart * min(100, int(m.viewport.ScrollPercent()*100))
+	var onePart int
+	if totalLength <= 99 {
+		onePart = m.viewport.Width / 5
+		if !math.IsNaN(m.viewport.ScrollPercent()) {
+			finishedCount = onePart * min(5, int(m.viewport.ScrollPercent()*100)/20)
+		}
+	} else {
+		onePart = max(1, totalLength/100)
+		if !math.IsNaN(m.viewport.ScrollPercent()) {
+			finishedCount = onePart * min(100, int(m.viewport.ScrollPercent()*100))
+		}
 	}
-	lineDone := strings.Repeat("/", max(0, finishedCount))
+
+	lineDone := strings.Repeat("/", finishedCount)
 	line := strings.Repeat("─", max(0, totalLength-finishedCount-5))
 	return lipgloss.JoinHorizontal(lipgloss.Center, info, lineDone, line)
 }
