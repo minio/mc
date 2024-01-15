@@ -105,27 +105,21 @@ func (m model) footerView() string {
 	if m.viewport.Width == 0 {
 		return ""
 	}
-
-	percent := percentStyle.Render(fmt.Sprintf("%d%%", int(m.viewport.ScrollPercent()*100)))
-	info := fmt.Sprintf(" %s", percent)
-	totalLength := m.viewport.Width - lipgloss.Width(info)
-	var finishedCount int
-	var onePart int
-	if totalLength <= 99 {
-		onePart = m.viewport.Width / 5
-		if !math.IsNaN(m.viewport.ScrollPercent()) {
-			finishedCount = onePart * min(5, int(m.viewport.ScrollPercent()*100)/20)
-		}
-	} else {
-		onePart = max(1, totalLength/100)
-		if !math.IsNaN(m.viewport.ScrollPercent()) {
-			finishedCount = onePart * min(100, int(m.viewport.ScrollPercent()*100))
-		}
+	if math.IsNaN(m.viewport.ScrollPercent()) {
+		return ""
 	}
 
-	lineDone := strings.Repeat("/", finishedCount)
-	line := strings.Repeat("─", max(0, totalLength-finishedCount-5))
-	return lipgloss.JoinHorizontal(lipgloss.Center, info, lineDone, line)
+	viewP := int(m.viewport.ScrollPercent() * 100)
+	info := fmt.Sprintf(" %s", percentStyle.Render(fmt.Sprintf("%d%%", viewP)))
+	totalLength := m.viewport.Width - lipgloss.Width(info)
+	finishedCount := int((float64(totalLength) / 100) * float64(viewP))
+
+	return lipgloss.JoinHorizontal(
+		lipgloss.Center,
+		info,
+		strings.Repeat("/", finishedCount),
+		strings.Repeat("─", max(0, totalLength-finishedCount)),
+	)
 }
 
 type termPager struct {
