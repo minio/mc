@@ -49,6 +49,10 @@ var undoFlags = []cli.Flag{
 		Name:  "dry-run",
 		Usage: "fake an undo operation",
 	},
+	cli.StringFlag{
+		Name:  "action",
+		Usage: "undo only if latest version is this type [PUT/DELETE]",
+	},
 }
 
 var undoCmd = cli.Command{
@@ -109,7 +113,7 @@ func (c undoMessage) JSON() string {
 }
 
 // parseUndoSyntax performs command-line input validation for cat command.
-func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recursive, dryRun bool) {
+func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recursive, dryRun bool, action string) {
 	targetAliasedURL = ctx.Args().Get(0)
 	if targetAliasedURL == "" {
 		fatalIf(errInvalidArgument().Trace(), "The argument should not be empty")
@@ -127,6 +131,10 @@ func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recur
 	}
 
 	dryRun = ctx.Bool("dry-run")
+	action = strings.ToUpper(ctx.String("action"))
+	if action != "PUT" && action != "DELETE" && action != "" {
+		fatalIf(errInvalidArgument().Trace(), "Invalid action, should be PUT,DELETE or empty")
+	}
 	return
 }
 
@@ -184,7 +192,7 @@ func undoLastNOperations(ctx context.Context, clnt Client, objectVersions []*Cli
 	return
 }
 
-func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun bool) (exitErr error) {
+func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun bool, action string) (exitErr error) {
 	clnt, err := newClient(aliasedURL)
 	fatalIf(err.Trace(aliasedURL), "Unable to initialize target `"+aliasedURL+"`.")
 
@@ -195,7 +203,7 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 		perObjectVersions     []*ClientContent
 		atLeastOneUndoApplied bool
 	)
-
+	remove := true
 	for content := range clnt.List(ctx, ListOptions{
 		Recursive:         recursive,
 		WithOlderVersions: true,
@@ -215,20 +223,28 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 				break
 			}
 		}
-
 		if lastObjectPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
+			if remove {
+				exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
+			}
+			remove = true
 			lastObjectPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
-
+		if !remove {
+			continue
+		}
+		if (content.IsLatest && action == "DELETE" && !content.IsDeleteMarker) || (content.IsLatest && action == "PUT" && content.IsDeleteMarker) {
+			remove = false
+			continue
+		}
 		perObjectVersions = append(perObjectVersions, content)
 		atLeastOneUndoApplied = true
 	}
 
 	// Undo the remaining versions found if any
-	if len(perObjectVersions) > 0 {
+	if len(perObjectVersions) > 0 && remove {
 		exitErr = undoLastNOperations(ctx, clnt, perObjectVersions, last, dryRun)
 	}
 
@@ -274,11 +290,11 @@ func mainUndo(cliCtx *cli.Context) error {
 	console.SetColor("Success", color.New(color.FgGreen, color.Bold))
 
 	// check 'undo' cli arguments.
-	targetAliasedURL, last, recursive, dryRun := parseUndoSyntax(cliCtx)
+	targetAliasedURL, last, recursive, dryRun, action := parseUndoSyntax(cliCtx)
 
 	if !checkIfBucketIsVersioned(ctx, targetAliasedURL) {
 		fatalIf(errDummy().Trace(), "Undo command works only with S3 versioned-enabled buckets.")
 	}
 
-	return undoURL(ctx, targetAliasedURL, last, recursive, dryRun)
+	return undoURL(ctx, targetAliasedURL, last, recursive, dryRun, action)
 }
