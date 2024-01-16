@@ -22,6 +22,7 @@ import (
 	"context"
 	"crypto/x509"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -85,11 +86,32 @@ var (
 	// Terminal height/width, zero if not found
 	globalTermWidth, globalTermHeight int
 
-	globalHelpPager *termPager
+	globalDisablePagerFlag  = "--disable-pager"
+	globalPagerDisabled     = false
+	globalHelpPager         *termPager
+	globalPagerEnabledTerms = map[string]bool{
+		"xterm":          true,
+		"xterm-256color": true,
+		"tmux":           true,
+		"tmux-256color":  true,
+	}
 
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool
 )
+
+func terminalSupportsPager() (ok bool) {
+	_, ok = globalPagerEnabledTerms[os.Getenv("TERM")]
+	return
+}
+
+func parsePagerDisableFlag(args []string) {
+	for _, arg := range args {
+		if arg == globalDisablePagerFlag {
+			globalPagerDisabled = true
+		}
+	}
+}
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
 func setGlobalsFromContext(ctx *cli.Context) error {

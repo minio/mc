@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 
@@ -28,7 +29,7 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 )
 
-var percentStyle = lipgloss.NewStyle().Width(5).Align(lipgloss.Left)
+var percentStyle = lipgloss.NewStyle().Width(4).Align(lipgloss.Left)
 
 type model struct {
 	viewport viewport.Model
@@ -100,10 +101,25 @@ func (m model) headerView() string {
 }
 
 func (m model) footerView() string {
-	percent := percentStyle.Render(fmt.Sprintf("%d%%", int(m.viewport.ScrollPercent()*100)))
-	info := fmt.Sprintf(" %s", percent)
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+	// Disables printing if the viewport is not ready
+	if m.viewport.Width == 0 {
+		return ""
+	}
+	if math.IsNaN(m.viewport.ScrollPercent()) {
+		return ""
+	}
+
+	viewP := int(m.viewport.ScrollPercent() * 100)
+	info := fmt.Sprintf(" %s", percentStyle.Render(fmt.Sprintf("%d%%", viewP)))
+	totalLength := m.viewport.Width - lipgloss.Width(info)
+	finishedCount := int((float64(totalLength) / 100) * float64(viewP))
+
+	return lipgloss.JoinHorizontal(
+		lipgloss.Center,
+		info,
+		strings.Repeat("/", finishedCount),
+		strings.Repeat("─", max(0, totalLength-finishedCount)),
+	)
 }
 
 type termPager struct {
