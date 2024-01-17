@@ -24,26 +24,40 @@ import (
 var testCases = []struct {
 	pattern []string
 
-	object string
+	srcSuffix string
 
 	match bool
+
+	typ ClientURLType
 }{
-	{nil, "testfile", false},
-	{[]string{"test*"}, "testfile", true},
-	{[]string{"file*"}, "file/abc/bcd/def", true},
-	{[]string{"*"}, "file/abc/bcd/def", true},
-	{[]string{""}, "file/abc/bcd/def", false},
-	{[]string{"abc*"}, "file/abc/bcd/def", false},
-	{[]string{"abc*", "*abc/*"}, "file/abc/bcd/def", true},
-	{[]string{"*.txt"}, "file/abc/bcd/def.txt", true},
-	{[]string{".*"}, ".sys", true},
-	{[]string{"*."}, ".sys.", true},
+	{nil, "testfile", false, objectStorage},
+	{[]string{"test*"}, "testfile", true, objectStorage},
+	{[]string{"file*"}, "file/abc/bcd/def", true, objectStorage},
+	{[]string{"*"}, "file/abc/bcd/def", true, objectStorage},
+	{[]string{""}, "file/abc/bcd/def", false, objectStorage},
+	{[]string{"abc*"}, "file/abc/bcd/def", false, objectStorage},
+	{[]string{"abc*", "*abc/*"}, "file/abc/bcd/def", true, objectStorage},
+	{[]string{"*.txt"}, "file/abc/bcd/def.txt", true, objectStorage},
+	{[]string{".*"}, ".sys", true, objectStorage},
+	{[]string{"*."}, ".sys.", true, objectStorage},
+	{nil, "testfile", false, fileSystem},
+	{[]string{"test*"}, "testfile", true, fileSystem},
+	{[]string{"file*"}, "file/abc/bcd/def", true, fileSystem},
+	{[]string{"*"}, "file/abc/bcd/def", true, fileSystem},
+	{[]string{""}, "file/abc/bcd/def", false, fileSystem},
+	{[]string{"abc*"}, "file/abc/bcd/def", false, fileSystem},
+	{[]string{"abc*", "*abc/*"}, "file/abc/bcd/def", true, fileSystem},
+	{[]string{"abc*", "*abc/*"}, "/file/abc/bcd/def", true, fileSystem},
+	{[]string{"*.txt"}, "file/abc/bcd/def.txt", true, fileSystem},
+	{[]string{"*.txt"}, "/file/abc/bcd/def.txt", true, fileSystem},
+	{[]string{".*"}, ".sys", true, fileSystem},
+	{[]string{"*."}, ".sys.", true, fileSystem},
 }
 
 func TestExcludeOptions(t *testing.T) {
 	for _, test := range testCases {
-		if matchExcludeOptions(test.pattern, test.object) != test.match {
-			t.Fatalf("Unexpected result %t, with pattern %s and object %s \n", !test.match, test.pattern, test.object)
+		if matchExcludeOptions(test.pattern, test.srcSuffix, test.typ) != test.match {
+			t.Fatalf("Unexpected result %t, with pattern %s and srcSuffix %s \n", !test.match, test.pattern, test.srcSuffix)
 		}
 	}
 }
