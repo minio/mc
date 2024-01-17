@@ -133,7 +133,7 @@ func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recur
 	dryRun = ctx.Bool("dry-run")
 	action = strings.ToUpper(ctx.String("action"))
 	if action != "PUT" && action != "DELETE" && action != "" {
-		fatalIf(errInvalidArgument().Trace(), "Invalid action, should be PUT,DELETE or empty")
+		fatalIf(errInvalidArgument().Trace(), "Invalid action, should be PUT, DELETE or empty")
 	}
 	return
 }
