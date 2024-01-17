@@ -137,6 +137,7 @@ func Main(args []string) error {
 	// Wait until the user quits the pager
 	defer globalHelpPager.WaitForExit()
 
+	parsePagerDisableFlag(args)
 	// Run the app
 	return registerApp(appName).Run(args)
 }
@@ -510,8 +511,11 @@ func registerApp(name string) *cli.App {
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
-	if isTerminal() {
+
+	if isTerminal() && terminalSupportsPager() && !globalPagerDisabled {
 		app.HelpWriter = globalHelpPager
+	} else {
+		app.HelpWriter = os.Stdout
 	}
 
 	return app
