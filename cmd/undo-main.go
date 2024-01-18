@@ -31,6 +31,11 @@ import (
 	"github.com/minio/pkg/v2/console"
 )
 
+const (
+	actionPut    = "PUT"
+	actionDelete = "DELETE"
+)
+
 var undoFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "last",
@@ -95,7 +100,7 @@ func (c undoMessage) String() string {
 	fmt.Print(color.GreenString("\u2713 "))
 	yellow := color.New(color.FgYellow).SprintFunc()
 	if c.IsDeleteMarker {
-		msg += "Last " + color.RedString("delete") + " of `" + yellow(c.Key) + "` is reverted"
+		msg += "Last " + color.RedString(actionDelete) + " of `" + yellow(c.Key) + "` is reverted"
 	} else {
 		msg += "Last " + color.BlueString("upload") + " of `" + yellow(c.Key) + "` (vid=" + c.VersionID + ") is reverted"
 	}
@@ -132,10 +137,10 @@ func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recur
 
 	dryRun = ctx.Bool("dry-run")
 	action = strings.ToUpper(ctx.String("action"))
-	if action != "PUT" && action != "DELETE" && action != "" {
+	if action != actionPut && action != actionDelete && action != "" {
 		fatalIf(errInvalidArgument().Trace(), "unsupported action specified, supported actions are PUT, DELETE or empty (default)")
 	}
-	if (action == "PUT" || action == "DELETE") && last != 1 {
+	if (action == actionPut || action == actionDelete) && last != 1 {
 		fatalIf(errInvalidArgument().Trace(), "--action if specified requires that you must specify --last=1")
 	}
 	return
@@ -238,7 +243,7 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 		if !remove {
 			continue
 		}
-		if (content.IsLatest && action == "DELETE" && !content.IsDeleteMarker) || (content.IsLatest && action == "PUT" && content.IsDeleteMarker) {
+		if (content.IsLatest && action == actionDelete && !content.IsDeleteMarker) || (content.IsLatest && action == actionPut && content.IsDeleteMarker) {
 			remove = false
 			continue
 		}
