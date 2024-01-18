@@ -100,7 +100,7 @@ func (c undoMessage) String() string {
 	fmt.Print(color.GreenString("\u2713 "))
 	yellow := color.New(color.FgYellow).SprintFunc()
 	if c.IsDeleteMarker {
-		msg += "Last " + color.RedString(actionDelete) + " of `" + yellow(c.Key) + "` is reverted"
+		msg += "Last " + color.RedString("delete") + " of `" + yellow(c.Key) + "` is reverted"
 	} else {
 		msg += "Last " + color.BlueString("upload") + " of `" + yellow(c.Key) + "` (vid=" + c.VersionID + ") is reverted"
 	}
