@@ -135,6 +135,9 @@ func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recur
 	if action != "PUT" && action != "DELETE" && action != "" {
 		fatalIf(errInvalidArgument().Trace(), "Invalid action, should be PUT, DELETE or empty")
 	}
+	if (action == "PUT" || action == "DELETE") && last != 1 {
+		fatalIf(errInvalidArgument().Trace(), "This is a dangerous operation, you need to provide --last=1")
+	}
 	return
 }
 
