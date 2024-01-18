@@ -51,7 +51,7 @@ var undoFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "action",
-		Usage: "undo only if latest version is this type [PUT/DELETE]",
+		Usage: "undo only if the latest version is of the following type [PUT/DELETE]",
 	},
 }
 
@@ -133,10 +133,10 @@ func parseUndoSyntax(ctx *cli.Context) (targetAliasedURL string, last int, recur
 	dryRun = ctx.Bool("dry-run")
 	action = strings.ToUpper(ctx.String("action"))
 	if action != "PUT" && action != "DELETE" && action != "" {
-		fatalIf(errInvalidArgument().Trace(), "Invalid action, should be PUT, DELETE or empty")
+		fatalIf(errInvalidArgument().Trace(), "unsupported action specified, supported actions are PUT, DELETE or empty (default)")
 	}
 	if (action == "PUT" || action == "DELETE") && last != 1 {
-		fatalIf(errInvalidArgument().Trace(), "This is a dangerous operation, you need to provide --last=1")
+		fatalIf(errInvalidArgument().Trace(), "--action if specified requires that you must specify --last=1")
 	}
 	return
 }
