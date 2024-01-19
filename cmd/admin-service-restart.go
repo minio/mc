@@ -20,9 +20,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
@@ -30,13 +33,25 @@ import (
 	"github.com/minio/pkg/v2/console"
 )
 
+var serviceRestartFlag = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "dry-run",
+		Usage: "do not attempt a restart, however verify the peer status",
+	},
+	cli.BoolFlag{
+		Name:   "force",
+		Usage:  "force trigger a restart without any pre-checks",
+		Hidden: true,
+	},
+}
+
 var adminServiceRestartCmd = cli.Command{
 	Name:         "restart",
 	Usage:        "restart a MinIO cluster",
 	Action:       mainAdminServiceRestart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(serviceRestartFlag, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -54,13 +69,37 @@ EXAMPLES:
 
 // serviceRestartCommand is container for service restart command success and failure messages.
 type serviceRestartCommand struct {
-	Status    string `json:"status"`
-	ServerURL string `json:"serverURL"`
+	Status    string                     `json:"status"`
+	ServerURL string                     `json:"serverURL"`
+	Result    madmin.ServiceActionResult `json:"result"`
 }
 
 // String colorized service restart command message.
 func (s serviceRestartCommand) String() string {
-	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`. Type Ctrl-C to quit or wait to follow the status of the restart process.")
+	var rows []table.Row
+	for _, peerRes := range s.Result.Results {
+		errStr := tickCell
+		if peerRes.Err != "" {
+			errStr = peerRes.Err
+		} else if len(peerRes.WaitingDrives) > 0 {
+			errStr = fmt.Sprintf("%d drives are waiting for I/O and are offline, manual restart of OS is recommended", len(peerRes.WaitingDrives))
+		}
+		rows = append(rows, table.Row{peerRes.Host, errStr})
+	}
+
+	t := table.NewWriter()
+	var s1 strings.Builder
+	s1.WriteString("Restart command successfully sent to `" + s.ServerURL + "`. Type Ctrl-C to quit or wait to follow the status of the restart process.\n")
+
+	t.SetOutputMirror(&s1)
+	t.SetColumnConfigs([]table.ColumnConfig{{Align: text.AlignCenter}})
+
+	t.AppendHeader(table.Row{"Host", "Status"})
+	t.AppendRows(rows)
+	t.SetStyle(table.StyleLight)
+	t.Render()
+
+	return console.Colorize("ServiceRestart", s1.String())
 }
 
 // JSON jsonified service restart command message.
@@ -123,10 +162,15 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Restart the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceRestart(ctxt)), "Unable to restart the server.")
+	result, e := client.ServiceAction(ctxt, madmin.ServiceActionOpts{
+		Action: madmin.ServiceActionRestart,
+		DryRun: ctx.Bool("dry-run"),
+		Force:  ctx.Bool("force"),
+	})
+	fatalIf(probe.NewError(e), "Unable to restart the server.")
 
 	// Success..
-	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
+	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL, Result: result})
 
 	// Start pinging the service until it is ready
 

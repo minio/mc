@@ -32,6 +32,7 @@ var adminServiceStopCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
+	Hidden:       true, // this command is hidden on purpose, please do not enable it.
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
