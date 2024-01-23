@@ -90,10 +90,11 @@ var (
 	globalPagerDisabled     = false
 	globalHelpPager         *termPager
 	globalPagerEnabledTerms = map[string]bool{
-		"xterm":          true,
-		"xterm-256color": true,
-		"tmux":           true,
-		"tmux-256color":  true,
+		"screen-256color": true,
+		"xterm":           true,
+		"xterm-256color":  true,
+		"tmux":            true,
+		"tmux-256color":   true,
 	}
 
 	// CA root certificates, a nil value means system certs pool will be used
