@@ -109,7 +109,7 @@ EXAMPLES:
 `,
 }
 
-func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPair, meta map[string]string) *probe.Error {
+func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPair, meta map[string]string, quiet bool) *probe.Error {
 	// If possible increase the pipe buffer size
 	if e := increasePipeBufferSize(os.Stdin, ctx.Int("pipe-max-size")); e != nil {
 		fatalIf(probe.NewError(e), "Unable to increase custom pipe-max-size")
@@ -151,9 +151,15 @@ func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPai
 		concurrentStream: ctx.IsSet("concurrent"),
 	}
 
-	pg := newProgressBar(0)
+	var reader io.Reader
+	if !quiet {
+		pg := newProgressBar(0)
+		reader = io.TeeReader(os.Stdin, pg)
+	} else {
+		reader = os.Stdin
+	}
 
-	_, err := putTargetStreamWithURL(targetURL, io.TeeReader(os.Stdin, pg), -1, opts)
+	_, err := putTargetStreamWithURL(targetURL, reader, -1, opts)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
@@ -183,6 +189,9 @@ func mainPipe(ctx *cli.Context) error {
 	// validate pipe input arguments.
 	checkPipeSyntax(ctx)
 
+	// globalQuiet is true for no window size to get. We just need --quiet here.
+	quiet := ctx.IsSet("quiet")
+
 	meta := map[string]string{}
 	if attr := ctx.String("attr"); attr != "" {
 		meta, err = getMetaDataEntry(attr)
@@ -192,12 +201,12 @@ func mainPipe(ctx *cli.Context) error {
 		meta["X-Amz-Tagging"] = tags
 	}
 	if len(ctx.Args()) == 0 {
-		err = pipe(ctx, "", nil, meta)
+		err = pipe(ctx, "", nil, meta, quiet)
 		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
 	} else {
 		// extract URLs.
 		URLs := ctx.Args()
-		err = pipe(ctx, URLs[0], encKeyDB, meta)
+		err = pipe(ctx, URLs[0], encKeyDB, meta, quiet)
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
 
