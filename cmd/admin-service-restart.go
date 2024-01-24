@@ -38,11 +38,6 @@ var serviceRestartFlag = []cli.Flag{
 		Name:  "dry-run",
 		Usage: "do not attempt a restart, however verify the peer status",
 	},
-	cli.BoolFlag{
-		Name:   "force",
-		Usage:  "force trigger a restart without any pre-checks",
-		Hidden: true,
-	},
 }
 
 var adminServiceRestartCmd = cli.Command{
@@ -76,28 +71,31 @@ type serviceRestartCommand struct {
 
 // String colorized service restart command message.
 func (s serviceRestartCommand) String() string {
-	var rows []table.Row
-	for _, peerRes := range s.Result.Results {
-		errStr := tickCell
-		if peerRes.Err != "" {
-			errStr = peerRes.Err
-		} else if len(peerRes.WaitingDrives) > 0 {
-			errStr = fmt.Sprintf("%d drives are waiting for I/O and are offline, manual restart of OS is recommended", len(peerRes.WaitingDrives))
-		}
-		rows = append(rows, table.Row{peerRes.Host, errStr})
-	}
-
-	t := table.NewWriter()
 	var s1 strings.Builder
-	s1.WriteString("Restart command successfully sent to `" + s.ServerURL + "`. Type Ctrl-C to quit or wait to follow the status of the restart process.\n")
+	s1.WriteString("Restart command successfully sent to `" + s.ServerURL + "`. Type Ctrl-C to quit or wait to follow the status of the restart process.")
 
-	t.SetOutputMirror(&s1)
-	t.SetColumnConfigs([]table.ColumnConfig{{Align: text.AlignCenter}})
+	if len(s.Result.Results) > 0 {
+		s1.WriteString("\n")
+		var rows []table.Row
+		for _, peerRes := range s.Result.Results {
+			errStr := tickCell
+			if peerRes.Err != "" {
+				errStr = peerRes.Err
+			} else if len(peerRes.WaitingDrives) > 0 {
+				errStr = fmt.Sprintf("%d drives are waiting for I/O and are offline, manual restart of OS is recommended", len(peerRes.WaitingDrives))
+			}
+			rows = append(rows, table.Row{peerRes.Host, errStr})
+		}
 
-	t.AppendHeader(table.Row{"Host", "Status"})
-	t.AppendRows(rows)
-	t.SetStyle(table.StyleLight)
-	t.Render()
+		t := table.NewWriter()
+		t.SetOutputMirror(&s1)
+		t.SetColumnConfigs([]table.ColumnConfig{{Align: text.AlignCenter}})
+
+		t.AppendHeader(table.Row{"Host", "Status"})
+		t.AppendRows(rows)
+		t.SetStyle(table.StyleLight)
+		t.Render()
+	}
 
 	return console.Colorize("ServiceRestart", s1.String())
 }
@@ -165,8 +163,12 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	result, e := client.ServiceAction(ctxt, madmin.ServiceActionOpts{
 		Action: madmin.ServiceActionRestart,
 		DryRun: ctx.Bool("dry-run"),
-		Force:  ctx.Bool("force"),
 	})
+	if e != nil {
+		// Attempt an older API server might be old
+		//lint:ignore SA1019 Ignore the deprecation warnings
+		e = client.ServiceRestart(ctxt)
+	}
 	fatalIf(probe.NewError(e), "Unable to restart the server.")
 
 	// Success..
@@ -190,36 +192,35 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	printProgress()
 	mark = "."
 
-	timer := time.NewTimer(time.Second)
-	defer timer.Stop()
-
 	t := time.Now()
 	for {
+		healthCtx, healthCancel := context.WithTimeout(ctxt, 2*time.Second)
+
+		// Fetch the health status of the specified MinIO server
+		healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{})
+		healthCancel()
+
+		switch {
+		case healthErr == nil && healthResult.Healthy:
+			printMsg(serviceRestartMessage{
+				Status:    "success",
+				ServerURL: aliasedURL,
+				TimeTaken: time.Since(t),
+			})
+			return nil
+		case healthErr == nil && !healthResult.Healthy:
+			coloring = color.New(color.FgYellow)
+			mark = "!"
+			fallthrough
+		default:
+			printProgress()
+		}
+
 		select {
 		case <-ctxt.Done():
 			return ctxt.Err()
-		case <-timer.C:
-			healthCtx, healthCancel := context.WithTimeout(ctxt, 3*time.Second)
-			// Fetch the health status of the specified MinIO server
-			healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{})
-			healthCancel()
-			switch {
-			case healthErr == nil && healthResult.Healthy:
-				printMsg(serviceRestartMessage{
-					Status:    "success",
-					ServerURL: aliasedURL,
-					TimeTaken: time.Since(t),
-				})
-				return nil
-			case healthErr == nil && !healthResult.Healthy:
-				coloring = color.New(color.FgYellow)
-				mark = "!"
-				fallthrough
-			default:
-				printProgress()
-			}
-
-			timer.Reset(time.Second)
+		default:
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }

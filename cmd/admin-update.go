@@ -24,8 +24,11 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
 )
@@ -64,22 +67,37 @@ EXAMPLES:
 
 // serverUpdateMessage is container for ServerUpdate success and failure messages.
 type serverUpdateMessage struct {
-	Status         string `json:"status"`
-	ServerURL      string `json:"serverURL"`
-	CurrentVersion string `json:"currentVersion"`
-	UpdatedVersion string `json:"updatedVersion"`
+	Status             string                      `json:"status"`
+	ServerURL          string                      `json:"serverURL"`
+	ServerUpdateStatus madmin.ServerUpdateStatusV2 `json:"serverUpdateStatus"`
 }
 
 // String colorized serverUpdate message.
 func (s serverUpdateMessage) String() string {
-	if s.CurrentVersion != s.UpdatedVersion {
-		return console.Colorize("ServerUpdate",
-			fmt.Sprintf("Server `%s` updated successfully from %s to %s",
-				s.ServerURL, s.CurrentVersion, s.UpdatedVersion))
+	var rows []table.Row
+	for _, peerRes := range s.ServerUpdateStatus.Results {
+		errStr := fmt.Sprintf("upgraded server from %s to %s: %s", peerRes.CurrentVersion, peerRes.UpdatedVersion, tickCell)
+		if peerRes.Err != "" {
+			errStr = peerRes.Err
+		} else if len(peerRes.WaitingDrives) > 0 {
+			errStr = fmt.Sprintf("%d drives are hung, process was upgraded. However OS reboot is recommended.", len(peerRes.WaitingDrives))
+		}
+		rows = append(rows, table.Row{peerRes.Host, errStr})
 	}
-	return console.Colorize("ServerUpdate",
-		fmt.Sprintf("Server `%s` already running the most recent version %s of MinIO",
-			s.ServerURL, s.CurrentVersion))
+
+	t := table.NewWriter()
+	var s1 strings.Builder
+	s1.WriteString("Server update request sent successfully `" + s.ServerURL + "`\n")
+
+	t.SetOutputMirror(&s1)
+	t.SetColumnConfigs([]table.ColumnConfig{{Align: text.AlignCenter}})
+
+	t.AppendHeader(table.Row{"Host", "Status"})
+	t.AppendRows(rows)
+	t.SetStyle(table.StyleLight)
+	t.Render()
+
+	return console.Colorize("ServiceRestart", s1.String())
 }
 
 // JSON jsonified server update message.
@@ -128,15 +146,17 @@ func mainAdminServerUpdate(ctx *cli.Context) error {
 
 	// Update the specified MinIO server, optionally also
 	// with the provided update URL.
-	us, e := client.ServerUpdate(globalContext, updateURL)
+	us, e := client.ServerUpdateV2(globalContext, madmin.ServerUpdateOpts{
+		DryRun:    ctx.Bool("dry-run"),
+		UpdateURL: updateURL,
+	})
 	fatalIf(probe.NewError(e), "Unable to update the server.")
 
 	// Success..
 	printMsg(serverUpdateMessage{
-		Status:         "success",
-		ServerURL:      aliasedURL,
-		CurrentVersion: us.CurrentVersion,
-		UpdatedVersion: us.UpdatedVersion,
+		Status:             "success",
+		ServerURL:          aliasedURL,
+		ServerUpdateStatus: us,
 	})
 	return nil
 }
