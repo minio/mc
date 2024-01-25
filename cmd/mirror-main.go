@@ -133,6 +133,10 @@ var (
 			Name:  "summary",
 			Usage: "print a summary of the mirror session",
 		},
+		cli.BoolFlag{
+			Name:  "skip-errors",
+			Usage: "Skip errors when mirroring",
+		},
 	}
 )
 
@@ -545,8 +549,12 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 						ignoreErr = true
 					}
 					if !ignoreErr {
-						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-							fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+						if !mj.opts.skipErrors {
+							errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+								fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+						} else {
+							console.Infof("[Warn] Failed to copy `%s`. %s", sURLs.SourceContent.URL.String(), sURLs.Error.Trace(sURLs.SourceContent.URL.String()))
+						}
 					}
 				}
 			case sURLs.TargetContent != nil:
@@ -569,7 +577,7 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				mirrorFailedOps.Inc()
 				errDuringMirror = true
 				// Quit mirroring if --watch and --active-active are not passed
-				if !mj.opts.activeActive && !mj.opts.isWatch {
+				if !mj.opts.skipErrors && !mj.opts.activeActive && !mj.opts.isWatch {
 					cancel()
 					cancelInProgress = true
 				}
@@ -955,6 +963,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isRetriable:           cli.Bool("retry"),
 		md5:                   cli.Bool("md5"),
 		disableMultipart:      cli.Bool("disable-multipart"),
+		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
 		excludeStorageClasses: cli.StringSlice("exclude-storageclass"),
 		olderThan:             cli.String("older-than"),
