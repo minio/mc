@@ -135,7 +135,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "skip-errors",
-			Usage: "Skip errors when mirroring",
+			Usage: "skip any errors when mirroring",
 		},
 	}
 )
