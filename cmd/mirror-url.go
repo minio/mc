@@ -237,6 +237,7 @@ type mirrorOptions struct {
 	isWatch, isRemove, isMetadata         bool
 	isRetriable                           bool
 	isSummary                             bool
+	skipErrors                            bool
 	excludeOptions, excludeStorageClasses []string
 	encKeyDB                              map[string][]prefixSSEPair
 	md5, disableMultipart                 bool
