@@ -32,6 +32,7 @@ var adminServiceStopCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
+	Hidden:       true, // this command is hidden on purpose, please do not enable it.
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -88,7 +89,7 @@ func mainAdminServiceStop(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Stop the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceStop(globalContext)), "Unable to stop the server.")
+	fatalIf(probe.NewError(client.ServiceStopV2(globalContext)), "Unable to stop the server.")
 
 	// Success..
 	printMsg(serviceStopMessage{Status: "success", ServerURL: aliasedURL})
