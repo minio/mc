@@ -118,6 +118,7 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 
 	if resp.StatusCode == http.StatusOK {
 		printMsg(prometheusMetricsReader{Reader: resp.Body})
+		return nil
 	}
 
 	return errors.New(resp.Status)
