@@ -95,7 +95,7 @@ func matchExcludeOptions(excludeOptions []string, srcSuffix string, typ ClientUR
 		if strings.HasPrefix(srcSuffix, "/") {
 			srcSuffix = srcSuffix[1:]
 		} else if runtime.GOOS == "windows" && strings.HasPrefix(srcSuffix, `\`) {
-			srcSuffix = srcSuffix[2:]
+			srcSuffix = srcSuffix[1:]
 		}
 	}
 	for _, pattern := range excludeOptions {
