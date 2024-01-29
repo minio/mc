@@ -25,16 +25,19 @@ import (
 
 // humanizedDuration container to capture humanized time.
 type humanizedDuration struct {
-	Days    int64 `json:"days,omitempty"`
-	Hours   int64 `json:"hours,omitempty"`
-	Minutes int64 `json:"minutes,omitempty"`
-	Seconds int64 `json:"seconds,omitempty"`
+	Days         int64 `json:"days,omitempty"`
+	Hours        int64 `json:"hours,omitempty"`
+	Minutes      int64 `json:"minutes,omitempty"`
+	Seconds      int64 `json:"seconds,omitempty"`
+	MilliSeconds int64 `json:"milliSeconds,omitempty"`
 }
 
 // StringShort() humanizes humanizedDuration to human readable short format.
 // This does not print at seconds.
 func (r humanizedDuration) StringShort() string {
 	switch {
+	case r.Days == 0 && r.Hours == 0 && r.Minutes == 0 && r.Seconds == 0:
+		return fmt.Sprintf("%d milliseconds", r.MilliSeconds)
 	case r.Days == 0 && r.Hours == 0 && r.Minutes == 0:
 		return fmt.Sprintf("%d seconds", r.Seconds)
 	case r.Days == 0 && r.Hours == 0:
@@ -50,6 +53,10 @@ func (r humanizedDuration) StringShort() string {
 
 // String() humanizes humanizedDuration to human readable,
 func (r humanizedDuration) String() string {
+	if r.Days == 0 && r.Hours == 0 && r.Minutes == 0 && r.Seconds == 0 {
+		return fmt.Sprintf("%d milliseconds", r.MilliSeconds)
+	}
+
 	if r.Days == 0 && r.Hours == 0 && r.Minutes == 0 {
 		return fmt.Sprintf("%d seconds", r.Seconds)
 	}
@@ -65,6 +72,10 @@ func (r humanizedDuration) String() string {
 // timeDurationToHumanizedDuration convert golang time.Duration to a custom more readable humanizedDuration.
 func timeDurationToHumanizedDuration(duration time.Duration) humanizedDuration {
 	r := humanizedDuration{}
+	if duration.Milliseconds() < 1000 {
+		r.MilliSeconds = int64(duration.Milliseconds())
+		return r
+	}
 	if duration.Seconds() < 60.0 {
 		r.Seconds = int64(duration.Seconds())
 		return r
