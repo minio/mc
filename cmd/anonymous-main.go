@@ -79,7 +79,7 @@ EXAMPLES:
   4. Set anonymous to "public" for bucket with prefix on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} set public s3/public-commons/images
 
-  5. Set bucket to "custom-policy.json" on Amazon S3 cloud storage using a JSON file.
+  5. Set bucket to "custom" on Amazon S3 cloud storage using a JSON file.
      {{.Prompt}} {{.HelpName}} set-json /path/to/custom-policy.json s3/mybucket
 
   6. Get bucket permissions.
