@@ -628,7 +628,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// joined to the targetURL.
 		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
 		// Skip the object, if it matches the Exclude options provided
-		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix) {
+		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix, sourceURL.Type) {
 			continue
 		}
 

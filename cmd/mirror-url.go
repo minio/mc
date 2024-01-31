@@ -89,7 +89,15 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	return
 }
 
-func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
+func matchExcludeOptions(excludeOptions []string, srcSuffix string, typ ClientURLType) bool {
+	// if type is file system, remove leading slash
+	if typ == fileSystem {
+		if strings.HasPrefix(srcSuffix, "/") {
+			srcSuffix = srcSuffix[1:]
+		} else if runtime.GOOS == "windows" && strings.HasPrefix(srcSuffix, `\`) {
+			srcSuffix = srcSuffix[1:]
+		}
+	}
 	for _, pattern := range excludeOptions {
 		if wildcard.Match(pattern, srcSuffix) {
 			return true
@@ -146,13 +154,13 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 
 		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
 		// Skip the source object if it matches the Exclude options provided
-		if matchExcludeOptions(opts.excludeOptions, srcSuffix) {
+		if matchExcludeOptions(opts.excludeOptions, srcSuffix, newClientURL(sourceURL).Type) {
 			continue
 		}
 
 		tgtSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
 		// Skip the target object if it matches the Exclude options provided
-		if matchExcludeOptions(opts.excludeOptions, tgtSuffix) {
+		if matchExcludeOptions(opts.excludeOptions, tgtSuffix, newClientURL(targetURL).Type) {
 			continue
 		}
 
