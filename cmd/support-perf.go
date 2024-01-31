@@ -66,7 +66,7 @@ var supportPerfFlags = append([]cli.Flag{
 		Hidden: true, // Hidden for now.
 	},
 	cli.BoolFlag{
-		Name:  "enable-sha256-payload",
+		Name:  "sha256",
 		Usage: "enable calculating sha256 for uploads",
 	},
 	// Drive test specific flags.
