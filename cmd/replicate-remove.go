@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -131,13 +130,18 @@ func mainReplicateRemove(cliCtx *cli.Context) error {
 	rcfg, err := client.GetReplication(ctx)
 	fatalIf(err.Trace(args...), "Unable to get replication configuration")
 
-	if rcfg.Empty() {
-		fatalIf(probe.NewError(errors.New("replication configuration not set")).Trace(aliasedURL),
-			"Unable to remove replication configuration")
-	}
 	rmAll := cliCtx.Bool("all")
 	rmForce := cliCtx.Bool("force")
 	ruleID := cliCtx.String("id")
+
+	if rcfg.Empty() && !rmAll {
+		printMsg(replicateRemoveMessage{
+			Op:     cliCtx.Command.Name,
+			Status: "success",
+			URL:    aliasedURL,
+		})
+		return nil
+	}
 	if rmAll && rmForce {
 		fatalIf(client.RemoveReplication(ctx), "Unable to remove replication configuration")
 	} else {
