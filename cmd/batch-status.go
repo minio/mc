@@ -221,7 +221,7 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("Versions: ", m.current.Replicate.Objects)
 		addLine("FailedObjects: ", m.current.Replicate.ObjectsFailed)
 		if accElapsedTime > 0 {
-			bytesTransferredPerSec := float64(int64(time.Second)*m.current.Replicate.BytesTransferred) / float64(accElapsedTime)
+			bytesTransferredPerSec := float64(m.current.Replicate.BytesTransferred) / accElapsedTime.Seconds()
 			objectsPerSec := float64(int64(time.Second)*m.current.Replicate.Objects) / float64(accElapsedTime)
 			addLine("Throughput: ", fmt.Sprintf("%s/s", humanize.IBytes(uint64(bytesTransferredPerSec))))
 			addLine("IOPs: ", fmt.Sprintf("%.2f objs/s", objectsPerSec))
@@ -229,6 +229,17 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("Transferred: ", humanize.IBytes(uint64(m.current.Replicate.BytesTransferred)))
 		addLine("Elapsed: ", accElapsedTime.String())
 		addLine("CurrObjName: ", m.current.Replicate.Object)
+	case string(madmin.BatchJobExpire):
+		addLine("JobType: ", m.current.JobType)
+		addLine("Objects: ", m.current.Expired.Objects)
+		addLine("FailedObjects: ", m.current.Expired.ObjectsFailed)
+		addLine("CurrObjName: ", m.current.Expired.Object)
+
+		if !m.current.LastUpdate.IsZero() {
+			accElapsedTime := m.current.LastUpdate.Sub(m.current.StartTime)
+			addLine("Elapsed: ", accElapsedTime.String())
+		}
+
 	}
 
 	table.AppendBulk(data)

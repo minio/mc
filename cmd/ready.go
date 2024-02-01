@@ -77,13 +77,19 @@ type readyMessage struct {
 	MaintenanceMode bool `json:"maintenanceMode"`
 	WriteQuorum     int  `json:"writeQuorum"`
 	HealingDrives   int  `json:"healingDrives"`
+
+	Err error `json:"error"`
 }
 
 func (r readyMessage) String() string {
-	if r.Healthy {
+	switch {
+	case r.Healthy:
 		return color.GreenString("The cluster is ready")
+	case r.Err != nil:
+		return color.RedString("The cluster is unreachable: " + r.Err.Error())
+	default:
+		return color.RedString("The cluster is not ready")
 	}
-	return color.RedString("The cluster is not ready")
 }
 
 // JSON jsonified ready result
@@ -116,38 +122,25 @@ func mainReady(cliCtx *cli.Context) error {
 		Maintenance: maintenance,
 	}
 
-	healthResult, hErr := anonClient.Healthy(ctx, healthOpts)
-	fatalIf(probe.NewError(hErr).Trace(aliasedURL), "Couldn't get the health status for `"+aliasedURL+"`.")
-
-	if healthResult.Healthy {
-		printMsg(readyMessage{
-			Healthy:         healthResult.Healthy,
-			MaintenanceMode: healthResult.MaintenanceMode,
-			WriteQuorum:     healthResult.WriteQuorum,
-			HealingDrives:   healthResult.HealingDrives,
-		})
-		return nil
-	}
-
-	timer := time.NewTimer(healthCheckInterval)
+	timer := time.NewTimer(0)
 	defer timer.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-timer.C:
 			healthResult, hErr := anonClient.Healthy(ctx, healthOpts)
-			fatalIf(probe.NewError(hErr).Trace(aliasedURL), "Couldn't get the health status for `"+aliasedURL+"`.")
 			printMsg(readyMessage{
 				Healthy:         healthResult.Healthy,
 				MaintenanceMode: healthResult.MaintenanceMode,
 				WriteQuorum:     healthResult.WriteQuorum,
 				HealingDrives:   healthResult.HealingDrives,
+				Err:             hErr,
 			})
 			if healthResult.Healthy {
 				return nil
 			}
-
 			timer.Reset(healthCheckInterval)
 		}
 	}

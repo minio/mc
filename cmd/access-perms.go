@@ -17,7 +17,12 @@
 
 package cmd
 
-import "path/filepath"
+import (
+	"os"
+
+	json "github.com/minio/colorjson"
+	"github.com/minio/minio-go/v7/pkg/policy"
+)
 
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
@@ -29,7 +34,31 @@ func (b accessPerms) isValidAccessPERM() bool {
 }
 
 func (b accessPerms) isValidAccessFile() bool {
-	return filepath.Ext(string(b)) == ".json"
+	file, err := os.Open(string(b))
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	var policy policy.BucketAccessPolicy
+	if json.NewDecoder(file).Decode(&policy) != nil {
+		fatalIf(errDummy().Trace(), "Unable to parse access file.")
+		return false
+	}
+
+	if policy.Version != "2012-10-17" {
+		fatalIf(errDummy().Trace(), "Invalid policy version. Only 2012-10-17 is supported.")
+		return false
+	}
+
+	for _, statement := range policy.Statements {
+		if statement.Effect != "Allow" && statement.Effect != "Deny" {
+			fatalIf(errDummy().Trace(), "Invalid policy effect. Only Allow and Deny are supported.")
+			return false
+		}
+	}
+
+	return true
 }
 
 // accessPerms - access level.

@@ -129,6 +129,14 @@ var (
 			Name:  "retry",
 			Usage: "if specified, will enable retrying on a per object basis if errors occur",
 		},
+		cli.BoolFlag{
+			Name:  "summary",
+			Usage: "print a summary of the mirror session",
+		},
+		cli.BoolFlag{
+			Name:  "skip-errors",
+			Usage: "skip any errors when mirroring",
+		},
 	}
 )
 
@@ -461,13 +469,15 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
-	mj.status.PrintMsg(mirrorMessage{
-		Source:     sourcePath,
-		Target:     targetPath,
-		Size:       length,
-		TotalCount: sURLs.TotalCount,
-		TotalSize:  sURLs.TotalSize,
-	})
+	if !mj.opts.isSummary {
+		mj.status.PrintMsg(mirrorMessage{
+			Source:     sourcePath,
+			Target:     targetPath,
+			Size:       length,
+			TotalCount: sURLs.TotalCount,
+			TotalSize:  sURLs.TotalSize,
+		})
+	}
 	sURLs.MD5 = mj.opts.md5
 	sURLs.DisableMultipart = mj.opts.disableMultipart
 
@@ -533,8 +543,19 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				if isErrIgnored(sURLs.Error) {
 					ignoreErr = true
 				} else {
-					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					switch sURLs.Error.ToGoError().(type) {
+					case PathInsufficientPermission:
+						// Ignore Permission error.
+						ignoreErr = true
+					}
+					if !ignoreErr {
+						if !mj.opts.skipErrors {
+							errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+								fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+						} else {
+							console.Infof("[Warn] Failed to copy `%s`. %s", sURLs.SourceContent.URL.String(), sURLs.Error.Trace(sURLs.SourceContent.URL.String()))
+						}
+					}
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
@@ -556,7 +577,7 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 				mirrorFailedOps.Inc()
 				errDuringMirror = true
 				// Quit mirroring if --watch and --active-active are not passed
-				if !mj.opts.activeActive && !mj.opts.isWatch {
+				if !mj.opts.skipErrors && !mj.opts.activeActive && !mj.opts.isWatch {
 					cancel()
 					cancelInProgress = true
 				}
@@ -607,7 +628,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		// joined to the targetURL.
 		sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
 		// Skip the object, if it matches the Exclude options provided
-		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix) {
+		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix, sourceURL.Type) {
 			continue
 		}
 
@@ -930,7 +951,6 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
-	isOverwrite = isOverwrite || isMetadata
 	isFake := cli.Bool("fake") || cli.Bool("dry-run")
 
 	mopts := mirrorOptions{
@@ -939,9 +959,11 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isOverwrite:           isOverwrite,
 		isWatch:               isWatch,
 		isMetadata:            isMetadata,
+		isSummary:             cli.Bool("summary"),
 		isRetriable:           cli.Bool("retry"),
 		md5:                   cli.Bool("md5"),
 		disableMultipart:      cli.Bool("disable-multipart"),
+		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
 		excludeStorageClasses: cli.StringSlice("exclude-storageclass"),
 		olderThan:             cli.String("older-than"),

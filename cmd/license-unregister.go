@@ -83,7 +83,7 @@ func mainLicenseUnregister(ctx *cli.Context) error {
 	checkLicenseUnregisterSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, false)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, false, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)

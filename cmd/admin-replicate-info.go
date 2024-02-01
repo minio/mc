@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -75,7 +76,8 @@ func (i srInfo) String() string {
 			Field{"Endpoint", 46},
 			Field{"Sync", 4},
 			Field{"Bandwidth", 10},
-		).buildRow("Deployment ID", "Site Name", "Endpoint", "Sync", "Bandwidth"))
+			Field{"ILM Expiry Replication", 25},
+		).buildRow("Deployment ID", "Site Name", "Endpoint", "Sync", "Bandwidth", "ILM Expiry Replication"))
 		messages = append(messages, r)
 
 		r = console.Colorize("THeaders", newPrettyTable(" | ",
@@ -85,7 +87,8 @@ func (i srInfo) String() string {
 			Field{"Endpoint", 46},
 			Field{"Sync", 4},
 			Field{"Bandwidth", 10},
-		).buildRow("", "", "", "", "Per Bucket"))
+			Field{"ILM Expiry Replication", 25},
+		).buildRow("", "", "", "", "Per Bucket", ""))
 		messages = append(messages, r)
 		for _, peer := range info.Sites {
 			var chk string
@@ -103,7 +106,8 @@ func (i srInfo) String() string {
 				Field{"Endpoint", 46},
 				Field{"Sync", 4},
 				Field{"Bandwidth", 10},
-			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint, chk, limit))
+				Field{"ILM Expiry Replication", 25},
+			).buildRow(peer.DeploymentID, peer.Name, peer.Endpoint, chk, limit, strconv.FormatBool(peer.ReplicateILMExpiry)))
 			messages = append(messages, r)
 		}
 	} else {

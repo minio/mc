@@ -179,7 +179,7 @@ func setAlias(alias string, aliasCfgV10 aliasConfigV10) aliasMessage {
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
 // using v4 signature then v2 in case of failure.
 func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, peerCert *x509.Certificate) (string, *probe.Error) {
-	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bucket-sign-")
+	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bsign-")
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
 		// S3 connection parameters
@@ -235,8 +235,8 @@ func probeS3Signature(ctx context.Context, accessKey, secretKey, url string, pee
 
 // BuildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func BuildS3Config(ctx context.Context, url, accessKey, secretKey, api, path string, peerCert *x509.Certificate) (*Config, *probe.Error) {
-	s3Config := NewS3Config(url, &aliasConfigV10{
+func BuildS3Config(ctx context.Context, alias, url, accessKey, secretKey, api, path string, peerCert *x509.Certificate) (*Config, *probe.Error) {
+	s3Config := NewS3Config(alias, url, &aliasConfigV10{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
@@ -339,7 +339,7 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 		fatalIf(err.Trace(alias, url, accessKey), "Unable to initialize new alias from the provided credentials.")
 	}
 
-	s3Config, err := BuildS3Config(ctx, url, accessKey, secretKey, api, path, peerCert)
+	s3Config, err := BuildS3Config(ctx, alias, url, accessKey, secretKey, api, path, peerCert)
 	fatalIf(err.Trace(alias, url, accessKey), "Unable to initialize new alias from the provided credentials.")
 
 	msg := setAlias(alias, aliasConfigV10{

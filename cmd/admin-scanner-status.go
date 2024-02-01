@@ -18,10 +18,13 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -58,6 +61,11 @@ var adminScannerInfoFlags = []cli.Flag{
 		Usage: "maximum number of active paths to show. -1 for unlimited",
 		Value: -1,
 	},
+	cli.StringFlag{
+		Name:   "in",
+		Hidden: true,
+		Usage:  "read previously saved json from file and replay",
+	},
 }
 
 var adminScannerInfo = cli.Command{
@@ -87,6 +95,9 @@ EXAMPLES:
 
 // checkAdminTopAPISyntax - validate all the passed arguments
 func checkAdminScannerInfoSyntax(ctx *cli.Context) {
+	if ctx.String("in") != "" {
+		return
+	}
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
@@ -97,12 +108,48 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 
 	aliasedURL := ctx.Args().Get(0)
 
+	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
+	ctxt, cancel := context.WithCancel(globalContext)
+	defer cancel()
+
+	// Replay from file
+	if inFile := ctx.String("in"); inFile != "" {
+		go func() {
+			if _, e := ui.Run(); e != nil {
+				cancel()
+				fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+			}
+		}()
+		f, e := os.Open(inFile)
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to open input")
+		sc := bufio.NewReader(f)
+		var lastTime time.Time
+		for {
+			b, e := sc.ReadBytes('\n')
+			if e == io.EOF {
+				break
+			}
+			var metrics madmin.RealtimeMetrics
+			e = json.Unmarshal(b, &metrics)
+			if e != nil || metrics.Aggregated.Scanner == nil {
+				continue
+			}
+			delay := metrics.Aggregated.Scanner.CollectedAt.Sub(lastTime)
+			if !lastTime.IsZero() && delay > 0 {
+				if delay > 3*time.Second {
+					delay = 3 * time.Second
+				}
+				time.Sleep(delay)
+			}
+			ui.Send(metrics)
+			lastTime = metrics.Aggregated.Scanner.CollectedAt
+		}
+		os.Exit(0)
+	}
+
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-
-	ctxt, cancel := context.WithCancel(globalContext)
-	defer cancel()
 
 	opts := madmin.MetricsOptions{
 		Type:     madmin.MetricsScanner,
@@ -111,7 +158,6 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		Hosts:    strings.Split(ctx.String("nodes"), ","),
 		ByHost:   false,
 	}
-	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
 	if globalJSON {
 		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
 			printMsg(metricsMessage{RealtimeMetrics: metrics})
@@ -285,10 +331,10 @@ func (m *scannerMetricsUI) View() string {
 	}
 	if sc.CurrentCycle > 0 {
 		addRowF(title("Current cycle:")+"         %s; Started: %v", ui(sc.CurrentCycle), console.Colorize("metrics-date", sc.CurrentStarted))
-		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
+		addRowF(title("Active drives:")+"         %s", ui(uint64(len(sc.ActivePaths))))
 	} else {
 		addRowF(title("Current cycle:") + "         (between cycles)")
-		addRowF(title("Active drives:")+"          %s", ui(uint64(len(sc.ActivePaths))))
+		addRowF(title("Active drives:")+"         %s", ui(uint64(len(sc.ActivePaths))))
 	}
 	getRate := func(x madmin.TimedAction) string {
 		if x.AccTime > 0 {

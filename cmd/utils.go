@@ -84,6 +84,9 @@ func max(a, b int) int {
 
 // randString generates random names and prepends them with a known prefix.
 func randString(n int, src rand.Source, prefix string) string {
+	if n == 0 {
+		return prefix
+	}
 	b := make([]byte, n)
 	// A rand.Int63() generates 63 random bits, enough for letterIdxMax letters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
@@ -97,7 +100,11 @@ func randString(n int, src rand.Source, prefix string) string {
 		cache >>= letterIdxBits
 		remain--
 	}
-	return prefix + string(b[0:30-len(prefix)])
+	x := n / 2
+	if x == 0 {
+		x = 1
+	}
+	return prefix + string(b[0:x])
 }
 
 // printTLSCertInfo prints some fields of the certificates received from the server.
@@ -130,7 +137,7 @@ func splitStr(path, sep string, n int) []string {
 
 // NewS3Config simply creates a new Config struct using the passed
 // parameters.
-func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
+func NewS3Config(alias, urlStr string, aliasCfg *aliasConfigV10) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
@@ -145,6 +152,7 @@ func NewS3Config(urlStr string, aliasCfg *aliasConfigV10) *Config {
 	s3Config.DownloadLimit = int64(globalLimitDownload)
 
 	s3Config.HostURL = urlStr
+	s3Config.Alias = alias
 	if aliasCfg != nil {
 		s3Config.AccessKey = aliasCfg.AccessKey
 		s3Config.SecretKey = aliasCfg.SecretKey

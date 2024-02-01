@@ -51,6 +51,10 @@ var adminReplicateStatusFlags = []cli.Flag{
 		Usage: "display only groups",
 	},
 	cli.BoolFlag{
+		Name:  "ilm-expiry-rules",
+		Usage: "display only ilm expiry rules",
+	},
+	cli.BoolFlag{
 		Name:  "all",
 		Usage: "display all available site replication status",
 	},
@@ -69,6 +73,10 @@ var adminReplicateStatusFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "group",
 		Usage: "display group sync status",
+	},
+	cli.StringFlag{
+		Name:  "ilm-expiry-rule",
+		Usage: "display ILM expiry rule sync status",
 	},
 }
 
@@ -312,6 +320,42 @@ func (i srStatus) String() string {
 			}
 		}
 	}
+	if i.opts.ILMExpiryRules {
+		messages = append(messages,
+			console.Colorize("SummaryHdr", "ILM Expiry Rules replication status:"))
+		switch {
+		case i.MaxILMExpiryRules == 0:
+			messages = append(messages, console.Colorize("Summary", "No ILM Expiry Rules present\n"))
+		default:
+			msg := console.Colorize(i.getTheme(len(info.ILMExpiryStats) == 0), fmt.Sprintf("%d/%d ILM Expiry Rules in sync", info.MaxILMExpiryRules-len(info.ILMExpiryStats), info.MaxILMExpiryRules)) + "\n"
+			messages = append(messages, fmt.Sprintf("%s  %s", coloredDot, msg))
+			if len(i.ILMExpiryStats) > 0 {
+				messages = append(messages, i.siteHeader(siteNames, "ILM Expiry Rules"))
+			}
+			var detailFields []Field
+			for b, ssMap := range i.ILMExpiryStats {
+				var details []string
+				details = append(details, b)
+				detailFields = append(detailFields, legendFields[0])
+				for _, sname := range siteNames {
+					detailFields = append(detailFields, legendFields[0])
+					dID := nameIDMap[sname]
+					ss := ssMap[dID]
+					switch {
+					case !ss.HasILMExpiryRules:
+						details = append(details, blankCell)
+					case ss.ILMExpiryRuleMismatch:
+						details = append(details, fmt.Sprintf("%s in-sync", crossTickCell))
+					default:
+						details = append(details, fmt.Sprintf("%s in-sync", tickCell))
+					}
+				}
+				messages = append(messages, newPrettyTable(" | ",
+					detailFields...).buildRow(details...))
+				messages = append(messages, "")
+			}
+		}
+	}
 
 	switch i.opts.Entity {
 	case madmin.SRBucketEntity:
@@ -322,7 +366,8 @@ func (i srStatus) String() string {
 		messages = append(messages, i.getUserStatusSummary(siteNames, nameIDMap, "User")...)
 	case madmin.SRGroupEntity:
 		messages = append(messages, i.getGroupStatusSummary(siteNames, nameIDMap, "Group")...)
-
+	case madmin.SRILMExpiryRuleEntity:
+		messages = append(messages, i.getILMExpiryStatusSummary(siteNames, nameIDMap, "ILMExpiryRule")...)
 	}
 	if i.opts.Metrics {
 		uiFn := func(theme string) func(string) string {
@@ -716,29 +761,85 @@ func (i srStatus) getGroupStatusSummary(siteNames []string, nameIDMap map[string
 	return messages
 }
 
+func (i srStatus) getILMExpiryStatusSummary(siteNames []string, nameIDMap map[string]string, legend string) []string {
+	var messages []string
+	coloredDot := console.Colorize("Status", dot)
+	var found bool
+	for _, st := range i.SRStatusInfo.ILMExpiryStats[i.opts.EntityValue] {
+		if st.HasILMExpiryRules {
+			found = true
+			break
+		}
+	}
+	if !found {
+		messages = append(messages, console.Colorize("Summary", fmt.Sprintf("ILM Expiry Rule %s not found\n", i.opts.EntityValue)))
+		return messages
+	}
+
+	rowLegend := []string{"ILM Expiry Rule"}
+	detailFields := make([][]Field, len(rowLegend))
+
+	var rules []string
+	detailFields[0] = make([]Field, len(siteNames)+1)
+	detailFields[0][0] = Field{"Entity", 15}
+	rules = append(rules, "ILM Expiry Rule")
+	rows := make([]string, len(rowLegend))
+	for j, sname := range siteNames {
+		dID := nameIDMap[sname]
+		ss := i.SRStatusInfo.ILMExpiryStats[i.opts.EntityValue][dID]
+		var theme, msgStr string
+		for r := range rowLegend {
+			switch r {
+			case 0:
+				theme, msgStr = syncStatus(ss.ILMExpiryRuleMismatch, ss.HasILMExpiryRules)
+				rules = append(rules, msgStr)
+				detailFields[r][j+1] = Field{theme, fieldLen}
+			}
+		}
+	}
+	for r := range rowLegend {
+		switch r {
+		case 0:
+			rows[r] = newPrettyTable(" | ",
+				detailFields[r]...).buildRow(rules...)
+		}
+	}
+	messages = append(messages,
+		console.Colorize("SummaryHdr", fmt.Sprintf("%s  %s\n", coloredDot, console.Colorize("Summary", "ILM Expiry Rule replication summary for: ")+console.Colorize("UserMessage", i.opts.EntityValue))))
+	siteHdr := i.siteHeader(siteNames, legend)
+	messages = append(messages, siteHdr)
+
+	messages = append(messages, rows...)
+	return messages
+}
+
 // Calculate srstatus options for command line flags
 func srStatusOpts(ctx *cli.Context) (opts madmin.SRStatusOptions) {
 	if !(ctx.IsSet("buckets") ||
 		ctx.IsSet("users") ||
 		ctx.IsSet("groups") ||
 		ctx.IsSet("policies") ||
+		ctx.IsSet("ilm-expiry-rules") ||
 		ctx.IsSet("bucket") ||
 		ctx.IsSet("user") ||
 		ctx.IsSet("group") ||
 		ctx.IsSet("policy") ||
+		ctx.IsSet("ilm-expiry-rule") ||
 		ctx.IsSet("all")) || ctx.IsSet("all") {
 		opts.Buckets = true
 		opts.Users = true
 		opts.Groups = true
 		opts.Policies = true
 		opts.Metrics = true
+		opts.ILMExpiryRules = true
 		return
 	}
 	opts.Buckets = ctx.Bool("buckets")
 	opts.Policies = ctx.Bool("policies")
 	opts.Users = ctx.Bool("users")
 	opts.Groups = ctx.Bool("groups")
-	for _, name := range []string{"bucket", "user", "group", "policy"} {
+	opts.ILMExpiryRules = ctx.Bool("ilm-expiry-rules")
+	for _, name := range []string{"bucket", "user", "group", "policy", "ilm-expiry-rule"} {
 		if ctx.IsSet(name) {
 			opts.Entity = madmin.GetSREntityType(name)
 			opts.EntityValue = ctx.String(name)
@@ -756,13 +857,13 @@ func mainAdminReplicationStatus(ctx *cli.Context) error {
 			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 				"Need exactly one alias argument.")
 		}
-		groupStatus := ctx.IsSet("buckets") || ctx.IsSet("groups") || ctx.IsSet("users") || ctx.IsSet("policies")
-		indivStatus := ctx.IsSet("bucket") || ctx.IsSet("group") || ctx.IsSet("user") || ctx.IsSet("policy")
+		groupStatus := ctx.IsSet("buckets") || ctx.IsSet("groups") || ctx.IsSet("users") || ctx.IsSet("policies") || ctx.IsSet("ilm-expiry-rules")
+		indivStatus := ctx.IsSet("bucket") || ctx.IsSet("group") || ctx.IsSet("user") || ctx.IsSet("policy") || ctx.IsSet("ilm-expiry-rule")
 		if groupStatus && indivStatus {
 			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-				"Cannot specify both (bucket|group|policy|user) flag and one or more of buckets|groups|policies|users) flag(s)")
+				"Cannot specify both (bucket|group|policy|user|ilm-expiry-rule) flag and one or more of buckets|groups|policies|users|ilm-expiry-rules) flag(s)")
 		}
-		setSlc := []bool{ctx.IsSet("bucket"), ctx.IsSet("user"), ctx.IsSet("group"), ctx.IsSet("policy")}
+		setSlc := []bool{ctx.IsSet("bucket"), ctx.IsSet("user"), ctx.IsSet("group"), ctx.IsSet("policy"), ctx.IsSet("ilm-expiry-rule")}
 		count := 0
 		for _, s := range setSlc {
 			if s {
@@ -771,7 +872,7 @@ func mainAdminReplicationStatus(ctx *cli.Context) error {
 		}
 		if count > 1 {
 			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
-				"Cannot specify more than one of --bucket, --policy, --user, --group flags at the same time")
+				"Cannot specify more than one of --bucket, --policy, --user, --group, --ilm-expiry-rule  flags at the same time")
 		}
 	}
 

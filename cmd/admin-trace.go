@@ -140,6 +140,11 @@ var traceCallTypes = map[string]func(o *madmin.ServiceTraceOpts) (help string){
 		o.BatchKeyRotation = true
 		return "Trace Batch KeyRotation (alias: brot)"
 	},
+	"batch-expiration": func(o *madmin.ServiceTraceOpts) string {
+		o.BatchExpire = true
+		return "Trace Batch Expiration (alias: bexp)"
+	},
+
 	"decommission": func(o *madmin.ServiceTraceOpts) string {
 		o.Decommission = true
 		return "Trace Decommission operations (alias: decom)"
@@ -895,6 +900,7 @@ type statItem struct {
 	CallStatsCount int           `json:"callStatsCount,omitempty"`
 	CallStats      callStats     `json:"callStats,omitempty"`
 	TTFB           time.Duration `json:"ttfb,omitempty"`
+	MaxTTFB        time.Duration `json:"maxTTFB,omitempty"`
 	MaxDur         time.Duration `json:"maxDuration"`
 	MinDur         time.Duration `json:"minDuration"`
 }
@@ -950,6 +956,9 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 		got.CallStats.Rx += t.Trace.HTTP.CallStats.InputBytes
 		got.CallStats.Tx += t.Trace.HTTP.CallStats.OutputBytes
 		got.TTFB += t.Trace.HTTP.CallStats.TimeToFirstByte
+		if got.MaxTTFB < t.Trace.HTTP.CallStats.TimeToFirstByte {
+			got.MaxTTFB = t.Trace.HTTP.CallStats.TimeToFirstByte
+		}
 	}
 	s.Calls[id] = got
 }
@@ -1073,9 +1082,10 @@ func (m *traceStatsUI) View() string {
 		console.Colorize("metrics-top-title", "Count"),
 		console.Colorize("metrics-top-title", "RPM"),
 		console.Colorize("metrics-top-title", "Avg Time"),
-		console.Colorize("metrics-top-title", "TTFB Time"),
 		console.Colorize("metrics-top-title", "Min Time"),
 		console.Colorize("metrics-top-title", "Max Time"),
+		console.Colorize("metrics-top-title", "Avg TTFB"),
+		console.Colorize("metrics-top-title", "Max TTFB"),
 		console.Colorize("metrics-top-title", "Errors"),
 		console.Colorize("metrics-top-title", "RX Avg"),
 		console.Colorize("metrics-top-title", "TX Avg"),
@@ -1123,9 +1133,10 @@ func (m *traceStatsUI) View() string {
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
 			console.Colorize("metrics-number", fmt.Sprintf("%0.1f", float64(v.Count)/dur.Minutes())),
 			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
-			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
 			console.Colorize(minColor, v.MinDur),
 			console.Colorize(maxColor, v.MaxDur),
+			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
+			console.Colorize(maxColor, v.MaxTTFB),
 			errs,
 			rx,
 			tx,

@@ -20,9 +20,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
@@ -30,13 +33,20 @@ import (
 	"github.com/minio/pkg/v2/console"
 )
 
+var serviceRestartFlag = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "dry-run",
+		Usage: "do not attempt a restart, however verify the peer status",
+	},
+}
+
 var adminServiceRestartCmd = cli.Command{
 	Name:         "restart",
 	Usage:        "restart a MinIO cluster",
 	Action:       mainAdminServiceRestart,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(serviceRestartFlag, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -54,13 +64,40 @@ EXAMPLES:
 
 // serviceRestartCommand is container for service restart command success and failure messages.
 type serviceRestartCommand struct {
-	Status    string `json:"status"`
-	ServerURL string `json:"serverURL"`
+	Status    string                     `json:"status"`
+	ServerURL string                     `json:"serverURL"`
+	Result    madmin.ServiceActionResult `json:"result"`
 }
 
 // String colorized service restart command message.
 func (s serviceRestartCommand) String() string {
-	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`. Type Ctrl-C to quit or wait to follow the status of the restart process.")
+	var s1 strings.Builder
+	s1.WriteString("Restart command successfully sent to `" + s.ServerURL + "`. Type Ctrl-C to quit or wait to follow the status of the restart process.")
+
+	if len(s.Result.Results) > 0 {
+		s1.WriteString("\n")
+		var rows []table.Row
+		for _, peerRes := range s.Result.Results {
+			errStr := tickCell
+			if peerRes.Err != "" {
+				errStr = peerRes.Err
+			} else if len(peerRes.WaitingDrives) > 0 {
+				errStr = fmt.Sprintf("%d drives are waiting for I/O and are offline, manual restart of OS is recommended", len(peerRes.WaitingDrives))
+			}
+			rows = append(rows, table.Row{peerRes.Host, errStr})
+		}
+
+		t := table.NewWriter()
+		t.SetOutputMirror(&s1)
+		t.SetColumnConfigs([]table.ColumnConfig{{Align: text.AlignCenter}})
+
+		t.AppendHeader(table.Row{"Host", "Status"})
+		t.AppendRows(rows)
+		t.SetStyle(table.StyleLight)
+		t.Render()
+	}
+
+	return console.Colorize("ServiceRestart", s1.String())
 }
 
 // JSON jsonified service restart command message.
@@ -123,10 +160,19 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Restart the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceRestart(ctxt)), "Unable to restart the server.")
+	result, e := client.ServiceAction(ctxt, madmin.ServiceActionOpts{
+		Action: madmin.ServiceActionRestart,
+		DryRun: ctx.Bool("dry-run"),
+	})
+	if e != nil {
+		// Attempt an older API server might be old
+		//lint:ignore SA1019 Ignore the deprecation warnings
+		e = client.ServiceRestart(ctxt)
+	}
+	fatalIf(probe.NewError(e), "Unable to restart the server.")
 
 	// Success..
-	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
+	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL, Result: result})
 
 	// Start pinging the service until it is ready
 
@@ -146,36 +192,35 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	printProgress()
 	mark = "."
 
-	timer := time.NewTimer(time.Second)
-	defer timer.Stop()
-
 	t := time.Now()
 	for {
+		healthCtx, healthCancel := context.WithTimeout(ctxt, 2*time.Second)
+
+		// Fetch the health status of the specified MinIO server
+		healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{})
+		healthCancel()
+
+		switch {
+		case healthErr == nil && healthResult.Healthy:
+			printMsg(serviceRestartMessage{
+				Status:    "success",
+				ServerURL: aliasedURL,
+				TimeTaken: time.Since(t),
+			})
+			return nil
+		case healthErr == nil && !healthResult.Healthy:
+			coloring = color.New(color.FgYellow)
+			mark = "!"
+			fallthrough
+		default:
+			printProgress()
+		}
+
 		select {
 		case <-ctxt.Done():
 			return ctxt.Err()
-		case <-timer.C:
-			healthCtx, healthCancel := context.WithTimeout(ctxt, 3*time.Second)
-			// Fetch the health status of the specified MinIO server
-			healthResult, healthErr := anonClient.Healthy(healthCtx, madmin.HealthOpts{})
-			healthCancel()
-			switch {
-			case healthErr == nil && healthResult.Healthy:
-				printMsg(serviceRestartMessage{
-					Status:    "success",
-					ServerURL: aliasedURL,
-					TimeTaken: time.Since(t),
-				})
-				return nil
-			case healthErr == nil && !healthResult.Healthy:
-				coloring = color.New(color.FgYellow)
-				mark = "!"
-				fallthrough
-			default:
-				printProgress()
-			}
-
-			timer.Reset(time.Second)
+		default:
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }

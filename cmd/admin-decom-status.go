@@ -139,14 +139,14 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 	cellText[0] = []string{
 		"ID",
 		"Pools",
-		"Capacity",
+		"Raw Drives Usage",
 		"Status",
 	}
 	for idx, pool := range poolStatuses {
 		idx++
 		totalSize := uint64(pool.Decommission.TotalSize)
-		currentSize := uint64(pool.Decommission.CurrentSize)
-		capacity := humanize.IBytes(totalSize-currentSize) + " (used) / " + humanize.IBytes(totalSize) + " (total)"
+		usedCurrent := uint64(pool.Decommission.TotalSize - pool.Decommission.CurrentSize)
+		capacity := fmt.Sprintf("%.1f%% (total: %s)", 100*float64(usedCurrent)/float64(totalSize), humanize.IBytes(totalSize))
 		status := "Active"
 		if pool.Decommission != nil {
 			if pool.Decommission.Complete {

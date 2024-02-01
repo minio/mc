@@ -137,6 +137,7 @@ func Main(args []string) error {
 	// Wait until the user quits the pager
 	defer globalHelpPager.WaitForExit()
 
+	parsePagerDisableFlag(args)
 	// Run the app
 	return registerApp(appName).Run(args)
 }
@@ -420,46 +421,46 @@ func checkUpdate(ctx *cli.Context) {
 
 var appCmds = []cli.Command{
 	aliasCmd,
-	lsCmd,
-	mbCmd,
-	rbCmd,
+	adminCmd,
+	anonymousCmd,
+	batchCmd,
 	cpCmd,
-	mvCmd,
-	rmCmd,
-	mirrorCmd,
 	catCmd,
-	headCmd,
-	pipeCmd,
-	findCmd,
-	sqlCmd,
-	statCmd,
-	treeCmd,
+	configCmd,
+	diffCmd,
 	duCmd,
-	retentionCmd,
-	legalHoldCmd,
-	supportCmd,
-	licenseCmd,
-	shareCmd,
-	versionCmd,
-	ilmCmd,
-	quotaCmd,
 	encryptCmd,
 	eventCmd,
-	watchCmd,
-	undoCmd,
-	anonymousCmd,
-	policyCmd,
-	tagCmd,
-	diffCmd,
-	replicateCmd,
-	adminCmd,
+	findCmd,
+	headCmd,
+	ilmCmd,
 	idpCmd,
-	configCmd,
-	updateCmd,
-	readyCmd,
-	pingCmd,
+	licenseCmd,
+	legalHoldCmd,
+	lsCmd,
+	mbCmd,
+	mvCmd,
+	mirrorCmd,
 	odCmd,
-	batchCmd,
+	pingCmd,
+	policyCmd,
+	pipeCmd,
+	quotaCmd,
+	rmCmd,
+	retentionCmd,
+	rbCmd,
+	replicateCmd,
+	readyCmd,
+	sqlCmd,
+	statCmd,
+	supportCmd,
+	shareCmd,
+	treeCmd,
+	tagCmd,
+	undoCmd,
+	updateCmd,
+	versionCmd,
+	watchCmd,
 }
 
 func printMCVersion(c *cli.Context) {
@@ -510,8 +511,11 @@ func registerApp(name string) *cli.App {
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
-	if isTerminal() {
+
+	if isTerminal() && terminalSupportsPager() && !globalPagerDisabled {
 		app.HelpWriter = globalHelpPager
+	} else {
+		app.HelpWriter = os.Stdout
 	}
 
 	return app

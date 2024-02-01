@@ -61,9 +61,18 @@ func (h hri) getReplicatedFileHCCChange() (b, a col, err error) {
 	getColCode := func(numAvail int) (c col, err error) {
 		// calculate color code for replicated object similar
 		// to erasure coded objects
-		quorum := h.DiskCount/h.SetCount/2 + 1
-		surplus := numAvail/h.SetCount - quorum
-		parity := h.DiskCount/h.SetCount - quorum
+		var quorum, surplus, parity int
+		if h.SetCount > 0 {
+			quorum = h.DiskCount/h.SetCount/2 + 1
+			surplus = numAvail/h.SetCount - quorum
+			parity = h.DiskCount/h.SetCount - quorum
+		} else {
+			// in case of bucket healing, disk count is for the node
+			// also explicitly set count would be set to invalid value of -1
+			quorum = h.DiskCount/2 + 1
+			surplus = numAvail - quorum
+			parity = h.DiskCount - quorum
+		}
 		c, err = getHColCode(surplus, parity)
 		return
 	}

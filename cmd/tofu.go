@@ -23,7 +23,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -60,7 +59,11 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, e error) {
 			return nil, e
 		}
 	case *ecdsa.PublicKey:
-		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+		pubKey, e := pub.ECDH()
+		if e != nil {
+			return nil, e
+		}
+		publicKeyBytes = pubKey.Bytes()
 	case ed25519.PublicKey:
 		publicKeyBytes = pub
 	default:

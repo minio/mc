@@ -18,15 +18,16 @@
 package cmd
 
 import (
+	"errors"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	dto "github.com/prometheus/client_model/go"
-	"github.com/prometheus/prom2json"
 )
 
 var adminPrometheusMetricsCmd = cli.Command{
@@ -62,10 +63,7 @@ EXAMPLES:
 `,
 }
 
-const (
-	metricsRespBodyLimit = 10 << 20 // 10 MiB
-	metricsEndPointRoot  = "/minio/v2/metrics/"
-)
+const metricsEndPointRoot = "/minio/v2/metrics/"
 
 // checkSupportMetricsSyntax - validate arguments passed by a user
 func checkSupportMetricsSyntax(ctx *cli.Context) {
@@ -105,7 +103,11 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 	if e != nil {
 		return e
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
+
+	if token != "" {
+		req.Header.Add("Authorization", "Bearer "+token)
+	}
+
 	client := httpClient(60 * time.Second)
 	resp, e := client.Do(req)
 	if e != nil {
@@ -115,32 +117,30 @@ func printPrometheusMetrics(ctx *cli.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		printMsg(prometheusMetricsReader{Reader: io.LimitReader(resp.Body, metricsRespBodyLimit)})
+		printMsg(prometheusMetricsReader{Reader: resp.Body})
+		return nil
 	}
-	return nil
+
+	return errors.New(resp.Status)
 }
 
 // JSON returns jsonified message
 func (pm prometheusMetricsReader) JSON() string {
-	mfChan := make(chan *dto.MetricFamily)
-	go func() {
-		fatalIf(probe.NewError(prom2json.ParseReader(pm.Reader, mfChan)), "Unable to parse Prometheus metrics.")
-	}()
-	result := []*prom2json.Family{}
-	for mf := range mfChan {
-		result = append(result, prom2json.NewFamily(mf))
-	}
-	jsonMessageBytes, e := json.MarshalIndent(result, "", " ")
+	results, e := madmin.ParsePrometheusResults(pm.Reader)
+	fatalIf(probe.NewError(e), "Unable to parse Prometheus metrics.")
+
+	jsonMessageBytes, e := json.MarshalIndent(results, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
 }
 
 // String - returns the string representation of the prometheus metrics
 func (pm prometheusMetricsReader) String() string {
-	respBytes, e := io.ReadAll(pm.Reader)
+	_, e := io.Copy(os.Stdout, pm.Reader)
+
 	fatalIf(probe.NewError(e), "Unable to read Prometheus metrics.")
 
-	return string(respBytes)
+	return ""
 }
 
 // prometheusMetricsReader mirrors the MetricFamily proto message.

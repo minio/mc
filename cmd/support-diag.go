@@ -142,7 +142,7 @@ func tarGZ(healthInfo interface{}, version, filename string) error {
 		warningMsgHeader := infoText(warningMsgBoundary)
 		warningMsgTrailer := infoText(warningMsgBoundary)
 		console.Printf("%s\n%s\n%s\n%s\n", warningMsgHeader, warning, warningContents, warningMsgTrailer)
-		console.Infoln("MinIO diagnostics report saved at", filename)
+		console.Infoln("MinIO diagnostics report saved at ", filename)
 	}
 
 	return nil
@@ -168,7 +168,7 @@ func mainSupportDiag(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
