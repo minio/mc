@@ -245,7 +245,7 @@ func mainDu(cliCtx *cli.Context) error {
 	var duErr error
 	var isDir bool
 	for _, urlStr := range cliCtx.Args() {
-		isDir, _ = isAliasURLDir(ctx, urlStr, nil, time.Time{})
+		isDir, _ = isAliasURLDir(ctx, urlStr, nil, time.Time{}, false)
 		if !isDir {
 			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}

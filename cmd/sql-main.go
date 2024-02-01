@@ -453,7 +453,7 @@ func mainSQL(cliCtx *cli.Context) error {
 	URLs := cliCtx.Args()
 	writeHdr := true
 	for _, url := range URLs {
-		if _, targetContent, err := url2Stat(ctx, url, "", false, encKeyDB, time.Time{}, false); err != nil {
+		if _, targetContent, err := url2Stat(ctx, url2StatOptions{url, "", false, encKeyDB, time.Time{}, false, false}); err != nil {
 			errorIf(err.Trace(url), "Unable to run sql for "+url+".")
 			continue
 		} else if !targetContent.Type.IsDir() {

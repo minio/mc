@@ -104,10 +104,10 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 // Check if the passed URL represents a folder. It may or may not exist yet.
 // If it exists, we can easily check if it is a folder, if it doesn't exist,
 // we can guess if the url is a folder from how it looks.
-func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefixSSEPair, timeRef time.Time) (bool, *ClientContent) {
+func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefixSSEPair, timeRef time.Time, ignoreBucketExists bool) (bool, *ClientContent) {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(ctx, aliasURL, "", false, keys, timeRef, false)
+	_, targetContent, err := url2Stat(ctx, url2StatOptions{aliasURL, "", false, keys, timeRef, false, ignoreBucketExists})
 	if err == nil {
 		return targetContent.Type.IsDir(), targetContent
 	}
@@ -149,7 +149,7 @@ func getSourceStreamMetadataFromURL(ctx context.Context, aliasedURL, versionID s
 		return nil, nil, err.Trace(aliasedURL)
 	}
 	if !timeRef.IsZero() {
-		_, content, err := url2Stat(ctx, aliasedURL, "", false, nil, timeRef, false)
+		_, content, err := url2Stat(ctx, url2StatOptions{aliasedURL, "", false, nil, timeRef, false, false})
 		if err != nil {
 			return nil, nil, err
 		}

@@ -66,7 +66,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 
 	/****** Generic rules *******/
 	if !cliCtx.Bool("watch") && !cliCtx.Bool("active-active") && !cliCtx.Bool("multi-master") {
-		_, srcContent, err := url2Stat(ctx, srcURL, "", false, encKeyDB, time.Time{}, false)
+		_, srcContent, err := url2Stat(ctx, url2StatOptions{srcURL, "", false, encKeyDB, time.Time{}, false, false})
 		if err != nil {
 			fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}

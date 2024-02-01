@@ -43,6 +43,16 @@ type ClientURL struct {
 // ClientURLType - enum of different url types
 type ClientURLType int
 
+// url2StatOptions - convert url to stat options
+type url2StatOptions struct {
+	urlStr, versionID  string
+	fileAttr           bool
+	encKeyDB           map[string][]prefixSSEPair
+	timeRef            time.Time
+	isZip              bool
+	ignoreBucketExists bool
+}
+
 // enum types
 const (
 	objectStorage = iota // MinIO and S3 compatible cloud storage
@@ -186,17 +196,17 @@ func urlJoinPath(url1, url2 string) string {
 }
 
 // url2Stat returns stat info for URL - supports bucket, object and a prefixe with or without a trailing slash
-func url2Stat(ctx context.Context, urlStr, versionID string, fileAttr bool, encKeyDB map[string][]prefixSSEPair, timeRef time.Time, isZip bool) (client Client, content *ClientContent, err *probe.Error) {
-	client, err = newClient(urlStr)
+func url2Stat(ctx context.Context, opts url2StatOptions) (client Client, content *ClientContent, err *probe.Error) {
+	client, err = newClient(opts.urlStr)
 	if err != nil {
-		return nil, nil, err.Trace(urlStr)
+		return nil, nil, err.Trace(opts.urlStr)
 	}
-	alias, _ := url2Alias(urlStr)
-	sse := getSSE(urlStr, encKeyDB[alias])
+	alias, _ := url2Alias(opts.urlStr)
+	sse := getSSE(opts.urlStr, opts.encKeyDB[alias])
 
-	content, err = client.Stat(ctx, StatOptions{preserve: fileAttr, sse: sse, timeRef: timeRef, versionID: versionID, isZip: isZip})
+	content, err = client.Stat(ctx, StatOptions{preserve: opts.fileAttr, sse: sse, timeRef: opts.timeRef, versionID: opts.versionID, isZip: opts.isZip, ignoreBucketExists: opts.ignoreBucketExists})
 	if err != nil {
-		return nil, nil, err.Trace(urlStr)
+		return nil, nil, err.Trace(opts.urlStr)
 	}
 	return client, content, nil
 }

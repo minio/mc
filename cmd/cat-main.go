@@ -231,7 +231,7 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
 		// 2. extract the version ID if rewind flag is passed
-		if client, content, err := url2Stat(ctx, sourceURL, o.versionID, false, encKeyDB, o.timeRef, o.isZip); err == nil {
+		if client, content, err := url2Stat(ctx, url2StatOptions{sourceURL, o.versionID, false, encKeyDB, o.timeRef, o.isZip, false}); err == nil {
 			if o.versionID == "" {
 				versionID = content.VersionID
 			}
