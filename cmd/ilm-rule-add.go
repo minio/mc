@@ -182,6 +182,10 @@ var ilmAddFlags = []cli.Flag{
 		Name:  "noncurrent-transition-tier",
 		Usage: "remote tier name to transition",
 	},
+	cli.BoolFlag{
+		Name:  "expired-object-all-versions",
+		Usage: "expire all object versions",
+	},
 }
 
 type ilmAddMessage struct {
