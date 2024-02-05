@@ -104,7 +104,7 @@ func validateExpiration(rule lifecycle.Rule) error {
 	if !rule.Expiration.IsDateNull() {
 		i++
 	}
-	if rule.Expiration.IsDeleteMarkerExpirationEnabled() || rule.Expiration.DeleteAll.IsEnabled() {
+	if rule.Expiration.IsDeleteMarkerExpirationEnabled() {
 		i++
 	}
 	if i > 1 {
