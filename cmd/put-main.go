@@ -69,7 +69,7 @@ EXAMPLES:
 `,
 }
 
-// mainPut is the entry point for cp command.
+// mainPut is the entry point for put command.
 func mainPut(cliCtx *cli.Context) error {
 	ctx, cancelPut := context.WithCancel(globalContext)
 	defer cancelPut()
