@@ -672,6 +672,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				encKeyDB:         mj.opts.encKeyDB,
 			}
 			if mj.opts.activeActive &&
+				event.Type != notification.ObjectCreatedCopy &&
+				event.Type != notification.ObjectCreatedCompleteMultipartUpload &&
 				(getSourceModTimeKey(mirrorURL.SourceContent.Metadata) != "" ||
 					getSourceModTimeKey(mirrorURL.SourceContent.UserMetadata) != "") {
 				// If source has active-active attributes, it means that the
