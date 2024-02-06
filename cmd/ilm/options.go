@@ -435,6 +435,12 @@ func ApplyRuleFields(dest *lifecycle.Rule, opts LifecycleOptions) *probe.Error {
 		dest.Expiration.DeleteMarker = lifecycle.ExpireDeleteMarker(*opts.ExpiredObjectDeleteMarker)
 		dest.Expiration.Days = 0
 		dest.Expiration.Date = lifecycle.ExpirationDate{}
+		// safe to check for delete here as delete marker would at least always come as false
+		if opts.ExpiredObjectAllversions != nil {
+			dest.Expiration.DeleteAll = lifecycle.ExpirationBoolean(*opts.ExpiredObjectAllversions)
+			dest.Expiration.Days = 0
+			dest.Expiration.Date = lifecycle.ExpirationDate{}
+		}
 	}
 
 	if opts.TransitionDate != nil {
