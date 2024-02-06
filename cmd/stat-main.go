@@ -124,7 +124,7 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	}
 
 	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url2StatOptions{url, versionID, false, encKeyDB, rewind, false, false})
+		_, _, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: versionID, fileAttr: false, encKeyDB: encKeyDB, timeRef: rewind, isZip: false, ignoreBucketExists: false})
 		if err != nil {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}

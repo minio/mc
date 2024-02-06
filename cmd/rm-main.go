@@ -302,7 +302,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 		modTime time.Time
 	)
 
-	_, content, pErr := url2Stat(ctx, url2StatOptions{url, versionID, false, opts.encKeyDB, time.Time{}, false, false})
+	_, content, pErr := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: versionID, fileAttr: false, encKeyDB: opts.encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExists: false})
 	if pErr != nil {
 		switch st := minio.ToErrorResponse(pErr.ToGoError()).StatusCode; st {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:

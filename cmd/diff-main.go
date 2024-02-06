@@ -130,7 +130,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	// Diff only works between two directories, verify them below.
 
 	// Verify if firstURL is accessible.
-	_, firstContent, err := url2Stat(ctx, url2StatOptions{firstURL, "", false, encKeyDB, time.Time{}, false, false})
+	_, firstContent, err := url2Stat(ctx, url2StatOptions{urlStr: firstURL, versionID: "", fileAttr: false, encKeyDB: encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExists: false})
 	if err != nil {
 		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
@@ -141,7 +141,7 @@ func checkDiffSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 	}
 
 	// Verify if secondURL is accessible.
-	_, secondContent, err := url2Stat(ctx, url2StatOptions{secondURL, "", false, encKeyDB, time.Time{}, false, false})
+	_, secondContent, err := url2Stat(ctx, url2StatOptions{urlStr: secondURL, versionID: "", fileAttr: false, encKeyDB: encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExists: false})
 	if err != nil {
 		// Destination doesn't exist is okay.
 		if _, ok := err.ToGoError().(ObjectMissing); !ok {
