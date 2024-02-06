@@ -80,7 +80,7 @@ func mainPut(cliCtx *cli.Context) error {
 	}
 	_, perr := humanize.ParseBytes(size)
 	if perr != nil {
-		fatalIf(probe.NewError(perr), "Unable to parse size")
+		fatalIf(probe.NewError(perr), "Unable to parse part size")
 	}
 	os.Setenv("MC_UPLOAD_MULTIPART_SIZE", size)
 	// threads
