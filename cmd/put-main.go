@@ -19,11 +19,12 @@ package cmd
 
 import (
 	"context"
+	"os"
+	"strconv"
+
 	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"os"
-	"strconv"
 )
 
 // put command flags.
