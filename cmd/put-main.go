@@ -64,7 +64,7 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   01. Put a list of objects from local file system to Amazon S3 cloud storage.
-      {{.Prompt}} {{.HelpName}} Music/*.ogg s3/jukebox/
+      {{.Prompt}} {{.HelpName}} objectsName s3/jukebox/
 `,
 }
 
