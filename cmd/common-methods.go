@@ -107,7 +107,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefixSSEPair, timeRef time.Time, ignoreBucketExists bool) (bool, *ClientContent) {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(ctx, url2StatOptions{urlStr: aliasURL, versionID: "", fileAttr: false, encKeyDB: keys, timeRef: timeRef, isZip: false, ignoreBucketExists: ignoreBucketExists})
+	_, targetContent, err := url2Stat(ctx, url2StatOptions{urlStr: aliasURL, versionID: "", fileAttr: false, encKeyDB: keys, timeRef: timeRef, isZip: false, ignoreBucketExistsCheck: ignoreBucketExists})
 	if err == nil {
 		return targetContent.Type.IsDir(), targetContent
 	}
@@ -149,7 +149,7 @@ func getSourceStreamMetadataFromURL(ctx context.Context, aliasedURL, versionID s
 		return nil, nil, err.Trace(aliasedURL)
 	}
 	if !timeRef.IsZero() {
-		_, content, err := url2Stat(ctx, url2StatOptions{urlStr: aliasedURL, versionID: "", fileAttr: false, encKeyDB: nil, timeRef: timeRef, isZip: false, ignoreBucketExists: false})
+		_, content, err := url2Stat(ctx, url2StatOptions{urlStr: aliasedURL, versionID: "", fileAttr: false, encKeyDB: nil, timeRef: timeRef, isZip: false, ignoreBucketExistsCheck: false})
 		if err != nil {
 			return nil, nil, err
 		}

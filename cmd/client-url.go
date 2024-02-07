@@ -45,12 +45,12 @@ type ClientURLType int
 
 // url2StatOptions - convert url to stat options
 type url2StatOptions struct {
-	urlStr, versionID  string
-	fileAttr           bool
-	encKeyDB           map[string][]prefixSSEPair
-	timeRef            time.Time
-	isZip              bool
-	ignoreBucketExists bool
+	urlStr, versionID       string
+	fileAttr                bool
+	encKeyDB                map[string][]prefixSSEPair
+	timeRef                 time.Time
+	isZip                   bool
+	ignoreBucketExistsCheck bool
 }
 
 // enum types
@@ -204,7 +204,7 @@ func url2Stat(ctx context.Context, opts url2StatOptions) (client Client, content
 	alias, _ := url2Alias(opts.urlStr)
 	sse := getSSE(opts.urlStr, opts.encKeyDB[alias])
 
-	content, err = client.Stat(ctx, StatOptions{preserve: opts.fileAttr, sse: sse, timeRef: opts.timeRef, versionID: opts.versionID, isZip: opts.isZip, ignoreBucketExists: opts.ignoreBucketExists})
+	content, err = client.Stat(ctx, StatOptions{preserve: opts.fileAttr, sse: sse, timeRef: opts.timeRef, versionID: opts.versionID, isZip: opts.isZip, ignoreBucketExists: opts.ignoreBucketExistsCheck})
 	if err != nil {
 		return nil, nil, err.Trace(opts.urlStr)
 	}

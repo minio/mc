@@ -19,13 +19,11 @@ package cmd
 
 import (
 	"context"
-	"os"
-	"strconv"
-	"time"
-
 	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"os"
+	"strconv"
 )
 
 // put command flags.
@@ -49,7 +47,7 @@ var putCmd = cli.Command{
 	Action:       mainPut,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(append(cpFlags, ioFlags...), globalFlags...), putFlags...),
+	Flags:        append(append(ioFlags, globalFlags...), putFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -90,13 +88,18 @@ func mainPut(cliCtx *cli.Context) error {
 	}
 	os.Setenv("MC_UPLOAD_MULTIPART_THREADS", strconv.Itoa(threads))
 
-	// get source and target
-	sourceURLs := cliCtx.Args()[:len(cliCtx.Args())-1]
-	targetURL := cliCtx.Args()[len(cliCtx.Args())-1]
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
-	cpURLsCh := make(chan URLs, 10000)
+	args := cliCtx.Args()
+	if len(args) < 2 {
+		fatalIf(errInvalidArgument().Trace(args...), "Invalid number of arguments.")
+	}
+	// get source and target
+	sourceURLs := args[:len(args)-1]
+	targetURL := args[len(args)-1]
+
+	putURLsCh := make(chan URLs, 10000)
 	var totalObjects, totalBytes int64
 
 	// Store a progress bar or an accounter
@@ -110,39 +113,36 @@ func mainPut(cliCtx *cli.Context) error {
 	}
 	go func() {
 		opts := prepareCopyURLsOpts{
-			sourceURLs:         sourceURLs,
-			targetURL:          targetURL,
-			isRecursive:        false,
-			encKeyDB:           encKeyDB,
-			olderThan:          "",
-			newerThan:          "",
-			timeRef:            time.Time{},
-			versionID:          "",
-			isZip:              false,
-			ignoreBucketExists: true,
+			sourceURLs:              sourceURLs,
+			targetURL:               targetURL,
+			encKeyDB:                encKeyDB,
+			ignoreBucketExistsCheck: true,
 		}
 
-		for cpURLs := range prepareCopyURLs(ctx, opts) {
-			if cpURLs.Error != nil {
-				printCopyURLsError(&cpURLs)
+		for putURLs := range preparePutURLs(ctx, opts) {
+			if putURLs.Error != nil {
+				printCopyURLsError(&putURLs)
 				break
 			}
-			totalBytes += cpURLs.SourceContent.Size
+			totalBytes += putURLs.SourceContent.Size
 			pg.SetTotal(totalBytes)
 			totalObjects++
-			cpURLsCh <- cpURLs
+			putURLsCh <- putURLs
 		}
-		close(cpURLsCh)
+		close(putURLsCh)
 	}()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case cpURLs, ok := <-cpURLsCh:
+		case putURLs, ok := <-putURLsCh:
 			if !ok {
 				return nil
 			}
-			_ = doCopy(ctx, cpURLs, pg, encKeyDB, false, false, false)
+			urls := doCopy(ctx, putURLs, pg, encKeyDB, false, false, false)
+			if urls.Error != nil {
+				return urls.Error.ToGoError()
+			}
 		}
 	}
 }

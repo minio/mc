@@ -66,7 +66,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 
 	/****** Generic rules *******/
 	if !cliCtx.Bool("watch") && !cliCtx.Bool("active-active") && !cliCtx.Bool("multi-master") {
-		_, srcContent, err := url2Stat(ctx, url2StatOptions{urlStr: srcURL, versionID: "", fileAttr: false, encKeyDB: encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExists: false})
+		_, srcContent, err := url2Stat(ctx, url2StatOptions{urlStr: srcURL, versionID: "", fileAttr: false, encKeyDB: encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExistsCheck: false})
 		if err != nil {
 			fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}
