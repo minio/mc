@@ -86,8 +86,12 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 			return cc, nil
 		}
 		client, err := newClient(o.targetURL)
-		c := client.(*S3Client)
-		bucket, path := c.url2BucketAndObject()
+		if err != nil {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, err
+		}
+		s3clnt := client.(*S3Client)
+		bucket, path := s3clnt.url2BucketAndObject()
 		// If target is a folder, it is Type B.
 		var isDir bool
 		if path == "" {
@@ -95,7 +99,7 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 		} else {
 			isDir = strings.HasSuffix(path, "/")
 		}
-		cc.targetContent = c.objectInfo2ClientContent(bucket, minio.ObjectInfo{
+		cc.targetContent = s3clnt.objectInfo2ClientContent(bucket, minio.ObjectInfo{
 			Key: bucket,
 		})
 		if isDir {
