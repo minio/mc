@@ -44,7 +44,7 @@ var (
 // Put command.
 var putCmd = cli.Command{
 	Name:         "put",
-	Usage:        "upload local objects to object storage",
+	Usage:        "upload local object to s3 object storage",
 	Action:       mainPut,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
