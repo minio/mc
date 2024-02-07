@@ -63,8 +63,12 @@ ENVIRONMENT VARIABLES:
   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
-  01. Put a list of objects from local file system to Amazon S3 cloud storage.
-      {{.Prompt}} {{.HelpName}} objectsName s3/jukebox/
+  1. Put an object from local file system to S3 storage
+    {{.Prompt}} {{.HelpName}} path-to/object ALIAS/BUCKET
+  2. Put an object from local file system to S3 bucket with name
+    {{.Prompt}} {{.HelpName}} path-to/object ALIAS/BUCKET/OBJECT-NAME
+  3. Put an object from local file system to S3 bucket under a prefix
+    {{.Prompt}} {{.HelpName}} path-to/object ALIAS/BUCKET/PREFIX/
 `,
 }
 
