@@ -512,7 +512,7 @@ func registerApp(name string) *cli.App {
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
 
-	if isTerminal() && terminalSupportsPager() && !globalPagerDisabled {
+	if isTerminal() && !globalPagerDisabled {
 		app.HelpWriter = globalHelpPager
 	} else {
 		app.HelpWriter = os.Stdout
