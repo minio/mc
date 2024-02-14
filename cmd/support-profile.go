@@ -104,7 +104,7 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 	}
 
 	if ctx.Int("duration") < 10 {
-		fatal(errDummy().Trace(), "profiling must be run for atleast 10 seconds")
+		fatal(errDummy().Trace(), "for any useful profiling one must run it for atleast 10 seconds")
 	}
 }
 
@@ -211,6 +211,6 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, api
 		}
 		console.Infoln("Profiling data uploaded to SUBNET successfully")
 	} else {
-		console.Infoln("Profiling data saved successfully at", profileFile)
+		console.Infoln("Profiling data saved successfully at ", profileFile)
 	}
 }
