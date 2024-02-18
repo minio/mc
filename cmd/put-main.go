@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"os"
 	"strconv"
 
 	"github.com/dustin/go-humanize"
@@ -33,10 +32,12 @@ var (
 		cli.IntFlag{
 			Name:  "parallel, P",
 			Usage: "upload number of parts in parallel",
+			Value: 4,
 		},
 		cli.StringFlag{
 			Name:  "part-size, s",
 			Usage: "each part size",
+			Value: "16MiB",
 		},
 	}
 )
@@ -85,13 +86,11 @@ func mainPut(cliCtx *cli.Context) error {
 	if perr != nil {
 		fatalIf(probe.NewError(perr), "Unable to parse part size")
 	}
-	os.Setenv("MC_UPLOAD_MULTIPART_SIZE", size)
 	// threads
 	threads := cliCtx.Int("P")
-	if threads == 0 {
-		threads = 1
+	if threads < 1 {
+		fatalIf(errInvalidArgument().Trace(strconv.Itoa(threads)), "Invalid number of threads")
 	}
-	os.Setenv("MC_UPLOAD_MULTIPART_THREADS", strconv.Itoa(threads))
 
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
@@ -144,7 +143,7 @@ func mainPut(cliCtx *cli.Context) error {
 			if !ok {
 				return nil
 			}
-			urls := doCopy(ctx, putURLs, pg, encKeyDB, false, false, false)
+			urls := doCopy(ctx, doCopyOpts{cpURLs: putURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, multipartSize: size, multipartThreads: strconv.Itoa(threads)})
 			if urls.Error != nil {
 				return urls.Error.ToGoError()
 			}

@@ -485,7 +485,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 
 	if !mj.opts.isRetriable {
 		now := time.Now()
-		ret = uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata, false)
+		ret = uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{urls: sURLs, progress: mj.status, encKeyDB: mj.opts.encKeyDB, preserve: mj.opts.isMetadata, isZip: false})
 		if ret.Error == nil {
 			durationMs := time.Since(now).Milliseconds()
 			mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))
@@ -504,7 +504,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 		}
 
 		now := time.Now()
-		ret = uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.opts.encKeyDB, mj.opts.isMetadata, false)
+		ret = uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{urls: sURLs, progress: mj.status, encKeyDB: mj.opts.encKeyDB, preserve: mj.opts.isMetadata, isZip: false})
 		if ret.Error == nil {
 			durationMs := time.Since(now).Milliseconds()
 			mirrorReplicationDurations.With(prometheus.Labels{"object_size": convertSizeToTag(sURLs.SourceContent.Size)}).Observe(float64(durationMs))

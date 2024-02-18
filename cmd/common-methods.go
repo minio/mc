@@ -416,18 +416,18 @@ func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSS
 // uploadSourceToTargetURL - uploads to targetURL from source.
 // optionally optimizes copy for object sizes <= 5GiB by using
 // server side copy operation.
-func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader, encKeyDB map[string][]prefixSSEPair, preserve, isZip bool) URLs {
-	sourceAlias := urls.SourceAlias
-	sourceURL := urls.SourceContent.URL
-	sourceVersion := urls.SourceContent.VersionID
-	targetAlias := urls.TargetAlias
-	targetURL := urls.TargetContent.URL
-	length := urls.SourceContent.Size
-	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, urls.SourceContent.URL.Path))
-	targetPath := filepath.ToSlash(filepath.Join(targetAlias, urls.TargetContent.URL.Path))
+func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTargetURLOpts) URLs {
+	sourceAlias := uploadOpts.urls.SourceAlias
+	sourceURL := uploadOpts.urls.SourceContent.URL
+	sourceVersion := uploadOpts.urls.SourceContent.VersionID
+	targetAlias := uploadOpts.urls.TargetAlias
+	targetURL := uploadOpts.urls.TargetContent.URL
+	length := uploadOpts.urls.SourceContent.Size
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, uploadOpts.urls.SourceContent.URL.Path))
+	targetPath := filepath.ToSlash(filepath.Join(targetAlias, uploadOpts.urls.TargetContent.URL.Path))
 
-	srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
-	tgtSSE := getSSE(targetPath, encKeyDB[targetAlias])
+	srcSSE := getSSE(sourcePath, uploadOpts.encKeyDB[sourceAlias])
+	tgtSSE := getSSE(targetPath, uploadOpts.encKeyDB[targetAlias])
 
 	var err *probe.Error
 	metadata := map[string]string{}
@@ -436,54 +436,54 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	// add object retention fields in metadata for target, if target wants
 	// to override defaults from source, usually happens in `cp` command.
 	// for the most part source metadata is copied over.
-	if urls.TargetContent.RetentionEnabled {
-		m := minio.RetentionMode(strings.ToUpper(urls.TargetContent.RetentionMode))
+	if uploadOpts.urls.TargetContent.RetentionEnabled {
+		m := minio.RetentionMode(strings.ToUpper(uploadOpts.urls.TargetContent.RetentionMode))
 		if !m.IsValid() {
-			return urls.WithError(probe.NewError(errors.New("invalid retention mode")).Trace(targetURL.String()))
+			return uploadOpts.urls.WithError(probe.NewError(errors.New("invalid retention mode")).Trace(targetURL.String()))
 		}
 
 		var dur uint64
 		var unit minio.ValidityUnit
-		dur, unit, err = parseRetentionValidity(urls.TargetContent.RetentionDuration)
+		dur, unit, err = parseRetentionValidity(uploadOpts.urls.TargetContent.RetentionDuration)
 		if err != nil {
-			return urls.WithError(err.Trace(targetURL.String()))
+			return uploadOpts.urls.WithError(err.Trace(targetURL.String()))
 		}
 
-		mode = urls.TargetContent.RetentionMode
+		mode = uploadOpts.urls.TargetContent.RetentionMode
 
 		until, err = getRetainUntilDate(dur, unit)
 		if err != nil {
-			return urls.WithError(err.Trace(sourceURL.String()))
+			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 		}
 	}
 
 	// add object legal hold fields in metadata for target, if target wants
 	// to override defaults from source, usually happens in `cp` command.
 	// for the most part source metadata is copied over.
-	if urls.TargetContent.LegalHoldEnabled {
-		switch minio.LegalHoldStatus(urls.TargetContent.LegalHold) {
+	if uploadOpts.urls.TargetContent.LegalHoldEnabled {
+		switch minio.LegalHoldStatus(uploadOpts.urls.TargetContent.LegalHold) {
 		case minio.LegalHoldDisabled:
 		case minio.LegalHoldEnabled:
 		default:
-			return urls.WithError(errInvalidArgument().Trace(urls.TargetContent.LegalHold))
+			return uploadOpts.urls.WithError(errInvalidArgument().Trace(uploadOpts.urls.TargetContent.LegalHold))
 		}
-		legalHold = urls.TargetContent.LegalHold
+		legalHold = uploadOpts.urls.TargetContent.LegalHold
 	}
 
-	for k, v := range urls.SourceContent.UserMetadata {
+	for k, v := range uploadOpts.urls.SourceContent.UserMetadata {
 		metadata[http.CanonicalHeaderKey(k)] = v
 	}
-	for k, v := range urls.SourceContent.Metadata {
+	for k, v := range uploadOpts.urls.SourceContent.Metadata {
 		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
 	// Optimize for server side copy if the host is same.
-	if sourceAlias == targetAlias && !isZip {
+	if sourceAlias == targetAlias && !uploadOpts.isZip {
 		// preserve new metadata and save existing ones.
-		if preserve {
-			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls)
+		if uploadOpts.preserve {
+			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
 			if err != nil {
-				return urls.WithError(err.Trace(sourceURL.String()))
+				return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 			}
 			for k, v := range currentMetadata {
 				metadata[k] = v
@@ -491,39 +491,39 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		}
 
 		// Get metadata from target content as well
-		for k, v := range urls.TargetContent.Metadata {
+		for k, v := range uploadOpts.urls.TargetContent.Metadata {
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
 		// Get userMetadata from target content as well
-		for k, v := range urls.TargetContent.UserMetadata {
+		for k, v := range uploadOpts.urls.TargetContent.UserMetadata {
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		if urls.SourceContent.RetentionEnabled {
+		if uploadOpts.urls.SourceContent.RetentionEnabled {
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
-			return urls.WithError(err.Trace(sourceURL.String()))
+			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 		}
 
 		opts := CopyOptions{
 			srcSSE:           srcSSE,
 			tgtSSE:           tgtSSE,
 			metadata:         filterMetadata(metadata),
-			disableMultipart: urls.DisableMultipart,
-			isPreserve:       preserve,
-			storageClass:     urls.TargetContent.StorageClass,
+			disableMultipart: uploadOpts.urls.DisableMultipart,
+			isPreserve:       uploadOpts.preserve,
+			storageClass:     uploadOpts.urls.TargetContent.StorageClass,
 		}
 
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, sourceVersion, mode, until,
-			legalHold, length, progress, opts)
+			legalHold, length, uploadOpts.progress, opts)
 	} else {
-		if urls.SourceContent.RetentionEnabled {
+		if uploadOpts.urls.SourceContent.RetentionEnabled {
 			// preserve new metadata and save existing ones.
-			if preserve {
-				currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, urls)
+			if uploadOpts.preserve {
+				currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
 				if err != nil {
-					return urls.WithError(err.Trace(sourceURL.String()))
+					return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 				}
 				for k, v := range currentMetadata {
 					metadata[k] = v
@@ -531,17 +531,17 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			}
 
 			// Get metadata from target content as well
-			for k, v := range urls.TargetContent.Metadata {
+			for k, v := range uploadOpts.urls.TargetContent.Metadata {
 				metadata[http.CanonicalHeaderKey(k)] = v
 			}
 
 			// Get userMetadata from target content as well
-			for k, v := range urls.TargetContent.UserMetadata {
+			for k, v := range uploadOpts.urls.TargetContent.UserMetadata {
 				metadata[http.CanonicalHeaderKey(k)] = v
 			}
 
 			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
-			return urls.WithError(err.Trace(sourceURL.String()))
+			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 		}
 
 		var reader io.ReadCloser
@@ -550,64 +550,75 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 			GetOptions: GetOptions{
 				VersionID: sourceVersion,
 				SSE:       srcSSE,
-				Zip:       isZip,
+				Zip:       uploadOpts.isZip,
 			},
 			fetchStat: true,
-			preserve:  preserve,
+			preserve:  uploadOpts.preserve,
 		})
 		if err != nil {
-			return urls.WithError(err.Trace(sourceURL.String()))
+			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 		}
 		defer reader.Close()
 
 		// Get metadata from target content as well
-		for k, v := range urls.TargetContent.Metadata {
+		for k, v := range uploadOpts.urls.TargetContent.Metadata {
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
 		// Get userMetadata from target content as well
-		for k, v := range urls.TargetContent.UserMetadata {
+		for k, v := range uploadOpts.urls.TargetContent.UserMetadata {
 			metadata[http.CanonicalHeaderKey(k)] = v
 		}
 
 		var e error
 		var multipartSize uint64
-		if v := env.Get("MC_UPLOAD_MULTIPART_SIZE", ""); v != "" {
+		var multipartThreads int
+		var v string
+		if uploadOpts.multipartSize == "" {
+			v = env.Get("MC_UPLOAD_MULTIPART_SIZE", "")
+		} else {
+			v = uploadOpts.multipartSize
+		}
+		if v != "" {
 			multipartSize, e = humanize.ParseBytes(v)
 			if e != nil {
-				return urls.WithError(probe.NewError(e))
+				return uploadOpts.urls.WithError(probe.NewError(e))
 			}
 		}
 
-		multipartThreads, e := strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
+		if uploadOpts.multipartThreads == "" {
+			multipartThreads, e = strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
+		} else {
+			multipartThreads, e = strconv.Atoi(uploadOpts.multipartThreads)
+		}
 		if e != nil {
-			return urls.WithError(probe.NewError(e))
+			return uploadOpts.urls.WithError(probe.NewError(e))
 		}
 
 		putOpts := PutOptions{
 			metadata:         filterMetadata(metadata),
 			sse:              tgtSSE,
-			storageClass:     urls.TargetContent.StorageClass,
-			md5:              urls.MD5,
-			disableMultipart: urls.DisableMultipart,
-			isPreserve:       preserve,
+			storageClass:     uploadOpts.urls.TargetContent.StorageClass,
+			md5:              uploadOpts.urls.MD5,
+			disableMultipart: uploadOpts.urls.DisableMultipart,
+			isPreserve:       uploadOpts.preserve,
 			multipartSize:    multipartSize,
 			multipartThreads: uint(multipartThreads),
 		}
 
 		if isReadAt(reader) {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
-				legalHold, reader, length, progress, putOpts)
+				legalHold, reader, length, uploadOpts.progress, putOpts)
 		} else {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
-				legalHold, io.LimitReader(reader, length), length, progress, putOpts)
+				legalHold, io.LimitReader(reader, length), length, uploadOpts.progress, putOpts)
 		}
 	}
 	if err != nil {
-		return urls.WithError(err.Trace(sourceURL.String()))
+		return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 	}
 
-	return urls.WithError(nil)
+	return uploadOpts.urls.WithError(nil)
 }
 
 // newClientFromAlias gives a new client interface for matching
@@ -665,4 +676,13 @@ func ParseForm(r *http.Request) error {
 		}
 	}
 	return nil
+}
+
+type uploadSourceToTargetURLOpts struct {
+	urls             URLs
+	progress         io.Reader
+	encKeyDB         map[string][]prefixSSEPair
+	preserve, isZip  bool
+	multipartSize    string
+	multipartThreads string
 }
