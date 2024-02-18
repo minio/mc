@@ -266,7 +266,7 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{urls: copyOpts.cpURLs, progress: copyOpts.pg, encKeyDB: copyOpts.encKeyDB, preserve: copyOpts.preserve, isZip: copyOpts.isZip})
+	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{urls: copyOpts.cpURLs, progress: copyOpts.pg, encKeyDB: copyOpts.encKeyDB, preserve: copyOpts.preserve, isZip: copyOpts.isZip, multipartSize: copyOpts.multipartSize, multipartThreads: copyOpts.multipartThreads})
 	if copyOpts.isMvCmd && urls.Error == nil {
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
 	}
