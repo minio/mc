@@ -20,14 +20,14 @@ require (
 	github.com/minio/colorjson v1.0.6
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.66
+	github.com/minio/minio-go/v7 v7.0.67
 	github.com/minio/selfupdate v0.6.0
 	github.com/minio/sha256-simd v1.0.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/xattr v0.4.9
 	github.com/posener/complete v1.2.3
 	github.com/prometheus/client_golang v1.17.0
-	github.com/prometheus/prom2json v1.3.3
+	github.com/prometheus/prom2json v1.3.3 // indirect
 	github.com/rjeczalik/notify v0.9.3
 	github.com/rs/xid v1.5.0
 	github.com/shirou/gopsutil/v3 v3.23.11
@@ -51,7 +51,6 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.4.1
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/prometheus/client_model v0.5.0
 	github.com/rivo/tview v0.0.0-20231206124440-5f078138442e
 	github.com/vbauerster/mpb/v8 v8.7.1
 	golang.org/x/term v0.15.0
@@ -65,6 +64,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/minio/mux v1.9.0 // indirect
+	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/safchain/ethtool v0.3.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
