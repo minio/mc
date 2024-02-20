@@ -183,7 +183,7 @@ var ilmAddFlags = []cli.Flag{
 		Usage: "remote tier name to transition",
 	},
 	cli.BoolFlag{
-		Name:  "expired-object-all-versions",
+		Name:  "expire-all-object-versions",
 		Usage: "expire all object versions",
 	},
 }

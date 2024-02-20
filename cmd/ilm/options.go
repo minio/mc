@@ -370,8 +370,8 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if f := "noncurrent-transition-newer"; ctx.IsSet(f) {
 		newerNoncurrentTransitionVersions = intPtr(ctx.Int(f))
 	}
-	if ctx.IsSet("expired-object-all-versions") {
-		expiredObjectAllversions = boolPtr(ctx.Bool("expired-object-all-versions"))
+	if ctx.IsSet("expire-all-object-versions") {
+		expiredObjectAllversions = boolPtr(ctx.Bool("expire-all-object-versions"))
 	}
 
 	return LifecycleOptions{
@@ -435,12 +435,8 @@ func ApplyRuleFields(dest *lifecycle.Rule, opts LifecycleOptions) *probe.Error {
 		dest.Expiration.DeleteMarker = lifecycle.ExpireDeleteMarker(*opts.ExpiredObjectDeleteMarker)
 		dest.Expiration.Days = 0
 		dest.Expiration.Date = lifecycle.ExpirationDate{}
-		// safe to check for delete here as delete marker would at least always come as false
-		if opts.ExpiredObjectAllversions != nil {
-			dest.Expiration.DeleteAll = lifecycle.ExpirationBoolean(*opts.ExpiredObjectAllversions)
-			dest.Expiration.Days = 0
-			dest.Expiration.Date = lifecycle.ExpirationDate{}
-		}
+	} else if opts.ExpiredObjectAllversions != nil {
+		dest.Expiration.DeleteAll = lifecycle.ExpirationBoolean(*opts.ExpiredObjectAllversions)
 	}
 
 	if opts.TransitionDate != nil {
