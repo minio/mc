@@ -507,6 +507,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/quota/set":   aliasCompleter,
 	"/quota/info":  aliasCompleter,
 	"/quota/clear": aliasCompleter,
+	"/put":         aliasCompleter,
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

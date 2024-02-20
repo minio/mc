@@ -1681,7 +1681,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	}
 
 	if path == "" {
-		content, err := c.bucketStat(ctx, bucket)
+		content, err := c.bucketStat(ctx, BucketStatOptions{bucket: bucket, ignoreBucketExists: opts.ignoreBucketExists})
 		if err != nil {
 			return nil, err.Trace(bucket)
 		}
@@ -2326,16 +2326,18 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 }
 
 // Returns bucket stat info of current bucket.
-func (c *S3Client) bucketStat(ctx context.Context, bucket string) (*ClientContent, *probe.Error) {
-	exists, e := c.api.BucketExists(ctx, bucket)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-	if !exists {
-		return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
+func (c *S3Client) bucketStat(ctx context.Context, opts BucketStatOptions) (*ClientContent, *probe.Error) {
+	if !opts.ignoreBucketExists {
+		exists, e := c.api.BucketExists(ctx, opts.bucket)
+		if e != nil {
+			return nil, probe.NewError(e)
+		}
+		if !exists {
+			return nil, probe.NewError(BucketDoesNotExist{Bucket: opts.bucket})
+		}
 	}
 	return &ClientContent{
-		URL: c.targetURL.Clone(), BucketName: bucket, Time: time.Unix(0, 0), Type: os.ModeDir,
+		URL: c.targetURL.Clone(), BucketName: opts.bucket, Time: time.Unix(0, 0), Type: os.ModeDir,
 	}, nil
 }
 
@@ -2361,7 +2363,7 @@ func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientCont
 			contentCh <- c.bucketInfo2ClientContent(bucket)
 		}
 	case b != "" && !strings.HasSuffix(c.targetURL.Path, string(c.targetURL.Separator)) && o == "":
-		content, err := c.bucketStat(ctx, b)
+		content, err := c.bucketStat(ctx, BucketStatOptions{bucket: b})
 		if err != nil {
 			contentCh <- &ClientContent{Err: err.Trace(b)}
 			return
@@ -2957,7 +2959,7 @@ func (c *S3Client) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error)
 	if object != "" {
 		return b, probe.NewError(InvalidArgument{})
 	}
-	content, err := c.bucketStat(ctx, bucket)
+	content, err := c.bucketStat(ctx, BucketStatOptions{bucket: bucket})
 	if err != nil {
 		return b, err.Trace(bucket)
 	}

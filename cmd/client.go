@@ -65,12 +65,19 @@ type PutOptions struct {
 
 // StatOptions holds options of the HEAD operation
 type StatOptions struct {
-	incomplete bool
-	preserve   bool
-	sse        encrypt.ServerSide
-	timeRef    time.Time
-	versionID  string
-	isZip      bool
+	incomplete         bool
+	preserve           bool
+	sse                encrypt.ServerSide
+	timeRef            time.Time
+	versionID          string
+	isZip              bool
+	ignoreBucketExists bool
+}
+
+// BucketStatOptions - bucket stat.
+type BucketStatOptions struct {
+	bucket             string
+	ignoreBucketExists bool
 }
 
 // ListOptions holds options for listing operation
