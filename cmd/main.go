@@ -432,6 +432,7 @@ var appCmds = []cli.Command{
 	encryptCmd,
 	eventCmd,
 	findCmd,
+	getCmd,
 	headCmd,
 	ilmCmd,
 	idpCmd,
