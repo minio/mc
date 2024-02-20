@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -65,7 +65,7 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsCont
 	if len(o.sourceURLs) == 1 { // 1 Source, 1 Target
 		var err *probe.Error
 		if !o.isRecursive {
-			_, cc.sourceContent, err = url2Stat(ctx, cc.sourceURL, o.versionID, false, o.encKeyDB, o.timeRef, o.isZip)
+			_, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: o.versionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: o.timeRef, isZip: o.isZip, ignoreBucketExistsCheck: false})
 		} else {
 			_, cc.sourceContent, err = firstURL2Stat(ctx, cc.sourceURL, o.timeRef, o.isZip)
 		}
@@ -84,7 +84,7 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsCont
 
 		// If target is a folder, it is Type B.
 		var isDir bool
-		isDir, cc.targetContent = isAliasURLDir(ctx, o.targetURL, o.encKeyDB, o.timeRef)
+		isDir, cc.targetContent = isAliasURLDir(ctx, o.targetURL, o.encKeyDB, o.timeRef, o.ignoreBucketExistsCheck)
 		if isDir {
 			cc.copyType = copyURLsTypeB
 			cc.sourceVersionID = cc.sourceContent.VersionID
@@ -99,7 +99,7 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsCont
 
 	var isDir bool
 	// Multiple source args and target is a folder. It is Type D.
-	isDir, cc.targetContent = isAliasURLDir(ctx, o.targetURL, o.encKeyDB, o.timeRef)
+	isDir, cc.targetContent = isAliasURLDir(ctx, o.targetURL, o.encKeyDB, o.timeRef, o.ignoreBucketExistsCheck)
 	if isDir {
 		cc.copyType = copyURLsTypeD
 		return cc, nil
@@ -114,7 +114,7 @@ func guessCopyURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsCont
 func prepareCopyURLsTypeA(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) URLs {
 	var err *probe.Error
 	if cc.sourceContent == nil {
-		_, cc.sourceContent, err = url2Stat(ctx, cc.sourceURL, cc.sourceVersionID, false, o.encKeyDB, time.Time{}, o.isZip)
+		_, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: cc.sourceVersionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: time.Time{}, isZip: o.isZip, ignoreBucketExistsCheck: false})
 		if err != nil {
 			// Source does not exist or insufficient privileges.
 			return URLs{Error: err.Trace(cc.sourceURL)}
@@ -145,7 +145,7 @@ func makeCopyContentTypeA(cc copyURLsContent) URLs {
 func prepareCopyURLsTypeB(ctx context.Context, cc copyURLsContent, o prepareCopyURLsOpts) URLs {
 	var err *probe.Error
 	if cc.sourceContent == nil {
-		_, cc.sourceContent, err = url2Stat(ctx, cc.sourceURL, cc.sourceVersionID, false, o.encKeyDB, time.Time{}, o.isZip)
+		_, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: cc.sourceVersionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: time.Time{}, isZip: o.isZip, ignoreBucketExistsCheck: o.ignoreBucketExistsCheck})
 		if err != nil {
 			// Source does not exist or insufficient privileges.
 			return URLs{Error: err.Trace(cc.sourceURL)}
@@ -161,7 +161,7 @@ func prepareCopyURLsTypeB(ctx context.Context, cc copyURLsContent, o prepareCopy
 	}
 
 	if cc.targetContent == nil {
-		_, cc.targetContent, err = url2Stat(ctx, cc.targetURL, "", false, o.encKeyDB, time.Time{}, false)
+		_, cc.targetContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.targetURL, versionID: "", fileAttr: false, encKeyDB: o.encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExistsCheck: o.ignoreBucketExistsCheck})
 		if err == nil {
 			if !cc.targetContent.Type.IsDir() {
 				return URLs{Error: errInvalidTarget(cc.targetURL).Trace(cc.targetURL)}
@@ -198,7 +198,7 @@ func prepareCopyURLsTypeC(ctx context.Context, cc copyURLsContent, o prepareCopy
 	}
 
 	if cc.targetContent == nil {
-		_, cc.targetContent, err = url2Stat(ctx, cc.targetURL, "", false, o.encKeyDB, time.Time{}, o.isZip)
+		_, cc.targetContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.targetURL, versionID: "", fileAttr: false, encKeyDB: o.encKeyDB, timeRef: time.Time{}, isZip: o.isZip, ignoreBucketExistsCheck: false})
 		if err == nil {
 			if !cc.targetContent.Type.IsDir() {
 				return returnErrorAndCloseChannel(errTargetIsNotDir(cc.targetURL).Trace(cc.targetURL))
@@ -207,7 +207,7 @@ func prepareCopyURLsTypeC(ctx context.Context, cc copyURLsContent, o prepareCopy
 	}
 
 	if cc.sourceContent == nil {
-		_, cc.sourceContent, err = url2Stat(ctx, cc.sourceURL, "", false, o.encKeyDB, time.Time{}, o.isZip)
+		_, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: "", fileAttr: false, encKeyDB: o.encKeyDB, timeRef: time.Time{}, isZip: o.isZip, ignoreBucketExistsCheck: false})
 		if err != nil {
 			return returnErrorAndCloseChannel(err.Trace(cc.sourceURL))
 		}
@@ -307,14 +307,15 @@ func prepareCopyURLsTypeD(ctx context.Context, cc copyURLsContent, o prepareCopy
 }
 
 type prepareCopyURLsOpts struct {
-	sourceURLs           []string
-	targetURL            string
-	isRecursive          bool
-	encKeyDB             map[string][]prefixSSEPair
-	olderThan, newerThan string
-	timeRef              time.Time
-	versionID            string
-	isZip                bool
+	sourceURLs              []string
+	targetURL               string
+	isRecursive             bool
+	encKeyDB                map[string][]prefixSSEPair
+	olderThan, newerThan    string
+	timeRef                 time.Time
+	versionID               string
+	isZip                   bool
+	ignoreBucketExistsCheck bool
 }
 
 type copyURLsContent struct {

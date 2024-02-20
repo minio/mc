@@ -240,34 +240,34 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a single file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair, isMvCmd, preserve, isZip bool) URLs {
-	if cpURLs.Error != nil {
-		cpURLs.Error = cpURLs.Error.Trace()
-		return cpURLs
+func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
+	if copyOpts.cpURLs.Error != nil {
+		copyOpts.cpURLs.Error = copyOpts.cpURLs.Error.Trace()
+		return copyOpts.cpURLs
 	}
 
-	sourceAlias := cpURLs.SourceAlias
-	sourceURL := cpURLs.SourceContent.URL
-	targetAlias := cpURLs.TargetAlias
-	targetURL := cpURLs.TargetContent.URL
-	length := cpURLs.SourceContent.Size
+	sourceAlias := copyOpts.cpURLs.SourceAlias
+	sourceURL := copyOpts.cpURLs.SourceContent.URL
+	targetAlias := copyOpts.cpURLs.TargetAlias
+	targetURL := copyOpts.cpURLs.TargetContent.URL
+	length := copyOpts.cpURLs.SourceContent.Size
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 
-	if progressReader, ok := pg.(*progressBar); ok {
-		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ":")
+	if progressReader, ok := copyOpts.pg.(*progressBar); ok {
+		progressReader.SetCaption(copyOpts.cpURLs.SourceContent.URL.String() + ":")
 	} else {
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
 			Source:     sourcePath,
 			Target:     targetPath,
 			Size:       length,
-			TotalCount: cpURLs.TotalCount,
-			TotalSize:  cpURLs.TotalSize,
+			TotalCount: copyOpts.cpURLs.TotalCount,
+			TotalSize:  copyOpts.cpURLs.TotalSize,
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB, preserve, isZip)
-	if isMvCmd && urls.Error == nil {
+	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{urls: copyOpts.cpURLs, progress: copyOpts.pg, encKeyDB: copyOpts.encKeyDB, preserve: copyOpts.preserve, isZip: copyOpts.isZip, multipartSize: copyOpts.multipartSize, multipartThreads: copyOpts.multipartThreads})
+	if copyOpts.isMvCmd && urls.Error == nil {
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
 	}
 
@@ -562,7 +562,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						startContinue = false
 					}
 					parallel.queueTask(func() URLs {
-						return doCopy(ctx, cpURLs, pg, encKeyDB, isMvCmd, preserve, isZip)
+						return doCopy(ctx, doCopyOpts{cpURLs: cpURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: isMvCmd, preserve: preserve, isZip: isZip})
 					}, cpURLs.SourceContent.Size)
 				}
 			}
@@ -757,4 +757,13 @@ func mainCopy(cliCtx *cli.Context) error {
 	}
 
 	return e
+}
+
+type doCopyOpts struct {
+	cpURLs                   URLs
+	pg                       ProgressReader
+	encKeyDB                 map[string][]prefixSSEPair
+	isMvCmd, preserve, isZip bool
+	multipartSize            string
+	multipartThreads         string
 }

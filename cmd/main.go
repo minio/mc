@@ -445,6 +445,7 @@ var appCmds = []cli.Command{
 	pingCmd,
 	policyCmd,
 	pipeCmd,
+	putCmd,
 	quotaCmd,
 	rmCmd,
 	retentionCmd,

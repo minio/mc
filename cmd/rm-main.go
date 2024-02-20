@@ -253,7 +253,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 		// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 		url = filepath.ToSlash(filepath.Clean(url))
 		// namespace removal applies only for non FS. So filter out if passed url represents a directory
-		dir, _ := isAliasURLDir(ctx, url, encKeyDB, time.Time{})
+		dir, _ := isAliasURLDir(ctx, url, encKeyDB, time.Time{}, false)
 		if dir {
 			_, path := url2Alias(url)
 			isNamespaceRemoval = (path == "")
@@ -302,7 +302,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 		modTime time.Time
 	)
 
-	_, content, pErr := url2Stat(ctx, url, versionID, false, opts.encKeyDB, time.Time{}, false)
+	_, content, pErr := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: versionID, fileAttr: false, encKeyDB: opts.encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExistsCheck: false})
 	if pErr != nil {
 		switch st := minio.ToErrorResponse(pErr.ToGoError()).StatusCode; st {
 		case http.StatusBadRequest, http.StatusMethodNotAllowed:
