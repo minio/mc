@@ -20,10 +20,12 @@ package cmd
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/v2/console"
 )
 
 // put command flags.
@@ -45,7 +47,7 @@ var (
 // Put command.
 var putCmd = cli.Command{
 	Name:         "put",
-	Usage:        "upload local object to s3 object storage",
+	Usage:        "upload an object to a bucket",
 	Action:       mainPut,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
@@ -54,7 +56,7 @@ var putCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
+  {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -125,7 +127,7 @@ func mainPut(cliCtx *cli.Context) error {
 
 		for putURLs := range preparePutURLs(ctx, opts) {
 			if putURLs.Error != nil {
-				printCopyURLsError(&putURLs)
+				printPutURLsError(&putURLs)
 				break
 			}
 			totalBytes += putURLs.SourceContent.Size
@@ -148,5 +150,22 @@ func mainPut(cliCtx *cli.Context) error {
 				return urls.Error.ToGoError()
 			}
 		}
+	}
+}
+
+func printPutURLsError(putURLs *URLs) {
+	// Print in new line and adjust to top so that we
+	// don't print over the ongoing scan bar
+	if !globalQuiet && !globalJSON {
+		console.Eraseline()
+	}
+
+	if strings.Contains(putURLs.Error.ToGoError().Error(),
+		" is a folder.") {
+		errorIf(putURLs.Error.Trace(),
+			"Folder cannot be copied. Please use `...` suffix.")
+	} else {
+		errorIf(putURLs.Error.Trace(),
+			"Unable to upload.")
 	}
 }

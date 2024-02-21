@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
@@ -32,7 +33,7 @@ func preparePutURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 		defer close(copyURLsCh)
 		copyURLsContent, err := guessPutURLType(ctx, o)
 		if err != nil {
-			copyURLsCh <- URLs{Error: errUnableToGuess().Trace(o.sourceURLs...)}
+			copyURLsCh <- URLs{Error: err}
 			return
 		}
 
@@ -90,8 +91,16 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 			cc.copyType = copyURLsTypeInvalid
 			return cc, err
 		}
-		s3clnt := client.(*S3Client)
+		s3clnt, ok := client.(*S3Client)
+		if !ok {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, probe.NewError(fmt.Errorf("Target is not s3."))
+		}
 		bucket, path := s3clnt.url2BucketAndObject()
+		if bucket == "" {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, probe.NewError(fmt.Errorf("Bucket should not be empty."))
+		}
 		cc.targetContent = s3clnt.objectInfo2ClientContent(bucket, minio.ObjectInfo{
 			Key: bucket,
 		})
