@@ -33,7 +33,7 @@ var (
 // Get command.
 var getCmd = cli.Command{
 	Name:         "get",
-	Usage:        "get s3 object storage to local",
+	Usage:        "get s3 object to local",
 	Action:       mainGet,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
