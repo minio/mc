@@ -196,15 +196,18 @@ func mainSupportInspect(ctx *cli.Context) error {
 		return nil
 	}
 
-	uploadURL := subnetUploadURL("inspect", inspectOutputFilename)
+	uploadURL := subnetUploadURL("inspect", inspectOutputFilename, nil)
 	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
 
-	_, e = uploadFileToSubnet(alias, tmpFile.Name(), reqURL, headers)
+	tmpFileName := tmpFile.Name()
+	_, e = uploadFileToSubnet(alias, tmpFileName, reqURL, headers)
 	if e != nil {
 		console.Errorln("Unable to upload inspect data to SUBNET portal: " + e.Error())
 		saveInspectDataFile(key, tmpFile)
 		return nil
 	}
+	// Delete the file after successful upload
+	os.Remove(tmpFileName)
 
 	printMsg(inspectMessage{AliasedURL: aliasedURL})
 	return nil

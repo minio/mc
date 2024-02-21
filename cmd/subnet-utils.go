@@ -61,12 +61,20 @@ func subnetBaseURL() string {
 	return subnet.BaseURL(globalDevMode)
 }
 
+func subnetIssueURL(issueNum int) string {
+	return fmt.Sprintf("%s/issues/%d", subnetBaseURL(), issueNum)
+}
+
 func subnetLogWebhookURL() string {
 	return subnetBaseURL() + "/api/logs"
 }
 
-func subnetUploadURL(uploadType, filename string) string {
-	return fmt.Sprintf("%s/api/%s/upload?filename=%s", subnetBaseURL(), uploadType, filename)
+func subnetUploadURL(uploadType, filename string, params url.Values) string {
+	if params == nil {
+		params = url.Values{}
+	}
+	params.Add("filename", filename)
+	return fmt.Sprintf("%s/api/%s/upload?%s", subnetBaseURL(), uploadType, params.Encode())
 }
 
 func subnetRegisterURL() string {
@@ -719,9 +727,6 @@ func uploadFileToSubnet(alias, filename, reqURL string, headers map[string]strin
 		return "", e
 	}
 
-	// Delete the file after successful upload
-	os.Remove(filename)
-
 	// ensure that both api-key and license from
 	// SUBNET response are saved in the config
 	extractAndSaveSubnetCreds(alias, resp)
@@ -729,7 +734,7 @@ func uploadFileToSubnet(alias, filename, reqURL string, headers map[string]strin
 	return resp, e
 }
 
-func subnetUploadReq(url, filename string) (*http.Request, error) {
+func subnetUploadReq(url, filePath string) (*http.Request, error) {
 	r, w := io.Pipe()
 	mwriter := multipart.NewWriter(w)
 	contentType := mwriter.FormDataContentType()
@@ -744,12 +749,12 @@ func subnetUploadReq(url, filename string) (*http.Request, error) {
 			w.CloseWithError(e)
 		}()
 
-		part, e = mwriter.CreateFormFile("file", filepath.Base(filename))
+		part, e = mwriter.CreateFormFile("file", filepath.Base(filePath))
 		if e != nil {
 			return
 		}
 
-		file, e := os.Open(filename)
+		file, e := os.Open(filePath)
 		if e != nil {
 			return
 		}

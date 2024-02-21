@@ -490,7 +490,7 @@ func execSupportPerf(ctx *cli.Context, aliasedURL, perfType string) {
 			return
 		}
 
-		uploadURL := subnetUploadURL("perf", tmpFileName)
+		uploadURL := subnetUploadURL("perf", tmpFileName, nil)
 		reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
 
 		_, e = uploadFileToSubnet(alias, tmpFileName, reqURL, headers)
@@ -499,6 +499,8 @@ func execSupportPerf(ctx *cli.Context, aliasedURL, perfType string) {
 			savePerfResultFile(tmpFileName, resultFileNamePfx)
 			return
 		}
+		// Delete the file after successful upload
+		os.Remove(tmpFileName)
 
 		console.Infoln("Uploaded performance report to SUBNET successfully")
 	}
