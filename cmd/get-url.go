@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
@@ -31,7 +32,7 @@ func prepareGetURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 		defer close(copyURLsCh)
 		copyURLsContent, err := guessGetURLType(ctx, o)
 		if err != nil {
-			copyURLsCh <- URLs{Error: errUnableToGuess().Trace(o.sourceURLs...)}
+			copyURLsCh <- URLs{Error: err}
 			return
 		}
 
@@ -79,11 +80,30 @@ func guessGetURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 			cc.copyType = copyURLsTypeInvalid
 			return cc, err
 		}
-		s3clnt := client.(*S3Client)
+		s3clnt, ok := client.(*S3Client)
+		if !ok {
+			return cc, probe.NewError(fmt.Errorf("Source is not s3."))
+		}
 		bucket, path := s3clnt.url2BucketAndObject()
+		if bucket == "" {
+			return cc, probe.NewError(fmt.Errorf("Please set bucket for s3 resource."))
+		}
+		if path == "" {
+			return cc, probe.NewError(fmt.Errorf("Please set a full path for s3 resource."))
+		}
 		cc.sourceContent = s3clnt.objectInfo2ClientContent(bucket, minio.ObjectInfo{
 			Key: path,
 		})
+
+		client, err = newClient(o.targetURL)
+		if err != nil {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, err
+		}
+		_, ok = client.(*fsClient)
+		if !ok {
+			return cc, probe.NewError(fmt.Errorf("Target is not local filesystem."))
+		}
 
 		// If target is a folder, it is Type B.
 		var isDir bool

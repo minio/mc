@@ -19,8 +19,10 @@ package cmd
 
 import (
 	"context"
+	"strings"
 
 	"github.com/minio/cli"
+	"github.com/minio/pkg/v2/console"
 )
 
 // get command flags.
@@ -93,7 +95,7 @@ func mainGet(cliCtx *cli.Context) error {
 
 		for getURLs := range prepareGetURLs(ctx, opts) {
 			if getURLs.Error != nil {
-				printCopyURLsError(&getURLs)
+				printGetURLsError(&getURLs)
 				break
 			}
 			totalBytes += getURLs.SourceContent.Size
@@ -116,5 +118,22 @@ func mainGet(cliCtx *cli.Context) error {
 				return urls.Error.ToGoError()
 			}
 		}
+	}
+}
+
+func printGetURLsError(cpURLs *URLs) {
+	// Print in new line and adjust to top so that we
+	// don't print over the ongoing scan bar
+	if !globalQuiet && !globalJSON {
+		console.Eraseline()
+	}
+
+	if strings.Contains(cpURLs.Error.ToGoError().Error(),
+		" is a folder.") {
+		errorIf(cpURLs.Error.Trace(),
+			"Folder cannot be copied. Please use `...` suffix.")
+	} else {
+		errorIf(cpURLs.Error.Trace(),
+			"Unable to download.")
 	}
 }
