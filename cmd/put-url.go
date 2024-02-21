@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
@@ -32,7 +33,7 @@ func preparePutURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 		defer close(copyURLsCh)
 		copyURLsContent, err := guessPutURLType(ctx, o)
 		if err != nil {
-			copyURLsCh <- URLs{Error: errUnableToGuess().Trace(o.sourceURLs...)}
+			copyURLsCh <- URLs{Error: err}
 			return
 		}
 
@@ -74,10 +75,16 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 
 	if len(o.sourceURLs) == 1 { // 1 Source, 1 Target
 		var err *probe.Error
-		_, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: o.versionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: o.timeRef, isZip: o.isZip, ignoreBucketExistsCheck: false})
+		var client Client
+		client, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: o.versionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: o.timeRef, isZip: o.isZip, ignoreBucketExistsCheck: false})
 		if err != nil {
 			cc.copyType = copyURLsTypeInvalid
 			return cc, err
+		}
+		_, ok := client.(*fsClient)
+		if !ok {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, probe.NewError(fmt.Errorf("Source is not local filepath."))
 		}
 		// If recursion is ON, it is type C.
 		// If source is a folder, it is Type C.
@@ -85,13 +92,21 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 			cc.copyType = copyURLsTypeC
 			return cc, nil
 		}
-		client, err := newClient(o.targetURL)
+		client, err = newClient(o.targetURL)
 		if err != nil {
 			cc.copyType = copyURLsTypeInvalid
 			return cc, err
 		}
-		s3clnt := client.(*S3Client)
+		s3clnt, ok := client.(*S3Client)
+		if !ok {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, probe.NewError(fmt.Errorf("Target is not s3."))
+		}
 		bucket, path := s3clnt.url2BucketAndObject()
+		if bucket == "" {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, probe.NewError(fmt.Errorf("Bucket should not be empty."))
+		}
 		cc.targetContent = s3clnt.objectInfo2ClientContent(bucket, minio.ObjectInfo{
 			Key: bucket,
 		})
