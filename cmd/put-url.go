@@ -75,10 +75,16 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 
 	if len(o.sourceURLs) == 1 { // 1 Source, 1 Target
 		var err *probe.Error
-		_, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: o.versionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: o.timeRef, isZip: o.isZip, ignoreBucketExistsCheck: false})
+		var client Client
+		client, cc.sourceContent, err = url2Stat(ctx, url2StatOptions{urlStr: cc.sourceURL, versionID: o.versionID, fileAttr: false, encKeyDB: o.encKeyDB, timeRef: o.timeRef, isZip: o.isZip, ignoreBucketExistsCheck: false})
 		if err != nil {
 			cc.copyType = copyURLsTypeInvalid
 			return cc, err
+		}
+		_, ok := client.(*fsClient)
+		if !ok {
+			cc.copyType = copyURLsTypeInvalid
+			return cc, probe.NewError(fmt.Errorf("Source is not local filepath."))
 		}
 		// If recursion is ON, it is type C.
 		// If source is a folder, it is Type C.
@@ -86,7 +92,7 @@ func guessPutURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 			cc.copyType = copyURLsTypeC
 			return cc, nil
 		}
-		client, err := newClient(o.targetURL)
+		client, err = newClient(o.targetURL)
 		if err != nil {
 			cc.copyType = copyURLsTypeInvalid
 			return cc, err
