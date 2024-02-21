@@ -51,7 +51,7 @@ var putCmd = cli.Command{
 	Action:       mainPut,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(ioFlags, globalFlags...), putFlags...),
+	Flags:        append(globalFlags, putFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -61,9 +61,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_ENCRYPT:      list of comma delimited prefixes
-  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
   1. Put an object from local file system to S3 storage
@@ -94,9 +91,6 @@ func mainPut(cliCtx *cli.Context) error {
 		fatalIf(errInvalidArgument().Trace(strconv.Itoa(threads)), "Invalid number of threads")
 	}
 
-	encKeyDB, err := getEncKeys(cliCtx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
 	args := cliCtx.Args()
 	if len(args) < 2 {
 		fatalIf(errInvalidArgument().Trace(args...), "Invalid number of arguments.")
@@ -121,7 +115,7 @@ func mainPut(cliCtx *cli.Context) error {
 		opts := prepareCopyURLsOpts{
 			sourceURLs:              sourceURLs,
 			targetURL:               targetURL,
-			encKeyDB:                encKeyDB,
+			encKeyDB:                nil,
 			ignoreBucketExistsCheck: true,
 		}
 
@@ -145,7 +139,7 @@ func mainPut(cliCtx *cli.Context) error {
 			if !ok {
 				return nil
 			}
-			urls := doCopy(ctx, doCopyOpts{cpURLs: putURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, multipartSize: size, multipartThreads: strconv.Itoa(threads)})
+			urls := doCopy(ctx, doCopyOpts{cpURLs: putURLs, pg: pg, encKeyDB: nil, isMvCmd: false, preserve: false, isZip: false, multipartSize: size, multipartThreads: strconv.Itoa(threads)})
 			if urls.Error != nil {
 				return urls.Error.ToGoError()
 			}
