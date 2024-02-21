@@ -242,7 +242,7 @@ func parseExpiryDays(expiryDayStr string) (lifecycle.ExpirationDays, *probe.Erro
 }
 
 // Returns lifecycleExpiration to be included in lifecycleRule
-func parseExpiry(expiryDate, expiryDays *string, expiredDeleteMarker *bool) (lfcExp lifecycle.Expiration, err *probe.Error) {
+func parseExpiry(expiryDate, expiryDays *string, expiredDeleteMarker, expiredObjectAllVersions *bool) (lfcExp lifecycle.Expiration, err *probe.Error) {
 	if expiryDate != nil {
 		date, err := parseExpiryDate(*expiryDate)
 		if err != nil {
@@ -261,6 +261,10 @@ func parseExpiry(expiryDate, expiryDays *string, expiredDeleteMarker *bool) (lfc
 
 	if expiredDeleteMarker != nil {
 		lfcExp.DeleteMarker = lifecycle.ExpireDeleteMarker(*expiredDeleteMarker)
+	}
+
+	if expiredObjectAllVersions != nil {
+		lfcExp.DeleteAll = lifecycle.ExpirationBoolean(*expiredObjectAllVersions)
 	}
 
 	return lfcExp, nil

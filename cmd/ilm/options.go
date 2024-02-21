@@ -79,6 +79,7 @@ type LifecycleOptions struct {
 	NoncurrentVersionTransitionDays         *int
 	NewerNoncurrentTransitionVersions       *int
 	NoncurrentVersionTransitionStorageClass *string
+	ExpiredObjectAllversions                *bool
 }
 
 // Filter returns lifecycle.Filter appropriate for opts
@@ -149,7 +150,7 @@ func (opts LifecycleOptions) ToILMRule() (lifecycle.Rule, *probe.Error) {
 		return "Enabled"
 	}()
 
-	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays, opts.ExpiredObjectDeleteMarker)
+	expiry, err := parseExpiry(opts.ExpiryDate, opts.ExpiryDays, opts.ExpiredObjectDeleteMarker, opts.ExpiredObjectAllversions)
 	if err != nil {
 		return lifecycle.Rule{}, err
 	}
@@ -241,6 +242,7 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		noncurrentVersionTransitionDays   *int
 		newerNoncurrentTransitionVersions *int
 		noncurrentTier                    *string
+		expiredObjectAllversions          *bool
 	)
 
 	id = ctx.String("id")
@@ -368,6 +370,9 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	if f := "noncurrent-transition-newer"; ctx.IsSet(f) {
 		newerNoncurrentTransitionVersions = intPtr(ctx.Int(f))
 	}
+	if ctx.IsSet("expire-all-object-versions") {
+		expiredObjectAllversions = boolPtr(ctx.Bool("expire-all-object-versions"))
+	}
 
 	return LifecycleOptions{
 		ID:                                      id,
@@ -387,6 +392,7 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		NoncurrentVersionTransitionDays:         noncurrentVersionTransitionDays,
 		NewerNoncurrentTransitionVersions:       newerNoncurrentTransitionVersions,
 		NoncurrentVersionTransitionStorageClass: noncurrentTier,
+		ExpiredObjectAllversions:                expiredObjectAllversions,
 	}, nil
 }
 
@@ -429,6 +435,8 @@ func ApplyRuleFields(dest *lifecycle.Rule, opts LifecycleOptions) *probe.Error {
 		dest.Expiration.DeleteMarker = lifecycle.ExpireDeleteMarker(*opts.ExpiredObjectDeleteMarker)
 		dest.Expiration.Days = 0
 		dest.Expiration.Date = lifecycle.ExpirationDate{}
+	} else if opts.ExpiredObjectAllversions != nil {
+		dest.Expiration.DeleteAll = lifecycle.ExpirationBoolean(*opts.ExpiredObjectAllversions)
 	}
 
 	if opts.TransitionDate != nil {
