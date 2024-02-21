@@ -40,7 +40,7 @@ var getCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
+  {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -65,7 +65,7 @@ func mainGet(cliCtx *cli.Context) error {
 
 	args := cliCtx.Args()
 	if len(args) < 2 {
-		fatalIf(errInvalidArgument().Trace(args...), "Invalid number of arguments.")
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
 	// get source and target
 	sourceURLs := args[:len(args)-1]
