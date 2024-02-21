@@ -77,6 +77,11 @@ EXAMPLES:
 
 // mainPut is the entry point for put command.
 func mainPut(cliCtx *cli.Context) error {
+	args := cliCtx.Args()
+	if len(args) < 2 {
+		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
+	}
+
 	ctx, cancelPut := context.WithCancel(globalContext)
 	defer cancelPut()
 	// part size
@@ -97,7 +102,6 @@ func mainPut(cliCtx *cli.Context) error {
 	encKeyDB, err := getEncKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
-	args := cliCtx.Args()
 	if len(args) < 2 {
 		fatalIf(errInvalidArgument().Trace(args...), "Invalid number of arguments.")
 	}
