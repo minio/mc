@@ -121,6 +121,7 @@ func mainPut(cliCtx *cli.Context) error {
 	} else {
 		pg = newAccounter(totalBytes)
 	}
+	defer showLastProgressBar(pg)
 	go func() {
 		opts := prepareCopyURLsOpts{
 			sourceURLs:              sourceURLs,
@@ -171,5 +172,15 @@ func printPutURLsError(putURLs *URLs) {
 	} else {
 		errorIf(putURLs.Error.Trace(),
 			"Unable to upload.")
+	}
+}
+
+func showLastProgressBar(pg ProgressReader) {
+	if progressReader, ok := pg.(*progressBar); ok {
+		progressReader.ProgressBar.Finish()
+	} else {
+		if accntReader, ok := pg.(*accounter); ok {
+			printMsg(accntReader.Stat())
+		}
 	}
 }
