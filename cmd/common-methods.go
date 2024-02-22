@@ -552,7 +552,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 				SSE:       srcSSE,
 				Zip:       uploadOpts.isZip,
 			},
-			fetchStat: true,
+			fetchStat: !uploadOpts.ignoreStat,
 			preserve:  uploadOpts.preserve,
 		})
 		if err != nil {
@@ -606,7 +606,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			multipartThreads: uint(multipartThreads),
 		}
 
-		if isReadAt(reader) {
+		if isReadAt(reader) || length == 0 {
 			_, err = putTargetStream(ctx, targetAlias, targetURL.String(), mode, until,
 				legalHold, reader, length, uploadOpts.progress, putOpts)
 		} else {
@@ -685,4 +685,5 @@ type uploadSourceToTargetURLOpts struct {
 	preserve, isZip  bool
 	multipartSize    string
 	multipartThreads string
+	ignoreStat       bool
 }
