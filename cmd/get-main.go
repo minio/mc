@@ -85,6 +85,7 @@ func mainGet(cliCtx *cli.Context) error {
 	} else {
 		pg = newAccounter(totalBytes)
 	}
+	defer showLastProgressBar(pg)
 	go func() {
 		opts := prepareCopyURLsOpts{
 			sourceURLs:              sourceURLs,
