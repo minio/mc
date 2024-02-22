@@ -637,7 +637,7 @@ func validateAndSaveLic(lic, alias string, saveAPIKey bool) string {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("License has expired on %s", li.ExpiresAt))
 	}
 
-	if len(li.DeploymentID) > 0 && li.DeploymentID != getAdminInfo(alias).DeploymentID {
+	if len(li.DeploymentID) > 0 && li.DeploymentID != uuid.Nil.String() && li.DeploymentID != getAdminInfo(alias).DeploymentID {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("License is invalid for the deployment %s", alias))
 	}
 
