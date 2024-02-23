@@ -29,7 +29,7 @@ import (
 
 // profile command flags.
 var (
-	uploadFlags = []cli.Flag{
+	uploadFlags = append(globalFlags,
 		cli.IntFlag{
 			Name:  "issue",
 			Usage: "SUBNET issue number to which the file is to be uploaded",
@@ -43,8 +43,25 @@ var (
 			Usage:  "Development mode",
 			Hidden: true,
 		},
-	}
+	)
 )
+
+type supportUploadMessage struct {
+	Status   string `json:"status"`
+	IssueNum int    `json:"-"`
+	IssueURL string `json:"issueUrl"`
+}
+
+// String colorized upload message
+func (s supportUploadMessage) String() string {
+	msg := fmt.Sprintf("File uploaded to SUBNET successfully. Click here to visit the issue: %s", subnetIssueURL(s.IssueNum))
+	return console.Colorize(supportSuccessMsgTag, msg)
+}
+
+// JSON jsonified upload message
+func (s supportUploadMessage) JSON() string {
+	return toJSON(s)
+}
 
 var supportUploadCmd = cli.Command{
 	Name:            "upload",
@@ -86,6 +103,7 @@ func checkSupportUploadSyntax(ctx *cli.Context) {
 func mainSupportUpload(ctx *cli.Context) error {
 	// Check for command syntax
 	checkSupportUploadSyntax(ctx)
+	setSuccessMessageColor()
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
@@ -122,8 +140,7 @@ func execSupportUpload(ctx *cli.Context, alias, apiKey string) {
 	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	_, e = uploadFileToSubnet(alias, filePath, reqURL, headers)
 	if e != nil {
-		errorIf(probe.NewError(e), "Unable to upload file to SUBNET")
-		return
+		fatalIf(probe.NewError(e), "Unable to upload file to SUBNET")
 	}
-	console.Infoln("File uploaded to SUBNET successfully. Click here to visit the issue: ", subnetIssueURL(issueNum))
+	printMsg(supportUploadMessage{IssueNum: issueNum, Status: "success", IssueURL: subnetIssueURL(issueNum)})
 }
