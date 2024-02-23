@@ -644,7 +644,7 @@ loop:
 				console.Eraseline()
 			}
 		} else if progressReader.ProgressBar.Get() > 0 {
-			progressReader.ProgressBar.Finish()
+			progressReader.Finish()
 		}
 	} else {
 		if accntReader, ok := pg.(*accounter); ok {

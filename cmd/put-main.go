@@ -191,7 +191,7 @@ func showLastProgressBar(pg ProgressReader, err error) {
 		return
 	}
 	if progressReader, ok := pg.(*progressBar); ok {
-		progressReader.ProgressBar.Finish()
+		progressReader.Finish()
 	} else {
 		if accntReader, ok := pg.(*accounter); ok {
 			printMsg(accntReader.Stat())
