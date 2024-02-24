@@ -35,7 +35,7 @@ type progressBar struct {
 
 func newPB(total int64) *pb.ProgressBar {
 	// Progress bar specific theme customization.
-	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Bar", color.New(color.FgYellow, color.Bold))
 
 	// get the new original progress bar.
 	bar := pb.New64(total)
@@ -96,6 +96,11 @@ func (p *progressBar) SetCaption(caption string) *progressBar {
 	caption = fixateBarCaption(caption, getFixedWidth(p.ProgressBar.GetWidth(), 18))
 	p.ProgressBar.Prefix(caption)
 	return p
+}
+
+func (p *progressBar) Finish() {
+	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
+	p.ProgressBar.Finish()
 }
 
 func (p *progressBar) Set64(length int64) *progressBar {

@@ -58,7 +58,7 @@ EXAMPLES:
 }
 
 // mainGet is the entry point for get command.
-func mainGet(cliCtx *cli.Context) error {
+func mainGet(cliCtx *cli.Context) (e error) {
 	ctx, cancelGet := context.WithCancel(globalContext)
 	defer cancelGet()
 
@@ -78,14 +78,12 @@ func mainGet(cliCtx *cli.Context) error {
 
 	// Store a progress bar or an accounter
 	var pg ProgressReader
-
 	// Enable progress bar reader only during default mode.
 	if !globalQuiet && !globalJSON { // set up progress bar
 		pg = newProgressBar(totalBytes)
 	} else {
 		pg = newAccounter(totalBytes)
 	}
-	defer showLastProgressBar(pg)
 	go func() {
 		opts := prepareCopyURLsOpts{
 			sourceURLs:              sourceURLs,
@@ -96,7 +94,7 @@ func mainGet(cliCtx *cli.Context) error {
 
 		for getURLs := range prepareGetURLs(ctx, opts) {
 			if getURLs.Error != nil {
-				printGetURLsError(&getURLs)
+				getURLsCh <- getURLs
 				break
 			}
 			totalBytes += getURLs.SourceContent.Size
@@ -109,14 +107,23 @@ func mainGet(cliCtx *cli.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			showLastProgressBar(pg, nil)
+			return
 		case getURLs, ok := <-getURLsCh:
 			if !ok {
-				return nil
+				showLastProgressBar(pg, nil)
+				return
+			}
+			if getURLs.Error != nil {
+				printGetURLsError(&getURLs)
+				showLastProgressBar(pg, getURLs.Error.ToGoError())
+				return
 			}
 			urls := doCopy(ctx, doCopyOpts{cpURLs: getURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, ignoreStat: true})
 			if urls.Error != nil {
-				return urls.Error.ToGoError()
+				e = urls.Error.ToGoError()
+				showLastProgressBar(pg, e)
+				return
 			}
 		}
 	}

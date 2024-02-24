@@ -76,7 +76,7 @@ EXAMPLES:
 }
 
 // mainPut is the entry point for put command.
-func mainPut(cliCtx *cli.Context) error {
+func mainPut(cliCtx *cli.Context) (e error) {
 	args := cliCtx.Args()
 	if len(args) < 2 {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
@@ -121,7 +121,6 @@ func mainPut(cliCtx *cli.Context) error {
 	} else {
 		pg = newAccounter(totalBytes)
 	}
-	defer showLastProgressBar(pg)
 	go func() {
 		opts := prepareCopyURLsOpts{
 			sourceURLs:              sourceURLs,
@@ -132,7 +131,7 @@ func mainPut(cliCtx *cli.Context) error {
 
 		for putURLs := range preparePutURLs(ctx, opts) {
 			if putURLs.Error != nil {
-				printPutURLsError(&putURLs)
+				putURLsCh <- putURLs
 				break
 			}
 			totalBytes += putURLs.SourceContent.Size
@@ -145,14 +144,23 @@ func mainPut(cliCtx *cli.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			showLastProgressBar(pg, nil)
+			return
 		case putURLs, ok := <-putURLsCh:
 			if !ok {
-				return nil
+				showLastProgressBar(pg, nil)
+				return
+			}
+			if putURLs.Error != nil {
+				printPutURLsError(&putURLs)
+				showLastProgressBar(pg, putURLs.Error.ToGoError())
+				return
 			}
 			urls := doCopy(ctx, doCopyOpts{cpURLs: putURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, multipartSize: size, multipartThreads: strconv.Itoa(threads)})
 			if urls.Error != nil {
-				return urls.Error.ToGoError()
+				e = urls.Error.ToGoError()
+				showLastProgressBar(pg, e)
+				return
 			}
 		}
 	}
@@ -164,7 +172,6 @@ func printPutURLsError(putURLs *URLs) {
 	if !globalQuiet && !globalJSON {
 		console.Eraseline()
 	}
-
 	if strings.Contains(putURLs.Error.ToGoError().Error(),
 		" is a folder.") {
 		errorIf(putURLs.Error.Trace(),
@@ -175,9 +182,16 @@ func printPutURLsError(putURLs *URLs) {
 	}
 }
 
-func showLastProgressBar(pg ProgressReader) {
+func showLastProgressBar(pg ProgressReader, e error) {
+	if e != nil {
+		// We only erase a line if we are displaying a progress bar
+		if !globalQuiet && !globalJSON {
+			console.Eraseline()
+		}
+		return
+	}
 	if progressReader, ok := pg.(*progressBar); ok {
-		progressReader.ProgressBar.Finish()
+		progressReader.Finish()
 	} else {
 		if accntReader, ok := pg.(*accounter); ok {
 			printMsg(accntReader.Stat())
