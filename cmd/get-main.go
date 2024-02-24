@@ -58,7 +58,7 @@ EXAMPLES:
 }
 
 // mainGet is the entry point for get command.
-func mainGet(cliCtx *cli.Context) (rerr error) {
+func mainGet(cliCtx *cli.Context) (e error) {
 	ctx, cancelGet := context.WithCancel(globalContext)
 	defer cancelGet()
 

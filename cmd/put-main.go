@@ -76,7 +76,7 @@ EXAMPLES:
 }
 
 // mainPut is the entry point for put command.
-func mainPut(cliCtx *cli.Context) (rerr error) {
+func mainPut(cliCtx *cli.Context) (e error) {
 	args := cliCtx.Args()
 	if len(args) < 2 {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
@@ -182,8 +182,8 @@ func printPutURLsError(putURLs *URLs) {
 	}
 }
 
-func showLastProgressBar(pg ProgressReader, err error) {
-	if err != nil {
+func showLastProgressBar(pg ProgressReader, e error) {
+	if e != nil {
 		// We only erase a line if we are displaying a progress bar
 		if !globalQuiet && !globalJSON {
 			console.Eraseline()
