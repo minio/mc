@@ -121,8 +121,8 @@ func mainGet(cliCtx *cli.Context) (e error) {
 			}
 			urls := doCopy(ctx, doCopyOpts{cpURLs: getURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, ignoreStat: true})
 			if urls.Error != nil {
-				rerr = urls.Error.ToGoError()
-				showLastProgressBar(pg, rerr)
+				e = urls.Error.ToGoError()
+				showLastProgressBar(pg, e)
 				return
 			}
 		}
