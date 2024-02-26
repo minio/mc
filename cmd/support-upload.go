@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -20,7 +20,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
-	"os"
+	"path/filepath"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -65,7 +65,7 @@ func (s supportUploadMessage) JSON() string {
 
 var supportUploadCmd = cli.Command{
 	Name:            "upload",
-	Usage:           "upload file to SUBNET issue",
+	Usage:           "upload file to a SUBNET issue",
 	Action:          mainSupportUpload,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
@@ -123,22 +123,15 @@ func execSupportUpload(ctx *cli.Context, alias, apiKey string) {
 	issueNum := ctx.Int("issue")
 	msg := ctx.String("comment")
 
-	f, e := os.Open(filePath)
-	fatalIf(probe.NewError(e), "Unable to open file '%s'", filePath)
-	defer f.Close()
-	fi, e := f.Stat()
-	fatalIf(probe.NewError(e), "Unable to get file info for '%s'", filePath)
-	filename := fi.Name()
-
 	params := url.Values{}
 	params.Add("issueNumber", fmt.Sprintf("%d", issueNum))
 	if len(msg) > 0 {
 		params.Add("message", msg)
 	}
 
-	uploadURL := subnetUploadURL("attachment", filename, params)
+	uploadURL := subnetUploadURL("attachment", filepath.Base(filePath), params)
 	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
-	_, e = uploadFileToSubnet(alias, filePath, reqURL, headers)
+	_, e := uploadFileToSubnet(alias, filePath, reqURL, headers)
 	if e != nil {
 		fatalIf(probe.NewError(e), "Unable to upload file to SUBNET")
 	}
