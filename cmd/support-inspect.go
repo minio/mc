@@ -81,27 +81,34 @@ EXAMPLES:
 }
 
 type inspectMessage struct {
-	File string `json:"file"`
-	Key  string `json:"key,omitempty"`
+	Status     string `json:"status"`
+	AliasedURL string `json:"aliasedURL,omitempty"`
+	File       string `json:"file,omitempty"`
+	Key        string `json:"key,omitempty"`
 }
 
 // Colorized message for console printing.
 func (t inspectMessage) String() string {
-	msg := ""
-	if t.Key == "" {
-		msg += fmt.Sprintf("File data successfully downloaded as %s\n", console.Colorize("File", t.File))
-	} else {
-		msg += fmt.Sprintf("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", t.File))
-		msg += fmt.Sprintf("Decryption key: %s\n\n", console.Colorize("Key", t.Key))
+	var msg string
+	if globalAirgapped {
+		if t.Key == "" {
+			msg = fmt.Sprintf("File data successfully downloaded as %s", console.Colorize("File", t.File))
+		} else {
+			msg = fmt.Sprintf("Encrypted file data successfully downloaded as %s\n", console.Colorize("File", t.File))
+			msg += fmt.Sprintf("Decryption key: %s\n\n", console.Colorize("Key", t.Key))
 
-		msg += "The decryption key will ONLY be shown here. It cannot be recovered.\n"
-		msg += "The encrypted file can safely be shared without the decryption key.\n"
-		msg += "Even with the decryption key, data stored with encryption cannot be accessed.\n"
+			msg += "The decryption key will ONLY be shown here. It cannot be recovered.\n"
+			msg += "The encrypted file can safely be shared without the decryption key.\n"
+			msg += "Even with the decryption key, data stored with encryption cannot be accessed."
+		}
+	} else {
+		msg = fmt.Sprintf("Object inspection data for '%s' uploaded to SUBNET successfully", t.AliasedURL)
 	}
-	return msg
+	return console.Colorize(supportSuccessMsgTag, msg)
 }
 
 func (t inspectMessage) JSON() string {
+	t.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(t, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(jsonMessageBytes)
@@ -118,11 +125,13 @@ func mainSupportInspect(ctx *cli.Context) error {
 	// Check for command syntax
 	checkSupportInspectSyntax(ctx)
 
+	setSuccessMessageColor()
+
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true, true)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
@@ -197,7 +206,7 @@ func mainSupportInspect(ctx *cli.Context) error {
 		return nil
 	}
 
-	console.Infof("Object inspection data for '%s' uploaded to SUBNET successfully\n", aliasedURL)
+	printMsg(inspectMessage{AliasedURL: aliasedURL})
 	return nil
 }
 

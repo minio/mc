@@ -44,7 +44,7 @@ var supportProxyRemoveCmd = cli.Command{
 	Action:          mainSupportProxyRemove,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           supportGlobalFlags,
+	Flags:           globalFlags,
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}

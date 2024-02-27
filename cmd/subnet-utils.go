@@ -782,9 +782,10 @@ func getAPIKeyFlag(ctx *cli.Context) (string, error) {
 	return apiKey, nil
 }
 
-func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool, failOnConnErr bool) (string, string) {
-	e := validateSubnetFlags(ctx, forUpload)
-	fatalIf(probe.NewError(e), "Invalid flags:")
+func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, failOnConnErr bool) (string, string) {
+	if ctx.IsSet("airgap") && len(ctx.String("api-key")) > 0 {
+		fatal(errDummy().Trace(), "--api-key is not applicable in airgap mode")
+	}
 
 	alias, _ := url2Alias(aliasedURL)
 
@@ -804,18 +805,4 @@ func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, forUpload bool,
 	}
 
 	return alias, apiKey
-}
-
-func validateSubnetFlags(ctx *cli.Context, forUpload bool) error {
-	if !globalAirgapped {
-		if globalJSON && forUpload {
-			return errors.New("--json is applicable only when --airgap is also passed")
-		}
-		return nil
-	}
-
-	if len(ctx.String("api-key")) > 0 {
-		return errors.New("--api-key is not applicable in airgap mode")
-	}
-	return nil
 }

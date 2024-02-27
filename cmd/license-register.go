@@ -220,7 +220,7 @@ func mainLicenseRegister(ctx *cli.Context) error {
 		alias, _ = url2Alias(aliasedURL)
 		accAPIKey = validateAndSaveLic(string(licBytes), alias, true)
 	} else {
-		alias, accAPIKey = initSubnetConnectivity(ctx, aliasedURL, true, false)
+		alias, accAPIKey = initSubnetConnectivity(ctx, aliasedURL, false)
 	}
 
 	clusterName := ctx.String("name")

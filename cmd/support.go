@@ -29,7 +29,10 @@ import (
 	"github.com/minio/pkg/v2/console"
 )
 
-const supportSuccessMsgTag = "SupportSuccessMessage"
+const (
+	supportSuccessMsgTag = "SupportSuccessMessage"
+	supportErrorMsgTag   = "SupportErrorMessage"
+)
 
 var supportGlobalFlags = append(globalFlags,
 	cli.BoolFlag{
@@ -92,6 +95,10 @@ func checkToggleCmdSyntax(ctx *cli.Context) (string, string) {
 
 func setSuccessMessageColor() {
 	console.SetColor(supportSuccessMsgTag, color.New(color.FgGreen, color.Bold))
+}
+
+func setErrorMessageColor() {
+	console.SetColor(supportErrorMsgTag, color.New(color.FgYellow, color.Italic))
 }
 
 func featureStatusStr(enabled bool) string {
