@@ -20,7 +20,6 @@ package cmd
 import (
 	"fmt"
 	"net/url"
-	"path/filepath"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -129,9 +128,17 @@ func execSupportUpload(ctx *cli.Context, alias, apiKey string) {
 		params.Add("message", msg)
 	}
 
-	uploadURL := subnetUploadURL("attachment", filepath.Base(filePath), params)
+	uploadURL := subnetUploadURL("attachment")
 	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
-	_, e := uploadFileToSubnet(alias, filePath, reqURL, headers)
+
+	_, e := (&subnetFileUploader{
+		alias:        alias,
+		filePath:     filePath,
+		reqURL:       reqURL,
+		headers:      headers,
+		autoCompress: true,
+		params:       params,
+	}).uploadFileToSubnet()
 	if e != nil {
 		fatalIf(probe.NewError(e), "Unable to upload file to SUBNET")
 	}
