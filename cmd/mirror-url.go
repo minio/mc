@@ -106,6 +106,26 @@ func matchExcludeOptions(excludeOptions []string, srcSuffix string, typ ClientUR
 	return false
 }
 
+func matchExcludeBucketOptions(excludeBuckets []string, srcSuffix string) bool {
+	if strings.HasPrefix(srcSuffix, "/") {
+		srcSuffix = srcSuffix[1:]
+	} else if runtime.GOOS == "windows" && strings.HasPrefix(srcSuffix, `\`) {
+		srcSuffix = srcSuffix[1:]
+	}
+	var bucketName string
+	if runtime.GOOS == "windows" {
+		bucketName = strings.Split(srcSuffix, `\`)[0]
+	} else {
+		bucketName = strings.Split(srcSuffix, "/")[0]
+	}
+	for _, pattern := range excludeBuckets {
+		if wildcard.Match(pattern, bucketName) {
+			return true
+		}
+	}
+	return false
+}
+
 func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mirrorOptions, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
@@ -153,14 +173,24 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		}
 
 		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
-		// Skip the source object if it matches the Exclude options provided
+		// Skip the source objects if it matches the Exclude options provided
 		if matchExcludeOptions(opts.excludeOptions, srcSuffix, newClientURL(sourceURL).Type) {
 			continue
 		}
 
+		// Skip the source buckets if it matches the Exclude options provided
+		if matchExcludeBucketOptions(opts.excludeBuckets, srcSuffix) {
+			continue
+		}
+
 		tgtSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
-		// Skip the target object if it matches the Exclude options provided
+		// Skip the target objects if it matches the Exclude options provided
 		if matchExcludeOptions(opts.excludeOptions, tgtSuffix, newClientURL(targetURL).Type) {
+			continue
+		}
+
+		// Skip the target buckets if it matches the Exclude options provided
+		if matchExcludeBucketOptions(opts.excludeBuckets, tgtSuffix) {
 			continue
 		}
 
@@ -233,17 +263,17 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 }
 
 type mirrorOptions struct {
-	isFake, isOverwrite, activeActive     bool
-	isWatch, isRemove, isMetadata         bool
-	isRetriable                           bool
-	isSummary                             bool
-	skipErrors                            bool
-	excludeOptions, excludeStorageClasses []string
-	encKeyDB                              map[string][]prefixSSEPair
-	md5, disableMultipart                 bool
-	olderThan, newerThan                  string
-	storageClass                          string
-	userMetadata                          map[string]string
+	isFake, isOverwrite, activeActive                     bool
+	isWatch, isRemove, isMetadata                         bool
+	isRetriable                                           bool
+	isSummary                                             bool
+	skipErrors                                            bool
+	excludeOptions, excludeStorageClasses, excludeBuckets []string
+	encKeyDB                                              map[string][]prefixSSEPair
+	md5, disableMultipart                                 bool
+	olderThan, newerThan                                  string
+	storageClass                                          string
+	userMetadata                                          map[string]string
 }
 
 // Prepares urls that need to be copied or removed based on requested options.

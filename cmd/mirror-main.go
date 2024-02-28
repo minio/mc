@@ -102,6 +102,10 @@ var (
 			Usage: "exclude object(s) that match specified object name pattern",
 		},
 		cli.StringSliceFlag{
+			Name:  "exclude-bucket",
+			Usage: "exclude bucket(s) that match specified bucket name pattern",
+		},
+		cli.StringSliceFlag{
 			Name:  "exclude-storageclass",
 			Usage: "exclude object(s) that match the specified storage class",
 		},
@@ -192,26 +196,30 @@ EXAMPLES:
       Exclude all .* files and *.temp files when mirroring.
       {{.Prompt}} {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
 
-  10. Mirror objects newer than 10 days from bucket test to a local folder.
+  10. Mirror all buckets from aliased Amazon S3 cloud storage to a local folder.
+      Exclude test* buckets and backup* buckets when mirroring.
+      {{.Prompt}} {{.HelpName}} --exclude 'test*' --exclude 'backup*' s3 ~/test
+
+  11. Mirror objects newer than 10 days from bucket test to a local folder.
       {{.Prompt}} {{.HelpName}} --newer-than 10d s3/test ~/localfolder
 
-  11. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
+  12. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
       {{.Prompt}} {{.HelpName}} --older-than 30d s3/test ~/test
 
-  12. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
+  13. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
       {{.Prompt}} {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
 
-  13. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage. In case the encryption key contains
+  14. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage. In case the encryption key contains
       non-printable character like tab, pass the base64 encoded string as key.
       {{.Prompt}} {{.HelpName}} --encrypt-key "s3/photos/=32byteslongsecretkeymustbegiven1,play/archive/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE=" s3/photos/ play/archive/
 
-  14. Update 'Cache-Control' header on all existing objects recursively.
+  15. Update 'Cache-Control' header on all existing objects recursively.
       {{.Prompt}} {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000" myminio/video-files myminio/video-files
 
-  15. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
+  16. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
-  16. Cross mirror between sites in a active-active deployment.
+  17. Cross mirror between sites in a active-active deployment.
       Site-A: {{.Prompt}} {{.HelpName}} --active-active siteA siteB
       Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
 `,
@@ -631,6 +639,10 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix, sourceURL.Type) {
 			continue
 		}
+		// Skip the bucket, if it matches the Exclude options provided
+		if matchExcludeBucketOptions(mj.opts.excludeBuckets, sourceSuffix) {
+			continue
+		}
 
 		sc, ok := event.UserMetadata["x-amz-storage-class"]
 		if ok {
@@ -967,6 +979,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		disableMultipart:      cli.Bool("disable-multipart"),
 		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
+		excludeBuckets:        cli.StringSlice("exclude-bucket"),
 		excludeStorageClasses: cli.StringSlice("exclude-storageclass"),
 		olderThan:             cli.String("older-than"),
 		newerThan:             cli.String("newer-than"),
@@ -1035,6 +1048,11 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 				})
 
 				if mj.opts.isFake {
+					continue
+				}
+
+				// Skip create bucket, if it matches the Exclude options provided
+				if matchExcludeBucketOptions(mopts.excludeBuckets, sourceSuffix) {
 					continue
 				}
 
