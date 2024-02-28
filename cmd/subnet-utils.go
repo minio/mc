@@ -783,7 +783,7 @@ func getAPIKeyFlag(ctx *cli.Context) (string, error) {
 }
 
 func initSubnetConnectivity(ctx *cli.Context, aliasedURL string, failOnConnErr bool) (string, string) {
-	if ctx.IsSet("airgap") && len(ctx.String("api-key")) > 0 {
+	if ctx.Bool("airgap") && len(ctx.String("api-key")) > 0 {
 		fatal(errDummy().Trace(), "--api-key is not applicable in airgap mode")
 	}
 
