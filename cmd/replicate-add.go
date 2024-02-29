@@ -178,17 +178,28 @@ func (l replicateAddMessage) String() string {
 
 func extractCredentialURL(argURL string) (accessKey, secretKey string, u *url.URL) {
 	var parsedURL string
-	if hostKeyTokens.MatchString(argURL) {
-		fatalIf(errInvalidArgument().Trace(argURL), "temporary tokens are not allowed for remote targets")
-	}
-	if hostKeys.MatchString(argURL) {
-		parts := hostKeys.FindStringSubmatch(argURL)
-		if len(parts) != 5 {
-			fatalIf(errInvalidArgument().Trace(argURL), "unsupported remote target format, please check --help")
+	if strings.HasPrefix(argURL, "http://") || strings.HasPrefix(argURL, "https://") {
+		if hostKeyTokens.MatchString(argURL) {
+			fatalIf(errInvalidArgument().Trace(argURL), "temporary tokens are not allowed for remote targets")
 		}
-		accessKey = parts[2]
-		secretKey = parts[3]
-		parsedURL = fmt.Sprintf("%s%s", parts[1], parts[4])
+		if hostKeys.MatchString(argURL) {
+			parts := hostKeys.FindStringSubmatch(argURL)
+			if len(parts) != 5 {
+				fatalIf(errInvalidArgument().Trace(argURL), "unsupported remote target format, please check --help")
+			}
+			accessKey = parts[2]
+			secretKey = parts[3]
+			parsedURL = fmt.Sprintf("%s%s", parts[1], parts[4])
+		}
+	} else {
+		var alias string
+		var aliasCfg *aliasConfigV10
+		// get alias config by alias url
+		alias, parsedURL, aliasCfg = mustExpandAlias(argURL)
+		if aliasCfg == nil {
+			fatalIf(errInvalidAliasedURL(alias).Trace(argURL), "No such alias `"+alias+"` found.")
+		}
+		accessKey, secretKey = aliasCfg.AccessKey, aliasCfg.SecretKey
 	}
 	var e error
 	if parsedURL == "" {
