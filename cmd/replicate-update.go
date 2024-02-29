@@ -132,8 +132,11 @@ EXAMPLES:
 
   8. Edit credentials for remote target with replication rule ID kxYD.491
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --remote-bucket  https://foobar:newpassword@minio.siteb.example.com/targetbucket
+  
+  9. Edit credentials with alias "targetminio" for remote target with replication rule ID kxYD.491
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.491" --remote-bucket  targetminio/targetbucket
 
-  9. Disable proxying and enable synchronous replication for remote target of bucket mybucket with rule ID kxYD.492
+  10. Disable proxying and enable synchronous replication for remote target of bucket mybucket with rule ID kxYD.492
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.492" --remote-bucket https://foobar:newpassword@minio.siteb.example.com/targetbucket \
          --sync "enable" --proxy "disable"
 `,
