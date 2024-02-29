@@ -198,7 +198,7 @@ EXAMPLES:
 
   10. Mirror all buckets from aliased Amazon S3 cloud storage to a local folder.
       Exclude test* buckets and backup* buckets when mirroring.
-      {{.Prompt}} {{.HelpName}} --exclude 'test*' --exclude 'backup*' s3 ~/test
+      {{.Prompt}} {{.HelpName}} --exclude-bucket 'test*' --exclude 'backup*' s3 ~/test
 
   11. Mirror objects newer than 10 days from bucket test to a local folder.
       {{.Prompt}} {{.HelpName}} --newer-than 10d s3/test ~/localfolder
