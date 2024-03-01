@@ -200,7 +200,7 @@ func extractCredentialURL(argURL string) (accessKey, secretKey string, u *url.UR
 		var aliasCfg *aliasConfigV10
 		// get alias config by alias url
 		alias, parsedURL, aliasCfg = mustExpandAlias(argURL)
-		if aliasCfg == nil {
+		if aliasCfg == nil || parsedURL == "" || alias == "" {
 			fatalIf(errInvalidAliasedURL(alias).Trace(argURL), "No such alias `"+alias+"` found.")
 		}
 		accessKey, secretKey = aliasCfg.AccessKey, aliasCfg.SecretKey
