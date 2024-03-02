@@ -290,7 +290,7 @@ func (s *TestSuite) TestGet(c *checkv1.C) {
 	c.Assert(err, checkv1.IsNil)
 	c.Assert(n, checkv1.Equals, int64(len(data)))
 
-	reader, err = fsClient.Get(context.Background(), GetOptions{})
+	reader, _, err = fsClient.Get(context.Background(), GetOptions{})
 	c.Assert(err, checkv1.IsNil)
 	var results bytes.Buffer
 	_, e = io.Copy(&results, reader)
@@ -319,7 +319,7 @@ func (s *TestSuite) TestGetRange(c *checkv1.C) {
 	c.Assert(err, checkv1.IsNil)
 	c.Assert(n, checkv1.Equals, int64(len(data)))
 
-	reader, err = fsClient.Get(context.Background(), GetOptions{})
+	reader, _, err = fsClient.Get(context.Background(), GetOptions{})
 	c.Assert(err, checkv1.IsNil)
 	var results bytes.Buffer
 	buf := make([]byte, 5)

@@ -266,7 +266,16 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 		})
 	}
 
-	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{urls: copyOpts.cpURLs, progress: copyOpts.pg, encKeyDB: copyOpts.encKeyDB, preserve: copyOpts.preserve, isZip: copyOpts.isZip, multipartSize: copyOpts.multipartSize, multipartThreads: copyOpts.multipartThreads, ignoreStat: copyOpts.ignoreStat})
+	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{
+		urls:                copyOpts.cpURLs,
+		progress:            copyOpts.pg,
+		encKeyDB:            copyOpts.encKeyDB,
+		preserve:            copyOpts.preserve,
+		isZip:               copyOpts.isZip,
+		multipartSize:       copyOpts.multipartSize,
+		multipartThreads:    copyOpts.multipartThreads,
+		updateProgressTotal: copyOpts.updateProgressTotal,
+	})
 	if copyOpts.isMvCmd && urls.Error == nil {
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
 	}
@@ -562,7 +571,14 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						startContinue = false
 					}
 					parallel.queueTask(func() URLs {
-						return doCopy(ctx, doCopyOpts{cpURLs: cpURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: isMvCmd, preserve: preserve, isZip: isZip})
+						return doCopy(ctx, doCopyOpts{
+							cpURLs:   cpURLs,
+							pg:       pg,
+							encKeyDB: encKeyDB,
+							isMvCmd:  isMvCmd,
+							preserve: preserve,
+							isZip:    isZip,
+						})
 					}, cpURLs.SourceContent.Size)
 				}
 			}
@@ -764,7 +780,7 @@ type doCopyOpts struct {
 	pg                       ProgressReader
 	encKeyDB                 map[string][]prefixSSEPair
 	isMvCmd, preserve, isZip bool
+	updateProgressTotal      bool
 	multipartSize            string
 	multipartThreads         string
-	ignoreStat               bool
 }
