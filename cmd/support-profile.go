@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -47,6 +48,36 @@ var (
 )
 
 const profileFile = "profile.zip"
+
+type supportProfileMessage struct {
+	Status string `json:"status"`
+	File   string `json:"file,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+// Colorized message for console printing.
+func (s supportProfileMessage) String() string {
+	var msg string
+	if s.Error != "" {
+		errMsg := fmt.Sprintln("Unable to upload profile file to SUBNET: ", s.Error)
+		msg := console.Colorize(supportErrorMsgTag, errMsg)
+		infoMsg := fmt.Sprintf("Profiling data saved locally at '%s'", profileFile)
+		msg += console.Colorize(supportSuccessMsgTag, infoMsg)
+		return msg
+	}
+
+	if globalAirgapped {
+		msg = fmt.Sprintf("Profiling data saved successfully at %s", s.File)
+	} else {
+		msg = "Profiling data uploaded to SUBNET successfully"
+	}
+	return console.Colorize(supportSuccessMsgTag, msg)
+}
+
+// JSON jsonified proxy remove message
+func (s supportProfileMessage) JSON() string {
+	return toJSON(s)
+}
 
 var supportProfileCmd = cli.Command{
 	Name:            "profile",
@@ -167,9 +198,12 @@ func mainSupportProfile(ctx *cli.Context) error {
 	// Check for command syntax
 	checkAdminProfileSyntax(ctx)
 
+	setSuccessMessageColor()
+	setErrorMessageColor()
+
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true, true)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
@@ -196,7 +230,9 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, api
 		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	}
 
-	console.Infof("Profiling '%s' for %d seconds... \n", alias, duration)
+	if !globalJSON {
+		console.Infof("Profiling '%s' for %d seconds... \n", alias, duration)
+	}
 	data, e := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
 	fatalIf(probe.NewError(e), "Unable to save profile data")
 
@@ -205,12 +241,20 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, api
 	if !globalAirgapped {
 		_, e = uploadFileToSubnet(alias, profileFile, reqURL, headers)
 		if e != nil {
-			errorIf(probe.NewError(e), "Unable to upload profile file to SUBNET")
-			console.Infof("Profiling data saved locally at '%s'\n", profileFile)
+			printMsg(supportProfileMessage{
+				Status: "error",
+				Error:  e.Error(),
+				File:   profileFile,
+			})
 			return
 		}
-		console.Infoln("Profiling data uploaded to SUBNET successfully")
+		printMsg(supportProfileMessage{
+			Status: "success",
+		})
 	} else {
-		console.Infoln("Profiling data saved successfully at ", profileFile)
+		printMsg(supportProfileMessage{
+			Status: "success",
+			File:   profileFile,
+		})
 	}
 }

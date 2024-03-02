@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,7 +37,6 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
-	"github.com/tidwall/gjson"
 )
 
 const (
@@ -94,6 +92,21 @@ EXAMPLES:
   3. Upload MinIO diagnostics report for cluster with alias 'myminio' to SUBNET, with strict anonymization
      {{.Prompt}} {{.HelpName}} myminio --anonymize=strict
 `,
+}
+
+type supportDiagMessage struct {
+	Status string `json:"status"`
+}
+
+// String colorized status message
+func (s supportDiagMessage) String() string {
+	return console.Colorize(supportSuccessMsgTag, "MinIO diagnostics report was successfully uploaded to SUBNET.")
+}
+
+// JSON jsonified status message
+func (s supportDiagMessage) JSON() string {
+	s.Status = "success"
+	return toJSON(s)
 }
 
 // checkSupportDiagSyntax - validate arguments passed by a user
@@ -168,7 +181,7 @@ func mainSupportDiag(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	aliasedURL := ctx.Args().Get(0)
-	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true, true)
+	alias, apiKey := initSubnetConnectivity(ctx, aliasedURL, true)
 	if len(apiKey) == 0 {
 		// api key not passed as flag. Check that the cluster is registered.
 		apiKey = validateClusterRegistered(alias, true)
@@ -186,6 +199,7 @@ func mainSupportDiag(ctx *cli.Context) error {
 func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey string) {
 	var reqURL string
 	var headers map[string]string
+	setSuccessMessageColor()
 
 	filename := fmt.Sprintf("%s-health_%s.json.gz", filepath.Clean(alias), UTCNow().Format("20060102150405"))
 	if !globalAirgapped {
@@ -198,7 +212,7 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey
 	healthInfo, version, e := fetchServerDiagInfo(ctx, client)
 	fatalIf(probe.NewError(e), "Unable to fetch health information.")
 
-	if globalJSON {
+	if globalJSON && globalAirgapped {
 		switch version {
 		case madmin.HealthInfoVersion0:
 			printMsg(healthInfo.(madmin.HealthInfoV0))
@@ -214,15 +228,10 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey
 	fatalIf(probe.NewError(e), "Unable to save MinIO diagnostics report")
 
 	if !globalAirgapped {
-		resp, e := uploadFileToSubnet(alias, filename, reqURL, headers)
+		_, e := uploadFileToSubnet(alias, filename, reqURL, headers)
 		fatalIf(probe.NewError(e), "Unable to upload MinIO diagnostics report to SUBNET portal")
 
-		msg := "MinIO diagnostics report was successfully uploaded to SUBNET."
-		clusterURL, _ := url.PathUnescape(gjson.Get(resp, "cluster_url").String())
-		if len(clusterURL) > 0 {
-			msg += fmt.Sprintf(" Please click here to view our analysis: %s", clusterURL)
-		}
-		console.Infoln(msg)
+		printMsg(supportDiagMessage{})
 	}
 }
 

@@ -179,7 +179,7 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	initLicInfoColors()
 
 	aliasedURL := ctx.Args().Get(0)
-	alias, _ := initSubnetConnectivity(ctx, aliasedURL, false, true)
+	alias, _ := initSubnetConnectivity(ctx, aliasedURL, true)
 
 	apiKey, lic, e := getSubnetCreds(alias)
 	fatalIf(probe.NewError(e), "Error in checking cluster registration status")
