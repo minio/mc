@@ -49,6 +49,7 @@ type GetOptions struct {
 	VersionID  string
 	Zip        bool
 	RangeStart int64
+	Preserve   bool
 }
 
 // PutOptions holds options for PUT operation
@@ -131,7 +132,7 @@ type Client interface {
 	Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
 
 	// I/O operations with metadata.
-	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, err *probe.Error)
+	Get(ctx context.Context, opts GetOptions) (reader io.ReadCloser, content *ClientContent, err *probe.Error)
 	Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
 
 	// Object Locking related API

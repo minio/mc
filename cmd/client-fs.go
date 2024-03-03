@@ -540,21 +540,53 @@ func (f *fsClient) Copy(ctx context.Context, source string, opts CopyOptions, pr
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get(_ context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Get(_ context.Context, opts GetOptions) (io.ReadCloser, *ClientContent, *probe.Error) {
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(f.PathURL.Path)
+		return nil, nil, err.Trace(f.PathURL.Path)
 	}
 	if opts.RangeStart != 0 {
 		_, e := fileData.Seek(opts.RangeStart, io.SeekStart)
 		if e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
-			return nil, err.Trace(f.PathURL.Path)
+			return nil, nil, err.Trace(f.PathURL.Path)
 		}
 	}
 
-	return fileData, nil
+	fi, e := fileData.Stat()
+	if e != nil {
+		return nil, nil, probe.NewError(e)
+	}
+
+	content := &ClientContent{}
+	content.URL = *f.PathURL
+	content.Size = fi.Size()
+	content.Time = fi.ModTime()
+	content.Type = fi.Mode()
+	content.Metadata = map[string]string{
+		"Content-Type": guessURLContentType(f.PathURL.Path),
+	}
+
+	path := f.PathURL.String()
+	// Populates meta data with file system attribute only in case of
+	// when preserve flag is passed.
+	if opts.Preserve {
+		fileAttr, err := disk.GetFileSystemAttrs(path)
+		if err != nil {
+			return nil, content, nil
+		}
+		metaData, pErr := getAllXattrs(path)
+		if pErr != nil {
+			return nil, content, nil
+		}
+		for k, v := range metaData {
+			content.Metadata[k] = v
+		}
+		content.Metadata[metadataKey] = fileAttr
+	}
+
+	return fileData, content, nil
 }
 
 // Check if the given error corresponds to ENOTEMPTY for unix

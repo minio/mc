@@ -308,11 +308,12 @@ func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]stri
 		r = os.Stdin
 	default:
 		var err *probe.Error
-		var metadata map[string]string
-		if r, metadata, err = getSourceStreamMetadataFromURL(globalContext, sourceURL, "", time.Time{}, encKeyDB, false); err != nil {
+		var content *ClientContent
+		if r, content, err = getSourceStreamMetadataFromURL(globalContext, sourceURL, "", time.Time{}, encKeyDB, false); err != nil {
 			return nil, err.Trace(sourceURL)
 		}
-		ctype := metadata["Content-Type"]
+
+		ctype := content.Metadata["Content-Type"]
 		if strings.Contains(ctype, "gzip") {
 			var e error
 			r, e = gzip.NewReader(r)

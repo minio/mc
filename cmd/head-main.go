@@ -99,11 +99,12 @@ func headURL(sourceURL, sourceVersion string, timeRef time.Time, encKeyDB map[st
 		reader = os.Stdin
 	default:
 		var err *probe.Error
-		var metadata map[string]string
-		if reader, metadata, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, sourceVersion, timeRef, encKeyDB, zip); err != nil {
+		var content *ClientContent
+		if reader, content, err = getSourceStreamMetadataFromURL(context.Background(), sourceURL, sourceVersion, timeRef, encKeyDB, zip); err != nil {
 			return err.Trace(sourceURL)
 		}
-		ctype := metadata["Content-Type"]
+
+		ctype := content.Metadata["Content-Type"]
 		if strings.Contains(ctype, "gzip") {
 			var e error
 			reader, e = gzip.NewReader(reader)

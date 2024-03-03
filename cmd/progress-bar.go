@@ -35,7 +35,7 @@ type progressBar struct {
 
 func newPB(total int64) *pb.ProgressBar {
 	// Progress bar specific theme customization.
-	console.SetColor("Bar", color.New(color.FgYellow, color.Bold))
+	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
 
 	// get the new original progress bar.
 	bar := pb.New64(total)
@@ -59,18 +59,19 @@ func newPB(total int64) *pb.ProgressBar {
 
 	// Use different unicodes for Linux, OS X and Windows.
 	switch runtime.GOOS {
-	case "linux", "darwin":
+	case "linux":
 		// Need to add '\x00' as delimiter for unicode characters.
-		bar.Format("━\x00━\x00━\x00┉\x00━")
+		bar.Format("┃\x00▓\x00█\x00░\x00┃")
+	case "darwin":
+		// Need to add '\x00' as delimiter for unicode characters.
+		bar.Format(" \x00▓\x00 \x00░\x00 ")
 	default:
 		// Default to non unicode characters.
 		bar.Format("[=> ]")
 	}
 
 	// Start the progress bar.
-	bar.Start()
-
-	return bar
+	return bar.Start()
 }
 
 func newProgressReader(r io.Reader, caption string, total int64) *pb.Reader {
@@ -99,7 +100,6 @@ func (p *progressBar) SetCaption(caption string) *progressBar {
 }
 
 func (p *progressBar) Finish() {
-	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
 	p.ProgressBar.Finish()
 }
 

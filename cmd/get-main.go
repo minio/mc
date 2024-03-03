@@ -66,9 +66,10 @@ func mainGet(cliCtx *cli.Context) (e error) {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	args := cliCtx.Args()
-	if len(args) < 2 {
+	if len(args) != 2 {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
+
 	// get source and target
 	sourceURLs := args[:len(args)-1]
 	targetURL := args[len(args)-1]
@@ -97,8 +98,6 @@ func mainGet(cliCtx *cli.Context) (e error) {
 				getURLsCh <- getURLs
 				break
 			}
-			totalBytes += getURLs.SourceContent.Size
-			pg.SetTotal(totalBytes)
 			totalObjects++
 			getURLsCh <- getURLs
 		}
@@ -119,7 +118,12 @@ func mainGet(cliCtx *cli.Context) (e error) {
 				showLastProgressBar(pg, getURLs.Error.ToGoError())
 				return
 			}
-			urls := doCopy(ctx, doCopyOpts{cpURLs: getURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, ignoreStat: true})
+			urls := doCopy(ctx, doCopyOpts{
+				cpURLs:              getURLs,
+				pg:                  pg,
+				encKeyDB:            encKeyDB,
+				updateProgressTotal: true,
+			})
 			if urls.Error != nil {
 				e = urls.Error.ToGoError()
 				showLastProgressBar(pg, e)

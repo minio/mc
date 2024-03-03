@@ -265,7 +265,7 @@ func (s *TestSuite) TestObjectOperations(c *checkv1.C) {
 	c.Assert(err, checkv1.IsNil)
 	c.Assert(n, checkv1.Equals, int64(len(object.data)))
 
-	reader, err = s3c.Get(context.Background(), GetOptions{})
+	reader, _, err = s3c.Get(context.Background(), GetOptions{})
 	c.Assert(err, checkv1.IsNil)
 	var buffer bytes.Buffer
 	{

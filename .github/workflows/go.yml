@@ -76,4 +76,4 @@ jobs:
 
       - name: Staticcheck
         # Run with defaults, but allow errors with other formats ST1005
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest && staticcheck -tests=false -checks="all,-ST1000,-ST1003,-ST1016,-ST1020,-ST1021,-ST1022,-ST1023,-ST1005" ./...
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest && make lint

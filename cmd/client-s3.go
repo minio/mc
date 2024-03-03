@@ -942,7 +942,7 @@ func (c *S3Client) Watch(ctx context.Context, options WatchOptions) (*WatchObjec
 }
 
 // Get - get object with GET options.
-func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *probe.Error) {
+func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *ClientContent, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	o := minio.GetObjectOptions{
 		ServerSideEncryption: opts.SSE,
@@ -954,7 +954,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 	if opts.RangeStart != 0 {
 		err := o.SetRange(opts.RangeStart, 0)
 		if err != nil {
-			return nil, probe.NewError(err)
+			return nil, nil, probe.NewError(err)
 		}
 	}
 	// Disallow automatic decompression for some objects with content-encoding set.
@@ -964,21 +964,39 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *pr
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
-			return nil, probe.NewError(BucketDoesNotExist{
+			return nil, nil, probe.NewError(BucketDoesNotExist{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "InvalidBucketName" {
-			return nil, probe.NewError(BucketInvalid{
+			return nil, nil, probe.NewError(BucketInvalid{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "NoSuchKey" {
-			return nil, probe.NewError(ObjectMissing{})
+			return nil, nil, probe.NewError(ObjectMissing{})
 		}
-		return nil, probe.NewError(e)
+		return nil, nil, probe.NewError(e)
 	}
-	return reader, nil
+	objStat, e := reader.Stat()
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
+		if errResponse.Code == "NoSuchBucket" {
+			return nil, nil, probe.NewError(BucketDoesNotExist{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "InvalidBucketName" {
+			return nil, nil, probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" {
+			return nil, nil, probe.NewError(ObjectMissing{})
+		}
+		return nil, nil, probe.NewError(e)
+	}
+	return reader, c.objectInfo2ClientContent(bucket, objStat), nil
 }
 
 // Copy - copy object, uses server side copy API. Also uses an abstracted API

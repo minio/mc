@@ -156,7 +156,13 @@ func mainPut(cliCtx *cli.Context) (e error) {
 				showLastProgressBar(pg, putURLs.Error.ToGoError())
 				return
 			}
-			urls := doCopy(ctx, doCopyOpts{cpURLs: putURLs, pg: pg, encKeyDB: encKeyDB, isMvCmd: false, preserve: false, isZip: false, multipartSize: size, multipartThreads: strconv.Itoa(threads)})
+			urls := doCopy(ctx, doCopyOpts{
+				cpURLs:           putURLs,
+				pg:               pg,
+				encKeyDB:         encKeyDB,
+				multipartSize:    size,
+				multipartThreads: strconv.Itoa(threads),
+			})
 			if urls.Error != nil {
 				e = urls.Error.ToGoError()
 				showLastProgressBar(pg, e)

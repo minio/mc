@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"golang.org/x/net/http/httpguts"
-	"gopkg.in/h2non/filetype.v1"
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
@@ -142,7 +141,7 @@ func isAliasURLDir(ctx context.Context, aliasURL string, keys map[string][]prefi
 
 // getSourceStreamMetadataFromURL gets a reader from URL.
 func getSourceStreamMetadataFromURL(ctx context.Context, aliasedURL, versionID string, timeRef time.Time, encKeyDB map[string][]prefixSSEPair, zip bool) (reader io.ReadCloser,
-	metadata map[string]string, err *probe.Error,
+	content *ClientContent, err *probe.Error,
 ) {
 	alias, urlStrFull, _, err := expandAlias(aliasedURL)
 	if err != nil {
@@ -166,8 +165,7 @@ func getSourceStreamMetadataFromURL(ctx context.Context, aliasedURL, versionID s
 
 type getSourceOpts struct {
 	GetOptions
-	fetchStat bool
-	preserve  bool
+	preserve bool
 }
 
 // getSourceStreamFromURL gets a reader from URL.
@@ -179,30 +177,6 @@ func getSourceStreamFromURL(ctx context.Context, urlStr string, encKeyDB map[str
 	opts.SSE = getSSE(urlStr, encKeyDB[alias])
 	reader, _, err = getSourceStream(ctx, alias, urlStrFull, opts)
 	return reader, err
-}
-
-func probeContentType(reader io.Reader) (ctype string, err *probe.Error) {
-	ctype = "application/octet-stream"
-	// Read a chunk to decide between utf-8 text and binary
-	if s, ok := reader.(io.Seeker); ok {
-		var buf [512]byte
-		n, _ := io.ReadFull(reader, buf[:])
-		if n <= 0 {
-			return ctype, nil
-		}
-		kind, e := filetype.Match(buf[:n])
-		if e != nil {
-			return ctype, probe.NewError(e)
-		}
-		// rewind to output whole file
-		if _, e = s.Seek(0, io.SeekStart); e != nil {
-			return ctype, probe.NewError(e)
-		}
-		if kind.MIME.Value != "" {
-			ctype = kind.MIME.Value
-		}
-	}
-	return ctype, nil
 }
 
 // Verify if reader is a generic ReaderAt
@@ -229,63 +203,18 @@ func isReadAt(reader io.Reader) (ok bool) {
 }
 
 // getSourceStream gets a reader from URL.
-func getSourceStream(ctx context.Context, alias, urlStr string, opts getSourceOpts) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
+func getSourceStream(ctx context.Context, alias, urlStr string, opts getSourceOpts) (reader io.ReadCloser, content *ClientContent, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
-	reader, err = sourceClnt.Get(ctx, opts.GetOptions)
+
+	reader, content, err = sourceClnt.Get(ctx, opts.GetOptions)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
 
-	metadata = make(map[string]string)
-	if opts.fetchStat {
-		var st *ClientContent
-		mo, mok := reader.(*minio.Object)
-		if mok {
-			oinfo, e := mo.Stat()
-			if e != nil {
-				return nil, nil, probe.NewError(e).Trace(alias, urlStr)
-			}
-			st = &ClientContent{}
-			st.Time = oinfo.LastModified
-			st.Size = oinfo.Size
-			st.ETag = oinfo.ETag
-			st.Expires = oinfo.Expires
-			st.Type = os.FileMode(0o664)
-			st.Metadata = map[string]string{}
-			for k := range oinfo.Metadata {
-				st.Metadata[k] = oinfo.Metadata.Get(k)
-			}
-			st.ETag = oinfo.ETag
-		} else {
-			st, err = sourceClnt.Stat(ctx, StatOptions{preserve: opts.preserve, sse: opts.SSE})
-			if err != nil {
-				return nil, nil, err.Trace(alias, urlStr)
-			}
-		}
-
-		for k, v := range st.Metadata {
-			if httpguts.ValidHeaderFieldName(k) &&
-				httpguts.ValidHeaderFieldValue(v) {
-				metadata[k] = v
-			}
-		}
-
-		// All unrecognized files have `application/octet-stream`
-		// So we continue our detection process.
-		if ctype := metadata["Content-Type"]; ctype == "application/octet-stream" {
-			// Continue probing content-type if its filesystem stream.
-			if !mok {
-				metadata["Content-Type"], err = probeContentType(reader)
-				if err != nil {
-					return nil, nil, err.Trace(alias, urlStr)
-				}
-			}
-		}
-	}
-	return reader, metadata, nil
+	return reader, content, nil
 }
 
 // putTargetRetention sets retention headers if any
@@ -544,21 +473,36 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 		}
 
-		var reader io.ReadCloser
 		// Proceed with regular stream copy.
-		reader, metadata, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), getSourceOpts{
+		var (
+			content *ClientContent
+			reader  io.ReadCloser
+		)
+
+		reader, content, err = getSourceStream(ctx, sourceAlias, sourceURL.String(), getSourceOpts{
 			GetOptions: GetOptions{
 				VersionID: sourceVersion,
 				SSE:       srcSSE,
 				Zip:       uploadOpts.isZip,
+				Preserve:  uploadOpts.preserve,
 			},
-			fetchStat: !uploadOpts.ignoreStat,
-			preserve:  uploadOpts.preserve,
 		})
 		if err != nil {
 			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 		}
 		defer reader.Close()
+
+		if uploadOpts.updateProgressTotal {
+			pg, ok := uploadOpts.progress.(*progressBar)
+			if ok {
+				pg.SetTotal(content.Size)
+			}
+		}
+
+		metadata := make(map[string]string, len(content.Metadata))
+		for k, v := range content.Metadata {
+			metadata[k] = v
+		}
 
 		// Get metadata from target content as well
 		for k, v := range uploadOpts.urls.TargetContent.Metadata {
@@ -679,11 +623,11 @@ func ParseForm(r *http.Request) error {
 }
 
 type uploadSourceToTargetURLOpts struct {
-	urls             URLs
-	progress         io.Reader
-	encKeyDB         map[string][]prefixSSEPair
-	preserve, isZip  bool
-	multipartSize    string
-	multipartThreads string
-	ignoreStat       bool
+	urls                URLs
+	progress            io.Reader
+	encKeyDB            map[string][]prefixSSEPair
+	preserve, isZip     bool
+	multipartSize       string
+	multipartThreads    string
+	updateProgressTotal bool
 }
