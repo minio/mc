@@ -29,7 +29,7 @@ encrypt     manage bucket encryption config
 event       manage object notifications
 watch       listen for object notification events
 undo        undo PUT/DELETE operations
-policy      manage anonymous access to buckets and objects
+anonymous   manage anonymous access to buckets and objects
 tag         manage tags for bucket(s) and object(s)
 replicate   configure server side bucket replication
 admin       manage MinIO servers
@@ -37,24 +37,29 @@ update      update mc to latest release
 support     supportability tools like  profile, register, callhome, inspect
 ping        perform liveness check
 quota       manage bucket quota
+batch       manage batch jobs
+get         get s3 object to local
+od          measure single stream upload and download
+put         upload an object to a bucket
+ready       checks if the cluster is ready or not
 ```
 
 ## 1.  Download MinIO Client
 ### Docker Stable
-```
+```sh
 docker pull minio/mc
 docker run minio/mc ls play
 ```
 
 ### Docker Edge
-```
+```sh
 docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
 **Note:** Above examples run `mc` against MinIO [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
 
-```
+```sh
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
@@ -63,7 +68,7 @@ then use the [`mc alias` command](#3-add-a-cloud-storage-service).
 ### Homebrew (macOS)
 Install mc packages using [Homebrew](http://brew.sh/)
 
-```
+```sh
 brew install minio/stable/mc
 mc --help
 ```
@@ -74,7 +79,7 @@ mc --help
 |GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
 ||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
 
-```
+```sh
 chmod +x mc
 ./mc --help
 ```
@@ -93,7 +98,7 @@ Source installation is intended only for developers and advanced users. `mc upda
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install).
 
-```
+```sh
 go get -d github.com/minio/mc
 cd ${GOPATH}/src/github.com/minio/mc
 make
@@ -103,14 +108,14 @@ make
 
 ### GNU/Linux
 
-```
+```sh
 chmod +x mc
 ./mc --help
 ```
 
 ### macOS
 
-```
+```sh
 chmod 755 mc
 ./mc --help
 ```
@@ -128,7 +133,7 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 
 #### Usage
 
-```
+```sh
 mc alias set <ALIAS> <YOUR-S3-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY] [--api API-SIGNATURE]
 ```
 
@@ -140,21 +145,21 @@ Alias is simply a short name to your cloud storage service. S3 end-point, access
 MinIO server displays URL, access and secret keys.
 
 
-```
+```sh
 mc alias set minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
 ```
 
 ### Example - Amazon S3 Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
-```
+```sh
 mc alias set s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
 ```
 
 ### Example - Google Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
-```
+```sh
 mc alias set gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
@@ -163,7 +168,7 @@ Get your AccessKeyID and SecretAccessKey by creating a service account [with HMA
 
 Finally, the url will be the **public endpoint specific to the region/resiliency** that you chose when setting up your bucket. There is no single, global url for all buckets. Find your bucket's URL in the console by going to Cloud Object Storage > Buckets > [your-bucket] > Configuration > Endpoints > public. Remember to prepend `https://` to the URL provided.
 
-```
+```sh
 mc alias set ibm https://s3.us-east.cloud-object-storage.appdomain.cloud BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api s3v4
 ```
 
@@ -173,7 +178,7 @@ mc alias set ibm https://s3.us-east.cloud-object-storage.appdomain.cloud BKIKJAA
 
 #### Prompt
 
-```
+```sh
 mc alias set minio http://192.168.1.51 --api S3v4
 Enter Access Key: BKIKJAA5BMMU2RHO6IBB
 Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
@@ -181,7 +186,7 @@ Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 
 #### Pipe from STDIN
 
-```
+```sh
 echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
 mc alias set minio http://192.168.1.51 --api S3v4
 ```
@@ -194,7 +199,7 @@ export MC_HOST_<alias>=https://<Access Key>:<Secret Key>@<YOUR-S3-ENDPOINT>
 ```
 
 Example:
-```
+```sh
 export MC_HOST_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.min.io
 mc ls myalias
 ```
@@ -205,7 +210,7 @@ export MC_HOST_<alias>=https://<Access Key>:<Secret Key>:<Session Token>@<YOUR-S
 ```
 
 Example:
-```
+```sh
 export MC_HOST_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG:eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NLZXkiOiJOVUlCT1JaWVRWMkhHMkJNUlNYUiIsImF1ZCI6IlBvRWdYUDZ1Vk80NUlzRU5SbmdEWGo1QXU1WWEiLCJhenAiOiJQb0VnWFA2dVZPNDVJc0VOUm5nRFhqNUF1NVlhIiwiZXhwIjoxNTM0ODk2NjI5LCJpYXQiOjE1MzQ4OTMwMjksImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0Ojk0NDMvb2F1dGgyL3Rva2VuIiwianRpIjoiNjY2OTZjZTctN2U1Ny00ZjU5LWI0MWQtM2E1YTMzZGZiNjA4In0.eJONnVaSVHypiXKEARSMnSKgr-2mlC2Sr4fEGJitLcJF_at3LeNdTHv0_oHsv6ZZA3zueVGgFlVXMlREgr9LXA@play.min.io
 mc ls myalias
 ```
@@ -218,7 +223,7 @@ mc ls myalias
 
 List all buckets from https://play.min.io
 
-```
+```sh
 mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
@@ -230,7 +235,7 @@ mc ls play
 ## 5. Everyday Use
 You may add shell aliases to override your common Unix tools.
 
-```
+```sh
 alias ls='mc ls'
 alias cp='mc cp'
 alias cat='mc cat'
@@ -250,7 +255,7 @@ Debug option enables debug output to console.
 
 *Example: Display verbose debug output for `ls` command.*
 
-```
+```sh
 mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
 Host: play.min.io
@@ -285,7 +290,7 @@ JSON option enables parseable output in [JSON lines](http://jsonlines.org/), als
 
 *Example: List all buckets from MinIO play service.*
 
-```
+```sh
 mc --json ls play
 {"status":"success","type":"folder","lastModified":"2016-04-08T03:56:14.577+05:30","size":0,"key":"albums/"}
 {"status":"success","type":"folder","lastModified":"2016-04-04T16:11:45.349+05:30","size":0,"key":"backup/"}
@@ -308,33 +313,40 @@ Skip SSL certificate verification.
 ### Option [--version]
 Display the current version of `mc` installed
 
+### Option [--limit-upload]
+limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
+
+### Option [--limit-download]
+limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
+
 *Example: Print version of mc.*
 
-```
+```sh
 mc --version
 mc version RELEASE.2020-04-25T00-43-23Z
 ```
 
 ## 7. Commands
 
-|                                                                                         |                                                                     |                                                            |                                                    |
-|:----------------------------------------------------------------------------------------|:--------------------------------------------------------------------|:-----------------------------------------------------------|----------------------------------------------------|
-| [**ls** - list buckets and objects](#ls)                                                | [**tree** - list buckets and objects in a tree format](#tree)       | [**mb** - make a bucket](#mb)                              | [**cat** - display object contents](#cat)          |
-| [**cp** - copy objects](#cp)                                                            | [**rb** - remove a bucket](#rb)                                     | [**pipe** - stream STDIN to an object](#pipe)              | [**version** - manage bucket version](#version)    |
-| [**share** - generate URL for temporary access to an object](#share)                    | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                 | [**undo** - undo PUT/DELETE operations](#undo)     |
-| [**diff** - list differences in object name, size, and date between two buckets](#diff) | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)         | [**replicate** - manage bucket server side replication](#replicate) |
-| [**alias** - manage aliases](#alias)                                                    | [**policy** - set public policy on bucket or prefix](#policy)       | [**event** - manage events on your buckets](#event)        | [**encrypt** - manage bucket encryption](#encrypt) |
-| [**update** - manage software updates](#update)                                         | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)  | [**sql** - run sql queries on objects](#sql)       |
-| [**head** - display first 'n' lines of an object](#head)                                | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold) | [**mv** - move objects](#mv)                       |
-| [**du** - summarize disk usage recursively](#du)                                        | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                 | [**support** - generate profile data for debugging purposes](#support) |
-| [**ping** - perform liveness check](#ping)                                        |                                                                     |                                                            |                                                    |
+|                                                                                                       |                                                                     |                                                                          |                                                    |
+|:------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------|:-------------------------------------------------------------------------|----------------------------------------------------|
+| [**ls** - list buckets and objects](#ls)                                                              | [**tree** - list buckets and objects in a tree format](#tree)       | [**mb** - make a bucket](#mb)                                            | [**cat** - display object contents](#cat)          |
+| [**cp** - copy objects](#cp)                                                                          | [**rb** - remove a bucket](#rb)                                     | [**pipe** - stream STDIN to an object](#pipe)                            | [**version** - manage bucket version](#version)    |
+| [**share** - generate URL for temporary access to an object](#share)                                  | [**rm** - remove objects](#rm)                                      | [**find** - find files and objects](#find)                               | [**undo** - undo PUT/DELETE operations](#undo)     |
+| [**diff** - list differences in object name, size, and date between two buckets](#diff)               | [**mirror** - synchronize object(s) to a remote site](#mirror)      | [**ilm** - manage bucket lifecycle policies](#ilm)                       | [**replicate** - manage bucket server side replication](#replicate) |
+| [**alias** - manage aliases](#alias)                                                                  | [**anonymous** - set public policy on bucket or prefix](#anonymous) | [**event** - manage events on your buckets](#event)                      | [**encrypt** - manage bucket encryption](#encrypt) |
+| [**update** - manage software updates](#update)                                                       | [**watch** - watch for events](#watch)                              | [**retention** - set retention for object(s)](#retention)                | [**sql** - run sql queries on objects](#sql)       |
+| [**head** - display first 'n' lines of an object](#head)                                              | [**stat** - stat contents of objects and folders](#stat)            | [**legalhold** - set legal hold for object(s)](#legalhold)               | [**mv** - move objects](#mv)                       |
+| [**du** - summarize disk usage recursively](#du)                                                      | [**tag** - manage tags for bucket and object(s)](#tag)              | [**admin** - manage MinIO servers](#admin)                               | [**support** - generate profile data for debugging purposes](#support) |
+| [**ping** - perform liveness check](#ping)                                                            | [**batch** - manage batch jobs](#batch)                             | [**get** - get s3 object to local](#get)                                 | [**put** - upload an object to a bucket](#put)                                  |
+| [**od** - measure single stream upload and download](#od)                                             | [**ready** - checks if the cluster is ready or not](#ready)                             |  |                              |
 
 
 
 ###  Command `ls`  
 `ls` command lists files, buckets and objects. Use `--incomplete` flag to list partially copied content.
 
-```
+```sh
 USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
@@ -348,7 +360,7 @@ FLAGS:
 
 *Example: List all buckets on https://play.min.io.*
 
-```
+```sh
 mc ls play
 [2016-04-08 03:56:14 IST]     0B albums/
 [2016-04-04 16:11:45 IST]     0B backup/
@@ -358,14 +370,14 @@ mc ls play
 ```
 
 *Example: List all contents versions if the bucket versioning is enabled*
-```
+```sh
 mc ls --versions s3/mybucket
 [2020-09-21 16:25:31 CET] 903KiB UiL4wSZS2OkST5aJ3AFAwtzZxHTW_9VC v1 PUT foo
 [2020-09-18 21:18:44 CET]     0B sK4pldVmOJqCJzX2aJvxX4eWMnuqazs9 v1 DEL bar
 ```
 
 *Example: List contents created earlier than 3 days*
-```
+```sh
 mc ls --rewind 3d s3/mybucket
 [2020-09-18 21:18:44 CET]     0B sK4pldVmOJqCJzX2aJvxX4eWMnuqazs9 v1 DEL bar
 ```
@@ -411,7 +423,7 @@ play/test-bucket/
 `mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. MinIO does not place any limits on the number of buckets created per user.
 On Amazon S3, each account is limited to 100 buckets. Please refer to [Buckets Restrictions and Limitations on S3](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) for more information.
 
-```
+```sh
 USAGE:
    mc mb [FLAGS] TARGET [TARGET...]
 
@@ -426,7 +438,7 @@ FLAGS:
 *Example: Create a new bucket named "mybucket" on https://play.min.io.*
 
 
-```
+```sh
 mc mb play/mybucket
 Bucket created successfully ‘play/mybucket’.
 ```
@@ -434,7 +446,7 @@ Bucket created successfully ‘play/mybucket’.
 *Example: Create a new bucket named "mybucket" on https://s3.amazonaws.com.*
 
 
-```
+```sh
 mc mb s3/mybucket --region=us-west-1
 Bucket created successfully ‘s3/mybucket’.
 ```
@@ -445,7 +457,7 @@ Bucket created successfully ‘s3/mybucket’.
 
 > NOTE:  When a bucket is removed all bucket configurations associated with the bucket will also be removed. All objects and their versions will be removed as well. If you need to preserve bucket and its configuration - only empty the objects and versions in a bucket use `mc rm` instead.
 
-```
+```sh
 USAGE:
    mc rb [FLAGS] TARGET [TARGET...]
 
@@ -459,16 +471,163 @@ FLAGS:
 *Example: Remove a bucket named "mybucket" on https://play.min.io.*
 
 
-```
+```sh
 mc rb play/mybucket --force
 Bucket removed successfully ‘play/mybucket’.
+```
+
+<a name="get"></a>
+### Command `get`
+`get` get s3 object to local.
+
+```sh
+USAGE:
+  mc get [FLAGS] SOURCE TARGET
+
+FLAGS:
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys) [$MC_ENCRYPT_KEY]
+  --encrypt value               encrypt/decrypt objects (using server-side encryption with server managed keys) [$MC_ENCRYPT]
+  --config-dir value, -C value  path to configuration folder (default: "/root/.mc") [$MC_CONFIG_DIR]
+  --quiet, -q                   disable progress bar display [$MC_QUIET]
+  --no-color                    disable color theme [$MC_NO_COLOR]
+  --json                        enable JSON lines formatted output [$MC_JSON]
+  --debug                       enable debug output [$MC_DEBUG]
+  --insecure                    disable SSL certificate verification [$MC_INSECURE]
+  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_UPLOAD]
+  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_DOWNLOAD]
+  --help, -h                    show help
+
+ENVIRONMENT VARIABLES:
+  MC_ENCRYPT:      list of comma delimited prefixes
+  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+```
+
+*Example: Get an object from S3 storage to local file system*
+
+
+```sh
+mc get myminio/mybucket/myobject ./myobject
+...mybucket/myobject: 36.73 MiB / ? ━┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉━┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉━ 92.64 MiB/s 0s 
+```
+
+<a name="put"></a>
+### Command `put`
+`put` upload an object to a bucket.
+
+```sh
+USAGE:
+  mc put [FLAGS] SOURCE TARGET
+
+FLAGS:
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys) [$MC_ENCRYPT_KEY]
+  --encrypt value               encrypt/decrypt objects (using server-side encryption with server managed keys) [$MC_ENCRYPT]
+  --config-dir value, -C value  path to configuration folder (default: "/root/.mc") [$MC_CONFIG_DIR]
+  --quiet, -q                   disable progress bar display [$MC_QUIET]
+  --no-color                    disable color theme [$MC_NO_COLOR]
+  --json                        enable JSON lines formatted output [$MC_JSON]
+  --debug                       enable debug output [$MC_DEBUG]
+  --insecure                    disable SSL certificate verification [$MC_INSECURE]
+  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_UPLOAD]
+  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_DOWNLOAD]
+  --parallel value, -P value    upload number of parts in parallel (default: 4)
+  --part-size value, -s value   each part size (default: "16MiB")
+  --help, -h                    show help
+
+ENVIRONMENT VARIABLES:
+  MC_ENCRYPT:      list of comma delimited prefixes
+  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+```
+
+*Example: Put an object from local file system to S3 bucket with name*
+
+
+```sh
+mc put ./myobject myminio/mybucket/myobject 
+./myobject: 36.73 MiB / 36.73 MiB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 182.21 MiB/s 0s 
+```
+
+<a name="od"></a>
+### Command `od`
+`od` measure single stream upload and download.
+
+```sh
+USAGE:
+  mc od [OPERANDS]
+
+OPERANDS:
+  if=        source stream to upload
+  of=        target path to upload to
+  size=      size of each part. If not specified, will be calculated from the source stream size.
+  parts=     number of parts to upload. If not specified, will calculated from the source file size.
+  skip=      number of parts to skip.
+
+FLAGS:
+  --config-dir value, -C value  path to configuration folder (default: "/root/.mc") [$MC_CONFIG_DIR]
+  --quiet, -q                   disable progress bar display [$MC_QUIET]
+  --no-color                    disable color theme [$MC_NO_COLOR]
+  --json                        enable JSON lines formatted output [$MC_JSON]
+  --debug                       enable debug output [$MC_DEBUG]
+  --insecure                    disable SSL certificate verification [$MC_INSECURE]
+  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_UPLOAD]
+  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_DOWNLOAD]
+  --help, -h                    show help
+```
+
+*Example: Upload 200MiB of a file to a bucket in 5 parts of size 40MiB.*
+
+
+```sh
+mc od if=file.txt of=play/my-bucket/file.txt size=40MiB parts=5
+Transferred: 200 MiB, Parts: 5, Time: 455ms, Speed: 81 MiB/s 
+```
+
+*Example: Upload a full file to a bucket with 40MiB parts.*
+
+
+```sh
+mc od if=file.txt of=play/my-bucket/file.txt size=40MiB
+Transferred: 200 MiB, Parts: 5, Time: 455ms, Speed: 81 MiB/s 
+```
+
+<a name="ready"></a>
+### Command `ready`
+`ready` checks if the cluster is ready or not
+
+```sh
+USAGE:
+  mc ready [FLAGS] TARGET
+
+FLAGS:
+  --cluster-read                check if the cluster has enough read quorum
+  --maintenance                 check if the cluster is taken down for maintenance
+  --config-dir value, -C value  path to configuration folder (default: "/root/.mc") [$MC_CONFIG_DIR]
+  --quiet, -q                   disable progress bar display [$MC_QUIET]
+  --no-color                    disable color theme [$MC_NO_COLOR]
+  --json                        enable JSON lines formatted output [$MC_JSON]
+  --debug                       enable debug output [$MC_DEBUG]
+  --insecure                    disable SSL certificate verification [$MC_INSECURE]
+  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_UPLOAD]
+  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_DOWNLOAD]
+  --help, -h                    show help
+```
+
+*Example: Check if the cluster is ready or not.*
+```sh
+mc ready myminio
+The cluster is ready
+```
+
+*Example:  Check if the cluster has enough read quorum*
+```sh
+mc ready myminio --cluster-read
+The cluster is ready
 ```
 
 <a name="du"></a>
 ### Command `du`
 `du` command summarizes disk usage recursively
 
-```
+```sh
 USAGE:
    mc du [FLAGS] TARGET
 FLAGS:
@@ -481,12 +640,12 @@ FLAGS:
 ```
 
 *Example: Summarize disk usage of 'jazz-songs' bucket recursively.*
-```
+```sh
 mc du s3/jazz-songs
 ```
 
 *Example:  Summarize disk usage of 'jazz-songs' bucket with all objects versions*
-```
+```sh
 mc du --versions s3/jazz-songs/
 ```
 
@@ -494,7 +653,7 @@ mc du --versions s3/jazz-songs/
 ### Command `cat`
 `cat` command concatenates contents of a file or object to another. You may also use it to simply display the contents to stdout
 
-```
+```sh
 USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
@@ -510,35 +669,35 @@ ENVIRONMENT VARIABLES:
 
 *Example: Display the contents of a text file `myobject.txt`*
 
-```
+```sh
 mc cat play/mybucket/myobject.txt
 Hello MinIO!!
 ```
 
 *Example: Display the contents of a server encrypted object `myencryptedobject.txt`*
 
-```
+```sh
 mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
 Hello MinIO!!
 ```
 
 *Example: Display the contents of a server encrypted object `myencryptedobject.txt`. Pass base64 encoded string if encryption key contains non-printable character like tab*
 
-```
+```sh
 mc cat --encrypt-key "play/mybucket=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" play/mybucket/myencryptedobject.txt
 Hello MinIO!!
 ```
 
 *Example: Display the content of an object 10 days earlier*
 
-```
+```sh
 mc cat --rewind "10d" play/mybucket/myobject
 Hello MinIO ten days earlier!
 ```
 
 *Example: Display the content of an object at a specific date/time in the past*
 
-```
+```sh
 mc cat --rewind "2020.03.24T10:00" play/mybucket/myobject
 Hello MinIO from the past!
 ```
@@ -548,7 +707,7 @@ Hello MinIO from the past!
 ### Command `sql`
 `sql` run sql queries on objects.
 
-```
+```sh
 USAGE:
   mc sql [FLAGS] TARGET [TARGET...]
 
@@ -610,19 +769,19 @@ COMPRESSION TYPE
 
 *Example: Select all columns on a set of objects recursively on AWS S3*
 
-```
+```sh
 mc sql --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
 ```
 
 *Example: Run an aggregation query on an object on MinIO*
 
-```
+```sh
 mc sql --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
 ```
 
 *Example: Run an aggregation query on an encrypted object with customer provided keys*
 
-```
+```sh
 mc sql --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
     --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio-encrypted.csv
 ```
@@ -633,7 +792,7 @@ For more query examples refer to official AWS S3 documentation [here](https://do
 ### Command `head`
 `head` display first 'n' lines of an object
 
-```
+```sh
 USAGE:
    mc head [FLAGS] SOURCE [SOURCE...]
 
@@ -648,20 +807,20 @@ ENVIRONMENT VARIABLES:
 
 *Example: Display the first line of a text file `myobject.txt`*
 
-```
+```sh
 mc head -n 1 play/mybucket/myobject.txt
 Hello!!
 ```
 
 *Example: Display the first line of a server encrypted object `myencryptedobject.txt`*
 
-```
+```sh
 mc head -n 1 --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
 Hello!!
 ```
 
 *Example: Display the first line of the content of an object, 1 year earlier*
-```
+```sh
 mc head -n 1 --rewind 365d play/mybucket/myencryptedobject.txt
 Hello!!
 ```
@@ -677,7 +836,7 @@ The [retention](#retention) command fully replaces `lock` functionality.
 `retention` sets object retention for objects with a given prefix *or* the default
 retention settings for a bucket.
 
-```
+```sh
 USAGE:
    mc retention COMMAND [FLAGS | -h] [ARGUMENTS...]
 
@@ -696,14 +855,14 @@ FLAGS:
 
 *Example: Set governance for 30 days for object `prefix` on bucket `mybucket`*
 
-```
+```sh
 mc retention set governance 30d myminio/mybucket/prefix -r
 Object retention successfully set for objects with prefix `myminio/mybucket/prefix`.
 
 ```
 *Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the compliance period is over*
 
-```
+```sh
 mc cp ~/comp.csv myminio/mybucket/prefix/
 mc rm myminio/mybucket/prefix/comp.csv
 Removing `myminio/mybucket/prefix/comp.csv`.
@@ -711,19 +870,19 @@ Removing `myminio/mybucket/prefix/comp.csv`.
 
 This creates delete marker (soft delete) you will be able to check if your objects still exist with
 
-```
+```sh
 mc ls --versions myminio/mybucket/prefix/comp.csv
 ```
 
 *Example: Set compliance for 30 days as default retention setting on bucket `mybucket`*
 
-```
+```sh
 mc retention set --default compliance 30d myminio/mybucket
 ```
 
 *Objects created in the above bucket `mybucket` cannot be deleted until the compliance period is over*
 
-```
+```sh
 mc cp ~/comp.csv myminio/mybucket/data.csv
 mc rm myminio/mybucket/data.csv
 Removing `myminio/mybucket/data.csv
@@ -731,25 +890,88 @@ Removing `myminio/mybucket/data.csv
 
 This creates delete marker (soft delete) you will be able to check if your objects still exist with
 
-```
+```sh
 mc ls --versions myminio/mybucket/prefix/data.csv
 ```
 
 *Example: Clear object retention for a specific version of a specific object*
-```
+```sh
 mc retention clear myminio/mybucket/prefix/obj.csv --version-id "3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp"
 ```
 
 *Example: Show object retention for recursively for all versions of all objects under prefix*
-```
+```sh
 mc retention info myminio/mybucket/prefix --recursive --versions
+```
+
+<a name="batch"></a>
+### Command `batch`
+`batch` manage batch jobs.
+
+```sh
+NAME:
+  mc batch - manage batch jobs
+
+USAGE:
+  mc batch COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  generate  generate a new batch job definition
+  start     start a new batch job
+  list, ls  list all current batch jobs
+  status    summarize job events on MinIO server in real-time
+  describe  describe job definition for a job
+  cancel    cancel ongoing batch job
+
+FLAGS:
+  --config-dir value, -C value  path to configuration folder (default: "/root/.mc") [$MC_CONFIG_DIR]
+  --quiet, -q                   disable progress bar display [$MC_QUIET]
+  --no-color                    disable color theme [$MC_NO_COLOR]
+  --json                        enable JSON lines formatted output [$MC_JSON]
+  --debug                       enable debug output [$MC_DEBUG]
+  --insecure                    disable SSL certificate verification [$MC_INSECURE]
+  --limit-upload value          limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_UPLOAD]
+  --limit-download value        limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_DOWNLOAD]
+  --help, -h                    show help
+```
+
+*Example: Generate a new batch `replication` job definition.*
+
+```sh
+mc batch generate myminio replicate > replication.yaml
+```
+*Example: Start a new batch 'replication' job.*
+
+```sh
+mc batch start myminio ./replication.yaml
+```
+
+*Example: List all current batch jobs of type `replicate`.*
+
+```sh
+mc batch list myminio/ --type "replicate"
+```
+
+*Example: Display current in-progress JOB events.*
+```sh
+mc batch status myminio/ KwSysDpxcBU9FNhGkn2dCf
+```
+
+*Example: Describe current batch job definition.*
+```sh
+mc batch describe myminio KwSysDpxcBU9FNhGkn2dCf
+```
+
+*Example: Cancel ongoing batch job.*
+```sh
+mc batch cancel myminio KwSysDpxcBU9FNhGkn2dCf
 ```
 
 <a name="legalhold"></a>
 ### Command `legalhold`
 `legalhold` sets object legal hold for objects
 
-```
+```sh
 USAGE:
    mc legalhold COMMAND [FLAGS | -h] TARGET
 
@@ -767,14 +989,14 @@ FLAGS:
 
 *Example: Enable legal hold for objects with prefix `prefix` on bucket `mybucket`*
 
-```
+```sh
 mc legalhold set myminio/mybucket/prefix -r
 Object legal hold successfully set for prefix `myminio/mybucket/prefix`.
 
 ```
 *Objects created with prefix `prefix` in the above bucket `mybucket` cannot be deleted until the legal hold is lifted*
 
-```
+```sh
 mc cp ~/test.csv myminio/mybucket/prefix/
 mc rm myminio/mybucket/prefix/test.csv
 Removing `myminio/mybucket/prefix/test.csv`.
@@ -782,17 +1004,17 @@ Removing `myminio/mybucket/prefix/test.csv`.
 
 This creates delete marker (soft delete) you will be able to check if your objects still exist with
 
-```
+```sh
 mc ls --versions myminio/mybucket/prefix/comp.csv
 ```
 
 *Example: Disable legal hold on a specific object version*
-```
+```sh
 mc legalhold clear myminio/mybucket/prefix/obj.csv --version-id "HiMFUTOowG6ylfNi4LKxD3ieHbgfgrvC"
 ```
 
 *Example: Show object legal hold recursively for all objects at a prefix*
-```
+```sh
 mc legalhold info myminio/mybucket/prefix --recursive
 ```
 
@@ -800,7 +1022,7 @@ mc legalhold info myminio/mybucket/prefix --recursive
 ### Command `pipe`
 `pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
 
-```
+```sh
 USAGE:
    mc pipe [FLAGS] [TARGET]
 
@@ -816,7 +1038,7 @@ ENVIRONMENT VARIABLES:
 
 *Example: Stream MySQL database dump to Amazon S3 directly.*
 
-```
+```sh
 mysqldump -u root -p ******* accountsdb | mc pipe s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 ```
 
@@ -825,7 +1047,7 @@ mysqldump -u root -p ******* accountsdb | mc pipe s3/sql-backups/backups/account
 ### Command `cp`
 `cp` command copies data from one or more sources to a target.  All copy operations to object storage are verified with MD5SUM checksums. Interrupted or failed copy operations can be resumed from the point of failure.
 
-```
+```sh
 USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
 
@@ -851,41 +1073,41 @@ ENVIRONMENT VARIABLES:
 
 *Example: Copy a text file to an object storage.*
 
-```
+```sh
 mc cp myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Copy a text file to an object storage with specified metadata.*
 
-```
+```sh
 mc cp --attr key1=value1;key2=value2 myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.*
-```
+```sh
 mc cp --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 https://play.minio.io:9000/mybucket/myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Copy a text file to an object storage and assign storage-class `REDUCED_REDUNDANCY` to the uploaded object.*
 
-```
+```sh
 mc cp --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Copy a server-side encrypted file to an object storage.*
 
-```
+```sh
 mc cp --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1 , myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/myobject.txt myminio/documents/
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Perform key-rotation on a server-side encrypted object*
 
-```
+```sh
 mc cp --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , myminio2/mybucket/=32byteslongsecretkeymustgenerat1' myminio1/mybucket/encryptedobject myminio2/mybucket/encryptedobject
 encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
@@ -900,13 +1122,13 @@ myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 
 *Example: Copy a text file to an object storage and preserve the filesyatem attributes.*
 
-```
+```sh
 mc cp -a myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Roll back to object version to 10 days earlier while copying.*
-```
+```sh
 mc cp --rewind 10d play/mybucket/myobject.txt myobject.txt
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
@@ -915,7 +1137,7 @@ myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 ### Command `mv`
 `mv` command moves data from one or more sources to a target.  All move operations to object storage are verified with MD5SUM checksums. Interrupted or failed move operations can be resumed from the point of failure.
 
-```
+```sh
 USAGE:
    mc mv [FLAGS] SOURCE [SOURCE...] TARGET
 
@@ -938,7 +1160,7 @@ ENVIRONMENT VARIABLES:
 
 *Example: Move a text file to an object storage.*
 
-```
+```sh
 mc mv myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
@@ -946,14 +1168,14 @@ Waiting move operations to complete
 
 *Example: Move a text file to an object storage with specified metadata.*
 
-```
+```sh
 mc mv --attr key1=value1;key2=value2 myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
 ```
 
 *Example: Move a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.*
-```
+```sh
 mc mv --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 https://play.minio.io:9000/mybucket/myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
@@ -961,7 +1183,7 @@ Waiting move operations to complete
 
 *Example: Move a text file to an object storage and assign storage-class `REDUCED_REDUNDANCY` to the uploaded object.*
 
-```
+```sh
 mc mv --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
@@ -969,7 +1191,7 @@ Waiting move operations to complete
 
 *Example: Move a server-side encrypted file to an object storage.*
 
-```
+```sh
 mc mv --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1 , myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/myobject.txt myminio/documents/
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
@@ -977,7 +1199,7 @@ Waiting move operations to complete
 
 *Example: Perform key-rotation on a server-side encrypted object*
 
-```
+```sh
 mc mv --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , myminio2/mybucket/=32byteslongsecretkeymustgenerat1' myminio1/mybucket/encryptedobject myminio2/mybucket/encryptedobject
 encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
@@ -994,7 +1216,7 @@ Waiting move operations to complete
 
 *Example: Move a text file to an object storage and preserve the filesyatem attributes.*
 
-```
+```sh
 mc mv -a myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 Waiting move operations to complete
@@ -1004,7 +1226,7 @@ Waiting move operations to complete
 ### Command `rm`
 Use `rm` command to remove file or object
 
-```
+```sh
 USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
@@ -1030,20 +1252,20 @@ ENVIRONMENT VARIABLES:
 
 *Example: Remove a single object.*
 
-```
+```sh
 mc rm play/mybucket/myobject.txt
 Removing `play/mybucket/myobject.txt`.
 ```
 *Example: Remove an encrypted object.*
 
-```
+```sh
 mc rm --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myobject.txt
 Removing `play/mybucket/myobject.txt`.
 ```
 
 *Example: Recursively remove a bucket's contents. Since this is a dangerous operation, you must explicitly pass `--force` option.*
 
-```
+```sh
 mc rm --recursive --force play/mybucket
 Removing `play/mybucket/newfile.txt`.
 Removing `play/mybucket/otherobject.txt`.
@@ -1051,13 +1273,13 @@ Removing `play/mybucket/otherobject.txt`.
 
 *Example: Remove all uploaded incomplete files for an object.*
 
-```
+```sh
 mc rm --incomplete play/mybucket/myobject.1gig
 Removing `play/mybucket/myobject.1gig`.
 ```
 *Example: Remove object and output a message only if the object is created older than 1 day, 2 hours and 30 minutes. Otherwise, the command stays quiet and nothing is printed out.*
 
-```
+```sh
 mc rm -r --force --older-than 1d2h30m myminio/mybucket
 Removing `myminio/mybucket/dayOld1.txt`.
 Removing `myminio/mybucket/dayOld2.txt`.
@@ -1066,14 +1288,14 @@ Removing `myminio/mybucket/dayOld3.txt`.
 
 *Example: Remove a particular version ID.*
 
-```
+```sh
 mc rm myminio/docs/money.xls --version-id "f20f3792-4bd4-4288-8d3c-b9d05b3b62f6"
 Removing `myminio/docs/money.xls` (versionId=f20f3792-4bd4-4288-8d3c-b9d05b3b62f6).
 ```
 
 *Example: Remove all object versions older than one year.*
 
-```
+```sh
 mc rm myminio/docs/ --recursive --versions --rewind 365d
 Removing `myminio/docs/foo.xls` (versionId=4d184091-ca84-4730-8d73-9e51a1016dc2, modTime=2019-08-05 13:42:08 +0000 UTC).
 Removing `myminio/docs/foo.xls` (versionId=9f716132-81ad-480b-a315-e44144b252a0, modTime=2019-08-05 13:41:59 +0000 UTC).
@@ -1081,11 +1303,11 @@ Removing `myminio/docs/foo.xls` (versionId=9f716132-81ad-480b-a315-e44144b252a0,
 
 <a name="share"></a>
 ### Command `share`
-`share` command securely grants upload or download access to object storage. This access is only temporary and it is safe to share with remote users and applications. If you want to grant permanent access, you may look at `mc policy` command instead.
+`share` command securely grants upload or download access to object storage. This access is only temporary and it is safe to share with remote users and applications. If you want to grant permanent access, you may look at `mc anonymous` command instead.
 
 Generated URL has access credentials encoded in it. Any attempt to tamper the URL will invalidate the access. To understand how this mechanism works, please follow [Pre-Signed URL](http://docs.aws.amazon.com/AmazonS3/latest/dev/ShareObjectPreSignedURL.html) technique.
 
-```
+```sh
 USAGE:
    mc share [FLAGS] COMMAND
 
@@ -1114,17 +1336,15 @@ FLAGS:
 
 *Example: Grant temporary access to an object with 4 hours expiry limit.*
 
-```
-
+```sh
 mc share download --expire 4h play/mybucket/myobject.txt
 URL: https://play.min.io/mybucket/myobject.txt
 Expire: 0 days 4 hours 0 minutes 0 seconds
 Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=14400&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
-
 ```
 
 *Example: Share a particular version of an object*
-```
+```sh
 mc share download --version-id 3Jr2x6fqlBUsVzbvPihBO3HgNpgZgAnp play/mybucket/myobject.txt
 URL: https://play.min.io/mybucket/myobject.txt
 Expire: 7 days 0 hours 0 minutes 0 seconds
@@ -1134,7 +1354,7 @@ Share: https://play.min.io/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA25
 #### Sub-command `share upload` - Share Upload
 `share upload` command generates a ‘curl’ command to upload objects without requiring access/secret keys. Expiry option sets the maximum validity period (no more than 7 days), beyond which the access is revoked automatically. Content-type option restricts uploads to only certain type of files.
 
-```
+```sh
 USAGE:
    mc share upload [FLAGS] TARGET [TARGET...]
 
@@ -1147,7 +1367,7 @@ FLAGS:
 
 *Example: Generate a `curl` command to enable upload access to `play/mybucket/myotherobject.txt`. User replaces `<FILE>` with the actual filename to upload*
 
-```
+```sh
 mc share upload play/mybucket/myotherobject.txt
 URL: https://play.min.io/mybucket/myotherobject.txt
 Expire: 7 days 0 hours 0 minutes 0 seconds
@@ -1157,7 +1377,7 @@ Share: curl https://play.min.io/mybucket -F x-amz-date=20160408T182356Z -F x-amz
 #### Sub-command `share list` - Share List
 `share list` command lists unexpired URLs that were previously shared
 
-```
+```sh
 USAGE:
    mc share list COMMAND
 
@@ -1170,9 +1390,9 @@ COMMAND:
 ### Command `mirror`
 `mirror` command synchronizes data between filesystems and object storages, similarly to `rsync`.
 
-```
+```sh
 USAGE:
-   mc mirror [FLAGS] SOURCE TARGET
+  mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
   --overwrite                        overwrite object(s) on target if it differs from source
@@ -1180,13 +1400,31 @@ FLAGS:
   --watch, -w                        watch and synchronize changes
   --remove                           remove extraneous object(s) on target
   --region value                     specify region when creating new bucket(s) on target (default: "us-east-1")
-  --preserve, -a                     preserve file system attributes and bucket policy rules on target bucket(s)
+  --preserve, -a                     preserve file(s)/object(s) attributes and bucket(s) policy/locking configuration(s) on target bucket(s)
+  --md5                              force all upload(s) to calculate md5sum checksum
+  --active-active                    enable active-active multi-site setup
+  --disable-multipart                disable multipart upload feature
   --exclude value                    exclude object(s) that match specified object name pattern
+  --exclude-bucket value             exclude bucket(s) that match specified bucket name pattern
+  --exclude-storageclass value       exclude object(s) that match the specified storage class
   --older-than value                 filter object(s) older than value in duration string (e.g. 7d10h31s)
   --newer-than value                 filter object(s) newer than value in duration string (e.g. 7d10h31s)
   --storage-class value, --sc value  specify storage class for new object(s) on target
-  --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
-  --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --attr value                       add custom metadata for all objects
+  --monitoring-address value         if specified, a new prometheus endpoint will be created to report mirroring activity. (eg: localhost:8081)
+  --retry                            if specified, will enable retrying on a per object basis if errors occur
+  --summary                          print a summary of the mirror session
+  --skip-errors                      skip any errors when mirroring
+  --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys) [$MC_ENCRYPT_KEY]
+  --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys) [$MC_ENCRYPT]
+  --config-dir value, -C value       path to configuration folder (default: "/root/.mc") [$MC_CONFIG_DIR]
+  --quiet, -q                        disable progress bar display [$MC_QUIET]
+  --no-color                         disable color theme [$MC_NO_COLOR]
+  --json                             enable JSON lines formatted output [$MC_JSON]
+  --debug                            enable debug output [$MC_DEBUG]
+  --insecure                         disable SSL certificate verification [$MC_INSECURE]
+  --limit-upload value               limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_UPLOAD]
+  --limit-download value             limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited) [$MC_LIMIT_DOWNLOAD]
   --help, -h                         show help
 
 ENVIRONMENT VARIABLES:
@@ -1196,14 +1434,14 @@ ENVIRONMENT VARIABLES:
 
 *Example: Mirror a local directory to 'mybucket' on https://play.min.io.*
 
-```
+```sh
 mc mirror localdir/ play/mybucket
 localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 73 B/s 0
 ```
 
 *Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.min.io.*
 
-```
+```sh
 mc mirror -w localdir play/mybucket
 localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 1 MB/s 15s
 ```
@@ -1212,7 +1450,7 @@ localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 ### Command `find`
 ``find`` command finds files which match the given set of parameters. It only lists the contents which match the given set of criteria.
 
-```
+```sh
 USAGE:
   mc find PATH [FLAGS]
 
@@ -1235,7 +1473,7 @@ FLAGS:
 ```
 
 *Example: Find all jpeg images from s3 bucket and copy to MinIO "play/bucket" bucket continuously.*
-```
+```sh
 mc find s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 ```
 
@@ -1245,7 +1483,7 @@ mc find s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 
 It *DOES NOT* compare the contents, so it is possible that the objects which are of same name and of the same size, but have difference in contents are not detected. This way, it can perform high speed comparison on large volumes or between sites
 
-```
+```sh
 USAGE:
   mc diff [FLAGS] FIRST SECOND
 
@@ -1266,7 +1504,7 @@ LEGEND:
 
 *Example: Compare a local directory and a remote object storage.*
 
-```
+```sh
  mc diff localdir play/mybucket
 ‘localdir/notes.txt’ and ‘https://play.min.io/mybucket/notes.txt’ - only in first.
 ```
@@ -1276,7 +1514,7 @@ JSON option enables parseable output in [JSON lines](http://jsonlines.org/) form
 
 *Example: diff json output.*
 
-```
+```sh
 mc diff minio1/diffbucket minio2/diffbucket --json
 {"status":"success","first":"","second":"http://127.0.0.1:9001/diffbucket/file1.png","diff":5}
 {"status":"success","first":"http://127.0.0.1:9000/diffbucket/file2.png","second":"","diff":4}
@@ -1301,7 +1539,7 @@ mc diff minio1/diffbucket minio2/diffbucket --json
 ``watch`` provides a convenient way to watch on various types of event notifications on object
 storage and filesystem.
 
-```
+```sh
 USAGE:
   mc watch [FLAGS] PATH
 
@@ -1315,7 +1553,7 @@ FLAGS:
 
 *Example: Watch for all events on object storage*
 
-```
+```sh
 mc watch play/testbucket
 [2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.min.io/testbucket/CONTRIBUTING.md
 [2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.min.io/testbucket/MAINTAINERS.md
@@ -1324,7 +1562,7 @@ mc watch play/testbucket
 
 *Example: Watch for all events on local directory*
 
-```
+```sh
 mc watch ~/Photos
 [2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
 [2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
@@ -1336,7 +1574,7 @@ mc watch ~/Photos
 ### Command `event`
 ``event`` provides a convenient way to manage various types of event notifications on a bucket. MinIO event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. MinIO configuration provides more details on how these services can be configured.
 
-```
+```sh
 USAGE:
   mc event COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
@@ -1352,14 +1590,14 @@ FLAGS:
 
 *Example: List all configured bucket notifications*
 
-```
+```sh
 mc event list play/andoria
 MyTopic        arn:minio:sns:us-east-1:1:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
 ```
 
 *Example: Add a new 'sqs' notification resource only to notify on ObjectCreated event*
 
-```
+```sh
 mc event add play/andoria arn:minio:sqs:us-east-1:1:your-queue --event put
 ```
 
@@ -1367,13 +1605,13 @@ mc event add play/andoria arn:minio:sqs:us-east-1:1:your-queue --event put
 
 Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
 
-```
+```sh
 mc event add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
 ```
 
 *Example: Remove a 'sqs' notification resource*
 
-```
+```sh
 mc event remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 ```
 
@@ -1381,7 +1619,7 @@ mc event remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 ### Command `ilm`
 ``ilm`` - A convenient way to manage bucket lifecycle configuration.
 
-```
+```sh
 USAGE:
   mc ilm COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
@@ -1400,7 +1638,7 @@ FLAGS:
 
 *Example: List the lifecycle management rules*
 
-```
+```sh
 mc ilm ls myminio/testbucket
    ID    | Prefix | Enabled | Expiry |  Date/Days   | Transition | Date/Days | Storage-Class | Tags
 ---------|--------|---------|--------|--------------|------------|-----------|---------------|------
@@ -1411,34 +1649,34 @@ mc ilm ls myminio/testbucket
 For more details about the lifecycle configuration, refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html)
 
 *Example: Edit the lifecycle management configuration rule given by ID "btd6pdot8748n94elvl0" to set tags*
-```
+```sh
 mc ilm edit --id "Documents" --tags "k1=v1&k2=v2" play/testbucket/dev
 Lifecycle configurtaion rule with ID `btd6pdot8748n94elvl0` modified to play/testbucket/dev.
 ```
 
 *Example: Remove the lifecycle management configuration rule given by ID "Documents"*
-```
+```sh
 mc ilm rm --id "Documents" play/testbucket/dev
 Rule ID `Documents` from target play/testbucket/dev removed.
 ```
 
 <a name="policy"></a>
-### Command `policy`
+### Command `anonymous`
 Manage anonymous bucket policies to a bucket and its contents
 
-```
+```sh
 USAGE:
-  mc policy [FLAGS] set PERMISSION TARGET
-  mc policy [FLAGS] set-json FILE TARGET
-  mc policy [FLAGS] get TARGET
-  mc policy [FLAGS] get-json TARGET
-  mc policy [FLAGS] list TARGET
+  mc anonymous [FLAGS] set PERMISSION TARGET
+  mc anonymous [FLAGS] set-json FILE TARGET
+  mc anonymous [FLAGS] get TARGET
+  mc anonymous [FLAGS] get-json TARGET
+  mc anonymous [FLAGS] list TARGET
 
 PERMISSION:
   Allowed policies are: [private, public, download, upload].
 
 FILE:
-  A valid S3 policy JSON filepath.
+  A valid S3 anonymous JSON filepath.
 
 FLAGS:
   --help, -h                       show help
@@ -1449,7 +1687,7 @@ FLAGS:
 Show current anonymous bucket policy for ``mybucket/myphotos/2020/`` sub-directory
 
 ```sh
-mc policy get play/mybucket/myphotos/2020/
+mc anonymous get play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 ```
 
@@ -1458,7 +1696,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 Set anonymous bucket policy for ``mybucket/myphotos/2020/`` sub-directory and its objects to ``download`` only. Now, objects under the sub-directory are publicly accessible. e.g ``mybucket/myphotos/2020/yourobjectname``is available at [https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname)
 
 ```sh
-mc policy set download play/mybucket/myphotos/2020/
+mc anonymous set download play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 ```
 
@@ -1467,7 +1705,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 Configure bucket policy for ``mybucket`` with a policy JSON file.
 
 ```sh
-mc policy set-json /tmp/policy.json play/mybucket
+mc anonymous set-json /tmp/policy.json play/mybucket
 Access permission for `play/mybucket` is set from `/tmp/policy.json`
 ```
 
@@ -1476,15 +1714,21 @@ Access permission for `play/mybucket` is set from `/tmp/policy.json`
 Set anonymous bucket policy for *mybucket/myphotos/2020/* sub-directory to ``private``. This is equivalent to removing any bucket policies.
 
 ```sh
-mc policy set private play/mybucket/myphotos/2020/
+mc anonymous set private play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'private'
+```
+
+*Example : List policies set to `mybucket`.*
+
+```sh
+mc anonymous list s3/mybucket
 ```
 
 <a name="tag"></a>
 ### Command `tag`
 ` tag` command provides a convenient way to set, remove, and list bucket/object tags. Tags are defined as key-value pairs.
 
-```
+```sh
 USAGE:
   mc tag COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
@@ -1502,7 +1746,7 @@ FLAGS:
 *Example : List tags assigned to an object*
 
 List tags for `testobject` in `testbucket` in alias `s3`
-```
+```sh
 mc tag list s3/testbucket/testobject
 Name                :    testobject
 editable            :    only-by-owner-and-authenticated
@@ -1512,7 +1756,7 @@ confidentiality     :    open-to-authenticated-only
 *Example : Set tags for an object*
 
 Set tags for `testobject` in `testbucket` in alias `s3`
-```
+```sh
 mc tag set s3/testbucket/testobject "key1=value1&key2=value2&key3=value3"
 Tags set for s3/testbucket/testobject.
 ```
@@ -1520,13 +1764,13 @@ Tags set for s3/testbucket/testobject.
 *Example : Remove tags assigned to an object*
 
 Remove tags assigned to `testobject` in `testbucket` in alias `s3`
-```
+```sh
 mc tag remove s3/testbucket/testobject
 Tags removed for s3/testbucket/testobject.
 ```
 
 *Example: Assign tags to a object versions older than one week*
-```
+```sh
 mc tag set --versions --rewind 7d play/testbucket/testobject "status=old"
 ```
 
@@ -1538,7 +1782,7 @@ Please visit [here](https://min.io/docs/minio/linux/reference/minio-mc-admin.htm
 ### Command `alias`
 `alias` command provides a convenient way to manage aliases entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.
 
-```
+```sh
 USAGE:
   mc alias COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
@@ -1555,7 +1799,7 @@ FLAGS:
 
 Add MinIO server access and secret keys to config file alias entry. Note that, the history feature of your shell may record these keys and pose a security risk. On `bash` shell, use `set -o` and `set +o` to disable and enable history feature momentarily.
 
-```
+```sh
 set +o history
 mc alias set myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
 set -o history
@@ -1563,13 +1807,13 @@ set -o history
 
 Remove the alias from the config file.
 
-```
+```sh
 mc alias remove myminio
 ```
 
 List all configured aliases
 
-```
+```sh
 mc alias list
 ```
 
@@ -1577,7 +1821,7 @@ mc alias list
 ### Command `update`
 Check for new software updates from [https://dl.min.io](https://dl.min.io). Experimental flag checks for unstable experimental releases primarily meant for testing purposes.
 
-```
+```sh
 USAGE:
   mc update [FLAGS]
 
@@ -1589,7 +1833,7 @@ FLAGS:
 
 *Example: Check for an update.*
 
-```
+```sh
 mc update
 You are already running the most recent version of ‘mc’.
 ```
@@ -1598,7 +1842,7 @@ You are already running the most recent version of ‘mc’.
 ### Command `stat`
 `stat` command displays information on objects (with optional prefix) contained in the specified bucket on an object storage. On a filesystem, it behaves like `stat` command.
 
-```
+```sh
 USAGE:
    mc stat [FLAGS] TARGET
 
@@ -1617,7 +1861,7 @@ ENVIRONMENT VARIABLES:
 *Example: Display information on a bucket named "mybucket" on https://play.min.io.*
 
 
-```
+```sh
 mc stat play/mybucket
 Name      : mybucket/
 Date      : 1969-12-31 16:00:00 PST
@@ -1640,7 +1884,7 @@ Metadata  :
 *Example: Display information on an encrypted object "myobject" in "mybucket" on https://play.min.io.*
 
 
-```
+```sh
 mc stat play/mybucket/myobject --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1"
 Name      : myobject
 Date      : 2018-03-02 11:47:13 PST
@@ -1655,7 +1899,7 @@ Metadata  :
 
 *Example: Display information on objects contained in the bucket named "mybucket" on https://play.min.io.*
 
-```
+```sh
 mc stat -r play/mybucket
 Name      : mybucket/META/textfile
 Date      : 2018-02-06 18:17:38 PST
@@ -1675,7 +1919,7 @@ Metadata  :
 ```
 
 *Example: Stat a specific object version*
-```
+```sh
 mc stat --version-id "CL3sWgdSN2pNntSf6UnZAuh2kcu8E8si" s3/personal-docs/2018-account_report.docx
 Name      : s3/personal-docs/2018-account_report.docx
 Date      : 2018-02-06 18:16:14 PST
@@ -1691,7 +1935,7 @@ Metadata  :
 ### Command `version`
 `version` manage bucket versioning
 
-```
+```sh
 NAME:
   mc version - manage bucket versioning
 
@@ -1706,20 +1950,20 @@ COMMANDS:
 
 *Example: Enable versioning on bucket `mybucket`*
 
-```
+```sh
 mc version enable myminio/mybucket
 myminio/mybucket versioning is enabled
 ```
 
 *Example: Display the version configuration for bucket `mybucket`*
 
-```
+```sh
 mc version info myminio/mybucket
 myminio/mybucket versioning status is enabled
 
 ```
 *Example: Suspend versioning for bucket `mybucket`*
-```
+```sh
 mc version suspend myminio/mybucket
 myminio/mybucket versioning is suspended
 ```
@@ -1728,7 +1972,7 @@ myminio/mybucket versioning is suspended
 ### Command `undo`
 `undo` reverts latest PUT/DELETE operations
 
-```
+```sh
 NAME:
   mc undo - undo PUT/DELETE operations
 
@@ -1745,7 +1989,7 @@ FLAGS:
 
 *Example:  Undo the last 3 uploads and/or removals of a particular object*
 
-```
+```sh
 mc undo s3/backups/file.zip --last 3
 ✓ Last delete of `CREDITS` is reverted.
 ✓ Last upload of `CREDITS` (vid=mj2juHIoyvU94s8kIim5H.Z9L0QO50wO) is reverted.
@@ -1756,7 +2000,7 @@ mc undo s3/backups/file.zip --last 3
 ### Command `encrypt`
 `encrypt` manages bucket encryption config
 
-```
+```sh
 NAME:
   mc encrypt - manage bucket encryption config
 
@@ -1774,28 +2018,28 @@ FLAGS:
 
 *Example: Display bucket encryption status for  bucket `mybucket`*
 
-```
+```sh
 mc encrypt info myminio/mybucket
 Algorithm: AES256
 ```
 
 *Example: Set SSE-S3 auto encryption for bucket `mybucket` on alias `myminio`*
 
-```
+```sh
 mc encrypt set sse-s3 myminio/mybucket
 Auto encryption has been set successfully for myminio/source
 ```
 
 *Example: Set SSE-KMS auto encryption for bucket `mybucket` on alias `myminio` with KMS Key Id "arn:aws:kms:us-east-1:xxx:key/xxx"*
 
-```
+```sh
 mc encrypt set sse-kms "arn:aws:kms:us-east-1:xxx:key/xxx" myminio/mybucket
 Auto encryption has been set successfully for myminio/source
 ```
 
 *Example: Clear auto encryption config for bucket `mybucket` on alias `myminio`*
 
-```
+```sh
 mc encrypt clear myminio/mybucket
 Auto encryption configuration has been cleared successfully.
 ```
@@ -1804,7 +2048,7 @@ Auto encryption configuration has been cleared successfully.
 ### Command `replicate`
 `replicate` manages bucket server side replication
 
-```
+```sh
 NAME:
   mc replicate - manage bucket server side replication
 
@@ -1828,99 +2072,99 @@ FLAGS:
 
 *Example: Add replication configuration rule on `mybucket` on alias `myminio`. Enable delete marker replication and replication of versioned deletes for the configuration*
 
-```
+```sh
 mc replicate add myminio/mybucket/prefix --tags "key1=value1&key2=value2" --storage-class "STANDARD" --remote-bucket "http://minio3:minio123@localhost:9006/bucket" --priority 1
 Replication configuration rule applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Disable replication configuration rule with rule Id "bsibgh8t874dnjst8hkg" on bucket "mybucket" with prefix "prefix" for alias `myminio`*
 
-```
+```sh
 mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --state disable
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
 *Example:  Change priority of rule with rule ID "bsibgh8t874dnjst8hkg" on bucket "mybucket" for alias `myminio`.*
 
-```
+```sh
 mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --priority 3
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix.
 ```
 
 *Example: Clear tags on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"*
 
-```
+```sh
 mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --tags ""
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 
 *Example: Enable delete marker replication and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
 
-```
+```sh
 mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate "delete,delete-marker"
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 *Example: Disable delete marker and versioned delete replication on rule ID "bsibgh8t874dnjst8hkg" for target myminio/bucket which has a replication configuration rule with prefix "prefix"
 
-```
+```sh
 mc replicate update myminio/mybucket/prefix --id "bsibgh8t874dnjst8hkg" --replicate ""
 Replication configuration rule with ID `bsibgh8t874dnjst8hkg` applied to myminio/mybucket/prefix successfully.
 ```
 
 *Example:  Edit credentials for remote target with replication rule ID kxYD.491
 
-```
-$ mc replicate update myminio/mybucket --id "kxYD.491" --remote-bucket
+```sh
+mc replicate update myminio/mybucket --id "kxYD.491" --remote-bucket
 https://foobar:newpassword@minio.siteb.example.com/targetbucket
 ```
 
 *Example: List replication configuration rules set on `mybucket` on alias `myminio`*
 
-```
+```sh
 mc replicate ls myminio/mybucket
 ```
 
 *Example: Clear replication configuration for bucket `mybucket` on alias `myminio`*
 
-```
+```sh
 mc replicate rm --all --force myminio/mybucket
 Replication configuration has been removed successfully for myminio/mybucket
 ```
 
 *Example: Remove replication configuration rule with id `bsibgh8t874dnjst8hkg` for bucket `mybucket` on alias `myminio`*
 
-```
+```sh
 mc replicate rm --id "bsibgh8t874dnjst8hkg" myminio/mybucket/prefix
 Replication configuration rule with id "bsibgh8t874dnjst8hkg" has been removed successfully for myminio/mybucket
 ```
 
 *Example: Import replication configuration for bucket `mybucket` on alias `myminio` from `/data/replicate/config`*
 
-```
+```sh
 mc replicate import myminio/mybucket < /data/replicate/config
 Replication configuration successfully set on `myminio/mybucket`.
 ```
 
 *Example: Export replication configuration for bucket `mybucket` on alias `myminio` to `/data/replicate/config`*
 
-```
+```sh
 mc replicate export myminio/mybucket > /data/replicate/config
 ```
 *Example: Show replication status of `mybucket` on alias `myminio`*
 
-```
+```sh
 mc replicate status myminio/mybucket
 ```
 
-*Example: Resync replication of previously replicated objects from `mybucket` on alias `myminio` to remote target "arn:minio:replication::xxx:mybucket".
+*Example: Resync replication of previously replicated objects from `mybucket` on alias `myminio` to remote target "arn:minio:replication::xxx:mybucket".*
 
-```
+```sh
 mc replicate resync start myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
 ```
 
-*Example: Show status of replication resync of target "arn:minio:replication::xxx:mybucket" for `mybucket` on alias `myminio`.
+*Example: Show status of replication resync of target "arn:minio:replication::xxx:mybucket" for `mybucket` on alias `myminio`.*
 
-```
+```sh
 mc replicate resync status myminio/mybucket --remote-bucket "arn:minio:replication::xxx:mybucket"
 ```
 
@@ -1928,7 +2172,7 @@ mc replicate resync status myminio/mybucket --remote-bucket "arn:minio:replicati
 <a name="support"></a>
 ### Command `support` - support related commands
 
-```
+```sh
 NAME:
   mc support register           register with MinIO subscription network
   mc support callhome           configure callhome settings
@@ -1942,52 +2186,52 @@ NAME:
 ```
 
 Register MinIO cluster at alias 'play' on SUBNET, using the name "play-cluster".
-```
+```sh
 mc support register play --name play-cluster
 ```
 
 Enable logs callhome for cluster with alias 'play'.
-```
+```sh
 mc support callhome set play logs=on
 ```
 
 Download 'xl.meta' for a specific object from all the drives in a zip file.
-```
+```sh
 mc support inspect myminio/bucket/test*/xl.meta
 ```
 
 Run object speed measurement with autotuning the concurrency to obtain maximum throughput and IOPs.
-```
+```sh
 mc support perf object myminio/
 ```
 
 Upload MinIO diagnostics report for 'play' (https://play.min.io by default) to SUBNET
-```
+```sh
 mc support diag play
 ```
 
 Get CPU profiling for 2 minutes
-```
+```sh
 mc support profile  --type cpu --duration 120 myminio/
 ```
 
 Print last 5 application error logs entries for node 'node1' on MinIO server with alias 'myminio'
-```
+```sh
 mc support logs show --last 5 --type application myminio node1
 ```
 
 Enable logs for cluster with alias 'play'
-```
+```sh
 mc support logs enable play
 ```
 
 Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
-```
+```sh
 mc admin top locks myminio
 ```
 
 Display current in-progress all 's3.PutObject' API calls.
-```
+```sh
 mc support top api --name s3.PutObject myminio/
 ```
 
@@ -1996,7 +2240,7 @@ mc support top api --name s3.PutObject myminio/
 ### Command `ping`
 `rb` command to perform liveness check
 
-```
+```sh
 USAGE:
    mc ping [FLAGS] TARGET
 
@@ -2013,7 +2257,7 @@ FLAGS:
 *Example: Perform liveness check on https://play.min.io.*
 
 
-```
+```sh
 mc ping play
 1: https://play.min.io:   min=919.538ms   max=919.538ms   average=919.538ms   errors=0   roundtrip=919.538ms
 2: https://play.min.io:   min=278.356ms   max=919.538ms   average=598.947ms   errors=0   roundtrip=278.356ms
@@ -2025,7 +2269,7 @@ mc ping play
 ### Command `quota` - Manage bucket quota
 `quota` command to set or get bucket quota on MinIO server.
 
-```
+```sh
 NAME:
   mc quota - manage bucket quota
 
@@ -2044,18 +2288,18 @@ QUOTA
 ```
 *Example: Show bucket quota on bucket 'mybucket' on MinIO.*
 
-```
+```sh
 mc quota info myminio/mybucket
 ```
 
 *Example: Set a hard bucket quota of 64Mb for bucket 'mybucket' on MinIO.*
 
-```
+```sh
 mc quota set myminio/mybucket --size 64MB
 ```
 
 *Example: Reset bucket quota configured for bucket 'mybucket' on MinIO.*
 
-```
+```sh
 mc quota clear myminio/mybucket
 ```

@@ -10,14 +10,12 @@ user                 manage users
 group                manage groups
 policy               manage policies defined in the MinIO server
 replicate            manage MinIO site replication
-idp                  manage MinIO IDentity Provider server configuration
 config               manage MinIO server configuration
 decommission, decom  manage MinIO server pool decommissioning
 heal                 heal bucket(s) and object(s) on MinIO server
 prometheus           manages prometheus config
 kms                  perform KMS management operations
 bucket               manage buckets defined in the MinIO server
-tier                 manage remote tier targets for ILM transition
 scanner              provide MinIO scanner info
 top                  provide top like statistics for MinIO
 trace                show http trace for MinIO server
@@ -28,13 +26,13 @@ logs                 show MinIO logs
 
 ## 1.  Download MinIO Client
 ### Docker Stable
-```
+```sh
 docker pull minio/mc
 docker run minio/mc admin info play
 ```
 
 ### Docker Edge
-```
+```sh
 docker pull minio/mc:edge
 docker run minio/mc:edge admin info server play
 ```
@@ -42,7 +40,7 @@ docker run minio/mc:edge admin info server play
 ### Homebrew (macOS)
 Install mc packages using [Homebrew](http://brew.sh/)
 
-```
+```sh
 brew install minio/stable/mc
 mc --help
 ```
@@ -53,7 +51,7 @@ mc --help
 |GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
 ||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
 
-```
+```sh
 chmod +x mc
 ./mc --help
 ```
@@ -72,7 +70,7 @@ Source installation is intended only for developers and advanced users. `mc upda
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install).
 
-```
+```sh
 go get -d github.com/minio/mc
 cd ${GOPATH}/src/github.com/minio/mc
 make
@@ -82,14 +80,14 @@ make
 
 ### GNU/Linux
 
-```
+```sh
 chmod +x mc
 ./mc --help
 ```
 
 ### macOS
 
-```
+```sh
 chmod 755 mc
 ./mc --help
 ```
@@ -105,7 +103,7 @@ MinIO server displays URL, access and secret keys.
 
 #### Usage
 
-```
+```sh
 mc alias set <ALIAS> <YOUR-MINIO-ENDPOINT> [YOUR-ACCESS-KEY] [YOUR-SECRET-KEY]
 ```
 
@@ -117,13 +115,13 @@ Keys must be supplied by argument or standard input.
 
 1. Keys by argument
 
-   ```
+   ```sh
    mc alias set minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
    ```
 
 2. Keys by prompt
 
-   ```
+   ```sh
    mc alias set minio http://192.168.1.51:9000
    Enter Access Key: BKIKJAA5BMMU2RHO6IBB
    Enter Secret Key: V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
@@ -131,7 +129,7 @@ Keys must be supplied by argument or standard input.
 
 2. Keys by pipe
 
-   ```
+   ```sh
    echo -e "BKIKJAA5BMMU2RHO6IBB\nV7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12" | \
        mc alias set minio http://192.168.1.51:9000
    ```
@@ -142,7 +140,7 @@ Keys must be supplied by argument or standard input.
 
 Get MinIO server information for the configured alias `minio`
 
-```
+```sh
 mc admin info minio
 ●  min.minio.io
    Uptime: 11 hours
@@ -157,7 +155,7 @@ mc admin info minio
 ## 5. Everyday Use
 You may add shell aliases for info, healing.
 
-```
+```sh
 alias minfo='mc admin info'
 ```
 
@@ -168,7 +166,8 @@ Debug option enables debug output to console.
 
 *Example: Display verbose debug output for `info` command.*
 
-```
+```sh
+mc --debug ls play
 mc: <DEBUG> GET /minio/admin/v2/info HTTP/1.1
 Host: play.minio.io
 User-Agent: MinIO (linux; amd64) madmin-go/0.0.1 mc/DEVELOPMENT.GOGET
@@ -207,7 +206,7 @@ JSON option enables parseable output in [JSON lines](http://jsonlines.org/) form
 
 *Example: MinIO server information.*
 
-```
+```sh
 mc admin --json info play
 {
     "status": "success",
@@ -297,9 +296,15 @@ Skip SSL certificate verification.
 ### Option [--version]
 Display the current version of `mc` installed
 
+### Option [--limit-upload]
+limits uploads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
+
+### Option [--limit-download]
+limits downloads to a maximum rate in KiB/s, MiB/s, GiB/s. (default: unlimited)
+
 *Example: Print version of mc.*
 
-```
+```sh
 mc --version
 mc version RELEASE.2020-04-25T00-43-23Z
 ```
@@ -315,9 +320,8 @@ mc version RELEASE.2020-04-25T00-43-23Z
 | [**group** - manage groups](#group)                                                |
 | [**policy** - manage canned policies](#policy)                                     |
 | [**replicate** - manage MinIO site replication](#replicate)                        |
-| [**idp** - manage MinIO IDentity Provider server configuration](#idp)              |
 | [**config** - manage server configuration file](#config)                           |
-| [**decommission, decom** - manage MinIO server pool decommissioning](#config)      |
+| [**decommission, decom** - manage MinIO server pool decommissioning](#decommission)      |
 | [**heal** - heal bucket(s) and object(s) on MinIO server](#heal)                   |
 | [**prometheus** - manages prometheus config settings](#prometheus)                 |
 | [**kms** - perform KMS management operations](#kms)                                |
@@ -334,7 +338,7 @@ mc version RELEASE.2020-04-25T00-43-23Z
 `update` command provides a way to update all MinIO servers in a cluster. You can also use a private mirror server with `update` command to update your MinIO cluster. This is useful in cases where MinIO is running in an environment that doesn't have Internet access.
 
 *Example: Update all MinIO servers.*
-```
+```sh
 mc admin update play
 Server `play` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
 ```
@@ -342,7 +346,7 @@ Server `play` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.
 #### Steps to update MinIO using a private mirror
 For using `update` command with private mirror server, you need to mirror the directory structure on `https://dl.minio.io/server/minio/release/linux-amd64/` on your private mirror server and then provide:
 
-```
+```sh
 mc admin update myminio https://myfavorite-mirror.com/minio-server/linux-amd64/minio.sha256sum
 Server `myminio` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
 ```
@@ -360,7 +364,7 @@ Server `myminio` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEA
 > - An alias pointing to a distributed setup this command will automatically execute the same actions across all servers.
 > - `restart` and `stop` sub-commands are disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only under administrative circumstances. Please use it with caution.
 
-```
+```sh
 NAME:
   mc admin service - restart and stop all MinIO servers
 
@@ -374,7 +378,7 @@ COMMANDS:
 ```
 
 *Example: Restart all MinIO servers.*
-```
+```sh
 mc admin service restart play
 Restarted `play` successfully.
 ```
@@ -383,7 +387,7 @@ Restarted `play` successfully.
 ### Command `info` - Display MinIO server information
 `info` command displays server information of one or many MinIO servers (under distributed cluster)
 
-```
+```sh
 NAME:
   mc admin info - display MinIO server information
 
@@ -393,7 +397,7 @@ FLAGS:
 
 *Example: Display MinIO server information.*
 
-```
+```sh
 mc admin info play
 ●  play.minio.io
    Uptime: 11 hours
@@ -409,7 +413,7 @@ mc admin info play
 ### Command `policy` - Manage canned policies
 `policy` command to add, remove, list policies, get info on a policy and to set a policy for a user on MinIO server.
 
-```
+```sh
 NAME:
   mc admin policy - manage policies defined in the MinIO server
 
@@ -427,7 +431,7 @@ COMMANDS:
 ```
 
 *Example: List all canned policies on MinIO.*
-```
+```sh
 mc admin policy list myminio/
 diagnostics
 readonly
@@ -458,35 +462,35 @@ writeonly
 ```
 
 *Add the policy as 'listbucketsonly' to the policy database*
-```
+```sh
 mc admin policy create myminio/ listbucketsonly /tmp/listbucketsonly.json
 Added policy `listbucketsonly` successfully.
 ```
 
 *Example: Remove policy 'listbucketsonly' on MinIO.*
 
-```
+```sh
 mc admin policy remove myminio/ listbucketsonly
 Removed policy `listbucketsonly` successfully.
 ```
 
 *Example: Show info on a canned policy, 'writeonly'*
 
-```
+```sh
 mc admin policy info myminio/ writeonly
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::*"]}]}
 ```
 
 *Example: Attach the canned policy.'writeonly' on a user or group*
 
-```
+```sh
 mc admin policy attach myminio/ writeonly user=someuser
 Policy `writeonly` successfully attached to user `someuser`
 ```
 
 *Example: Detach the canned policy.'writeonly' on a user or group*
 
-```
+```sh
 mc admin policy detach myminio/ writeonly group=somegroup
 Policy `writeonly` successfully detached from group `somegroup`
 ```
@@ -495,7 +499,7 @@ Policy `writeonly` successfully detached from group `somegroup`
 ### Command `user` - Manage users
 `user` command to add, remove, enable, disable, list users on MinIO server.
 
-```
+```sh
 NAME:
   mc admin user - manage users
 
@@ -516,13 +520,13 @@ COMMANDS:
 
 *Example: Add a new user 'newuser' on MinIO.*
 
-```
+```sh
 mc admin user add myminio/ newuser newuser123
 ```
 
 *Example: Add a new user 'newuser' on MinIO, using standard input.*
 
-```
+```sh
 mc admin user add myminio/
 Enter Access Key: newuser
 Enter Secret Key: newuser123
@@ -530,32 +534,32 @@ Enter Secret Key: newuser123
 
 *Example: Disable a user 'newuser' on MinIO.*
 
-```
+```sh
 mc admin user disable myminio/ newuser
 ```
 
 *Example: Enable a user 'newuser' on MinIO.*
 
-```
+```sh
 mc admin user enable myminio/ newuser
 ```
 
 *Example: Remove user 'newuser' on MinIO.*
 
-```
+```sh
 mc admin user remove myminio/ newuser
 ```
 
 *Example: List all users on MinIO.*
 
-```
+```sh
 mc admin user list --json myminio/
 {"status":"success","accessKey":"newuser","userStatus":"enabled"}
 ```
 
 *Example: Display info of a user*
 
-```
+```sh
 mc admin user info myminio someuser
 ```
 
@@ -563,7 +567,7 @@ mc admin user info myminio someuser
 ### Command `replicate` - manage MinIO site replication
 `replicate` command to add, update, rm sites for replication.
 
-```
+```sh
 NAME:
   mc admin replicate - manage MinIO site replication
 
@@ -581,142 +585,56 @@ COMMANDS:
 
 *Example: Add a site for cluster-level replication.*
 
-```
+```sh
 mc admin replicate add minio1 minio2
 ```
 
 *Example: Edit a site endpoint participating in cluster-level replication.*
 
-```
+```sh
 mc admin replicate update myminio --deployment-id c1758167-4426-454f-9aae-5c3dfdf6df64 --endpoint https://minio2:9000
 ```
 
 *Example: Remove site replication for all sites.*
 
-```
+```sh
 mc admin replicate rm minio2 --all --force
 ```
 
 *Example: Remove site replication for site with site names alpha, baker from active cluster minio2.*
 
-```
+```sh
 mc admin replicate rm minio2 alpha baker --force
 ```
 
 *Example: Get Site Replication information.*
 
-```
+```sh
 mc admin replicate info minio1
 ```
 
 *Example: Display overall site replication status.*
 
-```
+```sh
 mc admin replicate status minio1
 ```
 
 *Example: Resync bucket data from minio1 to minio2.*
 
-```
+```sh
 mc admin replicate resync start minio1 minio2
 ```
 
 *Example: Display status of resync from minio1 to minio2.*
 
-```
+```sh
 mc admin replicate resync status minio1 minio2
 ```
 
 *Example: Cancel ongoing resync of bucket data from minio1 to minio2.*
 
-```
+```sh
 mc admin replicate resync cancel minio1 minio2
-```
-
-
-<a name="idp"></a>
-### Command `idp` - manage MinIO IDentity Provider server configuration
-`idp` command to add, update, remove, list, enable, disable OpenID or Ldap IDP server configuration.
-
-```
-NAME:
-  mc admin idp - manage MinIO IDentity Provider server configuration
-
-FLAGS:
-  --help, -h                    show help
-
-COMMANDS:
-  openid  manage OpenID IDP server configuration
-  ldap    manage Ldap IDP server configuration
-```
-
-*Example: Create OpenID IDP configuration named "dex_test".*
-
-```
-mc admin idp openid add play/ dex_test \
-client_id=minio-client-app \
-client_secret=minio-client-app-secret \
-config_url="http://localhost:5556/dex/.well-known/openid-configuration" \
-scopes="openid,groups" \
-redirect_uri="http://127.0.0.1:10000/oauth_callback" \
-role_policy="consoleAdmin"
-```
-
-*Example: Update configuration for OpenID IDP configuration named "dex_test".*
-
-```
-mc admin idp openid update play/ dex_test \
-scopes="openid,groups" \
-role_policy="consoleAdmin"
-```
-
-*Example: Remove OpenID IDP configuration named "dex_test".*
-
-```
-mc admin idp openid remove play/ dex_test
-```
-
-*Example:  List configurations for OpenID IDP.*
-
-```
-mc admin idp openid list play/
-```
-
-*Example: Get configuration info on OpenID IDP configuration named "dex_test".*
-
-```
-mc admin idp openid info play/ dex_test
-```
-
-*Example: Enable OpenID IDP configuration named "dex_test".*
-
-```
-mc admin idp openid enable play/ dex_test
-```
-
-*Example: Disable OpenID IDP configuration named "dex_test".*
-
-```
-mc admin idp openid disable play/ dex_test
-```
-
-*Example: Create LDAP IDentity Provider configuration.*
-
-```
-mc admin idp ldap add myminio/ \
-server_addr=myldapserver:636 \
-lookup_bind_dn=cn=admin,dc=min,dc=io \
-lookup_bind_password=somesecret \
-user_dn_search_base_dn=dc=min,dc=io \
-user_dn_search_filter="(uid=%s)" \
-group_search_base_dn=ou=swengg,dc=min,dc=io \
-group_search_filter="(&(objectclass=groupofnames)(member=%d))"
-```
-
-*Example: Remove the default LDAP IDP configuration.*
-
-```
-mc admin idp ldap remove play/
 ```
 
 
@@ -724,7 +642,7 @@ mc admin idp ldap remove play/
 ### Command `group` - Manage groups
 `group` command to add, remove, info, list, enable, disable groups on MinIO server.
 
-```
+```sh
 NAME:
   mc admin group - manage groups
 
@@ -744,13 +662,13 @@ COMMANDS:
 
 Group is created if it does not exist.
 
-```
+```sh
 mc admin group add myminio somegroup someuser1 someuser2
 ```
 
 *Example: Remove a pair of users from a group 'somegroup' on MinIO.*
 
-```
+```sh
 mc admin group remove myminio somegroup someuser1 someuser2
 ```
 
@@ -758,31 +676,31 @@ mc admin group remove myminio somegroup someuser1 someuser2
 
 Only works if the given group is empty.
 
-```
+```sh
 mc admin group remove myminio somegroup
 ```
 
 *Example: Get info on a group 'somegroup' on MinIO.*
 
-```
+```sh
 mc admin group info myminio somegroup
 ```
 
 *Example: List all groups on MinIO.*
 
-```
+```sh
 mc admin group list myminio
 ```
 
 *Example: Enable a group 'somegroup' on MinIO.*
 
-```
+```sh
 mc admin group enable myminio somegroup
 ```
 
 *Example: Disable a group 'somegroup' on MinIO.*
 
-```
+```sh
 mc admin group disable myminio somegroup
 ```
 
@@ -790,7 +708,7 @@ mc admin group disable myminio somegroup
 ### Command `config` - Manage server configuration
 `config` command to manage MinIO server configuration.
 
-```
+```sh
 NAME:
   mc admin config - manage configuration file
 
@@ -812,25 +730,25 @@ FLAGS:
 
 *Example: Get 'etcd' sub-system configuration.*
 
-```
+```sh
 mc admin config get myminio etcd
 etcd endpoints= path_prefix= coredns_path=/skydns client_cert= client_cert_key=
 ```
 
 *Example: Set specific settings on 'etcd' sub-system.*
-```
+```sh
 mc admin config set myminio etcd endpoints=http://etcd.svc.cluster.local:2379
 ```
 
 *Example: Get entire server configuration of a MinIO server/cluster.*
 
-```
+```sh
 mc admin config export myminio > /tmp/my-serverconfig
 ```
 
 *Example: Set entire server configuration of a MinIO server/cluster.*
 
-```
+```sh
 mc admin config import myminio < /tmp/my-serverconfig
 ```
 
@@ -838,7 +756,7 @@ mc admin config import myminio < /tmp/my-serverconfig
 ### Command `decommission` - Manage MinIO server pool decommissioning
 `decommission` manage MinIO server pool decommissioning.
 
-```
+```sh
 NAME:
   mc admin decommission - manage MinIO server pool decommissioning
 
@@ -856,30 +774,30 @@ FLAGS:
 
 *Example: Start decommissioning a pool for removal.*
 
-```
+```sh
 mc admin decommission start myminio/ http://server{5...8}/disk{1...4}
 ```
 
 *Example: Show current decommissioning status.*
-```
+```sh
 mc admin decommission status myminio/ http://server{5...8}/disk{1...4}
 ```
 
 *Example: List all current decommissioning status of all pools.*
 
-```
+```sh
 mc admin decommission status myminio/
 ```
 
 *Example: Cancel an ongoing decommissioning of a pool.*
 
-```
+```sh
 mc admin decommission cancel myminio/ http://server{5...8}/disk{1...4}
 ```
 
 *Example: Cancel all decommissioning of a pool.*
 
-```
+```sh
 mc admin decommission cancel myminio/
 ```
 
@@ -888,7 +806,7 @@ mc admin decommission cancel myminio/
 Healing is automatic on server side which runs on a continuous basis on a low priority thread, this
 command allows you to monitor the running heals on the server side.
 
-```
+```sh
 NAME:
   mc admin heal - monitor healing of bucket(s) and object(s) on MinIO Server
 
@@ -901,7 +819,7 @@ FLAGS:
 
 *Example: Monitor healing status on a running server at alias 'myminio'.*
 
-```
+```sh
 mc admin heal myminio/
 ```
 
@@ -983,49 +901,49 @@ mc admin trace myminio
 
 *Example: Show verbose console trace for MinIO server.*
 
-```
+```sh
  mc admin trace -v -a myminio
 ```
 
 *Example: Show trace only for failed requests for MinIO server.*
 
-```
+```sh
  mc admin trace -v -e myminio
 ```
 
 *Example: Show verbose console trace for requests with '503' status code.*
 
-```
+```sh
  mc admin trace -v --status-code 503 myminio
 ```
 
 *Example: Show console trace for a specific path.*
 
-```
+```sh
  mc admin trace --path my-bucket/my-prefix/* myminio
 ```
 
 *Example: Show console trace for requests with '404' and '503' status code.*
 
-```
+```sh
  mc admin trace --status-code 404 --status-code 503 myminio
 ```
 
 *Example: Show trace only for requests bytes greater than 1MB.*
 
-```
+```sh
  mc admin trace --filter-request --filter-size 1MB myminio
 ```
 
 *Example: Show trace only for response bytes greater than 1MB.*
 
-```
+```sh
  mc admin trace --filter-response --filter-size 1MB myminio
 ```
 
 *Example: Show trace only for requests operations duration greater than 5ms.*
 
-```
+```sh
  mc admin trace --response-duration 5ms myminio
 ```
 
@@ -1043,13 +961,13 @@ FLAGS:
 
 *Example: Show scanner trace for MinIO server.*
 
-```
+```sh
  mc admin scanner trace myminio
 ```
 
 *Example: Display current in-progress all scanner operations.*
 
-```
+```sh
  mc admin scanner status myminio/
 ```
 
@@ -1061,7 +979,7 @@ This command is deprecated and will be removed in a future release. Use 'mc supp
 ### Command `logs` - Show MinIO logs
 `logs` show console logs for MinIO server.
 
-```
+```sh
 NAME:
   mc admin logs - show MinIO logs
 USAGE:
@@ -1075,19 +993,19 @@ FLAGS:
 
 *Example: Show logs for a MinIO server with alias 'myminio'.*
 
-```
+```sh
  mc admin logs myminio
 ```
 
 *Example: Show last 5 log entries for node 'node1' for a MinIO server with alias 'myminio'.*
 
-```
+```sh
  mc admin logs --last 5 myminio node1
 ```
 
 *Example: Show application errors in logs for a MinIO server with alias 'myminio'.*
 
-```
+```sh
  mc admin logs --type application myminio
 ```
 
@@ -1095,7 +1013,7 @@ FLAGS:
 ### Command `cluster` - Manage MinIO cluster metadata
 `cluster` manage MinIO cluster metadata.
 
-```
+```sh
 NAME:
   mc admin cluster - manage MinIO cluster metadata
 
@@ -1108,25 +1026,25 @@ FLAGS:
 
 *Example: Recover bucket metadata for all buckets from previously saved bucket metadata backup.*
 
-```
+```sh
  mc admin cluster bucket import myminio /backups/cluster-metadata.zip
 ```
 
 *Example: Save metadata of all buckets to a zip file.*
 
-```
+```sh
  mc admin cluster bucket export myminio
 ```
 
 *Example: Set IAM info from previously exported metadata zip file.*
 
-```
+```sh
  mc admin cluster iam import myminio /tmp/myminio-iam-info.zip
 ```
 
 *Example: Download all IAM metadata for cluster into zip file.*
 
-```
+```sh
  mc admin cluster iam export myminio
 ```
 
@@ -1134,7 +1052,7 @@ FLAGS:
 ### Command `rebalance` - Manage MinIO rebalance
 `rebalance` manage MinIO rebalance.
 
-```
+```sh
 NAME:
   mc admin rebalance - Manage MinIO rebalance
 
@@ -1147,19 +1065,19 @@ FLAGS:
 
 *Example: Start rebalance on a MinIO deployment with alias myminio.*
 
-```
+```sh
  mc admin rebalance start myminio
 ```
 
 *Example: Stop an ongoing rebalance on a MinIO deployment with alias myminio.*
 
-```
+```sh
  mc admin rebalance stop myminio
 ```
 
 *Example: Summarize ongoing rebalance on a MinIO deployment with alias myminio.*
 
-```
+```sh
  mc admin rebalance status myminio
 ```
 
@@ -1250,7 +1168,7 @@ This command is deprecated and will be removed in a future release. Use 'mc quot
 ### Command `remote` - configure remote target buckets
 `remote` command manages remote bucket targets on MinIO server.
 
-```
+```sh
 NAME:
   mc admin bucket remote - configure remote bucket targets 
 
