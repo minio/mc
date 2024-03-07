@@ -226,7 +226,7 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, api
 	if !globalAirgapped {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the profile data
-		uploadURL := subnetUploadURL("profile", profileFile)
+		uploadURL := subnetUploadURL("profile")
 		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	}
 
@@ -239,7 +239,13 @@ func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, api
 	saveProfileFile(data)
 
 	if !globalAirgapped {
-		_, e = uploadFileToSubnet(alias, profileFile, reqURL, headers)
+		_, e = (&subnetFileUploader{
+			alias:             alias,
+			filePath:          profileFile,
+			reqURL:            reqURL,
+			headers:           headers,
+			deleteAfterUpload: true,
+		}).uploadFileToSubnet()
 		if e != nil {
 			printMsg(supportProfileMessage{
 				Status: "error",

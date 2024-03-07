@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/klauspost/compress/zstd"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
@@ -61,12 +62,16 @@ func subnetBaseURL() string {
 	return subnet.BaseURL(globalDevMode)
 }
 
+func subnetIssueURL(issueNum int) string {
+	return fmt.Sprintf("%s/issues/%d", subnetBaseURL(), issueNum)
+}
+
 func subnetLogWebhookURL() string {
 	return subnetBaseURL() + "/api/logs"
 }
 
-func subnetUploadURL(uploadType, filename string) string {
-	return fmt.Sprintf("%s/api/%s/upload?filename=%s", subnetBaseURL(), uploadType, filename)
+func subnetUploadURL(uploadType string) string {
+	return fmt.Sprintf("%s/api/%s/upload", subnetBaseURL(), uploadType)
 }
 
 func subnetRegisterURL() string {
@@ -708,28 +713,61 @@ func prepareSubnetUploadURL(uploadURL, alias, apiKey string) (string, map[string
 	return reqURL, headers
 }
 
-func uploadFileToSubnet(alias, filename, reqURL string, headers map[string]string) (string, error) {
-	req, e := subnetUploadReq(reqURL, filename)
+type subnetFileUploader struct {
+	alias             string
+	filePath          string
+	filename          string
+	reqURL            string
+	headers           subnetHeaders
+	autoCompress      bool
+	deleteAfterUpload bool
+	params            url.Values
+}
+
+func (i *subnetFileUploader) uploadFileToSubnet() (string, error) {
+	req, e := i.subnetUploadReq()
 	if e != nil {
 		return "", e
 	}
 
-	resp, e := subnetReqDo(req, headers)
+	resp, e := subnetReqDo(req, i.headers)
 	if e != nil {
 		return "", e
 	}
 
-	// Delete the file after successful upload
-	os.Remove(filename)
+	if i.deleteAfterUpload {
+		os.Remove(i.filePath)
+	}
 
 	// ensure that both api-key and license from
 	// SUBNET response are saved in the config
-	extractAndSaveSubnetCreds(alias, resp)
+	extractAndSaveSubnetCreds(i.alias, resp)
 
 	return resp, e
 }
 
-func subnetUploadReq(url, filename string) (*http.Request, error) {
+func (i *subnetFileUploader) updateParams() {
+	if i.params == nil {
+		i.params = url.Values{}
+	}
+
+	if i.filename == "" {
+		i.filename = filepath.Base(i.filePath)
+	}
+
+	i.autoCompress = i.autoCompress && !strings.HasSuffix(strings.ToLower(i.filePath), ".zst")
+	if i.autoCompress {
+		i.filename += ".zst"
+		i.params.Add("auto-compression", "zstd")
+	}
+
+	i.params.Add("filename", i.filename)
+	i.reqURL += "?" + i.params.Encode()
+}
+
+func (i *subnetFileUploader) subnetUploadReq() (*http.Request, error) {
+	i.updateParams()
+
 	r, w := io.Pipe()
 	mwriter := multipart.NewWriter(w)
 	contentType := mwriter.FormDataContentType()
@@ -744,21 +782,27 @@ func subnetUploadReq(url, filename string) (*http.Request, error) {
 			w.CloseWithError(e)
 		}()
 
-		part, e = mwriter.CreateFormFile("file", filepath.Base(filename))
+		part, e = mwriter.CreateFormFile("file", i.filename)
 		if e != nil {
 			return
 		}
 
-		file, e := os.Open(filename)
+		file, e := os.Open(i.filePath)
 		if e != nil {
 			return
 		}
 		defer file.Close()
 
-		_, e = io.Copy(part, file)
+		if i.autoCompress {
+			z, _ := zstd.NewWriter(part, zstd.WithEncoderConcurrency(2))
+			defer z.Close()
+			_, e = z.ReadFrom(file)
+		} else {
+			_, e = io.Copy(part, file)
+		}
 	}()
 
-	req, e := http.NewRequest(http.MethodPost, url, r)
+	req, e := http.NewRequest(http.MethodPost, i.reqURL, r)
 	if e != nil {
 		return nil, e
 	}

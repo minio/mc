@@ -55,6 +55,7 @@ var supportSubcommands = []cli.Command{
 	supportProfileCmd,
 	supportTopCmd,
 	supportProxyCmd,
+	supportUploadCmd,
 }
 
 var supportCmd = cli.Command{
