@@ -166,7 +166,6 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	})
 	if e != nil {
 		// Attempt an older API server might be old
-		//lint:ignore SA1019 Ignore the deprecation warnings
 		e = client.ServiceRestart(ctxt)
 	}
 	fatalIf(probe.NewError(e), "Unable to restart the server.")
