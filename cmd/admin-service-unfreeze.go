@@ -89,7 +89,6 @@ func mainAdminServiceUnfreeze(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Unfreeze the specified MinIO server
-	//lint:ignore SA1019 Ignore the deprecation warnings
 	fatalIf(probe.NewError(client.ServiceUnfreeze(globalContext)), "Unable to unfreeze the server.")
 
 	// Success..

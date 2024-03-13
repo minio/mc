@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
@@ -434,8 +435,15 @@ func getClusterRegInfo(admInfo madmin.InfoMessage, clusterName string) ClusterRe
 	noOfPools := 1
 	noOfDrives := 0
 	for _, srvr := range admInfo.Servers {
-		if srvr.PoolNumber > noOfPools {
-			noOfPools = srvr.PoolNumber
+		for _, poolNumber := range srvr.PoolNumbers {
+			if poolNumber > noOfPools {
+				noOfPools = poolNumber
+			}
+		}
+		if len(srvr.PoolNumbers) == 0 {
+			if srvr.PoolNumber != math.MaxInt && srvr.PoolNumber > noOfPools {
+				noOfPools = srvr.PoolNumber
+			}
 		}
 		noOfDrives += len(srvr.Disks)
 	}

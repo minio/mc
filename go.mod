@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/prom2json v1.3.3 // indirect
 	github.com/rjeczalik/notify v0.9.3
 	github.com/rs/xid v1.5.0
-	github.com/shirou/gopsutil/v3 v3.23.11
+	github.com/shirou/gopsutil/v3 v3.23.12
 	github.com/tidwall/gjson v1.17.0
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.21.0
@@ -45,7 +45,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.7.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
-	github.com/minio/madmin-go/v3 v3.0.41
+	github.com/minio/madmin-go/v3 v3.0.50-0.20240307075442-63b4fc3ac1fd
 	github.com/minio/pkg/v2 v2.0.7
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.4.1
