@@ -30,13 +30,12 @@ require (
 	github.com/prometheus/prom2json v1.3.3 // indirect
 	github.com/rjeczalik/notify v0.9.3
 	github.com/rs/xid v1.5.0
-	github.com/shirou/gopsutil/v3 v3.23.11
+	github.com/shirou/gopsutil/v3 v3.23.12
 	github.com/tidwall/gjson v1.17.0
-	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/net v0.19.0
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/net v0.21.0
 	golang.org/x/text v0.14.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
-	gopkg.in/h2non/filetype.v1 v1.0.5
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -46,14 +45,14 @@ require (
 	github.com/gdamore/tcell/v2 v2.7.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
-	github.com/minio/madmin-go/v3 v3.0.41
+	github.com/minio/madmin-go/v3 v3.0.50-0.20240307075442-63b4fc3ac1fd
 	github.com/minio/pkg/v2 v2.0.7
 	github.com/muesli/reflow v0.3.0
 	github.com/navidys/tvxwidgets v0.4.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rivo/tview v0.0.0-20231206124440-5f078138442e
 	github.com/vbauerster/mpb/v8 v8.7.1
-	golang.org/x/term v0.15.0
+	golang.org/x/term v0.18.0
 )
 
 require (
@@ -92,7 +91,7 @@ require (
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
-	github.com/lestrrat-go/jwx v1.2.28 // indirect
+	github.com/lestrrat-go/jwx v1.2.29 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20231016141302-07b5767bb0ed // indirect
@@ -125,9 +124,9 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.18.0
 	google.golang.org/genproto v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/grpc v1.60.1 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )

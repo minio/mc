@@ -205,7 +205,7 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey
 	if !globalAirgapped {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the health information
-		uploadURL := subnetUploadURL("health", filename)
+		uploadURL := subnetUploadURL("health")
 		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	}
 
@@ -228,7 +228,13 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey
 	fatalIf(probe.NewError(e), "Unable to save MinIO diagnostics report")
 
 	if !globalAirgapped {
-		_, e := uploadFileToSubnet(alias, filename, reqURL, headers)
+		_, e := (&subnetFileUploader{
+			alias:             alias,
+			filePath:          filename,
+			reqURL:            reqURL,
+			headers:           headers,
+			deleteAfterUpload: true,
+		}).uploadFileToSubnet()
 		fatalIf(probe.NewError(e), "Unable to upload MinIO diagnostics report to SUBNET portal")
 
 		printMsg(supportDiagMessage{})
