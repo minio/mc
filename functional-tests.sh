@@ -278,7 +278,7 @@ function test_rb()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket1}"
 
     # Test rb with --force and --dangerous to remove a site content
-    if [ "${COMPLETE_RB_TEST}" = "true" ]; then
+    if [ "${COMPLETE_RB_TEST}" == "true" ]; then
         assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
         assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket2}"
         assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
