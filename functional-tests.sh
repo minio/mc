@@ -1149,15 +1149,15 @@ function __init__()
     MC_CMD=( "${MC}" --config-dir "$MC_CONFIG_DIR" --quiet --no-color )
 
     if [ ! -e "$FILE_0_B" ]; then
-	base64 /dev/urandom | head -c 0 >"$FILE_0_B"
+	touch "$FILE_0_B"
     fi
 
     if [ ! -e "$FILE_1_MB" ]; then
-	base64 /dev/urandom | head -c 1048576 >"$FILE_1_MB"
+	base64 -i /dev/urandom | head -c 1048576 >"$FILE_1_MB"
     fi
 
     if [ ! -e "$FILE_65_MB" ]; then
-	base64 /dev/urandom | head -c 68157440 >"$FILE_65_MB"
+	base64 -i /dev/urandom | head -c 68157440 >"$FILE_65_MB"
     fi
 
     set -E
