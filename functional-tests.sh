@@ -65,7 +65,7 @@ if [ -z "${SERVER_ENDPOINT+x}" ]; then
 fi
 
 # If you want to run the complete site cleaning test, set this variable to true 
-COMPLETE_RB_TEST=false
+COMPLETE_RB_TEST=true
 
 WORK_DIR="$PWD"
 DATA_DIR="$MINT_DATA_DIR"
