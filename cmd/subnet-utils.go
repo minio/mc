@@ -431,7 +431,8 @@ func setSubnetLicense(alias, lic string) {
 	setSubnetConfig(alias, "license", lic)
 }
 
-func getClusterRegInfo(admInfo madmin.InfoMessage, clusterName string) ClusterRegistrationInfo {
+// GetClusterRegInfo - returns the cluster registration info
+func GetClusterRegInfo(admInfo madmin.InfoMessage, clusterName string) ClusterRegistrationInfo {
 	noOfPools := 1
 	noOfDrives := 0
 	for _, srvr := range admInfo.Servers {
@@ -596,7 +597,7 @@ func getSubnetAPIKeyUsingAuthHeaders(authHeaders map[string]string) (string, err
 }
 
 func getSubnetLicenseUsingAPIKey(alias, apiKey string) (string, error) {
-	regInfo := getClusterRegInfo(getAdminInfo(alias), alias)
+	regInfo := GetClusterRegInfo(getAdminInfo(alias), alias)
 	_, lic, e := registerClusterOnSubnet(regInfo, alias, apiKey)
 	return lic, e
 }
