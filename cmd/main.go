@@ -256,9 +256,6 @@ func migrate() {
 	// Migrate config files if any.
 	migrateConfig()
 
-	// Migrate session files if any.
-	migrateSession()
-
 	// Migrate shared urls if any.
 	migrateShare()
 }
@@ -273,11 +270,6 @@ func initMC() {
 		if !globalQuiet && !globalJSON {
 			console.Infoln("Configuration written to `" + mustGetMcConfigPath() + "`. Please update your access credentials.")
 		}
-	}
-
-	// Check if mc session directory exists.
-	if !isSessionDirExists() {
-		fatalIf(createSessionDir().Trace(), "Unable to create session config directory.")
 	}
 
 	// Check if mc share directory exists.

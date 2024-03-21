@@ -171,7 +171,7 @@ func doShareUploadURL(ctx context.Context, objectURL string, isRecursive bool, e
 		return err.Trace(objectURL)
 	}
 
-	printMsg(shareMesssage{
+	printMsg(shareMessage{
 		ObjectURL:   objectURL,
 		ShareURL:    curlCmd,
 		TimeLeft:    expiry,

@@ -57,7 +57,7 @@ var ilmRestoreCmd = cli.Command{
 	Action:       mainILMRestore,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(ilmRestoreFlags, ioFlags...), globalFlags...),
+	Flags:        append(append(ilmRestoreFlags, encCFlag), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -86,7 +86,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --recursive --versions myminio/mybucket/dir/
 
   5. Restore an SSE-C encrypted object.
-     {{.Prompt}} {{.HelpName}} --encrypt-key "myminio/mybucket/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" myminio/mybucket/myobject.txt
+     {{.Prompt}} {{.HelpName}} --enc-c "myminio/mybucket/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" myminio/mybucket/myobject.txt
 `,
 }
 
@@ -311,7 +311,7 @@ func mainILMRestore(cliCtx *cli.Context) (cErr error) {
 	includeVersions := cliCtx.Bool("versions")
 	days := cliCtx.Int("days")
 
-	encKeyDB, err := getEncKeys(cliCtx)
+	encKeyDB, err := validateAndCreateEncryptionKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	targetAlias, targetURL, _ := mustExpandAlias(aliasedURL)

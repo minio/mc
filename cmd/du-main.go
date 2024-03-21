@@ -62,7 +62,7 @@ var duCmd = cli.Command{
 	Action:       mainDu,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(duFlags, ioFlags...), globalFlags...),
+	Flags:        append(duFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -72,8 +72,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 EXAMPLES:
   1. Summarize disk usage of 'jazz-songs' bucket recursively.
@@ -121,7 +119,7 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int, encKeyDB map[string][]prefixSSEPair) (sz, objs int64, err error) {
+func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool, depth int) (sz, objs int64, err error) {
 	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
 
 	if !strings.HasSuffix(targetURL, "/") {
@@ -176,7 +174,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			used, n, err := du(ctx, subDirAlias, timeRef, withVersions, depth, encKeyDB)
+			used, n, err := du(ctx, subDirAlias, timeRef, withVersions, depth)
 			if err != nil {
 				return 0, 0, err
 			}
@@ -223,10 +221,6 @@ func mainDu(cliCtx *cli.Context) error {
 	ctx, cancelRm := context.WithCancel(globalContext)
 	defer cancelRm()
 
-	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(cliCtx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
 	// du specific flags.
 	depth := cliCtx.Int("depth")
 	if depth == 0 {
@@ -250,7 +244,7 @@ func mainDu(cliCtx *cli.Context) error {
 			fatalIf(errInvalidArgument().Trace(urlStr), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by 'du' command.", urlStr))
 		}
 
-		if _, _, err := du(ctx, urlStr, timeRef, withVersions, depth, encKeyDB); duErr == nil {
+		if _, _, err := du(ctx, urlStr, timeRef, withVersions, depth); duErr == nil {
 			duErr = err
 		}
 	}
