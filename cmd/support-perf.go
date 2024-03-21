@@ -480,7 +480,7 @@ func execSupportPerf(ctx *cli.Context, aliasedURL, perfType string) {
 		resultFileNamePfx := fmt.Sprintf("%s-perf_%s", filepath.Clean(alias), UTCNow().Format("20060102150405"))
 		resultFileName := resultFileNamePfx + ".json"
 
-		regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), alias)
+		regInfo := GetClusterRegInfo(getAdminInfo(aliasedURL), alias)
 		tmpFileName, e := zipPerfResult(convertPerfResults(results), resultFileName, regInfo)
 		fatalIf(probe.NewError(e), "Unable to generate zip file from performance results")
 

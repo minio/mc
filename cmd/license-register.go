@@ -232,7 +232,7 @@ func mainLicenseRegister(ctx *cli.Context) error {
 		}
 	}
 
-	regInfo := getClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
+	regInfo := GetClusterRegInfo(getAdminInfo(aliasedURL), clusterName)
 
 	lrm := licRegisterMessage{Status: "success", Alias: alias}
 	if !globalAirgapped {
