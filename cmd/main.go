@@ -352,6 +352,8 @@ func installAutoCompletion() {
 }
 
 func registerBefore(ctx *cli.Context) error {
+	deprecatedFlagsWarning(ctx)
+
 	if ctx.IsSet("config-dir") {
 		// Set the config directory.
 		setMcConfigDir(ctx.String("config-dir"))
