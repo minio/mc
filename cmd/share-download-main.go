@@ -187,7 +187,7 @@ func doShareDownloadURL(ctx context.Context, targetURL, versionID string, isRecu
 		// Make new entries to shareDB.
 		contentType := "" // Not useful for download shares.
 		shareDB.Set(objectURL, shareURL, expiry, contentType)
-		printMsg(shareMesssage{
+		printMsg(shareMessage{
 			ObjectURL:   objectURL,
 			ShareURL:    shareURL,
 			TimeLeft:    expiry,
@@ -205,7 +205,7 @@ func mainShareDownload(cliCtx *cli.Context) error {
 	defer cancelShareDownload()
 
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(cliCtx)
+	encKeyDB, err := validateAndCreateEncryptionKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check input arguments.

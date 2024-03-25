@@ -64,7 +64,7 @@ var catCmd = cli.Command{
 	Action:       mainCat,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(catFlags, ioFlags...), globalFlags...),
+	Flags:        append(append(catFlags, encCFlag), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -74,8 +74,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
   1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
@@ -88,11 +86,11 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} part.* > complete.img
 
   4. Save an encrypted object from Amazon S3 cloud storage to a local file.
-     {{.Prompt}} {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
+     {{.Prompt}} {{.HelpName}} --enc-c "play/my-bucket/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
 
   5. Display the content of encrypted object. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
-     {{.Prompt}} {{.HelpName}} --encrypt-key "play/my-bucket/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  play/my-bucket/my-object
+     {{.Prompt}} {{.HelpName}} --enc-c "play/my-bucket/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" play/my-bucket/my-object
 
   6. Display the content of an object 10 days earlier
      {{.Prompt}} {{.HelpName}} --rewind 10d play/my-bucket/my-object
@@ -323,14 +321,11 @@ func mainCat(cliCtx *cli.Context) error {
 	ctx, cancelCat := context.WithCancel(globalContext)
 	defer cancelCat()
 
-	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(cliCtx)
+	encKeyDB, err := validateAndCreateEncryptionKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
 	o := parseCatSyntax(cliCtx)
-
-	// Set command flags from context.
 
 	// handle std input data.
 	if o.stdinMode {

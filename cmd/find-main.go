@@ -240,7 +240,7 @@ func mainFind(cliCtx *cli.Context) error {
 	console.SetColor("FindExecErr", color.New(color.FgRed, color.Italic, color.Bold))
 
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(cliCtx)
+	encKeyDB, err := validateAndCreateEncryptionKeys(cliCtx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	checkFindSyntax(ctx, cliCtx, encKeyDB)

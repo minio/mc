@@ -12,7 +12,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.5.0
 	github.com/inconshreveable/mousetrap v1.1.0
-	github.com/json-iterator/go v1.1.12
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.4
 	github.com/mattn/go-ieproxy v0.0.11
 	github.com/mattn/go-isatty v0.0.20
@@ -61,6 +61,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
+	github.com/lestrrat-go/jwx v1.2.27 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/minio/mux v1.9.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
@@ -91,7 +92,6 @@ require (
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
-	github.com/lestrrat-go/jwx v1.2.29 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20231016141302-07b5767bb0ed // indirect
