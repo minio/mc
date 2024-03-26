@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	gojson "encoding/json"
 	"errors"
@@ -123,26 +124,13 @@ func checkSupportDiagSyntax(ctx *cli.Context) {
 
 // compress and tar MinIO diagnostics output
 func tarGZ(healthInfo interface{}, version, filename string) error {
-	f, e := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o666)
+	data, e := TarGZHealthInfo(healthInfo, version)
 	if e != nil {
 		return e
 	}
-	defer f.Close()
 
-	gzWriter := gzip.NewWriter(f)
-	defer gzWriter.Close()
-
-	enc := gojson.NewEncoder(gzWriter)
-
-	header := struct {
-		Version string `json:"version"`
-	}{Version: version}
-
-	if e := enc.Encode(header); e != nil {
-		return e
-	}
-
-	if e := enc.Encode(healthInfo); e != nil {
+	e = os.WriteFile(filename, data, 0o666)
+	if e != nil {
 		return e
 	}
 
@@ -159,6 +147,32 @@ func tarGZ(healthInfo interface{}, version, filename string) error {
 	}
 
 	return nil
+}
+
+// TarGZHealthInfo - compress and tar MinIO diagnostics output
+func TarGZHealthInfo(healthInfo interface{}, version string) ([]byte, error) {
+	buffer := bytes.NewBuffer(nil)
+	gzWriter := gzip.NewWriter(buffer)
+
+	enc := gojson.NewEncoder(gzWriter)
+
+	header := struct {
+		Version string `json:"version"`
+	}{Version: version}
+
+	if e := enc.Encode(header); e != nil {
+		return nil, e
+	}
+
+	if e := enc.Encode(healthInfo); e != nil {
+		return nil, e
+	}
+
+	if e := gzWriter.Close(); e != nil {
+		return nil, e
+	}
+
+	return buffer.Bytes(), nil
 }
 
 func infoText(s string) string {
@@ -205,7 +219,7 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey
 	if !globalAirgapped {
 		// Retrieve subnet credentials (login/license) beforehand as
 		// it can take a long time to fetch the health information
-		uploadURL := subnetUploadURL("health")
+		uploadURL := SubnetUploadURL("health")
 		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
 	}
 
@@ -228,13 +242,13 @@ func execSupportDiag(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey
 	fatalIf(probe.NewError(e), "Unable to save MinIO diagnostics report")
 
 	if !globalAirgapped {
-		_, e := (&subnetFileUploader{
+		_, e = (&SubnetFileUploader{
 			alias:             alias,
-			filePath:          filename,
-			reqURL:            reqURL,
-			headers:           headers,
-			deleteAfterUpload: true,
-		}).uploadFileToSubnet()
+			FilePath:          filename,
+			ReqURL:            reqURL,
+			Headers:           headers,
+			DeleteAfterUpload: true,
+		}).UploadFileToSubnet()
 		fatalIf(probe.NewError(e), "Unable to upload MinIO diagnostics report to SUBNET portal")
 
 		printMsg(supportDiagMessage{})
