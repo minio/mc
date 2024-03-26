@@ -64,6 +64,9 @@ if [ -z "${SERVER_ENDPOINT+x}" ]; then
     ENABLE_HTTPS=1
 fi
 
+# If you want to run the complete site cleaning test, set this variable to true 
+COMPLETE_RB_TEST=true
+
 WORK_DIR="$PWD"
 DATA_DIR="$MINT_DATA_DIR"
 if [ -z "$MINT_MODE" ]; then
@@ -275,13 +278,15 @@ function test_rb()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket1}"
 
     # Test rb with --force and --dangerous to remove a site content
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket2}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket2}/${object_name}"
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force --dangerous "${SERVER_ALIAS}"
-
+    if [ "${COMPLETE_RB_TEST}" == "true" ]; then
+        assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket1}"
+        assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket2}"
+        assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket1}/${object_name}"
+        assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket2}/${object_name}"
+        assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/"
+        assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force --dangerous "${SERVER_ALIAS}"
+    fi
+    
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
