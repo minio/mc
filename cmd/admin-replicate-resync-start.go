@@ -87,15 +87,20 @@ func mainAdminReplicateResyncStart(ctx *cli.Context) error {
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
+
 	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
+	client, err := newAdminClient(args.Get(0))
 	fatalIf(err, "Unable to initialize admin connection.")
 	info, e := client.SiteReplicationInfo(globalContext)
 	fatalIf(probe.NewError(e), "Unable to fetch site replication info.")
+
+	peerClient := getClient(args.Get(1))
+	peerAdmInfo, e := peerClient.ServerInfo(globalContext)
+	fatalIf(probe.NewError(e), "Unable to fetch server info of the peer.")
+
 	var peer madmin.PeerInfo
 	for _, site := range info.Sites {
-		if args[1] == site.Name {
+		if peerAdmInfo.DeploymentID == site.DeploymentID {
 			peer = site
 		}
 	}
