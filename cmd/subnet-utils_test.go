@@ -23,7 +23,7 @@ import (
 )
 
 func TestSubnetBaseURL(t *testing.T) {
-	sbu := subnetBaseURL()
+	sbu := SubnetBaseURL()
 	u, err := url.ParseRequestURI(sbu)
 	if err != nil {
 		t.Fatal(err)
