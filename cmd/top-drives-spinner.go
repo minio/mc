@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"cmp"
 	"fmt"
 	"sort"
 	"strings"
@@ -200,37 +201,26 @@ func (s drivesSorter) String() string {
 	return "unknown"
 }
 
-func cmp[V float64 | uint64 | string](v1, v2 V) int {
-	switch {
-	case v1 < v2:
-		return -1
-	case v1 > v2:
-		return 1
-	default:
-		return 0
-	}
-}
-
 func sortDriveIOStat(sortBy drivesSorter, asc bool, data []driveIOStat) {
 	sort.SliceStable(data, func(i, j int) bool {
 		c := 0
 		switch sortBy {
 		case sortByName:
-			c = cmp(data[i].endpoint, data[j].endpoint)
+			c = cmp.Compare(data[i].endpoint, data[j].endpoint)
 		case sortByUsed:
-			c = cmp(data[i].used, data[j].used)
+			c = cmp.Compare(data[i].used, data[j].used)
 		case sortByAwait:
-			c = cmp(data[i].await, data[j].await)
+			c = cmp.Compare(data[i].await, data[j].await)
 		case sortByUtil:
-			c = cmp(data[i].util, data[j].util)
+			c = cmp.Compare(data[i].util, data[j].util)
 		case sortByRead:
-			c = cmp(data[i].readMBs, data[j].readMBs)
+			c = cmp.Compare(data[i].readMBs, data[j].readMBs)
 		case sortByWrite:
-			c = cmp(data[i].writeMBs, data[j].writeMBs)
+			c = cmp.Compare(data[i].writeMBs, data[j].writeMBs)
 		case sortByDiscard:
-			c = cmp(data[i].discardMBs, data[j].discardMBs)
+			c = cmp.Compare(data[i].discardMBs, data[j].discardMBs)
 		case sortByTps:
-			c = cmp(data[i].tps, data[j].tps)
+			c = cmp.Compare(data[i].tps, data[j].tps)
 		}
 
 		less := c < 0
