@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"runtime/debug"
@@ -62,6 +63,10 @@ var pipeFlags = []cli.Flag{
 		Usage:  "increase the pipe buffer size to a custom value",
 		Hidden: true,
 	},
+	cli.BoolFlag{
+		Name:  "append,ap",
+		Usage: "append content to target object",
+	},
 }
 
 // Display contents of a file.
@@ -95,18 +100,34 @@ EXAMPLES:
   3. Copy an ISO image to an object on Amazon S3 cloud storage.
      {{.Prompt}} cat debian-8.2.iso | {{.HelpName}} s3/opensource-isos/gnuos.iso
 
-  4. Stream MySQL database dump to Amazon S3 directly.
+  4. Write contents of stdin append to an object on Amazon S3 cloud storage.
+     {{.Prompt}} cat new.txt | {{.HelpName}} --append s3/bucket/old.txt
+
+  5. Stream MySQL database dump to Amazon S3 directly.
      {{.Prompt}} mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 
-  5. Write contents of stdin to an object on Amazon S3 cloud storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
+  6. Write contents of stdin to an object on Amazon S3 cloud storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
      {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY s3/personalbuck/meeting-notes.txt
 
-  6. Copy to MinIO cloud storage with specified metadata, separated by ";"
+  7. Copy to MinIO cloud storage with specified metadata, separated by ";"
       {{.Prompt}} cat music.mp3 | {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000;Artist=Unknown" play/mybucket/music.mp3
 
-  7. Set tags to the uploaded objects
+  8. Set tags to the uploaded objects
       {{.Prompt}} tar cvf - . | {{.HelpName}} --tags "category=prod&type=backup" play/mybucket/backup.tar
 `,
+}
+
+func appendStdinToResource(ctx context.Context, targetURL string, encKeyDB map[string][]prefixSSEPair, desReader io.Reader) io.Reader {
+	var sourceReader io.Reader
+	var err *probe.Error
+	gopts := GetOptions{VersionID: "", Zip: false, RangeStart: 0}
+	if sourceReader, err = getSourceStreamFromURL(ctx, targetURL, encKeyDB, getSourceOpts{
+		GetOptions: gopts,
+		preserve:   false,
+	}); err != nil {
+		return desReader
+	}
+	return io.MultiReader(sourceReader, desReader)
 }
 
 func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPair, meta map[string]string, quiet bool) *probe.Error {
@@ -158,8 +179,16 @@ func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPai
 	} else {
 		reader = os.Stdin
 	}
-
-	_, err := putTargetStreamWithURL(targetURL, reader, -1, opts)
+	var targetReader io.Reader
+	// append mode
+	if ctx.Bool("append") {
+		ctx, cancelGet := context.WithCancel(globalContext)
+		defer cancelGet()
+		targetReader = appendStdinToResource(ctx, targetURL, encKeyDB, reader)
+	} else {
+		targetReader = reader
+	}
+	_, err := putTargetStreamWithURL(targetURL, targetReader, -1, opts)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
