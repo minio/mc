@@ -18,12 +18,16 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
+	"cmp"
+	"fmt"
+	"slices"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	madmin "github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
 )
 
 var adminTierListCmd = cli.Command{
@@ -62,38 +66,6 @@ func checkAdminTierListSyntax(ctx *cli.Context) {
 	}
 }
 
-type tierLSRowHdr int
-
-const (
-	tierLSNameHdr tierLSRowHdr = iota
-	tierLSTypeHdr
-	tierLSEndpointHdr
-	tierLSBucketHdr
-	tierLSPrefixHdr
-	tierLSRegionHdr
-	tierLSStorageClassHdr
-)
-
-var tierLSRowNames = []string{
-	"Name",
-	"Type",
-	"Endpoint",
-	"Bucket",
-	"Prefix",
-	"Region",
-	"Storage-Class",
-}
-
-var tierLSColorScheme = []*color.Color{
-	color.New(color.FgYellow),
-	color.New(color.FgCyan),
-	color.New(color.FgGreen),
-	color.New(color.FgHiWhite),
-	color.New(color.FgHiWhite),
-	color.New(color.FgHiWhite),
-	color.New(color.FgCyan),
-}
-
 func storageClass(t *madmin.TierConfig) string {
 	switch t.Type {
 	case madmin.S3:
@@ -107,47 +79,6 @@ func storageClass(t *madmin.TierConfig) string {
 	}
 }
 
-type tierLS []*madmin.TierConfig
-
-func (t tierLS) NumRows() int {
-	return len(([]*madmin.TierConfig)(t))
-}
-
-func (t tierLS) NumCols() int {
-	return len(tierLSRowNames)
-}
-
-func (t tierLS) EmptyMessage() string {
-	return "No remote tier has been configured"
-}
-
-func (t tierLS) ToRow(i int, ls []int) []string {
-	row := make([]string, len(tierLSRowNames))
-	if i == -1 {
-		copy(row, tierLSRowNames)
-	} else {
-		tc := t[i]
-		row[tierLSNameHdr] = tc.Name
-		row[tierLSTypeHdr] = tc.Type.String()
-		row[tierLSEndpointHdr] = tc.Endpoint()
-		row[tierLSBucketHdr] = tc.Bucket()
-		row[tierLSPrefixHdr] = tc.Prefix()
-		row[tierLSRegionHdr] = tc.Region()
-		row[tierLSStorageClassHdr] = storageClass(tc)
-
-	}
-
-	// update ls to accommodate this row's values
-	for i := range tierLSRowNames {
-		if ls[i] < len(row[i]) {
-			ls[i] = len(row[i])
-		}
-	}
-	return row
-}
-
-var _ tabulator = (tierLS)(nil)
-
 type tierListMessage struct {
 	Status  string               `json:"status"`
 	Context *cli.Context         `json:"-"`
@@ -156,7 +87,7 @@ type tierListMessage struct {
 
 // String method returns a tabular listing of remote tier configurations.
 func (msg *tierListMessage) String() string {
-	return toTable(tierLS(msg.Tiers))
+	return "" // Not used in rendering; only to satisfy msg interface
 }
 
 // JSON method returns JSON encoding of msg.
@@ -168,10 +99,6 @@ func (msg *tierListMessage) JSON() string {
 func mainAdminTierList(ctx *cli.Context) error {
 	checkAdminTierListSyntax(ctx)
 
-	for i, color := range tierLSColorScheme {
-		console.SetColor(tierLSRowNames[i], color)
-	}
-
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
@@ -182,10 +109,82 @@ func mainAdminTierList(ctx *cli.Context) error {
 	tiers, e := client.ListTiers(globalContext)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list configured remote tier targets")
 
-	printMsg(&tierListMessage{
-		Status:  "success",
-		Context: ctx,
-		Tiers:   tiers,
+	if globalJSON {
+		printMsg(&tierListMessage{
+			Status:  "success",
+			Context: ctx,
+			Tiers:   tiers,
+		})
+		return nil
+	}
+
+	tableData := tierTable(tiers)
+	slices.SortFunc(tableData, func(a, b *madmin.TierConfig) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
+	tbl := table.New().
+		Border(lipgloss.NormalBorder()).
+		Headers(tableData.Headers()...).
+		StyleFunc(func(row, _ int) lipgloss.Style {
+			switch {
+			case row == 0:
+				return lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
+			case row%2 == 0:
+				return lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Align(lipgloss.Center)
+			default:
+				return lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Align(lipgloss.Center)
+			}
+		}).
+		Data(tableData)
+	fmt.Println(tbl)
 	return nil
+}
+
+type tierTable []*madmin.TierConfig
+
+var _ table.Data = tierTable(nil)
+
+func (tt tierTable) Headers() []string {
+	return []string{
+		"Name",
+		"Type",
+		"Endpoint",
+		"Bucket",
+		"Prefix",
+		"Region",
+		"Storage-Class",
+	}
+}
+
+func (tt tierTable) At(row, col int) string {
+	tc := []*madmin.TierConfig(tt)
+	cell := ""
+	switch col {
+	case 0:
+		cell = tc[row].Name
+	case 1:
+		cell = tc[row].Type.String()
+	case 2:
+		cell = tc[row].Endpoint()
+	case 3:
+		cell = tc[row].Bucket()
+	case 4:
+		cell = tc[row].Prefix()
+	case 5:
+		cell = tc[row].Region()
+	case 6:
+		cell = storageClass(tc[row])
+	}
+	if cell == "" {
+		return "-"
+	}
+	return cell
+}
+
+func (tt tierTable) Rows() int {
+	return len(tt)
+}
+
+func (tt tierTable) Columns() int {
+	return len(tt.Headers())
 }
