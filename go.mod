@@ -42,15 +42,12 @@ require (
 require (
 	github.com/charmbracelet/bubbles v0.17.1
 	github.com/charmbracelet/lipgloss v0.9.1
-	github.com/gdamore/tcell/v2 v2.7.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
 	github.com/minio/madmin-go/v3 v3.0.50
 	github.com/minio/pkg/v2 v2.0.7
 	github.com/muesli/reflow v0.3.0
-	github.com/navidys/tvxwidgets v0.4.1
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/rivo/tview v0.0.0-20231206124440-5f078138442e
 	github.com/vbauerster/mpb/v8 v8.7.1
 	golang.org/x/term v0.18.0
 )
@@ -79,7 +76,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
