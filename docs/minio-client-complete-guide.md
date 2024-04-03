@@ -1029,6 +1029,7 @@ USAGE:
 FLAGS:
   --encrypt value               encrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --append, -ap                 Append contents of stdin to an existing object on Amazon S3 cloud storage.
   --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
@@ -1041,6 +1042,13 @@ ENVIRONMENT VARIABLES:
 ```sh
 mysqldump -u root -p ******* accountsdb | mc pipe s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 ```
+
+*Example: Append contents of stdin to an existing object on Amazon S3 cloud storage.*
+
+```sh
+cat new.txt| mc pipe --append s3/bucket/old.txt
+```
+Notice: append works by reading back the existing object.
 
 
 <a name="cp"></a>
