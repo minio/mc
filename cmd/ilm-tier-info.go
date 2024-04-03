@@ -18,17 +18,16 @@
 package cmd
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 	"github.com/dustin/go-humanize"
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
-	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/console"
-	"github.com/rivo/tview"
 )
 
 var adminTierInfoCmd = cli.Command{
@@ -63,53 +62,56 @@ func checkAdminTierInfoSyntax(ctx *cli.Context) {
 	if argsNr < 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
+	if argsNr == 2 && globalJSON {
+		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
+			"Incorrect number of arguments for tier-info subcommand with json output.")
+	}
 	if argsNr > 2 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for tier-info subcommand.")
 	}
 }
 
-type tierInfoRowHdr int
-
-const (
-	tierInfoNameHdr tierInfoRowHdr = iota
-	tierInfoAPIHdr
-	tierInfoTypeHdr
-	tierInfoUsageHdr
-	tierInfoObjectsHdr
-	tierInfoVersionsHdr
-)
-
-var tierInfoRowNames = []string{
-	"Tier Name",
-	"API",
-	"Type",
-	"Usage",
-	"Objects",
-	"Versions",
-}
-
-var tierInfoColorScheme = []*color.Color{
-	color.New(color.FgYellow),
-	color.New(color.FgCyan),
-	color.New(color.FgCyan),
-	color.New(color.FgHiWhite),
-	color.New(color.FgHiWhite),
-	color.New(color.FgHiWhite),
-}
-
 type tierInfos []madmin.TierInfo
 
-func (t tierInfos) NumRows() int {
-	return len([]madmin.TierInfo(t))
+var _ table.Data = tierInfos(nil)
+
+func (t tierInfos) At(row, col int) string {
+	cell := "-"
+	switch col {
+	case 0:
+		cell = t[row].Name
+	case 1:
+		cell = t[row].Type
+	case 2:
+		cell = tierInfoType(t[row].Type)
+	case 3:
+		cell = humanize.IBytes(t[row].Stats.TotalSize)
+	case 4:
+		cell = strconv.Itoa(t[row].Stats.NumObjects)
+	case 5:
+		cell = strconv.Itoa(t[row].Stats.NumVersions)
+	}
+	return cell
 }
 
-func (t tierInfos) NumCols() int {
-	return len(tierInfoRowNames)
+func (t tierInfos) Rows() int {
+	return len(t)
 }
 
-func (t tierInfos) EmptyMessage() string {
-	return "No remote tiers configured."
+func (t tierInfos) Columns() int {
+	return len(t.Headers())
+}
+
+func (t tierInfos) Headers() []string {
+	return []string{
+		"Tier Name",
+		"API",
+		"Type",
+		"Usage",
+		"Objects",
+		"Versions",
+	}
 }
 
 func (t tierInfos) MarshalJSON() ([]byte, error) {
@@ -140,33 +142,11 @@ func tierInfoType(tierType string) string {
 	return "warm"
 }
 
-func (t tierInfos) ToRow(i int, ls []int) []string {
-	row := make([]string, len(tierInfoRowNames))
-	if i == -1 {
-		copy(row, tierInfoRowNames)
-	} else {
-		tierInfo := t[i]
-		row[tierInfoNameHdr] = tierInfo.Name
-		row[tierInfoAPIHdr] = tierInfo.Type
-		row[tierInfoTypeHdr] = tierInfoType(tierInfo.Type)
-		row[tierInfoUsageHdr] = humanize.IBytes(tierInfo.Stats.TotalSize)
-		row[tierInfoObjectsHdr] = strconv.Itoa(tierInfo.Stats.NumObjects)
-		row[tierInfoVersionsHdr] = strconv.Itoa(tierInfo.Stats.NumVersions)
-	}
-
-	// update ls to accommodate this row's values
-	for i := range tierInfoRowNames {
-		if ls[i] < len(row[i]) {
-			ls[i] = len(row[i])
-		}
-	}
-	return row
-}
-
 func mainAdminTierInfo(ctx *cli.Context) error {
 	checkAdminTierInfoSyntax(ctx)
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	tier := args.Get(1)
 
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
@@ -188,34 +168,55 @@ func mainAdminTierInfo(ctx *cli.Context) error {
 		}
 	}
 
-	for i, color := range tierInfoColorScheme {
-		console.SetColor(tierInfoRowNames[i], color)
-	}
-
 	if globalJSON {
 		printMsg(&msg)
 		return nil
 	}
 
-	layout := tview.NewFlex().SetDirection(tview.FlexRow)
-	if tier := args.Get(1); tier != "" {
-		if obc, vbc := tierInfos(tInfos).Barcharts(tier); obc != nil && vbc != nil {
-			layout.AddItem(obc, 0, 1, false)
-			layout.AddItem(vbc, 0, 1, false)
+	var (
+		HeaderStyle  = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
+		EvenRowStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Align(lipgloss.Center)
+		OddRowStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Align(lipgloss.Center)
+		NumbersStyle = lipgloss.NewStyle().Align(lipgloss.Right)
+	)
+	tableData := tierInfos(tInfos)
+	filteredData := table.NewFilter(tableData).
+		Filter(func(row int) bool {
+			if tier == "" {
+				return true
+			}
+			return tableData.At(row, 0) == tier
+		})
+	tbl := table.New().
+		Border(lipgloss.NormalBorder()).
+		Headers(tableData.Headers()...).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			var style lipgloss.Style
+			switch {
+			case row == 0:
+				return HeaderStyle
+			case row%2 == 0:
+				style = EvenRowStyle
+			default:
+				style = OddRowStyle
+			}
+			switch col {
+			case 3, 4, 5:
+				style = NumbersStyle.Foreground(style.GetForeground())
+			}
+			return style
+		}).
+		Data(filteredData)
+
+	if filteredData.Rows() == 0 {
+		if tier != "" {
+			console.Printf("No remote tiers' name match %s\n", tier)
+		} else {
+			console.Println("No remote tiers configured")
 		}
-	} else {
-		table := tierInfos(tInfos).TableUI()
-		layout.AddItem(table, 0, 1, false)
+		return nil
 	}
-
-	app := tview.NewApplication().
-		SetRoot(layout, true).
-		SetFocus(layout)
-
-	app.SetInputCapture(quitOnKeys(app))
-	if err := app.Run(); err != nil {
-		panic(err)
-	}
+	fmt.Println(tbl)
 
 	return nil
 }
@@ -229,10 +230,7 @@ type tierInfoMessage struct {
 
 // String method returns a tabular listing of remote tier configurations.
 func (msg *tierInfoMessage) String() string {
-	if msg.Status == "error" {
-		fatal(probe.NewError(errors.New(msg.Error)), "Unable to get tier statistics")
-	}
-	return toTable(msg.TierInfos)
+	return "" // Not used, present to satisfy msg interface
 }
 
 // JSON method returns JSON encoding of msg.
