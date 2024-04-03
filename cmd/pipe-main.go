@@ -100,7 +100,7 @@ EXAMPLES:
   3. Copy an ISO image to an object on Amazon S3 cloud storage.
      {{.Prompt}} cat debian-8.2.iso | {{.HelpName}} s3/opensource-isos/gnuos.iso
 
-  4. Write contents of stdin append to an object on Amazon S3 cloud storage.
+  4. Append contents of stdin to an existing object on Amazon S3 cloud storage.
      {{.Prompt}} cat new.txt | {{.HelpName}} --append s3/bucket/old.txt
 
   5. Stream MySQL database dump to Amazon S3 directly.
