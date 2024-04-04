@@ -18,21 +18,15 @@
 package cmd
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"net/url"
 	"os"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/pkg/v2/console"
 	"github.com/minio/pkg/v2/policy"
-	"golang.org/x/term"
 )
 
 var idpLdapAccesskeyCreateFlags = []cli.Flag{
@@ -65,8 +59,9 @@ var idpLdapAccesskeyCreateFlags = []cli.Flag{
 		Usage: "expiry date for the access key",
 	},
 	cli.BoolFlag{
-		Name:  "login",
-		Usage: "log in using ldap credentials to generate access key par for future use",
+		Name:   "login",
+		Usage:  "log in using ldap credentials to generate access key pair for future use",
+		Hidden: true,
 	},
 }
 
@@ -90,13 +85,11 @@ EXAMPLES:
   1. Create a new access key pair with the same policy as the authenticated user
      {{.Prompt}} {{.HelpName}} local/
   2. Create a new access key pair with custom access key and secret key
-	 {{.Prompt}} {{.HelpName}} local/ --access-key myaccesskey --secret-key mysecretkey
+     {{.Prompt}} {{.HelpName}} local/ --access-key myaccesskey --secret-key mysecretkey
   4. Create a new access key pair for user with username "james" that expires in 1 day
-	 {{.Prompt}} {{.HelpName}} james --expiry-duration 24h
+     {{.Prompt}} {{.HelpName}} local/ james --expiry-duration 24h
   5. Create a new access key pair for authenticated user that expires on 2021-01-01
-	 {{.Prompt}} {{.HelpName}} --expiry 2021-01-01
-  6. Create a new access key pair for minio.example.com by logging in with LDAP credentials
-	 {{.Prompt}} {{.HelpName}} --login minio.example.com
+     {{.Prompt}} {{.HelpName}} --expiry 2021-01-01
 	`,
 }
 
@@ -109,7 +102,32 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 	targetUser := args.Get(1)
 
-	login := ctx.Bool("login")
+	if ctx.Bool("login") {
+		deprecatedError("mc idp ldap accesskey create-with-login")
+	}
+
+	opts := accessKeyCreateOpts(ctx, targetUser)
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err, "Unable to initialize admin connection.")
+
+	res, e := client.AddServiceAccountLDAP(globalContext, opts)
+	fatalIf(probe.NewError(e), "Unable to add service account.")
+
+	m := ldapAccesskeyMessage{
+		op:          "create",
+		Status:      "success",
+		AccessKey:   res.AccessKey,
+		SecretKey:   res.SecretKey,
+		Expiration:  &res.Expiration,
+		Name:        opts.Name,
+		Description: opts.Description,
+	}
+	printMsg(m)
+
+	return nil
+}
+
+func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceAccountReq {
 	accessVal := ctx.String("access-key")
 	secretVal := ctx.String("secret-key")
 	name := ctx.String("name")
@@ -118,6 +136,7 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 
 	expDurVal := ctx.Duration("expiry-duration")
 	expVal := ctx.String("expiry")
+
 	if expVal != "" && expDurVal != 0 {
 		e := fmt.Errorf("Only one of --expiry or --expiry-duration can be specified")
 		fatalIf(probe.NewError(e), "Invalid flags.")
@@ -163,28 +182,6 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 		}
 	}
 
-	var client *madmin.AdminClient
-
-	// If login flag is set, use LDAP credentials to generate access key pair
-	if login {
-		if targetUser != "" {
-			fatalIf(errInvalidArgument().Trace(targetUser), "login flag cannot be used with a target user")
-		}
-		isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
-		if !isTerminal {
-			e := fmt.Errorf("login flag cannot be used with non-interactive terminal")
-			fatalIf(probe.NewError(e), "Invalid flags.")
-		}
-
-		// For login, aliasedURL is not aliased, but the actual server URL
-		client = loginLDAPAccesskey(aliasedURL)
-	} else {
-		var err *probe.Error
-		// If login flag is not set, continue normally
-		client, err = newAdminClient(aliasedURL)
-		fatalIf(err, "Unable to initialize admin connection.")
-	}
-
 	accessKey, secretKey, e := generateCredentials()
 	fatalIf(probe.NewError(e), "Unable to generate credentials.")
 
@@ -195,57 +192,13 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	if secretVal != "" {
 		secretKey = secretVal
 	}
-
-	res, e := client.AddServiceAccountLDAP(globalContext,
-		madmin.AddServiceAccountReq{
-			Policy:      policyBytes,
-			TargetUser:  targetUser,
-			AccessKey:   accessKey,
-			SecretKey:   secretKey,
-			Name:        name,
-			Description: description,
-			Expiration:  &exp,
-		})
-	fatalIf(probe.NewError(e), "Unable to add service account.")
-
-	m := ldapAccesskeyMessage{
-		op:         "create",
-		Status:     "success",
-		AccessKey:  res.AccessKey,
-		SecretKey:  res.SecretKey,
-		Expiration: &res.Expiration,
+	return madmin.AddServiceAccountReq{
+		Policy:      policyBytes,
+		TargetUser:  targetUser,
+		AccessKey:   accessKey,
+		SecretKey:   secretKey,
+		Name:        name,
+		Description: description,
+		Expiration:  &exp,
 	}
-	printMsg(m)
-
-	return nil
-}
-
-func loginLDAPAccesskey(URL string) *madmin.AdminClient {
-	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Username: "))
-	value, _, e := reader.ReadLine()
-	fatalIf(probe.NewError(e), "Unable to read username")
-	username := string(value)
-
-	fmt.Printf("%s", console.Colorize(cred, "Enter Password: "))
-	bytePassword, e := term.ReadPassword(int(os.Stdin.Fd()))
-	fatalIf(probe.NewError(e), "Unable to read password")
-	fmt.Printf("\n")
-	password := string(bytePassword)
-
-	ldapID, e := credentials.NewLDAPIdentity(URL, username, password)
-	fatalIf(probe.NewError(e), "Unable to initialize LDAP identity.")
-
-	u, e := url.Parse(URL)
-	fatalIf(probe.NewError(e), "Unable to parse server URL.")
-
-	client, e := madmin.NewWithOptions(u.Host, &madmin.Options{
-		Creds:  ldapID,
-		Secure: u.Scheme == "https",
-	})
-	fatalIf(probe.NewError(e), "Unable to initialize admin connection.")
-
-	return client
 }
