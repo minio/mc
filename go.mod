@@ -1,6 +1,8 @@
 module github.com/minio/mc
 
-go 1.19
+go 1.21
+
+toolchain go1.22.0
 
 require (
 	github.com/charmbracelet/bubbletea v0.25.0
@@ -10,17 +12,17 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/json-iterator/go v1.1.12
-	github.com/klauspost/compress v1.17.4
+	github.com/klauspost/compress v1.17.6
 	github.com/mattn/go-ieproxy v0.0.11
 	github.com/mattn/go-isatty v0.0.20
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.6
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.67
+	github.com/minio/minio-go/v7 v7.0.68
 	github.com/minio/selfupdate v0.6.0
 	github.com/minio/sha256-simd v1.0.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -32,8 +34,8 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/shirou/gopsutil/v3 v3.23.12
 	github.com/tidwall/gjson v1.17.0
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.23.0
+	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/net v0.24.0
 	golang.org/x/text v0.14.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
@@ -49,7 +51,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/vbauerster/mpb/v8 v8.7.1
-	golang.org/x/term v0.18.0
+	golang.org/x/term v0.19.0
 )
 
 require (
@@ -107,7 +109,6 @@ require (
 	github.com/prometheus/procfs v0.12.0
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/secure-io/sio-go v0.3.1 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tinylib/msgp v1.1.9 // indirect
@@ -120,7 +121,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	google.golang.org/genproto v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/grpc v1.60.1 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
