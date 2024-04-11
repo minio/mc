@@ -32,8 +32,8 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/shirou/gopsutil/v3 v3.23.12
 	github.com/tidwall/gjson v1.17.0
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.21.0
+	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/net v0.24.0
 	golang.org/x/text v0.14.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
@@ -49,7 +49,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/vbauerster/mpb/v8 v8.7.1
-	golang.org/x/term v0.18.0
+	golang.org/x/term v0.19.0
 )
 
 require (
@@ -120,7 +120,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	google.golang.org/genproto v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/grpc v1.60.1 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
