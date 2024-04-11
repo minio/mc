@@ -3,7 +3,7 @@ name: Go
 on:
   pull_request:
     branches:
-    - master
+      - master
 
 # This ensures that previous jobs for the PR are canceled when the PR is
 # updated.
@@ -23,13 +23,13 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Set up Go ${{ matrix.go-version }} on ${{ matrix.os }}
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Build on ${{ matrix.os }}
         if: matrix.os == 'windows-latest'
