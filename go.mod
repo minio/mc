@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/prom2json v1.3.3 // indirect
 	github.com/rjeczalik/notify v0.9.3
 	github.com/rs/xid v1.5.0
-	github.com/shirou/gopsutil/v3 v3.23.12
+	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/tidwall/gjson v1.17.0
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/net v0.24.0
@@ -113,7 +113,7 @@ require (
 	github.com/tinylib/msgp v1.1.9 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
-	github.com/yusufpapurcu/wmi v1.2.3 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.11 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.11 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.11 // indirect
