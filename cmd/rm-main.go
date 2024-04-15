@@ -111,7 +111,7 @@ var rmCmd = cli.Command{
 	Action:       mainRm,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(rmFlags, ioFlags...), globalFlags...),
+	Flags:        append(rmFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -121,8 +121,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 EXAMPLES:
   01. Remove a file.
@@ -152,16 +150,13 @@ EXAMPLES:
   09. Drop all incomplete uploads on the bucket 'jazz-songs'.
       {{.Prompt}} {{.HelpName}} --incomplete --recursive --force s3/jazz-songs/
 
-  10. Remove an encrypted object from Amazon S3 cloud storage.
-      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
-
-  11. Bypass object retention in governance mode and delete the object.
+  10. Bypass object retention in governance mode and delete the object.
       {{.Prompt}} {{.HelpName}} --bypass s3/pop-songs/
 
-  12. Remove a particular version ID.
+  11. Remove a particular version ID.
       {{.Prompt}} {{.HelpName}} s3/docs/money.xls --version-id "f20f3792-4bd4-4288-8d3c-b9d05b3b62f6"
 
-  13. Remove all object versions older than one year.
+  12. Remove all object versions older than one year.
       {{.Prompt}} {{.HelpName}} s3/docs/ --recursive --versions --rewind 365d
 
   14. Perform a fake removal of object(s) versions that are non-current and older than 10 days. If top-level version is a delete 
@@ -211,7 +206,7 @@ func (r rmMessage) JSON() string {
 }
 
 // Validate command line arguments.
-func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
+func checkRmSyntax(ctx context.Context, cliCtx *cli.Context) {
 	// Set command flags from context.
 	isForce := cliCtx.Bool("force")
 	isRecursive := cliCtx.Bool("recursive")
@@ -255,7 +250,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string
 			// Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 			url = filepath.ToSlash(filepath.Clean(url))
 			// namespace removal applies only for non FS. So filter out if passed url represents a directory
-			dir, _ := isAliasURLDir(ctx, url, encKeyDB, time.Time{}, false)
+			dir, _ := isAliasURLDir(ctx, url, nil, time.Time{}, false)
 			if dir {
 				_, path := url2Alias(url)
 				isNamespaceRemoval = (path == "")
@@ -312,7 +307,6 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 			urlStr:                  url,
 			versionID:               versionID,
 			fileAttr:                false,
-			encKeyDB:                opts.encKeyDB,
 			timeRef:                 time.Time{},
 			isZip:                   false,
 			ignoreBucketExistsCheck: false,
@@ -407,7 +401,6 @@ type removeOpts struct {
 	isForceDel        bool
 	olderThan         string
 	newerThan         string
-	encKeyDB          map[string][]prefixSSEPair
 }
 
 func printDryRunMsg(targetAlias string, content *ClientContent, printModTime bool) {
@@ -707,14 +700,8 @@ func mainRm(cliCtx *cli.Context) error {
 	ctx, cancelRm := context.WithCancel(globalContext)
 	defer cancelRm()
 
-	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(cliCtx)
-	fatalIf(err, "Unable to parse encryption keys.")
+	checkRmSyntax(ctx, cliCtx)
 
-	// check 'rm' cli arguments.
-	checkRmSyntax(ctx, cliCtx, encKeyDB)
-
-	// rm specific flags.
 	isIncomplete := cliCtx.Bool("incomplete")
 	isRecursive := cliCtx.Bool("recursive")
 	isFake := cliCtx.Bool("dry-run") || cliCtx.Bool("fake")
@@ -752,7 +739,6 @@ func mainRm(cliCtx *cli.Context) error {
 				isBypass:          isBypass,
 				olderThan:         olderThan,
 				newerThan:         newerThan,
-				encKeyDB:          encKeyDB,
 			})
 		} else {
 			e = removeSingle(url, versionID, removeOpts{
@@ -763,7 +749,6 @@ func mainRm(cliCtx *cli.Context) error {
 				isBypass:     isBypass,
 				olderThan:    olderThan,
 				newerThan:    newerThan,
-				encKeyDB:     encKeyDB,
 			})
 		}
 		if rerr == nil {
@@ -790,7 +775,6 @@ func mainRm(cliCtx *cli.Context) error {
 				isBypass:          isBypass,
 				olderThan:         olderThan,
 				newerThan:         newerThan,
-				encKeyDB:          encKeyDB,
 			})
 		} else {
 			e = removeSingle(url, versionID, removeOpts{
@@ -801,7 +785,6 @@ func mainRm(cliCtx *cli.Context) error {
 				isBypass:     isBypass,
 				olderThan:    olderThan,
 				newerThan:    newerThan,
-				encKeyDB:     encKeyDB,
 			})
 		}
 		if rerr == nil {

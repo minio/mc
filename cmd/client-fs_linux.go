@@ -68,8 +68,7 @@ func IsDeleteEvent(event notify.Event) bool {
 	return false
 }
 
-// getXAttr fetches the extended attribute for a particular key on
-// file
+// getXAttr fetches the extended attribute for a particular key on file
 func getXAttr(path, key string) (string, error) {
 	data, e := xattr.Get(path, key)
 	if e != nil {
@@ -81,8 +80,7 @@ func getXAttr(path, key string) (string, error) {
 	return hex.EncodeToString(data), nil
 }
 
-// getAllXattrs returns the extended attributes for a file if supported
-// by the OS
+// getAllXattrs returns the extended attributes for a file if supported by the OS
 func getAllXattrs(path string) (map[string]string, error) {
 	xMetadata := make(map[string]string)
 	list, e := xattr.List(path)

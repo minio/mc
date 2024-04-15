@@ -49,6 +49,9 @@ jobs:
           ENABLE_HTTPS: 1
           MINIO_CI_CD: 1
           SERVER_ENDPOINT: localhost:9000
+          MC_TEST_ENABLE_HTTPS: true
+          MC_TEST_SKIP_INSECURE: true
+          MC_TEST_SKIP_BUILD: true
         run: |
           wget https://dl.min.io/server/minio/release/linux-amd64/minio && chmod +x minio
           mkdir -p ~/.minio/certs/ && cp testdata/localhost.crt ~/.minio/certs/public.crt && cp testdata/localhost.key ~/.minio/certs/private.key

@@ -92,7 +92,7 @@ func doShareList(cmd string) *probe.Error {
 
 	// Print previously shared entries.
 	for shareURL, share := range shareDB.Shares {
-		printMsg(shareMesssage{
+		printMsg(shareMessage{
 			ObjectURL:   share.URL,
 			ShareURL:    shareURL,
 			TimeLeft:    share.Expiry - time.Since(share.Date),

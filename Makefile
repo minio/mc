@@ -43,7 +43,7 @@ test: verifiers build
 	@echo "Running unit tests"
 	@GO111MODULE=on CGO_ENABLED=0 go test -tags kqueue ./... 1>/dev/null
 	@echo "Running functional tests"
-	@(env bash $(PWD)/functional-tests.sh)
+	@GO111MODULE=on MC_TEST_RUN_FULL_SUITE=true go test -race -v --timeout 20m ./... -run Test_FullSuite
 
 test-race: verifiers build
 	@echo "Running unit tests under -race"
@@ -54,7 +54,7 @@ verify:
 	@echo "Verifying build with race"
 	@GO111MODULE=on CGO_ENABLED=1 go build -race -tags kqueue -trimpath --ldflags "$(LDFLAGS)" -o $(PWD)/mc 1>/dev/null
 	@echo "Running functional tests"
-	@(env bash $(PWD)/functional-tests.sh)
+	@GO111MODULE=on MC_TEST_RUN_FULL_SUITE=true go test -race -v --timeout 20m ./... -run Test_FullSuite
 
 # Builds mc locally.
 build: checks

@@ -59,7 +59,7 @@ var headCmd = cli.Command{
 	Action:       mainHead,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(headFlags, ioFlags...), globalFlags...),
+	Flags:        append(append(headFlags, encCFlag), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -69,8 +69,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 NOTE:
   '{{.HelpName}}' automatically decompresses 'gzip', 'bzip2' compressed objects.
@@ -80,11 +78,10 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} -n 1 s3/csv-data/population.csv.gz
 
   2. Display only first line from server encrypted object on Amazon S3.
-     {{.Prompt}} {{.HelpName}} -n 1 --encrypt-key 's3/csv-data=32byteslongsecretkeymustbegiven1' s3/csv-data/population.csv
+     {{.Prompt}} {{.HelpName}} -n 1 --enc-c 's3/csv-data=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA' s3/csv-data/population.csv
 
-  3. Display only first line from server encrypted object on Amazon S3. In case the encryption key contains non-printable character like tab, pass the
-     base64 encoded string as key.
-     {{.Prompt}} {{.HelpName}} --encrypt-key "s3/json-data=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  s3/json-data/population.json
+  3. Display only first line from server encrypted object on Amazon S3.
+     {{.Prompt}} {{.HelpName}} --enc-c "s3/json-data=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA"  s3/json-data/population.json
 
   4. Display the first lines of a specific object version.
      {{.Prompt}} {{.HelpName}} --version-id "3ddac055-89a7-40fa-8cd3-530a5581b6b8" s3/json-data/population.json
@@ -188,7 +185,7 @@ func parseHeadSyntax(ctx *cli.Context) (args []string, versionID string, timeRef
 // mainHead is the main entry point for head command.
 func mainHead(ctx *cli.Context) error {
 	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
+	encryptionKeys, err := validateAndCreateEncryptionKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	args, versionID, timeRef := parseHeadSyntax(ctx)
@@ -203,7 +200,15 @@ func mainHead(ctx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range ctx.Args() {
-		fatalIf(headURL(url, versionID, timeRef, encKeyDB, ctx.Int64("lines"), ctx.Bool("zip")).Trace(url), "Unable to read from `"+url+"`.")
+		err = headURL(
+			url,
+			versionID,
+			timeRef,
+			encryptionKeys,
+			ctx.Int64("lines"),
+			ctx.Bool("zip"),
+		)
+		fatalIf(err.Trace(url), "Unable to read from `"+url+"`.")
 	}
 
 	return nil

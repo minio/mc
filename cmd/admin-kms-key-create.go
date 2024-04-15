@@ -30,7 +30,7 @@ import (
 
 var adminKMSCreateKeyCmd = cli.Command{
 	Name:         "create",
-	Usage:        "creates a new master key at the KMS",
+	Usage:        "creates a new master KMS key",
 	Action:       mainAdminKMSCreateKey,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,

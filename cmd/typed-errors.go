@@ -148,9 +148,46 @@ var errSourceIsDir = func(URL string) *probe.Error {
 	return probe.NewError(sourceIsDirErr(errors.New(msg))).Untrace()
 }
 
-type conflictSSEErr error
+type sseInvalidAliasErr error
 
-var errConflictSSE = func(sseServer, sseKeys string) *probe.Error {
-	err := fmt.Errorf("SSE alias '%s' overlaps with SSE-C aliases '%s'", sseServer, sseKeys)
-	return probe.NewError(conflictSSEErr(err)).Untrace()
+var errSSEInvalidAlias = func(prefix string) *probe.Error {
+	msg := "SSE prefix " + prefix + " has an invalid alias."
+	return probe.NewError(sseInvalidAliasErr(errors.New(msg))).Untrace()
+}
+
+type sseOverlappingAliasErr error
+
+var errSSEOverlappingAlias = func(prefix, overlappingPrefix string) *probe.Error {
+	msg := "SSE prefix " + prefix + " overlaps with " + overlappingPrefix
+	return probe.NewError(sseOverlappingAliasErr(errors.New(msg))).Untrace()
+}
+
+type ssePrefixMatchErr error
+
+var errSSEPrefixMatch = func() *probe.Error {
+	msg := "SSE prefixes do not match any object paths."
+	return probe.NewError(ssePrefixMatchErr(errors.New(msg))).Untrace()
+}
+
+type sseKeyMissingError error
+
+var errSSEKeyMissing = func() *probe.Error {
+	m := "SSE key is missing"
+	return probe.NewError(sseKeyMissingError(errors.New(m))).Untrace()
+}
+
+type sseKMSKeyFormatErr error
+
+var errSSEKMSKeyFormat = func(msg string) *probe.Error {
+	m := "SSE key format error. "
+	m += msg
+	return probe.NewError(sseKMSKeyFormatErr(errors.New(m))).Untrace()
+}
+
+type sseClientKeyFormatErr error
+
+var errSSEClientKeyFormat = func(msg string) *probe.Error {
+	m := "Encryption key should be 44 bytes raw base64 encoded key."
+	m += msg
+	return probe.NewError(sseClientKeyFormatErr(errors.New(m))).Untrace()
 }
