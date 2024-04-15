@@ -18,18 +18,14 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -66,10 +62,6 @@ var (
 		cli.StringFlag{
 			Name:  "attr",
 			Usage: "add custom metadata for the object",
-		},
-		cli.BoolFlag{
-			Name:  "continue, c",
-			Usage: "create or resume copy session",
 		},
 		cli.BoolFlag{
 			Name:  "preserve, a",
@@ -122,7 +114,7 @@ var cpCmd = cli.Command{
 	Action:       mainCopy,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(append(cpFlags, ioFlags...), globalFlags...),
+	Flags:        append(append(cpFlags, encFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -132,9 +124,10 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
 ENVIRONMENT VARIABLES:
-  MC_ENCRYPT:      list of comma delimited prefixes
-  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+  MC_ENC_KMS: KMS encryption key in the form of (alias/prefix=key).
+  MC_ENC_S3: S3 encryption key in the form of (alias/prefix=key).
 
 EXAMPLES:
   01. Copy a list of objects from local file system to Amazon S3 cloud storage.
@@ -161,12 +154,11 @@ EXAMPLES:
   08. Copy a local folder with space separated characters to Amazon S3 cloud storage.
       {{.Prompt}} {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
-  09. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
-      {{.Prompt}} {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
+  09. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage using s3 encryption.
+      {{.Prompt}} {{.HelpName}} --recursive --enc-s3 "s3/documents/=my-aws-key" --enc-s3 "myminio/documents/=my-minio-key" s3/documents/ myminio/documents/
 
-  10. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage. In case the encryption key contains non-printable character like tab, pass the
-      base64 encoded string as key.
-      {{.Prompt}} {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
+  10. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
+      {{.Prompt}} {{.HelpName}} --recursive --enc-c "s3/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" --enc-c "myminio/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5BBB" s3/documents/ myminio/documents/
 
   11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata, separated by ";"
       {{.Prompt}} {{.HelpName}} --attr "key1=value1;key2=value2" Music/*.mp4 play/mybucket/
@@ -177,25 +169,22 @@ EXAMPLES:
   13. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
       {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 
-  14. Copy a text file to an object storage and create or resume copy session.
-      {{.Prompt}} {{.HelpName}} --recursive --continue dir/ play/mybucket
-
-  15. Copy a text file to an object storage and preserve the file system attribute as metadata.
+  14. Copy a text file to an object storage and preserve the file system attribute as metadata.
       {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
 
-  16. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention duration 1 day.
+  15. Copy a text file to an object storage with object lock mode set to 'GOVERNANCE' with retention duration 1 day.
       {{.Prompt}} {{.HelpName}} --retention-mode governance --retention-duration 1d locked.txt play/locked-bucket/
 
-  17. Copy a text file to an object storage with legal-hold enabled.
+  16. Copy a text file to an object storage with legal-hold enabled.
       {{.Prompt}} {{.HelpName}} --legal-hold on locked.txt play/locked-bucket/
 
-  18. Copy a text file to an object storage and disable multipart upload feature.
+  17. Copy a text file to an object storage and disable multipart upload feature.
       {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
 
-  19. Roll back 10 days in the past to copy the content of 'mybucket'
+  18. Roll back 10 days in the past to copy the content of 'mybucket'
       {{.Prompt}} {{.HelpName}} --rewind 10d -r play/mybucket/ /tmp/dest/
 
-  20. Set tags to the uploaded objects
+  19. Set tags to the uploaded objects
       {{.Prompt}} {{.HelpName}} -r --tags "category=prod&type=backup" ./data/ play/another-bucket/
 
 `,
@@ -269,7 +258,7 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{
 		urls:                copyOpts.cpURLs,
 		progress:            copyOpts.pg,
-		encKeyDB:            copyOpts.encKeyDB,
+		encKeyDB:            copyOpts.encryptionKeys,
 		preserve:            copyOpts.preserve,
 		isZip:               copyOpts.isZip,
 		multipartSize:       copyOpts.multipartSize,
@@ -292,90 +281,6 @@ func doCopyFake(cpURLs URLs, pg Progress) URLs {
 	return cpURLs
 }
 
-// doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(ctx context.Context, session *sessionV8, cancelCopy context.CancelFunc) (totalBytes, totalObjects int64, errSeen bool) {
-	// Separate source and target. 'cp' can take only one target,
-	// but any number of sources.
-	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
-	targetURL := session.Header.CommandArgs[len(session.Header.CommandArgs)-1] // Last one is target
-
-	// Access recursive flag inside the session header.
-	isRecursive := session.Header.CommandBoolFlags["recursive"]
-	rewind := session.Header.CommandStringFlags["rewind"]
-	versionID := session.Header.CommandStringFlags["version-id"]
-	olderThan := session.Header.CommandStringFlags["older-than"]
-	newerThan := session.Header.CommandStringFlags["newer-than"]
-	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
-	encrypt := session.Header.CommandStringFlags["encrypt"]
-	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys, encrypt)
-	fatalIf(err, "Unable to parse encryption keys.")
-
-	// Create a session data file to store the processed URLs.
-	dataFP := session.NewDataWriter()
-
-	var scanBar scanBarFunc
-	if !globalQuiet && !globalJSON { // set up progress bar
-		scanBar = scanBarFactory()
-	}
-
-	opts := prepareCopyURLsOpts{
-		sourceURLs:  sourceURLs,
-		targetURL:   targetURL,
-		isRecursive: isRecursive,
-		encKeyDB:    encKeyDB,
-		olderThan:   olderThan,
-		newerThan:   newerThan,
-		timeRef:     parseRewindFlag(rewind),
-		versionID:   versionID,
-	}
-
-	URLsCh := prepareCopyURLs(ctx, opts)
-	done := false
-	for !done {
-		select {
-		case cpURLs, ok := <-URLsCh:
-			if !ok { // Done with URL preparation
-				done = true
-				break
-			}
-
-			if cpURLs.Error != nil {
-				printCopyURLsError(&cpURLs)
-				errSeen = true
-				break
-			}
-
-			jsoniter := jsoniter.ConfigCompatibleWithStandardLibrary
-			jsonData, e := jsoniter.Marshal(cpURLs)
-			if e != nil {
-				session.Delete()
-				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
-			}
-			dataFP.Write(jsonData)
-			dataFP.Write([]byte{'\n'})
-			if !globalQuiet && !globalJSON {
-				scanBar(cpURLs.SourceContent.URL.String())
-			}
-
-			totalBytes += cpURLs.SourceContent.Size
-			totalObjects++
-		case <-globalContext.Done():
-			cancelCopy()
-			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuiet && !globalJSON {
-				console.Eraseline()
-			}
-			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
-			os.Exit(0)
-		}
-	}
-
-	session.Header.TotalBytes = totalBytes
-	session.Header.TotalObjects = totalObjects
-	session.Save()
-	return
-}
-
 func printCopyURLsError(cpURLs *URLs) {
 	// Print in new line and adjust to top so that we
 	// don't print over the ongoing scan bar
@@ -393,7 +298,7 @@ func printCopyURLsError(cpURLs *URLs) {
 	}
 }
 
-func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, session *sessionV8, encKeyDB map[string][]prefixSSEPair, isMvCmd bool) error {
+func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, encryptionKeys map[string][]prefixSSEPair, isMvCmd bool) error {
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
 
@@ -416,80 +321,43 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	// Check if the target path has object locking enabled
 	withLock, _ := isBucketLockEnabled(ctx, targetURL)
 
-	if session != nil {
-		// isCopied returns true if an object has been already copied
-		// or not. This is useful when we resume from a session.
-		isCopied = isLastFactory(session.Header.LastCopied)
+	isRecursive := cli.Bool("recursive")
+	olderThan := cli.String("older-than")
+	newerThan := cli.String("newer-than")
+	rewind := cli.String("rewind")
+	versionID := cli.String("version-id")
 
-		if !session.HasData() {
-			totalBytes, totalObjects, errSeen = doPrepareCopyURLs(ctx, session, cancelCopy)
-		} else {
-			totalBytes, totalObjects = session.Header.TotalBytes, session.Header.TotalObjects
+	go func() {
+		totalBytes := int64(0)
+		opts := prepareCopyURLsOpts{
+			sourceURLs:  sourceURLs,
+			targetURL:   targetURL,
+			isRecursive: isRecursive,
+			encKeyDB:    encryptionKeys,
+			olderThan:   olderThan,
+			newerThan:   newerThan,
+			timeRef:     parseRewindFlag(rewind),
+			versionID:   versionID,
+			isZip:       cli.Bool("zip"),
 		}
 
-		pg.SetTotal(totalBytes)
-
-		go func() {
-			jsoniter := jsoniter.ConfigCompatibleWithStandardLibrary
-			// Prepare URL scanner from session data file.
-			urlScanner := bufio.NewScanner(session.NewDataReader())
-			for {
-				if !urlScanner.Scan() || urlScanner.Err() != nil {
-					close(cpURLsCh)
-					break
-				}
-
-				var cpURLs URLs
-				if e := jsoniter.Unmarshal([]byte(urlScanner.Text()), &cpURLs); e != nil {
-					errorIf(probe.NewError(e), "Unable to unmarshal %s", urlScanner.Text())
-					continue
-				}
-
-				cpURLsCh <- cpURLs
-			}
-		}()
-
-	} else {
-		// Access recursive flag inside the session header.
-		isRecursive := cli.Bool("recursive")
-		olderThan := cli.String("older-than")
-		newerThan := cli.String("newer-than")
-		rewind := cli.String("rewind")
-		versionID := cli.String("version-id")
-
-		go func() {
-			totalBytes := int64(0)
-			opts := prepareCopyURLsOpts{
-				sourceURLs:  sourceURLs,
-				targetURL:   targetURL,
-				isRecursive: isRecursive,
-				encKeyDB:    encKeyDB,
-				olderThan:   olderThan,
-				newerThan:   newerThan,
-				timeRef:     parseRewindFlag(rewind),
-				versionID:   versionID,
-				isZip:       cli.Bool("zip"),
+		for cpURLs := range prepareCopyURLs(ctx, opts) {
+			if cpURLs.Error != nil {
+				errSeen = true
+				printCopyURLsError(&cpURLs)
+				break
 			}
 
-			for cpURLs := range prepareCopyURLs(ctx, opts) {
-				if cpURLs.Error != nil {
-					errSeen = true
-					printCopyURLsError(&cpURLs)
-					break
-				}
-
-				totalBytes += cpURLs.SourceContent.Size
-				pg.SetTotal(totalBytes)
-				totalObjects++
-				cpURLsCh <- cpURLs
-			}
-			close(cpURLsCh)
-		}()
-	}
+			totalBytes += cpURLs.SourceContent.Size
+			pg.SetTotal(totalBytes)
+			totalObjects++
+			cpURLsCh <- cpURLs
+		}
+		close(cpURLsCh)
+	}()
 
 	quitCh := make(chan struct{})
 	statusCh := make(chan URLs)
-
 	parallel := newParallelManager(statusCh)
 
 	go func() {
@@ -498,7 +366,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 			close(statusCh)
 		}
 
-		startContinue := true
 		for {
 			select {
 			case <-quitCh:
@@ -562,22 +429,14 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 					}, 0)
 				} else {
 					// Print the copy resume summary once in start
-					if startContinue && cli.Bool("continue") {
-						if pb, ok := pg.(*progressBar); ok {
-							startSize := humanize.IBytes(uint64(pb.Start().Get()))
-							totalSize := humanize.IBytes(uint64(pb.Total))
-							console.Println("Resuming copy from ", startSize, " / ", totalSize)
-						}
-						startContinue = false
-					}
 					parallel.queueTask(func() URLs {
 						return doCopy(ctx, doCopyOpts{
-							cpURLs:   cpURLs,
-							pg:       pg,
-							encKeyDB: encKeyDB,
-							isMvCmd:  isMvCmd,
-							preserve: preserve,
-							isZip:    isZip,
+							cpURLs:         cpURLs,
+							pg:             pg,
+							encryptionKeys: encryptionKeys,
+							isMvCmd:        isMvCmd,
+							preserve:       preserve,
+							isZip:          isZip,
 						})
 					}, cpURLs.SourceContent.Size)
 				}
@@ -598,9 +457,6 @@ loop:
 			if !globalQuiet && !globalJSON {
 				console.Eraseline()
 			}
-			if session != nil {
-				session.CloseAndDie()
-			}
 			break loop
 		case cpURLs, ok := <-statusCh:
 			// Status channel is closed, we should return.
@@ -608,10 +464,6 @@ loop:
 				break loop
 			}
 			if cpURLs.Error == nil {
-				if session != nil {
-					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
-					session.Save()
-				}
 				cpAllFilesErr = false
 			} else {
 
@@ -643,12 +495,6 @@ loop:
 					}
 				}
 
-				if session != nil {
-					// For critical errors we should exit. Session
-					// can be resumed after the user figures out
-					// the  problem.
-					session.copyCloseAndDie(session.Header.CommandBoolFlags["session"])
-				}
 			}
 		}
 	}
@@ -688,97 +534,25 @@ func mainCopy(cliCtx *cli.Context) error {
 	ctx, cancelCopy := context.WithCancel(globalContext)
 	defer cancelCopy()
 
-	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(cliCtx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
-	// Parse metadata.
-	userMetaMap := make(map[string]string)
-	if cliCtx.String("attr") != "" {
-		userMetaMap, err = getMetaDataEntry(cliCtx.String("attr"))
-		fatalIf(err, "Unable to parse attribute %v", cliCtx.String("attr"))
-	}
-
-	// check 'copy' cli arguments.
 	checkCopySyntax(cliCtx)
-	// Additional command specific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	recursive := cliCtx.Bool("recursive")
-	rewind := cliCtx.String("rewind")
-	versionID := cliCtx.String("version-id")
-	olderThan := cliCtx.String("older-than")
-	newerThan := cliCtx.String("newer-than")
-	storageClass := cliCtx.String("storage-class")
-	retentionMode := cliCtx.String(rmFlag)
-	retentionDuration := cliCtx.String(rdFlag)
-	legalHold := strings.ToUpper(cliCtx.String(lhFlag))
-	tags := cliCtx.String("tags")
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := cliCtx.String("encrypt-key"); key != "" {
-		sseKeys = key
+	var err *probe.Error
+
+	// Parse encryption keys per command.
+	encryptionKeyMap, err := validateAndCreateEncryptionKeys(cliCtx)
+	if err != nil {
+		err.Trace(cliCtx.Args()...)
 	}
+	fatalIf(err, "SSE Error")
 
-	if sseKeys != "" {
-		sseKeys, err = getDecodedKey(sseKeys)
-		fatalIf(err, "Unable to parse encryption keys.")
-	}
-	sse := cliCtx.String("encrypt")
-
-	var session *sessionV8
-
-	if cliCtx.Bool("continue") {
-		sessionID := getHash("cp", os.Args[1:])
-		if isSessionExists(sessionID) {
-			session, err = loadSessionV8(sessionID)
-			fatalIf(err.Trace(sessionID), "Unable to load session.")
-		} else {
-			session = newSessionV8(sessionID)
-			session.Header.CommandType = "cp"
-			session.Header.CommandBoolFlags["recursive"] = recursive
-			session.Header.CommandStringFlags["rewind"] = rewind
-			session.Header.CommandStringFlags["version-id"] = versionID
-			session.Header.CommandStringFlags["older-than"] = olderThan
-			session.Header.CommandStringFlags["newer-than"] = newerThan
-			session.Header.CommandStringFlags["storage-class"] = storageClass
-			session.Header.CommandStringFlags["tags"] = tags
-			session.Header.CommandStringFlags[rmFlag] = retentionMode
-			session.Header.CommandStringFlags[rdFlag] = retentionDuration
-			session.Header.CommandStringFlags[lhFlag] = legalHold
-			session.Header.CommandStringFlags["encrypt-key"] = sseKeys
-			session.Header.CommandStringFlags["encrypt"] = sse
-			session.Header.CommandBoolFlags["session"] = cliCtx.Bool("continue")
-
-			if cliCtx.Bool("preserve") {
-				session.Header.CommandBoolFlags["preserve"] = cliCtx.Bool("preserve")
-			}
-			session.Header.UserMetaData = userMetaMap
-			session.Header.CommandBoolFlags["md5"] = cliCtx.Bool("md5")
-			session.Header.CommandBoolFlags["disable-multipart"] = cliCtx.Bool("disable-multipart")
-
-			var e error
-			if session.Header.RootPath, e = os.Getwd(); e != nil {
-				session.Delete()
-				fatalIf(probe.NewError(e), "Unable to get current working folder.")
-			}
-
-			// extract URLs.
-			session.Header.CommandArgs = cliCtx.Args()
-		}
-	}
-
-	e := doCopySession(ctx, cancelCopy, cliCtx, session, encKeyDB, false)
-	if session != nil {
-		session.Delete()
-	}
-
-	return e
+	return doCopySession(ctx, cancelCopy, cliCtx, encryptionKeyMap, false)
 }
 
 type doCopyOpts struct {
 	cpURLs                   URLs
 	pg                       ProgressReader
-	encKeyDB                 map[string][]prefixSSEPair
+	encryptionKeys           map[string][]prefixSSEPair
 	isMvCmd, preserve, isZip bool
 	updateProgressTotal      bool
 	multipartSize            string

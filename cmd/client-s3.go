@@ -92,6 +92,8 @@ const (
 	AmzObjectLockRetainUntilDate = "X-Amz-Object-Lock-Retain-Until-Date"
 	// AmzObjectLockLegalHold sets object lock legal hold
 	AmzObjectLockLegalHold = "X-Amz-Object-Lock-Legal-Hold"
+	amzObjectSSEKMSKeyID   = "X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"
+	amzObjectSSE           = "X-Amz-Server-Side-Encryption"
 )
 
 type dialContext func(ctx context.Context, network, addr string) (net.Conn, error)

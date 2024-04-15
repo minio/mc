@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"io"
 	"net/http"
@@ -33,72 +32,11 @@ import (
 	"golang.org/x/net/http/httpguts"
 
 	"github.com/dustin/go-humanize"
-	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/pkg/v2/env"
 )
-
-// decode if the key is encoded key and returns the key
-func getDecodedKey(sseKeys string) (key string, err *probe.Error) {
-	keyString := ""
-	for i, sse := range strings.Split(sseKeys, ",") {
-		if i > 0 {
-			keyString = keyString + ","
-		}
-		sseString, err := parseKey(sse)
-		if err != nil {
-			return "", err
-		}
-		keyString = keyString + sseString
-	}
-	return keyString, nil
-}
-
-// Validate the key
-func parseKey(sseKeys string) (sse string, err *probe.Error) {
-	encryptString := strings.SplitN(sseKeys, "=", 2)
-	if len(encryptString) < 2 {
-		return "", probe.NewError(errors.New("SSE-C prefix should be of the form prefix1=key1,... "))
-	}
-
-	secretValue := encryptString[1]
-	if len(secretValue) == 32 {
-		return sseKeys, nil
-	}
-	decodedString, e := base64.StdEncoding.DecodeString(secretValue)
-	if e != nil || len(decodedString) != 32 {
-		return "", probe.NewError(errors.New("Encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"))
-	}
-	return encryptString[0] + "=" + string(decodedString), nil
-}
-
-// parse and return encryption key pairs per alias.
-func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
-	sseServer := ctx.String("encrypt")
-	var sseKeys string
-	if keyPrefix := ctx.String("encrypt-key"); keyPrefix != "" {
-		if sseServer != "" && strings.Contains(keyPrefix, sseServer) {
-			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
-		}
-		sseKeys = keyPrefix
-	}
-	var err *probe.Error
-	if sseKeys != "" {
-		sseKeys, err = getDecodedKey(sseKeys)
-		if err != nil {
-			return nil, err.Trace(sseKeys)
-		}
-	}
-
-	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys, sseServer)
-	if err != nil {
-		return nil, err.Trace(sseKeys)
-	}
-
-	return encKeyDB, nil
-}
 
 // Check if the passed URL represents a folder. It may or may not exist yet.
 // If it exists, we can easily check if it is a folder, if it doesn't exist,

@@ -51,7 +51,7 @@ var (
 )
 
 // Structured share command message.
-type shareMesssage struct {
+type shareMessage struct {
 	Status      string        `json:"status"`
 	ObjectURL   string        `json:"url"`
 	ShareURL    string        `json:"share"`
@@ -60,7 +60,7 @@ type shareMesssage struct {
 }
 
 // String - Themefied string message for console printing.
-func (s shareMesssage) String() string {
+func (s shareMessage) String() string {
 	msg := console.Colorize("URL", fmt.Sprintf("URL: %s\n", s.ObjectURL))
 	msg += console.Colorize("Expire", fmt.Sprintf("Expire: %s\n", timeDurationToHumanizedDuration(s.TimeLeft)))
 	if s.ContentType != "" {
@@ -78,7 +78,7 @@ func (s shareMesssage) String() string {
 }
 
 // JSON - JSONified message for scripting.
-func (s shareMesssage) JSON() string {
+func (s shareMessage) JSON() string {
 	s.Status = "success"
 	shareMessageBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
