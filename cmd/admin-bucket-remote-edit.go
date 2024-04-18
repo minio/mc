@@ -29,7 +29,6 @@ var adminBucketRemoteEditCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Flags:        globalFlags,
 	HideHelp:     true,
-	Hidden:       true,
 }
 
 // mainAdminBucketRemoteEdit is the handle for "mc admin bucket remote edit" command.

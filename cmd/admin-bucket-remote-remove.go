@@ -30,7 +30,6 @@ var adminBucketRemoteRmCmd = cli.Command{
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
 	HideHelp:     true,
-	Hidden:       true,
 }
 
 // mainAdminBucketRemoteRemove is the handle for "mc admin bucket remote rm" command.
