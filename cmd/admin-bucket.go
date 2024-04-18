@@ -33,6 +33,7 @@ var adminBucketCmd = cli.Command{
 	Flags:           globalFlags,
 	Subcommands:     adminBucketSubcommands,
 	HideHelpCommand: true,
+	Hidden:          true,
 }
 
 // mainAdminBucket is the handle for "mc admin bucket" command.

@@ -31,7 +31,6 @@ var adminBucketInfoCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminBucketInfoFlags, globalFlags...),
 	HideHelpCommand: true,
-	Hidden:          true,
 }
 
 // mainAdminBucketInfo is the handler for "mc admin bucket info" command.

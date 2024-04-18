@@ -40,7 +40,6 @@ var adminBucketQuotaCmd = cli.Command{
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminQuotaFlags, globalFlags...),
 	HideHelpCommand: true,
-	Hidden:          true,
 }
 
 // mainAdminBucketQuota is the handler for "mc admin bucket quota" command.

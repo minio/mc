@@ -28,7 +28,6 @@ var adminBucketRemoteAddCmd = cli.Command{
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
-	Hidden:       true,
 	HideHelp:     true,
 }
 
