@@ -326,6 +326,8 @@ func (i srStatus) String() string {
 		switch {
 		case i.MaxILMExpiryRules == 0:
 			messages = append(messages, console.Colorize("Summary", "No ILM Expiry Rules present\n"))
+		case i.ILMExpiryStats == nil:
+			messages = append(messages, console.Colorize("Summary", "Replication of ILM Expiry is not enabled\n"))
 		default:
 			msg := console.Colorize(i.getTheme(len(info.ILMExpiryStats) == 0), fmt.Sprintf("%d/%d ILM Expiry Rules in sync", info.MaxILMExpiryRules-len(info.ILMExpiryStats), info.MaxILMExpiryRules)) + "\n"
 			messages = append(messages, fmt.Sprintf("%s  %s", coloredDot, msg))
