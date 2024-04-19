@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 registry.access.redhat.com/ubi9/ubi-minimal:latest as build
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest as build
 
 RUN microdnf update --nodocs --assumeyes  && microdnf install ca-certificates --nodocs --assumeyes 
 
@@ -17,7 +17,7 @@ COPY --from=build /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/pki/ca-
 COPY CREDITS /licenses/CREDITS
 COPY LICENSE /licenses/LICENSE
 
-ADD https://dl.minio.io/client/mc/release/linux-${TARGETARCH}/archive/mc.${RELEASE} /usr/bin/mc
+ADD https://dl.min.io/client/mc/hotfixes/linux-${TARGETARCH}/archive/mc.${RELEASE} /usr/bin/mc
 
 RUN chmod +x /usr/bin/mc
 
