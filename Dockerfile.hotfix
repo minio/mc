@@ -17,8 +17,8 @@ COPY --from=build /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/pki/ca-
 COPY CREDITS /licenses/CREDITS
 COPY LICENSE /licenses/LICENSE
 
-RUN \
-    curl -s -q https://dl.minio.io/client/mc/release/linux-${TARGETARCH}/archive/mc.${RELEASE} -o /usr/bin/mc && \
-    chmod +x /usr/bin/mc
+ADD https://dl.minio.io/client/mc/release/linux-${TARGETARCH}/archive/mc.${RELEASE} /usr/bin/mc
+
+RUN chmod +x /usr/bin/mc
 
 ENTRYPOINT ["mc"]
