@@ -129,8 +129,12 @@ func validateAndParseKey(ctx *cli.Context, key string, keyType sseKeyType) (SSEP
 		return nil, "", errSSEClientKeyFormat("SSE-C/KMS key should be of the form alias/prefix=key,... ").Trace(key)
 	}
 
+	ssePairPrefix := alias + "/" + prefix
+
 	for _, arg := range ctx.Args() {
-		if strings.HasPrefix(arg, alias+"/"+prefix) {
+		if strings.HasPrefix(arg, ssePairPrefix) {
+			matchedCount++
+		} else if strings.HasPrefix(ssePairPrefix, arg) {
 			matchedCount++
 		}
 	}
@@ -139,7 +143,6 @@ func validateAndParseKey(ctx *cli.Context, key string, keyType sseKeyType) (SSEP
 		return nil, "", errSSEPrefixMatch()
 	}
 
-	ssePairPrefix := alias + "/" + prefix
 	var sse encrypt.ServerSide
 	var err error
 
