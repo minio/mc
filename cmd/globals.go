@@ -22,6 +22,7 @@ import (
 	"context"
 	"crypto/x509"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -89,17 +90,23 @@ var (
 	// Terminal height/width, zero if not found
 	globalTermWidth, globalTermHeight int
 
-	globalDisablePagerFlag = "--disable-pager"
-	globalPagerDisabled    = false
-	globalHelpPager        *termPager
+	globalDisablePagerEnv       = "DISABLE_PAGER"
+	globalDisablePagerFlag      = "--disable-pager"
+	globalDisablePagerFlagShort = "--dp"
+	globalPagerDisabled         = false
+	globalHelpPager             *termPager
 
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool
 )
 
 func parsePagerDisableFlag(args []string) {
+	disableEnv := os.Getenv(envPrefix + globalDisablePagerEnv)
+	if disableEnv == "true" {
+		globalPagerDisabled = true
+	}
 	for _, arg := range args {
-		if arg == globalDisablePagerFlag {
+		if arg == globalDisablePagerFlag || arg == globalDisablePagerFlagShort {
 			globalPagerDisabled = true
 		}
 	}
