@@ -101,10 +101,7 @@ var (
 )
 
 func parsePagerDisableFlag(args []string) {
-	disableEnv := os.Getenv(envPrefix + globalDisablePagerEnv)
-	if disableEnv == "true" {
-		globalPagerDisabled = true
-	}
+	globalPagerDisabled, _ = strconv.ParseBool(os.Getenv(envPrefix + globalDisablePagerEnv))
 	for _, arg := range args {
 		if arg == globalDisablePagerFlag || arg == globalDisablePagerFlagShort {
 			globalPagerDisabled = true
