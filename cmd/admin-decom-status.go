@@ -146,7 +146,12 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 		idx++
 		totalSize := uint64(pool.Decommission.TotalSize)
 		usedCurrent := uint64(pool.Decommission.TotalSize - pool.Decommission.CurrentSize)
-		capacity := fmt.Sprintf("%.1f%% (total: %s)", 100*float64(usedCurrent)/float64(totalSize), humanize.IBytes(totalSize))
+		var capacity string
+		if totalSize == 0 {
+			capacity = "0% (total: 0B)"
+		} else {
+			capacity = fmt.Sprintf("%.1f%% (total: %s)", 100*float64(usedCurrent)/float64(totalSize), humanize.IBytes(totalSize))
+		}
 		status := "Active"
 		if pool.Decommission != nil {
 			if pool.Decommission.Complete {
