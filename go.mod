@@ -12,7 +12,6 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
 	github.com/inconshreveable/mousetrap v1.1.0
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.8
 	github.com/mattn/go-ieproxy v0.0.11
 	github.com/mattn/go-isatty v0.0.20
@@ -20,9 +19,7 @@ require (
 	github.com/minio/colorjson v1.0.6
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.69
-	github.com/minio/selfupdate v0.6.0
-	github.com/minio/sha256-simd v1.0.1
+	github.com/minio/minio-go/v7 v7.0.70
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/xattr v0.4.9
 	github.com/posener/complete v1.2.3
@@ -46,6 +43,7 @@ require (
 	github.com/juju/ratelimit v1.0.2
 	github.com/minio/madmin-go/v3 v3.0.50
 	github.com/minio/pkg/v2 v2.0.17
+	github.com/minio/selfupdate v0.6.0
 	github.com/muesli/reflow v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/vbauerster/mpb/v8 v8.7.3
@@ -53,7 +51,7 @@ require (
 )
 
 require (
-	aead.dev/minisign v0.2.1 // indirect
+	aead.dev/minisign v0.2.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -94,8 +92,6 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.2
