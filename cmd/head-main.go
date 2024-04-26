@@ -134,15 +134,19 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 	}
 
 	// Initialize a new scanner.
-	scn := bufio.NewScanner(r)
+	br := bufio.NewReader(r)
 
 	// Negative number of lines means default number of lines.
 	if nlines < 0 {
 		nlines = 10
 	}
 
-	for scn.Scan() && nlines > 0 {
-		if _, e := stdout.Write(scn.Bytes()); e != nil {
+	for nlines > 0 {
+		line, _, e := br.ReadLine()
+		if e != nil {
+			return probe.NewError(e)
+		}
+		if _, e := stdout.Write(line); e != nil {
 			switch e := e.(type) {
 			case *os.PathError:
 				if e.Err == syscall.EPIPE {
@@ -156,9 +160,6 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 		}
 		stdout.Write([]byte("\n"))
 		nlines--
-	}
-	if e := scn.Err(); e != nil {
-		return probe.NewError(e)
 	}
 	return nil
 }
