@@ -34,6 +34,8 @@ import (
 	"strings"
 	"time"
 
+	_ "crypto/sha256" // needed for selfupdate hashers
+
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"github.com/minio/cli"
@@ -41,7 +43,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v2/env"
 	"github.com/minio/selfupdate"
-	_ "github.com/minio/sha256-simd" // Needed for sha256 hash verifier.
 )
 
 // Check for new software updates.
