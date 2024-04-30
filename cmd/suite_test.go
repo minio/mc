@@ -69,6 +69,7 @@ func Test_FullSuite(t *testing.T) {
 	// needs to be set in order to run these tests
 	if protocol == "https://" {
 		PutObjectWithSSEC(t)
+		PutObjectWithSSECPartialPrefixMatch(t)
 		PutObjectWithSSECMultipart(t)
 		PutObjectWithSSECInvalidKeys(t)
 		GetObjectWithSSEC(t)
@@ -87,6 +88,7 @@ func Test_FullSuite(t *testing.T) {
 	if sseKMSKeyName != "" {
 		VerifyKMSKey(t)
 		PutObjectWithSSEKMS(t)
+		PutObjectWithSSEKMSPartialPrefixMatch(t)
 		PutObjectWithSSEKMSMultipart(t)
 		PutObjectWithSSEKMSInvalidKeys(t)
 		GetObjectWithSSEKMS(t)
@@ -103,6 +105,7 @@ func Test_FullSuite(t *testing.T) {
 	// needs to be set to in order to run these tests.
 	if sseS3Enabled {
 		PutObjectWithSSES3(t)
+		PutObjectWithSSES3PartialPrefixMatch(t)
 		PutObjectWithSSES3Multipart(t)
 		GetObjectWithSSES3(t)
 		CatObjectWithSSES3(t)
@@ -858,6 +861,23 @@ func VerifyKMSKey(t *testing.T) {
 	}
 }
 
+func PutObjectWithSSEKMSPartialPrefixMatch(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encput-kms-prefix-test",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-kms",
+		sseTestBucket+"/"+file.fileNameWithoutPath+"="+sseKMSKeyName,
+		file.diskFile.Name(),
+		sseTestBucket,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
 func PutObjectWithSSEKMS(t *testing.T) {
 	file := createFile(newTestFile{
 		addToGlobalFileMap: false,
@@ -1102,6 +1122,22 @@ func MirrorTempDirectoryUsingSSES3(t *testing.T) {
 	}
 }
 
+func PutObjectWithSSES3PartialPrefixMatch(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encput-s3-prefix-test",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-s3="+sseTestBucket+"/"+file.fileNameWithoutPath,
+		file.diskFile.Name(),
+		sseTestBucket,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
 func PutObjectWithSSES3(t *testing.T) {
 	file := createFile(newTestFile{
 		addToGlobalFileMap: false,
@@ -1222,6 +1258,22 @@ func CatObjectWithSSEKMS(t *testing.T) {
 		"cat length: "+strconv.Itoa(len(out))+" -- file length:"+strconv.Itoa(int(file.diskStat.Size())),
 		t,
 	)
+}
+
+func PutObjectWithSSECPartialPrefixMatch(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encput-prefix-test",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"/"+file.fileNameWithoutPath+"="+sseBaseEncodedKey,
+		file.diskFile.Name(),
+		sseTestBucket,
+	)
+	fatalIfErrorWMsg(err, out, t)
 }
 
 func PutObjectWithSSEC(t *testing.T) {
