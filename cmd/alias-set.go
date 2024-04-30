@@ -363,12 +363,16 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 // TLS root CAs of s3Config. Once configured, any client
 // initialized with this config trusts the given peer certificate.
 func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
+	tr, ok := s3Config.Transport.(*http.Transport)
+	if !ok {
+		return
+	}
 	switch {
-	case s3Config.Transport == nil:
+	case tr == nil:
 		if globalRootCAs != nil {
 			globalRootCAs.AddCert(peerCert)
 		}
-		s3Config.Transport = &http.Transport{
+		tr = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
 				Timeout:   10 * time.Second,
@@ -381,12 +385,13 @@ func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
 			DisableCompression:    true,
 			TLSClientConfig:       &tls.Config{RootCAs: globalRootCAs},
 		}
-	case s3Config.Transport.TLSClientConfig == nil || s3Config.Transport.TLSClientConfig.RootCAs == nil:
+	case tr.TLSClientConfig == nil || tr.TLSClientConfig.RootCAs == nil:
 		if globalRootCAs != nil {
 			globalRootCAs.AddCert(peerCert)
 		}
-		s3Config.Transport.TLSClientConfig = &tls.Config{RootCAs: globalRootCAs}
+		tr.TLSClientConfig = &tls.Config{RootCAs: globalRootCAs}
 	default:
-		s3Config.Transport.TLSClientConfig.RootCAs.AddCert(peerCert)
+		tr.TLSClientConfig.RootCAs.AddCert(peerCert)
 	}
+	s3Config.Transport = tr
 }
