@@ -239,7 +239,7 @@ type Config struct {
 	ConnWriteDeadline time.Duration
 	UploadLimit       int64
 	DownloadLimit     int64
-	Transport         *http.Transport
+	Transport         http.RoundTripper
 }
 
 // SelectObjectOpts - opts entered for select API
