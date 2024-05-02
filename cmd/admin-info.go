@@ -296,9 +296,10 @@ func (u clusterStruct) String() (msg string) {
 		}
 		// Summary on total no of online and total
 		// number of offline drives at the Cluster level
-		msg += fmt.Sprintf("%s online, %s offline\n",
+		msg += fmt.Sprintf("%s online, %s offline, EC:%d\n",
 			english.Plural(u.Info.Backend.OnlineDisks, "drive", ""),
-			english.Plural(u.Info.Backend.OfflineDisks, "drive", ""))
+			english.Plural(u.Info.Backend.OfflineDisks, "drive", ""),
+			u.Info.Backend.StandardSCParity)
 	}
 
 	// Remove the last new line if any
