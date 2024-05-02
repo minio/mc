@@ -243,16 +243,21 @@ func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) (
 		credsChain = append(credsChain, credsSts)
 	}
 
-	// V4 Credentials
-	credsV4 := &credentials.Static{
+	signType := credentials.SignatureV4
+	if strings.EqualFold(config.Signature, "s3v2") {
+		signType = credentials.SignatureV2
+	}
+
+	// Credentials
+	creds := &credentials.Static{
 		Value: credentials.Value{
 			AccessKeyID:     config.AccessKey,
 			SecretAccessKey: config.SecretKey,
 			SessionToken:    config.SessionToken,
-			SignerType:      credentials.SignatureV4,
+			SignerType:      signType,
 		},
 	}
-	credsChain = append(credsChain, credsV4)
+	credsChain = append(credsChain, creds)
 	return credsChain, nil
 }
 
@@ -302,24 +307,10 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				return nil, err
 			}
 
-			// V2 Credentials
-			credsV2 := &credentials.Static{
-				Value: credentials.Value{
-					AccessKeyID:     config.AccessKey,
-					SecretAccessKey: config.SecretKey,
-					SessionToken:    "",
-					SignerType:      credentials.SignatureV2,
-				},
-			}
-			credsChain = append(credsChain, credsV2)
-
-			creds := credentials.NewChainCredentials(credsChain)
-
-			// Not found. Instantiate a new MinIO
 			var e error
 
 			options := minio.Options{
-				Creds:        creds,
+				Creds:        credentials.NewChainCredentials(credsChain),
 				Secure:       useTLS,
 				Region:       env.Get("MC_REGION", env.Get("AWS_REGION", "")),
 				BucketLookup: config.Lookup,
