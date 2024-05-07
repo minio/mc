@@ -32,7 +32,7 @@ var adminSubnetHealthCmd = cli.Command{
 	Action:             mainSubnetHealth,
 	Before:             setGlobalsFromContext,
 	Hidden:             true,
-	Flags:              append(supportDiagFlags, globalFlags...),
+	Flags:              supportDiagFlags, // No need to append globalFlags as top level command would add them
 	CustomHelpTemplate: "This command is deprecated and will be removed in a future release. Use 'mc support diag' instead.\n",
 }
 
