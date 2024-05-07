@@ -258,11 +258,17 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
+			case BucketDoesNotExist:
+				if isForce {
+					continue
+				}
+				errorIf(err.Trace(targetURL), "Unable to validate target `"+targetURL+"`.")
+				cErr = exitStatus(globalErrorExitStatus)
+				continue
 			default:
 				errorIf(err.Trace(targetURL), "Unable to validate target `"+targetURL+"`.")
 				cErr = exitStatus(globalErrorExitStatus)
 				continue
-
 			}
 		}
 
