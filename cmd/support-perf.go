@@ -99,6 +99,8 @@ var supportPerfCmd = cli.Command{
 USAGE:
   {{.HelpName}} [COMMAND] [FLAGS] TARGET
 
+COMMAND:
+  valid values are 'drive', 'net', 'object' and 'site-replication'
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -108,6 +110,12 @@ EXAMPLES:
 
   2. Run object storage, network, and drive performance tests on cluster with alias 'myminio', save and upload to SUBNET manually
      {{.Prompt}} {{.HelpName}} myminio --airgap
+
+  3. Run 'network' performance tests on cluster with alias 'myminio', save and upload to SUBNET manually
+     {{.Prompt}} {{.HelpName}} network myminio --airgap
+
+  4. Upload site replication performance analysis for cluster with alias 'myminio' to SUBNET
+     {{.Prompt}} {{.HelpName}} site-replication myminio
 `,
 }
 
