@@ -83,7 +83,7 @@ func (v encryptInfoMessage) String() string {
 		msg = "Auto encryption 'sse-s3' is enabled"
 	}
 	if v.Encryption.KeyID != "" {
-		msg = fmt.Sprintf("Auto encrytion 'sse-kms' is enabled with KeyID: %s", v.Encryption.KeyID)
+		msg = fmt.Sprintf("Auto encryption 'sse-kms' is enabled with KeyID: %s", v.Encryption.KeyID)
 	}
 	return console.Colorize("encryptInfoMessage", msg)
 }
