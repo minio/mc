@@ -51,7 +51,7 @@ var adminReplicateUpdateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "bucket-bandwidth",
-		Usage: "Set default bandwidth limit for bucket in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
+		Usage: "Set default bandwidth limit for bucket in bytes per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
 	cli.BoolFlag{
 		Name:  "disable-ilm-expiry-replication",

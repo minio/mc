@@ -83,7 +83,7 @@ var replicateAddFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "bandwidth",
-		Usage: "set bandwidth limit in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
+		Usage: "set bandwidth limit in bytes per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
 	cli.BoolFlag{
 		Name:  "sync",
