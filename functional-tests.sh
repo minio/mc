@@ -1068,6 +1068,45 @@ function test_admin_users()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_bucket_replication()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-replicate-$RANDOM"
+    bkt1="rep-bucket1"
+    bkt2="rep-bucket2"
+
+    echo "${SERVER_ALIAS}"
+    mc admin info "${SERVER_ALIAS}"
+    mc ls "${SERVER_ALIAS}"
+    # Remove any pre-existing buckets
+    mc rb "${SERVER_ALIAS}/${bkt1}" --force
+    mc rb "${SERVER_ALIAS}/${bkt2}" --force
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bkt1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd version enable "${SERVER_ALIAS}/${bkt1}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bkt2}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd version enable "${SERVER_ALIAS}/${bkt2}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd replicate add "${SERVER_ALIAS}/${bkt1}" --remote-bucket "${SERVER_ALIAS}/${bkt2}"
+    loop_count=0
+    while true; do
+        if [ $loop_count -eq 100 ]; then
+            break
+        fi
+        # Intentionally not using mc_cmd to avoid delays of adding error to log files etc
+        assert_success "$start_time" "${FUNCNAME[0]}" mc cp "$FILE_0_B" "${SERVER_ALIAS}/${bkt1}/${object_name}"
+        assert_success "$start_time" "${FUNCNAME[0]}" mc rm "${SERVER_ALIAS}/${bkt1}/${object_name}"
+        assert_failure "$start_time" "${FUNCNAME[0]}" mc stat "${SERVER_ALIAS}/${bkt1}/${object_name}"
+        loop_count=$((loop_count + 1))
+        echo $loop_count
+    done
+    # Finally remove the buckets
+    mc rb "${SERVER_ALIAS}/${bkt1}" --force
+    mc rb "${SERVER_ALIAS}/${bkt2}" --force
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function run_test()
 {
     test_make_bucket
@@ -1098,6 +1137,7 @@ function run_test()
     test_copy_object_preserve_filesystem_attr
     test_find
     test_find_empty
+    test_bucket_replication
     if [ -z "$MINT_MODE" ]; then
 	test_watch_object
     fi
