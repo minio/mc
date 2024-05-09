@@ -244,12 +244,12 @@ func (s replicateStatusMessage) String() string {
 			limit := "N/A"   // N/A means cluster bandwidth is not configured
 			current := "N/A" // N/A means cluster bandwidth is not configured
 			if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
-				current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond * 8))
-				current = fmt.Sprintf("%sb/s", current[:len(current)-1])
+				current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
+				current = fmt.Sprintf("%s/s", current)
 			}
 			if bwStat.BandWidthLimitInBytesPerSecond > 0 {
-				limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond * 8))
-				limit = fmt.Sprintf("%sb/s", limit[:len(limit)-1])
+				limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
+				limit = fmt.Sprintf("%s/s", limit)
 			}
 			addRowF(titleui("Configured Max Bandwidth (Bps): ")+"%s"+titleui("   Current Bandwidth (Bps): ")+"%s", valueui(limit), valueui(current))
 		}

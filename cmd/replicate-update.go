@@ -76,7 +76,7 @@ var replicateUpdateFlags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "bandwidth",
-		Usage: "Set bandwidth limit in bits per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
+		Usage: "Set bandwidth limit in bytes per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
 	cli.UintFlag{
 		Name:  "healthcheck-seconds",

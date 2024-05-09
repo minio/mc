@@ -25,10 +25,10 @@ func TestGetBandwidthInBytes(t *testing.T) {
 	type args struct {
 		bandwidthStr string
 	}
-	f1 := 999.123457 * 1024 * 1024 / 8
-	f2 := 10.123456790 * 1024 * 1024 * 1024 / 8
-	f3 := 10000.123456790 * 1024 * 1024 * 1024 / 8
-	f4 := (0.001*1024*1024*1024 + 1) / 8 // round up
+	f1 := 999.1234567 * 1024 * 1024
+	f2 := 10.123456789 * 1024 * 1024 * 1024
+	f3 := 10000.123456789 * 1024 * 1024 * 1024
+	f4 := 0.001 * 1024 * 1024 * 1024
 	tests := []struct {
 		name string
 		args args
@@ -39,66 +39,66 @@ func TestGetBandwidthInBytes(t *testing.T) {
 			args: args{
 				bandwidthStr: "1Mi",
 			},
-			want: 1024 * 1024 / 8,
+			want: 1024 * 1024,
 		},
 		{
 			name: "1MegaBit",
 			args: args{
 				bandwidthStr: "1M",
 			},
-			want: 1000000 / 8,
-		},
-		{
-			name: "1GigaBit",
-			args: args{
-				bandwidthStr: "1G",
-			},
-			want: 1000000000 / 8,
+			want: 1000000,
 		},
 		{
 			name: "1GigaByte",
 			args: args{
+				bandwidthStr: "1G",
+			},
+			want: 1000000000,
+		},
+		{
+			name: "1GibiByte",
+			args: args{
 				bandwidthStr: "1Gi",
 			},
-			want: 1024 * 1024 * 1024 / 8,
-		},
-		{
-			name: "FractionalMegaBits",
-			args: args{
-				bandwidthStr: "999.123456789123456789M",
-			},
-			want: 999123457 / 8,
-		},
-		{
-			name: "FractionalGigaBits",
-			args: args{
-				bandwidthStr: "10.123456789123456789123456G",
-			},
-			want: 10123456789 / 8,
-		},
-		{
-			name: "FractionalBigGigaBits",
-			args: args{
-				bandwidthStr: "10000.123456789123456789123456G",
-			},
-			want: 10000123456789 / 8,
+			want: 1024 * 1024 * 1024,
 		},
 		{
 			name: "FractionalMegaBytes",
+			args: args{
+				bandwidthStr: "999.123456789123456789M",
+			},
+			want: 999123456,
+		},
+		{
+			name: "FractionalGigaBytes",
+			args: args{
+				bandwidthStr: "10.123456789123456789123456G",
+			},
+			want: 10123456789,
+		},
+		{
+			name: "FractionalBigGigaBytes",
+			args: args{
+				bandwidthStr: "10000.123456789123456789123456G",
+			},
+			want: 10000123456789,
+		},
+		{
+			name: "FractionalMebiBytes",
 			args: args{
 				bandwidthStr: "999.123456789123456789Mi",
 			},
 			want: uint64(f1),
 		},
 		{
-			name: "FractionalGigaBytes",
+			name: "FractionalGibiBytes",
 			args: args{
 				bandwidthStr: "10.123456789123456789123456Gi",
 			},
 			want: uint64(f2),
 		},
 		{
-			name: "FractionalBigGigaBytes",
+			name: "FractionalBigGibiBytes",
 			args: args{
 				bandwidthStr: "10000.123456789123456789123456Gi",
 			},
@@ -116,7 +116,7 @@ func TestGetBandwidthInBytes(t *testing.T) {
 			args: args{
 				bandwidthStr: "1024Ki",
 			},
-			want: 1024 * 1024 / 8,
+			want: 1024 * 1024,
 		},
 	}
 	t.Parallel()
