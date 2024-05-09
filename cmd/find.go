@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -426,7 +427,7 @@ func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 		match = int64(ctx.smallerSize) > fileContent.Size
 	}
 	if match && len(ctx.matchMeta) > 0 {
-		match = matchRegexMaps(ctx.matchMeta, fileContent.Metadata)
+		match = matchMetadataRegexMaps(ctx.matchMeta, fileContent.Metadata)
 	}
 	if match && len(ctx.matchTags) > 0 {
 		match = matchRegexMaps(ctx.matchTags, fileContent.Tags)
@@ -506,6 +507,28 @@ func matchRegexMaps(m map[string]*regexp.Regexp, v map[string]string) bool {
 			continue
 		}
 		val, ok := v[k]
+		if !ok || !reg.MatchString(val) {
+			return false
+		}
+	}
+	return true
+}
+
+// matchMetadataRegexMaps will check if all regexes in 'm' match values in 'v' with the same key.
+// If a regex is nil, it must either not exist in v or have a 0 length value.
+func matchMetadataRegexMaps(m map[string]*regexp.Regexp, v map[string]string) bool {
+	for k, reg := range m {
+		if reg == nil {
+			if v[k] != "" {
+				return false
+			}
+			// Does not exist or empty, that is fine.
+			continue
+		}
+		val, ok := v[k]
+		if !ok {
+			val, ok = v[http.CanonicalHeaderKey(fmt.Sprintf("X-Amz-Meta-%s", k))]
+		}
 		if !ok || !reg.MatchString(val) {
 			return false
 		}
