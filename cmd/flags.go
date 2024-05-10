@@ -42,7 +42,7 @@ var globalFlags = []cli.Flag{
 		Name:   "disable-pager, dp",
 		Usage:  "disable mc internal pager and print to raw stdout",
 		EnvVar: envPrefix + globalDisablePagerEnv,
-		Hidden: true,
+		Hidden: false,
 	},
 	cli.BoolFlag{
 		Name:   "no-color",

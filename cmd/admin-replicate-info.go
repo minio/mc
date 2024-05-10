@@ -97,8 +97,8 @@ func (i srInfo) String() string {
 			}
 			limit := "N/A" // N/A means cluster bandwidth is not configured
 			if peer.DefaultBandwidth.Limit > 0 {
-				limit = humanize.Bytes(uint64(peer.DefaultBandwidth.Limit * 8))
-				limit = fmt.Sprintf("%sb/s", limit[:len(limit)-1])
+				limit = humanize.Bytes(uint64(peer.DefaultBandwidth.Limit))
+				limit = fmt.Sprintf("%s/s", limit)
 			}
 			r := console.Colorize("TDetail", newPrettyTable(" | ",
 				Field{"Deployment ID", 36},
