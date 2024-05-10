@@ -4,6 +4,7 @@ linters:
     - typecheck
     - goimports
     - misspell
+    - staticcheck
     - govet
     - revive
     - ineffassign
@@ -19,9 +20,6 @@ linters-settings:
   misspell:
     locale: US
 
-  gofumpt:
-    lang-version: "1.17"
-
     # Choose whether or not to use the extra rules that are disabled
     # by default
     extra-rules: false
@@ -32,6 +30,3 @@ issues:
     - instead of using struct literal
     - should have a package comment
     - error strings should not be capitalized or end with punctuation or a newline
-
-service:
-  golangci-lint-version: 1.43.0 # use the fixed version to not introduce new linters unexpectedly

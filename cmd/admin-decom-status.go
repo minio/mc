@@ -139,7 +139,7 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 	cellText[0] = []string{
 		"ID",
 		"Pools",
-		"Raw Drives Usage",
+		"Drives Usage",
 		"Status",
 	}
 	for idx, pool := range poolStatuses {
