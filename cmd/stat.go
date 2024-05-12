@@ -384,33 +384,6 @@ func (v bucketInfoMessage) JSON() string {
 	return buf.String()
 }
 
-type histogramDef struct {
-	start, end uint64
-	text       string
-}
-
-var histogramTagsDesc = map[string]histogramDef{
-	"LESS_THAN_1024_B":          {0, 1024, "less than 1024 bytes"},
-	"BETWEEN_1024_B_AND_1_MB":   {1024, 1024 * 1024, "between 1024 bytes and 1 MB"},
-	"BETWEEN_1_MB_AND_10_MB":    {1024 * 1024, 10 * 1024 * 1024, "between 1 MB and 10 MB"},
-	"BETWEEN_10_MB_AND_64_MB":   {10 * 1024 * 1024, 64 * 1024 * 1024, "between 10 MB and 64 MB"},
-	"BETWEEN_64_MB_AND_128_MB":  {64 * 1024 * 1024, 128 * 1024 * 1024, "between 64 MB and 128 MB"},
-	"BETWEEN_128_MB_AND_512_MB": {128 * 1024 * 1024, 512 * 1024 * 1024, "between 128 MB and 512 MB"},
-	"GREATER_THAN_512_MB":       {512 * 1024 * 1024, 0, "greater than 512 MB"},
-}
-
-// Return a sorted list of histograms
-func sortHistogramTags() (orderedTags []string) {
-	orderedTags = make([]string, 0, len(histogramTagsDesc))
-	for tag := range histogramTagsDesc {
-		orderedTags = append(orderedTags, tag)
-	}
-	sort.Slice(orderedTags, func(i, j int) bool {
-		return histogramTagsDesc[orderedTags[i]].start < histogramTagsDesc[orderedTags[j]].start
-	})
-	return
-}
-
 func countDigits(num uint64) (count uint) {
 	for num > 0 {
 		num /= 10
@@ -466,11 +439,15 @@ func (v bucketInfoMessage) String() string {
 			}
 		}
 
-		sortedTags := sortHistogramTags()
+		var sortedTags []string
+		for k := range v.Usage.ObjectSizesHistogram {
+			sortedTags = append(sortedTags, k)
+		}
+		sort.Strings(sortedTags)
 		for _, tagName := range sortedTags {
 			val, ok := v.Usage.ObjectSizesHistogram[tagName]
 			if ok {
-				fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, histogramTagsDesc[tagName].text)
+				fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, tagName)
 			}
 		}
 	}
