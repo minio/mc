@@ -3,7 +3,10 @@ name: Go
 on:
   pull_request:
     branches:
-    - master
+    - main
+  push:
+    branches:
+    - main
 
 jobs:
   build:
@@ -11,17 +14,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.22.3]
         os: [ubuntu-latest, windows-latest]
     steps:
       - name: Set up Go ${{ matrix.go-version }} on ${{ matrix.os }}
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Build on ${{ matrix.os }}
         if: matrix.os == 'windows-latest'
