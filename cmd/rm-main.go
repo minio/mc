@@ -327,9 +327,10 @@ func removeSingle(url, versionID string, isIncomplete, isFake, isForce, isBypass
 }
 
 // listAndRemove uses listing before removal, it can list recursively or not, with versions or not.
-//   Use cases:
-//      * Remove objects recursively
-//      * Remove all versions of a single object
+//
+//	Use cases:
+//	   * Remove objects recursively
+//	   * Remove all versions of a single object
 func listAndRemove(url string, timeRef time.Time, withVersions, isRecursive, isIncomplete, isFake, isBypass bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
 	ctx, cancelRemove := context.WithCancel(globalContext)
 	defer cancelRemove()

@@ -25,7 +25,7 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
-/////////////////// Session V6 ///////////////////
+// ///////////////// Session V6 ///////////////////
 // sessionV6Header for resumable sessions.
 type sessionV6Header struct {
 	Version            string            `json:"version"`

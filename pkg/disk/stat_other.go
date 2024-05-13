@@ -1,3 +1,4 @@
+//go:build openbsd || solaris
 // +build openbsd solaris
 
 /*
