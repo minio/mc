@@ -3,7 +3,7 @@ name: Go
 on:
   push:
     tags:
-      - 'v*'
+      - 'RELEASE.*'
 
 permissions:
   contents: write
