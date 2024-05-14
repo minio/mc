@@ -1,3 +1,8 @@
+# FORKED FROM MINIO/MC
+This repository is a fork of the original MinIO/MC repository. The original repository can be found [here](https://github.com/minio/mc).
+The fork was split at commit [0c11cf9](https://github.com/StackVista/minio-mc/commit/0c11cf9f28560f573af2c508944ab29cc02177a3).
+This is to ensure that we have a stable version of the MinIO client that is still licensed under the Apache 2.0 License. The only changes that will typically happen are dependency updates to ensure there are no security vulnerabilities.
+
 # MinIO Client Quickstart Guide
 [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/)
 
