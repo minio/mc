@@ -11,3 +11,4 @@ stage/
 mc
 .run*
 .idea/
+bin/

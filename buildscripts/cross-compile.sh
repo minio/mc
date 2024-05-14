@@ -10,7 +10,7 @@ function _init() {
     export CGO_ENABLED=0
 
     ## List of architectures and OS to test coss compilation.
-    SUPPORTED_OSARCH="linux/ppc64le linux/arm64 linux/s390x darwin/amd64 freebsd/amd64 linux/arm linux/386 windows/amd64"
+    SUPPORTED_OSARCH="linux/amd64 linux/arm64 linux/s390x darwin/amd64 freebsd/amd64 linux/arm linux/386 windows/amd64"
 }
 
 function _build() {
@@ -26,7 +26,7 @@ function _build() {
     export GOARCH=$arch
     export GO111MODULE=on
     export CGO_ENABLED=0
-    go build -tags kqueue -o /dev/null
+    go build -tags kqueue -o ./bin/mc_${os}_${arch}
 }
 
 function main() {
