@@ -143,6 +143,7 @@ func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceA
 	}
 
 	var exp time.Time
+	var expPointer *time.Time
 	if expVal != "" {
 		location, e := time.LoadLocation("Local")
 		if e != nil {
@@ -155,6 +156,7 @@ func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceA
 			if e == nil {
 				patternMatched = true
 				exp = t
+				expPointer = &exp
 				break
 			}
 		}
@@ -165,8 +167,7 @@ func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceA
 		}
 	} else if expDurVal != 0 {
 		exp = time.Now().Add(expDurVal)
-	} else {
-		exp = time.Unix(0, 0)
+		expPointer = &exp
 	}
 
 	var policyBytes []byte
@@ -199,6 +200,6 @@ func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceA
 		SecretKey:   secretKey,
 		Name:        name,
 		Description: description,
-		Expiration:  &exp,
+		Expiration:  expPointer,
 	}
 }
