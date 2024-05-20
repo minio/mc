@@ -77,6 +77,7 @@ func getPolicyInfo(client *madmin.AdminClient, policyName string) (*madmin.Polic
 
 	if pinfo.PolicyName == "" {
 		// Likely server only supports the older version.
+		// nolint:staticcheck
 		pinfo.Policy, e = client.InfoCannedPolicy(globalContext, policyName)
 		if e != nil {
 			return nil, e

@@ -2455,7 +2455,7 @@ func validateObjectMetaData(t *testing.T, file *testFile) {
 		found := false
 
 		for ii, vv := range file.MinioStat.Metadata {
-			if metaPrefix+strings.Title(i) == ii {
+			if metaPrefix+http.CanonicalHeaderKey(i) == ii {
 				found = true
 				if v != vv {
 					fmt.Println("------------------------")

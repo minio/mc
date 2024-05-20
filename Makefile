@@ -18,7 +18,6 @@ getdeps:
 	@mkdir -p ${GOPATH}/bin
 	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
 	@echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@latest
-	@echo "Installing staticheck" && go install honnef.co/go/tools/cmd/staticcheck@latest
 
 crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)
@@ -35,7 +34,6 @@ vet:
 lint: getdeps
 	@echo "Running $@ check"
 	@GO111MODULE=on ${GOPATH}/bin/golangci-lint run --timeout=5m --config ./.golangci.yml
-	@GO111MODULE=on ${GOPATH}/bin/staticcheck -tests=false -checks="all,-ST1000,-ST1003,-ST1016,-ST1020,-ST1021,-ST1022,-ST1023,-ST1005" ./...
 
 # Builds mc, runs the verifiers then runs the tests.
 check: test
