@@ -25,8 +25,8 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
-	"github.com/minio/pkg/v2/policy"
+	"github.com/minio/pkg/v3/console"
+	"github.com/minio/pkg/v3/policy"
 )
 
 var adminUserSTSAcctSubcommands = []cli.Command{
