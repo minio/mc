@@ -167,7 +167,7 @@ func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceA
 	}
 
 	if policyPath != "" {
-		// Validate the policy document and ensure it has at least when statement
+		// Validate the policy document and ensure it has at least one statement
 		policyBytes, e := os.ReadFile(policyPath)
 		fatalIf(probe.NewError(e), "unable to read the policy document")
 
