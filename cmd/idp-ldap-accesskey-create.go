@@ -184,7 +184,7 @@ func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceA
 	switch {
 	case expVal != "":
 		location, e := time.LoadLocation("Local")
-		fatalIf(probe.NewError(e), "unable to load local location verify your local TZ=<val> settings")
+		fatalIf(probe.NewError(e), "unable to load local location. verify your local TZ=<val> settings")
 
 		var found bool
 		for _, format := range supportedTimeFormats {

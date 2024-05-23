@@ -333,7 +333,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 
 	if expiry != "" {
 		location, e := time.LoadLocation("Local")
-		fatalIf(probe.NewError(e), "unable to load local location verify your local TZ=<val> settings")
+		fatalIf(probe.NewError(e), "unable to load local location. verify your local TZ=<val> settings")
 
 		var found bool
 		for _, format := range supportedTimeFormats {
