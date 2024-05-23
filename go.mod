@@ -16,7 +16,7 @@ require (
 	github.com/mattn/go-ieproxy v0.0.11
 	github.com/mattn/go-isatty v0.0.20
 	github.com/minio/cli v1.24.2
-	github.com/minio/colorjson v1.0.6
+	github.com/minio/colorjson v1.0.7
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.70
@@ -42,7 +42,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
 	github.com/minio/madmin-go/v3 v3.0.51
-	github.com/minio/pkg/v2 v2.0.19
+	github.com/minio/pkg/v3 v3.0.0
 	github.com/minio/selfupdate v0.6.0
 	github.com/muesli/reflow v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5

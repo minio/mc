@@ -24,7 +24,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/cmd/ilm"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var ilmRemoveFlags = []cli.Flag{
