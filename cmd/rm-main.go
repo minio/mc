@@ -329,7 +329,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 		}
 
 		// We should not proceed
-		if ignoreStatError && opts.olderThan != "" || opts.newerThan != "" {
+		if ignoreStatError && (opts.olderThan != "" || opts.newerThan != "") {
 			errorIf(pErr.Trace(url), "Unable to stat `"+url+"`.")
 			return exitStatus(globalErrorExitStatus)
 		}
