@@ -43,7 +43,11 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "self",
-		Usage: "list access keys for the authenticated user if admin",
+		Usage: "list access keys for the authenticated user",
+	},
+	cli.BoolFlag{
+		Name:  "all",
+		Usage: "list all access keys for all LDAP users",
 	},
 }
 
@@ -130,34 +134,55 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	}
 
 	usersOnly := ctx.Bool("users-only")
-	tempOnly := ctx.Bool("sts-only")
-	permanentOnly := ctx.Bool("svcacc-only")
-	isSelf := ctx.Bool("self")
-	listType := ""
-
-	if (usersOnly && permanentOnly) || (usersOnly && tempOnly) || (permanentOnly && tempOnly) {
-		e := errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
-		fatalIf(probe.NewError(e), "Invalid flags.")
-	}
-	if tempOnly {
-		listType = "sts-only"
-	} else if permanentOnly {
-		listType = "svcacc-only"
-	}
+	stsOnly := ctx.Bool("temp-only")
+	svcaccOnly := ctx.Bool("svcacc-only")
+	selfFlag := ctx.Bool("self")
+	allFlag := ctx.Bool("all")
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	userArg := args.Tail()
+	users := args.Tail()
+
+	var e error
+	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
+		e = errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
+	} else if selfFlag && allFlag {
+		e = errors.New("only one of --self or --all can be specified")
+	} else if (selfFlag || allFlag) && len(users) > 0 {
+		e = errors.New("user DNs cannot be specified with --self or --all")
+	}
+	fatalIf(probe.NewError(e), "Invalid flags.")
+
+	// If no users/self/all flags are specified, tentatively assume --all
+	// If access is denied on tentativeAll, retry with self
+	// This is to maintain compatibility with the previous behavior
+	tentativeAll := false
+	if !selfFlag && !allFlag && len(users) == 0 {
+		tentativeAll = true
+		allFlag = true
+	}
+
+	var listType string
+	switch {
+	case usersOnly:
+		listType = madmin.AccessKeyListUsersOnly
+	case stsOnly:
+		listType = madmin.AccessKeyListSTSOnly
+	case svcaccOnly:
+		listType = madmin.AccessKeyListSvcaccOnly
+	default:
+		listType = madmin.AccessKeyListAll
+	}
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	accessKeysMap, e := client.ListAccessKeysLDAP(globalContext, userArg, listType, isSelf)
+	accessKeysMap, e := client.ListAccessKeysLDAPv2(globalContext, users, listType, allFlag)
 	if e != nil {
-		if e.Error() == "Access Denied." && !isSelf {
+		if e.Error() == "Access Denied." && tentativeAll {
 			// retry with self
-			accessKeysMap, e = client.ListAccessKeysLDAP(globalContext, userArg, listType, true)
+			accessKeysMap, e = client.ListAccessKeysLDAPv2(globalContext, users, listType, false)
 		}
 		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
