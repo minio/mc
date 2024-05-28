@@ -1028,6 +1028,7 @@ function test_bucket_replication() {
 			break
 		fi
 		assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_0_B" "${SERVER_ALIAS}/${bkt1}/${object_name}"
+		sleep 5s # to make sure objects reflects
 		assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bkt1}/${object_name}"
 		assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${SERVER_ALIAS}/${bkt1}/${object_name}"
 		loop_count=$((loop_count + 1))
