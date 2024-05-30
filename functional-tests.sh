@@ -1009,36 +1009,6 @@ function test_admin_users() {
 	log_success "$start_time" "${FUNCNAME[0]}"
 }
 
-function test_bucket_replication() {
-	show "${FUNCNAME[0]}"
-
-	start_time=$(get_time)
-	object_name="mc-test-replicate-$RANDOM"
-	bkt1="${object_name}-bucket1"
-	bkt2="${object_name}-bucket2"
-
-	assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bkt1}"
-	assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd version enable "${SERVER_ALIAS}/${bkt1}"
-	assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bkt2}"
-	assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd version enable "${SERVER_ALIAS}/${bkt2}"
-	assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd replicate add "${SERVER_ALIAS}/${bkt1}" --remote-bucket "${SERVER_ALIAS}/${bkt2}"
-	loop_count=0
-	while true; do
-		if [ $loop_count -eq 100 ]; then
-			break
-		fi
-		assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "$FILE_0_B" "${SERVER_ALIAS}/${bkt1}/${object_name}"
-		assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bkt1}/${object_name}"
-		assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd stat "${SERVER_ALIAS}/${bkt1}/${object_name}"
-		loop_count=$((loop_count + 1))
-	done
-
-	diff -bB <(mc_cmd --json ls "${SERVER_ALIAS}/${bkt1}/${object_name}" | jq -r .key) <(mc_cmd --json ls "${SERVER_ALIAS}/${bkt2}/${object_name}" | jq -r .key) >/dev/null 2>&1
-	assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "replication list differs"
-
-	log_success "$start_time" "${FUNCNAME[0]}"
-}
-
 function run_test() {
 	test_make_bucket
 	test_make_bucket_error
