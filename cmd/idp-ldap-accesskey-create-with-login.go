@@ -28,13 +28,13 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 	"golang.org/x/term"
 )
 
 var idpLdapAccesskeyCreateWithLoginCmd = cli.Command{
 	Name:         "create-with-login",
-	Usage:        "log in using LDAP credentials to generate access key pair",
+	Usage:        "login using LDAP credentials to generate access key pair",
 	Action:       mainIDPLdapAccesskeyCreateWithLogin,
 	Before:       setGlobalsFromContext,
 	Flags:        append(idpLdapAccesskeyCreateFlags, globalFlags...),
@@ -51,31 +51,27 @@ FLAGS:
 EXAMPLES:
   1. Create a new access key pair for https://minio.example.com by logging in with LDAP credentials
      {{.Prompt}} {{.HelpName}} https://minio.example.com
+
   2. Create a new access key pair for http://localhost:9000 via login with custom access key and secret key 
      {{.Prompt}} {{.HelpName}} http://localhost:9000 --access-key myaccesskey --secret-key mysecretkey
-	`,
+`,
 }
 
 func mainIDPLdapAccesskeyCreateWithLogin(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
+	if !ctx.Args().Present() {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
-	args := ctx.Args()
-	url := args.Get(0)
-
-	opts := accessKeyCreateOpts(ctx, "")
-
 	isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
 	if !isTerminal {
-		e := fmt.Errorf("login flag cannot be used with non-interactive terminal")
-		fatalIf(probe.NewError(e), "Invalid flags.")
+		e := fmt.Errorf("login flag cannot be used with a non-interactive terminal")
+		fatalIf(probe.NewError(e), "unable to read from STDIN")
 	}
 
-	client := loginLDAPAccesskey(url)
+	client, opts := loginLDAPAccesskey(ctx)
 
 	res, e := client.AddServiceAccountLDAP(globalContext, opts)
-	fatalIf(probe.NewError(e), "Unable to add service account.")
+	fatalIf(probe.NewError(e), "unable to add service account")
 
 	m := ldapAccesskeyMessage{
 		op:          "create",
@@ -91,32 +87,34 @@ func mainIDPLdapAccesskeyCreateWithLogin(ctx *cli.Context) error {
 	return nil
 }
 
-func loginLDAPAccesskey(URL string) *madmin.AdminClient {
+func loginLDAPAccesskey(ctx *cli.Context) (*madmin.AdminClient, madmin.AddServiceAccountReq) {
+	urlStr := ctx.Args().First()
+
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Username: "))
 	value, _, e := reader.ReadLine()
-	fatalIf(probe.NewError(e), "Unable to read username")
+	fatalIf(probe.NewError(e), "unable to read username")
 	username := string(value)
 
-	fmt.Printf("%s", console.Colorize(cred, "Enter Password: "))
+	fmt.Printf("%s", console.Colorize(cred, "Enter LDAP Password: "))
 	bytePassword, e := term.ReadPassword(int(os.Stdin.Fd()))
-	fatalIf(probe.NewError(e), "Unable to read password")
+	fatalIf(probe.NewError(e), "unable to read password")
 	fmt.Printf("\n")
 	password := string(bytePassword)
 
-	ldapID, e := credentials.NewLDAPIdentity(URL, username, password)
-	fatalIf(probe.NewError(e), "Unable to initialize LDAP identity.")
+	stsCreds, e := credentials.NewLDAPIdentity(urlStr, username, password)
+	fatalIf(probe.NewError(e), "unable to initialize LDAP identity")
 
-	u, e := url.Parse(URL)
-	fatalIf(probe.NewError(e), "Unable to parse server URL.")
+	u, e := url.Parse(urlStr)
+	fatalIf(probe.NewError(e), "unable to parse server URL")
 
 	client, e := madmin.NewWithOptions(u.Host, &madmin.Options{
-		Creds:  ldapID,
+		Creds:  stsCreds,
 		Secure: u.Scheme == "https",
 	})
-	fatalIf(probe.NewError(e), "Unable to initialize admin connection.")
+	fatalIf(probe.NewError(e), "unable to initialize admin connection")
 
-	return client
+	return client, accessKeyCreateOpts(ctx, username)
 }

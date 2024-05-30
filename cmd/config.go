@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/env"
+	"github.com/minio/pkg/v3/env"
 
 	"github.com/mitchellh/go-homedir"
 )

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -26,7 +27,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/policy"
+	"github.com/minio/pkg/v3/policy"
 )
 
 var idpLdapAccesskeyCreateFlags = []cli.Flag{
@@ -84,13 +85,16 @@ FLAGS:
 EXAMPLES:
   1. Create a new access key pair with the same policy as the authenticated user
      {{.Prompt}} {{.HelpName}} local/
+
   2. Create a new access key pair with custom access key and secret key
      {{.Prompt}} {{.HelpName}} local/ --access-key myaccesskey --secret-key mysecretkey
+
   4. Create a new access key pair for user with username "james" that expires in 1 day
      {{.Prompt}} {{.HelpName}} local/ james --expiry-duration 24h
+
   5. Create a new access key pair for authenticated user that expires on 2021-01-01
      {{.Prompt}} {{.HelpName}} --expiry 2021-01-01
-	`,
+`,
 }
 
 func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
@@ -128,77 +132,77 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 }
 
 func accessKeyCreateOpts(ctx *cli.Context, targetUser string) madmin.AddServiceAccountReq {
-	accessVal := ctx.String("access-key")
-	secretVal := ctx.String("secret-key")
 	name := ctx.String("name")
-	description := ctx.String("description")
-	policyPath := ctx.String("policy")
-
-	expDurVal := ctx.Duration("expiry-duration")
 	expVal := ctx.String("expiry")
+	policyPath := ctx.String("policy")
+	accessKey := ctx.String("access-key")
+	secretKey := ctx.String("secret-key")
+	description := ctx.String("description")
+	expDurVal := ctx.Duration("expiry-duration")
+
+	// generate access key and secret key
+	if len(accessKey) <= 0 || len(secretKey) <= 0 {
+		randomAccessKey, randomSecretKey, err := generateCredentials()
+		if err != nil {
+			fatalIf(err, "unable to generate randomized access credentials")
+		}
+		if len(accessKey) <= 0 {
+			accessKey = randomAccessKey
+		}
+		if len(secretKey) <= 0 {
+			secretKey = randomSecretKey
+		}
+	}
 
 	if expVal != "" && expDurVal != 0 {
-		e := fmt.Errorf("Only one of --expiry or --expiry-duration can be specified")
-		fatalIf(probe.NewError(e), "Invalid flags.")
+		fatalIf(probe.NewError(errors.New("Only one of --expiry or --expiry-duration can be specified")), "invalid flags")
 	}
 
-	var exp time.Time
-	if expVal != "" {
-		location, e := time.LoadLocation("Local")
-		if e != nil {
-			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
-		}
-
-		patternMatched := false
-		for _, format := range supportedTimeFormats {
-			t, e := time.ParseInLocation(format, expVal, location)
-			if e == nil {
-				patternMatched = true
-				exp = t
-				break
-			}
-		}
-
-		if !patternMatched {
-			e := fmt.Errorf("invalid expiry date format '%s'", expVal)
-			fatalIf(probe.NewError(e), "unable to parse the expiry argument.")
-		}
-	} else if expDurVal != 0 {
-		exp = time.Now().Add(expDurVal)
-	} else {
-		exp = time.Unix(0, 0)
-	}
-
-	var policyBytes []byte
-	if policyPath != "" {
-		// Validate the policy document and ensure it has at least when statement
-		var e error
-		policyBytes, e = os.ReadFile(policyPath)
-		fatalIf(probe.NewError(e), "Unable to open the policy document.")
-		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
-		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
-		if p.IsEmpty() {
-			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
-		}
-	}
-
-	accessKey, secretKey, e := generateCredentials()
-	fatalIf(probe.NewError(e), "Unable to generate credentials.")
-
-	// If access key and secret key are provided, use them instead
-	if accessVal != "" {
-		accessKey = accessVal
-	}
-	if secretVal != "" {
-		secretKey = secretVal
-	}
-	return madmin.AddServiceAccountReq{
-		Policy:      policyBytes,
+	opts := madmin.AddServiceAccountReq{
 		TargetUser:  targetUser,
 		AccessKey:   accessKey,
 		SecretKey:   secretKey,
 		Name:        name,
 		Description: description,
-		Expiration:  &exp,
 	}
+
+	if policyPath != "" {
+		// Validate the policy document and ensure it has at least one statement
+		policyBytes, e := os.ReadFile(policyPath)
+		fatalIf(probe.NewError(e), "unable to read the policy document")
+
+		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
+		fatalIf(probe.NewError(e), "unable to parse the policy document")
+
+		if p.IsEmpty() {
+			fatalIf(errInvalidArgument(), "empty policies are not allowed")
+		}
+
+		opts.Policy = policyBytes
+	}
+
+	switch {
+	case expVal != "":
+		location, e := time.LoadLocation("Local")
+		fatalIf(probe.NewError(e), "unable to load local location. verify your local TZ=<val> settings")
+
+		var found bool
+		for _, format := range supportedTimeFormats {
+			t, e := time.ParseInLocation(format, expVal, location)
+			if e == nil {
+				found = true
+				opts.Expiration = &t
+				break
+			}
+		}
+
+		if !found {
+			fatalIf(probe.NewError(fmt.Errorf("invalid expiry date format '%s'", expVal)), "unable to parse the expiry argument")
+		}
+	case expDurVal != 0:
+		t := time.Now().Add(expDurVal)
+		opts.Expiration = &t
+	}
+
+	return opts
 }
