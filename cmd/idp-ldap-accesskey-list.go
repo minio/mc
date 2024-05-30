@@ -116,7 +116,6 @@ func (m ldapUsersList) String() string {
 			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
 		}
 	}
-	o.WriteString("\n")
 
 	return o.String()
 }
@@ -178,11 +177,11 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	accessKeysMap, e := client.ListAccessKeysLDAPv2(globalContext, users, listType, allFlag)
+	accessKeysMap, e := client.ListAccessKeysLDAPBulk(globalContext, users, listType, allFlag)
 	if e != nil {
 		if e.Error() == "Access Denied." && tentativeAll {
 			// retry with self
-			accessKeysMap, e = client.ListAccessKeysLDAPv2(globalContext, users, listType, false)
+			accessKeysMap, e = client.ListAccessKeysLDAPBulk(globalContext, users, listType, false)
 		}
 		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
