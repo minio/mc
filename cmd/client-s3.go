@@ -953,7 +953,8 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	// Disallow automatic decompression for some objects with content-encoding set.
 	o.Set("Accept-Encoding", "identity")
 
-	reader, e := c.api.GetObject(ctx, bucket, object, o)
+	cr := minio.Core{Client: c.api}
+	reader, objectInfo, _, e := cr.GetObject(ctx, bucket, object, o)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -971,25 +972,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 		}
 		return nil, nil, probe.NewError(e)
 	}
-	objStat, e := reader.Stat()
-	if e != nil {
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "NoSuchBucket" {
-			return nil, nil, probe.NewError(BucketDoesNotExist{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "InvalidBucketName" {
-			return nil, nil, probe.NewError(BucketInvalid{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "NoSuchKey" {
-			return nil, nil, probe.NewError(ObjectMissing{})
-		}
-		return nil, nil, probe.NewError(e)
-	}
-	return reader, c.objectInfo2ClientContent(bucket, objStat), nil
+	return reader, c.objectInfo2ClientContent(bucket, objectInfo), nil
 }
 
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
