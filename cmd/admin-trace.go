@@ -1090,20 +1090,34 @@ func (m *traceStatsUI) View() string {
 	if m.maxEntries > 0 && len(entries) > m.maxEntries {
 		entries = entries[:m.maxEntries]
 	}
-
-	table.Append([]string{
+	hasTTFB := false
+	for _, e := range entries {
+		if e.TTFB > 0 {
+			hasTTFB = true
+			break
+		}
+	}
+	t := []string{
 		console.Colorize("metrics-top-title", "Call"),
 		console.Colorize("metrics-top-title", "Count"),
 		console.Colorize("metrics-top-title", "RPM"),
 		console.Colorize("metrics-top-title", "Avg Time"),
 		console.Colorize("metrics-top-title", "Min Time"),
 		console.Colorize("metrics-top-title", "Max Time"),
-		console.Colorize("metrics-top-title", "Avg TTFB"),
-		console.Colorize("metrics-top-title", "Max TTFB"),
+	}
+	if hasTTFB {
+		t = append(t,
+			console.Colorize("metrics-top-title", "Avg TTFB"),
+			console.Colorize("metrics-top-title", "Max TTFB"),
+		)
+	}
+	t = append(t,
 		console.Colorize("metrics-top-title", "Avg Size"),
 		console.Colorize("metrics-top-title", "Rate"),
 		console.Colorize("metrics-top-title", "Errors"),
-	})
+	)
+
+	table.Append(t)
 	for _, v := range entries {
 		if v.Count <= 0 {
 			continue
@@ -1161,7 +1175,7 @@ func (m *traceStatsUI) View() string {
 			rate = console.Colorize("metrics-size", rate)
 		}
 
-		table.Append([]string{
+		t := []string{
 			console.Colorize("metrics-title", metricsTitle(v.Name)),
 			console.Colorize("metrics-number", fmt.Sprintf("%d ", v.Count)) +
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
@@ -1169,12 +1183,16 @@ func (m *traceStatsUI) View() string {
 			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
 			console.Colorize(minColor, v.MinDur),
 			console.Colorize(maxColor, v.MaxDur),
-			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
-			console.Colorize(maxColor, v.MaxTTFB),
-			sz,
+		}
+		if hasTTFB {
+			t = append(t,
+				console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
+				console.Colorize(maxColor, v.MaxTTFB))
+		}
+		t = append(t, sz,
 			rate,
-			errs,
-		})
+			errs)
+		table.Append(t)
 	}
 	table.Render()
 	return s.String()
