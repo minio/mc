@@ -24,6 +24,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"sort"
 	"strconv"
@@ -41,7 +42,9 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
+	"github.com/muesli/reflow/truncate"
 	"github.com/olekukonko/tablewriter"
+	"golang.org/x/term"
 )
 
 var adminTraceFlags = []cli.Flag{
@@ -1057,17 +1060,8 @@ func (m *traceStatsUI) View() string {
 	table.SetRowSeparator("")
 	table.SetHeaderLine(false)
 	table.SetBorder(false)
-	table.SetTablePadding("\t") // pad with tabs
+	table.SetTablePadding("  ") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	addRow := func(s string) {
-		table.Append([]string{s})
-	}
-	_ = addRow
-	addRowF := func(format string, vals ...interface{}) {
-		s := fmt.Sprintf(format, vals...)
-		table.Append([]string{s})
-	}
-	_ = addRowF
 	var entries []statItem
 	m.current.mu.Lock()
 	totalCnt := 0
@@ -1195,5 +1189,16 @@ func (m *traceStatsUI) View() string {
 		table.Append(t)
 	}
 	table.Render()
-	return s.String()
+	if globalTermWidth <= 10 {
+		return s.String()
+	}
+	w := globalTermWidth
+	if nw, _, e := term.GetSize(int(os.Stdout.Fd())); e == nil {
+		w = nw
+	}
+	split := strings.Split(s.String(), "\n")
+	for i, line := range split {
+		split[i] = truncate.StringWithTail(line, uint(w), "»")
+	}
+	return strings.Join(split, "\n")
 }
