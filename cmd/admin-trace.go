@@ -979,7 +979,7 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
-	s.Spinner.FPS = time.Second / 4
+	s.Spinner.FPS = time.Second / 2
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	console.SetColor("metrics-duration", color.New(color.FgWhite))
 	console.SetColor("metrics-size", color.New(color.FgGreen))
@@ -1101,6 +1101,7 @@ func (m *traceStatsUI) View() string {
 		console.Colorize("metrics-top-title", "Avg TTFB"),
 		console.Colorize("metrics-top-title", "Max TTFB"),
 		console.Colorize("metrics-top-title", "Avg Size"),
+		console.Colorize("metrics-top-title", "Rate"),
 		console.Colorize("metrics-top-title", "Errors"),
 	})
 	for _, v := range entries {
@@ -1135,23 +1136,29 @@ func (m *traceStatsUI) View() string {
 		}
 
 		sz := "-"
+		rate := "-"
 		if v.Size > 0 && v.Count > 0 {
 			sz = humanize.IBytes(uint64(v.Size) / uint64(v.Count))
+			rate = fmt.Sprintf("%s/m", humanize.IBytes(uint64(float64(v.Size)/dur.Minutes())))
 		}
 		if v.CallStatsCount > 0 {
-			var s []string
+			var s, r []string
 			if v.CallStats.Rx > 0 {
 				s = append(s, fmt.Sprintf("↓%s", humanize.IBytes(uint64(v.CallStats.Rx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↓%s", humanize.IBytes(uint64(float64(v.CallStats.Rx)/dur.Minutes()))))
 			}
 			if v.CallStats.Tx > 0 {
 				s = append(s, fmt.Sprintf("↑%s", humanize.IBytes(uint64(v.CallStats.Tx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↑%s", humanize.IBytes(uint64(float64(v.CallStats.Tx)/dur.Minutes()))))
 			}
 			if len(s) > 0 {
 				sz = strings.Join(s, " ")
+				rate = strings.Join(r, " ") + "/m"
 			}
 		}
 		if sz != "-" {
 			sz = console.Colorize("metrics-size", sz)
+			rate = console.Colorize("metrics-size", rate)
 		}
 
 		table.Append([]string{
@@ -1165,6 +1172,7 @@ func (m *traceStatsUI) View() string {
 			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
 			console.Colorize(maxColor, v.MaxTTFB),
 			sz,
+			rate,
 			errs,
 		})
 	}
