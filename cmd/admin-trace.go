@@ -1152,12 +1152,12 @@ func (m *traceStatsUI) View() string {
 		if v.CallStatsCount > 0 {
 			var s, r []string
 			if v.CallStats.Rx > 0 {
-				s = append(s, fmt.Sprintf("↓%s", humanize.IBytes(uint64(v.CallStats.Rx/v.CallStatsCount))))
-				r = append(r, fmt.Sprintf("↓%s", humanize.IBytes(uint64(float64(v.CallStats.Rx)/dur.Minutes()))))
+				s = append(s, fmt.Sprintf("↓ %s", humanize.IBytes(uint64(v.CallStats.Rx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↓ %s", humanize.IBytes(uint64(float64(v.CallStats.Rx)/dur.Minutes()))))
 			}
 			if v.CallStats.Tx > 0 {
-				s = append(s, fmt.Sprintf("↑%s", humanize.IBytes(uint64(v.CallStats.Tx/v.CallStatsCount))))
-				r = append(r, fmt.Sprintf("↑%s", humanize.IBytes(uint64(float64(v.CallStats.Tx)/dur.Minutes()))))
+				s = append(s, fmt.Sprintf("↑ %s", humanize.IBytes(uint64(v.CallStats.Tx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↑ %s", humanize.IBytes(uint64(float64(v.CallStats.Tx)/dur.Minutes()))))
 			}
 			if len(s) > 0 {
 				sz = strings.Join(s, " ")
