@@ -1716,7 +1716,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	nonRecursive := false
 	maxKeys := 1
-	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, false, false, false, maxKeys, opts.isZip) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}

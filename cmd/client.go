@@ -71,6 +71,7 @@ type StatOptions struct {
 	sse                encrypt.ServerSide
 	timeRef            time.Time
 	versionID          string
+	includeVersions    bool
 	isZip              bool
 	ignoreBucketExists bool
 }
