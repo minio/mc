@@ -43,7 +43,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
-	github.com/minio/madmin-go/v3 v3.0.51
+	github.com/minio/madmin-go/v3 v3.0.55-0.20240603092915-420a67132c32
 	github.com/minio/pkg/v3 v3.0.0
 	github.com/minio/selfupdate v0.6.0
 	github.com/muesli/reflow v0.3.0

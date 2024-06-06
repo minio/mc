@@ -24,6 +24,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"sort"
 	"strconv"
@@ -41,7 +42,9 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
+	"github.com/muesli/reflow/truncate"
 	"github.com/olekukonko/tablewriter"
+	"golang.org/x/term"
 )
 
 var adminTraceFlags = []cli.Flag{
@@ -582,6 +585,7 @@ type shortTraceMsg struct {
 	StatusCode int               `json:"statusCode"`
 	StatusMsg  string            `json:"statusMsg"`
 	Type       string            `json:"type"`
+	Size       int64             `json:"size,omitempty"`
 	Error      string            `json:"error"`
 	Extra      map[string]string `json:"extra"`
 	trcType    madmin.TraceType
@@ -650,6 +654,7 @@ func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s.Duration = t.Duration
 	s.StatusMsg = t.Message
 	s.Extra = t.Custom
+	s.Size = t.Bytes
 
 	switch t.TraceType {
 	case madmin.TraceS3, madmin.TraceInternal:
@@ -703,10 +708,15 @@ func (s shortTraceMsg) String() string {
 				console.Colorize("ErrStatus", s.Error),
 				console.Colorize("HeaderValue", s.Duration))
 		} else {
-			fmt.Fprintf(b, "[%s] %s %s %s %2s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
+			sz := ""
+			if s.Size != 0 {
+				sz = fmt.Sprintf(" %s", humanize.IBytes(uint64(s.Size)))
+			}
+			fmt.Fprintf(b, "[%s] %s %s %s %2s%s", console.Colorize("RespStatus", strings.ToUpper(s.trcType.String())), console.Colorize("FuncName", s.FuncName),
 				hostStr,
 				s.Path,
-				console.Colorize("HeaderValue", s.Duration))
+				console.Colorize("HeaderValue", s.Duration),
+				sz)
 		}
 		return b.String()
 	}
@@ -839,10 +849,14 @@ func (t traceMessage) String() string {
 		fmt.Fprintf(b, "%s %s [%s] %s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Message, extra)
 		return b.String()
 	default:
+		sz := ""
+		if trc.Bytes != 0 {
+			sz = fmt.Sprintf(" %s", humanize.IBytes(uint64(trc.Bytes)))
+		}
 		if trc.Error != "" {
-			fmt.Fprintf(b, "%s %s [%s] %s%s err='%s' %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, extra, console.Colorize("ErrStatus", trc.Error), trc.Duration)
+			fmt.Fprintf(b, "%s %s [%s] %s%s err='%s' %s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, extra, console.Colorize("ErrStatus", trc.Error), trc.Duration, sz)
 		} else {
-			fmt.Fprintf(b, "%s %s [%s] %s%s %s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, extra, trc.Duration)
+			fmt.Fprintf(b, "%s %s [%s] %s%s %s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[%s %s]", strings.ToUpper(trc.TraceType.String()), trc.FuncName)), trc.Time.Local().Format(traceTimeFormat), trc.Path, extra, trc.Duration, sz)
 		}
 		return b.String()
 	}
@@ -903,6 +917,7 @@ type statItem struct {
 	MaxTTFB        time.Duration `json:"maxTTFB,omitempty"`
 	MaxDur         time.Duration `json:"maxDuration"`
 	MinDur         time.Duration `json:"minDuration"`
+	Size           int64         `json:"size"`
 }
 
 type statTrace struct {
@@ -951,6 +966,7 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 	if t.Trace.Error != "" {
 		got.Errors++
 	}
+	got.Size += t.Trace.Bytes
 	if t.Trace.HTTP != nil {
 		got.CallStatsCount++
 		got.CallStats.Rx += t.Trace.HTTP.CallStats.InputBytes
@@ -966,9 +982,10 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
-	s.Spinner.FPS = time.Second / 4
+	s.Spinner.FPS = time.Second / 2
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	console.SetColor("metrics-duration", color.New(color.FgWhite))
+	console.SetColor("metrics-size", color.New(color.FgGreen))
 	console.SetColor("metrics-dur", color.New(color.FgGreen))
 	console.SetColor("metrics-dur-med", color.New(color.FgYellow))
 	console.SetColor("metrics-dur-high", color.New(color.FgRed))
@@ -1043,17 +1060,8 @@ func (m *traceStatsUI) View() string {
 	table.SetRowSeparator("")
 	table.SetHeaderLine(false)
 	table.SetBorder(false)
-	table.SetTablePadding("\t") // pad with tabs
+	table.SetTablePadding("  ") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	addRow := func(s string) {
-		table.Append([]string{s})
-	}
-	_ = addRow
-	addRowF := func(format string, vals ...interface{}) {
-		s := fmt.Sprintf(format, vals...)
-		table.Append([]string{s})
-	}
-	_ = addRowF
 	var entries []statItem
 	m.current.mu.Lock()
 	totalCnt := 0
@@ -1076,20 +1084,34 @@ func (m *traceStatsUI) View() string {
 	if m.maxEntries > 0 && len(entries) > m.maxEntries {
 		entries = entries[:m.maxEntries]
 	}
-
-	table.Append([]string{
+	hasTTFB := false
+	for _, e := range entries {
+		if e.TTFB > 0 {
+			hasTTFB = true
+			break
+		}
+	}
+	t := []string{
 		console.Colorize("metrics-top-title", "Call"),
 		console.Colorize("metrics-top-title", "Count"),
 		console.Colorize("metrics-top-title", "RPM"),
 		console.Colorize("metrics-top-title", "Avg Time"),
 		console.Colorize("metrics-top-title", "Min Time"),
 		console.Colorize("metrics-top-title", "Max Time"),
-		console.Colorize("metrics-top-title", "Avg TTFB"),
-		console.Colorize("metrics-top-title", "Max TTFB"),
+	}
+	if hasTTFB {
+		t = append(t,
+			console.Colorize("metrics-top-title", "Avg TTFB"),
+			console.Colorize("metrics-top-title", "Max TTFB"),
+		)
+	}
+	t = append(t,
+		console.Colorize("metrics-top-title", "Avg Size"),
+		console.Colorize("metrics-top-title", "Rate"),
 		console.Colorize("metrics-top-title", "Errors"),
-		console.Colorize("metrics-top-title", "RX Avg"),
-		console.Colorize("metrics-top-title", "TX Avg"),
-	})
+	)
+
+	table.Append(t)
 	for _, v := range entries {
 		if v.Count <= 0 {
 			continue
@@ -1121,13 +1143,33 @@ func (m *traceStatsUI) View() string {
 			maxColor = "metrics-dur-med"
 		}
 
-		rx := "-"
-		tx := "-"
-		if v.CallStatsCount > 0 {
-			rx = humanize.IBytes(uint64(v.CallStats.Rx / v.CallStatsCount))
-			tx = humanize.IBytes(uint64(v.CallStats.Tx / v.CallStatsCount))
+		sz := "-"
+		rate := "-"
+		if v.Size > 0 && v.Count > 0 {
+			sz = humanize.IBytes(uint64(v.Size) / uint64(v.Count))
+			rate = fmt.Sprintf("%s/m", humanize.IBytes(uint64(float64(v.Size)/dur.Minutes())))
 		}
-		table.Append([]string{
+		if v.CallStatsCount > 0 {
+			var s, r []string
+			if v.CallStats.Rx > 0 {
+				s = append(s, fmt.Sprintf("↓ %s", humanize.IBytes(uint64(v.CallStats.Rx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↓ %s", humanize.IBytes(uint64(float64(v.CallStats.Rx)/dur.Minutes()))))
+			}
+			if v.CallStats.Tx > 0 {
+				s = append(s, fmt.Sprintf("↑ %s", humanize.IBytes(uint64(v.CallStats.Tx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↑ %s", humanize.IBytes(uint64(float64(v.CallStats.Tx)/dur.Minutes()))))
+			}
+			if len(s) > 0 {
+				sz = strings.Join(s, " ")
+				rate = strings.Join(r, " ") + "/m"
+			}
+		}
+		if sz != "-" {
+			sz = console.Colorize("metrics-size", sz)
+			rate = console.Colorize("metrics-size", rate)
+		}
+
+		t := []string{
 			console.Colorize("metrics-title", metricsTitle(v.Name)),
 			console.Colorize("metrics-number", fmt.Sprintf("%d ", v.Count)) +
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
@@ -1135,13 +1177,28 @@ func (m *traceStatsUI) View() string {
 			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
 			console.Colorize(minColor, v.MinDur),
 			console.Colorize(maxColor, v.MaxDur),
-			console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
-			console.Colorize(maxColor, v.MaxTTFB),
-			errs,
-			rx,
-			tx,
-		})
+		}
+		if hasTTFB {
+			t = append(t,
+				console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
+				console.Colorize(maxColor, v.MaxTTFB))
+		}
+		t = append(t, sz,
+			rate,
+			errs)
+		table.Append(t)
 	}
 	table.Render()
-	return s.String()
+	if globalTermWidth <= 10 {
+		return s.String()
+	}
+	w := globalTermWidth
+	if nw, _, e := term.GetSize(int(os.Stdout.Fd())); e == nil {
+		w = nw
+	}
+	split := strings.Split(s.String(), "\n")
+	for i, line := range split {
+		split[i] = truncate.StringWithTail(line, uint(w), "»")
+	}
+	return strings.Join(split, "\n")
 }
