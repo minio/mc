@@ -103,7 +103,7 @@ func (m ldapUsersList) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
-	o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+m.DN)))
+	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("DN:"), m.DN))
 	if len(m.STSKeys) > 0 {
 		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("STS Access Keys:")))
 		for _, k := range m.STSKeys {
