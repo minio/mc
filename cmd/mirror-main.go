@@ -20,7 +20,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"math/rand"
 	"net/http"
 	"path"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dustin/go-humanize"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
