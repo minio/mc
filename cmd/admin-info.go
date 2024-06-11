@@ -36,13 +36,20 @@ import (
 	"github.com/minio/pkg/v3/console"
 )
 
+var adminInfoFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "offline",
+		Usage: "show only offline nodes/drives",
+	},
+}
+
 var adminInfoCmd = cli.Command{
 	Name:         "info",
 	Usage:        "display MinIO server information",
 	Action:       mainAdminInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, adminInfoFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -127,6 +134,8 @@ type clusterStruct struct {
 	Status string             `json:"status"`
 	Error  string             `json:"error,omitempty"`
 	Info   madmin.InfoMessage `json:"info,omitempty"`
+
+	onlyOffline bool
 }
 
 // String provides colorized info messages
@@ -199,6 +208,10 @@ func (u clusterStruct) String() (msg string) {
 			msg += "\n"
 
 			// Continue to the next server
+			continue
+		}
+
+		if u.onlyOffline {
 			continue
 		}
 
@@ -374,7 +387,10 @@ func mainAdminInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var clusterInfo clusterStruct
+	clusterInfo := clusterStruct{
+		onlyOffline: ctx.Bool("offline"),
+	}
+
 	// Fetch info of all servers (cluster or single server)
 	admInfo, e := client.ServerInfo(globalContext)
 	if e != nil {
@@ -384,6 +400,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 		clusterInfo.Status = "success"
 		clusterInfo.Error = ""
 	}
+
 	clusterInfo.Info = admInfo
 	printMsg(clusterInfo)
 
