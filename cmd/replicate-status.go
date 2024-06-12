@@ -116,7 +116,7 @@ func (s replicateStatusMessage) String() string {
 	for arn, st := range rs.Stats { // Remove stale ARNs from stats
 		staleARN := true
 		for _, r := range s.cfg.Rules {
-			if r.Destination.Bucket == arn {
+			if r.Destination.Bucket == arn || s.cfg.Role == arn {
 				staleARN = false
 				break
 			}
@@ -178,7 +178,7 @@ func (s replicateStatusMessage) String() string {
 		}
 		staleARN = true
 		for _, r := range s.cfg.Rules {
-			if r.Destination.Bucket == arn {
+			if r.Destination.Bucket == arn || s.cfg.Role == arn {
 				staleARN = false
 				break
 			}
