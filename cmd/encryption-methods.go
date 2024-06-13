@@ -198,19 +198,19 @@ func parseSSEKey(sseKey string, keyType sseKeyType) (
 ) {
 	sseKeyBytes := []byte(sseKey)
 
-	seperatorIndex := bytes.LastIndex(sseKeyBytes, []byte("="))
-	if seperatorIndex < 0 {
+	separatorIndex := bytes.LastIndex(sseKeyBytes, []byte("="))
+	if separatorIndex < 0 {
 		err = errSSEKeyMissing().Trace(sseKey)
 		return
 	}
 
-	encodedKey := string(sseKeyBytes[seperatorIndex+1:])
-	if seperatorIndex == len(sseKeyBytes)-1 {
+	encodedKey := string(sseKeyBytes[separatorIndex+1:])
+	if separatorIndex == len(sseKeyBytes)-1 {
 		err = errSSEKeyMissing().Trace(sseKey)
 		return
 	}
 
-	alias, prefix = splitKey(string(sseKeyBytes[:seperatorIndex]))
+	alias, prefix = splitKey(string(sseKeyBytes[:separatorIndex]))
 
 	if keyType == sseS3 {
 		return
