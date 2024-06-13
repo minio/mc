@@ -223,13 +223,16 @@ func parseSSEKey(sseKey string, keyType sseKeyType) (
 		return
 	}
 
-	keyB, de := hex.DecodeString(encodedKey)
-	if de != nil {
-		keyB, de = base64.RawStdEncoding.DecodeString(encodedKey)
-		if de != nil {
-			err = errSSEClientKeyFormat(fmt.Sprintf("Key (%s) was neither base64 raw encoded nor hex encoded.", encodedKey)).Trace(sseKey)
-			return
-		}
+	var keyB []byte
+	var decodeError error
+	if len(encodedKey) == 64 {
+		keyB, decodeError = hex.DecodeString(encodedKey)
+	} else {
+		keyB, decodeError = base64.RawStdEncoding.DecodeString(encodedKey)
+	}
+
+	if decodeError != nil {
+		err = errSSEClientKeyFormat(fmt.Sprintf("Key (%s) was neither base64 raw encoded nor hex encoded.", encodedKey)).Trace(sseKey)
 	}
 
 	key = string(keyB)
