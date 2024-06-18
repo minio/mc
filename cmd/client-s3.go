@@ -1168,6 +1168,11 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		opts.SendContentMd5 = true
 	}
 
+	if putOpts.ifNotExists {
+		// Only supported in newer MinIO releases.
+		opts.SetMatchETagExcept("*")
+	}
+
 	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)

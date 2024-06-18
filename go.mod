@@ -19,7 +19,7 @@ require (
 	github.com/minio/colorjson v1.0.7
 	github.com/minio/filepath v1.0.0
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.70
+	github.com/minio/minio-go/v7 v7.0.72-0.20240618070918-0b004e328e1e
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/xattr v0.4.9
 	github.com/posener/complete v1.2.3
