@@ -97,7 +97,7 @@ var encFlags = []cli.Flag{
 
 var encCFlag = cli.StringSliceFlag{
 	Name:  "enc-c",
-	Usage: "encrypt/decrypt objects using client provided keys. (multiple keys can be provided) Format: Raw base64 encoding.",
+	Usage: "encrypt/decrypt objects using client provided keys. (multiple keys can be provided) Formats: RawBase64 or Hex.",
 }
 
 var encKSMFlag = cli.StringSliceFlag{

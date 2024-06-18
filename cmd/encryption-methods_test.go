@@ -28,6 +28,7 @@ func TestParseEncryptionKeys(t *testing.T) {
 	baseObject := "object_name"
 	sseKey := "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA"
 	sseKeyPlain := "01234567890123456789012345678900"
+	sseHexKey := "3031323334353637383930313233343536373839303132333435363738393030"
 
 	// INVALID KEYS
 	sseKeyInvalidShort := "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2"
@@ -45,6 +46,14 @@ func TestParseEncryptionKeys(t *testing.T) {
 		sseType       sseKeyType
 		success       bool
 	}{
+		{
+			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseHexKey),
+			keyPlain:      sseKeyPlain,
+			alias:         baseAlias,
+			prefix:        basePrefix,
+			object:        baseObject,
+			success:       true,
+		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKey),
 			keyPlain:      sseKeyPlain,
