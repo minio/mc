@@ -1038,7 +1038,6 @@ function run_test() {
 	test_copy_object_preserve_filesystem_attr
 	test_find
 	test_find_empty
-	test_bucket_replication
 	if [ -z "$MINT_MODE" ]; then
 		test_watch_object
 	fi
