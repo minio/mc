@@ -18,9 +18,11 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/hex"
+	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/minio/cli"
@@ -194,41 +196,49 @@ func parseSSEKey(sseKey string, keyType sseKeyType) (
 	key string,
 	err *probe.Error,
 ) {
-	if keyType == sseS3 {
-		alias, prefix = splitKey(sseKey)
-		return
-	}
+	sseKeyBytes := []byte(sseKey)
 
-	var path string
-	alias, path = splitKey(sseKey)
-	splitPath := strings.Split(path, "=")
-	if len(splitPath) == 0 {
+	separatorIndex := bytes.LastIndex(sseKeyBytes, []byte("="))
+	if separatorIndex < 0 {
 		err = errSSEKeyMissing().Trace(sseKey)
 		return
 	}
 
-	aliasPlusPrefix := strings.Join(splitPath[:len(splitPath)-1], "=")
-	prefix = strings.Replace(aliasPlusPrefix, alias+"/", "", 1)
-	key = splitPath[len(splitPath)-1]
+	encodedKey := string(sseKeyBytes[separatorIndex+1:])
+	if separatorIndex == len(sseKeyBytes)-1 {
+		err = errSSEKeyMissing().Trace(sseKey)
+		return
+	}
 
-	if keyType == sseC {
-		keyB, de := base64.RawStdEncoding.DecodeString(key)
-		if de != nil {
-			err = errSSEClientKeyFormat("One of the inserted keys was " + strconv.Itoa(len(key)) + " bytes and did not have valid base64 raw encoding.").Trace(sseKey)
-			return
-		}
-		key = string(keyB)
-		if len(key) != 32 {
-			err = errSSEClientKeyFormat("The plain text key was " + strconv.Itoa(len(key)) + " bytes but should be 32 bytes long").Trace(sseKey)
-			return
-		}
+	alias, prefix = splitKey(string(sseKeyBytes[:separatorIndex]))
+
+	if keyType == sseS3 {
+		return
 	}
 
 	if keyType == sseKMS {
-		if !validKMSKeyName(key) {
-			err = errSSEKMSKeyFormat("One of the inserted keys was " + strconv.Itoa(len(key)) + " bytes and did not have a valid KMS key name.").Trace(sseKey)
-			return
+		if !validKMSKeyName(encodedKey) {
+			err = errSSEKMSKeyFormat(fmt.Sprintf("Key (%s) is badly formatted.", encodedKey)).Trace(sseKey)
 		}
+		return
+	}
+
+	var keyB []byte
+	var decodeError error
+	if len(encodedKey) == 64 {
+		keyB, decodeError = hex.DecodeString(encodedKey)
+	} else {
+		keyB, decodeError = base64.RawStdEncoding.DecodeString(encodedKey)
+	}
+
+	if decodeError != nil {
+		err = errSSEClientKeyFormat(fmt.Sprintf("Key (%s) was neither base64 raw encoded nor hex encoded.", encodedKey)).Trace(sseKey)
+	}
+
+	key = string(keyB)
+	if len(key) != 32 {
+		err = errSSEClientKeyFormat(fmt.Sprintf("Plain text from key (%s) is only %d bytes, but should be 32 bytes.", encodedKey, len(key))).Trace(sseKey)
+		return
 	}
 
 	return

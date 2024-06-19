@@ -62,6 +62,7 @@ type PutOptions struct {
 	multipartSize         uint64
 	multipartThreads      uint
 	concurrentStream      bool
+	ifNotExists           bool
 }
 
 // StatOptions holds options of the HEAD operation
