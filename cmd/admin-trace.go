@@ -169,6 +169,7 @@ var traceCallTypeAliases = map[string]func(o *madmin.ServiceTraceOpts) string{
 	"resync": traceCallTypes["replication-resync"],
 	"brep":   traceCallTypes["batch-replication"],
 	"brot":   traceCallTypes["batch-keyrotation"],
+	"bexp":   traceCallTypes["batch-expiration"],
 }
 
 func traceCallsHelp() string {
