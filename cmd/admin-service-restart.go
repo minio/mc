@@ -67,12 +67,13 @@ type serviceRestartCommand struct {
 	Status    string                     `json:"status"`
 	ServerURL string                     `json:"serverURL"`
 	Result    madmin.ServiceActionResult `json:"result"`
+	TimeTaken time.Duration              `json:"timeTaken"`
 }
 
 // String colorized service restart command message.
 func (s serviceRestartCommand) String() string {
 	var s1 strings.Builder
-	s1.WriteString("Restart command successfully sent to `" + s.ServerURL + "`. Type Ctrl-C to quit or wait to follow the status of the restart process.")
+	s1.WriteString("Restart command successfully acknowledged by `" + s.ServerURL + "` in " + timeDurationToHumanizedDuration(s.TimeTaken).StringShort() + ". Type Ctrl-C to quit or wait to follow the status of the restart process.")
 
 	if len(s.Result.Results) > 0 {
 		s1.WriteString("\n")
@@ -119,7 +120,7 @@ type serviceRestartMessage struct {
 // String colorized service restart message.
 func (s serviceRestartMessage) String() string {
 	if s.Err == nil {
-		return console.Colorize("ServiceRestart", fmt.Sprintf("\nRestarted `%s` successfully in %s", s.ServerURL, timeDurationToHumanizedDuration(s.TimeTaken).StringShort()))
+		return console.Colorize("ServiceRestart", fmt.Sprintf("\nEstablished quorum on `%s` successfully in %s", s.ServerURL, timeDurationToHumanizedDuration(s.TimeTaken).StringShort()))
 	}
 	return console.Colorize("FailedServiceRestart", "Failed to restart `"+s.ServerURL+"`. error: "+s.Err.Error())
 }
@@ -159,6 +160,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	t := time.Now()
 	// Restart the specified MinIO server
 	result, e := client.ServiceAction(ctxt, madmin.ServiceActionOpts{
 		Action: madmin.ServiceActionRestart,
@@ -171,7 +173,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Unable to restart the server.")
 
 	// Success..
-	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL, Result: result})
+	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL, Result: result, TimeTaken: time.Since(t)})
 
 	// Start pinging the service until it is ready
 
@@ -191,7 +193,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	printProgress()
 	mark = "."
 
-	t := time.Now()
+	t = time.Now()
 	for {
 		healthCtx, healthCancel := context.WithTimeout(ctxt, 2*time.Second)
 
