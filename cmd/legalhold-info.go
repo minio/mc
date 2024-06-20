@@ -129,7 +129,7 @@ func (l legalHoldInfoMessage) JSON() string {
 }
 
 // showLegalHoldInfo - show legalhold for one or many objects within a given prefix, with or without versioning
-func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool) error {
+func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef time.Time, withVersions, recursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -142,7 +142,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	}
 	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
-	if !recursive && !withOlderVersions {
+	if !recursive && !withVersions {
 		lhold, err := clnt.GetObjectLegalHold(ctx, versionID)
 		if err != nil {
 			fatalIf(err.Trace(urlStr), "Failed to show legal hold information of `"+urlStr+"`.")
@@ -167,7 +167,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	objectsFound := false
 	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.WithOlderVersions = withVersions
 		lstOptions.TimeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {

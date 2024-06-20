@@ -272,7 +272,7 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 	defer watchFind(ctxCtx, ctx)
 
 	lstOptions := ListOptions{
-		WithOlderVersions: ctx.withOlderVersions,
+		WithOlderVersions: ctx.withVersions,
 		WithDeleteMarkers: false,
 		Recursive:         true,
 		ShowDir:           DirFirst,

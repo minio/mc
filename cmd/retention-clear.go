@@ -114,8 +114,8 @@ func parseClearRetentionArgs(cliCtx *cli.Context) (target, versionID string, tim
 }
 
 // Clear Retention for one object/version or many objects within a given prefix, bypass governance is always enabled
-func clearRetention(ctx context.Context, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool) error {
-	return applyRetention(ctx, lockOpClear, target, versionID, timeRef, withOlderVersions, isRecursive, "", 0, minio.Days, true)
+func clearRetention(ctx context.Context, target, versionID string, timeRef time.Time, withVersions, isRecursive bool) error {
+	return applyRetention(ctx, lockOpClear, target, versionID, timeRef, withVersions, isRecursive, "", 0, minio.Days, true)
 }
 
 func clearBucketLock(urlStr string) error {
