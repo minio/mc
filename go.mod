@@ -2,8 +2,6 @@ module github.com/minio/mc
 
 go 1.21
 
-replace github.com/minio/madmin-go/v3 => github.com/taran-p/madmin-go/v3 v3.10.1-0.20240606204813-55a2c38ac0b1
-
 require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/cheggaaa/pb v1.0.29
@@ -43,7 +41,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/juju/ratelimit v1.0.2
-	github.com/minio/madmin-go/v3 v3.0.51
+	github.com/minio/madmin-go/v3 v3.0.57
 	github.com/minio/pkg/v3 v3.0.0
 	github.com/minio/selfupdate v0.6.0
 	github.com/muesli/reflow v0.3.0
