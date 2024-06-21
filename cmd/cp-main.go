@@ -264,6 +264,7 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 		multipartSize:       copyOpts.multipartSize,
 		multipartThreads:    copyOpts.multipartThreads,
 		updateProgressTotal: copyOpts.updateProgressTotal,
+		ifNotExists:         copyOpts.ifNotExists,
 	})
 	if copyOpts.isMvCmd && urls.Error == nil {
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
@@ -557,4 +558,5 @@ type doCopyOpts struct {
 	updateProgressTotal      bool
 	multipartSize            string
 	multipartThreads         string
+	ifNotExists              bool
 }

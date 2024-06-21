@@ -953,7 +953,8 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	// Disallow automatic decompression for some objects with content-encoding set.
 	o.Set("Accept-Encoding", "identity")
 
-	reader, e := c.api.GetObject(ctx, bucket, object, o)
+	cr := minio.Core{Client: c.api}
+	reader, objectInfo, _, e := cr.GetObject(ctx, bucket, object, o)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -971,25 +972,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 		}
 		return nil, nil, probe.NewError(e)
 	}
-	objStat, e := reader.Stat()
-	if e != nil {
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "NoSuchBucket" {
-			return nil, nil, probe.NewError(BucketDoesNotExist{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "InvalidBucketName" {
-			return nil, nil, probe.NewError(BucketInvalid{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "NoSuchKey" {
-			return nil, nil, probe.NewError(ObjectMissing{})
-		}
-		return nil, nil, probe.NewError(e)
-	}
-	return reader, c.objectInfo2ClientContent(bucket, objStat), nil
+	return reader, c.objectInfo2ClientContent(bucket, objectInfo), nil
 }
 
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
@@ -1183,6 +1166,11 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		delete(metadata, AmzObjectLockLegalHold)
 		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
 		opts.SendContentMd5 = true
+	}
+
+	if putOpts.ifNotExists {
+		// Only supported in newer MinIO releases.
+		opts.SetMatchETagExcept("*")
 	}
 
 	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
@@ -1733,7 +1721,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	nonRecursive := false
 	maxKeys := 1
-	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, false, false, false, maxKeys, opts.isZip) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
