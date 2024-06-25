@@ -200,26 +200,25 @@ func parseSSEKey(sseKey string, keyType sseKeyType) (
 
 	separatorIndex := bytes.LastIndex(sseKeyBytes, []byte("="))
 	if separatorIndex < 0 {
+		if keyType == sseS3 {
+			alias, prefix = splitKey(sseKey)
+			return
+		}
 		err = errSSEKeyMissing().Trace(sseKey)
 		return
 	}
-
-	encodedKey := string(sseKeyBytes[separatorIndex+1:])
 	if separatorIndex == len(sseKeyBytes)-1 {
 		err = errSSEKeyMissing().Trace(sseKey)
 		return
 	}
 
+	encodedKey := string(sseKeyBytes[separatorIndex+1:])
 	alias, prefix = splitKey(string(sseKeyBytes[:separatorIndex]))
-
-	if keyType == sseS3 {
-		return
-	}
-
 	if keyType == sseKMS {
 		if !validKMSKeyName(encodedKey) {
 			err = errSSEKMSKeyFormat(fmt.Sprintf("Key (%s) is badly formatted.", encodedKey)).Trace(sseKey)
 		}
+		key = encodedKey
 		return
 	}
 
