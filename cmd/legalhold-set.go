@@ -82,7 +82,7 @@ EXAMPLES:
 }
 
 // setLegalHold - Set legalhold for all objects within a given prefix.
-func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool, lhold minio.LegalHoldStatus) error {
+func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Time, withVersions, recursive bool, lhold minio.LegalHoldStatus) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -95,7 +95,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	}
 	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
-	if !recursive && !withOlderVersions {
+	if !recursive && !withVersions {
 		err = clnt.PutObjectLegalHold(ctx, versionID, lhold)
 		if err != nil {
 			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
@@ -119,7 +119,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	objectsFound := false
 	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.WithOlderVersions = withVersions
 		lstOptions.TimeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {

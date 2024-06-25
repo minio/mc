@@ -1168,6 +1168,11 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		opts.SendContentMd5 = true
 	}
 
+	if putOpts.ifNotExists {
+		// Only supported in newer MinIO releases.
+		opts.SetMatchETagExcept("*")
+	}
+
 	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -1716,7 +1721,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 
 	nonRecursive := false
 	maxKeys := 1
-	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, false, false, false, maxKeys, opts.isZip) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}

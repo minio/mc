@@ -26,8 +26,11 @@ func TestParseEncryptionKeys(t *testing.T) {
 	baseAlias := "mintest"
 	basePrefix := "two/layer/prefix"
 	baseObject := "object_name"
+	sseKeyKMS := "my-default-key"
+	sseKeyKMSInvalid := "my@default@key"
 	sseKey := "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA"
 	sseKeyPlain := "01234567890123456789012345678900"
+	sseHexKey := "3031323334353637383930313233343536373839303132333435363738393030"
 
 	// INVALID KEYS
 	sseKeyInvalidShort := "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2"
@@ -46,11 +49,21 @@ func TestParseEncryptionKeys(t *testing.T) {
 		success       bool
 	}{
 		{
+			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseHexKey),
+			keyPlain:      sseKeyPlain,
+			alias:         baseAlias,
+			prefix:        basePrefix,
+			object:        baseObject,
+			sseType:       sseC,
+			success:       true,
+		},
+		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKey),
 			keyPlain:      sseKeyPlain,
 			alias:         baseAlias,
 			prefix:        basePrefix,
 			object:        baseObject,
+			sseType:       sseC,
 			success:       true,
 		},
 		{
@@ -59,6 +72,7 @@ func TestParseEncryptionKeys(t *testing.T) {
 			alias:         baseAlias + "=",
 			prefix:        basePrefix + "=",
 			object:        baseObject + "=",
+			sseType:       sseC,
 			success:       true,
 		},
 		{
@@ -67,6 +81,7 @@ func TestParseEncryptionKeys(t *testing.T) {
 			alias:         baseAlias + "/",
 			prefix:        basePrefix + "/",
 			object:        baseObject + "/",
+			sseType:       sseC,
 			success:       true,
 		},
 		{
@@ -75,6 +90,7 @@ func TestParseEncryptionKeys(t *testing.T) {
 			alias:         baseAlias,
 			prefix:        basePrefix,
 			object:        baseObject + "=",
+			sseType:       sseC,
 			success:       true,
 		},
 		{
@@ -83,36 +99,67 @@ func TestParseEncryptionKeys(t *testing.T) {
 			alias:         baseAlias,
 			prefix:        basePrefix,
 			object:        baseObject + "!@_==_$^&*",
+			sseType:       sseC,
 			success:       true,
 		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%sXXXXX", baseAlias, basePrefix, baseObject, sseKey),
+			sseType:       sseC,
 			success:       false,
 		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKeyInvalidShort),
+			sseType:       sseC,
 			success:       false,
 		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKeyInvalidSymbols),
+			sseType:       sseC,
 			success:       false,
 		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKeyInvalidSpaces),
+			sseType:       sseC,
 			success:       false,
 		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKeyInvalidPrefixSpace),
+			sseType:       sseC,
 			success:       false,
 		},
 		{
 			encryptionKey: fmt.Sprintf("%s/%s/%s==%s", baseAlias, basePrefix, baseObject, sseKeyInvalidOneShort),
+			sseType:       sseC,
 			success:       false,
+		},
+		// sse-type KMS
+		{
+			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKeyKMS),
+			keyPlain:      sseKeyKMS,
+			alias:         baseAlias,
+			prefix:        basePrefix,
+			object:        baseObject,
+			sseType:       sseKMS,
+			success:       true,
+		},
+		{
+			encryptionKey: fmt.Sprintf("%s/%s/%s=%s", baseAlias, basePrefix, baseObject, sseKeyKMSInvalid),
+			sseType:       sseKMS,
+			success:       false,
+		},
+		// sse-type S3
+		{
+			encryptionKey: fmt.Sprintf("%s/%s/%s", baseAlias, basePrefix, baseObject),
+			alias:         baseAlias,
+			prefix:        basePrefix,
+			object:        baseObject,
+			sseType:       sseS3,
+			success:       true,
 		},
 	}
 
 	for i, tc := range testCases {
-		alias, prefix, key, err := parseSSEKey(tc.encryptionKey, sseC)
+		alias, prefix, key, err := parseSSEKey(tc.encryptionKey, tc.sseType)
 		if tc.success {
 			if err != nil {
 				t.Fatalf("Test %d: Expected success, got %s", i+1, err)

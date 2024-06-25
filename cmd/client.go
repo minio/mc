@@ -62,6 +62,7 @@ type PutOptions struct {
 	multipartSize         uint64
 	multipartThreads      uint
 	concurrentStream      bool
+	ifNotExists           bool
 }
 
 // StatOptions holds options of the HEAD operation
@@ -71,6 +72,7 @@ type StatOptions struct {
 	sse                encrypt.ServerSide
 	timeRef            time.Time
 	versionID          string
+	includeVersions    bool
 	isZip              bool
 	ignoreBucketExists bool
 }

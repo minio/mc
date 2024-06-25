@@ -392,7 +392,7 @@ func difference(sourceURL string, sourceCh <-chan *ClientContent, targetURL stri
 				return
 			case minio.ErrorResponse:
 				switch v.Code {
-				case "NoSuchBucket", "NoSuchKey":
+				case "NoSuchBucket", "NoSuchKey", "SignatureDoesNotMatch":
 					diffCh <- diffMessage{
 						Error: err,
 					}
