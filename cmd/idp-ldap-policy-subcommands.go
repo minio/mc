@@ -374,6 +374,15 @@ func (p policyEntities) String() string {
 			for _, p := range u.Policies {
 				o.WriteString(iFmt(4, "%s\n", p))
 			}
+
+			// TODO: Reword+reformat this
+			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Member Of:")))
+			for _, g := range u.MemberOfMappings {
+				o.WriteString(iFmt(6, "%s %s\n", labelStyle.Render("Group:"), g.Group))
+				for _, p := range g.Policies {
+					o.WriteString(iFmt(8, "%s\n", p))
+				}
+			}
 		}
 	}
 	if len(p.Result.GroupMappings) > 0 {
