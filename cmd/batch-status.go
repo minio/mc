@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ func (c batchJobStatusMessage) JSON() string {
 }
 
 func (c batchJobStatusMessage) String() string {
-	return ""
+	return c.JSON()
 }
 
 // checkBatchStatusSyntax - validate all the passed arguments
@@ -90,22 +91,60 @@ func mainBatchStatus(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Unable to lookup job status")
 
 	ui := tea.NewProgram(initBatchJobMetricsUI(jobID))
-	go func() {
-		res, e := client.BatchJobStatus(ctxt, jobID)
-		fatalIf(probe.NewError(e), "Unable to lookup job status")
-		if globalJSON {
-			printMsg(batchJobStatusMessage{
-				Status: "success",
-				Metric: res.LastMetric,
-			})
-			if res.LastMetric.Complete || res.LastMetric.Failed {
-				cancel()
-				return
+	if nosuchJob {
+		go func() {
+			res, e := client.BatchJobStatus(ctxt, jobID)
+			fatalIf(probe.NewError(e), "Unable to lookup job status")
+			if globalJSON {
+				printMsg(batchJobStatusMessage{
+					Status: "success",
+					Metric: res.LastMetric,
+				})
+				if res.LastMetric.Complete || res.LastMetric.Failed {
+					cancel()
+					return
+				}
+			} else {
+				ui.Send(res.LastMetric)
 			}
-		} else {
-			ui.Send(res.LastMetric)
-		}
-	}()
+		}()
+	} else {
+		go func() {
+			opts := madmin.MetricsOptions{
+				Type:     madmin.MetricsBatchJobs,
+				ByJobID:  jobID,
+				Interval: time.Second,
+			}
+			e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
+				if globalJSON {
+					if metrics.Aggregated.BatchJobs == nil {
+						cancel()
+						return
+					}
+
+					job, ok := metrics.Aggregated.BatchJobs.Jobs[jobID]
+					if !ok {
+						cancel()
+						return
+					}
+
+					printMsg(batchJobStatusMessage{
+						Status: "in-progress",
+						Metric: job,
+					})
+					if job.Complete || job.Failed {
+						cancel()
+						return
+					}
+				} else {
+					ui.Send(metrics.Aggregated.BatchJobs.Jobs[jobID])
+				}
+			})
+			if e != nil && !errors.Is(e, context.Canceled) {
+				fatalIf(probe.NewError(e).Trace(ctx.Args()...), "Unable to get current batch status")
+			}
+		}()
+	}
 
 	if !globalJSON {
 		if _, e := ui.Run(); e != nil {
