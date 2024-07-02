@@ -40,6 +40,16 @@ const (
 )
 
 var adminHealFlags = []cli.Flag{
+	cli.IntFlag{
+		Name:   "pool",
+		Usage:  "heal only the given pool",
+		Hidden: true,
+	},
+	cli.IntFlag{
+		Name:   "set",
+		Usage:  "heal only the given set",
+		Hidden: true,
+	},
 	cli.StringFlag{
 		Name:   "scan",
 		Usage:  "select the healing scan mode (normal/deep)",
@@ -666,6 +676,24 @@ func mainAdminHeal(ctx *cli.Context) error {
 		Recursive: ctx.Bool("recursive"),
 		DryRun:    ctx.Bool("dry-run"),
 		Recreate:  ctx.Bool("rewrite"),
+	}
+
+	if ctx.IsSet("pool") {
+		p := ctx.Int("pool")
+		if p < 1 {
+			fatalIf(errInvalidArgument(), "--pool takes a non zero positive number.")
+		}
+		p--
+		opts.Pool = &p
+	}
+
+	if ctx.IsSet("set") {
+		s := ctx.Int("set")
+		if s < 1 {
+			fatalIf(errInvalidArgument(), "--set takes a non zero positive number.")
+		}
+		s--
+		opts.Set = &s
 	}
 
 	forceStart := ctx.Bool("force-start")
