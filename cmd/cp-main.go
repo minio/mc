@@ -104,10 +104,6 @@ var (
 			Name:  "sharding-id",
 			Usage: "sharding id to execute the command",
 		},
-		cli.BoolFlag {
-			Name:  "debug",
-			Usage: "show more debug message for sharding processing",
-		},
 	}
 )
 
@@ -382,17 +378,17 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				break
 			}
 
-			pos_name := strings.LastIndex(cpURLs.SourceContent.URL.Path, "/")
-			src_name := cpURLs.SourceContent.URL.Path[pos_name + 1 : ]
-
-			var sumx uint64 = 0
-			for _, valint := range ([]rune(src_name)) {
-				sumx += uint64(valint)
-			}
-			src_sharding_id := sumx % shardings
-
-			// filter URL by sharding method
 			if !noSharding {
+				pos_name := strings.LastIndex(cpURLs.SourceContent.URL.Path, "/")
+				src_name := cpURLs.SourceContent.URL.Path[pos_name + 1 : ]
+
+				var sumx uint64 = 0
+				for _, valint := range ([]rune(src_name)) {
+					sumx += uint64(valint)
+				}
+				src_sharding_id := sumx % shardings
+
+				// filter URL by sharding method
 				if shardingID != src_sharding_id {
 					if moreDebugInfo {
 						fmt.Println("skip src ", src_name, " sharding-id ", src_sharding_id, " not match with ", shardingID)
