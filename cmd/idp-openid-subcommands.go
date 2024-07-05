@@ -301,9 +301,9 @@ func (i idpCfgList) String() string {
 
 	// Override some style settings for the header
 	for ii, hdr := range headers {
+		styl := styles[ii]
 		headerRow = append(headerRow,
-			styles[ii].Copy().
-				Bold(true).
+			styl.Bold(true).
 				Foreground(lipgloss.Color("#6495ed")). // green
 				Align(lipgloss.Center).
 				Render(hdr),
@@ -328,8 +328,8 @@ func (i idpCfgList) String() string {
 		}
 		if item.Name == "_" {
 			// For default config, don't display `_` and make it look faint.
-			line[1] = styles[1].Copy().
-				Faint(true).
+			styl := styles[1]
+			line[1] = styl.Faint(true).
 				Render("(default)")
 		}
 		lines = append(lines, strings.Join(line, ""))
