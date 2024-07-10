@@ -59,43 +59,43 @@ FLAGS:
   {{end}}
 EXAMPLES (v3):
   1. API metrics
-     {{.Prompt}} {{.HelpName}} play api
+     {{.Prompt}} {{.HelpName}} play api --api-version v3
 
   2. API metrics for the bucket 'mybucket'
-     {{.Prompt}} {{.HelpName}} play api --bucket mybucket
+     {{.Prompt}} {{.HelpName}} play api --bucket mybucket --api-version v3
 
   3. System metrics
-     {{.Prompt}} {{.HelpName}} play system
+     {{.Prompt}} {{.HelpName}} play system --api-version v3
 
   4. Debug metrics
-     {{.Prompt}} {{.HelpName}} play debug
+     {{.Prompt}} {{.HelpName}} play debug --api-version v3
 
   5. Cluster metrics
-     {{.Prompt}} {{.HelpName}} play cluster
+     {{.Prompt}} {{.HelpName}} play cluster --api-version v3
 
   6. ILM metrics
-     {{.Prompt}} {{.HelpName}} play ilm
+     {{.Prompt}} {{.HelpName}} play ilm --api-version v3
 
   7. Audit metrics
-     {{.Prompt}} {{.HelpName}} play audit
+     {{.Prompt}} {{.HelpName}} play audit --api-version v3
 
   8. Logger metrics
-     {{.Prompt}} {{.HelpName}} play logger
+     {{.Prompt}} {{.HelpName}} play logger --api-version v3
 
   9. Replication metrics
-     {{.Prompt}} {{.HelpName}} play replication
+     {{.Prompt}} {{.HelpName}} play replication --api-version v3
 
   10. Replication metrics for the bucket 'mybucket'
-      {{.Prompt}} {{.HelpName}} play replication --bucket mybucket
+      {{.Prompt}} {{.HelpName}} play replication --bucket mybucket --api-version v3
 
   11. Notification metrics
-      {{.Prompt}} {{.HelpName}} play notification
+      {{.Prompt}} {{.HelpName}} play notification --api-version v3
 
   12. Scanner metrics
-      {{.Prompt}} {{.HelpName}} play scanner
+      {{.Prompt}} {{.HelpName}} play scanner --api-version v3
 
   13. List of cluster metrics (without values)
-      {{.Prompt}} {{.HelpName}} play cluster --list
+      {{.Prompt}} {{.HelpName}} play cluster --list --api-version v3
 
 
 EXAMPLES (v2):
