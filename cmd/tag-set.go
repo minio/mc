@@ -210,7 +210,7 @@ func mainSetTag(cliCtx *cli.Context) error {
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+		if !recursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(targetURL) {
 			break
 		}
 

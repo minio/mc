@@ -235,7 +235,7 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 			continue
 		}
 
-		if !isRecursive && alias+getKey(content) != getStandardizedURL(target) {
+		if !isRecursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(target) {
 			break
 		}
 
