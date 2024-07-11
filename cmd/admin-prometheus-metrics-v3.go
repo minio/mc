@@ -45,6 +45,9 @@ var (
 		},
 	}
 
+	metricsV3SubSystems = set.CreateStringSet("api", "system", "debug", "cluster",
+		"ilm", "audit", "logger", "replication", "notification", "scanner")
+
 	bucketMetricsSubSystems = set.CreateStringSet("api", "replication")
 )
 
@@ -52,10 +55,10 @@ const metricsV3EndPointRoot = "/minio/metrics/v3"
 
 func printPrometheusMetricsV3(ctx *cli.Context, req prometheusMetricsReq) error {
 	subsys := req.subsystem
-	switch subsys {
-	case "", "api", "system", "debug", "cluster", "ilm", "audit", "logger", "replication", "notification", "scanner":
-	default:
-		fatalIf(errInvalidArgument().Trace(), "invalid metric type `"+subsys+"`")
+	if subsys != "" && !metricsV3SubSystems.Contains(subsys) {
+		fatalIf(errInvalidArgument().Trace(),
+			"invalid metric type `"+subsys+"`. valid values are `"+
+				strings.Join(metricsV3SubSystems.ToSlice(), ", ")+"`")
 	}
 
 	list := ctx.Bool("list")

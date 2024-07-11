@@ -22,12 +22,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 )
 
 var metricsFlags = append(metricsV3Flags,
@@ -36,6 +38,8 @@ var metricsFlags = append(metricsV3Flags,
 		Usage: "version of metrics api to use. valid values are ['v2', 'v3']. defaults to 'v2' if not specified.",
 		Value: "v2",
 	})
+
+var metricsV2SubSystems = set.CreateStringSet("node", "bucket", "cluster", "resource")
 
 var adminPrometheusMetricsCmd = cli.Command{
 	Name:         "metrics",
@@ -150,12 +154,14 @@ func printPrometheusMetricsV2(ctx *cli.Context, req prometheusMetricsReq) error 
 	}
 
 	subsys := req.subsystem
-	switch subsys {
-	case "node", "bucket", "cluster", "resource":
-	case "":
+	if subsys == "" {
 		subsys = "cluster"
-	default:
-		fatalIf(errInvalidArgument().Trace(), "invalid metric type `"+subsys+"`")
+	}
+
+	if !metricsV2SubSystems.Contains(subsys) {
+		fatalIf(errInvalidArgument().Trace(),
+			"invalid metric type `"+subsys+"`. valid values are `"+
+				strings.Join(metricsV2SubSystems.ToSlice(), ", ")+"`")
 	}
 
 	resp, e := fetchMetrics(req.aliasURL+metricsEndPointRoot+subsys, req.token)
