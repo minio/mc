@@ -98,10 +98,6 @@ EXAMPLES (v3):
   12. Scanner metrics
       {{.Prompt}} {{.HelpName}} play scanner --api-version v3
 
-  13. List of cluster metrics (without values)
-      {{.Prompt}} {{.HelpName}} play cluster --list --api-version v3
-
-
 EXAMPLES (v2):
   1. Metrics reported cluster wide.
      {{.Prompt}} {{.HelpName}} play
@@ -240,7 +236,7 @@ func mainSupportMetrics(ctx *cli.Context) error {
 		fatalIf(probe.NewError(err), "Unable to list prometheus metrics with api-version v2.")
 	case "v3":
 		err := printPrometheusMetricsV3(ctx, metricsReq)
-		fatalIf(probe.NewError(err), "Unable to list prometheus metrics with api-version v2.")
+		fatalIf(probe.NewError(err), "Unable to list prometheus metrics with api-version v3.")
 	default:
 		fatalIf(errInvalidArgument().Trace(), "Invalid api version `"+apiVer+"`")
 	}
