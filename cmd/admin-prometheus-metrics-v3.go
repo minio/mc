@@ -44,17 +44,37 @@ var (
 
 const metricsV3EndPointRoot = "/minio/metrics/v3"
 
-func printPrometheusMetricsV3(ctx *cli.Context, req prometheusMetricsReq) error {
-	subsys := req.subsystem
+func getMetricsV3Path(subsys string, bucket string) string {
+	params := url.Values{}
+
+	metricsPath := metricsV3EndPointRoot
+	if len(bucket) > 0 {
+		metricsPath += "/bucket"
+	}
+
+	if len(subsys) > 0 {
+		metricsPath += "/" + subsys
+	}
+
+	if len(bucket) > 0 {
+		// bucket specific metrics endpoints have '/bucket' prefix and bucket name as suffix.
+		// e.g. bucket api metrics: /bucket/api/mybucket
+		metricsPath += "/" + bucket
+	}
+
+	qparams := params.Encode()
+	if len(qparams) > 0 {
+		metricsPath += "?" + qparams
+	}
+	return metricsPath
+}
+
+func validateV3Args(subsys string, bucket string) {
 	if subsys != "" && !metricsV3SubSystems.Contains(subsys) {
 		fatalIf(errInvalidArgument().Trace(),
 			"invalid metric type `"+subsys+"`. valid values are `"+
 				strings.Join(metricsV3SubSystems.ToSlice(), ", ")+"`")
 	}
-
-	bucket := ctx.String("bucket")
-	metricsURL := req.aliasURL + metricsV3EndPointRoot
-	params := url.Values{}
 
 	if len(bucket) > 0 {
 		bms := strings.Join(bucketMetricsSubSystems.ToSlice(), ", ")
@@ -65,24 +85,14 @@ func printPrometheusMetricsV3(ctx *cli.Context, req prometheusMetricsReq) error 
 		if !bucketMetricsSubSystems.Contains(subsys) {
 			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("--bucket is applicable only for metric types `"+bms+"`"))
 		}
-
-		metricsURL += "/bucket"
 	}
+}
 
-	if len(subsys) > 0 {
-		metricsURL += "/" + subsys
-	}
+func printPrometheusMetricsV3(ctx *cli.Context, req prometheusMetricsReq) error {
+	bucket := ctx.String("bucket")
+	validateV3Args(req.subsystem, bucket)
 
-	if len(bucket) > 0 {
-		// bucket specific metrics endpoints have '/bucket' prefix and bucket name as suffix.
-		// e.g. bucket api metrics: /bucket/api/mybucket
-		metricsURL += "/" + bucket
-	}
-
-	qparams := params.Encode()
-	if len(qparams) > 0 {
-		metricsURL += "?" + qparams
-	}
+	metricsURL := req.aliasURL + getMetricsV3Path(req.subsystem, bucket)
 
 	resp, e := fetchMetrics(metricsURL, req.token)
 	if e != nil {

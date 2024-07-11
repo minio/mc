@@ -141,7 +141,7 @@ func fetchMetrics(metricsURL string, token string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func printPrometheusMetricsV2(ctx *cli.Context, req prometheusMetricsReq) error {
+func validateV2Args(ctx *cli.Context, subsys string) {
 	for _, flag := range metricsV3Flags {
 		flagName := flag.GetName()
 		if ctx.IsSet(flagName) {
@@ -149,16 +149,19 @@ func printPrometheusMetricsV2(ctx *cli.Context, req prometheusMetricsReq) error 
 		}
 	}
 
-	subsys := req.subsystem
-	if subsys == "" {
-		subsys = "cluster"
-	}
-
 	if !metricsV2SubSystems.Contains(subsys) {
 		fatalIf(errInvalidArgument().Trace(),
 			"invalid metric type `"+subsys+"`. valid values are `"+
 				strings.Join(metricsV2SubSystems.ToSlice(), ", ")+"`")
 	}
+}
+
+func printPrometheusMetricsV2(ctx *cli.Context, req prometheusMetricsReq) error {
+	subsys := req.subsystem
+	if subsys == "" {
+		subsys = "cluster"
+	}
+	validateV2Args(ctx, subsys)
 
 	resp, e := fetchMetrics(req.aliasURL+metricsEndPointRoot+subsys, req.token)
 	if e != nil {
