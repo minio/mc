@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -22,48 +22,104 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 )
+
+var metricsFlags = append(metricsV3Flags,
+	cli.StringFlag{
+		Name:  "api-version",
+		Usage: "version of metrics api to use. valid values are ['v2', 'v3']. defaults to 'v2' if not specified.",
+		Value: "v2",
+	})
+
+var metricsV2SubSystems = set.CreateStringSet("node", "bucket", "cluster", "resource")
 
 var adminPrometheusMetricsCmd = cli.Command{
 	Name:         "metrics",
-	Usage:        "print cluster wide prometheus metrics",
+	Usage:        "print prometheus metrics",
 	OnUsageError: onUsageError,
 	Action:       mainSupportMetrics,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, metricsFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 USAGE:
   {{.HelpName}} TARGET [METRIC-TYPE]
 
 METRIC-TYPE:
-  valid values are ['cluster', 'node', 'bucket', 'resource']. Defaults to 'cluster' if not specified.
+  valid values are
+    api-version v2 ['cluster', 'node', 'bucket', 'resource']. defaults to 'cluster' if not specified.
+    api-version v3 ["api", "system", "debug", "cluster", "ilm", "audit", "logger", "replication", "notification", "scanner"]. defaults to all if not specified.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-EXAMPLES:
-  1. List of metrics reported cluster wide.
+EXAMPLES (v3):
+  1. API metrics
+     {{.Prompt}} {{.HelpName}} play api --api-version v3
+
+  2. API metrics for the bucket 'mybucket'
+     {{.Prompt}} {{.HelpName}} play api --bucket mybucket --api-version v3
+
+  3. System metrics
+     {{.Prompt}} {{.HelpName}} play system --api-version v3
+
+  4. Debug metrics
+     {{.Prompt}} {{.HelpName}} play debug --api-version v3
+
+  5. Cluster metrics
+     {{.Prompt}} {{.HelpName}} play cluster --api-version v3
+
+  6. ILM metrics
+     {{.Prompt}} {{.HelpName}} play ilm --api-version v3
+
+  7. Audit metrics
+     {{.Prompt}} {{.HelpName}} play audit --api-version v3
+
+  8. Logger metrics
+     {{.Prompt}} {{.HelpName}} play logger --api-version v3
+
+  9. Replication metrics
+     {{.Prompt}} {{.HelpName}} play replication --api-version v3
+
+  10. Replication metrics for the bucket 'mybucket'
+      {{.Prompt}} {{.HelpName}} play replication --bucket mybucket --api-version v3
+
+  11. Notification metrics
+      {{.Prompt}} {{.HelpName}} play notification --api-version v3
+
+  12. Scanner metrics
+      {{.Prompt}} {{.HelpName}} play scanner --api-version v3
+
+EXAMPLES (v2):
+  1. Metrics reported cluster wide.
      {{.Prompt}} {{.HelpName}} play
 
-  2. List of metrics reported at node level.
+  2. Metrics reported at node level.
      {{.Prompt}} {{.HelpName}} play node
 
-  3. List of metrics reported at bucket level.
+  3. Metrics reported at bucket level.
      {{.Prompt}} {{.HelpName}} play bucket
 
-  4. List of resource metrics.
+  4. Resource metrics.
      {{.Prompt}} {{.HelpName}} play resource
 `,
 }
 
 const metricsEndPointRoot = "/minio/v2/metrics/"
+
+type prometheusMetricsReq struct {
+	aliasURL  string
+	token     string
+	subsystem string
+}
 
 // checkSupportMetricsSyntax - validate arguments passed by a user
 func checkSupportMetricsSyntax(ctx *cli.Context) {
@@ -72,44 +128,39 @@ func checkSupportMetricsSyntax(ctx *cli.Context) {
 	}
 }
 
-func printPrometheusMetrics(ctx *cli.Context) error {
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	alias := cleanAlias(args.Get(0))
-
-	if !isValidAlias(alias) {
-		fatalIf(errInvalidAlias(alias), "Invalid alias.")
-	}
-	hostConfig := mustGetHostConfig(alias)
-	if hostConfig == nil {
-		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
-		return nil
-	}
-
-	token, e := getPrometheusToken(hostConfig)
+func fetchMetrics(metricsURL string, token string) (*http.Response, error) {
+	req, e := http.NewRequest(http.MethodGet, metricsURL, nil)
 	if e != nil {
-		return e
+		return nil, e
 	}
-	metricsSubSystem := args.Get(1)
-	switch metricsSubSystem {
-	case "node", "bucket", "cluster", "resource":
-	case "":
-		metricsSubSystem = "cluster"
-	default:
-		fatalIf(errInvalidArgument().Trace(), "invalid metric type '%v'", metricsSubSystem)
-	}
-
-	req, e := http.NewRequest(http.MethodGet, hostConfig.URL+metricsEndPointRoot+metricsSubSystem, nil)
-	if e != nil {
-		return e
-	}
-
 	if token != "" {
 		req.Header.Add("Authorization", "Bearer "+token)
 	}
 
 	client := httpClient(60 * time.Second)
-	resp, e := client.Do(req)
+	return client.Do(req)
+}
+
+func printPrometheusMetricsV2(ctx *cli.Context, req prometheusMetricsReq) error {
+	for _, flag := range metricsV3Flags {
+		flagName := flag.GetName()
+		if ctx.IsSet(flagName) {
+			fatalIf(errInvalidArgument().Trace(), "Flag `"+flagName+"` is not supported with v2 metrics")
+		}
+	}
+
+	subsys := req.subsystem
+	if subsys == "" {
+		subsys = "cluster"
+	}
+
+	if !metricsV2SubSystems.Contains(subsys) {
+		fatalIf(errInvalidArgument().Trace(),
+			"invalid metric type `"+subsys+"`. valid values are `"+
+				strings.Join(metricsV2SubSystems.ToSlice(), ", ")+"`")
+	}
+
+	resp, e := fetchMetrics(req.aliasURL+metricsEndPointRoot+subsys, req.token)
 	if e != nil {
 		return e
 	}
@@ -151,7 +202,44 @@ type prometheusMetricsReader struct {
 func mainSupportMetrics(ctx *cli.Context) error {
 	checkSupportMetricsSyntax(ctx)
 
-	fatalIf(probe.NewError(printPrometheusMetrics(ctx)), "Unable to list prometheus metrics.")
+	// Get the alias parameter from cli
+	args := ctx.Args()
+	alias := cleanAlias(args.Get(0))
+
+	if !isValidAlias(alias) {
+		fatalIf(errInvalidAlias(alias), "Invalid alias.")
+	}
+
+	hostConfig := mustGetHostConfig(alias)
+	if hostConfig == nil {
+		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
+		return nil
+	}
+
+	token, e := getPrometheusToken(hostConfig)
+	if e != nil {
+		return e
+	}
+
+	metricsSubSystem := args.Get(1)
+	apiVer := ctx.String("api-version")
+
+	metricsReq := prometheusMetricsReq{
+		aliasURL:  hostConfig.URL,
+		token:     token,
+		subsystem: metricsSubSystem,
+	}
+
+	switch apiVer {
+	case "v2":
+		err := printPrometheusMetricsV2(ctx, metricsReq)
+		fatalIf(probe.NewError(err), "Unable to list prometheus metrics with api-version v2.")
+	case "v3":
+		err := printPrometheusMetricsV3(ctx, metricsReq)
+		fatalIf(probe.NewError(err), "Unable to list prometheus metrics with api-version v3.")
+	default:
+		fatalIf(errInvalidArgument().Trace(), "Invalid api version `"+apiVer+"`")
+	}
 
 	return nil
 }
