@@ -607,8 +607,8 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 			if !ignoreErr {
 				mirrorFailedOps.Inc()
 				errDuringMirror = true
-				// Quit mirroring if --watch and --active-active are not passed
-				if !mj.opts.skipErrors && !mj.opts.activeActive && !mj.opts.isWatch {
+				// Quit mirroring if --skip-errors is not passed
+				if !mj.opts.skipErrors {
 					cancel()
 					cancelInProgress = true
 				}
