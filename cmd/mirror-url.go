@@ -106,7 +106,7 @@ func matchExcludeOptions(excludeOptions []string, srcSuffix string, typ ClientUR
 	return false
 }
 
-func matchExcludeBucketOptions(excludeBuckets []string, srcSuffix string) bool {
+func matchExcludeBucketOptions(excludeBuckets, includeBuckets []string, srcSuffix string) bool {
 	if strings.HasPrefix(srcSuffix, "/") {
 		srcSuffix = srcSuffix[1:]
 	} else if runtime.GOOS == "windows" && strings.HasPrefix(srcSuffix, `\`) {
@@ -118,12 +118,23 @@ func matchExcludeBucketOptions(excludeBuckets []string, srcSuffix string) bool {
 	} else {
 		bucketName = strings.Split(srcSuffix, "/")[0]
 	}
+	if bucketName == "" {
+		return false
+	}
 	for _, pattern := range excludeBuckets {
 		if wildcard.Match(pattern, bucketName) {
 			return true
 		}
 	}
-	return false
+	if len(includeBuckets) <= 0 {
+		return false
+	}
+	for _, pattern := range includeBuckets {
+		if wildcard.Match(pattern, bucketName) {
+			return false
+		}
+	}
+	return true
 }
 
 func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mirrorOptions, URLsCh chan<- URLs) {
@@ -179,7 +190,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		}
 
 		// Skip the source bucket if it matches the Exclude options provided
-		if matchExcludeBucketOptions(opts.excludeBuckets, srcSuffix) {
+		if matchExcludeBucketOptions(opts.excludeBuckets, opts.buckets, srcSuffix) {
 			continue
 		}
 
@@ -190,7 +201,7 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 		}
 
 		// Skip the target bucket if it matches the Exclude options provided
-		if matchExcludeBucketOptions(opts.excludeBuckets, tgtSuffix) {
+		if matchExcludeBucketOptions(opts.excludeBuckets, opts.buckets, tgtSuffix) {
 			continue
 		}
 
@@ -263,17 +274,17 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 }
 
 type mirrorOptions struct {
-	isFake, isOverwrite, activeActive                     bool
-	isWatch, isRemove, isMetadata                         bool
-	isRetriable                                           bool
-	isSummary                                             bool
-	skipErrors                                            bool
-	excludeOptions, excludeStorageClasses, excludeBuckets []string
-	encKeyDB                                              map[string][]prefixSSEPair
-	md5, disableMultipart                                 bool
-	olderThan, newerThan                                  string
-	storageClass                                          string
-	userMetadata                                          map[string]string
+	isFake, isOverwrite, activeActive                              bool
+	isWatch, isRemove, isMetadata                                  bool
+	isRetriable                                                    bool
+	isSummary                                                      bool
+	skipErrors                                                     bool
+	excludeOptions, excludeStorageClasses, excludeBuckets, buckets []string
+	encKeyDB                                                       map[string][]prefixSSEPair
+	md5, disableMultipart                                          bool
+	olderThan, newerThan                                           string
+	storageClass                                                   string
+	userMetadata                                                   map[string]string
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
