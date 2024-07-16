@@ -305,37 +305,43 @@ func (m *scannerMetricsUI) View() string {
 
 	title := metricsTitle
 	ui := metricsUint64
-	const wantCycles = 16
 	addRow("")
-	if len(sc.CyclesCompletedAt) < 2 {
-		addRow("Last full scan time:             Unknown (not enough data)")
+
+	if sc.CurrentCycle == 0 && sc.CurrentStarted.IsZero() && sc.CyclesCompletedAt == nil {
+		addRowF("     "+title("Scanning:")+" %d bucket(s)", sc.OngoingBuckets)
 	} else {
-		addRow("Overall Statistics")
-		addRow("------------------")
-		sort.Slice(sc.CyclesCompletedAt, func(i, j int) bool {
-			return sc.CyclesCompletedAt[i].After(sc.CyclesCompletedAt[j])
-		})
-		if len(sc.CyclesCompletedAt) >= wantCycles {
-			sinceLast := sc.CyclesCompletedAt[0].Sub(sc.CyclesCompletedAt[wantCycles-1])
-			perMonth := float64(30*24*time.Hour) / float64(sinceLast)
-			cycleTime := console.Colorize("metrics-number", fmt.Sprintf("%dd%dh%dm", int(sinceLast.Hours()/24), int(sinceLast.Hours())%24, int(sinceLast.Minutes())%60))
-			perms := console.Colorize("metrics-number", fmt.Sprintf("%.02f", perMonth))
-			addRowF(title("Last full scan time:")+"   %s; Estimated %s/month", cycleTime, perms)
+		const wantCycles = 16
+		if len(sc.CyclesCompletedAt) < 2 {
+			addRow("Last full scan time:             Unknown (not enough data)")
 		} else {
-			sinceLast := sc.CyclesCompletedAt[0].Sub(sc.CyclesCompletedAt[1]) * time.Duration(wantCycles)
-			perMonth := float64(30*24*time.Hour) / float64(sinceLast)
-			cycleTime := console.Colorize("metrics-number", fmt.Sprintf("%dd%dh%dm", int(sinceLast.Hours()/24), int(sinceLast.Hours())%24, int(sinceLast.Minutes())%60))
-			perms := console.Colorize("metrics-number", fmt.Sprintf("%.02f", perMonth))
-			addRowF(title("Est. full scan time:")+"   %s; Estimated %s/month", cycleTime, perms)
+			addRow("Overall Statistics")
+			addRow("------------------")
+			sort.Slice(sc.CyclesCompletedAt, func(i, j int) bool {
+				return sc.CyclesCompletedAt[i].After(sc.CyclesCompletedAt[j])
+			})
+			if len(sc.CyclesCompletedAt) >= wantCycles {
+				sinceLast := sc.CyclesCompletedAt[0].Sub(sc.CyclesCompletedAt[wantCycles-1])
+				perMonth := float64(30*24*time.Hour) / float64(sinceLast)
+				cycleTime := console.Colorize("metrics-number", fmt.Sprintf("%dd%dh%dm", int(sinceLast.Hours()/24), int(sinceLast.Hours())%24, int(sinceLast.Minutes())%60))
+				perms := console.Colorize("metrics-number", fmt.Sprintf("%.02f", perMonth))
+				addRowF(title("Last full scan time:")+"   %s; Estimated %s/month", cycleTime, perms)
+			} else {
+				sinceLast := sc.CyclesCompletedAt[0].Sub(sc.CyclesCompletedAt[1]) * time.Duration(wantCycles)
+				perMonth := float64(30*24*time.Hour) / float64(sinceLast)
+				cycleTime := console.Colorize("metrics-number", fmt.Sprintf("%dd%dh%dm", int(sinceLast.Hours()/24), int(sinceLast.Hours())%24, int(sinceLast.Minutes())%60))
+				perms := console.Colorize("metrics-number", fmt.Sprintf("%.02f", perMonth))
+				addRowF(title("Est. full scan time:")+"   %s; Estimated %s/month", cycleTime, perms)
+			}
+		}
+		if sc.CurrentCycle > 0 {
+			addRowF(title("Current cycle:")+"         %s; Started: %v", ui(sc.CurrentCycle), console.Colorize("metrics-date", sc.CurrentStarted))
+		} else {
+			addRowF(title("Current cycle:") + "         (between cycles)")
 		}
 	}
-	if sc.CurrentCycle > 0 {
-		addRowF(title("Current cycle:")+"         %s; Started: %v", ui(sc.CurrentCycle), console.Colorize("metrics-date", sc.CurrentStarted))
-		addRowF(title("Active drives:")+"         %s", ui(uint64(len(sc.ActivePaths))))
-	} else {
-		addRowF(title("Current cycle:") + "         (between cycles)")
-		addRowF(title("Active drives:")+"         %s", ui(uint64(len(sc.ActivePaths))))
-	}
+
+	addRowF(title("Active drives:")+" %s", ui(uint64(len(sc.ActivePaths))))
+
 	getRate := func(x madmin.TimedAction) string {
 		if x.AccTime > 0 {
 			return fmt.Sprintf("; Rate: %v/day", ui(uint64(float64(24*time.Hour)/(float64(time.Minute)/float64(x.Count)))))
