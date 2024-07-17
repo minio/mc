@@ -399,8 +399,9 @@ func (p policyEntities) String() string {
 
 		for _, u := range p.Result.GroupMappings {
 			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Group:"), u.Group))
+			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Policies:")))
 			for _, p := range u.Policies {
-				o.WriteString(iFmt(4, "%s\n", p))
+				o.WriteString(iFmt(6, "%s\n", p))
 			}
 		}
 	}
