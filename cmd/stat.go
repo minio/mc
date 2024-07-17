@@ -109,12 +109,30 @@ func (stat statMessage) String() (msg string) {
 	}
 
 	if maxKeyEncrypted > 0 {
-		if keyID, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"]; ok {
+		// Handle various AWS S3 headers, behaviors etc.
+		var found bool
+		if enabled, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Bucket-Key-Enabled"]; ok {
+			if enabled == "true" {
+				msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "KMS"))
+			}
+			// we still need to treat this as 'true' because X-Amz-Server-Side-Encryption-Bucket-Key-Enabled
+			// can be set to 'false' by the server to indicate there is no SSE enabled on the object
+			// we shouldn't be printing `unknown` in that scenario.
+			found = true
+		} else if keyID, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"]; ok {
 			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s (%s)\n", "Encryption", "KMS", keyID))
+			found = true
 		} else if _, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Customer-Key-Md5"]; ok {
 			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "C"))
-		} else {
+			found = true
+		} else if algo, ok := stat.Metadata["X-Amz-Server-Side-Encryption"]; ok && algo == "AES256" {
 			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "S3"))
+			found = true
+		}
+		if !found {
+			// encryption headers are present but not something we recognize, check `mc stat --debug`
+			// to obtain more information and understand if we are missing something.
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "Unknown"))
 		}
 	}
 
@@ -277,7 +295,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 			continue
 		}
 
-		url := targetAlias + getKey(content)
+		url := getStandardizedURL(targetAlias + getKey(content))
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(filepath.FromSlash(url), standardizedURL) && !filepath.IsAbs(url) {

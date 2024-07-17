@@ -8,6 +8,9 @@ GOOS := $(shell go env GOOS)
 VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/mc:$(VERSION)"
 
+GOLANGCI_DIR = .bin/golangci/$(GOLANGCI_VERSION)
+GOLANGCI = $(GOLANGCI_DIR)/golangci-lint
+
 all: build
 
 checks:
@@ -16,7 +19,7 @@ checks:
 
 getdeps:
 	@mkdir -p ${GOPATH}/bin
-	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
+	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOLANGCI_DIR)
 	@echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@latest
 
 crosscompile:
@@ -31,9 +34,13 @@ vet:
 	@echo "Running $@"
 	@GO111MODULE=on go vet github.com/minio/mc/...
 
+lint-fix: getdeps ## runs golangci-lint suite of linters with automatic fixes
+	@echo "Running $@ check"
+	@$(GOLANGCI) run --build-tags kqueue --timeout=10m --config ./.golangci.yml --fix
+
 lint: getdeps
 	@echo "Running $@ check"
-	@GO111MODULE=on ${GOPATH}/bin/golangci-lint run --timeout=5m --config ./.golangci.yml
+	@$(GOLANGCI) run --build-tags kqueue --timeout=10m --config ./.golangci.yml
 
 # Builds mc, runs the verifiers then runs the tests.
 check: test
