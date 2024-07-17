@@ -512,7 +512,7 @@ func registerApp(name string) *cli.App {
 			host := k.(string)
 			expires := v.(time.Time)
 			fmt.Fprintf(os.Stderr, "\n")
-			fmt.Fprintf(os.Stderr, "== WARN: `%s` certificate will expire in %s. Consider renewing it soon.\n", host, expires)
+			fmt.Fprintf(os.Stderr, "== WARN: `%s` certificate will expire in %s. Renew soon to avoid outage.\n", host, expires)
 			fmt.Fprintf(os.Stderr, "\n")
 			return true
 		})
