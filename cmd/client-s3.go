@@ -147,6 +147,31 @@ func isHostTLS(config *Config) bool {
 	return useTLS
 }
 
+type notifyExpiringTLS struct {
+	transport http.RoundTripper
+}
+
+var globalExpiringCerts sync.Map
+
+func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err error) {
+	if n.transport == nil {
+		return nil, errors.New("invalid transport")
+	}
+
+	res, err = n.transport.RoundTrip(req)
+	if err != nil || res.TLS == nil || len(res.TLS.PeerCertificates) == 0 {
+		return res, err
+	}
+
+	cert := res.TLS.PeerCertificates[0] // leaf certificate
+	validityDur := cert.NotAfter.Sub(cert.NotBefore)
+	if time.Since(cert.NotBefore) > time.Duration(0.9*float64(validityDur)) {
+		globalExpiringCerts.Store(req.Host, cert.NotAfter)
+	}
+
+	return res, err
+}
+
 // getTransportForConfig returns a corresponding *http.Transport for the *Config
 // set withS3v2 bool to true to add traceV2 tracer.
 func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
@@ -208,7 +233,12 @@ func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
 		} else if strings.EqualFold(config.Signature, "S3v2") && withS3v2 {
 			transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
 		}
+	} else {
+		if !globalJSONLine && !globalJSON {
+			transport = notifyExpiringTLS{transport: transport}
+		}
 	}
+
 	transport = gzhttp.Transport(transport)
 	return transport
 }

@@ -507,6 +507,17 @@ func registerApp(name string) *cli.App {
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
+	app.After = func(*cli.Context) error {
+		globalExpiringCerts.Range(func(k, v interface{}) bool {
+			host := k.(string)
+			expires := v.(time.Time)
+			fmt.Fprintf(os.Stderr, "\n")
+			fmt.Fprintf(os.Stderr, "== WARN: `%s` certificate will expire in %s. Consider renewing it soon.\n", host, expires)
+			fmt.Fprintf(os.Stderr, "\n")
+			return true
+		})
+		return nil
+	}
 
 	if isTerminal() && !globalPagerDisabled {
 		app.HelpWriter = globalHelpPager
