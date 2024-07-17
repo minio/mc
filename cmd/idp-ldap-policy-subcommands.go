@@ -28,6 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 )
 
 var idpLdapPolicyAttachFlags = []cli.Flag{
@@ -371,16 +372,24 @@ func (p policyEntities) String() string {
 
 		for _, u := range p.Result.UserMappings {
 			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("User:"), u.User))
+			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Policies:")))
 			for _, p := range u.Policies {
-				o.WriteString(iFmt(4, "%s\n", p))
+				o.WriteString(iFmt(6, "%s\n", p))
 			}
 
-			// TODO: Reword+reformat this
-			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Member Of:")))
-			for _, g := range u.MemberOfMappings {
-				o.WriteString(iFmt(6, "%s %s\n", labelStyle.Render("Group:"), g.Group))
-				for _, p := range g.Policies {
-					o.WriteString(iFmt(8, "%s\n", p))
+			if len(u.MemberOfMappings) > 0 {
+				effectivePolicies := set.CreateStringSet(u.Policies...)
+				o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Group Memberships:")))
+				for _, g := range u.MemberOfMappings {
+					o.WriteString(iFmt(6, "%s\n", g.Group))
+					for _, p := range g.Policies {
+						effectivePolicies.Add(p)
+					}
+				}
+
+				o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Effective Policies:")))
+				for _, p := range effectivePolicies.ToSlice() {
+					o.WriteString(iFmt(6, "%s\n", p))
 				}
 			}
 		}
