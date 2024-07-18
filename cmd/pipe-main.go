@@ -191,7 +191,7 @@ func mainPipe(ctx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// globalQuiet is true for no window size to get. We just need --quiet here.
-	quiet := ctx.IsSet("quiet")
+	quiet := ctx.Bool("quiet")
 
 	meta := map[string]string{}
 	if attr := ctx.String("attr"); attr != "" {
