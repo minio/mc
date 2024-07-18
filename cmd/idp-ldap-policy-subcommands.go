@@ -359,6 +359,29 @@ func iFmt(n int, fmtStr string, a ...any) string {
 	return fmt.Sprintf(indentStr+fmtStr, a...)
 }
 
+func builderWrapper(strList []string, o *strings.Builder, indent, maxLen int) {
+	currLen := 0
+	for _, s := range strList {
+		if currLen+len(s) > maxLen && currLen > 0 {
+			o.WriteString("\n")
+			currLen = 0
+		}
+		if currLen == 0 {
+			o.WriteString(iFmt(indent, ""))
+			currLen = indent
+		} else {
+			o.WriteString(", ")
+			currLen += 2
+		}
+		if strings.Contains(s, ",") {
+			s = fmt.Sprintf("\"%s\"", s)
+		}
+		o.WriteString(s)
+		currLen += len(s)
+	}
+	o.WriteString("\n")
+}
+
 func (p policyEntities) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
 	o := strings.Builder{}
@@ -373,24 +396,22 @@ func (p policyEntities) String() string {
 		for _, u := range p.Result.UserMappings {
 			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("User:"), u.User))
 			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Policies:")))
-			for _, p := range u.Policies {
-				o.WriteString(iFmt(6, "%s\n", p))
-			}
+			builderWrapper(u.Policies, &o, 6, 80)
 
 			if len(u.MemberOfMappings) > 0 {
 				effectivePolicies := set.CreateStringSet(u.Policies...)
 				o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Group Memberships:")))
+				groups := make([]string, 0, len(u.MemberOfMappings))
 				for _, g := range u.MemberOfMappings {
-					o.WriteString(iFmt(6, "%s\n", g.Group))
+					groups = append(groups, g.Group)
 					for _, p := range g.Policies {
 						effectivePolicies.Add(p)
 					}
 				}
+				builderWrapper(groups, &o, 6, 80)
 
 				o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Effective Policies:")))
-				for _, p := range effectivePolicies.ToSlice() {
-					o.WriteString(iFmt(6, "%s\n", p))
-				}
+				builderWrapper(effectivePolicies.ToSlice(), &o, 6, 80)
 			}
 		}
 	}
