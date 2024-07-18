@@ -519,7 +519,7 @@ func mainReplicateBacklog(cliCtx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
-	if !cliCtx.IsSet("full") {
+	if !cliCtx.Bool("full") {
 		mrfCh := client.BucketReplicationMRF(ctx, bucket, cliCtx.String("nodes"))
 		if globalJSON {
 			for mrf := range mrfCh {

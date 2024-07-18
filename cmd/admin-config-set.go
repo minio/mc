@@ -112,13 +112,13 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 
 	if !strings.Contains(input, madmin.KvSeparator) {
 		// Call get config API
-		hr, e := client.HelpConfigKV(globalContext, args.Get(1), args.Get(2), ctx.IsSet("env"))
+		hr, e := client.HelpConfigKV(globalContext, args.Get(1), args.Get(2), ctx.Bool("env"))
 		fatalIf(probe.NewError(e), "Unable to get help for the sub-system")
 
 		// Print
 		printMsg(configHelpMessage{
 			Value:   hr,
-			envOnly: ctx.IsSet("env"),
+			envOnly: ctx.Bool("env"),
 		})
 
 		return nil
