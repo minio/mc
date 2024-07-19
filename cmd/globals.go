@@ -112,13 +112,13 @@ func parsePagerDisableFlag(args []string) {
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
 func setGlobalsFromContext(ctx *cli.Context) error {
-	quiet := ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet")
-	debug := ctx.IsSet("debug") || ctx.GlobalIsSet("debug")
-	json := ctx.IsSet("json") || ctx.GlobalIsSet("json")
-	noColor := ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color")
-	insecure := ctx.IsSet("insecure") || ctx.GlobalIsSet("insecure")
-	devMode := ctx.IsSet("dev") || ctx.GlobalIsSet("dev")
-	airgapped := ctx.IsSet("airgap") || ctx.GlobalIsSet("airgap")
+	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
+	debug := ctx.Bool("debug") || ctx.GlobalBool("debug")
+	json := ctx.Bool("json") || ctx.GlobalBool("json")
+	noColor := ctx.Bool("no-color") || ctx.GlobalBool("no-color")
+	insecure := ctx.Bool("insecure") || ctx.GlobalBool("insecure")
+	devMode := ctx.Bool("dev") || ctx.GlobalBool("dev")
+	airgapped := ctx.Bool("airgap") || ctx.GlobalBool("airgap")
 
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
