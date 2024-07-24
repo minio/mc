@@ -51,12 +51,12 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Download all IAM metadata for cluster into zip file.
-     {{.Prompt}} {{.HelpName}} myminio
+     {{.Prompt}} {{.HelpName}} myminio /tmp/myminio-iam.zip
 `,
 }
 
 func checkIAMExportSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
+	if len(ctx.Args()) != 1 && len(ctx.Args()) != 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
@@ -97,6 +97,9 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 	tmpFile.Close()
 
 	downloadPath := fmt.Sprintf("%s-iam-info.%s", aliasedURL, ext)
+	if args.Get(1) != "" {
+		downloadPath = args.Get(1)
+	}
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
