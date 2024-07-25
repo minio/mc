@@ -43,6 +43,7 @@ type traceStatsUI struct {
 	meter      spinner.Model
 	quitting   bool
 	maxEntries int
+	allFlag    bool
 }
 
 func (m *traceStatsUI) Init() tea.Cmd {
@@ -127,13 +128,15 @@ func (m *traceStatsUI) View() string {
 		}
 	}
 
-	if totalRX > 0 {
-		s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RX Rate:↑ %s/m\n",
-			humanize.IBytes(uint64(float64(totalRX)/dur.Minutes())))))
-	}
-	if totalTX > 0 {
-		s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("TX Rate:↓ %s/m\n",
-			humanize.IBytes(uint64(float64(totalTX)/dur.Minutes())))))
+	if !m.allFlag {
+		if totalRX > 0 {
+			s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RX Rate:↑ %s/m\n",
+				humanize.IBytes(uint64(float64(totalRX)/dur.Minutes())))))
+		}
+		if totalTX > 0 {
+			s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("TX Rate:↓ %s/m\n",
+				humanize.IBytes(uint64(float64(totalTX)/dur.Minutes())))))
+		}
 	}
 	s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RPM    :  %0.1f\n", float64(totalCnt)/dur.Minutes())))
 	s.WriteString("-------------\n")
@@ -250,7 +253,7 @@ func (m *traceStatsUI) View() string {
 	return strings.Join(split, "\n")
 }
 
-func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
+func initTraceStatsUI(allFlag bool, maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
 	meter := spinner.New()
 	meter.Spinner = spinner.Meter
 	meter.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -276,5 +279,6 @@ func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *tr
 		meter:      meter,
 		maxEntries: maxEntries,
 		current:    stats,
+		allFlag:    allFlag,
 	}
 }
