@@ -32,13 +32,23 @@ import (
 	"github.com/minio/pkg/v3/console"
 )
 
+// iam export specific flags.
+var (
+	iamExportFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "overwrite,o",
+			Usage: "overwrite iam export file path",
+		},
+	}
+)
+
 var adminClusterIAMExportCmd = cli.Command{
 	Name:            "export",
 	Usage:           "exports IAM info to zipped file",
 	Action:          mainClusterIAMExport,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
+	Flags:           append(iamExportFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -51,7 +61,9 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Download all IAM metadata for cluster into zip file.
-     {{.Prompt}} {{.HelpName}} myminio /tmp/myminio-iam.zip
+     {{.Prompt}} {{.HelpName}} myminio
+  2. Download all IAM metadata for cluster into designated zip file.
+     {{.Prompt}} {{.HelpName}} myminio --overwrite /tmp/myminio-iam.zip
 `,
 }
 
@@ -97,8 +109,8 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 	tmpFile.Close()
 
 	downloadPath := fmt.Sprintf("%s-iam-info.%s", aliasedURL, ext)
-	if args.Get(1) != "" {
-		downloadPath = args.Get(1)
+	if ctx.String("overwrite") != "" {
+		downloadPath = ctx.String("overwrite")
 	}
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
