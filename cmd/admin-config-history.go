@@ -127,7 +127,7 @@ func mainAdminConfigHistory(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	if ctx.IsSet("clear") {
+	if ctx.Bool("clear") {
 		fatalIf(probe.NewError(client.ClearConfigHistoryKV(globalContext, "all")), "Unable to clear server configuration.")
 
 		// Print
