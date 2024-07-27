@@ -32,7 +32,7 @@ var (
 	metricsV3Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "bucket",
-			Usage: "bucket name to list metrics for. only applicable with api version v3 for metric type `api, replication`",
+			Usage: "bucket name to list metrics for. only applicable with api version v3 for metric type 'api, replication'",
 		},
 	}
 
