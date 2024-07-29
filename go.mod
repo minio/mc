@@ -118,4 +118,9 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
 	google.golang.org/grpc v1.65.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/minio/madmin-go/v3 => github.com/marktheunissen/madmin-go/v3 v3.0.0-20240730061730-2d8255671cb3
+
+replace github.com/minio/pkg/v3 => github.com/marktheunissen/pkg/v3 v3.0.0-20240726014105-5a91ee390421
