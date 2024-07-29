@@ -36,7 +36,7 @@ import (
 var (
 	iamExportFlags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "overwrite,o",
+			Name:  "output,o",
 			Usage: "output iam export to a custom file path",
 		},
 	}
