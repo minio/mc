@@ -109,8 +109,8 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 	tmpFile.Close()
 
 	downloadPath := fmt.Sprintf("%s-iam-info.%s", aliasedURL, ext)
-	if ctx.String("overwrite") != "" {
-		downloadPath = ctx.String("overwrite")
+	if ctx.String("output") != "" {
+		downloadPath = ctx.String("output")
 	}
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
