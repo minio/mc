@@ -104,7 +104,7 @@ func mainSupportTopAPI(ctx *cli.Context) error {
 	traceCh := client.ServiceTrace(ctxt, opts)
 
 	filteredTraces := make(chan madmin.ServiceTraceInfo, 1)
-	ui := tea.NewProgram(initTraceStatsUI(30, filteredTraces))
+	ui := tea.NewProgram(initTraceStatsUI(false, 30, filteredTraces))
 	var te error
 	go func() {
 		for t := range traceCh {
