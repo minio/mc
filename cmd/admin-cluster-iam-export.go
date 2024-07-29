@@ -37,7 +37,7 @@ var (
 	iamExportFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "overwrite,o",
-			Usage: "overwrite iam export file path",
+			Usage: "output iam export to a custom file path",
 		},
 	}
 )
