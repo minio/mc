@@ -251,7 +251,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	rowCount := 2
-	toWait := ctx.IsSet("wait")
+	toWait := ctx.Bool("wait")
 	if toWait {
 		rowCount = 3
 	}
