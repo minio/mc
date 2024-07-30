@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -117,15 +118,29 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	if versionID != "" && (recursive || withVersions || !rewind.IsZero()) {
 		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --version-id with either --rewind, --versions or --recursive.")
 	}
-
+	var targetUrls []string
 	for _, url := range URLs {
 		_, _, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: versionID, fileAttr: false, encKeyDB: encKeyDB, timeRef: rewind, isZip: false, ignoreBucketExistsCheck: false})
 		if err != nil {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
+		_, path := url2Alias(url)
+		if path != "" {
+			targetUrls = append(targetUrls, url)
+			continue
+		}
+		clnt, err := newClient(url)
+		fatalIf(err.Trace(args...), "Unable to initialize `"+url+"`.")
+		buckets, e := clnt.ListBuckets(ctx)
+		if e != nil || len(buckets) == 0 {
+			targetUrls = append(targetUrls, url)
+			continue
+		}
+		for _, bucket := range buckets {
+			targetUrls = append(targetUrls, filepath.Join(url, bucket.BucketName))
+		}
 	}
-
-	return URLs, recursive, versionID, rewind, withVersions
+	return targetUrls, recursive, versionID, rewind, withVersions
 }
 
 // mainStat - is a handler for mc stat command
