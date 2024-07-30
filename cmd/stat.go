@@ -295,7 +295,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 			continue
 		}
 
-		url := targetAlias + getKey(content)
+		url := getStandardizedURL(targetAlias + getKey(content))
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(filepath.FromSlash(url), standardizedURL) && !filepath.IsAbs(url) {

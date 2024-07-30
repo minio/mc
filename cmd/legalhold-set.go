@@ -129,7 +129,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(urlStr) {
+		if !recursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(urlStr) {
 			break
 		}
 

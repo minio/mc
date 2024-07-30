@@ -1,3 +1,20 @@
+// Copyright (c) 2015-2024 MinIO, Inc.
+//
+// This file is part of MinIO Object Storage stack
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package cmd
 
 import (
@@ -11,7 +28,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/pkg/v3/console"
@@ -26,6 +43,7 @@ type traceStatsUI struct {
 	meter      spinner.Model
 	quitting   bool
 	maxEntries int
+	allFlag    bool
 }
 
 func (m *traceStatsUI) Init() tea.Cmd {
@@ -110,13 +128,15 @@ func (m *traceStatsUI) View() string {
 		}
 	}
 
-	if totalRX > 0 {
-		s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RX Rate:↑ %s/m\n",
-			humanize.IBytes(uint64(float64(totalRX)/dur.Minutes())))))
-	}
-	if totalTX > 0 {
-		s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("TX Rate:↓ %s/m\n",
-			humanize.IBytes(uint64(float64(totalTX)/dur.Minutes())))))
+	if !m.allFlag {
+		if totalRX > 0 {
+			s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RX Rate:↑ %s/m\n",
+				humanize.IBytes(uint64(float64(totalRX)/dur.Minutes())))))
+		}
+		if totalTX > 0 {
+			s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("TX Rate:↓ %s/m\n",
+				humanize.IBytes(uint64(float64(totalTX)/dur.Minutes())))))
+		}
 	}
 	s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RPM    :  %0.1f\n", float64(totalCnt)/dur.Minutes())))
 	s.WriteString("-------------\n")
@@ -137,7 +157,7 @@ func (m *traceStatsUI) View() string {
 	}
 	t = append(t,
 		console.Colorize("metrics-top-title", "Avg Size"),
-		console.Colorize("metrics-top-title", "Rate"),
+		console.Colorize("metrics-top-title", "Rate /min"),
 		console.Colorize("metrics-top-title", "Errors"),
 	)
 
@@ -176,24 +196,24 @@ func (m *traceStatsUI) View() string {
 		sz := "-"
 		rate := "-"
 		if v.Size > 0 && v.Count > 0 {
-			sz = humanize.IBytes(uint64(v.Size) / uint64(v.Count))
-			rate = fmt.Sprintf("%s/m", humanize.IBytes(uint64(float64(v.Size)/dur.Minutes())))
+			sz = ibytesShort(uint64(v.Size) / uint64(v.Count))
+			rate = ibytesShort(uint64(float64(v.Size) / dur.Minutes()))
 		}
 		if v.CallStatsCount > 0 {
 			var s, r []string
 			if v.CallStats.Rx > 0 {
-				s = append(s, fmt.Sprintf("↑ %s", humanize.IBytes(uint64(v.CallStats.Rx/v.CallStatsCount))))
-				r = append(r, fmt.Sprintf("↑ %s", humanize.IBytes(uint64(float64(v.CallStats.Rx)/dur.Minutes()))))
+				s = append(s, fmt.Sprintf("↑%s", ibytesShort(uint64(v.CallStats.Rx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↑%s", ibytesShort(uint64(float64(v.CallStats.Rx)/dur.Minutes()))))
 			}
 			if v.CallStats.Tx > 0 {
-				s = append(s, fmt.Sprintf("↓ %s", humanize.IBytes(uint64(v.CallStats.Tx/v.CallStatsCount))))
-				r = append(r, fmt.Sprintf("↓ %s", humanize.IBytes(uint64(float64(v.CallStats.Tx)/dur.Minutes()))))
+				s = append(s, fmt.Sprintf("↓%s", ibytesShort(uint64(v.CallStats.Tx/v.CallStatsCount))))
+				r = append(r, fmt.Sprintf("↓%s", ibytesShort(uint64(float64(v.CallStats.Tx)/dur.Minutes()))))
 			}
-			if len(s) > 0 {
+			if len(s)+len(r) > 0 {
 				sz = strings.Join(s, " ")
 			}
 			if len(r) > 0 {
-				rate = strings.Join(r, " ") + "/m"
+				rate = strings.Join(r, " ")
 			}
 		}
 		if sz != "-" {
@@ -206,14 +226,18 @@ func (m *traceStatsUI) View() string {
 			console.Colorize("metrics-number", fmt.Sprintf("%d ", v.Count)) +
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
 			console.Colorize("metrics-number", fmt.Sprintf("%0.1f", float64(v.Count)/dur.Minutes())),
-			console.Colorize(avgColor, fmt.Sprintf("%v", avg.Round(time.Microsecond))),
-			console.Colorize(minColor, v.MinDur),
-			console.Colorize(maxColor, v.MaxDur),
+			console.Colorize(avgColor, fmt.Sprintf("%v", roundDur(avg))),
+			console.Colorize(minColor, roundDur(v.MinDur)),
+			console.Colorize(maxColor, roundDur(v.MaxDur)),
 		}
 		if hasTTFB {
-			t = append(t,
-				console.Colorize(avgColor, fmt.Sprintf("%v", avgTTFB.Round(time.Microsecond))),
-				console.Colorize(maxColor, v.MaxTTFB))
+			if v.TTFB > 0 {
+				t = append(t,
+					console.Colorize(avgColor, fmt.Sprintf("%v", roundDur(avgTTFB))),
+					console.Colorize(maxColor, roundDur(v.MaxTTFB)))
+			} else {
+				t = append(t, "-", "-")
+			}
 		}
 		t = append(t, sz, rate, errs)
 		table.Append(t)
@@ -233,10 +257,31 @@ func (m *traceStatsUI) View() string {
 	return strings.Join(split, "\n")
 }
 
-func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
+// ibytesShort returns a short un-padded version of the value from humanize.IBytes.
+func ibytesShort(v uint64) string {
+	return strings.ReplaceAll(strings.TrimSuffix(humanize.IBytes(v), "iB"), " ", "")
+}
+
+// roundDur will round the duration to a nice, printable number, with "reasonable" precision.
+func roundDur(d time.Duration) time.Duration {
+	if d > time.Minute {
+		return d.Round(time.Second)
+	}
+	if d > time.Second {
+		return d.Round(time.Millisecond)
+	}
+	if d > time.Millisecond {
+		return d.Round(time.Millisecond / 10)
+	}
+	return d.Round(time.Microsecond)
+}
+
+func initTraceStatsUI(allFlag bool, maxEntries int, traces <-chan madmin.ServiceTraceInfo) *traceStatsUI {
 	meter := spinner.New()
 	meter.Spinner = spinner.Meter
 	meter.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	// Use half the default fps to reduce flickering
+	meter.Spinner.FPS = time.Second / 3
 	console.SetColor("metrics-duration", color.New(color.FgWhite))
 	console.SetColor("metrics-size", color.New(color.FgGreen))
 	console.SetColor("metrics-dur", color.New(color.FgGreen))
@@ -259,5 +304,6 @@ func initTraceStatsUI(maxEntries int, traces <-chan madmin.ServiceTraceInfo) *tr
 		meter:      meter,
 		maxEntries: maxEntries,
 		current:    stats,
+		allFlag:    allFlag,
 	}
 }
