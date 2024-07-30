@@ -72,7 +72,7 @@ EXAMPLES:
   1. Stat all contents of mybucket on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} s3/mybucket/
 
-  2. Stat all contents of all bucket on Amazon S3 cloud storage.
+  2. Stat all contents of all buckets on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} s3
 
   3. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
