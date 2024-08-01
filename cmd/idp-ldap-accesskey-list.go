@@ -41,6 +41,14 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 		Name:  "svcacc-only",
 		Usage: "only list service account access keys",
 	},
+	cli.BoolFlag{
+		Name:  "self",
+		Usage: "list access keys for the authenticated user",
+	},
+	cli.BoolFlag{
+		Name:  "all",
+		Usage: "list all access keys for all LDAP users",
+	},
 }
 
 var idpLdapAccesskeyListCmd = cli.Command{
@@ -95,7 +103,7 @@ func (m ldapUsersList) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
-	o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+m.DN)))
+	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("DN:"), m.DN))
 	if len(m.STSKeys) > 0 {
 		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("STS Access Keys:")))
 		for _, k := range m.STSKeys {
@@ -108,7 +116,6 @@ func (m ldapUsersList) String() string {
 			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
 		}
 	}
-	o.WriteString("\n")
 
 	return o.String()
 }
@@ -126,73 +133,65 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	}
 
 	usersOnly := ctx.Bool("users-only")
-	tempOnly := ctx.Bool("sts-only")
-	permanentOnly := ctx.Bool("svcacc-only")
-	listType := ""
-
-	if (usersOnly && permanentOnly) || (usersOnly && tempOnly) || (permanentOnly && tempOnly) {
-		e := errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
-		fatalIf(probe.NewError(e), "Invalid flags.")
-	}
-	if tempOnly {
-		listType = "sts-only"
-	} else if permanentOnly {
-		listType = "svcacc-only"
-	}
+	stsOnly := ctx.Bool("temp-only")
+	svcaccOnly := ctx.Bool("svcacc-only")
+	selfFlag := ctx.Bool("self")
+	allFlag := ctx.Bool("all")
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	userArg := args.Tail()
+	users := args.Tail()
+
+	var e error
+	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
+		e = errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
+	} else if selfFlag && allFlag {
+		e = errors.New("only one of --self or --all can be specified")
+	} else if (selfFlag || allFlag) && len(users) > 0 {
+		e = errors.New("user DNs cannot be specified with --self or --all")
+	}
+	fatalIf(probe.NewError(e), "Invalid flags.")
+
+	// If no users/self/all flags are specified, tentatively assume --all
+	// If access is denied on tentativeAll, retry with self
+	// This is to maintain compatibility with the previous behavior
+	tentativeAll := false
+	if !selfFlag && !allFlag && len(users) == 0 {
+		tentativeAll = true
+		allFlag = true
+	}
+
+	var listType string
+	switch {
+	case usersOnly:
+		listType = madmin.AccessKeyListUsersOnly
+	case stsOnly:
+		listType = madmin.AccessKeyListSTSOnly
+	case svcaccOnly:
+		listType = madmin.AccessKeyListSvcaccOnly
+	default:
+		listType = madmin.AccessKeyListAll
+	}
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var e error
-	var users map[string]madmin.UserInfo
-
-	// If no users given, attempt to list all users
-	if len(userArg) == 0 {
-		users, e = client.ListUsers(globalContext)
-	} else {
-		users = make(map[string]madmin.UserInfo)
-		for _, user := range userArg {
-			users[user] = madmin.UserInfo{}
-		}
-	}
+	accessKeysMap, e := client.ListAccessKeysLDAPBulk(globalContext, users, listType, allFlag)
 	if e != nil {
-		if e.Error() == "Access Denied." {
-			// If user does not have ListUsers permission, only get current user's access keys
-			users = make(map[string]madmin.UserInfo)
-			users[""] = madmin.UserInfo{}
-		} else {
-			fatalIf(probe.NewError(e), "Unable to retrieve users.")
+		if e.Error() == "Access Denied." && tentativeAll {
+			// retry with self
+			accessKeysMap, e = client.ListAccessKeysLDAPBulk(globalContext, users, listType, false)
 		}
+		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
 
-	for dn := range users {
-		// if dn is blank, it means we are listing the current user's access keys
-		if dn == "" {
-			name, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
-			fatalIf(probe.NewError(e), "Unable to retrieve account name.")
-			dn = name.AccountName
-		}
-
+	for dn, accessKeys := range accessKeysMap {
 		m := ldapUsersList{
-			Status: "success",
-			DN:     dn,
-		}
-
-		// Get access keys if not listing users only
-		if !usersOnly {
-			accessKeys, e := client.ListAccessKeysLDAP(globalContext, dn, listType)
-			if e != nil {
-				errorIf(probe.NewError(e), "Unable to retrieve access keys for user '"+dn+"'.")
-				continue
-			}
-
-			m.STSKeys = accessKeys.STSKeys
-			m.ServiceAccounts = accessKeys.ServiceAccounts
+			Status:          "success",
+			DN:              dn,
+			ServiceAccounts: accessKeys.ServiceAccounts,
+			STSKeys:         accessKeys.STSKeys,
 		}
 		printMsg(m)
 	}
