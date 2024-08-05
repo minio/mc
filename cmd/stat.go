@@ -88,7 +88,7 @@ func (stat statMessage) String() (msg string) {
 	}
 	if stat.Restore != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Restore") + "\n")
-		if stat.Restore.ExpiryTime.IsZero() && !stat.Restore.ExpiryTime.Equal(timeSentinel) {
+		if !stat.Restore.ExpiryTime.IsZero() && !stat.Restore.ExpiryTime.Equal(timeSentinel) {
 			msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
 				stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
 		}
