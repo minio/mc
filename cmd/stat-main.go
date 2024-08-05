@@ -47,6 +47,10 @@ var (
 			Name:  "recursive, r",
 			Usage: "stat all objects recursively",
 		},
+		cli.BoolFlag{
+			Name:  "verbose, v",
+			Usage: "show verbose buckets information",
+		},
 	}
 )
 
@@ -73,7 +77,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} s3/mybucket/
 
   2. Stat all contents of all buckets on Amazon S3 cloud storage.
-     {{.Prompt}} {{.HelpName}} s3
+     {{.Prompt}} {{.HelpName}} s3 --verbose
 
   3. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
      {{.Prompt}} {{.HelpName}} s3\mybucket\
@@ -128,7 +132,7 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
 		_, path := url2Alias(url)
-		if path != "" {
+		if path != "" || !cliCtx.Bool("verbose") {
 			targetUrls = append(targetUrls, url)
 			continue
 		}
