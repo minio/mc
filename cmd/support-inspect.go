@@ -90,7 +90,7 @@ type inspectMessage struct {
 // Colorized message for console printing.
 func (t inspectMessage) String() string {
 	var msg string
-	if globalAirgapped {
+	if globalAirgapped || t.File != "" {
 		if t.Key == "" {
 			msg = fmt.Sprintf("File data successfully downloaded as %s", console.Colorize("File", t.File))
 		} else {
