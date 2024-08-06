@@ -28,7 +28,7 @@ var adminServiceSubcommands = []cli.Command{
 
 var adminServiceCmd = cli.Command{
 	Name:            "service",
-	Usage:           "restart, stop and unfreeze a MinIO cluster",
+	Usage:           "restart or unfreeze a MinIO cluster",
 	Action:          mainAdminService,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
