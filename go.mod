@@ -21,9 +21,9 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.8
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v3 v3.0.59-0.20240731063507-b957f4b8dc7c
+	github.com/minio/madmin-go/v3 v3.0.60
 	github.com/minio/minio-go/v7 v7.0.73
-	github.com/minio/pkg/v3 v3.0.9
+	github.com/minio/pkg/v3 v3.0.10
 	github.com/minio/selfupdate v0.6.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
