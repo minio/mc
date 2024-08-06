@@ -180,7 +180,7 @@ EXAMPLES:
 
   17. Copy a text file to an object storage and disable multipart upload feature.
       {{.Prompt}} {{.HelpName}} --disable-multipart myobject.txt play/mybucket
-//
+
   18. Roll back 10 days in the past to copy the content of 'mybucket'
       {{.Prompt}} {{.HelpName}} --rewind 10d -r play/mybucket/ /tmp/dest/
 
