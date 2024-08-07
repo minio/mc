@@ -32,7 +32,7 @@ import (
 var quotaSetFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "size",
-		Usage: "set a hard quota, disallowing writes after quota is reached",
+		Usage: "set a quota, disallowing writes after quota is reached",
 	},
 }
 
@@ -60,7 +60,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set hard quota of 1gb for a bucket "mybucket" on MinIO.
+  1. Set quota of 1gb for a bucket "mybucket" on MinIO.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --size 1GB
 `,
 }
