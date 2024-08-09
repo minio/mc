@@ -61,7 +61,7 @@ func (stat statMessage) String() (msg string) {
 	// Format properly for alignment based on maxKey leng
 	stat.Key = fmt.Sprintf("%-10s: %s", "Name", stat.Key)
 	msgBuilder.WriteString(console.Colorize("Name", stat.Key) + "\n")
-	if !stat.Date.IsZero() {
+	if !stat.Date.IsZero() && !stat.Date.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)) + "\n")
 	}
 	if stat.Type != "folder" {
@@ -79,17 +79,19 @@ func (stat statMessage) String() (msg string) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField) + "\n")
 	}
 	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Type", stat.Type) + "\n")
-	if stat.Expires != nil {
+	if stat.Expires != nil && !stat.Expires.IsZero() && !stat.Expires.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)) + "\n")
 	}
-	if stat.Expiration != nil {
+	if stat.Expiration != nil && !stat.Expiration.IsZero() && !stat.Expiration.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
 	}
 	if stat.Restore != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Restore") + "\n")
-		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
-			stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
+		if !stat.Restore.ExpiryTime.IsZero() && !stat.Restore.ExpiryTime.Equal(timeSentinel) {
+			msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
+				stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
+		}
 		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %t", "Ongoing",
 			stat.Restore.OngoingRestore) + "\n")
 	}
