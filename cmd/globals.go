@@ -21,9 +21,13 @@ package cmd
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
+	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -69,6 +73,7 @@ var (
 	globalDebug        = false               // Debug flag set via command line
 	globalNoColor      = false               // No Color flag set via command line
 	globalInsecure     = false               // Insecure flag set via command line
+	globalResolvers    map[string]netip.Addr // Custom mappings from HOST[:PORT] to IP
 	globalAirgapped    = false               // Airgapped flag set via command line
 	globalSubnetConfig []madmin.SubsysConfig // Subnet config
 
@@ -170,5 +175,30 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 		}
 	}
 
+	dnsEntries := ctx.StringSlice("resolve")
+	if len(dnsEntries) > 0 {
+		globalResolvers = make(map[string]netip.Addr, len(dnsEntries))
+
+		// Each entry is a HOST[:PORT]=IP pair. This is very similar to cURL's syntax.
+		for _, e := range dnsEntries {
+			i := strings.IndexByte(e, '=')
+			if i < 0 {
+				return fmt.Errorf("invalid DNS resolve entry %s", e)
+			}
+
+			if strings.ContainsRune(e[:i], ':') {
+				if _, _, err := net.SplitHostPort(e[:i]); err != nil {
+					return fmt.Errorf("invalid DNS resolve entry %s: %v", e, err)
+				}
+			}
+
+			host := e[:i]
+			addr, err := netip.ParseAddr(e[i+1:])
+			if err != nil {
+				return fmt.Errorf("invalid DNS resolve entry %s: %v", e, err)
+			}
+			globalResolvers[host] = addr
+		}
+	}
 	return nil
 }
