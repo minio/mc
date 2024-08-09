@@ -128,7 +128,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --r --enc-c "s3/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MBB" --enc-c "myminio/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" s3/documents/ myminio/documents/
 
   15. Move a folder using specific server managed encryption keys from Amazon S3 to MinIO cloud storage.
-      {{.Prompt}} {{.HelpName}} --r --enc-s3 "s3/documents/=my-s3-key" --enc-s3 "myminio/documents/=my-minio-key" s3/documents/ myminio/documents/
+      {{.Prompt}} {{.HelpName}} --r --enc-s3 "s3/documents" --enc-s3 "myminio/documents" s3/documents/ myminio/documents/
 `,
 }
 
