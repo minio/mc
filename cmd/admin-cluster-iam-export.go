@@ -62,6 +62,7 @@ FLAGS:
 EXAMPLES:
   1. Download all IAM metadata for cluster into zip file.
      {{.Prompt}} {{.HelpName}} myminio
+
   2. Download all IAM metadata to a custom file.
      {{.Prompt}} {{.HelpName}} myminio --output /tmp/myminio-iam.zip
 `,
