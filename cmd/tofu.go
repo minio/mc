@@ -93,9 +93,9 @@ func promptTrustSelfSignedCert(ctx context.Context, endpoint, alias string) (*x5
 	client := http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
+			DialTLSContext: newCustomDialTLSContext(&tls.Config{
 				RootCAs: globalRootCAs, // make sure to use loaded certs before probing
-			},
+			}),
 		},
 	}
 
@@ -167,9 +167,9 @@ func fetchPeerCertificate(ctx context.Context, endpoint string) (*x509.Certifica
 	}
 	client := http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
+			DialTLSContext: newCustomDialTLSContext(&tls.Config{
 				InsecureSkipVerify: true,
-			},
+			}),
 		},
 	}
 	resp, e := client.Do(req)

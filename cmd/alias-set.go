@@ -24,7 +24,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -373,25 +372,23 @@ func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
 			globalRootCAs.AddCert(peerCert)
 		}
 		tr = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   10 * time.Second,
-				KeepAlive: 15 * time.Second,
-			}).DialContext,
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           newCustomDialContext(&Config{}),
+			DialTLSContext:        newCustomDialTLSContext(&tls.Config{RootCAs: globalRootCAs}),
 			MaxIdleConnsPerHost:   256,
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 10 * time.Second,
 			DisableCompression:    true,
-			TLSClientConfig:       &tls.Config{RootCAs: globalRootCAs},
 		}
 	case tr.TLSClientConfig == nil || tr.TLSClientConfig.RootCAs == nil:
 		if globalRootCAs != nil {
 			globalRootCAs.AddCert(peerCert)
 		}
-		tr.TLSClientConfig = &tls.Config{RootCAs: globalRootCAs}
+		tr.DialTLSContext = newCustomDialTLSContext(&tls.Config{RootCAs: globalRootCAs})
 	default:
 		tr.TLSClientConfig.RootCAs.AddCert(peerCert)
+		tr.DialTLSContext = newCustomDialTLSContext(tr.TLSClientConfig)
 	}
 	s3Config.Transport = tr
 }
