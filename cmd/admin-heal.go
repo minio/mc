@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -398,7 +398,7 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 					stateText = console.Colorize("DiskFailed", d.State)
 				}
 				fmt.Fprintf(&msg, "  +  %s : %s\n", d.DrivePath, stateText)
-				if d.Healing && d.HealInfo != nil {
+				if d.Healing && d.HealInfo != nil && !d.HealInfo.Finished {
 					now := time.Now().UTC()
 					scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
 					remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
@@ -495,7 +495,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				continue
 			}
 
-			if disk.HealInfo != nil {
+			if disk.HealInfo != nil && !disk.HealInfo.Finished {
 				missingInSet++
 
 				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}

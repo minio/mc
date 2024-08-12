@@ -136,8 +136,8 @@ github.com/minio/colorjson v1.0.8 h1:AS6gEQ1dTRYHmC4xuoodPDRILHP/9Wz5wYUGDQfPLpg
 github.com/minio/colorjson v1.0.8/go.mod h1:wrs39G/4kqNlGjwqHvPlAnXuc2tlPszo6JKdSBCLN8w=
 github.com/minio/filepath v1.0.0 h1:fvkJu1+6X+ECRA6G3+JJETj4QeAYO9sV43I79H8ubDY=
 github.com/minio/filepath v1.0.0/go.mod h1:/nRZA2ldl5z6jT9/KQuvZcQlxZIMQoFFQPvEXx9T/Bw=
-github.com/minio/madmin-go/v3 v3.0.60 h1:Vy9t7Mti22EcqqQyYRcvtLJmluaA3VINhBzaDBsT8h8=
-github.com/minio/madmin-go/v3 v3.0.60/go.mod h1:IFAwr0XMrdsLovxAdCcuq/eoL4nRuMVQQv0iubJANQw=
+github.com/minio/madmin-go/v3 v3.0.63 h1:ERJRxEI/FFRh8MDi4Z+3DKe4sONkQ0g+OkNzRpk7qxk=
+github.com/minio/madmin-go/v3 v3.0.63/go.mod h1:IFAwr0XMrdsLovxAdCcuq/eoL4nRuMVQQv0iubJANQw=
 github.com/minio/md5-simd v1.1.2 h1:Gdi1DZK69+ZVMoNHRXJyNcxrMA4dSxoYHZSQbirFg34=
 github.com/minio/md5-simd v1.1.2/go.mod h1:MzdKDxYpY2BT9XQFocsiZf/NKVtR7nkE4RoEpN+20RM=
 github.com/minio/minio-go/v7 v7.0.75 h1:0uLrB6u6teY2Jt+cJUVi9cTvDRuBKWSRzSAcznRkwlE=
