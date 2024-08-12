@@ -49,7 +49,11 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "verbose, v",
-			Usage: "show verbose buckets information",
+			Usage: "show extended bucket(s) stat",
+		},
+		cli.BoolFlag{
+			Name:  "no-list",
+			Usage: "disable all LIST operations for stat",
 		},
 	}
 )
@@ -98,7 +102,7 @@ EXAMPLES:
 }
 
 // parseAndCheckStatSyntax - parse and validate all the passed arguments
-func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
+func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
@@ -113,6 +117,7 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	recursive := cliCtx.Bool("recursive")
 	versionID := cliCtx.String("version-id")
 	withVersions := cliCtx.Bool("versions")
+	headOnly := cliCtx.Bool("no-list")
 	rewind := parseRewindFlag(cliCtx.String("rewind"))
 
 	// extract URLs.
@@ -125,12 +130,13 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	if versionID != "" && (recursive || withVersions || !rewind.IsZero()) {
 		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --version-id with either --rewind, --versions or --recursive.")
 	}
+
+	if (recursive || withVersions) && headOnly {
+		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --no-list with either --versions or --recursive.")
+	}
+
 	var targetUrls []string
 	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: versionID, fileAttr: false, encKeyDB: encKeyDB, timeRef: rewind, isZip: false, ignoreBucketExistsCheck: false})
-		if err != nil {
-			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
-		}
 		_, path := url2Alias(url)
 		if path != "" || !cliCtx.Bool("verbose") {
 			targetUrls = append(targetUrls, url)
@@ -175,14 +181,15 @@ func mainStat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'stat' cli arguments.
-	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx, encKeyDB)
+	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx)
 	// mimic operating system tool behavior.
 	if len(args) == 0 {
 		args = []string{"."}
 	}
 
+	headOnly := cliCtx.Bool("no-list")
 	for _, targetURL := range args {
-		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB), "Unable to stat `"+targetURL+"`.")
+		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, headOnly, encKeyDB), "Unable to stat `"+targetURL+"`.")
 	}
 
 	return nil
