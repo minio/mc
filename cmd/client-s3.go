@@ -1736,7 +1736,10 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	}
 
 	if path == "" {
-		content, err := c.bucketStat(ctx, BucketStatOptions{bucket: bucket, ignoreBucketExists: opts.ignoreBucketExists})
+		content, err := c.bucketStat(ctx, BucketStatOptions{
+			bucket:             bucket,
+			ignoreBucketExists: opts.ignoreBucketExists,
+		})
 		if err != nil {
 			return nil, err.Trace(bucket)
 		}
@@ -1771,13 +1774,20 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
+
+		// when versionID is specified we do not have to perform List() operation
+		if opts.versionID != "" && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
+			return nil, probe.NewError(ObjectMissing{opts.timeRef})
+		}
+
 		// The object is not found, look for a directory marker or a prefix
 		path += string(c.targetURL.Separator)
 	}
 
 	nonRecursive := false
 	maxKeys := 1
-	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef,
+		opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
