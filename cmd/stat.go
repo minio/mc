@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -203,20 +203,43 @@ func getStandardizedURL(targetURL string) string {
 // statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
 // HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
 // from GET listing.
-func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive, headOnly bool, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return err
 	}
 
 	targetAlias, _, _ := mustExpandAlias(targetURL)
-	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
-
+	prefixPath := clnt.GetURL().Path
 	hasTrailingSlash := strings.HasSuffix(prefixPath, separator)
 
 	if !hasTrailingSlash {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
+	}
+
+	if headOnly || versionID != "" {
+		url := getStandardizedURL(targetURL)
+
+		_, stat, err := url2Stat(ctx, url2StatOptions{
+			urlStr: url, versionID: versionID,
+			fileAttr: true, encKeyDB: encKeyDB,
+			timeRef: timeRef, isZip: false,
+			ignoreBucketExistsCheck: false,
+			headOnly:                headOnly,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Convert any os specific delimiters to "/".
+		contentURL := filepath.ToSlash(stat.URL.Path)
+
+		// Trim prefix path from the content path.
+		stat.URL.Path = strings.TrimPrefix(contentURL, filepath.ToSlash(prefixPath))
+
+		printMsg(parseStat(stat))
+		return nil
 	}
 
 	// if stat is on a bucket and non-recursive mode, serve the bucket metadata
@@ -271,6 +294,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	}
 
 	var e error
+	var found int
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -292,6 +316,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 			e = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
+		found++
 
 		if content.StorageClass == s3StorageClassGlacier {
 			continue
@@ -309,9 +334,14 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-		_, stat, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: content.VersionID, fileAttr: true, encKeyDB: encKeyDB, timeRef: timeRef, isZip: false, ignoreBucketExistsCheck: false})
+		_, stat, err := url2Stat(ctx, url2StatOptions{
+			urlStr: url, versionID: content.VersionID,
+			fileAttr: true, encKeyDB: encKeyDB,
+			timeRef: timeRef, isZip: false,
+			ignoreBucketExistsCheck: false,
+		})
 		if err != nil {
-			continue
+			return err.Trace(url)
 		}
 
 		// Convert any os specific delimiters to "/".
@@ -322,6 +352,10 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		stat.URL.Path = contentURL
 
 		printMsg(parseStat(stat))
+	}
+
+	if found <= 0 {
+		return probe.NewError(ObjectMissing{timeRef})
 	}
 
 	return probe.NewError(e)
