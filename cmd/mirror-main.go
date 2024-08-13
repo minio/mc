@@ -106,7 +106,7 @@ var (
 			Usage: "exclude bucket(s) that match specified bucket name pattern",
 		},
 		cli.StringSliceFlag{
-			Name:  "bucket",
+			Name:  "include-bucket",
 			Usage: "mirror bucket(s) that match specified bucket name pattern",
 		},
 		cli.StringSliceFlag{
@@ -643,8 +643,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		if matchExcludeOptions(mj.opts.excludeOptions, sourceSuffix, sourceURL.Type) {
 			continue
 		}
-		// Skip the bucket, if it matches the Exclude options provided
-		if matchExcludeBucketOptions(mj.opts.excludeBuckets, mj.opts.buckets, sourceSuffix) {
+		// Skip the bucket,  if it matches the provided exclude options or does not match the included options
+		if matchBucketOptions(mj.opts.excludeBuckets, mj.opts.includeBuckets, sourceSuffix) {
 			continue
 		}
 
@@ -984,7 +984,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
 		excludeBuckets:        cli.StringSlice("exclude-bucket"),
-		buckets:               cli.StringSlice("bucket"),
+		includeBuckets:        cli.StringSlice("include-bucket"),
 		excludeStorageClasses: cli.StringSlice("exclude-storageclass"),
 		olderThan:             cli.String("older-than"),
 		newerThan:             cli.String("newer-than"),
@@ -1056,8 +1056,8 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 					continue
 				}
 
-				// Skip create bucket, if it matches the Exclude options provided
-				if matchExcludeBucketOptions(mopts.excludeBuckets, mj.opts.buckets, sourceSuffix) {
+				// Skips bucket creation if it matches the provided exclusion options or does not match the included options
+				if matchBucketOptions(mopts.excludeBuckets, mj.opts.includeBuckets, sourceSuffix) {
 					continue
 				}
 
