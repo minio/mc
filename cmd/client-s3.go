@@ -106,6 +106,14 @@ func newCustomDialContext(c *Config) dialContext {
 			KeepAlive: 15 * time.Second,
 		}
 
+		if ip, ok := globalResolvers[addr]; ok {
+			if _, port, err := net.SplitHostPort(addr); err == nil {
+				addr = net.JoinHostPort(ip.String(), port)
+			} else {
+				addr = ip.String()
+			}
+		}
+
 		conn, err := dialer.DialContext(ctx, network, addr)
 		if err != nil {
 			return nil, err
@@ -116,6 +124,31 @@ func newCustomDialContext(c *Config) dialContext {
 			WithWriteDeadline(c.ConnWriteDeadline)
 
 		return dconn, nil
+	}
+}
+
+// newCustomDialTLSContext setups a custom TLS dialer for any external communication and proxies.
+func newCustomDialTLSContext(tlsConf *tls.Config) dialContext {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := &tls.Dialer{
+			NetDialer: &net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 15 * time.Second,
+			},
+			Config: tlsConf,
+		}
+
+		if ip, ok := globalResolvers[addr]; ok {
+			dialer.Config = dialer.Config.Clone()
+			if host, port, err := net.SplitHostPort(addr); err == nil {
+				dialer.Config.ServerName = host // Set SNI
+				addr = net.JoinHostPort(ip.String(), port)
+			} else {
+				dialer.Config.ServerName = addr // Set SNI
+				addr = ip.String()
+			}
+		}
+		return dialer.DialContext(ctx, network, addr)
 	}
 }
 
@@ -200,18 +233,11 @@ func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
 			DisableCompression: true,
 		}
 		if useTLS {
-			// Keep TLS config.
-			tlsConfig := &tls.Config{
-				RootCAs: globalRootCAs,
-				// Can't use SSLv3 because of POODLE and BEAST
-				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
-				// Can't use TLSv1.1 because of RC4 cipher usage
-				MinVersion: tls.VersionTLS12,
-			}
-			if config.Insecure {
-				tlsConfig.InsecureSkipVerify = true
-			}
-			tr.TLSClientConfig = tlsConfig
+			tr.DialTLSContext = newCustomDialTLSContext(&tls.Config{
+				RootCAs:            globalRootCAs,
+				MinVersion:         tls.VersionTLS12,
+				InsecureSkipVerify: config.Insecure,
+			})
 
 			// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
 			// See https://github.com/golang/go/issues/14275
@@ -1710,7 +1736,10 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	}
 
 	if path == "" {
-		content, err := c.bucketStat(ctx, BucketStatOptions{bucket: bucket, ignoreBucketExists: opts.ignoreBucketExists})
+		content, err := c.bucketStat(ctx, BucketStatOptions{
+			bucket:             bucket,
+			ignoreBucketExists: opts.ignoreBucketExists,
+		})
 		if err != nil {
 			return nil, err.Trace(bucket)
 		}
@@ -1745,13 +1774,20 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
+
+		// when versionID is specified we do not have to perform List() operation
+		if opts.versionID != "" && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
+			return nil, probe.NewError(ObjectMissing{opts.timeRef})
+		}
+
 		// The object is not found, look for a directory marker or a prefix
 		path += string(c.targetURL.Separator)
 	}
 
 	nonRecursive := false
 	maxKeys := 1
-	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef,
+		opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}

@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -46,6 +47,14 @@ var (
 			Name:  "recursive, r",
 			Usage: "stat all objects recursively",
 		},
+		cli.BoolFlag{
+			Name:  "verbose, v",
+			Usage: "show extended bucket(s) stat",
+		},
+		cli.BoolFlag{
+			Name:  "no-list",
+			Usage: "disable all LIST operations for stat",
+		},
 	}
 )
 
@@ -71,26 +80,29 @@ EXAMPLES:
   1. Stat all contents of mybucket on Amazon S3 cloud storage.
      {{.Prompt}} {{.HelpName}} s3/mybucket/
 
-  2. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
+  2. Stat all contents of all buckets on Amazon S3 cloud storage.
+     {{.Prompt}} {{.HelpName}} s3 --verbose
+
+  3. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
      {{.Prompt}} {{.HelpName}} s3\mybucket\
 
-  3. Stat files recursively on a local filesystem on Microsoft Windows.
+  4. Stat files recursively on a local filesystem on Microsoft Windows.
      {{.Prompt}} {{.HelpName}} --recursive C:\Users\mydocuments\
 
-  4. Stat encrypted files on Amazon S3 cloud storage. In case the encryption key contains non-printable character like tab, pass the
+  5. Stat encrypted files on Amazon S3 cloud storage. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
      {{.Prompt}} {{.HelpName}} --enc-c "s3/personal-document/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" s3/personal-document/2019-account_report.docx
 
-  5. Stat a specific object version.
+  6. Stat a specific object version.
      {{.Prompt}} {{.HelpName}} --version-id "CL3sWgdSN2pNntSf6UnZAuh2kcu8E8si" s3/personal-docs/2018-account_report.docx
 
-  6. Stat all objects versions recursively created before 1st January 2020.
+  7. Stat all objects versions recursively created before 1st January 2020.
      {{.Prompt}} {{.HelpName}} --versions --rewind 2020.01.01T00:00 s3/personal-docs/
 `,
 }
 
 // parseAndCheckStatSyntax - parse and validate all the passed arguments
-func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[string][]prefixSSEPair) ([]string, bool, string, time.Time, bool) {
+func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context) ([]string, bool, string, time.Time, bool) {
 	if !cliCtx.Args().Present() {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code
 	}
@@ -105,6 +117,7 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 	recursive := cliCtx.Bool("recursive")
 	versionID := cliCtx.String("version-id")
 	withVersions := cliCtx.Bool("versions")
+	headOnly := cliCtx.Bool("no-list")
 	rewind := parseRewindFlag(cliCtx.String("rewind"))
 
 	// extract URLs.
@@ -118,14 +131,29 @@ func parseAndCheckStatSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB 
 		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --version-id with either --rewind, --versions or --recursive.")
 	}
 
-	for _, url := range URLs {
-		_, _, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: versionID, fileAttr: false, encKeyDB: encKeyDB, timeRef: rewind, isZip: false, ignoreBucketExistsCheck: false})
-		if err != nil {
-			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
-		}
+	if (recursive || withVersions) && headOnly {
+		fatalIf(errInvalidArgument().Trace(args...), "You cannot specify --no-list with either --versions or --recursive.")
 	}
 
-	return URLs, recursive, versionID, rewind, withVersions
+	var targetUrls []string
+	for _, url := range URLs {
+		_, path := url2Alias(url)
+		if path != "" || !cliCtx.Bool("verbose") {
+			targetUrls = append(targetUrls, url)
+			continue
+		}
+		clnt, err := newClient(url)
+		fatalIf(err.Trace(args...), "Unable to initialize `"+url+"`.")
+		buckets, e := clnt.ListBuckets(ctx)
+		if e != nil || len(buckets) == 0 {
+			targetUrls = append(targetUrls, url)
+			continue
+		}
+		for _, bucket := range buckets {
+			targetUrls = append(targetUrls, filepath.Join(url, bucket.BucketName))
+		}
+	}
+	return targetUrls, recursive, versionID, rewind, withVersions
 }
 
 // mainStat - is a handler for mc stat command
@@ -153,14 +181,15 @@ func mainStat(cliCtx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'stat' cli arguments.
-	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx, encKeyDB)
+	args, isRecursive, versionID, rewind, withVersions := parseAndCheckStatSyntax(ctx, cliCtx)
 	// mimic operating system tool behavior.
 	if len(args) == 0 {
 		args = []string{"."}
 	}
 
+	headOnly := cliCtx.Bool("no-list")
 	for _, targetURL := range args {
-		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, encKeyDB), "Unable to stat `"+targetURL+"`.")
+		fatalIf(statURL(ctx, targetURL, versionID, rewind, withVersions, false, isRecursive, headOnly, encKeyDB), "Unable to stat `"+targetURL+"`.")
 	}
 
 	return nil
