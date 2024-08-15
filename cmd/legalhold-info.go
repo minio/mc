@@ -190,7 +190,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 		lhold, probeErr := newClnt.GetObjectLegalHold(ctx, content.VersionID)
 		if probeErr != nil {
 			errorsFound = true
-			errorIf(probeErr.Trace(content.URL.Path), "Failed to get legal hold information on `"+content.URL.Path+"`")
+			errorIf(probeErr.Trace(content.URL.Path), "Failed to get legal hold information on `%s`", content.URL.Path)
 		} else {
 			if !globalJSON {
 
