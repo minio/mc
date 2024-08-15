@@ -288,7 +288,7 @@ func getTransportAndCredentialsChainForConfig(config *Config) (http.RoundTripper
 		}
 		stsEndpointURL, err := url.Parse(stsEndpoint)
 		if err != nil {
-			return nil, nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+			return nil, nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %w", err))
 		}
 		if stsEndpointURL.Scheme == "https" {
 			transport = getTransportForConfig(config, false, true)
