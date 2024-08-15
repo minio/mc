@@ -207,10 +207,10 @@ func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err
 
 // getTransportForConfig returns a corresponding *http.Transport for the *Config
 // set withS3v2 bool to true to add traceV2 tracer.
-func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
+func getTransportForConfig(config *Config, withS3v2 bool, chainsTLS bool) http.RoundTripper {
 	var transport http.RoundTripper
 
-	useTLS := isHostTLS(config)
+	useTLS := isHostTLS(config) || chainsTLS
 
 	if config.Transport != nil {
 		transport = config.Transport
@@ -269,10 +269,11 @@ func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
 	return transport
 }
 
-// getCredentialsChainForConfig returns an []credentials.Provider array for the config
+// getTransportAndCredentialsChainForConfig returns an []credentials.Provider array for the config
 // and the STS configuration (if present)
-func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) ([]credentials.Provider, *probe.Error) {
+func getTransportAndCredentialsChainForConfig(config *Config) (http.RoundTripper, []credentials.Provider, *probe.Error) {
 	var credsChain []credentials.Provider
+	transport := getTransportForConfig(config, false, false)
 	// if an STS endpoint is set, we will add that to the chain
 	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
 		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
@@ -285,10 +286,12 @@ func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) (
 				os.Setenv("AWS_ROLE_SESSION_NAME", val)
 			}
 		}
-
 		stsEndpointURL, err := url.Parse(stsEndpoint)
 		if err != nil {
-			return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+			return nil, nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
+		}
+		if stsEndpointURL.Scheme == "https" {
+			transport = getTransportForConfig(config, false, true)
 		}
 		credsSts := &credentials.IAM{
 			Client: &http.Client{
@@ -314,7 +317,7 @@ func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) (
 		},
 	}
 	credsChain = append(credsChain, creds)
-	return credsChain, nil
+	return transport, credsChain, nil
 }
 
 // newFactory encloses New function with client cache.
@@ -356,9 +359,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 
-			transport := getTransportForConfig(config, true)
-
-			credsChain, err := getCredentialsChainForConfig(config, transport)
+			transport, credsChain, err := getTransportAndCredentialsChainForConfig(config)
 			if err != nil {
 				return nil, err
 			}
