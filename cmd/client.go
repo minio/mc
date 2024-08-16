@@ -315,7 +315,6 @@ func (config *Config) getTransport() http.RoundTripper {
 }
 
 func (config *Config) initTransport(withS3v2 bool) {
-
 	var transport http.RoundTripper
 
 	useTLS := isHostTLS(config) || config.forceTLS
