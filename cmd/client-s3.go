@@ -207,10 +207,10 @@ func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err
 
 // getTransportForConfig returns a corresponding *http.Transport for the *Config
 // set withS3v2 bool to true to add traceV2 tracer.
-func getTransportForConfig(config *Config, withS3v2 bool, chainsTLS bool) http.RoundTripper {
+func getTransportForConfig(config *Config, withS3v2 bool, forceTLS bool) http.RoundTripper {
 	var transport http.RoundTripper
 
-	useTLS := isHostTLS(config) || chainsTLS
+	useTLS := isHostTLS(config) || forceTLS
 
 	if config.Transport != nil {
 		transport = config.Transport
