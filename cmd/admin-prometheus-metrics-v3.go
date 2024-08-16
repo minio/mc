@@ -79,11 +79,11 @@ func validateV3Args(subsys string, bucket string) {
 	if len(bucket) > 0 {
 		bms := strings.Join(bucketMetricsSubSystems.ToSlice(), ", ")
 		if len(subsys) == 0 {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("metric type must be passed with --bucket. valid values are `"+bms+"`"))
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("metric type must be passed with --bucket. valid values are `%s`", bms))
 		}
 
 		if !bucketMetricsSubSystems.Contains(subsys) {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("--bucket is applicable only for metric types `"+bms+"`"))
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("--bucket is applicable only for metric types `%s`", bms))
 		}
 	}
 }
