@@ -308,12 +308,10 @@ func (config *Config) getCredsChain() ([]credentials.Provider, *probe.Error) {
 // getTransport returns a corresponding *http.Transport for the *Config
 // set withS3v2 bool to true to add traceV2 tracer.
 func (config *Config) getTransport() http.RoundTripper {
-	if config.Transport != nil {
-		return config.Transport
-	} else {
+	if config.Transport == nil {
 		config.initTransport(true)
-		return config.Transport
 	}
+	return config.Transport
 }
 
 func (config *Config) initTransport(withS3v2 bool) {
