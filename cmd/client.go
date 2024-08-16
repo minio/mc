@@ -19,16 +19,26 @@ package cmd
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/minio/mc/pkg/httptracer"
+	"github.com/minio/mc/pkg/limiter"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/replication"
+	"github.com/minio/pkg/v3/env"
 )
 
 // DirOpt - list directory option.
@@ -242,6 +252,131 @@ type Config struct {
 	UploadLimit       int64
 	DownloadLimit     int64
 	Transport         http.RoundTripper
+	// Force TLS
+	forceTLS bool
+}
+
+// getCredsChain returns an []credentials.Provider array for the config
+// and the STS configuration (if present)
+func (config *Config) getCredsChain() ([]credentials.Provider, *probe.Error) {
+	var credsChain []credentials.Provider
+	// if an STS endpoint is set, we will add that to the chain
+	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
+		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
+		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE_"+config.Alias, ""); val != "" {
+			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
+			if val := env.Get("MC_ROLE_ARN_"+config.Alias, ""); val != "" {
+				os.Setenv("AWS_ROLE_ARN", val)
+			}
+			if val := env.Get("MC_ROLE_SESSION_NAME_"+config.Alias, randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
+				os.Setenv("AWS_ROLE_SESSION_NAME", val)
+			}
+		}
+		stsEndpointURL, err := url.Parse(stsEndpoint)
+		if err != nil {
+			return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %w", err))
+		}
+		config.forceTLS = true
+		config.Transport = config.getTransport()
+		credsSts := &credentials.IAM{
+			Client: &http.Client{
+				Transport: config.Transport,
+			},
+			Endpoint: stsEndpointURL.String(),
+		}
+		credsChain = append(credsChain, credsSts)
+	}
+
+	signType := credentials.SignatureV4
+	if strings.EqualFold(config.Signature, "s3v2") {
+		signType = credentials.SignatureV2
+	}
+
+	// Credentials
+	creds := &credentials.Static{
+		Value: credentials.Value{
+			AccessKeyID:     config.AccessKey,
+			SecretAccessKey: config.SecretKey,
+			SessionToken:    config.SessionToken,
+			SignerType:      signType,
+		},
+	}
+	credsChain = append(credsChain, creds)
+	return credsChain, nil
+}
+
+// getTransport returns a corresponding *http.Transport for the *Config
+// set withS3v2 bool to true to add traceV2 tracer.
+func (config *Config) getTransport() http.RoundTripper {
+	if config.Transport != nil {
+		return config.Transport
+	} else {
+		config.initTransport(true)
+		return config.Transport
+	}
+}
+
+func (config *Config) initTransport(withS3v2 bool) {
+
+	var transport http.RoundTripper
+
+	useTLS := isHostTLS(config) || config.forceTLS
+
+	if config.Transport != nil {
+		transport = config.Transport
+	} else {
+		tr := &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           newCustomDialContext(config),
+			MaxIdleConnsPerHost:   1024,
+			WriteBufferSize:       32 << 10, // 32KiB moving up from 4KiB default
+			ReadBufferSize:        32 << 10, // 32KiB moving up from 4KiB default
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
+			// Set this value so that the underlying transport round-tripper
+			// doesn't try to auto decode the body of objects with
+			// content-encoding set to `gzip`.
+			//
+			// Refer:
+			//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
+			DisableCompression: true,
+		}
+		if useTLS {
+			tr.DialTLSContext = newCustomDialTLSContext(&tls.Config{
+				RootCAs:            globalRootCAs,
+				MinVersion:         tls.VersionTLS12,
+				InsecureSkipVerify: config.Insecure,
+			})
+
+			// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
+			// See https://github.com/golang/go/issues/14275
+			//
+			// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
+			//
+			// if e = http2.ConfigureTransport(tr); e != nil {
+			// 	return nil, probe.NewError(e)
+			// }
+		}
+		transport = tr
+	}
+
+	transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
+
+	if config.Debug {
+		if strings.EqualFold(config.Signature, "S3v4") {
+			transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
+		} else if strings.EqualFold(config.Signature, "S3v2") && withS3v2 {
+			transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
+		}
+	} else {
+		if !globalJSONLine && !globalJSON {
+			transport = notifyExpiringTLS{transport: transport}
+		}
+	}
+
+	transport = gzhttp.Transport(transport)
+	config.Transport = transport
 }
 
 // SelectObjectOpts - opts entered for select API
