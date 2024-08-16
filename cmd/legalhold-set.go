@@ -98,7 +98,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	if !recursive && !withVersions {
 		err = clnt.PutObjectLegalHold(ctx, versionID, lhold)
 		if err != nil {
-			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
+			errorIf(err.Trace(urlStr), "Failed to set legal hold on `%s` successfully", urlStr)
 		} else {
 			contentURL := filepath.ToSlash(clnt.GetURL().Path)
 			key := strings.TrimPrefix(contentURL, prefixPath)
@@ -143,7 +143,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 
 		probeErr := newClnt.PutObjectLegalHold(ctx, content.VersionID, lhold)
 		if probeErr != nil {
-			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `"+content.URL.Path+"` successfully")
+			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `%s` successfully", content.URL.Path)
 		} else {
 			if !globalJSON {
 				contentURL := filepath.ToSlash(content.URL.Path)
