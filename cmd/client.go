@@ -277,10 +277,9 @@ func (config *Config) getCredsChain() ([]credentials.Provider, *probe.Error) {
 			return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %w", err))
 		}
 		config.forceTLS = stsEndpointURL.Scheme == "https"
-		config.Transport = config.getTransport()
 		credsSts := &credentials.IAM{
 			Client: &http.Client{
-				Transport: config.Transport,
+				Transport: config.getTransport(),
 			},
 			Endpoint: stsEndpointURL.String(),
 		}
