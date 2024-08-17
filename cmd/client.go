@@ -252,8 +252,6 @@ type Config struct {
 	UploadLimit       int64
 	DownloadLimit     int64
 	Transport         http.RoundTripper
-	// Force TLS
-	forceTLS bool
 }
 
 // getCredsChain returns an []credentials.Provider array for the config
@@ -276,7 +274,6 @@ func (config *Config) getCredsChain() ([]credentials.Provider, *probe.Error) {
 		if err != nil {
 			return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %w", err))
 		}
-		config.forceTLS = stsEndpointURL.Scheme == "https"
 		credsSts := &credentials.IAM{
 			Client: &http.Client{
 				Transport: config.getTransport(),
@@ -313,10 +310,30 @@ func (config *Config) getTransport() http.RoundTripper {
 	return config.Transport
 }
 
+func (config *Config) isTLS() bool {
+	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
+		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
+		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE_"+config.Alias, ""); val != "" {
+			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
+			if val := env.Get("MC_ROLE_ARN_"+config.Alias, ""); val != "" {
+				os.Setenv("AWS_ROLE_ARN", val)
+			}
+			if val := env.Get("MC_ROLE_SESSION_NAME_"+config.Alias, randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
+				os.Setenv("AWS_ROLE_SESSION_NAME", val)
+			}
+		}
+		stsEndpointURL, err := url.Parse(stsEndpoint)
+		if err != nil {
+			return false
+		}
+		return isHostTLS(config) || stsEndpointURL.Scheme == "https"
+	}
+	return isHostTLS(config)
+}
 func (config *Config) initTransport(withS3v2 bool) {
 	var transport http.RoundTripper
 
-	useTLS := isHostTLS(config) || config.forceTLS
+	useTLS := config.isTLS()
 
 	if config.Transport != nil {
 		transport = config.Transport
