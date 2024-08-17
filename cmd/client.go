@@ -312,16 +312,6 @@ func (config *Config) getTransport() http.RoundTripper {
 
 func (config *Config) isTLS() bool {
 	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
-		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
-		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE_"+config.Alias, ""); val != "" {
-			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
-			if val := env.Get("MC_ROLE_ARN_"+config.Alias, ""); val != "" {
-				os.Setenv("AWS_ROLE_ARN", val)
-			}
-			if val := env.Get("MC_ROLE_SESSION_NAME_"+config.Alias, randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
-				os.Setenv("AWS_ROLE_SESSION_NAME", val)
-			}
-		}
 		stsEndpointURL, err := url.Parse(stsEndpoint)
 		if err != nil {
 			return false
