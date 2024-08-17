@@ -57,12 +57,13 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 
+			transport := config.getTransport()
+
 			credsChain, err := config.getCredsChain()
 			if err != nil {
 				return nil, err
 			}
 
-			transport := config.getTransport()
 			creds := credentials.NewChainCredentials(credsChain)
 
 			// Not found. Instantiate a new MinIO
