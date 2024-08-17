@@ -247,10 +247,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				return nil, err
 			}
 
-			if err != nil {
-				return nil, err
-			}
-
 			var e error
 
 			options := minio.Options{
