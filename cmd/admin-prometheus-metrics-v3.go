@@ -32,7 +32,7 @@ var (
 	metricsV3Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "bucket",
-			Usage: "bucket name to list metrics for. only applicable with api version v3 for metric type 'bucket'",
+			Usage: "bucket name to list metrics for. only applicable with api version v3 for metric type 'api, replication'",
 		},
 	}
 
@@ -79,11 +79,11 @@ func validateV3Args(subsys string, bucket string) {
 	if len(bucket) > 0 {
 		bms := strings.Join(bucketMetricsSubSystems.ToSlice(), ", ")
 		if len(subsys) == 0 {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("metric type must be passed with --bucket. valid values are `"+bms+"`"))
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("metric type must be passed with --bucket. valid values are `%s`", bms))
 		}
 
 		if !bucketMetricsSubSystems.Contains(subsys) {
-			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("--bucket is applicable only for metric types `"+bms+"`"))
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("--bucket is applicable only for metric types `%s`", bms))
 		}
 	}
 }

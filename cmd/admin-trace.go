@@ -529,7 +529,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	traceCh := client.ServiceTrace(ctxt, opts)
 	if stats {
 		filteredTraces := make(chan madmin.ServiceTraceInfo, 1)
-		ui := tea.NewProgram(initTraceStatsUI(ctx.Int("stats-n"), filteredTraces))
+		ui := tea.NewProgram(initTraceStatsUI(ctx.Bool("all"), ctx.Int("stats-n"), filteredTraces))
 		var te error
 		go func() {
 			for t := range traceCh {

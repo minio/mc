@@ -36,6 +36,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
+	"golang.org/x/text/unicode/norm"
 
 	// golang does not support flat keys for path matching, find does
 	"github.com/minio/pkg/v3/wildcard"
@@ -486,8 +487,10 @@ func getRegexMap(cliCtx *cli.Context, key string) map[string]*regexp.Regexp {
 			reMap[split[0]] = nil
 			continue
 		}
+		// Normalize character encoding.
+		norm := norm.NFC.String(split[1])
 		var err error
-		reMap[split[0]], err = regexp.Compile(split[1])
+		reMap[split[0]], err = regexp.Compile(norm)
 		if err != nil {
 			fatalIf(probe.NewError(err), fmt.Sprintf("Unable to compile metadata regex for %s=%s", split[0], split[1]))
 		}
@@ -507,7 +510,7 @@ func matchRegexMaps(m map[string]*regexp.Regexp, v map[string]string) bool {
 			continue
 		}
 		val, ok := v[k]
-		if !ok || !reg.MatchString(val) {
+		if !ok || !reg.MatchString(norm.NFC.String(val)) {
 			return false
 		}
 	}
@@ -529,7 +532,7 @@ func matchMetadataRegexMaps(m map[string]*regexp.Regexp, v map[string]string) bo
 		if !ok {
 			val, ok = v[http.CanonicalHeaderKey(fmt.Sprintf("X-Amz-Meta-%s", k))]
 		}
-		if !ok || !reg.MatchString(val) {
+		if !ok || !reg.MatchString(norm.NFC.String(val)) {
 			return false
 		}
 	}
