@@ -57,9 +57,9 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 
-			transport := getTransportForConfig(config, true)
+			transport := config.getTransport()
 
-			credsChain, err := getCredentialsChainForConfig(config, transport)
+			credsChain, err := config.getCredsChain()
 			if err != nil {
 				return nil, err
 			}
