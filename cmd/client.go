@@ -320,6 +320,7 @@ func (config *Config) isTLS() bool {
 	}
 	return isHostTLS(config)
 }
+
 func (config *Config) initTransport(withS3v2 bool) {
 	var transport http.RoundTripper
 
