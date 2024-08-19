@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -39,7 +38,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klauspost/compress/gzhttp"
 	"github.com/minio/pkg/v3/env"
 
 	"github.com/minio/minio-go/v7"
@@ -55,8 +53,6 @@ import (
 	"github.com/minio/pkg/v3/mimedb"
 
 	"github.com/minio/mc/pkg/deadlineconn"
-	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/mc/pkg/limiter"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -205,118 +201,6 @@ func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err
 	return res, err
 }
 
-// getTransportForConfig returns a corresponding *http.Transport for the *Config
-// set withS3v2 bool to true to add traceV2 tracer.
-func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
-	var transport http.RoundTripper
-
-	useTLS := isHostTLS(config)
-
-	if config.Transport != nil {
-		transport = config.Transport
-	} else {
-		tr := &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           newCustomDialContext(config),
-			MaxIdleConnsPerHost:   1024,
-			WriteBufferSize:       32 << 10, // 32KiB moving up from 4KiB default
-			ReadBufferSize:        32 << 10, // 32KiB moving up from 4KiB default
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 10 * time.Second,
-			// Set this value so that the underlying transport round-tripper
-			// doesn't try to auto decode the body of objects with
-			// content-encoding set to `gzip`.
-			//
-			// Refer:
-			//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
-			DisableCompression: true,
-		}
-		if useTLS {
-			tr.DialTLSContext = newCustomDialTLSContext(&tls.Config{
-				RootCAs:            globalRootCAs,
-				MinVersion:         tls.VersionTLS12,
-				InsecureSkipVerify: config.Insecure,
-			})
-
-			// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
-			// See https://github.com/golang/go/issues/14275
-			//
-			// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
-			//
-			// if e = http2.ConfigureTransport(tr); e != nil {
-			// 	return nil, probe.NewError(e)
-			// }
-		}
-		transport = tr
-	}
-
-	transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
-
-	if config.Debug {
-		if strings.EqualFold(config.Signature, "S3v4") {
-			transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
-		} else if strings.EqualFold(config.Signature, "S3v2") && withS3v2 {
-			transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
-		}
-	} else {
-		if !globalJSONLine && !globalJSON {
-			transport = notifyExpiringTLS{transport: transport}
-		}
-	}
-
-	transport = gzhttp.Transport(transport)
-	return transport
-}
-
-// getCredentialsChainForConfig returns an []credentials.Provider array for the config
-// and the STS configuration (if present)
-func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) ([]credentials.Provider, *probe.Error) {
-	var credsChain []credentials.Provider
-	// if an STS endpoint is set, we will add that to the chain
-	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
-		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
-		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE_"+config.Alias, ""); val != "" {
-			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
-			if val := env.Get("MC_ROLE_ARN_"+config.Alias, ""); val != "" {
-				os.Setenv("AWS_ROLE_ARN", val)
-			}
-			if val := env.Get("MC_ROLE_SESSION_NAME_"+config.Alias, randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
-				os.Setenv("AWS_ROLE_SESSION_NAME", val)
-			}
-		}
-
-		stsEndpointURL, err := url.Parse(stsEndpoint)
-		if err != nil {
-			return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
-		}
-		credsSts := &credentials.IAM{
-			Client: &http.Client{
-				Transport: transport,
-			},
-			Endpoint: stsEndpointURL.String(),
-		}
-		credsChain = append(credsChain, credsSts)
-	}
-
-	signType := credentials.SignatureV4
-	if strings.EqualFold(config.Signature, "s3v2") {
-		signType = credentials.SignatureV2
-	}
-
-	// Credentials
-	creds := &credentials.Static{
-		Value: credentials.Value{
-			AccessKeyID:     config.AccessKey,
-			SecretAccessKey: config.SecretKey,
-			SessionToken:    config.SessionToken,
-			SignerType:      signType,
-		},
-	}
-	credsChain = append(credsChain, creds)
-	return credsChain, nil
-}
-
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
 	clientCache := make(map[uint32]*minio.Client)
@@ -356,9 +240,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 
-			transport := getTransportForConfig(config, true)
+			transport := config.getTransport()
 
-			credsChain, err := getCredentialsChainForConfig(config, transport)
+			credsChain, err := config.getCredsChain()
 			if err != nil {
 				return nil, err
 			}
