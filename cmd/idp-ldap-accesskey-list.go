@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
@@ -104,17 +105,22 @@ func (m ldapUsersList) String() string {
 	o := strings.Builder{}
 
 	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("DN:"), m.DN))
-	if len(m.STSKeys) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("STS Access Keys:")))
-		for _, k := range m.STSKeys {
-			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
-		}
+	if len(m.STSKeys) > 0 || len(m.ServiceAccounts) > 0 {
+		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Access Keys:")))
 	}
-	if len(m.ServiceAccounts) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Service Account Access Keys:")))
-		for _, k := range m.ServiceAccounts {
-			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
+	for _, k := range m.STSKeys {
+		expiration := "never"
+		if k.Expiration != nil {
+			expiration = humanize.Time(*k.Expiration)
 		}
+		o.WriteString(iFmt(4, "%s, expires: %s, sts: true\n", k.AccessKey, expiration))
+	}
+	for _, k := range m.ServiceAccounts {
+		expiration := "never"
+		if k.Expiration != nil {
+			expiration = humanize.Time(*k.Expiration)
+		}
+		o.WriteString(iFmt(4, "%s, expires: %s, sts: false\n", k.AccessKey, expiration))
 	}
 
 	return o.String()
