@@ -34,6 +34,7 @@ import (
 	"github.com/minio/mc/pkg/limiter"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/cors"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
@@ -199,6 +200,11 @@ type Client interface {
 	// OD operations
 	GetPart(ctx context.Context, part int) (io.ReadCloser, *probe.Error)
 	PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (n int64, err *probe.Error)
+
+	// Cors operations
+	GetBucketCors(ctx context.Context) (*cors.Config, *probe.Error)
+	SetBucketCors(ctx context.Context, corsXML []byte) *probe.Error
+	DeleteBucketCors(ctx context.Context) *probe.Error
 }
 
 // ClientContent - Content container for content metadata
