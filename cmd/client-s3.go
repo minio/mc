@@ -881,6 +881,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	o := minio.GetObjectOptions{
 		ServerSideEncryption: opts.SSE,
 		VersionID:            opts.VersionID,
+		PartNumber:           opts.PartNumber,
 	}
 	if opts.Zip {
 		o.Set("x-minio-extract", "true")
