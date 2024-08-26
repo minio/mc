@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 registry.access.redhat.com/ubi9/ubi-minimal:latest as build
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS build
 
 RUN microdnf update --nodocs --assumeyes  && microdnf install ca-certificates --nodocs --assumeyes 
 
