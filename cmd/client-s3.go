@@ -38,6 +38,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/minio/minio-go/v7/pkg/cors"
 	"github.com/minio/pkg/v3/env"
 
 	"github.com/minio/minio-go/v7"
@@ -880,6 +881,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	o := minio.GetObjectOptions{
 		ServerSideEncryption: opts.SSE,
 		VersionID:            opts.VersionID,
+		PartNumber:           opts.PartNumber,
 	}
 	if opts.Zip {
 		o.Set("x-minio-extract", "true")
@@ -3000,4 +3002,53 @@ func (c *S3Client) GetPart(ctx context.Context, part int) (io.ReadCloser, *probe
 		return nil, probe.NewError(e)
 	}
 	return reader, nil
+}
+
+// SetBucketCors - Set bucket cors configuration.
+func (c *S3Client) SetBucketCors(ctx context.Context, corsXML []byte) *probe.Error {
+	bucketName, _ := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
+	corsCfg, err := cors.ParseBucketCorsConfig(bytes.NewReader(corsXML))
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	err = c.api.SetBucketCors(ctx, bucketName, corsCfg)
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// GetBucketCors - Get bucket cors configuration.
+func (c *S3Client) GetBucketCors(ctx context.Context) (*cors.Config, *probe.Error) {
+	bucketName, _ := c.url2BucketAndObject()
+	if bucketName == "" {
+		return nil, probe.NewError(BucketNameEmpty{})
+	}
+
+	corsCfg, err := c.api.GetBucketCors(ctx, bucketName)
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	return corsCfg, nil
+}
+
+// DeleteBucketCors - Delete bucket cors configuration.
+func (c *S3Client) DeleteBucketCors(ctx context.Context) *probe.Error {
+	bucketName, _ := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
+	err := c.api.SetBucketCors(ctx, bucketName, nil)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	return nil
 }
