@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,26 +19,22 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminServiceSubcommands = []cli.Command{
-	adminServiceRestartCmd,
-	adminServiceStopCmd,
-	adminServiceUnfreezeCmd,
-	adminServiceFreezeCmd,
+var corsSubcommands = []cli.Command{
+	corsSetCmd,
+	corsGetCmd,
+	corsRemoveCmd,
 }
 
-var adminServiceCmd = cli.Command{
-	Name:            "service",
-	Usage:           "restart or unfreeze a MinIO cluster",
-	Action:          mainAdminService,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	HideHelpCommand: true,
-	Subcommands:     adminServiceSubcommands,
+var corsCmd = cli.Command{
+	Name:        "cors",
+	Usage:       "manage bucket CORS configuration",
+	Action:      mainCors,
+	Before:      setGlobalsFromContext,
+	Flags:       globalFlags,
+	Subcommands: corsSubcommands,
 }
 
-// mainAdmin is the handle for "mc admin service" command.
-func mainAdminService(ctx *cli.Context) error {
-	commandNotFound(ctx, adminServiceSubcommands)
+func mainCors(ctx *cli.Context) error {
+	commandNotFound(ctx, corsSubcommands)
 	return nil
-	// Sub-commands like "status", "restart" have their own main.
 }

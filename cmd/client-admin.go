@@ -20,7 +20,6 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -58,9 +57,9 @@ func NewAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 
-			transport := getTransportForConfig(config, true)
+			transport := config.getTransport()
 
-			credsChain, err := getCredentialsChainForConfig(config, transport)
+			credsChain, err := config.getCredsChain()
 			if err != nil {
 				return nil, err
 			}
@@ -149,29 +148,19 @@ func newAnonymousClient(aliasedURL string) (*madmin.AnonymousClient, *probe.Erro
 		return nil, probe.NewError(e)
 	}
 
-	// Keep TLS config.
-	tlsConfig := &tls.Config{
-		RootCAs: globalRootCAs,
-		// Can't use SSLv3 because of POODLE and BEAST
-		// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
-		// Can't use TLSv1.1 because of RC4 cipher usage
-		MinVersion: tls.VersionTLS12,
-	}
-	if globalInsecure {
-		tlsConfig.InsecureSkipVerify = true
-	}
 	// Set custom transport
 	var transport http.RoundTripper = &http.Transport{
-		Proxy: ieproxy.GetProxyFunc(),
-		DialContext: (&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 15 * time.Second,
-		}).DialContext,
+		Proxy:       ieproxy.GetProxyFunc(),
+		DialContext: newCustomDialContext(&Config{}),
+		DialTLSContext: newCustomDialTLSContext(&tls.Config{
+			RootCAs:            globalRootCAs,
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: globalInsecure,
+		}),
 		MaxIdleConnsPerHost:   256,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 10 * time.Second,
-		TLSClientConfig:       tlsConfig,
 		// Set this value so that the underlying transport round-tripper
 		// doesn't try to auto decode the body of objects with
 		// content-encoding set to `gzip`.
