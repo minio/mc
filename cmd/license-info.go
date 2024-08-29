@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
+	"github.com/miniohq/license/go/license"
 )
 
 var licenseInfoCmd = cli.Command{
@@ -62,9 +62,9 @@ const (
 )
 
 type licInfoMessage struct {
-	Status string  `json:"status"`
-	Info   licInfo `json:"info,omitempty"`
-	Error  string  `json:"error,omitempty"`
+	Status string          `json:"status"`
+	Info   license.License `json:"info,omitempty"`
+	Error  string          `json:"error,omitempty"`
 }
 
 type licInfo struct {
@@ -100,10 +100,6 @@ func (li licInfoMessage) String() string {
 		return licInfoErr(li.Error)
 	}
 
-	if len(li.Info.Message) > 0 {
-		return licInfoMsg(li.Info.Message)
-	}
-
 	return getLicInfoStr(li.Info)
 }
 
@@ -115,7 +111,7 @@ func (li licInfoMessage) JSON() string {
 	return string(jsonBytes)
 }
 
-func getLicInfoStr(li licInfo) string {
+func getLicInfoStr(li license.License) string {
 	columns := []table.Column{
 		{Title: "License", Width: 20},
 		{Title: "", Width: 45},
@@ -128,8 +124,8 @@ func getLicInfoStr(li licInfo) string {
 		{licInfoField("Expires"), licInfoVal(li.ExpiresAt.Format(http.TimeFormat))},
 	}
 
-	if len(li.LicenseID) > 0 {
-		rows = append(rows, table.Row{licInfoField("License ID"), licInfoVal(li.LicenseID)})
+	if len(li.ID) > 0 {
+		rows = append(rows, table.Row{licInfoField("License ID"), licInfoVal(li.ID)})
 	}
 	if len(li.DeploymentID) > 0 {
 		rows = append(rows, table.Row{licInfoField("Deployment ID"), licInfoVal(li.DeploymentID)})
@@ -181,56 +177,16 @@ func mainLicenseInfo(ctx *cli.Context) error {
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := initSubnetConnectivity(ctx, aliasedURL, true)
 
-	apiKey, lic, e := getSubnetCreds(alias)
-	fatalIf(probe.NewError(e), "Error in checking cluster registration status")
+	client, err := newAdminClient(alias)
+	fatalIf(err, "Unable to initialize admin connection.")
+	lic, e := client.GetLicenseInfo(globalContext)
+	fatalIf(probe.NewError(e), "Error in getting license info.")
 
-	var lim licInfoMessage
-	if len(lic) > 0 {
-		lim = getLicInfoMsg(lic)
-	} else if len(apiKey) > 0 {
-		lim = licInfoMessage{
-			Status: "success",
-			Info: licInfo{
-				Message: fmt.Sprintf("%s is registered with SUBNET. License info not available.", alias),
-			},
-		}
-	} else {
-		// Not registered. Default to AGPLv3
-		lim = licInfoMessage{
-			Status: "success",
-			Info: licInfo{
-				Plan:    "AGPLv3",
-				Message: getAGPLMessage(),
-			},
-		}
+	lim := licInfoMessage{
+		Status: "success",
+		Info:   *lic,
 	}
 
 	printMsg(lim)
 	return nil
-}
-
-func getLicInfoMsg(lic string) licInfoMessage {
-	li, e := parseLicense(lic)
-	if e != nil {
-		return licErrMsg(e)
-	}
-	return licInfoMessage{
-		Status: "success",
-		Info: licInfo{
-			LicenseID:    li.LicenseID,
-			Organization: li.Organization,
-			Plan:         li.Plan,
-			IssuedAt:     &li.IssuedAt,
-			ExpiresAt:    &li.ExpiresAt,
-			DeploymentID: li.DeploymentID,
-			APIKey:       li.APIKey,
-		},
-	}
-}
-
-func licErrMsg(e error) licInfoMessage {
-	return licInfoMessage{
-		Status: "error",
-		Error:  e.Error(),
-	}
 }

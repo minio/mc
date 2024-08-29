@@ -25,6 +25,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.76
 	github.com/minio/pkg/v3 v3.0.13
 	github.com/minio/selfupdate v0.6.0
+	github.com/miniohq/license/go/license v0.0.0-20240729180209-172cc9dff82c
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.15.2
@@ -118,3 +119,5 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/minio/madmin-go/v3 => github.com/anjalshireesh/madmin-go/v3 v3.0.0-20240829054150-9cc27f7fbbfe
