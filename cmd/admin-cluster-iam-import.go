@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/klauspost/compress/zip"
 	"github.com/minio/cli"
@@ -95,11 +96,13 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 		return nil
 	}
 
-	e = client.ImportIAM(context.Background(), f)
+	skippedEntities, e := client.ImportIAM(context.Background(), f)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
 
 	if !globalJSON {
 		console.Infof("IAM info imported to %s from %s\n", aliasedURL, args.Get(1))
+		console.Infof("Skipped Access Keys: %v\n", strings.Join(skippedEntities.SkippedAccessKeys, ", "))
+		console.Infof("Skipped DN: %v\n", strings.Join(skippedEntities.SkippedDN, ", "))
 	}
 	return nil
 }
