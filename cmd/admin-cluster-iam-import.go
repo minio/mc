@@ -96,7 +96,7 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 		return nil
 	}
 
-	skippedEntities, e := client.ImportIAM(context.Background(), f)
+	skippedEntities, e := client.ImportIAMV2(context.Background(), f)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
 
 	if !globalJSON {
