@@ -101,8 +101,12 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 
 	if !globalJSON {
 		console.Infof("IAM info imported to %s from %s\n", aliasedURL, args.Get(1))
-		console.Infof("Skipped Access Keys: %v\n", strings.Join(skippedEntities.SkippedAccessKeys, ", "))
-		console.Infof("Skipped DN: %v\n", strings.Join(skippedEntities.SkippedDN, ", "))
+		if len(skippedEntities.SkippedAccessKeys) > 0 {
+			console.Infof("Skipped Access Keys: %v\n", strings.Join(skippedEntities.SkippedAccessKeys, ", "))
+		}
+		if len(skippedEntities.SkippedDN) > 0 {
+			console.Infof("Skipped DN: %v\n", strings.Join(skippedEntities.SkippedDN, ", "))
+		}
 	}
 	return nil
 }
