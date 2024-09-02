@@ -27,8 +27,9 @@ import (
 
 	"github.com/klauspost/compress/zip"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v3/console"
 )
 
 var adminClusterIAMImportCmd = cli.Command{
@@ -53,6 +54,32 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio /tmp/myminio-iam-info.zip
 
 `,
+}
+
+type iamImportInfo madmin.ImportIAMResult
+
+func (i iamImportInfo) JSON() string {
+	bs, e := json.MarshalIndent(madmin.ImportIAMResult(i), "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(bs)
+}
+
+func (i iamImportInfo) String() string {
+	var messages []string
+	info := madmin.ImportIAMResult(i)
+	if len(info.Skipped) > 0 {
+		messages = append(messages, fmt.Sprintf("Skipped Entries: %v", strings.Join(info.Skipped, ", ")))
+	}
+	if len(info.Removed) > 0 {
+		messages = append(messages, fmt.Sprintf("Removed Entries: %v", strings.Join(info.Removed, ", ")))
+	}
+	if len(info.Added) > 0 {
+		messages = append(messages, fmt.Sprintf("Newly Added Entries: %v", strings.Join(info.Added, ", ")))
+	}
+	if len(info.Failed) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add Entries: %v", strings.Join(info.Failed, ", ")))
+	}
+	return strings.Join(messages, "\n")
 }
 
 func checkIAMImportSyntax(ctx *cli.Context) {
@@ -96,17 +123,9 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 		return nil
 	}
 
-	skippedEntities, e := client.ImportIAMV2(context.Background(), f)
+	iamr, e := client.ImportIAMV2(context.Background(), f)
 	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
 
-	if !globalJSON {
-		console.Infof("IAM info imported to %s from %s\n", aliasedURL, args.Get(1))
-		if len(skippedEntities.SkippedAccessKeys) > 0 {
-			console.Infof("Skipped Access Keys: %v\n", strings.Join(skippedEntities.SkippedAccessKeys, ", "))
-		}
-		if len(skippedEntities.SkippedDN) > 0 {
-			console.Infof("Skipped DN: %v\n", strings.Join(skippedEntities.SkippedDN, ", "))
-		}
-	}
+	printMsg(iamImportInfo(iamr))
 	return nil
 }
