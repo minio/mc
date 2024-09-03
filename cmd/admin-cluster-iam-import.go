@@ -67,19 +67,115 @@ func (i iamImportInfo) JSON() string {
 func (i iamImportInfo) String() string {
 	var messages []string
 	info := madmin.ImportIAMResult(i)
-	if len(info.Skipped) > 0 {
-		messages = append(messages, fmt.Sprintf("Skipped Entries: %v", strings.Join(info.Skipped, ", ")))
-	}
-	if len(info.Removed) > 0 {
-		messages = append(messages, fmt.Sprintf("Removed Entries: %v", strings.Join(info.Removed, ", ")))
-	}
-	if len(info.Added) > 0 {
-		messages = append(messages, fmt.Sprintf("Newly Added Entries: %v", strings.Join(info.Added, ", ")))
-	}
-	if len(info.Failed) > 0 {
-		messages = append(messages, fmt.Sprintf("Failed to add Entries: %v", strings.Join(info.Failed, ", ")))
-	}
+	messages = append(messages, processIAMEntities(info.Skipped, "Skipped")...)
+	messages = append(messages, processIAMEntities(info.Removed, "Removed")...)
+	messages = append(messages, processIAMEntities(info.Added, "Added")...)
+	messages = append(messages, processErrIAMEntities(info.Failed)...)
 	return strings.Join(messages, "\n")
+}
+
+func processIAMEntities(entities madmin.IAMEntities, action string) []string {
+	var messages []string
+	if len(entities.Policies) > 0 {
+		messages = append(messages, fmt.Sprintf("%s policies: %v", action, strings.Join(entities.Policies, ", ")))
+	}
+	if len(entities.Users) > 0 {
+		messages = append(messages, fmt.Sprintf("%s users: %v", action, strings.Join(entities.Users, ", ")))
+	}
+	if len(entities.Groups) > 0 {
+		messages = append(messages, fmt.Sprintf("%s groups: %v", action, strings.Join(entities.Groups, ", ")))
+	}
+	if len(entities.ServiceAccounts) > 0 {
+		messages = append(messages, fmt.Sprintf("%s service acoounts: %v", action, strings.Join(entities.ServiceAccounts, ", ")))
+	}
+	var users []string
+	for _, pol := range entities.UserPolicies {
+		for name, _ := range pol {
+			users = append(users, name)
+		}
+	}
+	if len(users) > 0 {
+		messages = append(messages, fmt.Sprintf("%s policies for users: %v", action, strings.Join(users, ", ")))
+	}
+	var groups []string
+	for _, pol := range entities.GroupPolicies {
+		for name, _ := range pol {
+			groups = append(groups, name)
+		}
+	}
+	if len(groups) > 0 {
+		messages = append(messages, fmt.Sprintf("%s policies for groups: %v", action, strings.Join(groups, ", ")))
+	}
+	var stsarr []string
+	for _, pol := range entities.STSPolicies {
+		for name, _ := range pol {
+			stsarr = append(stsarr, name)
+		}
+	}
+	if len(stsarr) > 0 {
+		messages = append(messages, fmt.Sprintf("%s policies for sts: %v", action, strings.Join(stsarr, ", ")))
+	}
+	return messages
+}
+
+func processErrIAMEntities(entities madmin.IAMErrEntities) []string {
+	var messages []string
+	var policies []string
+	for _, entry := range entities.Policies {
+		policies = append(policies, entry.Name)
+	}
+	if len(policies) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add policies: %v", strings.Join(policies, ", ")))
+	}
+	var users []string
+	for _, entry := range entities.Users {
+		users = append(users, entry.Name)
+	}
+	if len(users) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add users: %v", strings.Join(users, ", ")))
+	}
+	var groups []string
+	for _, entry := range entities.Groups {
+		groups = append(groups, entry.Name)
+	}
+	if len(groups) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add groups: %v", strings.Join(groups, ", ")))
+	}
+	var sas []string
+	for _, entry := range entities.ServiceAccounts {
+		sas = append(sas, entry.Name)
+	}
+	if len(sas) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add service accounts: %v", strings.Join(sas, ", ")))
+	}
+	var polusers []string
+	for _, pol := range entities.UserPolicies {
+		for name, _ := range pol.PolicyMap {
+			polusers = append(polusers, name)
+		}
+	}
+	if len(polusers) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add policies for users: %v", strings.Join(polusers, ", ")))
+	}
+	var polgroups []string
+	for _, pol := range entities.GroupPolicies {
+		for name, _ := range pol.PolicyMap {
+			polgroups = append(polgroups, name)
+		}
+	}
+	if len(polgroups) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add policies for groups: %v", strings.Join(polgroups, ", ")))
+	}
+	var polsts []string
+	for _, pol := range entities.STSPolicies {
+		for name, _ := range pol.PolicyMap {
+			polsts = append(polsts, name)
+		}
+	}
+	if len(polsts) > 0 {
+		messages = append(messages, fmt.Sprintf("Failed to add policies for sts: %v", strings.Join(polsts, ", ")))
+	}
+	return messages
 }
 
 func checkIAMImportSyntax(ctx *cli.Context) {
