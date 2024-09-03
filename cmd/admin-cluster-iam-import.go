@@ -90,7 +90,7 @@ func processIAMEntities(entities madmin.IAMEntities, action string) []string {
 	}
 	var users []string
 	for _, pol := range entities.UserPolicies {
-		for name, _ := range pol {
+		for name := range pol {
 			users = append(users, name)
 		}
 	}
@@ -99,7 +99,7 @@ func processIAMEntities(entities madmin.IAMEntities, action string) []string {
 	}
 	var groups []string
 	for _, pol := range entities.GroupPolicies {
-		for name, _ := range pol {
+		for name := range pol {
 			groups = append(groups, name)
 		}
 	}
@@ -108,7 +108,7 @@ func processIAMEntities(entities madmin.IAMEntities, action string) []string {
 	}
 	var stsarr []string
 	for _, pol := range entities.STSPolicies {
-		for name, _ := range pol {
+		for name := range pol {
 			stsarr = append(stsarr, name)
 		}
 	}
@@ -150,7 +150,7 @@ func processErrIAMEntities(entities madmin.IAMErrEntities) []string {
 	}
 	var polusers []string
 	for _, pol := range entities.UserPolicies {
-		for name, _ := range pol.PolicyMap {
+		for name := range pol.PolicyMap {
 			polusers = append(polusers, name)
 		}
 	}
@@ -159,7 +159,7 @@ func processErrIAMEntities(entities madmin.IAMErrEntities) []string {
 	}
 	var polgroups []string
 	for _, pol := range entities.GroupPolicies {
-		for name, _ := range pol.PolicyMap {
+		for name := range pol.PolicyMap {
 			polgroups = append(polgroups, name)
 		}
 	}
@@ -168,7 +168,7 @@ func processErrIAMEntities(entities madmin.IAMErrEntities) []string {
 	}
 	var polsts []string
 	for _, pol := range entities.STSPolicies {
-		for name, _ := range pol.PolicyMap {
+		for name := range pol.PolicyMap {
 			polsts = append(polsts, name)
 		}
 	}
