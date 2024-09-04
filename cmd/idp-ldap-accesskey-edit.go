@@ -95,7 +95,7 @@ func mainIDPLdapAccesskeyEdit(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	e := client.UpdateServiceAccount(globalContext, accessKey, opts)
-	fatalIf(probe.NewError(e), "Unable to add service account.")
+	fatalIf(probe.NewError(e), "Unable to edit service account.")
 
 	m := ldapAccesskeyMessage{
 		op:        "edit",

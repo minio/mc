@@ -79,8 +79,13 @@ func (m ldapAccesskeyMessage) String() string {
 		if m.ImpliedPolicy {
 			policyStr = "implied"
 		}
+		statusStr := "enabled"
+		if m.AccountStatus == "off" {
+			statusStr = "disabled"
+		}
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Parent User:"), m.ParentUser))
+		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Status:"), statusStr))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Policy:"), policyStr))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
