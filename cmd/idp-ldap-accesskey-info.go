@@ -99,6 +99,10 @@ func (m ldapAccesskeyMessage) String() string {
 		o.WriteString(labelStyle.Render(iFmt(0, "Successfully removed access key `%s`.", m.AccessKey)))
 	case "edit":
 		o.WriteString(labelStyle.Render(iFmt(0, "Successfully edited access key `%s`.", m.AccessKey)))
+	case "enable":
+		o.WriteString(labelStyle.Render(iFmt(0, "Successfully enabled access key `%s`.", m.AccessKey)))
+	case "disable":
+		o.WriteString(labelStyle.Render(iFmt(0, "Successfully disabled access key `%s`.", m.AccessKey)))
 	}
 	return o.String()
 }

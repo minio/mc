@@ -74,7 +74,10 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  TODO
+  1. Change the secret key for the access key "testkey"
+     {{.Prompt}} {{.HelpName}} myminio/ testkey --secret-key newsecretkey
+  2. Change the expiry duration for the access key "testkey"
+     {{.Prompt}} {{.HelpName}} myminio/ testkey ---expiry-duration 24h
 `,
 }
 
@@ -86,10 +89,6 @@ func mainIDPLdapAccesskeyEdit(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 	accessKey := args.Get(1)
-
-	if ctx.Bool("login") {
-		deprecatedError("mc idp ldap accesskey create-with-login")
-	}
 
 	opts := accessKeyEditOpts(ctx)
 	client, err := newAdminClient(aliasedURL)
