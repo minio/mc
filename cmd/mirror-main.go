@@ -554,18 +554,14 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 						ignoreErr = true
 					}
 					if !ignoreErr {
-						if !mj.opts.skipErrors {
-							errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-								fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
-						} else {
-							console.Infof("[Warn] Failed to copy `%s`. %s", sURLs.SourceContent.URL.String(), sURLs.Error.Trace(sURLs.SourceContent.URL.String()))
-						}
+						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+							"Failed to copy `%s`.", sURLs.SourceContent.URL)
 					}
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
 				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
-					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
+					"Failed to remove `%s`.", sURLs.TargetContent.URL.String())
 			default:
 				if strings.Contains(sURLs.Error.ToGoError().Error(), "Overwrite not allowed") {
 					ignoreErr = true
@@ -581,8 +577,8 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 			if !ignoreErr {
 				mirrorFailedOps.Inc()
 				errDuringMirror = true
-				// Quit mirroring if --watch and --active-active are not passed
-				if !mj.opts.skipErrors && !mj.opts.activeActive && !mj.opts.isWatch {
+				// Quit mirroring if --skip-errors is not passed
+				if !mj.opts.skipErrors {
 					cancel()
 					cancelInProgress = true
 				}
@@ -1055,14 +1051,14 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx, cli.String("region"), false, withLock); err != nil {
-					errorIf(err, "Unable to create bucket at `"+newTgtURL+"`.")
+					errorIf(err, "Unable to create bucket at `%s`.", newTgtURL)
 					continue
 				}
 				if preserve && mirrorBucketsToBuckets {
 					// object lock configuration set on bucket
 					if mode != "" {
 						err = newDstClt.SetObjectLockConfig(ctx, mode, validity, unit)
-						errorIf(err, "Unable to set object lock config in `"+newTgtURL+"`.")
+						errorIf(err, "Unable to set object lock config in `%s`.", newTgtURL)
 						if err != nil && mj.opts.activeActive {
 							return true
 						}
@@ -1071,7 +1067,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 						}
 					}
 					errorIf(copyBucketPolicies(ctx, newSrcClt, newDstClt, isOverwrite),
-						"Unable to copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
+						"Unable to copy bucket policies to `%s`.", newDstClt.GetURL())
 				}
 			}
 		}

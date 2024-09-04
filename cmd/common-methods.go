@@ -494,6 +494,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			isPreserve:       uploadOpts.preserve,
 			multipartSize:    multipartSize,
 			multipartThreads: uint(multipartThreads),
+			ifNotExists:      uploadOpts.ifNotExists,
 		}
 
 		if isReadAt(reader) || length == 0 {
@@ -576,4 +577,5 @@ type uploadSourceToTargetURLOpts struct {
 	multipartSize       string
 	multipartThreads    string
 	updateProgressTotal bool
+	ifNotExists         bool
 }

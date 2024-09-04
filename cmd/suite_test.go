@@ -84,6 +84,9 @@ func Test_FullSuite(t *testing.T) {
 	// MC_TEST_ENABLE_HTTPS=true
 	// needs to be set in order to run these tests
 	if protocol == "https://" {
+		PutObjectWithSSECHexKey(t)
+		GetObjectWithSSEC(t)
+
 		PutObjectWithSSEC(t)
 		PutObjectWithSSECPartialPrefixMatch(t)
 		PutObjectWithSSECMultipart(t)
@@ -207,7 +210,8 @@ var (
 	bucketList     = make([]string, 0)
 	userList       = make(map[string]TestUser, 0)
 
-	// KMS
+	// ENCRYPTION
+	sseHexKey                = "8fe4d820587c427d5cc207d75cb76f3c6874808174b04050fa209206bfd08ebb"
 	sseBaseEncodedKey        = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA"
 	invalidSSEBaseEncodedKey = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5"
 	sseBaseEncodedKey2       = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5YWE"
@@ -1292,6 +1296,22 @@ func PutObjectWithSSECPartialPrefixMatch(t *testing.T) {
 	fatalIfErrorWMsg(err, out, t)
 }
 
+func PutObjectWithSSECHexKey(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encputhex",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"="+sseHexKey,
+		file.diskFile.Name(),
+		sseTestBucket+"/"+file.fileNameWithoutPath,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
 func PutObjectWithSSEC(t *testing.T) {
 	file := createFile(newTestFile{
 		addToGlobalFileMap: false,
@@ -1338,6 +1358,36 @@ func PutObjectWithSSECInvalidKeys(t *testing.T) {
 		sseTestBucket+"/"+file.fileNameWithoutPath,
 	)
 	fatalIfNoErrorWMsg(err, out, t)
+}
+
+func GetObjectWithSSECHexKey(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encgethex",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"="+sseHexKey,
+		file.diskFile.Name(),
+		sseTestBucket+"/"+file.fileNameWithoutPath,
+	)
+	fatalIfErrorWMsg(err, out, t)
+
+	out, err = RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"="+sseHexKey,
+		sseTestBucket+"/"+file.fileNameWithoutPath,
+		file.diskFile.Name()+".download",
+	)
+	fatalIfErrorWMsg(err, out, t)
+
+	md5s, err := openFileAndGetMd5Sum(file.diskFile.Name() + ".download")
+	fatalIfError(err, t)
+	if md5s != file.md5Sum {
+		fatalMsgOnly(fmt.Sprintf("expecting md5sum (%s) but got sum (%s)", file.md5Sum, md5s), t)
+	}
 }
 
 func GetObjectWithSSEC(t *testing.T) {

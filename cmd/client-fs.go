@@ -40,6 +40,7 @@ import (
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/cors"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
@@ -1504,6 +1505,30 @@ func (f *fsClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
 func (f *fsClient) GetPart(_ context.Context, _ int) (io.ReadCloser, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{
 		API:     "GetPart",
+		APIType: "filesystem",
+	})
+}
+
+// GetBucketCors - not implemented
+func (f *fsClient) GetBucketCors(_ context.Context) (*cors.Config, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{
+		API:     "GetBucketCors",
+		APIType: "filesystem",
+	})
+}
+
+// SetBucketCors - not implemented
+func (f *fsClient) SetBucketCors(_ context.Context, _ []byte) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "SetBucketCors",
+		APIType: "filesystem",
+	})
+}
+
+// DeleteBucketCors - not implemented
+func (f *fsClient) DeleteBucketCors(_ context.Context) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "DeleteBucketCors",
 		APIType: "filesystem",
 	})
 }

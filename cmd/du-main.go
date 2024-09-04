@@ -128,7 +128,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(urlStr), "Failed to summarize disk usage `"+urlStr+"`.")
+		errorIf(pErr.Trace(urlStr), "Failed to summarize disk usage `%s`.", urlStr)
 		return 0, 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
@@ -156,7 +156,7 @@ func du(ctx context.Context, urlStr string, timeRef time.Time, withVersions bool
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}
-			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
+			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `%s` recursively.", urlStr)
 			return 0, 0, exitStatus(globalErrorExitStatus)
 		}
 

@@ -139,7 +139,7 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 			// If not a service account must be sts
 			tempRes, e := client.TemporaryAccountInfo(globalContext, accessKey)
 			if e != nil {
-				errorIf(probe.NewError(e), "Unable to retrieve access key "+accessKey+" info.")
+				errorIf(probe.NewError(e), "Unable to retrieve access key %s info.", accessKey)
 			} else {
 				m := ldapAccesskeyMessage{
 					op:            "info",

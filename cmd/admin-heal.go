@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -40,6 +40,16 @@ const (
 )
 
 var adminHealFlags = []cli.Flag{
+	cli.IntFlag{
+		Name:   "pool",
+		Usage:  "heal only the given pool",
+		Hidden: true,
+	},
+	cli.IntFlag{
+		Name:   "set",
+		Usage:  "heal only the given set",
+		Hidden: true,
+	},
 	cli.StringFlag{
 		Name:   "scan",
 		Usage:  "select the healing scan mode (normal/deep)",
@@ -388,12 +398,16 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 					stateText = console.Colorize("DiskFailed", d.State)
 				}
 				fmt.Fprintf(&msg, "  +  %s : %s\n", d.DrivePath, stateText)
-				if d.Healing && d.HealInfo != nil {
-					now := time.Now().UTC()
-					scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
-					remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
-					estimationText := humanize.RelTime(now, now.Add(remainingTime), "", "")
-					fmt.Fprintf(&msg, "  |__ Estimated: %s\n", estimationText)
+				if d.Healing && d.HealInfo != nil && !d.HealInfo.Finished {
+					if d.HealInfo.RetryAttempts == 0 {
+						now := time.Now().UTC()
+						scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
+						remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
+						estimationText := humanize.RelTime(now, now.Add(remainingTime), "", "")
+						fmt.Fprintf(&msg, "  |__ Estimated: %s\n", estimationText)
+					} else {
+						fmt.Fprintf(&msg, "  |__ Retry attempts: %d\n", d.HealInfo.RetryAttempts)
+					}
 				}
 				fmt.Fprintf(&msg, "  |__  Capacity: %s/%s\n", humanize.IBytes(d.UsedSpace), humanize.IBytes(d.TotalSpace))
 				if showTolerance {
@@ -485,7 +499,7 @@ func (s shortBackgroundHealStatusMessage) String() string {
 				continue
 			}
 
-			if disk.HealInfo != nil {
+			if disk.HealInfo != nil && !disk.HealInfo.Finished {
 				missingInSet++
 
 				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
@@ -498,10 +512,12 @@ func (s shortBackgroundHealStatusMessage) String() string {
 					leastPct = 0
 				}
 
-				scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
-				remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
-				if remainingTime > healingRemaining {
-					healingRemaining = remainingTime
+				if disk.HealInfo.RetryAttempts == 0 {
+					scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
+					remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
+					if remainingTime > healingRemaining {
+						healingRemaining = remainingTime
+					}
 				}
 
 				disk := disk
@@ -567,8 +583,12 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	}
 
 	// Estimation completion
-	now := time.Now()
-	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", humanize.RelTime(now, now.Add(healingRemaining), "", ""))
+	eta := "<unknown>"
+	if healingRemaining > 0 {
+		now := time.Now()
+		eta = humanize.RelTime(now, now.Add(healingRemaining), "", "")
+	}
+	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", eta)
 
 	if problematicDisks > 0 {
 		healPrettyMsg += "\n"
@@ -666,6 +686,24 @@ func mainAdminHeal(ctx *cli.Context) error {
 		Recursive: ctx.Bool("recursive"),
 		DryRun:    ctx.Bool("dry-run"),
 		Recreate:  ctx.Bool("rewrite"),
+	}
+
+	if ctx.IsSet("pool") {
+		p := ctx.Int("pool")
+		if p < 1 {
+			fatalIf(errInvalidArgument(), "--pool takes a non zero positive number.")
+		}
+		p--
+		opts.Pool = &p
+	}
+
+	if ctx.IsSet("set") {
+		s := ctx.Int("set")
+		if s < 1 {
+			fatalIf(errInvalidArgument(), "--set takes a non zero positive number.")
+		}
+		s--
+		opts.Set = &s
 	}
 
 	forceStart := ctx.Bool("force-start")

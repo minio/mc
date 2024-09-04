@@ -28,6 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7/pkg/set"
 )
 
 var idpLdapPolicyAttachFlags = []cli.Flag{
@@ -358,6 +359,29 @@ func iFmt(n int, fmtStr string, a ...any) string {
 	return fmt.Sprintf(indentStr+fmtStr, a...)
 }
 
+func builderWrapper(strList []string, o *strings.Builder, indent, maxLen int) {
+	currLen := 0
+	for _, s := range strList {
+		if currLen+len(s) > maxLen && currLen > 0 {
+			o.WriteString("\n")
+			currLen = 0
+		}
+		if currLen == 0 {
+			o.WriteString(iFmt(indent, ""))
+			currLen = indent
+		} else {
+			o.WriteString(", ")
+			currLen += 2
+		}
+		if strings.Contains(s, ",") {
+			s = fmt.Sprintf("\"%s\"", s)
+		}
+		o.WriteString(s)
+		currLen += len(s)
+	}
+	o.WriteString("\n")
+}
+
 func (p policyEntities) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
 	o := strings.Builder{}
@@ -371,8 +395,23 @@ func (p policyEntities) String() string {
 
 		for _, u := range p.Result.UserMappings {
 			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("User:"), u.User))
-			for _, p := range u.Policies {
-				o.WriteString(iFmt(4, "%s\n", p))
+			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Policies:")))
+			builderWrapper(u.Policies, &o, 6, 80)
+
+			if len(u.MemberOfMappings) > 0 {
+				effectivePolicies := set.CreateStringSet(u.Policies...)
+				o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Group Memberships:")))
+				groups := make([]string, 0, len(u.MemberOfMappings))
+				for _, g := range u.MemberOfMappings {
+					groups = append(groups, g.Group)
+					for _, p := range g.Policies {
+						effectivePolicies.Add(p)
+					}
+				}
+				builderWrapper(groups, &o, 6, 80)
+
+				o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Effective Policies:")))
+				builderWrapper(effectivePolicies.ToSlice(), &o, 6, 80)
 			}
 		}
 	}
@@ -381,8 +420,9 @@ func (p policyEntities) String() string {
 
 		for _, u := range p.Result.GroupMappings {
 			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Group:"), u.Group))
+			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Policies:")))
 			for _, p := range u.Policies {
-				o.WriteString(iFmt(4, "%s\n", p))
+				o.WriteString(iFmt(6, "%s\n", p))
 			}
 		}
 	}

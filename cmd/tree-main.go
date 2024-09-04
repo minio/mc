@@ -294,13 +294,13 @@ func mainTree(cliCtx *cli.Context) error {
 			clnt, err := newClientFromAlias(targetAlias, targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 			opts := doListOptions{
-				timeRef:           timeRef,
-				isRecursive:       true,
-				isIncomplete:      false,
-				isSummary:         false,
-				withOlderVersions: false,
-				listZip:           false,
-				filter:            "*",
+				timeRef:      timeRef,
+				isRecursive:  true,
+				isIncomplete: false,
+				isSummary:    false,
+				withVersions: false,
+				listZip:      false,
+				filter:       "*",
 			}
 			if e := doList(ctx, clnt, opts); e != nil {
 				cErr = e

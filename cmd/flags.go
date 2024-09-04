@@ -59,6 +59,11 @@ var globalFlags = []cli.Flag{
 		Usage:  "enable debug output",
 		EnvVar: envPrefix + "DEBUG",
 	},
+	cli.StringSliceFlag{
+		Name:   "resolve",
+		Usage:  "resolves HOST[:PORT] to an IP address. Example: minio.local:9000=10.10.75.1",
+		EnvVar: envPrefix + "RESOLVE",
+	},
 	cli.BoolFlag{
 		Name:   "insecure",
 		Usage:  "disable SSL certificate verification",
@@ -97,7 +102,7 @@ var encFlags = []cli.Flag{
 
 var encCFlag = cli.StringSliceFlag{
 	Name:  "enc-c",
-	Usage: "encrypt/decrypt objects using client provided keys. (multiple keys can be provided) Format: Raw base64 encoding.",
+	Usage: "encrypt/decrypt objects using client provided keys. (multiple keys can be provided) Formats: RawBase64 or Hex.",
 }
 
 var encKSMFlag = cli.StringSliceFlag{
