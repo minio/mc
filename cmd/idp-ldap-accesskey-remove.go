@@ -18,10 +18,8 @@
 package cmd
 
 import (
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v3/console"
 )
 
 var idpLdapAccesskeyRemoveCmd = cli.Command{
@@ -51,8 +49,6 @@ func mainIDPLdapAccesskeyRemove(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
-
-	console.SetColor("RemoveAccessKey", color.New(color.FgGreen))
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)

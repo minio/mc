@@ -85,34 +85,30 @@ func mainIDPLdapAccesskeyEdit(ctx *cli.Context) error {
 
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	targetUser := args.Get(1)
+	accessKey := args.Get(1)
 
 	if ctx.Bool("login") {
 		deprecatedError("mc idp ldap accesskey create-with-login")
 	}
 
-	opts := accessKeyUpdateOpts(ctx, targetUser)
+	opts := accessKeyEditOpts(ctx)
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	res, e := client.AddServiceAccountLDAP(globalContext, opts)
+	e := client.UpdateServiceAccount(globalContext, accessKey, opts)
 	fatalIf(probe.NewError(e), "Unable to add service account.")
 
 	m := ldapAccesskeyMessage{
-		op:          "create",
-		Status:      "success",
-		AccessKey:   res.AccessKey,
-		SecretKey:   res.SecretKey,
-		Expiration:  &res.Expiration,
-		Name:        opts.Name,
-		Description: opts.Description,
+		op:        "edit",
+		Status:    "success",
+		AccessKey: accessKey,
 	}
 	printMsg(m)
 
 	return nil
 }
 
-func accessKeyEditOpts(ctx *cli.Context, targetUser string) madmin.UpdateServiceAccountReq {
+func accessKeyEditOpts(ctx *cli.Context) madmin.UpdateServiceAccountReq {
 	name := ctx.String("name")
 	expVal := ctx.String("expiry")
 	policyPath := ctx.String("policy")
@@ -125,11 +121,9 @@ func accessKeyEditOpts(ctx *cli.Context, targetUser string) madmin.UpdateService
 	}
 
 	opts := madmin.UpdateServiceAccountReq{
-		TargetUser:  targetUser,
-		AccessKey:   accessKey,
-		SecretKey:   secretKey,
-		Name:        name,
-		Description: description,
+		NewName:        name,
+		NewSecretKey:   secretKey,
+		NewDescription: description,
 	}
 
 	if policyPath != "" {
@@ -144,7 +138,7 @@ func accessKeyEditOpts(ctx *cli.Context, targetUser string) madmin.UpdateService
 			fatalIf(errInvalidArgument(), "empty policies are not allowed")
 		}
 
-		opts.Policy = policyBytes
+		opts.NewPolicy = policyBytes
 	}
 
 	switch {
@@ -157,7 +151,7 @@ func accessKeyEditOpts(ctx *cli.Context, targetUser string) madmin.UpdateService
 			t, e := time.ParseInLocation(format, expVal, location)
 			if e == nil {
 				found = true
-				opts.Expiration = &t
+				opts.NewExpiration = &t
 				break
 			}
 		}
@@ -167,7 +161,7 @@ func accessKeyEditOpts(ctx *cli.Context, targetUser string) madmin.UpdateService
 		}
 	case expDurVal != 0:
 		t := time.Now().Add(expDurVal)
-		opts.Expiration = &t
+		opts.NewExpiration = &t
 	}
 
 	return opts
