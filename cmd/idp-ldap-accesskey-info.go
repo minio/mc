@@ -156,9 +156,8 @@ func commonAccesskeyInfo(ctx *cli.Context) error {
 					Policy:        json.RawMessage(tempRes.Policy),
 					Name:          tempRes.Name,
 					Description:   tempRes.Description,
-					Expiration:    tempRes.Expiration,
+					Expiration:    nilExpiry(tempRes.Expiration),
 				}
-
 				printMsg(m)
 			}
 		} else {
@@ -172,12 +171,18 @@ func commonAccesskeyInfo(ctx *cli.Context) error {
 				Policy:        json.RawMessage(res.Policy),
 				Name:          res.Name,
 				Description:   res.Description,
-				Expiration:    res.Expiration,
+				Expiration:    nilExpiry(res.Expiration),
 			}
-
 			printMsg(m)
 		}
 	}
 
 	return nil
+}
+
+func nilExpiry(expiry *time.Time) *time.Time {
+	if expiry.Equal(timeSentinel) {
+		return nil
+	}
+	return expiry
 }

@@ -110,14 +110,14 @@ func (m ldapUserAccesskeyList) String() string {
 	}
 	for _, k := range m.STSKeys {
 		expiration := "never"
-		if k.Expiration != nil {
+		if nilExpiry(k.Expiration) != nil {
 			expiration = humanize.Time(*k.Expiration)
 		}
 		o.WriteString(iFmt(4, "%s, expires: %s, sts: true\n", k.AccessKey, expiration))
 	}
 	for _, k := range m.ServiceAccounts {
 		expiration := "never"
-		if k.Expiration != nil {
+		if nilExpiry(k.Expiration) != nil {
 			expiration = humanize.Time(*k.Expiration)
 		}
 		o.WriteString(iFmt(4, "%s, expires: %s, sts: false\n", k.AccessKey, expiration))
