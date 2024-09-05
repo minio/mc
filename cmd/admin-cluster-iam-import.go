@@ -86,7 +86,7 @@ func processIAMEntities(entities madmin.IAMEntities, action string) []string {
 		messages = append(messages, fmt.Sprintf("%s groups: %v", action, strings.Join(entities.Groups, ", ")))
 	}
 	if len(entities.ServiceAccounts) > 0 {
-		messages = append(messages, fmt.Sprintf("%s service acoounts: %v", action, strings.Join(entities.ServiceAccounts, ", ")))
+		messages = append(messages, fmt.Sprintf("%s service accounts: %v", action, strings.Join(entities.ServiceAccounts, ", ")))
 	}
 	var users []string
 	for _, pol := range entities.UserPolicies {
@@ -120,6 +120,7 @@ func processIAMEntities(entities madmin.IAMEntities, action string) []string {
 
 func processErrIAMEntities(entities madmin.IAMErrEntities) []string {
 	var messages []string
+
 	var policies []string
 	for _, entry := range entities.Policies {
 		policies = append(policies, entry.Name)
@@ -150,27 +151,21 @@ func processErrIAMEntities(entities madmin.IAMErrEntities) []string {
 	}
 	var polusers []string
 	for _, pol := range entities.UserPolicies {
-		for name := range pol.PolicyMap {
-			polusers = append(polusers, name)
-		}
+		polusers = append(polusers, pol.Name)
 	}
 	if len(polusers) > 0 {
 		messages = append(messages, fmt.Sprintf("Failed to add policies for users: %v", strings.Join(polusers, ", ")))
 	}
 	var polgroups []string
 	for _, pol := range entities.GroupPolicies {
-		for name := range pol.PolicyMap {
-			polgroups = append(polgroups, name)
-		}
+		polgroups = append(polgroups, pol.Name)
 	}
 	if len(polgroups) > 0 {
 		messages = append(messages, fmt.Sprintf("Failed to add policies for groups: %v", strings.Join(polgroups, ", ")))
 	}
 	var polsts []string
 	for _, pol := range entities.STSPolicies {
-		for name := range pol.PolicyMap {
-			polsts = append(polsts, name)
-		}
+		polsts = append(polsts, pol.Name)
 	}
 	if len(polsts) > 0 {
 		messages = append(messages, fmt.Sprintf("Failed to add policies for sts: %v", strings.Join(polsts, ", ")))

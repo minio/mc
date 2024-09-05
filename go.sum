@@ -209,8 +209,8 @@ github.com/shoenig/go-m1cpu v0.1.6 h1:nxdKQNcEB6vzgA2E2bvzKIYRuNj7XNJ4S/aRSwKzFt
 github.com/shoenig/go-m1cpu v0.1.6/go.mod h1:1JJMcUBvfNwpq05QDQVAnx3gUHr9IYF7GNg9SUEw2VQ=
 github.com/shoenig/test v0.6.4 h1:kVTaSd7WLz5WZ2IaoM0RSzRsUD+m8wRR+5qvntpn4LU=
 github.com/shoenig/test v0.6.4/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnjqq0k=
-github.com/shtripat/madmin-go/v3 v3.0.0-20240903073137-3b373d73c09c h1:d4MW+GoDObqdFILBeXfojfkYV8p7JwG+v5pQbh18pIc=
-github.com/shtripat/madmin-go/v3 v3.0.0-20240903073137-3b373d73c09c/go.mod h1:IFAwr0XMrdsLovxAdCcuq/eoL4nRuMVQQv0iubJANQw=
+github.com/shtripat/madmin-go/v3 v3.0.0-20240905100705-0302fd48cd5e h1:SKPId/MszE2JrSxFuh9DR6FS1NU70QIPrc2h3ZioSl0=
+github.com/shtripat/madmin-go/v3 v3.0.0-20240905100705-0302fd48cd5e/go.mod h1:IFAwr0XMrdsLovxAdCcuq/eoL4nRuMVQQv0iubJANQw=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
