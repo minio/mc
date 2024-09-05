@@ -54,7 +54,7 @@ var adminAccesskeyCreateFlags = []cli.Flag{
 
 var adminAccesskeyCreateCmd = cli.Command{
 	Name:         "create",
-	Usage:        "create access key pairs for LDAP",
+	Usage:        "create access key pairs for users",
 	Action:       mainAdminAccesskeyCreate,
 	Before:       setGlobalsFromContext,
 	Flags:        append(adminAccesskeyCreateFlags, globalFlags...),

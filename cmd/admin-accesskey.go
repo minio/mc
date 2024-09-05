@@ -21,9 +21,12 @@ import "github.com/minio/cli"
 
 var adminAccesskeySubcommands = []cli.Command{
 	adminAccesskeyListCmd,
-	adminAccesskeyCreateCmd,
 	adminAccesskeyRemoveCmd,
 	adminAccesskeyInfoCmd,
+	adminAccesskeyCreateCmd,
+	adminAccesskeyEditCmd,
+	adminAccesskeyEnableCmd,
+	adminAccesskeyDisableCmd,
 }
 
 var adminAccesskeyCmd = cli.Command{
@@ -34,12 +37,10 @@ var adminAccesskeyCmd = cli.Command{
 	Flags:           globalFlags,
 	Subcommands:     adminAccesskeySubcommands,
 	HideHelpCommand: true,
-	Hidden:          true,
 }
 
-// mainAdminBucket is the handle for "mc admin bucket" command.
 func mainAdminAccesskey(ctx *cli.Context) error {
 	commandNotFound(ctx, adminAccesskeySubcommands)
 	return nil
-	// Sub-commands like "quota", "remote" have their own main.
+
 }
