@@ -215,8 +215,12 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 	}
 
 	iamr, e := client.ImportIAMV2(context.Background(), f)
-	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
+	if e != nil {
+		e = client.ImportIAM(context.Background(), f)
+		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
+	} else {
+		printMsg(iamImportInfo(iamr))
+	}
 
-	printMsg(iamImportInfo(iamr))
 	return nil
 }
