@@ -114,17 +114,18 @@ func (m userAccesskeyList) JSON() string {
 }
 
 func mainAdminAccesskeyList(ctx *cli.Context) error {
-	aliasedURL, tentativeAll, users, listType, allFlag := commonAccesskeyList(ctx)
+	aliasedURL, tentativeAll, users, opts := commonAccesskeyList(ctx)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	accessKeysMap, e := client.ListAccessKeysBulk(globalContext, users, listType, allFlag)
+	accessKeysMap, e := client.ListAccessKeysBulk(globalContext, users, opts)
 	if e != nil {
 		if e.Error() == "Access Denied." && tentativeAll {
 			// retry with self
-			accessKeysMap, e = client.ListAccessKeysBulk(globalContext, users, listType, false)
+			opts.All = false
+			accessKeysMap, e = client.ListAccessKeysBulk(globalContext, users, opts)
 		}
 		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}

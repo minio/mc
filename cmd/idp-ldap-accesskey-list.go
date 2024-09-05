@@ -134,17 +134,18 @@ func (m ldapUserAccesskeyList) JSON() string {
 }
 
 func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
-	aliasedURL, tentativeAll, users, listType, allFlag := commonAccesskeyList(ctx)
+	aliasedURL, tentativeAll, users, opts := commonAccesskeyList(ctx)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	accessKeysMap, e := client.ListAccessKeysLDAPBulk(globalContext, users, listType, allFlag)
+	accessKeysMap, e := client.ListAccessKeysLDAPBulk(globalContext, users, opts)
 	if e != nil {
 		if e.Error() == "Access Denied." && tentativeAll {
 			// retry with self
-			accessKeysMap, e = client.ListAccessKeysLDAPBulk(globalContext, users, listType, false)
+			opts.All = false
+			accessKeysMap, e = client.ListAccessKeysLDAPBulk(globalContext, users, opts)
 		}
 		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
@@ -161,7 +162,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	return nil
 }
 
-func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool, users []string, listType string, allFlag bool) {
+func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool, users []string, opts madmin.ListAccessKeysOpts) {
 	if len(ctx.Args()) == 0 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
@@ -170,7 +171,7 @@ func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool
 	stsOnly := ctx.Bool("temp-only")
 	svcaccOnly := ctx.Bool("svcacc-only")
 	selfFlag := ctx.Bool("self")
-	allFlag = ctx.Bool("all")
+	opts.All = ctx.Bool("all")
 
 	args := ctx.Args()
 	aliasedURL = args.Get(0)
@@ -179,9 +180,9 @@ func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool
 	var e error
 	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
 		e = errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
-	} else if selfFlag && allFlag {
+	} else if selfFlag && opts.All {
 		e = errors.New("only one of --self or --all can be specified")
-	} else if (selfFlag || allFlag) && len(users) > 0 {
+	} else if (selfFlag || opts.All) && len(users) > 0 {
 		e = errors.New("user DNs cannot be specified with --self or --all")
 	}
 	fatalIf(probe.NewError(e), "Invalid flags.")
@@ -189,21 +190,21 @@ func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool
 	// If no users/self/all flags are specified, tentatively assume --all
 	// If access is denied on tentativeAll, retry with self
 	// This is to maintain compatibility with the previous behavior
-	if !selfFlag && !allFlag && len(users) == 0 {
+	if !selfFlag && !opts.All && len(users) == 0 {
 		tentativeAll = true
-		allFlag = true
+		opts.All = true
 	}
 
 	switch {
 	case usersOnly:
-		listType = madmin.AccessKeyListUsersOnly
+		opts.ListType = madmin.AccessKeyListUsersOnly
 	case stsOnly:
-		listType = madmin.AccessKeyListSTSOnly
+		opts.ListType = madmin.AccessKeyListSTSOnly
 	case svcaccOnly:
-		listType = madmin.AccessKeyListSvcaccOnly
+		opts.ListType = madmin.AccessKeyListSvcaccOnly
 	default:
-		listType = madmin.AccessKeyListAll
+		opts.ListType = madmin.AccessKeyListAll
 	}
 
-	return aliasedURL, tentativeAll, users, listType, allFlag
+	return aliasedURL, tentativeAll, users, opts
 }
