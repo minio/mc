@@ -82,6 +82,10 @@ EXAMPLES:
 }
 
 func mainIDPLdapAccesskeyEdit(ctx *cli.Context) error {
+	return commonAccesskeyEdit(ctx)
+}
+
+func commonAccesskeyEdit(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
