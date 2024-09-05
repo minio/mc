@@ -93,14 +93,14 @@ EXAMPLES:
 `,
 }
 
-type ldapUsersList struct {
+type ldapUserAccesskeyList struct {
 	Status          string                      `json:"status"`
 	DN              string                      `json:"dn"`
 	STSKeys         []madmin.ServiceAccountInfo `json:"stsKeys"`
 	ServiceAccounts []madmin.ServiceAccountInfo `json:"svcaccs"`
 }
 
-func (m ldapUsersList) String() string {
+func (m ldapUserAccesskeyList) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
@@ -126,7 +126,7 @@ func (m ldapUsersList) String() string {
 	return o.String()
 }
 
-func (m ldapUsersList) JSON() string {
+func (m ldapUserAccesskeyList) JSON() string {
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -134,50 +134,7 @@ func (m ldapUsersList) JSON() string {
 }
 
 func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
-	if len(ctx.Args()) == 0 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
-
-	usersOnly := ctx.Bool("users-only")
-	stsOnly := ctx.Bool("temp-only")
-	svcaccOnly := ctx.Bool("svcacc-only")
-	selfFlag := ctx.Bool("self")
-	allFlag := ctx.Bool("all")
-
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	users := args.Tail()
-
-	var e error
-	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
-		e = errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
-	} else if selfFlag && allFlag {
-		e = errors.New("only one of --self or --all can be specified")
-	} else if (selfFlag || allFlag) && len(users) > 0 {
-		e = errors.New("user DNs cannot be specified with --self or --all")
-	}
-	fatalIf(probe.NewError(e), "Invalid flags.")
-
-	// If no users/self/all flags are specified, tentatively assume --all
-	// If access is denied on tentativeAll, retry with self
-	// This is to maintain compatibility with the previous behavior
-	tentativeAll := false
-	if !selfFlag && !allFlag && len(users) == 0 {
-		tentativeAll = true
-		allFlag = true
-	}
-
-	var listType string
-	switch {
-	case usersOnly:
-		listType = madmin.AccessKeyListUsersOnly
-	case stsOnly:
-		listType = madmin.AccessKeyListSTSOnly
-	case svcaccOnly:
-		listType = madmin.AccessKeyListSvcaccOnly
-	default:
-		listType = madmin.AccessKeyListAll
-	}
+	aliasedURL, tentativeAll, users, listType, allFlag := commonAccesskeyList(ctx)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -193,7 +150,7 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	}
 
 	for dn, accessKeys := range accessKeysMap {
-		m := ldapUsersList{
+		m := ldapUserAccesskeyList{
 			Status:          "success",
 			DN:              dn,
 			ServiceAccounts: accessKeys.ServiceAccounts,
@@ -202,4 +159,51 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 		printMsg(m)
 	}
 	return nil
+}
+
+func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool, users []string, listType string, allFlag bool) {
+	if len(ctx.Args()) == 0 {
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+
+	usersOnly := ctx.Bool("users-only")
+	stsOnly := ctx.Bool("temp-only")
+	svcaccOnly := ctx.Bool("svcacc-only")
+	selfFlag := ctx.Bool("self")
+	allFlag = ctx.Bool("all")
+
+	args := ctx.Args()
+	aliasedURL = args.Get(0)
+	users = args.Tail()
+
+	var e error
+	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
+		e = errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
+	} else if selfFlag && allFlag {
+		e = errors.New("only one of --self or --all can be specified")
+	} else if (selfFlag || allFlag) && len(users) > 0 {
+		e = errors.New("user DNs cannot be specified with --self or --all")
+	}
+	fatalIf(probe.NewError(e), "Invalid flags.")
+
+	// If no users/self/all flags are specified, tentatively assume --all
+	// If access is denied on tentativeAll, retry with self
+	// This is to maintain compatibility with the previous behavior
+	if !selfFlag && !allFlag && len(users) == 0 {
+		tentativeAll = true
+		allFlag = true
+	}
+
+	switch {
+	case usersOnly:
+		listType = madmin.AccessKeyListUsersOnly
+	case stsOnly:
+		listType = madmin.AccessKeyListSTSOnly
+	case svcaccOnly:
+		listType = madmin.AccessKeyListSvcaccOnly
+	default:
+		listType = madmin.AccessKeyListAll
+	}
+
+	return aliasedURL, tentativeAll, users, listType, allFlag
 }

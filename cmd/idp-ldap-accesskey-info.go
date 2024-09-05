@@ -121,6 +121,11 @@ func (m ldapAccesskeyMessage) JSON() string {
 }
 
 func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
+	return commonAccesskeyInfo(ctx)
+}
+
+// currently no difference between ldap and builtin accesskey info
+func commonAccesskeyInfo(ctx *cli.Context) error {
 	if len(ctx.Args()) < 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
