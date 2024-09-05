@@ -26,12 +26,14 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -65,6 +67,10 @@ var adminScannerInfoFlags = []cli.Flag{
 		Name:   "in",
 		Hidden: true,
 		Usage:  "read previously saved json from file and replay",
+	},
+	cli.StringFlag{
+		Name:  "bucket",
+		Usage: "show scan stats about a given bucket",
 	},
 }
 
@@ -103,10 +109,107 @@ func checkAdminScannerInfoSyntax(ctx *cli.Context) {
 	}
 }
 
+// bucketScanMsg container for content message structure
+type bucketScanMsg struct {
+	Status string                  `json:"status"`
+	Stats  []madmin.BucketScanInfo `json:"stats"`
+}
+
+func (b bucketScanMsg) String() string {
+	var sb strings.Builder
+	sb.WriteString("\n")
+
+	sort.Slice(b.Stats, func(i, j int) bool { return b.Stats[i].LastUpdate.Before(b.Stats[j].LastUpdate) })
+
+	pt := newPrettyTable(" | ",
+		Field{"Pool", 5},
+		Field{"Set", 5},
+		Field{"LastUpdate", timeFieldMaxLen},
+	)
+
+	sb.WriteString(console.Colorize("Headers", pt.buildRow("Pool", "Set", "Last Update")) + "\n")
+
+	now := time.Now().UTC()
+	for i := range b.Stats {
+		sb.WriteString(
+			pt.buildRow(
+				strconv.Itoa(b.Stats[i].Pool+1),
+				strconv.Itoa(b.Stats[i].Set+1),
+				humanize.RelTime(now, b.Stats[i].LastUpdate, "", "ago"),
+			) + "\n")
+	}
+
+	var (
+		earliestESScan time.Time // the earliest ES that completed a bucket scan
+		latestESScan   time.Time // the last ES that completed a bucket scan
+		fullScan       = true
+	)
+
+	// Look for a bucket full scan inforation only if all
+	// erasure sets completed at least 16 cycles
+	for _, st := range b.Stats {
+		if len(st.Completed) < 16 {
+			fullScan = false
+			break
+		}
+		if earliestESScan.IsZero() {
+			// First stats
+			earliestESScan = st.Completed[0]
+			latestESScan = st.Completed[len(st.Completed)-1]
+			continue
+		}
+		if earliestESScan.Before(st.Completed[0]) {
+			earliestESScan = st.Completed[0]
+		}
+		if latestESScan.After(st.Completed[len(st.Completed)-1]) {
+			latestESScan = st.Completed[len(st.Completed)-1]
+		}
+	}
+
+	sb.WriteString("\n")
+
+	if fullScan {
+		took := latestESScan.Sub(earliestESScan)
+		sb.WriteString(
+			fmt.Sprintf(
+				"%s %s (took %s)\n",
+				console.Colorize("FullScan", "Full bucket scan: "),
+				humanize.RelTime(now, latestESScan, "", "ago"),
+				fmt.Sprintf("%dd%dh%dm", int(took.Hours()/24), int(took.Hours())%24, int(took.Minutes())%60)),
+		)
+	}
+
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (b bucketScanMsg) JSON() string {
+	b.Status = "success"
+	jsonMessageBytes, e := json.MarshalIndent(b, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(jsonMessageBytes)
+}
+
 func mainAdminScannerInfo(ctx *cli.Context) error {
+	console.SetColor("Headers", color.New(color.Bold, color.FgHiGreen))
+	console.SetColor("FullScan", color.New(color.Bold, color.FgHiGreen))
+
 	checkAdminScannerInfoSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
+
+	// Create a new MinIO Admin Client
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
+
+	if bucket := ctx.String("bucket"); bucket != "" {
+		bucketStats, err := client.BucketScanInfo(globalContext, bucket)
+		fatalIf(probe.NewError(err).Trace(aliasedURL), "Unable to get bucket stats.")
+		printMsg(bucketScanMsg{Stats: bucketStats})
+		return nil
+	}
 
 	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
 	ctxt, cancel := context.WithCancel(globalContext)
@@ -146,10 +249,6 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		}
 		os.Exit(0)
 	}
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 
 	opts := madmin.MetricsOptions{
 		Type:     madmin.MetricsScanner,
