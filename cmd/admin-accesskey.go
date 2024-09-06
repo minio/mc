@@ -31,7 +31,7 @@ var adminAccesskeySubcommands = []cli.Command{
 
 var adminAccesskeyCmd = cli.Command{
 	Name:            "accesskey",
-	Usage:           "manage accesskeys defined in the MinIO server",
+	Usage:           "manage access keys defined in the MinIO server",
 	Action:          mainAdminAccesskey,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
