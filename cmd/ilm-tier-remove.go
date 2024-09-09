@@ -19,8 +19,22 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 )
+
+var adminTierRmFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:   "force",
+		Usage:  "forcefully remove the specified tier",
+		Hidden: true,
+	},
+	cli.BoolFlag{
+		Name:   "dangerous",
+		Usage:  "additional flag to be required in addition to force flag",
+		Hidden: true,
+	},
+}
 
 var adminTierRmCmd = cli.Command{
 	Name:         "remove",
@@ -29,7 +43,7 @@ var adminTierRmCmd = cli.Command{
 	Action:       mainAdminTierRm,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, adminTierRmFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -65,11 +79,15 @@ func mainAdminTierRm(ctx *cli.Context) error {
 		fatalIf(errInvalidArgument(), "Tier name can't be empty")
 	}
 
+	if ctx.Bool("force") && !ctx.Bool("dangerous") {
+		fatalIf(errInvalidArgument(), "This operation results in an irreversible disconnection from the specified remote tier. If you are really sure, retry this command with ‘--force’ and ‘--dangerous’ flags.")
+	}
+
 	// Create a new MinIO Admin Client
 	client, cerr := newAdminClient(aliasedURL)
 	fatalIf(cerr, "Unable to initialize admin connection.")
 
-	e := client.RemoveTier(globalContext, tierName)
+	e := client.RemoveTierV2(globalContext, tierName, madmin.RemoveTierOpts{Force: ctx.Bool("force")})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to remove remote tier target")
 
 	printMsg(&tierMessage{
