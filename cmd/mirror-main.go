@@ -580,12 +580,8 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 						ignoreErr = true
 					}
 					if !ignoreErr {
-						if !mj.opts.skipErrors {
-							errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-								"Failed to copy `%s`.", sURLs.SourceContent.URL)
-						} else {
-							console.Infof("[Warn] Failed to copy `%s`. %s", sURLs.SourceContent.URL, sURLs.Error.Trace(sURLs.SourceContent.URL.String()))
-						}
+						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+							"Failed to copy `%s`.", sURLs.SourceContent.URL)
 					}
 				}
 			case sURLs.TargetContent != nil:
