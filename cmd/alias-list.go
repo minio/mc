@@ -140,7 +140,6 @@ func buildAliasMessage(alias string, deprecated bool, aliasCfg *aliasConfigV10) 
 
 // listAliases - list one or all aliases
 func listAliases(alias string, deprecated bool) (aliases []aliasMessage) {
-
 	// If specific alias is requested, look for it and print.
 	if alias != "" {
 		aliasCfg := mustGetHostConfig(alias)
