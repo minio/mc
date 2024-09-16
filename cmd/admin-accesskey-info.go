@@ -23,7 +23,7 @@ import (
 
 var adminAccesskeyInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "info about given access key pairs for LDAP",
+	Usage:        "info about given access key pairs",
 	Action:       mainAdminAccesskeyInfo,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,

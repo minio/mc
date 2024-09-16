@@ -70,10 +70,10 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get list of all users and associated access keys in local server (if admin)
+  1. Get list of all LDAP users and associated access keys in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/
 
-  2. Get list of users in local server (if admin)
+  2. Get list of LDAP users in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/ --users-only
 
   3. Get list of all users and associated temporary access keys in play server (if admin)
