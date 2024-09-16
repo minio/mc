@@ -140,12 +140,12 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	accessKeysMap, e := client.ListAccessKeysLDAPBulk(globalContext, users, opts)
+	accessKeysMap, e := client.ListAccessKeysLDAPBulkWithOpts(globalContext, users, opts)
 	if e != nil {
 		if e.Error() == "Access Denied." && tentativeAll {
 			// retry with self
 			opts.All = false
-			accessKeysMap, e = client.ListAccessKeysLDAPBulk(globalContext, users, opts)
+			accessKeysMap, e = client.ListAccessKeysLDAPBulkWithOpts(globalContext, users, opts)
 		}
 		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
