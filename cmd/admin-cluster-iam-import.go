@@ -30,6 +30,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminClusterIAMImportCmd = cli.Command{
@@ -216,8 +217,12 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 
 	iamr, e := client.ImportIAMV2(context.Background(), f)
 	if e != nil {
+		f.Seek(0, 0)
 		e = client.ImportIAM(context.Background(), f)
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to import IAM info.")
+		if !globalJSON {
+			console.Infof("IAM info imported to %s from %s\n", aliasedURL, args.Get(1))
+		}
 	} else {
 		printMsg(iamImportInfo(iamr))
 	}
