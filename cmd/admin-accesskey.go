@@ -42,5 +42,4 @@ var adminAccesskeyCmd = cli.Command{
 func mainAdminAccesskey(ctx *cli.Context) error {
 	commandNotFound(ctx, adminAccesskeySubcommands)
 	return nil
-
 }
