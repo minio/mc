@@ -223,7 +223,7 @@ EXAMPLES:
   16. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
-  16. Cross mirror between sites in a active-active deployment.
+  17. Cross mirror between sites in a active-active deployment.
       Site-A: {{.Prompt}} {{.HelpName}} --active-active siteA siteB
       Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
 `,
