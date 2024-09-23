@@ -31,8 +31,9 @@ import (
 
 // SubnetFileUploader - struct to upload files to SUBNET
 type SubnetFileUploader struct {
-	alias             string        // used for saving api-key and license from response
-	filename          string        // filename passed in the SUBNET request
+	alias             string // used for saving api-key and license from response
+	filename          string // filename passed in the SUBNET request
+	showProgressBar   bool
 	FilePath          string        // file to upload
 	ReqURL            string        // SUBNET upload URL
 	Params            url.Values    // query params to be sent in the request
@@ -113,12 +114,23 @@ func (i *SubnetFileUploader) subnetUploadReq() (*http.Request, error) {
 		}
 		defer file.Close()
 
+		rd := io.Reader(file)
+
+		if i.showProgressBar {
+			var st os.FileInfo
+			st, e = file.Stat()
+			if e != nil {
+				return
+			}
+			rd = newProgressReader(rd, "", st.Size())
+		}
+
 		if i.AutoCompress {
 			z, _ := zstd.NewWriter(part, zstd.WithEncoderConcurrency(2))
 			defer z.Close()
-			_, e = z.ReadFrom(file)
+			_, e = z.ReadFrom(rd)
 		} else {
-			_, e = io.Copy(part, file)
+			_, e = io.Copy(part, rd)
 		}
 	}()
 

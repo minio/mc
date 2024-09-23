@@ -166,7 +166,7 @@ func moveFile(sourcePath, destPath string) error {
 	return os.Remove(sourcePath)
 }
 
-func saveProfileFile(data io.ReadCloser) {
+func saveProfileFile(data io.Reader) {
 	// Create profile zip file
 	tmpFile, e := os.CreateTemp("", "mc-profile-")
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
@@ -176,7 +176,6 @@ func saveProfileFile(data io.ReadCloser) {
 	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
 	// Close everything
-	data.Close()
 	tmpFile.Close()
 
 	downloadedFile := profileFile + "." + time.Now().Format(dateTimeFormatFilename)
@@ -218,49 +217,62 @@ func mainSupportProfile(ctx *cli.Context) error {
 }
 
 func execSupportProfile(ctx *cli.Context, client *madmin.AdminClient, alias, apiKey string) {
-	var reqURL string
-	var headers map[string]string
 	profilers := ctx.String("type")
 	duration := ctx.Int("duration")
-
-	if !globalAirgapped {
-		// Retrieve subnet credentials (login/license) beforehand as
-		// it can take a long time to fetch the profile data
-		uploadURL := SubnetUploadURL("profile")
-		reqURL, headers = prepareSubnetUploadURL(uploadURL, alias, apiKey)
-	}
 
 	if !globalJSON {
 		console.Infof("Profiling '%s' for %d seconds... \n", alias, duration)
 	}
+
+	// Start profiling and download data locally
 	data, e := client.Profile(globalContext, madmin.ProfilerType(profilers), time.Second*time.Duration(duration))
 	fatalIf(probe.NewError(e), "Unable to save profile data")
+	rd := io.Reader(data)
+	if !globalJSON {
+		console.Info("Downloading profiling data..\n")
+		rd = newProgressReader(rd, "", 0)
+	}
+	saveProfileFile(rd)
+	data.Close()
 
-	saveProfileFile(data)
-
-	if !globalAirgapped {
-		_, e = (&SubnetFileUploader{
-			alias:             alias,
-			FilePath:          profileFile,
-			ReqURL:            reqURL,
-			Headers:           headers,
-			DeleteAfterUpload: true,
-		}).UploadFileToSubnet()
-		if e != nil {
-			printMsg(supportProfileMessage{
-				Status: "error",
-				Error:  e.Error(),
-				File:   profileFile,
-			})
-			return
-		}
-		printMsg(supportProfileMessage{
-			Status: "success",
-		})
-	} else {
+	if globalAirgapped {
 		printMsg(supportProfileMessage{
 			Status: "success",
 			File:   profileFile,
 		})
+		return
 	}
+
+	// --airgap is not passed, upload the downloaded profile to Subnet
+
+	// Retrieve subnet credentials (login/license) beforehand as
+	// it can take a long time to fetch the profile data
+	uploadURL := SubnetUploadURL("profile")
+	reqURL, headers := prepareSubnetUploadURL(uploadURL, alias, apiKey)
+
+	uploader := SubnetFileUploader{
+		alias:             alias,
+		FilePath:          profileFile,
+		ReqURL:            reqURL,
+		Headers:           headers,
+		DeleteAfterUpload: true,
+	}
+
+	if !globalJSON {
+		console.Info("Uploading profiling data to Subnet..\n")
+		uploader.showProgressBar = true
+	}
+
+	_, e = uploader.UploadFileToSubnet()
+	if e != nil {
+		printMsg(supportProfileMessage{
+			Status: "error",
+			Error:  e.Error(),
+			File:   profileFile,
+		})
+		return
+	}
+	printMsg(supportProfileMessage{
+		Status: "success",
+	})
 }
