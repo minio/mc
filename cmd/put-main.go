@@ -31,6 +31,7 @@ import (
 // put command flags.
 var (
 	putFlags = []cli.Flag{
+		checksumFlag,
 		cli.IntFlag{
 			Name:  "parallel, P",
 			Usage: "upload number of parts in parallel",
@@ -121,6 +122,7 @@ func mainPut(cliCtx *cli.Context) (e error) {
 		err.Trace(cliCtx.Args()...)
 	}
 	fatalIf(err, "SSE Error")
+	md5, checksum := parseChecksum(cliCtx)
 
 	if len(args) < 2 {
 		fatalIf(errInvalidArgument().Trace(args...), "Invalid number of arguments.")
@@ -154,6 +156,8 @@ func mainPut(cliCtx *cli.Context) (e error) {
 				putURLsCh <- putURLs
 				break
 			}
+			putURLs.checksum = checksum
+			putURLs.MD5 = md5
 			totalBytes += putURLs.SourceContent.Size
 			pg.SetTotal(totalBytes)
 			totalObjects++

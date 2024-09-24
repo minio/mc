@@ -54,6 +54,7 @@ type statMessage struct {
 	VersionID         string             `json:"versionID,omitempty"`
 	DeleteMarker      bool               `json:"deleteMarker,omitempty"`
 	Restore           *minio.RestoreInfo `json:"restore,omitempty"`
+	Checksum          map[string]string  `json:"checksum,omitempty"`
 }
 
 func (stat statMessage) String() (msg string) {
@@ -85,6 +86,10 @@ func (stat statMessage) String() (msg string) {
 	if stat.Expiration != nil && !stat.Expiration.IsZero() && !stat.Expiration.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
+	}
+	if len(stat.Checksum) > 0 {
+		cs := strings.TrimSuffix(strings.TrimPrefix(fmt.Sprintf("%v", stat.Checksum), "map["), "]")
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %v", "Checksum", cs) + "\n")
 	}
 	if stat.Restore != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Restore") + "\n")
@@ -192,6 +197,7 @@ func parseStat(c *ClientContent) statMessage {
 	content.ExpirationRuleID = c.ExpirationRuleID
 	content.ReplicationStatus = c.ReplicationStatus
 	content.Restore = c.Restore
+	content.Checksum = c.Checksum
 	return content
 }
 

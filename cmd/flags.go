@@ -18,9 +18,14 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v7"
 )
 
 const envPrefix = "MC_"
@@ -115,4 +120,39 @@ var encS3Flag = cli.StringSliceFlag{
 	Name:   "enc-s3",
 	Usage:  "encrypt/decrypt objects using server-side default keys and configurations. (multiple keys can be provided).",
 	EnvVar: envPrefix + "ENC_S3",
+}
+
+var checksumFlag = cli.StringFlag{
+	Name:  "checksum",
+	Usage: "Add checksum to uploaded object. Values: MD5, CRC32, CRC32C, SHA1 or SHA256. Requires server trailing headers (AWS, MinIO)",
+	Value: "",
+}
+
+func parseChecksum(ctx *cli.Context) (useMD5 bool, ct minio.ChecksumType) {
+	useMD5 = ctx.Bool("md5")
+	if cs := ctx.String("checksum"); cs != "" {
+		switch strings.ToUpper(cs) {
+		case "CRC32":
+			ct = minio.ChecksumCRC32
+		case "CRC32C":
+			ct = minio.ChecksumCRC32C
+		case "SHA1":
+			ct = minio.ChecksumSHA1
+		case "SHA256":
+			ct = minio.ChecksumSHA256
+		case "MD5":
+			useMD5 = true
+		default:
+			err := fmt.Errorf("unknown checksum type: %s. Should be one of MD5, CRC32, CRC32C, SHA1 or SHA256", cs)
+			fatalIf(probe.NewError(err), "")
+		}
+		if ct.IsSet() {
+			useTrailingHeaders.Store(true)
+			if useMD5 {
+				err := errors.New("cannot combine MD5 with checksum")
+				fatalIf(probe.NewError(err), "")
+			}
+		}
+	}
+	return
 }
