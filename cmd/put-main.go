@@ -47,6 +47,10 @@ var (
 			Usage:  "upload only if object does not exist",
 			Hidden: true,
 		},
+		cli.BoolFlag{
+			Name:  "disable-multipart",
+			Usage: "disable multipart upload feature",
+		},
 	}
 )
 
@@ -116,6 +120,8 @@ func mainPut(cliCtx *cli.Context) (e error) {
 		fatalIf(errInvalidArgument().Trace(strconv.Itoa(threads)), "Invalid number of threads")
 	}
 
+	disableMultipart := cliCtx.Bool("disable-multipart")
+
 	// Parse encryption keys per command.
 	encryptionKeys, err := validateAndCreateEncryptionKeys(cliCtx)
 	if err != nil {
@@ -161,6 +167,7 @@ func mainPut(cliCtx *cli.Context) (e error) {
 			totalBytes += putURLs.SourceContent.Size
 			pg.SetTotal(totalBytes)
 			totalObjects++
+			putURLs.DisableMultipart = disableMultipart
 			putURLsCh <- putURLs
 		}
 		close(putURLsCh)
