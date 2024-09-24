@@ -36,6 +36,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/cors"
@@ -202,6 +203,9 @@ func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err
 	return res, err
 }
 
+// useTrailingHeaders will enable trailing headers on S3 clients.
+var useTrailingHeaders atomic.Bool
+
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
 	clientCache := make(map[uint32]*minio.Client)
@@ -251,11 +255,12 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			var e error
 
 			options := minio.Options{
-				Creds:        credentials.NewChainCredentials(credsChain),
-				Secure:       useTLS,
-				Region:       env.Get("MC_REGION", env.Get("AWS_REGION", "")),
-				BucketLookup: config.Lookup,
-				Transport:    transport,
+				Creds:           credentials.NewChainCredentials(credsChain),
+				Secure:          useTLS,
+				Region:          env.Get("MC_REGION", env.Get("AWS_REGION", "")),
+				BucketLookup:    config.Lookup,
+				Transport:       transport,
+				TrailingHeaders: useTrailingHeaders.Load(),
 			}
 
 			api, e = minio.New(hostName, &options)
@@ -1089,6 +1094,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		StorageClass:          strings.ToUpper(putOpts.storageClass),
 		ServerSideEncryption:  putOpts.sse,
 		SendContentMd5:        putOpts.md5,
+		Checksum:              putOpts.checksum,
 		DisableMultipart:      putOpts.disableMultipart,
 		PartSize:              putOpts.multipartSize,
 		NumThreads:            putOpts.multipartThreads,
@@ -1652,6 +1658,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if opts.isZip {
 			o.Set("x-minio-extract", "true")
 		}
+		o.Set("x-amz-checksum-mode", "ENABLED")
 		ctnt, err := c.getObjectStat(ctx, bucket, path, o)
 		if err == nil {
 			return ctnt, nil
@@ -2272,7 +2279,15 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	} else {
 		content.Type = os.FileMode(0o664)
 	}
-
+	setChecksum := func(k, v string) {
+		if v != "" {
+			content.Checksum = map[string]string{k: v}
+		}
+	}
+	setChecksum("CRC32", entry.ChecksumCRC32)
+	setChecksum("CRC32C", entry.ChecksumCRC32C)
+	setChecksum("SHA1", entry.ChecksumSHA1)
+	setChecksum("SHA256", entry.ChecksumSHA256)
 	return content
 }
 
