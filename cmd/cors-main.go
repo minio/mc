@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,28 +19,22 @@ package cmd
 
 import "github.com/minio/cli"
 
-var idpLdapAccesskeySubcommands = []cli.Command{
-	idpLdapAccesskeyListCmd,
-	idpLdapAccesskeyRemoveCmd,
-	idpLdapAccesskeyInfoCmd,
-	idpLdapAccesskeyCreateCmd,
-	idpLdapAccesskeyCreateWithLoginCmd,
-	idpLdapAccesskeyEditCmd,
-	idpLdapAccesskeyEnableCmd,
-	idpLdapAccesskeyDisableCmd,
+var corsSubcommands = []cli.Command{
+	corsSetCmd,
+	corsGetCmd,
+	corsRemoveCmd,
 }
 
-var idpLdapAccesskeyCmd = cli.Command{
-	Name:            "accesskey",
-	Usage:           "manage LDAP access key pairs",
-	Action:          mainIDPLDAPAccesskey,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	Subcommands:     idpLdapAccesskeySubcommands,
-	HideHelpCommand: true,
+var corsCmd = cli.Command{
+	Name:        "cors",
+	Usage:       "manage bucket CORS configuration",
+	Action:      mainCors,
+	Before:      setGlobalsFromContext,
+	Flags:       globalFlags,
+	Subcommands: corsSubcommands,
 }
 
-func mainIDPLDAPAccesskey(ctx *cli.Context) error {
-	commandNotFound(ctx, idpLdapAccesskeySubcommands)
+func mainCors(ctx *cli.Context) error {
+	commandNotFound(ctx, corsSubcommands)
 	return nil
 }

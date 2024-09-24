@@ -46,6 +46,7 @@ type aliasConfigV10 struct {
 	Path         string `json:"path"`
 	License      string `json:"license,omitempty"`
 	APIKey       string `json:"apiKey,omitempty"`
+	Src          string `json:"src,omitempty"`
 }
 
 // configV10 config version.

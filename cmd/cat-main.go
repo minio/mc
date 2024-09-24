@@ -55,6 +55,10 @@ var catFlags = []cli.Flag{
 		Name:  "tail",
 		Usage: "tail number of bytes at ending of file",
 	},
+	cli.IntFlag{
+		Name:  "part-number",
+		Usage: "download only a specific part number",
+	},
 }
 
 // Display contents of a file.
@@ -162,6 +166,7 @@ type catOpts struct {
 	timeRef   time.Time
 	startO    int64
 	tailO     int64
+	partN     int
 	isZip     bool
 	stdinMode bool
 }
@@ -197,6 +202,7 @@ func parseCatSyntax(ctx *cli.Context) catOpts {
 	o.isZip = ctx.Bool("zip")
 	o.startO = ctx.Int64("offset")
 	o.tailO = ctx.Int64("tail")
+	o.partN = ctx.Int("part-number")
 	if o.tailO != 0 && o.startO != 0 {
 		fatalIf(errInvalidArgument().Trace(), "You cannot specify both --tail and --offset")
 	}
@@ -208,6 +214,9 @@ func parseCatSyntax(ctx *cli.Context) catOpts {
 	}
 	if o.stdinMode && (o.isZip || o.startO != 0 || o.tailO != 0) {
 		fatalIf(errInvalidArgument().Trace(), "You cannot use --zip --tail or --offset with stdin")
+	}
+	if (o.tailO != 0 || o.startO != 0) && o.partN > 0 {
+		fatalIf(errInvalidArgument().Trace(), "You cannot use --part-number with --tail or --offset")
 	}
 
 	return o
@@ -248,7 +257,6 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 					o.startO = 0
 				}
 			}
-
 			if client.GetURL().Type == objectStorage {
 				size = content.Size - o.startO
 				if size < 0 {
@@ -256,10 +264,13 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 					return err.Trace(sourceURL)
 				}
 			}
+			if o.partN != 0 {
+				size = int64(-1)
+			}
 		} else {
 			return err.Trace(sourceURL)
 		}
-		gopts := GetOptions{VersionID: versionID, Zip: o.isZip, RangeStart: o.startO}
+		gopts := GetOptions{VersionID: versionID, Zip: o.isZip, RangeStart: o.startO, PartNumber: o.partN}
 		if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB, getSourceOpts{
 			GetOptions: gopts,
 			preserve:   false,

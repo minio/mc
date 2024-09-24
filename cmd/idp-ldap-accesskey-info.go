@@ -26,7 +26,6 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v3/console"
 )
 
 var idpLdapAccesskeyInfoCmd = cli.Command{
@@ -68,6 +67,8 @@ type ldapAccesskeyMessage struct {
 }
 
 func (m ldapAccesskeyMessage) String() string {
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
+	o := strings.Builder{}
 	switch m.op {
 	case "info":
 		expirationStr := "NONE"
@@ -78,39 +79,37 @@ func (m ldapAccesskeyMessage) String() string {
 		if m.ImpliedPolicy {
 			policyStr = "implied"
 		}
-
-		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
-		o := strings.Builder{}
-
+		statusStr := "enabled"
+		if m.AccountStatus == "off" {
+			statusStr = "disabled"
+		}
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Parent User:"), m.ParentUser))
+		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Status:"), statusStr))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Policy:"), policyStr))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
-		o.WriteString(iFmt(0, "%s %s\n\n", labelStyle.Render("Expiration:"), expirationStr))
-
-		return o.String()
-
+		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Expiration:"), expirationStr))
 	case "create":
 		expirationStr := "NONE"
 		if m.Expiration != nil && !m.Expiration.IsZero() && !m.Expiration.Equal(timeSentinel) {
 			expirationStr = m.Expiration.String()
 		}
-
-		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
-		o := strings.Builder{}
-
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Secret Key:"), m.SecretKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Expiration:"), expirationStr))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
-		o.WriteString(iFmt(0, "%s %s\n\n", labelStyle.Render("Description:"), m.Description))
-
-		return o.String()
+		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
 	case "remove":
-		return console.Colorize("RemoveAccessKey", "Successfully removed access key `"+m.AccessKey+"`.")
+		o.WriteString(labelStyle.Render(iFmt(0, "Successfully removed access key `%s`.", m.AccessKey)))
+	case "edit":
+		o.WriteString(labelStyle.Render(iFmt(0, "Successfully edited access key `%s`.", m.AccessKey)))
+	case "enable":
+		o.WriteString(labelStyle.Render(iFmt(0, "Successfully enabled access key `%s`.", m.AccessKey)))
+	case "disable":
+		o.WriteString(labelStyle.Render(iFmt(0, "Successfully disabled access key `%s`.", m.AccessKey)))
 	}
-	return ""
+	return o.String()
 }
 
 func (m ldapAccesskeyMessage) JSON() string {
@@ -140,7 +139,7 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 			// If not a service account must be sts
 			tempRes, e := client.TemporaryAccountInfo(globalContext, accessKey)
 			if e != nil {
-				errorIf(probe.NewError(e), "Unable to retrieve access key "+accessKey+" info.")
+				errorIf(probe.NewError(e), "Unable to retrieve access key %s info.", accessKey)
 			} else {
 				m := ldapAccesskeyMessage{
 					op:            "info",
