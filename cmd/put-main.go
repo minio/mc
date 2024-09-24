@@ -50,10 +50,6 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
-		cli.BoolFlag{
-			Name:  "md5",
-			Usage: "force all upload(s) to calculate md5sum checksum",
-		},
 	}
 )
 
@@ -123,7 +119,6 @@ func mainPut(cliCtx *cli.Context) (e error) {
 		fatalIf(errInvalidArgument().Trace(strconv.Itoa(threads)), "Invalid number of threads")
 	}
 
-	md5 := cliCtx.Bool("md5")
 	disableMultipart := cliCtx.Bool("disable-multipart")
 
 	// Parse encryption keys per command.
@@ -168,7 +163,6 @@ func mainPut(cliCtx *cli.Context) (e error) {
 			totalBytes += putURLs.SourceContent.Size
 			pg.SetTotal(totalBytes)
 			totalObjects++
-			putURLs.MD5 = md5
 			putURLs.DisableMultipart = disableMultipart
 			putURLsCh <- putURLs
 		}
