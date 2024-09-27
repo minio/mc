@@ -19,12 +19,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/pkg/v3/console"
+	"github.com/minio/pkg/v3/env"
 
 	"github.com/fatih/color"
 )
@@ -151,19 +151,13 @@ func listAliases(alias string, deprecated bool) (aliases []aliasMessage) {
 	}
 
 	// list alias from the environment variable.
-	for _, envLine := range os.Environ() {
-		pair := strings.SplitN(envLine, "=", 2)
-		if len(pair) != 2 {
+	for _, envK := range env.List(mcEnvHostPrefix) {
+		aliasCfg, _ := expandAliasFromEnv(env.Get(envK, ""))
+		if aliasCfg == nil {
 			continue
 		}
-		if len(strings.TrimPrefix(pair[0], mcEnvHostPrefix)) != 0 {
-			aliasCfg, _ := expandAliasFromEnv(pair[1])
-			if aliasCfg == nil {
-				continue
-			}
-			alias := strings.ReplaceAll(pair[0], mcEnvHostPrefix, "")
-			aliases = append(aliases, buildAliasMessage(alias, deprecated, aliasCfg))
-		}
+		alias := strings.ReplaceAll(envK, mcEnvHostPrefix, "")
+		aliases = append(aliases, buildAliasMessage(alias, deprecated, aliasCfg))
 	}
 
 	// list alias from the customized configuration.
