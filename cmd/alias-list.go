@@ -156,7 +156,7 @@ func listAliases(alias string, deprecated bool) (aliases []aliasMessage) {
 		if len(pair) != 2 {
 			continue
 		}
-		if len(strings.TrimPrefix(pair[0], mcEnvHostPrefix)) != 0 {
+		if strings.HasPrefix(pair[0], mcEnvHostPrefix) {
 			aliasCfg, _ := expandAliasFromEnv(pair[1])
 			if aliasCfg == nil {
 				continue
