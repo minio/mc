@@ -75,6 +75,7 @@ type PutOptions struct {
 	multipartThreads      uint
 	concurrentStream      bool
 	ifNotExists           bool
+	checksum              minio.ChecksumType
 }
 
 // StatOptions holds options of the HEAD operation
@@ -219,6 +220,7 @@ type ClientContent struct {
 	Metadata     map[string]string
 	Tags         map[string]string
 	UserMetadata map[string]string
+	Checksum     map[string]string
 	ETag         string
 	Expires      time.Time
 

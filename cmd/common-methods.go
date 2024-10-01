@@ -353,7 +353,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 	}
 
 	// Optimize for server side copy if the host is same.
-	if sourceAlias == targetAlias && !uploadOpts.isZip {
+	if sourceAlias == targetAlias && !uploadOpts.isZip && !uploadOpts.urls.checksum.IsSet() {
 		// preserve new metadata and save existing ones.
 		if uploadOpts.preserve {
 			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
@@ -495,6 +495,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			multipartSize:    multipartSize,
 			multipartThreads: uint(multipartThreads),
 			ifNotExists:      uploadOpts.ifNotExists,
+			checksum:         uploadOpts.urls.checksum,
 		}
 
 		if isReadAt(reader) || length == 0 {

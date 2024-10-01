@@ -28,6 +28,7 @@ func checkCopySyntax(cliCtx *cli.Context) {
 	if len(cliCtx.Args()) < 2 {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
+	parseChecksum(cliCtx)
 
 	// extract URLs.
 	URLs := cliCtx.Args()
