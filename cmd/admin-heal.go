@@ -18,8 +18,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"math"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -95,6 +98,10 @@ var adminHealFlags = []cli.Flag{
 		Name:  "verbose, v",
 		Usage: "show verbose information",
 	},
+	cli.BoolFlag{
+		Name:  "all-drives, a",
+		Usage: "select all drives for verbose printing",
+	},
 }
 
 var adminHealCmd = cli.Command{
@@ -162,8 +169,11 @@ type poolInfo struct {
 }
 
 type setInfo struct {
-	maxUsedSpace   uint64
-	totalDisks     int
+	totalDisks int
+
+	readyDisksCount     int    // disks online and not in healing state
+	readyDisksUsedSpace uint64 // the total used space of ready disks
+
 	incapableDisks int
 }
 
@@ -218,11 +228,11 @@ func generateSetsStatus(disks []madmin.Disk) map[setIndex]setInfo {
 			setSt = setInfo{}
 		}
 		setSt.totalDisks++
-		if d.UsedSpace > setSt.maxUsedSpace {
-			setSt.maxUsedSpace = d.UsedSpace
-		}
 		if d.State != "ok" || d.Healing {
 			setSt.incapableDisks++
+		} else {
+			setSt.readyDisksCount++
+			setSt.readyDisksUsedSpace += d.UsedSpace
 		}
 		m[idx] = setSt
 	}
@@ -327,6 +337,8 @@ type verboseBackgroundHealStatusMessage struct {
 	Status   string `json:"status"`
 	HealInfo madmin.BgHealState
 
+	allDrives bool
+
 	// Specify storage class to show servers/disks tolerance
 	ToleranceForSC string `json:"-"`
 }
@@ -374,14 +386,16 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 				fmt.Fprintf(&msg, "  %s: %s\n", endpoint, stateText)
 				continue
 			}
+			var serverHeader strings.Builder
+			var serverHeaderPrinted bool
 			serverStatus := serversStatus[endpoint]
 			switch {
 			case showTolerance:
-				serverHeader := "  %s: (Tolerance: %d server(s))\n"
-				fmt.Fprintf(&msg, serverHeader, endpoint, poolsInfo[serverStatus.pool].tolerance)
+				hdr := "  %s: (Tolerance: %d server(s))\n"
+				fmt.Fprintf(&serverHeader, hdr, endpoint, poolsInfo[serverStatus.pool].tolerance)
 			default:
-				serverHeader := "  %s:\n"
-				fmt.Fprintf(&msg, serverHeader, endpoint)
+				hdr := "  %s:\n"
+				fmt.Fprintf(&serverHeader, hdr, endpoint)
 			}
 
 			for _, d := range serverStatus.disks {
@@ -393,29 +407,49 @@ func (s verboseBackgroundHealStatusMessage) String() string {
 				case d.State == "ok" && d.Healing:
 					stateText = console.Colorize("DiskHealing", "HEALING")
 				case d.State == "ok":
+					if !s.allDrives {
+						continue
+					}
 					stateText = console.Colorize("DiskOK", "OK")
 				default:
 					stateText = console.Colorize("DiskFailed", d.State)
 				}
-				fmt.Fprintf(&msg, "  +  %s : %s\n", d.DrivePath, stateText)
-				if d.Healing && d.HealInfo != nil && !d.HealInfo.Finished {
-					if d.HealInfo.RetryAttempts == 0 {
-						now := time.Now().UTC()
-						scanSpeed := float64(d.UsedSpace) / float64(now.Sub(d.HealInfo.Started))
-						remainingTime := time.Duration(float64(setsStatus[setIndex{d.PoolIndex, d.SetIndex}].maxUsedSpace-d.UsedSpace) / scanSpeed)
-						estimationText := humanize.RelTime(now, now.Add(remainingTime), "", "")
-						fmt.Fprintf(&msg, "  |__ Estimated: %s\n", estimationText)
-					} else {
-						fmt.Fprintf(&msg, "  |__ Retry attempts: %d\n", d.HealInfo.RetryAttempts)
+				if !serverHeaderPrinted {
+					serverHeaderPrinted = true
+					fmt.Fprint(&msg, serverHeader.String())
+				}
+				drivePath := d.DrivePath
+				if drivePath == "" {
+					if u, e := url.Parse(d.Endpoint); e == nil {
+						drivePath = u.Path
 					}
 				}
-				fmt.Fprintf(&msg, "  |__  Capacity: %s/%s\n", humanize.IBytes(d.UsedSpace), humanize.IBytes(d.TotalSpace))
+				fmt.Fprintf(&msg, "  +  %s : %s\n", drivePath, stateText)
+
+				thisSet := setsStatus[setIndex{d.PoolIndex, d.SetIndex}]
+				if d.Healing && d.HealInfo != nil && !d.HealInfo.Finished {
+					refUsedSpace := uint64(math.MaxUint64)
+					if thisSet.readyDisksCount > 0 { // to avoid crashing
+						refUsedSpace = thisSet.readyDisksUsedSpace / uint64(thisSet.readyDisksCount)
+					}
+					if refUsedSpace < d.UsedSpace { // normalize
+						refUsedSpace = d.UsedSpace
+					}
+					fmt.Fprintf(&msg, "  |__   Progress: %d%%\n", 100*d.UsedSpace/refUsedSpace)
+					fmt.Fprintf(&msg, "  |__    Started: %s\n", humanize.Time(d.HealInfo.Started))
+					if d.HealInfo.RetryAttempts > 0 {
+						fmt.Fprintf(&msg, "  |__    Retries: %d\n", d.HealInfo.RetryAttempts)
+					}
+				}
+				fmt.Fprintf(&msg, "  |__   Capacity: %s/%s\n", humanize.IBytes(d.UsedSpace), humanize.IBytes(d.TotalSpace))
 				if showTolerance {
-					fmt.Fprintf(&msg, "  |__ Tolerance: %d drive(s)\n", parity-setsStatus[setIndex{d.PoolIndex, d.SetIndex}].incapableDisks)
+					fmt.Fprintf(&msg, "  |__  Tolerance: %d drive(s)\n", parity-thisSet.incapableDisks)
 				}
 			}
 
-			fmt.Fprintf(&msg, "\n")
+			if serverHeaderPrinted {
+				fmt.Fprintf(&msg, "\n")
+			}
 		}
 	}
 
@@ -476,9 +510,6 @@ func (s shortBackgroundHealStatusMessage) String() string {
 		// The addition of Elapsed time of each parallel healing operation
 		// this is needed to calculate the rate of healing
 		accumulatedElapsedTime time.Duration
-
-		// ETA of healing - it is the latest ETA of all drives currently healing
-		healingRemaining time.Duration
 	)
 
 	var problematicDisks int
@@ -502,22 +533,21 @@ func (s shortBackgroundHealStatusMessage) String() string {
 			if disk.HealInfo != nil && !disk.HealInfo.Finished {
 				missingInSet++
 
-				diskSet := setIndex{pool: disk.PoolIndex, set: disk.SetIndex}
-				if maxUsedSpace := setsStatus[diskSet].maxUsedSpace; maxUsedSpace > 0 {
-					if pct := float64(disk.UsedSpace) / float64(maxUsedSpace); pct < leastPct {
+				thisSet := setsStatus[setIndex{pool: disk.PoolIndex, set: disk.SetIndex}]
+				refUsedSpace := uint64(math.MaxUint64)
+				if thisSet.readyDisksCount > 0 {
+					refUsedSpace = thisSet.readyDisksUsedSpace / uint64(thisSet.readyDisksCount)
+				}
+				if refUsedSpace < disk.UsedSpace {
+					refUsedSpace = disk.UsedSpace
+				}
+				if refUsedSpace > 0 {
+					if pct := float64(disk.UsedSpace) / float64(refUsedSpace); pct < leastPct {
 						leastPct = pct
 					}
 				} else {
 					// Unlikely to have max used space in an erasure set to be zero, but still set this to zero
 					leastPct = 0
-				}
-
-				if disk.HealInfo.RetryAttempts == 0 {
-					scanSpeed := float64(disk.UsedSpace) / float64(time.Since(disk.HealInfo.Started))
-					remainingTime := time.Duration(float64(setsStatus[diskSet].maxUsedSpace-disk.UsedSpace) / scanSpeed)
-					if remainingTime > healingRemaining {
-						healingRemaining = remainingTime
-					}
 				}
 
 				disk := disk
@@ -581,14 +611,6 @@ func (s shortBackgroundHealStatusMessage) String() string {
 	if accumulatedElapsedTime > 0 {
 		healPrettyMsg += fmt.Sprintf("Heal rate: %d obj/s, %s/s\n", int64(itemsHealedPerSec), humanize.IBytes(uint64(bytesHealedPerSec)))
 	}
-
-	// Estimation completion
-	eta := "<unknown>"
-	if healingRemaining > 0 {
-		now := time.Now()
-		eta = humanize.RelTime(now, now.Add(healingRemaining), "", "")
-	}
-	healPrettyMsg += fmt.Sprintf("Estimated Completion: %s\n", eta)
 
 	if problematicDisks > 0 {
 		healPrettyMsg += "\n"
@@ -669,6 +691,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 			printMsg(verboseBackgroundHealStatusMessage{
 				Status:         "success",
 				HealInfo:       bgHealStatus,
+				allDrives:      ctx.Bool("all-drives"),
 				ToleranceForSC: strings.ToUpper(ctx.String("storage-class")),
 			})
 		} else {
@@ -713,6 +736,16 @@ func mainAdminHeal(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e), "Unable to stop healing.")
 		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
 		return nil
+	}
+
+	if prefix == "" && opts.Recursive && opts.Pool == nil && opts.Set == nil && isTerminal() {
+		fmt.Printf("You are about to scan and heal the whole namespace in all pools and sets, please confirm [y/N]: ")
+		answer, e := bufio.NewReader(os.Stdin).ReadString('\n')
+		fatalIf(probe.NewError(e), "Unable to parse user input.")
+		if answer = strings.TrimSpace(strings.ToLower(answer)); answer != "y" && answer != "yes" {
+			fmt.Println("Heal aborted!")
+			return nil
+		}
 	}
 
 	healStart, _, e := adminClnt.Heal(globalContext, bucket, prefix, opts, "", forceStart, false)
