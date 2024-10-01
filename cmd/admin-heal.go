@@ -80,6 +80,10 @@ var adminHealFlags = []cli.Flag{
 		Hidden: true,
 	},
 	cli.BoolFlag{
+		Name:  "force",
+		Usage: "avoid showing a warning prompt",
+	},
+	cli.BoolFlag{
 		Name:   "remove",
 		Usage:  "remove dangling objects in heal sequence",
 		Hidden: true,
@@ -738,7 +742,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 		return nil
 	}
 
-	if prefix == "" && opts.Recursive && opts.Pool == nil && opts.Set == nil && isTerminal() {
+	if opts.Recursive && opts.Pool == nil && opts.Set == nil && isTerminal() && !ctx.Bool("force") {
 		fmt.Printf("You are about to scan and heal the whole namespace in all pools and sets, please confirm [y/N]: ")
 		answer, e := bufio.NewReader(os.Stdin).ReadString('\n')
 		fatalIf(probe.NewError(e), "Unable to parse user input.")
