@@ -19,12 +19,8 @@ package cmd
 
 import (
 	"errors"
-	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/dustin/go-humanize"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -93,46 +89,6 @@ EXAMPLES:
 `,
 }
 
-type ldapUserAccesskeyList struct {
-	Status          string                      `json:"status"`
-	DN              string                      `json:"dn"`
-	STSKeys         []madmin.ServiceAccountInfo `json:"stsKeys"`
-	ServiceAccounts []madmin.ServiceAccountInfo `json:"svcaccs"`
-}
-
-func (m ldapUserAccesskeyList) String() string {
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	o := strings.Builder{}
-
-	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("DN:"), m.DN))
-	if len(m.STSKeys) > 0 || len(m.ServiceAccounts) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Access Keys:")))
-	}
-	for _, k := range m.STSKeys {
-		expiration := "never"
-		if nilExpiry(k.Expiration) != nil {
-			expiration = humanize.Time(*k.Expiration)
-		}
-		o.WriteString(iFmt(4, "%s, expires: %s, sts: true\n", k.AccessKey, expiration))
-	}
-	for _, k := range m.ServiceAccounts {
-		expiration := "never"
-		if nilExpiry(k.Expiration) != nil {
-			expiration = humanize.Time(*k.Expiration)
-		}
-		o.WriteString(iFmt(4, "%s, expires: %s, sts: false\n", k.AccessKey, expiration))
-	}
-
-	return o.String()
-}
-
-func (m ldapUserAccesskeyList) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
-}
-
 func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	aliasedURL, tentativeAll, users, opts := commonAccesskeyList(ctx)
 
@@ -151,11 +107,12 @@ func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
 	}
 
 	for dn, accessKeys := range accessKeysMap {
-		m := ldapUserAccesskeyList{
+		m := userAccesskeyList{
 			Status:          "success",
-			DN:              dn,
+			User:            dn,
 			ServiceAccounts: accessKeys.ServiceAccounts,
 			STSKeys:         accessKeys.STSKeys,
+			LDAP:            true,
 		}
 		printMsg(m)
 	}

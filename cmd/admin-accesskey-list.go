@@ -97,26 +97,31 @@ type userAccesskeyList struct {
 	User            string                      `json:"user"`
 	STSKeys         []madmin.ServiceAccountInfo `json:"stsKeys"`
 	ServiceAccounts []madmin.ServiceAccountInfo `json:"svcaccs"`
+	LDAP            bool                        `json:"ldap,omitempty"`
 }
 
 func (m userAccesskeyList) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
 	o := strings.Builder{}
 
-	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("User:"), m.User))
+	userStr := "User"
+	if m.LDAP {
+		userStr = "DN"
+	}
+	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render(userStr+":"), m.User))
 	if len(m.STSKeys) > 0 || len(m.ServiceAccounts) > 0 {
 		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Access Keys:")))
 	}
 	for _, k := range m.STSKeys {
 		expiration := "never"
-		if k.Expiration != nil {
+		if nilExpiry(k.Expiration) != nil {
 			expiration = humanize.Time(*k.Expiration)
 		}
 		o.WriteString(iFmt(4, "%s, expires: %s, sts: true\n", k.AccessKey, expiration))
 	}
 	for _, k := range m.ServiceAccounts {
 		expiration := "never"
-		if k.Expiration != nil {
+		if nilExpiry(k.Expiration) != nil {
 			expiration = humanize.Time(*k.Expiration)
 		}
 		o.WriteString(iFmt(4, "%s, expires: %s, sts: false\n", k.AccessKey, expiration))
@@ -155,6 +160,7 @@ func mainAdminAccesskeyList(ctx *cli.Context) error {
 			User:            user,
 			ServiceAccounts: accessKeys.ServiceAccounts,
 			STSKeys:         accessKeys.STSKeys,
+			LDAP:            false,
 		}
 		printMsg(m)
 	}

@@ -181,7 +181,7 @@ func commonAccesskeyInfo(ctx *cli.Context) error {
 }
 
 func nilExpiry(expiry *time.Time) *time.Time {
-	if expiry.Equal(timeSentinel) {
+	if expiry != nil && expiry.Equal(timeSentinel) {
 		return nil
 	}
 	return expiry
