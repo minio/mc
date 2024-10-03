@@ -119,6 +119,10 @@ func accessKeyEditOpts(ctx *cli.Context) madmin.UpdateServiceAccountReq {
 	description := ctx.String("description")
 	expDurVal := ctx.Duration("expiry-duration")
 
+	if name == "" && expVal == "" && expDurVal == 0 && policyPath == "" && secretKey == "" && description == "" {
+		fatalIf(probe.NewError(errors.New("At least one property must be edited")), "invalid flags")
+	}
+
 	if expVal != "" && expDurVal != 0 {
 		fatalIf(probe.NewError(errors.New("Only one of --expiry or --expiry-duration can be specified")), "invalid flags")
 	}
