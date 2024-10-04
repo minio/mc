@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -37,10 +36,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/minio/pkg/v2/env"
+	"github.com/minio/minio-go/v7/pkg/cors"
+	"github.com/minio/pkg/v3/env"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -52,11 +52,9 @@ import (
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/sse"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/pkg/v2/mimedb"
+	"github.com/minio/pkg/v3/mimedb"
 
 	"github.com/minio/mc/pkg/deadlineconn"
-	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/mc/pkg/limiter"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -106,6 +104,14 @@ func newCustomDialContext(c *Config) dialContext {
 			KeepAlive: 15 * time.Second,
 		}
 
+		if ip, ok := globalResolvers[addr]; ok {
+			if _, port, err := net.SplitHostPort(addr); err == nil {
+				addr = net.JoinHostPort(ip.String(), port)
+			} else {
+				addr = ip.String()
+			}
+		}
+
 		conn, err := dialer.DialContext(ctx, network, addr)
 		if err != nil {
 			return nil, err
@@ -116,6 +122,31 @@ func newCustomDialContext(c *Config) dialContext {
 			WithWriteDeadline(c.ConnWriteDeadline)
 
 		return dconn, nil
+	}
+}
+
+// newCustomDialTLSContext setups a custom TLS dialer for any external communication and proxies.
+func newCustomDialTLSContext(tlsConf *tls.Config) dialContext {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := &tls.Dialer{
+			NetDialer: &net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 15 * time.Second,
+			},
+			Config: tlsConf,
+		}
+
+		if ip, ok := globalResolvers[addr]; ok {
+			dialer.Config = dialer.Config.Clone()
+			if host, port, err := net.SplitHostPort(addr); err == nil {
+				dialer.Config.ServerName = host // Set SNI
+				addr = net.JoinHostPort(ip.String(), port)
+			} else {
+				dialer.Config.ServerName = addr // Set SNI
+				addr = ip.String()
+			}
+		}
+		return dialer.DialContext(ctx, network, addr)
 	}
 }
 
@@ -147,114 +178,33 @@ func isHostTLS(config *Config) bool {
 	return useTLS
 }
 
-// getTransportForConfig returns a corresponding *http.Transport for the *Config
-// set withS3v2 bool to true to add traceV2 tracer.
-func getTransportForConfig(config *Config, withS3v2 bool) http.RoundTripper {
-	var transport http.RoundTripper
-
-	useTLS := isHostTLS(config)
-
-	if config.Transport != nil {
-		transport = config.Transport
-	} else {
-		tr := &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           newCustomDialContext(config),
-			MaxIdleConnsPerHost:   1024,
-			WriteBufferSize:       32 << 10, // 32KiB moving up from 4KiB default
-			ReadBufferSize:        32 << 10, // 32KiB moving up from 4KiB default
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 10 * time.Second,
-			// Set this value so that the underlying transport round-tripper
-			// doesn't try to auto decode the body of objects with
-			// content-encoding set to `gzip`.
-			//
-			// Refer:
-			//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
-			DisableCompression: true,
-		}
-		if useTLS {
-			// Keep TLS config.
-			tlsConfig := &tls.Config{
-				RootCAs: globalRootCAs,
-				// Can't use SSLv3 because of POODLE and BEAST
-				// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
-				// Can't use TLSv1.1 because of RC4 cipher usage
-				MinVersion: tls.VersionTLS12,
-			}
-			if config.Insecure {
-				tlsConfig.InsecureSkipVerify = true
-			}
-			tr.TLSClientConfig = tlsConfig
-
-			// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
-			// See https://github.com/golang/go/issues/14275
-			//
-			// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
-			//
-			// if e = http2.ConfigureTransport(tr); e != nil {
-			// 	return nil, probe.NewError(e)
-			// }
-		}
-		transport = tr
-	}
-
-	transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
-
-	if config.Debug {
-		if strings.EqualFold(config.Signature, "S3v4") {
-			transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
-		} else if strings.EqualFold(config.Signature, "S3v2") && withS3v2 {
-			transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
-		}
-	}
-	transport = gzhttp.Transport(transport)
-	return transport
+type notifyExpiringTLS struct {
+	transport http.RoundTripper
 }
 
-// getCredentialsChainForConfig returns an []credentials.Provider array for the config
-// and the STS configuration (if present)
-func getCredentialsChainForConfig(config *Config, transport http.RoundTripper) ([]credentials.Provider, *probe.Error) {
-	var credsChain []credentials.Provider
-	// if an STS endpoint is set, we will add that to the chain
-	if stsEndpoint := env.Get("MC_STS_ENDPOINT_"+config.Alias, ""); stsEndpoint != "" {
-		// set AWS_WEB_IDENTITY_TOKEN_FILE is MC_WEB_IDENTITY_TOKEN_FILE is set
-		if val := env.Get("MC_WEB_IDENTITY_TOKEN_FILE_"+config.Alias, ""); val != "" {
-			os.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", val)
-			if val := env.Get("MC_ROLE_ARN_"+config.Alias, ""); val != "" {
-				os.Setenv("AWS_ROLE_ARN", val)
-			}
-			if val := env.Get("MC_ROLE_SESSION_NAME_"+config.Alias, randString(32, rand.NewSource(time.Now().UnixNano()), "mc-session-name-")); val != "" {
-				os.Setenv("AWS_ROLE_SESSION_NAME", val)
-			}
-		}
+var globalExpiringCerts sync.Map
 
-		stsEndpointURL, err := url.Parse(stsEndpoint)
-		if err != nil {
-			return nil, probe.NewError(fmt.Errorf("Error parsing sts endpoint: %v", err))
-		}
-		credsSts := &credentials.IAM{
-			Client: &http.Client{
-				Transport: transport,
-			},
-			Endpoint: stsEndpointURL.String(),
-		}
-		credsChain = append(credsChain, credsSts)
+func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err error) {
+	if n.transport == nil {
+		return nil, errors.New("invalid transport")
 	}
 
-	// V4 Credentials
-	credsV4 := &credentials.Static{
-		Value: credentials.Value{
-			AccessKeyID:     config.AccessKey,
-			SecretAccessKey: config.SecretKey,
-			SessionToken:    config.SessionToken,
-			SignerType:      credentials.SignatureV4,
-		},
+	res, err = n.transport.RoundTrip(req)
+	if err != nil || res.TLS == nil || len(res.TLS.PeerCertificates) == 0 {
+		return res, err
 	}
-	credsChain = append(credsChain, credsV4)
-	return credsChain, nil
+
+	cert := res.TLS.PeerCertificates[0] // leaf certificate
+	validityDur := cert.NotAfter.Sub(cert.NotBefore)
+	if time.Since(cert.NotBefore) > time.Duration(0.9*float64(validityDur)) {
+		globalExpiringCerts.Store(req.Host, cert.NotAfter)
+	}
+
+	return res, err
 }
+
+// useTrailingHeaders will enable trailing headers on S3 clients.
+var useTrailingHeaders atomic.Bool
 
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
@@ -295,35 +245,22 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		var found bool
 		if api, found = clientCache[confSum]; !found {
 
-			transport := getTransportForConfig(config, true)
+			transport := config.getTransport()
 
-			credsChain, err := getCredentialsChainForConfig(config, transport)
+			credsChain, err := config.getCredsChain()
 			if err != nil {
 				return nil, err
 			}
 
-			// V2 Credentials
-			credsV2 := &credentials.Static{
-				Value: credentials.Value{
-					AccessKeyID:     config.AccessKey,
-					SecretAccessKey: config.SecretKey,
-					SessionToken:    "",
-					SignerType:      credentials.SignatureV2,
-				},
-			}
-			credsChain = append(credsChain, credsV2)
-
-			creds := credentials.NewChainCredentials(credsChain)
-
-			// Not found. Instantiate a new MinIO
 			var e error
 
 			options := minio.Options{
-				Creds:        creds,
-				Secure:       useTLS,
-				Region:       env.Get("MC_REGION", env.Get("AWS_REGION", "")),
-				BucketLookup: config.Lookup,
-				Transport:    transport,
+				Creds:           credentials.NewChainCredentials(credsChain),
+				Secure:          useTLS,
+				Region:          env.Get("MC_REGION", env.Get("AWS_REGION", "")),
+				BucketLookup:    config.Lookup,
+				Transport:       transport,
+				TrailingHeaders: useTrailingHeaders.Load(),
 			}
 
 			api, e = minio.New(hostName, &options)
@@ -948,6 +885,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	o := minio.GetObjectOptions{
 		ServerSideEncryption: opts.SSE,
 		VersionID:            opts.VersionID,
+		PartNumber:           opts.PartNumber,
 	}
 	if opts.Zip {
 		o.Set("x-minio-extract", "true")
@@ -961,7 +899,8 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	// Disallow automatic decompression for some objects with content-encoding set.
 	o.Set("Accept-Encoding", "identity")
 
-	reader, e := c.api.GetObject(ctx, bucket, object, o)
+	cr := minio.Core{Client: c.api}
+	reader, objectInfo, _, e := cr.GetObject(ctx, bucket, object, o)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -979,25 +918,7 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 		}
 		return nil, nil, probe.NewError(e)
 	}
-	objStat, e := reader.Stat()
-	if e != nil {
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "NoSuchBucket" {
-			return nil, nil, probe.NewError(BucketDoesNotExist{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "InvalidBucketName" {
-			return nil, nil, probe.NewError(BucketInvalid{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "NoSuchKey" {
-			return nil, nil, probe.NewError(ObjectMissing{})
-		}
-		return nil, nil, probe.NewError(e)
-	}
-	return reader, c.objectInfo2ClientContent(bucket, objStat), nil
+	return reader, c.objectInfo2ClientContent(bucket, objectInfo), nil
 }
 
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
@@ -1172,6 +1093,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		StorageClass:          strings.ToUpper(putOpts.storageClass),
 		ServerSideEncryption:  putOpts.sse,
 		SendContentMd5:        putOpts.md5,
+		Checksum:              putOpts.checksum,
 		DisableMultipart:      putOpts.disableMultipart,
 		PartSize:              putOpts.multipartSize,
 		NumThreads:            putOpts.multipartThreads,
@@ -1191,6 +1113,11 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		delete(metadata, AmzObjectLockLegalHold)
 		opts.LegalHold = minio.LegalHoldStatus(strings.ToUpper(lh))
 		opts.SendContentMd5 = true
+	}
+
+	if putOpts.ifNotExists {
+		// Only supported in newer MinIO releases.
+		opts.SetMatchETagExcept("*")
 	}
 
 	ui, e := c.api.PutObject(ctx, bucket, object, reader, size, opts)
@@ -1700,7 +1627,10 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 	}
 
 	if path == "" {
-		content, err := c.bucketStat(ctx, BucketStatOptions{bucket: bucket, ignoreBucketExists: opts.ignoreBucketExists})
+		content, err := c.bucketStat(ctx, BucketStatOptions{
+			bucket:             bucket,
+			ignoreBucketExists: opts.ignoreBucketExists,
+		})
 		if err != nil {
 			return nil, err.Trace(bucket)
 		}
@@ -1727,6 +1657,7 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if opts.isZip {
 			o.Set("x-minio-extract", "true")
 		}
+		o.Set("x-amz-checksum-mode", "ENABLED")
 		ctnt, err := c.getObjectStat(ctx, bucket, path, o)
 		if err == nil {
 			return ctnt, nil
@@ -1735,13 +1666,20 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
+
+		// when versionID is specified we do not have to perform List() operation
+		if opts.versionID != "" && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
+			return nil, probe.NewError(ObjectMissing{opts.timeRef})
+		}
+
 		// The object is not found, look for a directory marker or a prefix
 		path += string(c.targetURL.Separator)
 	}
 
 	nonRecursive := false
 	maxKeys := 1
-	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef, false, false, false, maxKeys, opts.isZip) {
+	for objectStat := range c.listObjectWrapper(ctx, bucket, path, nonRecursive, opts.timeRef,
+		opts.includeVersions, opts.includeVersions, false, maxKeys, opts.isZip) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
@@ -2340,7 +2278,15 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	} else {
 		content.Type = os.FileMode(0o664)
 	}
-
+	setChecksum := func(k, v string) {
+		if v != "" {
+			content.Checksum = map[string]string{k: v}
+		}
+	}
+	setChecksum("CRC32", entry.ChecksumCRC32)
+	setChecksum("CRC32C", entry.ChecksumCRC32C)
+	setChecksum("SHA1", entry.ChecksumSHA1)
+	setChecksum("SHA256", entry.ChecksumSHA256)
 	return content
 }
 
@@ -3070,4 +3016,53 @@ func (c *S3Client) GetPart(ctx context.Context, part int) (io.ReadCloser, *probe
 		return nil, probe.NewError(e)
 	}
 	return reader, nil
+}
+
+// SetBucketCors - Set bucket cors configuration.
+func (c *S3Client) SetBucketCors(ctx context.Context, corsXML []byte) *probe.Error {
+	bucketName, _ := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
+	corsCfg, err := cors.ParseBucketCorsConfig(bytes.NewReader(corsXML))
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	err = c.api.SetBucketCors(ctx, bucketName, corsCfg)
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// GetBucketCors - Get bucket cors configuration.
+func (c *S3Client) GetBucketCors(ctx context.Context) (*cors.Config, *probe.Error) {
+	bucketName, _ := c.url2BucketAndObject()
+	if bucketName == "" {
+		return nil, probe.NewError(BucketNameEmpty{})
+	}
+
+	corsCfg, err := c.api.GetBucketCors(ctx, bucketName)
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	return corsCfg, nil
+}
+
+// DeleteBucketCors - Delete bucket cors configuration.
+func (c *S3Client) DeleteBucketCors(ctx context.Context) *probe.Error {
+	bucketName, _ := c.url2BucketAndObject()
+	if bucketName == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
+	err := c.api.SetBucketCors(ctx, bucketName, nil)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	return nil
 }

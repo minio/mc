@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/fatih/color"
@@ -73,10 +74,12 @@ EXAMPLES:
 }
 
 type readyMessage struct {
-	Healthy         bool `json:"healthy"`
-	MaintenanceMode bool `json:"maintenanceMode"`
-	WriteQuorum     int  `json:"writeQuorum"`
-	HealingDrives   int  `json:"healingDrives"`
+	Status          string `json:"status"`
+	Alias           string `json:"alias"`
+	Healthy         bool   `json:"healthy"`
+	MaintenanceMode bool   `json:"maintenanceMode"`
+	WriteQuorum     int    `json:"writeQuorum"`
+	HealingDrives   int    `json:"healingDrives"`
 
 	Err error `json:"error"`
 }
@@ -84,11 +87,11 @@ type readyMessage struct {
 func (r readyMessage) String() string {
 	switch {
 	case r.Healthy:
-		return color.GreenString("The cluster is ready")
+		return color.GreenString(fmt.Sprintf("The cluster '%s' is ready", r.Alias))
 	case r.Err != nil:
-		return color.RedString("The cluster is unreachable: " + r.Err.Error())
+		return color.RedString(fmt.Sprintf("The cluster '%s' is unreachable: %s", r.Alias, r.Err.Error()))
 	default:
-		return color.RedString("The cluster is not ready")
+		return color.RedString(fmt.Sprintf("The cluster '%s' is not ready", r.Alias))
 	}
 }
 
@@ -132,6 +135,8 @@ func mainReady(cliCtx *cli.Context) error {
 		case <-timer.C:
 			healthResult, hErr := anonClient.Healthy(ctx, healthOpts)
 			printMsg(readyMessage{
+				Alias:           aliasedURL,
+				Status:          "success",
 				Healthy:         healthResult.Healthy,
 				MaintenanceMode: healthResult.MaintenanceMode,
 				WriteQuorum:     healthResult.WriteQuorum,

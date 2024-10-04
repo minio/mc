@@ -33,7 +33,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // rm specific flags.
@@ -319,7 +319,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 				_, ok := pErr.ToGoError().(ObjectMissing)
 				ignoreStatError = (st == http.StatusServiceUnavailable || ok || st == http.StatusNotFound) && (opts.isForce && opts.isForceDel)
 				if !ignoreStatError {
-					errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
+					errorIf(pErr.Trace(url), "Failed to remove `%s`.", url)
 					return exitStatus(globalErrorExitStatus)
 				}
 			}
@@ -329,8 +329,8 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 		}
 
 		// We should not proceed
-		if ignoreStatError && opts.olderThan != "" || opts.newerThan != "" {
-			errorIf(pErr.Trace(url), "Unable to stat `"+url+"`.")
+		if ignoreStatError && (opts.olderThan != "" || opts.newerThan != "") {
+			errorIf(pErr.Trace(url), "Unable to stat `%s`.", url)
 			return exitStatus(globalErrorExitStatus)
 		}
 
@@ -352,7 +352,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
+		errorIf(pErr.Trace(url), "Invalid argument `%s`.", url)
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
@@ -368,7 +368,7 @@ func removeSingle(url, versionID string, opts removeOpts) error {
 	resultCh := clnt.Remove(ctx, opts.isIncomplete, isRemoveBucket, opts.isBypass, opts.isForce && opts.isForceDel, contentCh)
 	for result := range resultCh {
 		if result.Err != nil {
-			errorIf(result.Err.Trace(url), "Failed to remove `"+url+"`.")
+			errorIf(result.Err.Trace(url), "Failed to remove `%s`.", url)
 			switch result.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
 				// Ignore Permission error.
@@ -431,7 +431,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Failed to remove `"+url+"` recursively.")
+		errorIf(pErr.Trace(url), "Failed to remove `%s` recursively.", url)
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 	contentCh := make(chan *ClientContent)
@@ -451,7 +451,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	var perObjectVersions []*ClientContent
 	for content := range clnt.List(ctx, listOpts) {
 		if content.Err != nil {
-			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
+			errorIf(content.Err.Trace(url), "Failed to remove `%s` recursively.", url)
 			switch content.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
 				// Ignore Permission error.
@@ -469,7 +469,7 @@ func listAndRemove(url string, opts removeOpts) error {
 		}
 
 		if !opts.isRecursive {
-			currentObjectURL := targetAlias + getKey(content)
+			currentObjectURL := getStandardizedURL(targetAlias + getKey(content))
 			standardizedURL := getStandardizedURL(currentObjectURL)
 			if !strings.HasPrefix(url, standardizedURL) {
 				break
@@ -512,7 +512,7 @@ func listAndRemove(url string, opts removeOpts) error {
 							path := path.Join(targetAlias, result.BucketName, result.ObjectName)
 							if result.Err != nil {
 								errorIf(result.Err.Trace(path),
-									"Failed to remove `"+path+"`.")
+									"Failed to remove `%s`.", path)
 								switch result.Err.ToGoError().(type) {
 								case PathInsufficientPermission:
 									// Ignore Permission error.
@@ -570,7 +570,7 @@ func listAndRemove(url string, opts removeOpts) error {
 					path := path.Join(targetAlias, result.BucketName, result.ObjectName)
 					if result.Err != nil {
 						errorIf(result.Err.Trace(path),
-							"Failed to remove `"+path+"`.")
+							"Failed to remove `%s`.", path)
 						switch e := result.Err.ToGoError().(type) {
 						case PathInsufficientPermission:
 							// Ignore Permission error.
@@ -633,7 +633,7 @@ func listAndRemove(url string, opts removeOpts) error {
 					path := path.Join(targetAlias, result.BucketName, result.ObjectName)
 					if result.Err != nil {
 						errorIf(result.Err.Trace(path),
-							"Failed to remove `"+path+"`.")
+							"Failed to remove `%s`.", path)
 						switch result.Err.ToGoError().(type) {
 						case PathInsufficientPermission:
 							// Ignore Permission error.
@@ -663,7 +663,7 @@ func listAndRemove(url string, opts removeOpts) error {
 	for result := range resultCh {
 		path := path.Join(targetAlias, result.BucketName, result.ObjectName)
 		if result.Err != nil {
-			errorIf(result.Err.Trace(path), "Failed to remove `"+path+"` recursively.")
+			errorIf(result.Err.Trace(path), "Failed to remove `%s` recursively.", path)
 			switch result.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
 				// Ignore Permission error.
@@ -688,7 +688,7 @@ func listAndRemove(url string, opts removeOpts) error {
 			// behavior and do not print an error as well.
 			return nil
 		}
-		errorIf(errDummy().Trace(url), "No object/version found to be removed in `"+url+"`.")
+		errorIf(errDummy().Trace(url), "No object/version found to be removed in `%s`.", url)
 		return exitStatus(globalErrorExitStatus)
 	}
 

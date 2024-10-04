@@ -388,6 +388,19 @@ var completeCmds = map[string]complete.Predictor{
 	"/idp/ldap/accesskey/remove":            aliasCompleter,
 	"/idp/ldap/accesskey/rm":                aliasCompleter,
 	"/idp/ldap/accesskey/info":              aliasCompleter,
+	"/idp/ldap/accesskey/edit":              aliasCompleter,
+	"/idp/ldap/accesskey/enable":            aliasCompleter,
+	"/idp/ldap/accesskey/disable":           aliasCompleter,
+
+	"/admin/accesskey/create":  aliasCompleter,
+	"/admin/accesskey/list":    aliasCompleter,
+	"/admin/accesskey/ls":      aliasCompleter,
+	"/admin/accesskey/remove":  aliasCompleter,
+	"/admin/accesskey/rm":      aliasCompleter,
+	"/admin/accesskey/info":    aliasCompleter,
+	"/admin/accesskey/edit":    aliasCompleter,
+	"/admin/accesskey/enable":  aliasCompleter,
+	"/admin/accesskey/disable": aliasCompleter,
 
 	"/admin/policy/info":     aliasCompleter,
 	"/admin/policy/update":   aliasCompleter,
@@ -511,6 +524,10 @@ var completeCmds = map[string]complete.Predictor{
 	"/quota/clear": aliasCompleter,
 	"/put":         complete.PredictOr(s3Completer, fsCompleter),
 	"/get":         complete.PredictOr(s3Completer, fsCompleter),
+
+	"/cors/set":    s3Complete{deepLevel: 2},
+	"/cors/get":    s3Complete{deepLevel: 2},
+	"/cors/remove": s3Complete{deepLevel: 2},
 }
 
 // flagsToCompleteFlags transforms a cli.Flag to complete.Flags

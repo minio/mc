@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/mimedb"
+	"github.com/minio/pkg/v3/mimedb"
 )
 
 // ClientURL url client url structure
@@ -50,6 +50,7 @@ type url2StatOptions struct {
 	encKeyDB                map[string][]prefixSSEPair
 	timeRef                 time.Time
 	isZip                   bool
+	headOnly                bool
 	ignoreBucketExistsCheck bool
 }
 
@@ -204,7 +205,14 @@ func url2Stat(ctx context.Context, opts url2StatOptions) (client Client, content
 	alias, _ := url2Alias(opts.urlStr)
 	sse := getSSE(opts.urlStr, opts.encKeyDB[alias])
 
-	content, err = client.Stat(ctx, StatOptions{preserve: opts.fileAttr, sse: sse, timeRef: opts.timeRef, versionID: opts.versionID, isZip: opts.isZip, ignoreBucketExists: opts.ignoreBucketExistsCheck})
+	content, err = client.Stat(ctx, StatOptions{
+		preserve:           opts.fileAttr,
+		sse:                sse,
+		timeRef:            opts.timeRef,
+		versionID:          opts.versionID,
+		isZip:              opts.isZip,
+		ignoreBucketExists: opts.ignoreBucketExistsCheck,
+	})
 	if err != nil {
 		return nil, nil, err.Trace(opts.urlStr)
 	}

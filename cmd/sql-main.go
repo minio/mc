@@ -34,7 +34,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/mimedb"
+	"github.com/minio/pkg/v3/mimedb"
 )
 
 var sqlFlags = []cli.Flag{
@@ -453,7 +453,7 @@ func mainSQL(cliCtx *cli.Context) error {
 	writeHdr := true
 	for _, url := range URLs {
 		if _, targetContent, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: "", fileAttr: false, encKeyDB: encKeyDB, timeRef: time.Time{}, isZip: false, ignoreBucketExistsCheck: false}); err != nil {
-			errorIf(err.Trace(url), "Unable to run sql for "+url+".")
+			errorIf(err.Trace(url), "Unable to run sql for %s.", url)
 			continue
 		} else if !targetContent.Type.IsDir() {
 			if writeHdr {
@@ -466,13 +466,13 @@ func mainSQL(cliCtx *cli.Context) error {
 		targetAlias, targetURL, _ := mustExpandAlias(url)
 		clnt, err := newClientFromAlias(targetAlias, targetURL)
 		if err != nil {
-			errorIf(err.Trace(url), "Unable to initialize target `"+url+"`.")
+			errorIf(err.Trace(url), "Unable to initialize target `%s`.", url)
 			continue
 		}
 
 		for content := range clnt.List(ctx, ListOptions{Recursive: cliCtx.Bool("recursive"), WithMetadata: true, ShowDir: DirNone}) {
 			if content.Err != nil {
-				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
+				errorIf(content.Err.Trace(url), "Unable to list on target `%s`.", url)
 				continue
 			}
 			if writeHdr {

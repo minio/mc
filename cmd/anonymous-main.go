@@ -29,7 +29,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var anonymousFlags = []cli.Flag{
@@ -406,7 +406,7 @@ func runAnonymousLinksCmd(args cli.Args, recursive bool) {
 
 			// Encode public URL
 			u, e := url.Parse(content.URL.String())
-			errorIf(probe.NewError(e), "Unable to parse url `"+content.URL.String()+"`.")
+			errorIf(probe.NewError(e), "Unable to parse url `%s`.", content.URL)
 			publicURL := u.String()
 
 			// Construct the message to be displayed to the user

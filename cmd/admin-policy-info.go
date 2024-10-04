@@ -24,7 +24,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var policyInfoFlags = []cli.Flag{
@@ -77,6 +77,7 @@ func getPolicyInfo(client *madmin.AdminClient, policyName string) (*madmin.Polic
 
 	if pinfo.PolicyName == "" {
 		// Likely server only supports the older version.
+		// nolint:staticcheck
 		pinfo.Policy, e = client.InfoCannedPolicy(globalContext, policyName)
 		if e != nil {
 			return nil, e

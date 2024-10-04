@@ -29,7 +29,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var lhInfoFlags = []cli.Flag{
@@ -129,7 +129,7 @@ func (l legalHoldInfoMessage) JSON() string {
 }
 
 // showLegalHoldInfo - show legalhold for one or many objects within a given prefix, with or without versioning
-func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool) error {
+func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef time.Time, withVersions, recursive bool) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -142,7 +142,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	}
 	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
-	if !recursive && !withOlderVersions {
+	if !recursive && !withVersions {
 		lhold, err := clnt.GetObjectLegalHold(ctx, versionID)
 		if err != nil {
 			fatalIf(err.Trace(urlStr), "Failed to show legal hold information of `"+urlStr+"`.")
@@ -167,7 +167,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 	objectsFound := false
 	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.WithOlderVersions = withVersions
 		lstOptions.TimeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {
@@ -177,7 +177,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(urlStr) {
+		if !recursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(urlStr) {
 			break
 		}
 
@@ -190,7 +190,7 @@ func showLegalHoldInfo(ctx context.Context, urlStr, versionID string, timeRef ti
 		lhold, probeErr := newClnt.GetObjectLegalHold(ctx, content.VersionID)
 		if probeErr != nil {
 			errorsFound = true
-			errorIf(probeErr.Trace(content.URL.Path), "Failed to get legal hold information on `"+content.URL.Path+"`")
+			errorIf(probeErr.Trace(content.URL.Path), "Failed to get legal hold information on `%s`", content.URL.Path)
 		} else {
 			if !globalJSON {
 

@@ -29,7 +29,17 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
+)
+
+// iam export specific flags.
+var (
+	iamExportFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "output,o",
+			Usage: "output iam export to a custom file path",
+		},
+	}
 )
 
 var adminClusterIAMExportCmd = cli.Command{
@@ -38,7 +48,7 @@ var adminClusterIAMExportCmd = cli.Command{
 	Action:          mainClusterIAMExport,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
+	Flags:           append(iamExportFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -52,6 +62,9 @@ FLAGS:
 EXAMPLES:
   1. Download all IAM metadata for cluster into zip file.
      {{.Prompt}} {{.HelpName}} myminio
+
+  2. Download all IAM metadata to a custom file.
+     {{.Prompt}} {{.HelpName}} myminio --output /tmp/myminio-iam.zip
 `,
 }
 
@@ -97,6 +110,9 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 	tmpFile.Close()
 
 	downloadPath := fmt.Sprintf("%s-iam-info.%s", aliasedURL, ext)
+	if ctx.String("output") != "" {
+		downloadPath = ctx.String("output")
+	}
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))

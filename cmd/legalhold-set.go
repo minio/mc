@@ -27,7 +27,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var lhSetFlags = []cli.Flag{
@@ -82,7 +82,7 @@ EXAMPLES:
 }
 
 // setLegalHold - Set legalhold for all objects within a given prefix.
-func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Time, withOlderVersions, recursive bool, lhold minio.LegalHoldStatus) error {
+func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Time, withVersions, recursive bool, lhold minio.LegalHoldStatus) error {
 	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Unable to parse the provided url.")
@@ -95,10 +95,10 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	}
 	prefixPath = strings.TrimPrefix(prefixPath, "./")
 
-	if !recursive && !withOlderVersions {
+	if !recursive && !withVersions {
 		err = clnt.PutObjectLegalHold(ctx, versionID, lhold)
 		if err != nil {
-			errorIf(err.Trace(urlStr), "Failed to set legal hold on `"+urlStr+"` successfully")
+			errorIf(err.Trace(urlStr), "Failed to set legal hold on `%s` successfully", urlStr)
 		} else {
 			contentURL := filepath.ToSlash(clnt.GetURL().Path)
 			key := strings.TrimPrefix(contentURL, prefixPath)
@@ -119,7 +119,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 	objectsFound := false
 	lstOptions := ListOptions{Recursive: recursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.WithOlderVersions = withVersions
 		lstOptions.TimeRef = timeRef
 	}
 	for content := range clnt.List(ctx, lstOptions) {
@@ -129,7 +129,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(urlStr) {
+		if !recursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(urlStr) {
 			break
 		}
 
@@ -143,7 +143,7 @@ func setLegalHold(ctx context.Context, urlStr, versionID string, timeRef time.Ti
 
 		probeErr := newClnt.PutObjectLegalHold(ctx, content.VersionID, lhold)
 		if probeErr != nil {
-			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `"+content.URL.Path+"` successfully")
+			errorIf(probeErr.Trace(content.URL.Path), "Failed to set legal hold on `%s` successfully", content.URL.Path)
 		} else {
 			if !globalJSON {
 				contentURL := filepath.ToSlash(content.URL.Path)

@@ -62,6 +62,7 @@ var pipeFlags = []cli.Flag{
 		Usage:  "increase the pipe buffer size to a custom value",
 		Hidden: true,
 	},
+	checksumFlag,
 }
 
 // Display contents of a file.
@@ -123,7 +124,7 @@ func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPai
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin, -1).Trace()
 	}
-
+	md5, checksum := parseChecksum(ctx)
 	storageClass := ctx.String("storage-class")
 	alias, _ := url2Alias(targetURL)
 	sseKey := getSSE(targetURL, encKeyDB[alias])
@@ -153,6 +154,8 @@ func pipe(ctx *cli.Context, targetURL string, encKeyDB map[string][]prefixSSEPai
 		multipartSize:    multipartSize,
 		multipartThreads: uint(multipartThreads),
 		concurrentStream: ctx.IsSet("concurrent"),
+		md5:              md5,
+		checksum:         checksum,
 	}
 
 	var reader io.Reader
@@ -191,7 +194,7 @@ func mainPipe(ctx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// globalQuiet is true for no window size to get. We just need --quiet here.
-	quiet := ctx.IsSet("quiet")
+	quiet := ctx.Bool("quiet")
 
 	meta := map[string]string{}
 	if attr := ctx.String("attr"); attr != "" {

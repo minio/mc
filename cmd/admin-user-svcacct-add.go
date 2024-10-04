@@ -32,8 +32,8 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
-	"github.com/minio/pkg/v2/policy"
+	"github.com/minio/pkg/v3/console"
+	"github.com/minio/pkg/v3/policy"
 )
 
 var adminUserSvcAcctAddFlags = []cli.Flag{
@@ -227,12 +227,12 @@ func (u acctMessage) String() string {
 
 // generateCredentials - creates randomly generated credentials of maximum
 // allowed length.
-func generateCredentials() (accessKey, secretKey string, err error) {
-	readBytes := func(size int) (data []byte, err error) {
+func generateCredentials() (accessKey, secretKey string, err *probe.Error) {
+	readBytes := func(size int) (data []byte, e error) {
 		data = make([]byte, size)
 		var n int
-		if n, err = rand.Read(data); err != nil {
-			return nil, err
+		if n, e = rand.Read(data); e != nil {
+			return nil, e
 		} else if n != size {
 			return nil, fmt.Errorf("Not enough data. Expected to read: %v bytes, got: %v bytes", size, n)
 		}
@@ -240,9 +240,9 @@ func generateCredentials() (accessKey, secretKey string, err error) {
 	}
 
 	// Generate access key.
-	keyBytes, err := readBytes(accessKeyMaxLen)
-	if err != nil {
-		return "", "", err
+	keyBytes, e := readBytes(accessKeyMaxLen)
+	if e != nil {
+		return "", "", probe.NewError(e)
 	}
 	for i := 0; i < accessKeyMaxLen; i++ {
 		keyBytes[i] = alphaNumericTable[keyBytes[i]%alphaNumericTableLen]
@@ -250,9 +250,9 @@ func generateCredentials() (accessKey, secretKey string, err error) {
 	accessKey = string(keyBytes)
 
 	// Generate secret key.
-	keyBytes, err = readBytes(secretKeyMaxLen)
-	if err != nil {
-		return "", "", err
+	keyBytes, e = readBytes(secretKeyMaxLen)
+	if e != nil {
+		return "", "", probe.NewError(e)
 	}
 
 	secretKey = strings.ReplaceAll(string([]byte(base64.StdEncoding.EncodeToString(keyBytes))[:secretKeyMaxLen]),
@@ -294,7 +294,7 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	if len(accessKey) <= 0 || len(secretKey) <= 0 {
 		randomAccessKey, randomSecretKey, err := generateCredentials()
 		if err != nil {
-			fatalIf(probe.NewError(err), "Unable to add a new service account")
+			fatalIf(err, "unable to generate randomized access credentials")
 		}
 		if len(accessKey) <= 0 {
 			accessKey = randomAccessKey
@@ -308,52 +308,46 @@ func mainAdminUserSvcAcctAdd(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var policyBytes []byte
-	if policyPath != "" {
-		// Validate the policy document and ensure it has at least when statement
-		var e error
-		policyBytes, e = os.ReadFile(policyPath)
-		fatalIf(probe.NewError(e), "Unable to open the policy document.")
-		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
-		fatalIf(probe.NewError(e), "Unable to parse the policy document.")
-		if p.IsEmpty() {
-			fatalIf(errInvalidArgument(), "Empty policy documents are not allowed.")
-		}
-	}
-
-	var expiryTime time.Time
-	var expiryPointer *time.Time
-
-	if expiry != "" {
-		location, e := time.LoadLocation("Local")
-		if e != nil {
-			fatalIf(probe.NewError(e), "Unable to parse the expiry argument.")
-		}
-
-		patternMatched := false
-		for _, format := range supportedTimeFormats {
-			t, e := time.ParseInLocation(format, expiry, location)
-			if e == nil {
-				patternMatched = true
-				expiryTime = t
-				expiryPointer = &expiryTime
-				break
-			}
-		}
-
-		if !patternMatched {
-			fatalIf(probe.NewError(fmt.Errorf("expiry argument is not matching any of the supported patterns")), "unable to parse the expiry argument.")
-		}
-	}
-
 	opts := madmin.AddServiceAccountReq{
-		Policy:      policyBytes,
 		AccessKey:   accessKey,
 		SecretKey:   secretKey,
 		Name:        name,
 		Description: description,
 		TargetUser:  user,
-		Expiration:  expiryPointer,
+	}
+
+	if policyPath != "" {
+		// Validate the policy document and ensure it has at least when statement
+		policyBytes, e := os.ReadFile(policyPath)
+		fatalIf(probe.NewError(e), "unable to read the policy document")
+
+		p, e := policy.ParseConfig(bytes.NewReader(policyBytes))
+		fatalIf(probe.NewError(e), "unable to parse the policy document")
+
+		if p.IsEmpty() {
+			fatalIf(errInvalidArgument(), "empty policies are not allowed")
+		}
+
+		opts.Policy = policyBytes
+	}
+
+	if expiry != "" {
+		location, e := time.LoadLocation("Local")
+		fatalIf(probe.NewError(e), "unable to load local location. verify your local TZ=<val> settings")
+
+		var found bool
+		for _, format := range supportedTimeFormats {
+			t, e := time.ParseInLocation(format, expiry, location)
+			if e == nil {
+				found = true
+				opts.Expiration = &t
+				break
+			}
+		}
+
+		if !found {
+			fatalIf(probe.NewError(fmt.Errorf("expiry argument is not matching any of the supported patterns")), "unable to parse the expiry argument")
+		}
 	}
 
 	creds, e := client.AddServiceAccount(globalContext, opts)

@@ -35,7 +35,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/pkg/v2/env"
+	"github.com/minio/pkg/v3/env"
 )
 
 // Check if the passed URL represents a folder. It may or may not exist yet.
@@ -353,7 +353,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 	}
 
 	// Optimize for server side copy if the host is same.
-	if sourceAlias == targetAlias && !uploadOpts.isZip {
+	if sourceAlias == targetAlias && !uploadOpts.isZip && !uploadOpts.urls.checksum.IsSet() {
 		// preserve new metadata and save existing ones.
 		if uploadOpts.preserve {
 			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
@@ -494,6 +494,8 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			isPreserve:       uploadOpts.preserve,
 			multipartSize:    multipartSize,
 			multipartThreads: uint(multipartThreads),
+			ifNotExists:      uploadOpts.ifNotExists,
+			checksum:         uploadOpts.urls.checksum,
 		}
 
 		if isReadAt(reader) || length == 0 {
@@ -576,4 +578,5 @@ type uploadSourceToTargetURLOpts struct {
 	multipartSize       string
 	multipartThreads    string
 	updateProgressTotal bool
+	ifNotExists         bool
 }

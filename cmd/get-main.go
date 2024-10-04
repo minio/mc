@@ -22,12 +22,17 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // get command flags.
 var (
-	getFlags = []cli.Flag{}
+	getFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "version-id, vid",
+			Usage: "get a specific version of an object",
+		},
+	}
 )
 
 // Get command.
@@ -50,10 +55,10 @@ FLAGS:
 
 EXAMPLES:
   1. Get an object from MinIO storage to local file system
-    {{.Prompt}} {{.HelpName}} play/mybucket/object path-to/object
+     {{.Prompt}} {{.HelpName}} play/mybucket/object path-to/object
 
   2. Get an object from MinIO storage using encryption
-    {{.Prompt}} {{.HelpName}} --enc-c "play/mybucket/object=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" play/mybucket/object path-to/object
+     {{.Prompt}} {{.HelpName}} --enc-c "play/mybucket/object=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" play/mybucket/object path-to/object
 `,
 }
 
@@ -94,6 +99,7 @@ func mainGet(cliCtx *cli.Context) (e error) {
 			targetURL:               targetURL,
 			encKeyDB:                encryptionKeys,
 			ignoreBucketExistsCheck: true,
+			versionID:               cliCtx.String("version-id"),
 		}
 
 		for getURLs := range prepareGetURLs(ctx, opts) {

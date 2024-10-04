@@ -30,7 +30,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var tagListFlags = []cli.Flag{
@@ -147,14 +147,14 @@ func (t tagListMessage) String() string {
 }
 
 // parseTagListSyntax performs command-line input validation for tag list command.
-func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withOlderVersions, recursive bool) {
+func parseTagListSyntax(ctx *cli.Context) (targetURL, versionID string, timeRef time.Time, withVersions, recursive bool) {
 	if len(ctx.Args()) != 1 {
 		showCommandHelpAndExit(ctx, globalErrorExitStatus)
 	}
 
 	targetURL = ctx.Args().Get(0)
 	versionID = ctx.String("version-id")
-	withOlderVersions = ctx.Bool("versions")
+	withVersions = ctx.Bool("versions")
 	rewind := ctx.String("rewind")
 	recursive = ctx.Bool("recursive")
 
@@ -235,7 +235,7 @@ func mainListTag(cliCtx *cli.Context) error {
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+		if !recursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(targetURL) {
 			break
 		}
 

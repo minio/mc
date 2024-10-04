@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -33,8 +33,15 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
+
+var adminInfoFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "offline",
+		Usage: "show only offline nodes/drives",
+	},
+}
 
 var adminInfoCmd = cli.Command{
 	Name:         "info",
@@ -42,7 +49,7 @@ var adminInfoCmd = cli.Command{
 	Action:       mainAdminInfo,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        globalFlags,
+	Flags:        append(globalFlags, adminInfoFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -59,11 +66,13 @@ EXAMPLES:
 }
 
 type poolSummary struct {
-	index          int
-	setsCount      int
-	drivesPerSet   int
-	driveTolerance int
-	endpoints      set.StringSet
+	index                  int
+	setsCount              int
+	drivesPerSet           int
+	driveTolerance         int
+	drivesTotalFreeSpace   uint64
+	drivesTotalUsableSpace uint64
+	endpoints              set.StringSet
 }
 
 type clusterInfo map[int]*poolSummary
@@ -73,6 +82,10 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 
 	for _, srv := range info.Servers {
 		for _, disk := range srv.Disks {
+			if disk.PoolIndex < 0 {
+				continue
+			}
+
 			pool := summary[disk.PoolIndex]
 			if pool == nil {
 				pool = &poolSummary{
@@ -81,25 +94,28 @@ func clusterSummaryInfo(info madmin.InfoMessage) clusterInfo {
 					driveTolerance: info.StandardParity(),
 				}
 			}
-			// Deprecated calculation based on disk location
-			if disk.SetIndex+1 > pool.setsCount {
-				pool.setsCount = disk.SetIndex + 1
+
+			if disk.DiskIndex < (info.Backend.DrivesPerSet[disk.PoolIndex] - info.Backend.StandardSCParity) {
+				pool.drivesTotalFreeSpace += disk.AvailableSpace
+				pool.drivesTotalUsableSpace += disk.TotalSpace
 			}
-			// Deprecated calculation based on disk location
-			if disk.DiskIndex+1 > pool.drivesPerSet {
-				pool.drivesPerSet = disk.DiskIndex + 1
-			}
+
 			pool.endpoints.Add(srv.Endpoint)
 			summary[disk.PoolIndex] = pool
 		}
 	}
 
-	if len(info.Backend.TotalSets) > 0 { // Check if this is a recent enough MinIO version
-		for _, pool := range summary {
-			pool.setsCount = info.Backend.TotalSets[pool.index]
-			pool.drivesPerSet = info.Backend.DrivesPerSet[pool.index]
+	// This was already added in 2022 enough time has passed to remove
+	// any other deprecated calculations
+	for idx := range info.Backend.TotalSets {
+		pool := summary[idx]
+		if pool != nil {
+			pool.setsCount = info.Backend.TotalSets[idx]
+			pool.drivesPerSet = info.Backend.DrivesPerSet[idx]
+			summary[idx] = pool
 		}
 	}
+
 	return summary
 }
 
@@ -118,32 +134,25 @@ type clusterStruct struct {
 	Status string             `json:"status"`
 	Error  string             `json:"error,omitempty"`
 	Info   madmin.InfoMessage `json:"info,omitempty"`
+
+	onlyOffline bool
 }
 
-// String provides colorized info messages depending on the type of a server
-//
-//	FS server                          non-FS server
-//
-// ==============================  ===================================
-// ● <ip>:<port>                   ● <ip>:<port>
-//
-//	Uptime: xxx                     Uptime: xxx
-//	Version: xxx                    Version: xxx
-//	Network: X/Y OK                 Network: X/Y OK
-//
-// U Used, B Buckets, O Objects    Drives: N/N OK
-//
-//	U Used, B Buckets, O Objects
-//	N drives online, K drives offline
+// String provides colorized info messages
 func (u clusterStruct) String() (msg string) {
 	// Check cluster level "Status" field for error
 	if u.Status == "error" {
-		fatal(probe.NewError(errors.New(u.Error)), "Unable to get service status")
+		fatal(probe.NewError(errors.New(u.Error)), "Unable to get service info")
 	}
 
 	// If nothing has been collected, error out
 	if u.Info.Servers == nil {
-		fatal(probe.NewError(errors.New("Unable to get service status")), "")
+		fatal(probe.NewError(errors.New("Unable to get service info")), "")
+	}
+
+	// Validate such that we expect the server to be atleast from 2022
+	if len(u.Info.Backend.TotalSets) == 0 || len(u.Info.Backend.DrivesPerSet) == 0 {
+		fatal(probe.NewError(errors.New("Unable to display service info, server is too old")), "")
 	}
 
 	// Initialization
@@ -202,6 +211,10 @@ func (u clusterStruct) String() (msg string) {
 			continue
 		}
 
+		if u.onlyOffline {
+			continue
+		}
+
 		// Print server title
 		msg += fmt.Sprintf("%s  %s\n", coloredDot, console.Colorize("PrintB", srv.Endpoint))
 
@@ -211,7 +224,7 @@ func (u clusterStruct) String() (msg string) {
 
 		// Version
 		version := srv.Version
-		if srv.Version == "DEVELOPMENT.GOGET" {
+		if strings.Contains(srv.Version, "DEVELOPMENT") {
 			version = "<development>"
 		}
 		msg += fmt.Sprintf("   Version: %s\n", version)
@@ -266,14 +279,54 @@ func (u clusterStruct) String() (msg string) {
 	}
 
 	if backendType == madmin.Erasure {
-		msg += "Pools:\n"
-		for pool, summary := range clusterSummary {
-			msg += fmt.Sprintf("   %s, Erasure sets: %d, Drives per erasure set: %d\n",
-				console.Colorize("Info", humanize.Ordinal(pool+1)), summary.setsCount, summary.drivesPerSet)
+		dspOrder := []col{colGreen} // Header
+		for i := 0; i < len(clusterSummary); i++ {
+			dspOrder = append(dspOrder, colGrey)
 		}
-	}
+		var printColors []*color.Color
+		for _, c := range dspOrder {
+			printColors = append(printColors, getPrintCol(c))
+		}
 
-	msg += "\n"
+		tbl := console.NewTable(printColors, []bool{false, false, false, false}, 0)
+
+		var builder strings.Builder
+		cellText := make([][]string, 0, len(clusterSummary)+1)
+		cellText = append(cellText, []string{
+			"Pool",
+			"Drives Usage",
+			"Erasure stripe size",
+			"Erasure sets",
+		})
+
+		// Keep the pool order while printing the output
+		for poolIdx := 0; poolIdx < len(clusterSummary); poolIdx++ {
+			summary := clusterSummary[poolIdx]
+			if summary == nil {
+				break
+			}
+			totalSize := summary.drivesTotalUsableSpace
+			usedCurrent := summary.drivesTotalUsableSpace - summary.drivesTotalFreeSpace
+			var capacity string
+			if totalSize == 0 {
+				capacity = "0% (total: 0B)"
+			} else {
+				capacity = fmt.Sprintf("%.1f%% (total: %s)", 100*float64(usedCurrent)/float64(totalSize), humanize.IBytes(totalSize))
+			}
+
+			cellText = append(cellText, []string{
+				humanize.Ordinal(poolIdx + 1),
+				capacity,
+				strconv.Itoa(summary.drivesPerSet),
+				strconv.Itoa(summary.setsCount),
+			})
+		}
+
+		e := tbl.PopulateTable(&builder, cellText)
+		fatalIf(probe.NewError(e), "unable to populate the table")
+
+		msg += builder.String() + "\n"
+	}
 
 	// Summary on used space, total no of buckets and
 	// total no of objects at the Cluster level
@@ -296,9 +349,10 @@ func (u clusterStruct) String() (msg string) {
 		}
 		// Summary on total no of online and total
 		// number of offline drives at the Cluster level
-		msg += fmt.Sprintf("%s online, %s offline\n",
+		msg += fmt.Sprintf("%s online, %s offline, EC:%d\n",
 			english.Plural(u.Info.Backend.OnlineDisks, "drive", ""),
-			english.Plural(u.Info.Backend.OfflineDisks, "drive", ""))
+			english.Plural(u.Info.Backend.OfflineDisks, "drive", ""),
+			u.Info.Backend.StandardSCParity)
 	}
 
 	// Remove the last new line if any
@@ -333,7 +387,10 @@ func mainAdminInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var clusterInfo clusterStruct
+	clusterInfo := clusterStruct{
+		onlyOffline: ctx.Bool("offline"),
+	}
+
 	// Fetch info of all servers (cluster or single server)
 	admInfo, e := client.ServerInfo(globalContext)
 	if e != nil {
@@ -343,6 +400,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 		clusterInfo.Status = "success"
 		clusterInfo.Error = ""
 	}
+
 	clusterInfo.Info = admInfo
 	printMsg(clusterInfo)
 

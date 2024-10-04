@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // Status implements a interface that can be used in quit mode or with progressbar.
@@ -134,11 +134,11 @@ func (qs *QuietStatus) Update() {
 }
 
 func (qs *QuietStatus) errorIf(err *probe.Error, msg string) {
-	errorIf(err, msg)
+	errorIf(err, "%s", msg)
 }
 
 func (qs *QuietStatus) fatalIf(err *probe.Error, msg string) {
-	fatalIf(err, msg)
+	fatalIf(err, "%s", msg)
 }
 
 // NewProgressStatus returns a progress status object
@@ -235,7 +235,7 @@ func (ps *ProgressStatus) Update() {
 func (ps *ProgressStatus) errorIf(err *probe.Error, msg string) {
 	// remove progressbar
 	console.Eraseline()
-	errorIf(err, msg)
+	errorIf(err, "%s", msg)
 
 	ps.progressBar.Update()
 }
@@ -243,7 +243,7 @@ func (ps *ProgressStatus) errorIf(err *probe.Error, msg string) {
 func (ps *ProgressStatus) fatalIf(err *probe.Error, msg string) {
 	// remove progressbar
 	console.Eraseline()
-	fatalIf(err, msg)
+	fatalIf(err, "%s", msg)
 
 	ps.progressBar.Update()
 }

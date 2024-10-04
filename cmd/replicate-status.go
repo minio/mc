@@ -33,7 +33,7 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/replication"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -116,7 +116,7 @@ func (s replicateStatusMessage) String() string {
 	for arn, st := range rs.Stats { // Remove stale ARNs from stats
 		staleARN := true
 		for _, r := range s.cfg.Rules {
-			if r.Destination.Bucket == arn {
+			if r.Destination.Bucket == arn || s.cfg.Role == arn {
 				staleARN = false
 				break
 			}
@@ -178,7 +178,7 @@ func (s replicateStatusMessage) String() string {
 		}
 		staleARN = true
 		for _, r := range s.cfg.Rules {
-			if r.Destination.Bucket == arn {
+			if r.Destination.Bucket == arn || s.cfg.Role == arn {
 				staleARN = false
 				break
 			}
@@ -244,12 +244,12 @@ func (s replicateStatusMessage) String() string {
 			limit := "N/A"   // N/A means cluster bandwidth is not configured
 			current := "N/A" // N/A means cluster bandwidth is not configured
 			if bwStat.CurrentBandwidthInBytesPerSecond > 0 {
-				current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond * 8))
-				current = fmt.Sprintf("%sb/s", current[:len(current)-1])
+				current = humanize.Bytes(uint64(bwStat.CurrentBandwidthInBytesPerSecond))
+				current = fmt.Sprintf("%s/s", current)
 			}
 			if bwStat.BandWidthLimitInBytesPerSecond > 0 {
-				limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond * 8))
-				limit = fmt.Sprintf("%sb/s", limit[:len(limit)-1])
+				limit = humanize.Bytes(uint64(bwStat.BandWidthLimitInBytesPerSecond))
+				limit = fmt.Sprintf("%s/s", limit)
 			}
 			addRowF(titleui("Configured Max Bandwidth (Bps): ")+"%s"+titleui("   Current Bandwidth (Bps): ")+"%s", valueui(limit), valueui(current))
 		}

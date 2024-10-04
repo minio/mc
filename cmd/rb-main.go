@@ -29,7 +29,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var rbFlags = []cli.Flag{
@@ -250,7 +250,7 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
-			errorIf(err.Trace(targetURL), "Invalid target `"+targetURL+"`.")
+			errorIf(err.Trace(targetURL), "Invalid target `%s`.", targetURL)
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
@@ -258,11 +258,17 @@ func mainRemoveBucket(cliCtx *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
-			default:
-				errorIf(err.Trace(targetURL), "Unable to validate target `"+targetURL+"`.")
+			case BucketDoesNotExist:
+				if isForce {
+					continue
+				}
+				errorIf(err.Trace(targetURL), "Unable to validate target `%s`.", targetURL)
 				cErr = exitStatus(globalErrorExitStatus)
 				continue
-
+			default:
+				errorIf(err.Trace(targetURL), "Unable to validate target `%s`.", targetURL)
+				cErr = exitStatus(globalErrorExitStatus)
+				continue
 			}
 		}
 

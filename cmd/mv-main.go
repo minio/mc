@@ -25,7 +25,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // mv command flags.
@@ -128,7 +128,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --r --enc-c "s3/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MBB" --enc-c "myminio/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" s3/documents/ myminio/documents/
 
   15. Move a folder using specific server managed encryption keys from Amazon S3 to MinIO cloud storage.
-      {{.Prompt}} {{.HelpName}} --r --enc-s3 "s3/documents/=my-s3-key" --enc-s3 "myminio/documents/=my-minio-key" s3/documents/ myminio/documents/
+      {{.Prompt}} {{.HelpName}} --r --enc-s3 "s3/documents" --enc-s3 "myminio/documents" s3/documents/ myminio/documents/
 `,
 }
 
@@ -150,7 +150,7 @@ func (rm *removeManager) readErrors(resultCh <-chan RemoveResult, targetURL stri
 		defer rm.wg.Done()
 		for result := range resultCh {
 			if result.Err != nil {
-				errorIf(result.Err.Trace(targetURL), "Failed to remove in`"+targetURL+"`.")
+				errorIf(result.Err.Trace(targetURL), "Failed to remove in `%s`.", targetURL)
 			}
 		}
 	}()
@@ -164,7 +164,7 @@ func (rm *removeManager) add(ctx context.Context, targetAlias, targetURL string)
 	if clientInfo == nil {
 		client, pErr := newClientFromAlias(targetAlias, targetURL)
 		if pErr != nil {
-			errorIf(pErr.Trace(targetURL), "Invalid argument `"+targetURL+"`.")
+			errorIf(pErr.Trace(targetURL), "Invalid argument `%s`.", targetURL)
 			return
 		}
 

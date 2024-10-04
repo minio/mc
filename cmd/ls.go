@@ -28,7 +28,7 @@ import (
 	"github.com/dustin/go-humanize"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // printDate - human friendly formatted date.
@@ -207,13 +207,13 @@ func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, print
 }
 
 type doListOptions struct {
-	timeRef           time.Time
-	isRecursive       bool
-	isIncomplete      bool
-	isSummary         bool
-	withOlderVersions bool
-	listZip           bool
-	filter            string
+	timeRef      time.Time
+	isRecursive  bool
+	isIncomplete bool
+	isSummary    bool
+	withVersions bool
+	listZip      bool
+	filter       string
 }
 
 // doList - list all entities inside a folder.
@@ -230,7 +230,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		Recursive:         o.isRecursive,
 		Incomplete:        o.isIncomplete,
 		TimeRef:           o.timeRef,
-		WithOlderVersions: o.withOlderVersions || !o.timeRef.IsZero(),
+		WithOlderVersions: o.withVersions || !o.timeRef.IsZero(),
 		WithDeleteMarkers: true,
 		ShowDir:           DirNone,
 		ListZip:           o.listZip,
@@ -247,7 +247,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions)
+			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -257,7 +257,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withOlderVersions)
+	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
 
 	if o.isSummary {
 		printMsg(summaryMessage{

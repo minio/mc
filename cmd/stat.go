@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -35,7 +35,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/minio/minio-go/v7/pkg/replication"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // contentMessage container for content message structure.
@@ -54,6 +54,7 @@ type statMessage struct {
 	VersionID         string             `json:"versionID,omitempty"`
 	DeleteMarker      bool               `json:"deleteMarker,omitempty"`
 	Restore           *minio.RestoreInfo `json:"restore,omitempty"`
+	Checksum          map[string]string  `json:"checksum,omitempty"`
 }
 
 func (stat statMessage) String() (msg string) {
@@ -61,7 +62,7 @@ func (stat statMessage) String() (msg string) {
 	// Format properly for alignment based on maxKey leng
 	stat.Key = fmt.Sprintf("%-10s: %s", "Name", stat.Key)
 	msgBuilder.WriteString(console.Colorize("Name", stat.Key) + "\n")
-	if !stat.Date.IsZero() {
+	if !stat.Date.IsZero() && !stat.Date.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)) + "\n")
 	}
 	if stat.Type != "folder" {
@@ -79,17 +80,23 @@ func (stat statMessage) String() (msg string) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "VersionID", versionIDField) + "\n")
 	}
 	msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Type", stat.Type) + "\n")
-	if stat.Expires != nil {
+	if stat.Expires != nil && !stat.Expires.IsZero() && !stat.Expires.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)) + "\n")
 	}
-	if stat.Expiration != nil {
+	if stat.Expiration != nil && !stat.Expiration.IsZero() && !stat.Expiration.Equal(timeSentinel) {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s: %s (lifecycle-rule-id: %s) ", "Expiration",
 			stat.Expiration.Local().Format(printDate), stat.ExpirationRuleID) + "\n")
 	}
+	if len(stat.Checksum) > 0 {
+		cs := strings.TrimSuffix(strings.TrimPrefix(fmt.Sprintf("%v", stat.Checksum), "map["), "]")
+		msgBuilder.WriteString(fmt.Sprintf("%-10s: %v", "Checksum", cs) + "\n")
+	}
 	if stat.Restore != nil {
 		msgBuilder.WriteString(fmt.Sprintf("%-10s:", "Restore") + "\n")
-		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
-			stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
+		if !stat.Restore.ExpiryTime.IsZero() && !stat.Restore.ExpiryTime.Equal(timeSentinel) {
+			msgBuilder.WriteString(fmt.Sprintf("  %-10s: %s", "ExpiryTime",
+				stat.Restore.ExpiryTime.Local().Format(printDate)) + "\n")
+		}
 		msgBuilder.WriteString(fmt.Sprintf("  %-10s: %t", "Ongoing",
 			stat.Restore.OngoingRestore) + "\n")
 	}
@@ -109,12 +116,30 @@ func (stat statMessage) String() (msg string) {
 	}
 
 	if maxKeyEncrypted > 0 {
-		if keyID, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"]; ok {
+		// Handle various AWS S3 headers, behaviors etc.
+		var found bool
+		if enabled, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Bucket-Key-Enabled"]; ok {
+			if enabled == "true" {
+				msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "KMS"))
+			}
+			// we still need to treat this as 'true' because X-Amz-Server-Side-Encryption-Bucket-Key-Enabled
+			// can be set to 'false' by the server to indicate there is no SSE enabled on the object
+			// we shouldn't be printing `unknown` in that scenario.
+			found = true
+		} else if keyID, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"]; ok {
 			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s (%s)\n", "Encryption", "KMS", keyID))
+			found = true
 		} else if _, ok := stat.Metadata["X-Amz-Server-Side-Encryption-Customer-Key-Md5"]; ok {
 			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "C"))
-		} else {
+			found = true
+		} else if algo, ok := stat.Metadata["X-Amz-Server-Side-Encryption"]; ok && algo == "AES256" {
 			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "S3"))
+			found = true
+		}
+		if !found {
+			// encryption headers are present but not something we recognize, check `mc stat --debug`
+			// to obtain more information and understand if we are missing something.
+			msgBuilder.WriteString(fmt.Sprintf("%-10s: SSE-%s\n", "Encryption", "Unknown"))
 		}
 	}
 
@@ -172,6 +197,7 @@ func parseStat(c *ClientContent) statMessage {
 	content.ExpirationRuleID = c.ExpirationRuleID
 	content.ReplicationStatus = c.ReplicationStatus
 	content.Restore = c.Restore
+	content.Checksum = c.Checksum
 	return content
 }
 
@@ -183,20 +209,43 @@ func getStandardizedURL(targetURL string) string {
 // statURL - uses combination of GET listing and HEAD to fetch information of one or more objects
 // HEAD can fail with 400 with an SSE-C encrypted object but we still return information gathered
 // from GET listing.
-func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time, includeOlderVersions, isIncomplete, isRecursive, headOnly bool, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	clnt, err := newClient(targetURL)
 	if err != nil {
 		return err
 	}
 
 	targetAlias, _, _ := mustExpandAlias(targetURL)
-	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
-
+	prefixPath := clnt.GetURL().Path
 	hasTrailingSlash := strings.HasSuffix(prefixPath, separator)
 
 	if !hasTrailingSlash {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
+	}
+
+	if headOnly || versionID != "" {
+		url := getStandardizedURL(targetURL)
+
+		_, stat, err := url2Stat(ctx, url2StatOptions{
+			urlStr: url, versionID: versionID,
+			fileAttr: true, encKeyDB: encKeyDB,
+			timeRef: timeRef, isZip: false,
+			ignoreBucketExistsCheck: false,
+			headOnly:                headOnly,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Convert any os specific delimiters to "/".
+		contentURL := filepath.ToSlash(stat.URL.Path)
+
+		// Trim prefix path from the content path.
+		stat.URL.Path = strings.TrimPrefix(contentURL, filepath.ToSlash(prefixPath))
+
+		printMsg(parseStat(stat))
+		return nil
 	}
 
 	// if stat is on a bucket and non-recursive mode, serve the bucket metadata
@@ -251,6 +300,7 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 	}
 
 	var e error
+	var found int
 	for content := range clnt.List(ctx, lstOptions) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -272,12 +322,13 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 			e = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
+		found++
 
 		if content.StorageClass == s3StorageClassGlacier {
 			continue
 		}
 
-		url := targetAlias + getKey(content)
+		url := getStandardizedURL(targetAlias + getKey(content))
 		standardizedURL := getStandardizedURL(targetURL)
 
 		if !isRecursive && !strings.HasPrefix(filepath.FromSlash(url), standardizedURL) && !filepath.IsAbs(url) {
@@ -289,9 +340,14 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 				continue
 			}
 		}
-		_, stat, err := url2Stat(ctx, url2StatOptions{urlStr: url, versionID: content.VersionID, fileAttr: true, encKeyDB: encKeyDB, timeRef: timeRef, isZip: false, ignoreBucketExistsCheck: false})
+		_, stat, err := url2Stat(ctx, url2StatOptions{
+			urlStr: url, versionID: content.VersionID,
+			fileAttr: true, encKeyDB: encKeyDB,
+			timeRef: timeRef, isZip: false,
+			ignoreBucketExistsCheck: false,
+		})
 		if err != nil {
-			continue
+			return err.Trace(url)
 		}
 
 		// Convert any os specific delimiters to "/".
@@ -302,6 +358,10 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		stat.URL.Path = contentURL
 
 		printMsg(parseStat(stat))
+	}
+
+	if found <= 0 {
+		return probe.NewError(ObjectMissing{timeRef})
 	}
 
 	return probe.NewError(e)
@@ -384,33 +444,6 @@ func (v bucketInfoMessage) JSON() string {
 	return buf.String()
 }
 
-type histogramDef struct {
-	start, end uint64
-	text       string
-}
-
-var histogramTagsDesc = map[string]histogramDef{
-	"LESS_THAN_1024_B":          {0, 1024, "less than 1024 bytes"},
-	"BETWEEN_1024_B_AND_1_MB":   {1024, 1024 * 1024, "between 1024 bytes and 1 MB"},
-	"BETWEEN_1_MB_AND_10_MB":    {1024 * 1024, 10 * 1024 * 1024, "between 1 MB and 10 MB"},
-	"BETWEEN_10_MB_AND_64_MB":   {10 * 1024 * 1024, 64 * 1024 * 1024, "between 10 MB and 64 MB"},
-	"BETWEEN_64_MB_AND_128_MB":  {64 * 1024 * 1024, 128 * 1024 * 1024, "between 64 MB and 128 MB"},
-	"BETWEEN_128_MB_AND_512_MB": {128 * 1024 * 1024, 512 * 1024 * 1024, "between 128 MB and 512 MB"},
-	"GREATER_THAN_512_MB":       {512 * 1024 * 1024, 0, "greater than 512 MB"},
-}
-
-// Return a sorted list of histograms
-func sortHistogramTags() (orderedTags []string) {
-	orderedTags = make([]string, 0, len(histogramTagsDesc))
-	for tag := range histogramTagsDesc {
-		orderedTags = append(orderedTags, tag)
-	}
-	sort.Slice(orderedTags, func(i, j int) bool {
-		return histogramTagsDesc[orderedTags[i]].start < histogramTagsDesc[orderedTags[j]].start
-	})
-	return
-}
-
 func countDigits(num uint64) (count uint) {
 	for num > 0 {
 		num /= 10
@@ -466,11 +499,15 @@ func (v bucketInfoMessage) String() string {
 			}
 		}
 
-		sortedTags := sortHistogramTags()
+		var sortedTags []string
+		for k := range v.Usage.ObjectSizesHistogram {
+			sortedTags = append(sortedTags, k)
+		}
+		sort.Strings(sortedTags)
 		for _, tagName := range sortedTags {
 			val, ok := v.Usage.ObjectSizesHistogram[tagName]
 			if ok {
-				fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, histogramTagsDesc[tagName].text)
+				fmt.Fprintf(&b, "   %*d object(s) %s\n", maxDigits, val, tagName)
 			}
 		}
 	}

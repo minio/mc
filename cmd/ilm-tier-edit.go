@@ -24,7 +24,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminTierEditFlags = []cli.Flag{
@@ -46,6 +46,21 @@ var adminTierEditFlags = []cli.Flag{
 		Name:  "account-key",
 		Value: "",
 		Usage: "Azure Blob Storage account key",
+	},
+	cli.StringFlag{
+		Name:  "az-sp-tenant-id",
+		Value: "",
+		Usage: "Directory ID for the Azure service principal account",
+	},
+	cli.StringFlag{
+		Name:  "az-sp-client-id",
+		Value: "",
+		Usage: "The client ID of the Azure service principal account",
+	},
+	cli.StringFlag{
+		Name:  "az-sp-client-secret",
+		Value: "",
+		Usage: "The client secret of the Azure service principal account",
 	},
 	cli.StringFlag{
 		Name:  "credentials-file",
@@ -114,9 +129,14 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 	var creds madmin.TierCreds
 	accessKey := ctx.String("access-key")
 	secretKey := ctx.String("secret-key")
-	accountKey := ctx.String("account-key")
 	credsPath := ctx.String("credentials-file")
 	useAwsRole := ctx.IsSet("use-aws-role")
+
+	// Azure, either account-key or one of the 3 service principal flags are required
+	accountKey := ctx.String("account-key")
+	azSPTenantID := ctx.String("az-sp-tenant-id")
+	azSPClientID := ctx.String("az-sp-client-id")
+	azSPClientSecret := ctx.String("az-sp-client-secret")
 
 	switch {
 	case accessKey != "" && secretKey != "" && !useAwsRole: // S3 tier
@@ -124,8 +144,14 @@ func mainAdminTierEdit(ctx *cli.Context) error {
 		creds.SecretKey = secretKey
 	case useAwsRole:
 		creds.AWSRole = true
-	case accountKey != "": // Azure tier
+	case accountKey != "": // Azure tier, account key given
 		creds.SecretKey = accountKey
+	case azSPTenantID != "" || azSPClientID != "" || azSPClientSecret != "": // Azure tier, SP creds given
+		creds.AzSP = madmin.ServicePrincipalAuth{
+			TenantID:     azSPTenantID,
+			ClientID:     azSPClientID,
+			ClientSecret: azSPClientSecret,
+		}
 	case credsPath != "": // GCS tier
 		credsBytes, e := os.ReadFile(credsPath)
 		fatalIf(probe.NewError(e), "Unable to read credentials file at %s", credsPath)

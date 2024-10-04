@@ -24,7 +24,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var mbFlags = []cli.Flag{
@@ -136,7 +136,7 @@ func mainMakeBucket(cliCtx *cli.Context) error {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
-			errorIf(err.Trace(targetURL), "Invalid target `"+targetURL+"`.")
+			errorIf(err.Trace(targetURL), "Invalid target `%s`.", targetURL)
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
@@ -150,7 +150,7 @@ func mainMakeBucket(cliCtx *cli.Context) error {
 			case BucketNameEmpty:
 				errorIf(err.Trace(targetURL), "Unable to make bucket, please use `mc mb %s`.", urlJoinPath(targetURL, "your-bucket-name"))
 			default:
-				errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
+				errorIf(err.Trace(targetURL), "Unable to make bucket `%s`.", targetURL)
 			}
 			cErr = exitStatus(globalErrorExitStatus)
 			continue

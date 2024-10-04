@@ -26,7 +26,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var tagSetFlags = []cli.Flag{
@@ -210,7 +210,7 @@ func mainSetTag(cliCtx *cli.Context) error {
 			continue
 		}
 
-		if !recursive && alias+getKey(content) != getStandardizedURL(targetURL) {
+		if !recursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(targetURL) {
 			break
 		}
 

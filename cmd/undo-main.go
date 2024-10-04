@@ -28,7 +28,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 const (
@@ -227,7 +227,7 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 		}
 
 		if !recursive {
-			if alias+getKey(content) != getStandardizedURL(aliasedURL) {
+			if getStandardizedURL(alias+getKey(content)) != getStandardizedURL(aliasedURL) {
 				break
 			}
 		}

@@ -19,11 +19,8 @@ package cmd
 
 import (
 	"errors"
-	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -40,6 +37,14 @@ var idpLdapAccesskeyListFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "svcacc-only",
 		Usage: "only list service account access keys",
+	},
+	cli.BoolFlag{
+		Name:  "self",
+		Usage: "list access keys for the authenticated user",
+	},
+	cli.BoolFlag{
+		Name:  "all",
+		Usage: "list all access keys for all LDAP users",
 	},
 }
 
@@ -61,10 +66,10 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get list of all users and associated access keys in local server (if admin)
+  1. Get list of all LDAP users and associated access keys in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/
 
-  2. Get list of users in local server (if admin)
+  2. Get list of LDAP users in local server (if admin)
  	 {{.Prompt}} {{.HelpName}} local/ --users-only
 
   3. Get list of all users and associated temporary access keys in play server (if admin)
@@ -84,117 +89,79 @@ EXAMPLES:
 `,
 }
 
-type ldapUsersList struct {
-	Status          string                      `json:"status"`
-	DN              string                      `json:"dn"`
-	STSKeys         []madmin.ServiceAccountInfo `json:"stsKeys"`
-	ServiceAccounts []madmin.ServiceAccountInfo `json:"svcaccs"`
-}
-
-func (m ldapUsersList) String() string {
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	o := strings.Builder{}
-
-	o.WriteString(iFmt(0, "%s\n", labelStyle.Render("DN "+m.DN)))
-	if len(m.STSKeys) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("STS Access Keys:")))
-		for _, k := range m.STSKeys {
-			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
-		}
-	}
-	if len(m.ServiceAccounts) > 0 {
-		o.WriteString(iFmt(2, "%s\n", labelStyle.Render("Service Account Access Keys:")))
-		for _, k := range m.ServiceAccounts {
-			o.WriteString(iFmt(4, "%s\n", k.AccessKey))
-		}
-	}
-	o.WriteString("\n")
-
-	return o.String()
-}
-
-func (m ldapUsersList) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
-}
-
 func mainIDPLdapAccesskeyList(ctx *cli.Context) error {
-	if len(ctx.Args()) == 0 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
-
-	usersOnly := ctx.Bool("users-only")
-	tempOnly := ctx.Bool("sts-only")
-	permanentOnly := ctx.Bool("svcacc-only")
-	listType := ""
-
-	if (usersOnly && permanentOnly) || (usersOnly && tempOnly) || (permanentOnly && tempOnly) {
-		e := errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
-		fatalIf(probe.NewError(e), "Invalid flags.")
-	}
-	if tempOnly {
-		listType = "sts-only"
-	} else if permanentOnly {
-		listType = "svcacc-only"
-	}
-
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	userArg := args.Tail()
+	aliasedURL, tentativeAll, users, opts := commonAccesskeyList(ctx)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var e error
-	var users map[string]madmin.UserInfo
-
-	// If no users given, attempt to list all users
-	if len(userArg) == 0 {
-		users, e = client.ListUsers(globalContext)
-	} else {
-		users = make(map[string]madmin.UserInfo)
-		for _, user := range userArg {
-			users[user] = madmin.UserInfo{}
-		}
-	}
+	accessKeysMap, e := client.ListAccessKeysLDAPBulkWithOpts(globalContext, users, opts)
 	if e != nil {
-		if e.Error() == "Access Denied." {
-			// If user does not have ListUsers permission, only get current user's access keys
-			users = make(map[string]madmin.UserInfo)
-			users[""] = madmin.UserInfo{}
-		} else {
-			fatalIf(probe.NewError(e), "Unable to retrieve users.")
+		if e.Error() == "Access Denied." && tentativeAll {
+			// retry with self
+			opts.All = false
+			accessKeysMap, e = client.ListAccessKeysLDAPBulkWithOpts(globalContext, users, opts)
 		}
+		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
 
-	for dn := range users {
-		// if dn is blank, it means we are listing the current user's access keys
-		if dn == "" {
-			name, e := client.AccountInfo(globalContext, madmin.AccountOpts{})
-			fatalIf(probe.NewError(e), "Unable to retrieve account name.")
-			dn = name.AccountName
-		}
-
-		m := ldapUsersList{
-			Status: "success",
-			DN:     dn,
-		}
-
-		// Get access keys if not listing users only
-		if !usersOnly {
-			accessKeys, e := client.ListAccessKeysLDAP(globalContext, dn, listType)
-			if e != nil {
-				errorIf(probe.NewError(e), "Unable to retrieve access keys for user '"+dn+"'.")
-				continue
-			}
-
-			m.STSKeys = accessKeys.STSKeys
-			m.ServiceAccounts = accessKeys.ServiceAccounts
+	for dn, accessKeys := range accessKeysMap {
+		m := userAccesskeyList{
+			Status:          "success",
+			User:            dn,
+			ServiceAccounts: accessKeys.ServiceAccounts,
+			STSKeys:         accessKeys.STSKeys,
+			LDAP:            true,
 		}
 		printMsg(m)
 	}
 	return nil
+}
+
+func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool, users []string, opts madmin.ListAccessKeysOpts) {
+	if len(ctx.Args()) == 0 {
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
+	}
+
+	usersOnly := ctx.Bool("users-only")
+	stsOnly := ctx.Bool("temp-only")
+	svcaccOnly := ctx.Bool("svcacc-only")
+	selfFlag := ctx.Bool("self")
+	opts.All = ctx.Bool("all")
+
+	args := ctx.Args()
+	aliasedURL = args.Get(0)
+	users = args.Tail()
+
+	var e error
+	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
+		e = errors.New("only one of --users-only, --temp-only, or --permanent-only can be specified")
+	} else if selfFlag && opts.All {
+		e = errors.New("only one of --self or --all can be specified")
+	} else if (selfFlag || opts.All) && len(users) > 0 {
+		e = errors.New("user DNs cannot be specified with --self or --all")
+	}
+	fatalIf(probe.NewError(e), "Invalid flags.")
+
+	// If no users/self/all flags are specified, tentatively assume --all
+	// If access is denied on tentativeAll, retry with self
+	// This is to maintain compatibility with the previous behavior
+	if !selfFlag && !opts.All && len(users) == 0 {
+		tentativeAll = true
+		opts.All = true
+	}
+
+	switch {
+	case usersOnly:
+		opts.ListType = madmin.AccessKeyListUsersOnly
+	case stsOnly:
+		opts.ListType = madmin.AccessKeyListSTSOnly
+	case svcaccOnly:
+		opts.ListType = madmin.AccessKeyListSvcaccOnly
+	default:
+		opts.ListType = madmin.AccessKeyListAll
+	}
+
+	return aliasedURL, tentativeAll, users, opts
 }

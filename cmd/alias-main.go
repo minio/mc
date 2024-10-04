@@ -21,7 +21,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 //   Configure an alias in MinIO Client
@@ -73,6 +73,7 @@ type aliasMessage struct {
 	SecretKey   string `json:"secretKey,omitempty"`
 	API         string `json:"api,omitempty"`
 	Path        string `json:"path,omitempty"`
+	Src         string `json:"src,omitempty"`
 	// Deprecated field, replaced by Path
 	Lookup string `json:"lookup,omitempty"`
 }
@@ -91,13 +92,14 @@ func (h aliasMessage) String() string {
 			Row{"SecretKey", "SecretKey"},
 			Row{"API", "API"},
 			Row{"Path", "Path"},
+			Row{"Src", "Src"},
 		)
 		// Handle deprecated lookup
 		path := h.Path
 		if path == "" {
 			path = h.Lookup
 		}
-		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, path)
+		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, path, h.Src)
 	case "remove":
 		return console.Colorize("AliasMessage", "Removed `"+h.Alias+"` successfully.")
 	case "add": // add is deprecated

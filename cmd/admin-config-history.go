@@ -26,7 +26,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var historyListFlags = []cli.Flag{
@@ -127,7 +127,7 @@ func mainAdminConfigHistory(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	if ctx.IsSet("clear") {
+	if ctx.Bool("clear") {
 		fatalIf(probe.NewError(client.ClearConfigHistoryKV(globalContext, "all")), "Unable to clear server configuration.")
 
 		// Print

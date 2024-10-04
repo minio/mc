@@ -25,7 +25,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminConfigEnvFlags = []cli.Flag{
@@ -116,13 +116,13 @@ func mainAdminConfigReset(ctx *cli.Context) error {
 
 	if len(ctx.Args()) == 1 {
 		// Call get config API
-		hr, e := client.HelpConfigKV(globalContext, "", "", ctx.IsSet("env"))
+		hr, e := client.HelpConfigKV(globalContext, "", "", ctx.Bool("env"))
 		fatalIf(probe.NewError(e), "Unable to get help for the sub-system")
 
 		// Print
 		printMsg(configHelpMessage{
 			Value:   hr,
-			envOnly: ctx.IsSet("env"),
+			envOnly: ctx.Bool("env"),
 		})
 
 		return nil

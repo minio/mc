@@ -25,7 +25,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminReplicateRemoveFlags = []cli.Flag{
@@ -95,15 +95,15 @@ func (i srRemoveStatus) String() string {
 func checkAdminReplicateRemoveSyntax(ctx *cli.Context) {
 	// Check argument count
 	argsNr := len(ctx.Args())
-	if ctx.IsSet("all") && argsNr > 1 {
+	if ctx.Bool("all") && argsNr > 1 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"")
 	}
-	if argsNr < 2 && !ctx.IsSet("all") {
+	if argsNr < 2 && !ctx.Bool("all") {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Need at least two arguments to remove command.")
 	}
-	if !ctx.IsSet("force") {
+	if !ctx.Bool("force") {
 		fatalIf(errDummy().Trace(),
 			"Site removal requires --force flag. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}

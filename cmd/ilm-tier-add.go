@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -27,7 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminTierAddFlags = []cli.Flag{
@@ -169,10 +170,8 @@ func checkAdminTierAddSyntax(ctx *cli.Context) {
 	}
 }
 
-const (
-	s3Standard          = "STANDARD"
-	s3ReducedRedundancy = "REDUCED_REDUNDANCY"
-)
+// The list of AWS S3 storage classes that can be used with MinIO ILM tiering
+var supportedAWSTierSC = []string{"STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA"}
 
 // fetchTierConfig returns a TierConfig given a tierName, a tierType and ctx to
 // lookup command-line flags from. It exits with non-zero error code if any of
@@ -256,7 +255,7 @@ func fetchTierConfig(ctx *cli.Context, tierName string, tierType madmin.TierType
 
 		s3SC := ctx.String("storage-class")
 		if s3SC != "" {
-			if s3SC != s3Standard && s3SC != s3ReducedRedundancy {
+			if !slices.Contains(supportedAWSTierSC, s3SC) {
 				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("unsupported storage-class type %s", s3SC))
 			}
 			s3Opts = append(s3Opts, madmin.S3StorageClass(s3SC))

@@ -21,7 +21,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var quotaInfoCmd = cli.Command{
@@ -71,10 +71,14 @@ func mainQuotaInfo(ctx *cli.Context) error {
 	_, targetURL := url2Alias(args[0])
 	qCfg, e := client.GetBucketQuota(globalContext, targetURL)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get bucket quota")
+	sz := qCfg.Quota
+	if qCfg.Size > 0 {
+		sz = qCfg.Size
+	}
 	printMsg(quotaMessage{
 		op:        ctx.Command.Name,
 		Bucket:    targetURL,
-		Quota:     qCfg.Quota,
+		Quota:     sz,
 		QuotaType: string(qCfg.Type),
 		Status:    "success",
 	})

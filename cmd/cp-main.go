@@ -29,7 +29,8 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/pkg/v3/console"
 )
 
 // cp command flags.
@@ -72,8 +73,9 @@ var (
 			Usage: "disable multipart upload feature",
 		},
 		cli.BoolFlag{
-			Name:  "md5",
-			Usage: "force all upload(s) to calculate md5sum checksum",
+			Name:   "md5",
+			Usage:  "force all upload(s) to calculate md5sum checksum",
+			Hidden: true,
 		},
 		cli.StringFlag{
 			Name:  "tags",
@@ -95,6 +97,7 @@ var (
 			Name:  "zip",
 			Usage: "Extract from remote zip file (MinIO server source only)",
 		},
+		checksumFlag,
 	}
 )
 
@@ -155,7 +158,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
   09. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage using s3 encryption.
-      {{.Prompt}} {{.HelpName}} --recursive --enc-s3 "s3/documents/=my-aws-key" --enc-s3 "myminio/documents/=my-minio-key" s3/documents/ myminio/documents/
+      {{.Prompt}} {{.HelpName}} --recursive --enc-s3 "s3/documents" --enc-s3 "myminio/documents" s3/documents/ myminio/documents/
 
   10. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
       {{.Prompt}} {{.HelpName}} --recursive --enc-c "s3/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" --enc-c "myminio/documents/=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5BBB" s3/documents/ myminio/documents/
@@ -264,6 +267,7 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 		multipartSize:       copyOpts.multipartSize,
 		multipartThreads:    copyOpts.multipartThreads,
 		updateProgressTotal: copyOpts.updateProgressTotal,
+		ifNotExists:         copyOpts.ifNotExists,
 	})
 	if copyOpts.isMvCmd && urls.Error == nil {
 		rmManager.add(ctx, sourceAlias, sourceURL.String())
@@ -314,7 +318,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	} else {
 		pg = newAccounter(totalBytes)
 	}
-
 	sourceURLs := cli.Args()[:len(cli.Args())-1]
 	targetURL := cli.Args()[len(cli.Args())-1] // Last one is target
 
@@ -326,6 +329,11 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 	newerThan := cli.String("newer-than")
 	rewind := cli.String("rewind")
 	versionID := cli.String("version-id")
+	md5, checksum := parseChecksum(cli)
+	if withLock {
+		// The Content-MD5 header is required for any request to upload an object with a retention period configured using Amazon S3 Object Lock.
+		md5, checksum = true, minio.ChecksumNone
+	}
 
 	go func() {
 		totalBytes := int64(0)
@@ -419,7 +427,8 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 					}
 				}
 
-				cpURLs.MD5 = cli.Bool("md5") || withLock
+				cpURLs.MD5 = md5
+				cpURLs.checksum = checksum
 				cpURLs.DisableMultipart = cli.Bool("disable-multipart")
 
 				// Verify if previously copied, notify progress bar.
@@ -476,7 +485,7 @@ loop:
 					console.Eraseline()
 				}
 				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
-					fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
+					"Failed to copy `%s`.", cpURLs.SourceContent.URL)
 				if isErrIgnored(cpURLs.Error) {
 					cpAllFilesErr = false
 					continue loop
@@ -557,4 +566,5 @@ type doCopyOpts struct {
 	updateProgressTotal      bool
 	multipartSize            string
 	multipartThreads         string
+	ifNotExists              bool
 }

@@ -20,10 +20,13 @@ package cmd
 import (
 	"fmt"
 	"sort"
+	"strings"
+
+	"github.com/minio/cli"
+	"github.com/minio/pkg/v3/console"
+	"github.com/minio/pkg/v3/env"
 
 	"github.com/fatih/color"
-	"github.com/minio/cli"
-	"github.com/minio/pkg/v2/console"
 )
 
 var aliasListCmd = cli.Command{
@@ -75,6 +78,7 @@ func mainAliasList(ctx *cli.Context, deprecated bool) error {
 	console.SetColor("SecretKey", color.New(color.FgCyan))
 	console.SetColor("API", color.New(color.FgBlue))
 	console.SetColor("Path", color.New(color.FgCyan))
+	console.SetColor("Src", color.New(color.FgCyan))
 
 	alias := cleanAlias(ctx.Args().Get(0))
 
@@ -115,51 +119,59 @@ func (d byAlias) Len() int           { return len(d) }
 func (d byAlias) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
 func (d byAlias) Less(i, j int) bool { return d[i].Alias < d[j].Alias }
 
+func buildAliasMessage(alias string, deprecated bool, aliasCfg *aliasConfigV10) aliasMessage {
+	aliasMsg := aliasMessage{
+		prettyPrint: false,
+		Alias:       alias,
+		URL:         aliasCfg.URL,
+		AccessKey:   aliasCfg.AccessKey,
+		SecretKey:   aliasCfg.SecretKey,
+		API:         aliasCfg.API,
+		Src:         aliasCfg.Src,
+	}
+
+	if deprecated {
+		aliasMsg.Lookup = aliasCfg.Path
+	} else {
+		aliasMsg.Path = aliasCfg.Path
+	}
+	return aliasMsg
+}
+
 // listAliases - list one or all aliases
 func listAliases(alias string, deprecated bool) (aliases []aliasMessage) {
-	conf, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
-
 	// If specific alias is requested, look for it and print.
 	if alias != "" {
-		if v, ok := conf.Aliases[alias]; ok {
-			aliasMsg := aliasMessage{
-				prettyPrint: false,
-				Alias:       alias,
-				URL:         v.URL,
-				AccessKey:   v.AccessKey,
-				SecretKey:   v.SecretKey,
-				API:         v.API,
-			}
-
-			if deprecated {
-				aliasMsg.Lookup = v.Path
-			} else {
-				aliasMsg.Path = v.Path
-			}
-
-			return []aliasMessage{aliasMsg}
+		aliasCfg := mustGetHostConfig(alias)
+		if aliasCfg != nil {
+			return []aliasMessage{buildAliasMessage(alias, deprecated, aliasCfg)}
 		}
+
 		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
 	}
 
+	// list alias from the environment variable.
+	for _, envK := range env.List(mcEnvHostPrefix) {
+		aliasCfg, _ := expandAliasFromEnv(env.Get(envK, ""))
+		if aliasCfg == nil {
+			continue
+		}
+		alias := strings.ReplaceAll(envK, mcEnvHostPrefix, "")
+		aliases = append(aliases, buildAliasMessage(alias, deprecated, aliasCfg))
+	}
+
+	// list alias from the customized configuration.
+	for s, aliasCfg := range aliasToConfigMap {
+		aliases = append(aliases, buildAliasMessage(s, deprecated, aliasCfg))
+	}
+
+	// list alias from the default configuration.
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
+
 	for k, v := range conf.Aliases {
-		aliasMsg := aliasMessage{
-			prettyPrint: true,
-			Alias:       k,
-			URL:         v.URL,
-			AccessKey:   v.AccessKey,
-			SecretKey:   v.SecretKey,
-			API:         v.API,
-		}
-
-		if deprecated {
-			aliasMsg.Lookup = v.Path
-		} else {
-			aliasMsg.Path = v.Path
-		}
-
-		aliases = append(aliases, aliasMsg)
+		v.Src = mustGetMcConfigPath()
+		aliases = append(aliases, buildAliasMessage(k, deprecated, &v))
 	}
 
 	// Sort by alias names lexically.

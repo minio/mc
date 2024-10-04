@@ -37,10 +37,10 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/pkg/v2/console"
-	"github.com/minio/pkg/v2/env"
-	"github.com/minio/pkg/v2/trie"
-	"github.com/minio/pkg/v2/words"
+	"github.com/minio/pkg/v3/console"
+	"github.com/minio/pkg/v3/env"
+	"github.com/minio/pkg/v3/trie"
+	"github.com/minio/pkg/v3/words"
 	"golang.org/x/term"
 
 	completeinstall "github.com/posener/complete/cmd/install"
@@ -117,7 +117,7 @@ func Main(args []string) error {
 
 	// Fetch terminal size, if not available, automatically
 	// set globalQuiet to true on non-window.
-	if w, h, e := term.GetSize(int(os.Stdin.Fd())); e != nil {
+	if w, h, e := term.GetSize(int(os.Stdout.Fd())); e != nil {
 		globalQuiet = runtime.GOOS != "windows"
 	} else {
 		globalTermWidth, globalTermHeight = w, h
@@ -421,6 +421,7 @@ var appCmds = []cli.Command{
 	cpCmd,
 	catCmd,
 	configCmd,
+	corsCmd,
 	diffCmd,
 	duCmd,
 	encryptCmd,
@@ -507,6 +508,17 @@ func registerApp(name string) *cli.App {
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
+	app.After = func(*cli.Context) error {
+		globalExpiringCerts.Range(func(k, v interface{}) bool {
+			host := k.(string)
+			expires := v.(time.Time)
+			fmt.Fprintf(os.Stderr, "\n")
+			fmt.Fprintf(os.Stderr, "== WARN: `%s` certificate will expire in %s. Renew soon to avoid outage.\n", host, expires)
+			fmt.Fprintf(os.Stderr, "\n")
+			return true
+		})
+		return nil
+	}
 
 	if isTerminal() && !globalPagerDisabled {
 		app.HelpWriter = globalHelpPager

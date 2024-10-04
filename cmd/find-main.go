@@ -27,7 +27,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // List of all flags supported by find command.
@@ -207,21 +207,21 @@ func checkFindSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 // ease of repurposing.
 type findContext struct {
 	*cli.Context
-	execCmd           string
-	ignorePattern     string
-	namePattern       string
-	pathPattern       string
-	regexPattern      *regexp.Regexp
-	maxDepth          uint
-	printFmt          string
-	olderThan         string
-	newerThan         string
-	largerSize        uint64
-	smallerSize       uint64
-	watch             bool
-	withOlderVersions bool
-	matchMeta         map[string]*regexp.Regexp
-	matchTags         map[string]*regexp.Regexp
+	execCmd       string
+	ignorePattern string
+	namePattern   string
+	pathPattern   string
+	regexPattern  *regexp.Regexp
+	maxDepth      uint
+	printFmt      string
+	olderThan     string
+	newerThan     string
+	largerSize    uint64
+	smallerSize   uint64
+	watch         bool
+	withVersions  bool
+	matchMeta     map[string]*regexp.Regexp
+	matchTags     map[string]*regexp.Regexp
 
 	// Internal values
 	targetAlias   string
@@ -295,25 +295,25 @@ func mainFind(cliCtx *cli.Context) error {
 	}
 
 	return doFind(ctx, &findContext{
-		Context:           cliCtx,
-		maxDepth:          cliCtx.Uint("maxdepth"),
-		execCmd:           cliCtx.String("exec"),
-		printFmt:          cliCtx.String("print"),
-		namePattern:       cliCtx.String("name"),
-		pathPattern:       cliCtx.String("path"),
-		regexPattern:      regMatch,
-		ignorePattern:     cliCtx.String("ignore"),
-		withOlderVersions: withVersions,
-		olderThan:         olderThan,
-		newerThan:         newerThan,
-		largerSize:        largerSize,
-		smallerSize:       smallerSize,
-		watch:             cliCtx.Bool("watch"),
-		targetAlias:       targetAlias,
-		targetURL:         args[0],
-		targetFullURL:     targetFullURL,
-		clnt:              clnt,
-		matchMeta:         getRegexMap(cliCtx, "metadata"),
-		matchTags:         getRegexMap(cliCtx, "tags"),
+		Context:       cliCtx,
+		maxDepth:      cliCtx.Uint("maxdepth"),
+		execCmd:       cliCtx.String("exec"),
+		printFmt:      cliCtx.String("print"),
+		namePattern:   cliCtx.String("name"),
+		pathPattern:   cliCtx.String("path"),
+		regexPattern:  regMatch,
+		ignorePattern: cliCtx.String("ignore"),
+		withVersions:  withVersions,
+		olderThan:     olderThan,
+		newerThan:     newerThan,
+		largerSize:    largerSize,
+		smallerSize:   smallerSize,
+		watch:         cliCtx.Bool("watch"),
+		targetAlias:   targetAlias,
+		targetURL:     args[0],
+		targetFullURL: targetFullURL,
+		clnt:          clnt,
+		matchMeta:     getRegexMap(cliCtx, "metadata"),
+		matchTags:     getRegexMap(cliCtx, "tags"),
 	})
 }

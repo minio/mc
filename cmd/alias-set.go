@@ -24,7 +24,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -34,7 +33,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 	"golang.org/x/term"
 )
 
@@ -363,30 +362,33 @@ func mainAliasSet(cli *cli.Context, deprecated bool) error {
 // TLS root CAs of s3Config. Once configured, any client
 // initialized with this config trusts the given peer certificate.
 func configurePeerCertificate(s3Config *Config, peerCert *x509.Certificate) {
+	tr, ok := s3Config.Transport.(*http.Transport)
+	if !ok {
+		return
+	}
 	switch {
-	case s3Config.Transport == nil:
+	case tr == nil:
 		if globalRootCAs != nil {
 			globalRootCAs.AddCert(peerCert)
 		}
-		s3Config.Transport = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   10 * time.Second,
-				KeepAlive: 15 * time.Second,
-			}).DialContext,
+		tr = &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           newCustomDialContext(&Config{}),
+			DialTLSContext:        newCustomDialTLSContext(&tls.Config{RootCAs: globalRootCAs}),
 			MaxIdleConnsPerHost:   256,
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 10 * time.Second,
 			DisableCompression:    true,
-			TLSClientConfig:       &tls.Config{RootCAs: globalRootCAs},
 		}
-	case s3Config.Transport.TLSClientConfig == nil || s3Config.Transport.TLSClientConfig.RootCAs == nil:
+	case tr.TLSClientConfig == nil || tr.TLSClientConfig.RootCAs == nil:
 		if globalRootCAs != nil {
 			globalRootCAs.AddCert(peerCert)
 		}
-		s3Config.Transport.TLSClientConfig = &tls.Config{RootCAs: globalRootCAs}
+		tr.DialTLSContext = newCustomDialTLSContext(&tls.Config{RootCAs: globalRootCAs})
 	default:
-		s3Config.Transport.TLSClientConfig.RootCAs.AddCert(peerCert)
+		tr.TLSClientConfig.RootCAs.AddCert(peerCert)
+		tr.DialTLSContext = newCustomDialTLSContext(tr.TLSClientConfig)
 	}
+	s3Config.Transport = tr
 }

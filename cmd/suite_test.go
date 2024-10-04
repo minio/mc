@@ -1,6 +1,22 @@
+// Copyright (c) 2015-2024 MinIO, Inc.
+//
+// This file is part of MinIO Object Storage stack
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package cmd
 
-/**/
 import (
 	"bytes"
 	"crypto/md5"
@@ -68,7 +84,11 @@ func Test_FullSuite(t *testing.T) {
 	// MC_TEST_ENABLE_HTTPS=true
 	// needs to be set in order to run these tests
 	if protocol == "https://" {
+		PutObjectWithSSECHexKey(t)
+		GetObjectWithSSEC(t)
+
 		PutObjectWithSSEC(t)
+		PutObjectWithSSECPartialPrefixMatch(t)
 		PutObjectWithSSECMultipart(t)
 		PutObjectWithSSECInvalidKeys(t)
 		GetObjectWithSSEC(t)
@@ -87,6 +107,7 @@ func Test_FullSuite(t *testing.T) {
 	if sseKMSKeyName != "" {
 		VerifyKMSKey(t)
 		PutObjectWithSSEKMS(t)
+		PutObjectWithSSEKMSPartialPrefixMatch(t)
 		PutObjectWithSSEKMSMultipart(t)
 		PutObjectWithSSEKMSInvalidKeys(t)
 		GetObjectWithSSEKMS(t)
@@ -103,6 +124,7 @@ func Test_FullSuite(t *testing.T) {
 	// needs to be set to in order to run these tests.
 	if sseS3Enabled {
 		PutObjectWithSSES3(t)
+		PutObjectWithSSES3PartialPrefixMatch(t)
 		PutObjectWithSSES3Multipart(t)
 		GetObjectWithSSES3(t)
 		CatObjectWithSSES3(t)
@@ -188,7 +210,8 @@ var (
 	bucketList     = make([]string, 0)
 	userList       = make(map[string]TestUser, 0)
 
-	// KMS
+	// ENCRYPTION
+	sseHexKey                = "8fe4d820587c427d5cc207d75cb76f3c6874808174b04050fa209206bfd08ebb"
 	sseBaseEncodedKey        = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA"
 	invalidSSEBaseEncodedKey = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5"
 	sseBaseEncodedKey2       = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5YWE"
@@ -858,6 +881,23 @@ func VerifyKMSKey(t *testing.T) {
 	}
 }
 
+func PutObjectWithSSEKMSPartialPrefixMatch(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encput-kms-prefix-test",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-kms",
+		sseTestBucket+"/"+file.fileNameWithoutPath+"="+sseKMSKeyName,
+		file.diskFile.Name(),
+		sseTestBucket,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
 func PutObjectWithSSEKMS(t *testing.T) {
 	file := createFile(newTestFile{
 		addToGlobalFileMap: false,
@@ -1102,6 +1142,22 @@ func MirrorTempDirectoryUsingSSES3(t *testing.T) {
 	}
 }
 
+func PutObjectWithSSES3PartialPrefixMatch(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encput-s3-prefix-test",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-s3="+sseTestBucket+"/"+file.fileNameWithoutPath,
+		file.diskFile.Name(),
+		sseTestBucket,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
 func PutObjectWithSSES3(t *testing.T) {
 	file := createFile(newTestFile{
 		addToGlobalFileMap: false,
@@ -1224,6 +1280,38 @@ func CatObjectWithSSEKMS(t *testing.T) {
 	)
 }
 
+func PutObjectWithSSECPartialPrefixMatch(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encput-prefix-test",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"/"+file.fileNameWithoutPath+"="+sseBaseEncodedKey,
+		file.diskFile.Name(),
+		sseTestBucket,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
+func PutObjectWithSSECHexKey(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encputhex",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"="+sseHexKey,
+		file.diskFile.Name(),
+		sseTestBucket+"/"+file.fileNameWithoutPath,
+	)
+	fatalIfErrorWMsg(err, out, t)
+}
+
 func PutObjectWithSSEC(t *testing.T) {
 	file := createFile(newTestFile{
 		addToGlobalFileMap: false,
@@ -1270,6 +1358,36 @@ func PutObjectWithSSECInvalidKeys(t *testing.T) {
 		sseTestBucket+"/"+file.fileNameWithoutPath,
 	)
 	fatalIfNoErrorWMsg(err, out, t)
+}
+
+func GetObjectWithSSECHexKey(t *testing.T) {
+	file := createFile(newTestFile{
+		addToGlobalFileMap: false,
+		tag:                "encgethex",
+		sizeInMBS:          1,
+	})
+
+	out, err := RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"="+sseHexKey,
+		file.diskFile.Name(),
+		sseTestBucket+"/"+file.fileNameWithoutPath,
+	)
+	fatalIfErrorWMsg(err, out, t)
+
+	out, err = RunMC(
+		"cp",
+		"--enc-c="+sseTestBucket+"="+sseHexKey,
+		sseTestBucket+"/"+file.fileNameWithoutPath,
+		file.diskFile.Name()+".download",
+	)
+	fatalIfErrorWMsg(err, out, t)
+
+	md5s, err := openFileAndGetMd5Sum(file.diskFile.Name() + ".download")
+	fatalIfError(err, t)
+	if md5s != file.md5Sum {
+		fatalMsgOnly(fmt.Sprintf("expecting md5sum (%s) but got sum (%s)", file.md5Sum, md5s), t)
+	}
 }
 
 func GetObjectWithSSEC(t *testing.T) {
@@ -2387,7 +2505,7 @@ func validateObjectMetaData(t *testing.T, file *testFile) {
 		found := false
 
 		for ii, vv := range file.MinioStat.Metadata {
-			if metaPrefix+strings.Title(i) == ii {
+			if metaPrefix+http.CanonicalHeaderKey(i) == ii {
 				found = true
 				if v != vv {
 					fmt.Println("------------------------")

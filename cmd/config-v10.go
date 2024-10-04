@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/quick"
+	"github.com/minio/pkg/v3/quick"
 )
 
 const (
@@ -46,6 +46,7 @@ type aliasConfigV10 struct {
 	Path         string `json:"path"`
 	License      string `json:"license,omitempty"`
 	APIKey       string `json:"apiKey,omitempty"`
+	Src          string `json:"src,omitempty"`
 }
 
 // configV10 config version.

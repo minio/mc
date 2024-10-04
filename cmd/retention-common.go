@@ -26,7 +26,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 // Structured message depending on the type of console.
@@ -178,7 +178,7 @@ func fatalIfBucketLockNotSupported(ctx context.Context, aliasedURL string) {
 }
 
 // Apply Retention for one object/version or many objects within a given prefix.
-func applyRetention(ctx context.Context, op lockOpType, target, versionID string, timeRef time.Time, withOlderVersions, isRecursive bool,
+func applyRetention(ctx context.Context, op lockOpType, target, versionID string, timeRef time.Time, withVersions, isRecursive bool,
 	mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, bypassGovernance bool,
 ) error {
 	clnt, err := newClient(target)
@@ -207,7 +207,7 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 	}
 
 	alias, urlStr, _ := mustExpandAlias(target)
-	if versionID != "" || !isRecursive && !withOlderVersions {
+	if versionID != "" || !isRecursive && !withVersions {
 		err := setRetentionSingle(ctx, op, alias, urlStr, versionID, mode, until, bypassGovernance)
 		fatalIf(err.Trace(), "Unable to set retention on `%s`", target)
 		return nil
@@ -215,7 +215,7 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 
 	lstOptions := ListOptions{Recursive: isRecursive, ShowDir: DirNone}
 	if !timeRef.IsZero() {
-		lstOptions.WithOlderVersions = withOlderVersions
+		lstOptions.WithOlderVersions = withVersions
 		lstOptions.WithDeleteMarkers = true
 		lstOptions.TimeRef = timeRef
 	}
@@ -235,7 +235,7 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 			continue
 		}
 
-		if !isRecursive && alias+getKey(content) != getStandardizedURL(target) {
+		if !isRecursive && getStandardizedURL(alias+getKey(content)) != getStandardizedURL(target) {
 			break
 		}
 
@@ -249,7 +249,7 @@ func applyRetention(ctx context.Context, op lockOpType, target, versionID string
 	}
 
 	if !atLeastOneRetentionApplied {
-		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to "+string(op)+" its retention.")
+		errorIf(errDummy().Trace(clnt.GetURL().String()), "Unable to find any object/version to %s its retention.", op)
 		cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 	}
 

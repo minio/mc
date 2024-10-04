@@ -32,7 +32,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminClusterBucketImportCmd = cli.Command{
@@ -148,7 +148,8 @@ func (i importMetaMsg) String() string {
 		if st.ObjectLock.Err != "" || st.Versioning.Err != "" ||
 			st.SSEConfig.Err != "" || st.Tagging.Err != "" ||
 			st.Lifecycle.Err != "" || st.Quota.Err != "" ||
-			st.Policy.Err != "" || st.Notification.Err != "" {
+			st.Policy.Err != "" || st.Notification.Err != "" ||
+			st.Cors.Err != "" || st.Err != "" {
 			totErrs++
 		}
 	}
@@ -168,7 +169,8 @@ func (i importMetaMsg) String() string {
 			if st.ObjectLock.Err != "" || st.Versioning.Err != "" ||
 				st.SSEConfig.Err != "" || st.Tagging.Err != "" ||
 				st.Lifecycle.Err != "" || st.Quota.Err != "" ||
-				st.Policy.Err != "" || st.Notification.Err != "" {
+				st.Policy.Err != "" || st.Notification.Err != "" ||
+				st.Cors.Err != "" || st.Err != "" {
 				fmt.Fprintln(&b, printImportErrs(bucket, st))
 			}
 		}
@@ -194,6 +196,10 @@ func printImportErrs(bucket string, r madmin.BucketStatus) string {
 	key := fmt.Sprintf("%-10s: %s", "Name", bucket)
 	fmt.Fprintln(&b, console.Colorize("Name", key))
 
+	if r.Err != "" {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, console.Colorize("errors", "Error: "), r.Err)
+		fmt.Fprintln(&b)
+	}
 	if r.ObjectLock.IsSet {
 		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Object lock: ", statusTick(r.ObjectLock))
 		fmt.Fprintln(&b)
@@ -225,6 +231,10 @@ func printImportErrs(bucket string, r madmin.BucketStatus) string {
 	}
 	if r.Tagging.IsSet {
 		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "Tagging: ", statusTick(r.Tagging))
+		fmt.Fprintln(&b)
+	}
+	if r.Cors.IsSet {
+		fmt.Fprintf(&b, "%2s%s %s", placeHolder, "CORS: ", statusTick(r.Cors))
 		fmt.Fprintln(&b)
 	}
 	return b.String()

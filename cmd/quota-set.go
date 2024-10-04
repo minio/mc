@@ -26,7 +26,7 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v2/console"
+	"github.com/minio/pkg/v3/console"
 )
 
 var quotaSetFlags = []cli.Flag{
@@ -50,11 +50,16 @@ USAGE:
   {{.HelpName}} TARGET [--size QUOTA]
 
 QUOTA
-  quota accepts human-readable case-insensitive number
-  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  Quota accepts human-readable case-insensitive number.
+  Suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
   also accepted. Without suffixes the unit is bytes.
+
+  The MinIO object scanner checks a bucket's quota each time it is scanned.
+  If the scanner determines a bucket has met or exceeded its quota, MinIO
+  rejects subsequent object write requests until the scanner determines the
+  bucket no longer exceeds its quota.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
