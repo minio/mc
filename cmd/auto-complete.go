@@ -392,6 +392,16 @@ var completeCmds = map[string]complete.Predictor{
 	"/idp/ldap/accesskey/enable":            aliasCompleter,
 	"/idp/ldap/accesskey/disable":           aliasCompleter,
 
+	"/admin/accesskey/create":  aliasCompleter,
+	"/admin/accesskey/list":    aliasCompleter,
+	"/admin/accesskey/ls":      aliasCompleter,
+	"/admin/accesskey/remove":  aliasCompleter,
+	"/admin/accesskey/rm":      aliasCompleter,
+	"/admin/accesskey/info":    aliasCompleter,
+	"/admin/accesskey/edit":    aliasCompleter,
+	"/admin/accesskey/enable":  aliasCompleter,
+	"/admin/accesskey/disable": aliasCompleter,
+
 	"/admin/policy/info":     aliasCompleter,
 	"/admin/policy/update":   aliasCompleter,
 	"/admin/policy/add":      aliasCompleter,

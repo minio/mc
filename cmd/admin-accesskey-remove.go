@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,14 +19,13 @@ package cmd
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/probe"
 )
 
-var idpLdapAccesskeyRemoveCmd = cli.Command{
+var adminAccesskeyRemoveCmd = cli.Command{
 	Name:         "remove",
 	ShortName:    "rm",
-	Usage:        "delete access key pairs for LDAP",
-	Action:       mainIDPLdapAccesskeyRemove,
+	Usage:        "delete access key pairs for builtin users",
+	Action:       mainAdminAccesskeyRemove,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
 	OnUsageError: onUsageError,
@@ -45,34 +44,6 @@ EXAMPLES:
 	`,
 }
 
-func mainIDPLdapAccesskeyRemove(ctx *cli.Context) error {
+func mainAdminAccesskeyRemove(ctx *cli.Context) error {
 	return commonAccesskeyRemove(ctx)
-}
-
-// No difference between ldap and builtin accesskey remove for now
-func commonAccesskeyRemove(ctx *cli.Context) error {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, 1) // last argument is exit code
-	}
-
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	accessKey := args.Get(1)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	e := client.DeleteServiceAccount(globalContext, accessKey)
-	fatalIf(probe.NewError(e), "Unable to remove service account.")
-
-	m := ldapAccesskeyMessage{
-		op:        "remove",
-		Status:    "success",
-		AccessKey: accessKey,
-	}
-
-	printMsg(m)
-
-	return nil
 }
