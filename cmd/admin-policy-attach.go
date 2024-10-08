@@ -24,7 +24,7 @@ import (
 )
 
 const (
-    errCodeChangeAlreadyApplied = "XMinioAdminPolicyChangeAlreadyApplied"
+	errCodeChangeAlreadyApplied = "XMinioAdminPolicyChangeAlreadyApplied"
 )
 
 var adminAttachPolicyFlags = []cli.Flag{
@@ -73,14 +73,13 @@ func mainAdminPolicyAttach(ctx *cli.Context) error {
 }
 
 func isCodeChangeAlreadyAppliedError(e error) bool {
-    switch v := e.(type) {
-    case madmin.ErrorResponse:
-        if v.Code == errCodeChangeAlreadyApplied {
-            return true
-        }
-    }
-
-    return false
+	switch v := e.(type) {
+	case madmin.ErrorResponse:
+		if v.Code == errCodeChangeAlreadyApplied {
+			return true
+		}
+	}
+	return false
 }
 
 func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
@@ -113,9 +112,9 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 		res, e = client.DetachPolicy(globalContext, req)
 	}
 
-    if e != nil && !isCodeChangeAlreadyAppliedError(e) {
-            fatalIf(probe.NewError(e), "Unable to make user/group policy association")
-    }
+	if e != nil && !isCodeChangeAlreadyAppliedError(e) {
+		fatalIf(probe.NewError(e), "Unable to make user/group policy association")
+	}
 
 	var emptyResp madmin.PolicyAssociationResp
 	if res.UpdatedAt == emptyResp.UpdatedAt {
