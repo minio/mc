@@ -72,16 +72,6 @@ func mainAdminPolicyAttach(ctx *cli.Context) error {
 	return userAttachOrDetachPolicy(ctx, true)
 }
 
-func isCodeChangeAlreadyAppliedError(e error) bool {
-	switch v := e.(type) {
-	case madmin.ErrorResponse:
-		if v.Code == errCodeChangeAlreadyApplied {
-			return true
-		}
-	}
-	return false
-}
-
 func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	if len(ctx.Args()) < 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
@@ -112,7 +102,7 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 		res, e = client.DetachPolicy(globalContext, req)
 	}
 
-	if e != nil && !isCodeChangeAlreadyAppliedError(e) {
+	if e != nil && madmin.ToErrorResponse(e).Code != errCodeChangeAlreadyApplied {
 		fatalIf(probe.NewError(e), "Unable to make user/group policy association")
 	}
 
