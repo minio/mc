@@ -34,7 +34,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-var supportTopRpcFlags = []cli.Flag{
+var supportTopRPCFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "nodes",
 		Usage: "collect only metrics from matching servers, comma separate multiple",
@@ -51,14 +51,14 @@ var supportTopRpcFlags = []cli.Flag{
 	},
 }
 
-var supportTopRpcCmd = cli.Command{
+var supportTopRPCCmd = cli.Command{
 	Name:            "rpc",
 	HiddenAliases:   true,
-	Usage:           "show real-time net metrics",
-	Action:          mainSupportTopRpc,
+	Usage:           "show real-time rpc metrics (grid only)",
+	Action:          mainSupportTopRPC,
 	OnUsageError:    onUsageError,
 	Before:          setGlobalsFromContext,
-	Flags:           append(supportTopRpcFlags, supportGlobalFlags...),
+	Flags:           append(supportTopRPCFlags, supportGlobalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -76,14 +76,14 @@ EXAMPLES:
 }
 
 // checkSupportTopNetSyntax - validate all the passed arguments
-func checkSupportTopRpcSyntax(ctx *cli.Context) {
+func checkSupportTopRPCSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 }
 
-func mainSupportTopRpc(ctx *cli.Context) error {
-	checkSupportTopRpcSyntax(ctx)
+func mainSupportTopRPC(ctx *cli.Context) error {
+	checkSupportTopRPCSyntax(ctx)
 
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
@@ -116,7 +116,7 @@ func mainSupportTopRpc(ctx *cli.Context) error {
 		}
 		return nil
 	}
-	p := tea.NewProgram(initTopRpcUI())
+	p := tea.NewProgram(initTopRPCUI())
 	go func() {
 		out := func(m madmin.RealtimeMetrics) {
 			p.Send(m)
@@ -137,18 +137,18 @@ func mainSupportTopRpc(ctx *cli.Context) error {
 	return nil
 }
 
-type topRpcUI struct {
+type topRPCUI struct {
 	spinner  spinner.Model
 	offset   int
 	quitting bool
 	curr     madmin.RealtimeMetrics
 }
 
-func (m *topRpcUI) Init() tea.Cmd {
+func (m *topRPCUI) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-func (m *topRpcUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *topRPCUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -178,12 +178,12 @@ func (m *topRpcUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *topRpcUI) View() string {
+func (m *topRPCUI) View() string {
 	var s strings.Builder
 	// Set table header
 	table := tablewriter.NewWriter(&s)
 	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
+	table.SetAutoFormatHeaders(false)
 	table.SetHeaderAlignment(tablewriter.ALIGN_CENTER)
 	table.SetAlignment(tablewriter.ALIGN_CENTER)
 	table.SetCenterSeparator("")
@@ -193,13 +193,14 @@ func (m *topRpcUI) View() string {
 	table.SetBorder(false)
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
-	table.SetHeader([]string{"SERVER", "CONCTD", "PING", "OUT Q", "RECONNS", "STR.IN", "STR.OUT", "MSG.IN", "MSG.OUT"})
+	table.SetHeader([]string{"SERVER", "CONCTD", "PING", "PONG", "OUT.Q", "RECONNS", "STR.IN", "STR.OUT", "MSG.IN", "MSG.OUT"})
 
-	if m.curr.Aggregated.RPC == nil {
+	rpc := m.curr.Aggregated.RPC
+	if rpc == nil || len(rpc.ByDestination) == 0 {
 		table.Render()
+		s.WriteString("\n(no rpc connections)\n")
 		return s.String()
 	}
-	rpc := m.curr.Aggregated.RPC
 	hosts := make([]string, 0, len(rpc.ByDestination))
 	intoHost := make(map[string]madmin.RPCMetrics, len(rpc.ByDestination))
 	fromHost := make(map[string]madmin.RPCMetrics, len(rpc.ByDestination))
@@ -241,10 +242,11 @@ func (m *topRpcUI) View() string {
 				fmt.Sprintf(" To  %s", host),
 				fmt.Sprintf("%d", v.Connected),
 				fmt.Sprintf("%0.1fms", v.LastPingMS),
+				fmt.Sprintf("%ds ago", time.Since(v.LastPongTime)/time.Second),
 				fmt.Sprintf("%d", v.OutQueue),
 				fmt.Sprintf("%d", v.ReconnectCount),
-				fmt.Sprintf("-> %d", v.IncomingStreams),
-				fmt.Sprintf("%d ->", v.OutgoingStreams),
+				fmt.Sprintf("->%d", v.IncomingStreams),
+				fmt.Sprintf("%d->", v.OutgoingStreams),
 				fmt.Sprintf("%d", v.IncomingMessages),
 				fmt.Sprintf("%d", v.OutgoingMessages),
 			})
@@ -254,10 +256,11 @@ func (m *topRpcUI) View() string {
 				fmt.Sprintf("From %s", host),
 				fmt.Sprintf("%d", v.Connected),
 				fmt.Sprintf("%0.1fms", v.LastPingMS),
+				fmt.Sprintf("%ds ago", time.Since(v.LastPongTime)/time.Second),
 				fmt.Sprintf("%d", v.OutQueue),
 				fmt.Sprintf("%d", v.ReconnectCount),
-				fmt.Sprintf("-> %d", v.IncomingStreams),
-				fmt.Sprintf("%d ->", v.OutgoingStreams),
+				fmt.Sprintf("->%d", v.IncomingStreams),
+				fmt.Sprintf("%d->", v.OutgoingStreams),
 				fmt.Sprintf("%d", v.IncomingMessages),
 				fmt.Sprintf("%d", v.OutgoingMessages),
 			})
@@ -272,11 +275,11 @@ func (m *topRpcUI) View() string {
 	return s.String()
 }
 
-func initTopRpcUI() *topRpcUI {
+func initTopRPCUI() *topRPCUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	return &topRpcUI{
+	return &topRPCUI{
 		spinner: s,
 	}
 }
