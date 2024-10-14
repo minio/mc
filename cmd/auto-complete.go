@@ -502,6 +502,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/support/top/drive":    aliasCompleter,
 	"/support/top/disk":     aliasCompleter,
 	"/support/top/net":      aliasCompleter,
+	"/support/top/rpc":      aliasCompleter,
 	"/support/upload":       aliasCompleter,
 
 	"/license/register": aliasCompleter,

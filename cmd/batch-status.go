@@ -256,7 +256,7 @@ func (m *batchJobMetricsUI) View() string {
 			addLine("IOPs: ", fmt.Sprintf("%.2f objs/s", objectsPerSec))
 		}
 		addLine("Transferred: ", humanize.IBytes(uint64(m.metric.Replicate.BytesTransferred)))
-		addLine("Elapsed: ", accElapsedTime.String())
+		addLine("Elapsed: ", accElapsedTime.Round(time.Second).String())
 		addLine("CurrObjName: ", m.metric.Replicate.Object)
 	case string(madmin.BatchJobExpire):
 		addLine("JobType: ", m.metric.JobType)
