@@ -219,7 +219,7 @@ func (m *topRpcUI) View() string {
 	}
 	sort.Strings(hosts)
 	allhosts := hosts
-	maxHosts := (globalTermHeight - 4) / 2 // 2 lines of output per host
+	maxHosts := max(3, (globalTermHeight-4)/2) // 2 lines of output per host, or at least 3 hosts.
 
 	truncate := len(hosts) > maxHosts && !m.quitting
 	if truncate {
