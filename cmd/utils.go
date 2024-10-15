@@ -366,3 +366,21 @@ func getPrometheusToken(hostConfig *aliasConfigV10) (string, error) {
 	}
 	return token, nil
 }
+
+// conservativeFileName returns a conservative file name
+func conservativeFileName(s string) string {
+	return strings.Trim(strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return r
+		case r >= 'A' && r <= 'Z':
+			return r
+		case r >= '0' && r <= '9':
+			return r
+		case strings.ContainsAny(string(r), "+-_%()[]!@"):
+			return r
+		default:
+			return '_'
+		}
+	}, s), "_")
+}
