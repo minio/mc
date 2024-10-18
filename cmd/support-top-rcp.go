@@ -18,9 +18,12 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +32,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/olekukonko/tablewriter"
@@ -48,6 +52,10 @@ var supportTopRPCFlags = []cli.Flag{
 		Name:  "n",
 		Usage: "number of requests to run before exiting. 0 for endless (default)",
 		Value: 0,
+	},
+	cli.StringFlag{
+		Name:  "in",
+		Usage: "read previously saved json from file and replay",
 	},
 }
 
@@ -77,6 +85,9 @@ EXAMPLES:
 
 // checkSupportTopNetSyntax - validate all the passed arguments
 func checkSupportTopRPCSyntax(ctx *cli.Context) {
+	if ctx.String("in") != "" {
+		return
+	}
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
@@ -84,6 +95,45 @@ func checkSupportTopRPCSyntax(ctx *cli.Context) {
 
 func mainSupportTopRPC(ctx *cli.Context) error {
 	checkSupportTopRPCSyntax(ctx)
+
+	ui := tea.NewProgram(initTopRPCUI())
+	ctxt, cancel := context.WithCancel(globalContext)
+	defer cancel()
+
+	// Replay from file.
+	if inFile := ctx.String("in"); inFile != "" {
+		go func() {
+			if _, e := ui.Run(); e != nil {
+				cancel()
+				fatalIf(probe.NewError(e), "Unable to fetch scanner metrics")
+			}
+		}()
+		f, e := os.Open(inFile)
+		fatalIf(probe.NewError(e), "Unable to open input")
+		sc := bufio.NewReader(f)
+		var lastTime time.Time
+		for {
+			b, e := sc.ReadBytes('\n')
+			if e == io.EOF {
+				break
+			}
+			var metrics madmin.RealtimeMetrics
+			e = json.Unmarshal(b, &metrics)
+			if e != nil || metrics.Aggregated.RPC == nil {
+				continue
+			}
+			delay := metrics.Aggregated.RPC.CollectedAt.Sub(lastTime)
+			if !lastTime.IsZero() && delay > 0 {
+				if delay > 3*time.Second {
+					delay = 3 * time.Second
+				}
+				time.Sleep(delay)
+			}
+			ui.Send(metrics)
+			lastTime = metrics.Aggregated.RPC.CollectedAt
+		}
+		os.Exit(0)
+	}
 
 	aliasedURL := ctx.Args().Get(0)
 	alias, _ := url2Alias(aliasedURL)
@@ -95,9 +145,6 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
 		return nil
 	}
-
-	ctxt, cancel := context.WithCancel(globalContext)
-	defer cancel()
 
 	// MetricsOptions are options provided to Metrics call.
 	opts := madmin.MetricsOptions{
@@ -116,20 +163,19 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 		}
 		return nil
 	}
-	p := tea.NewProgram(initTopRPCUI())
 	go func() {
 		out := func(m madmin.RealtimeMetrics) {
-			p.Send(m)
+			ui.Send(m)
 		}
 
 		e := client.Metrics(ctxt, opts, out)
 		if e != nil {
 			fatalIf(probe.NewError(e), "Unable to fetch top net events")
 		}
-		p.Quit()
+		ui.Quit()
 	}()
 
-	if _, e := p.Run(); e != nil {
+	if _, e := ui.Run(); e != nil {
 		cancel()
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch top net events")
 	}
@@ -242,7 +288,7 @@ func (m *topRPCUI) View() string {
 				fmt.Sprintf(" To  %s", host),
 				fmt.Sprintf("%d", v.Connected),
 				fmt.Sprintf("%0.1fms", v.LastPingMS),
-				fmt.Sprintf("%ds ago", time.Since(v.LastPongTime)/time.Second),
+				fmt.Sprintf("%ds ago", v.CollectedAt.Sub(v.LastPongTime)/time.Second),
 				fmt.Sprintf("%d", v.OutQueue),
 				fmt.Sprintf("%d", v.ReconnectCount),
 				fmt.Sprintf("->%d", v.IncomingStreams),
@@ -256,7 +302,7 @@ func (m *topRPCUI) View() string {
 				fmt.Sprintf("From %s", host),
 				fmt.Sprintf("%d", v.Connected),
 				fmt.Sprintf("%0.1fms", v.LastPingMS),
-				fmt.Sprintf("%ds ago", time.Since(v.LastPongTime)/time.Second),
+				fmt.Sprintf("%ds ago", v.CollectedAt.Sub(v.LastPongTime)/time.Second),
 				fmt.Sprintf("%d", v.OutQueue),
 				fmt.Sprintf("%d", v.ReconnectCount),
 				fmt.Sprintf("->%d", v.IncomingStreams),
