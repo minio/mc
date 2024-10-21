@@ -128,10 +128,19 @@ func mainBatchStatus(ctx *cli.Context) error {
 						return
 					}
 
-					printMsg(batchJobStatusMessage{
+					m := batchJobStatusMessage{
 						Status: "in-progress",
 						Metric: job,
-					})
+					}
+					switch {
+					case job.Complete:
+						m.Status = "complete"
+					case job.Failed:
+						m.Status = "failed"
+					default:
+						// leave as is with in-progress
+					}
+					printMsg(m)
 					if job.Complete || job.Failed {
 						cancel()
 						return
