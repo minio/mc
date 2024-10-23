@@ -120,7 +120,7 @@ func matchBucketOptions(excludeBuckets, includeBuckets []string, srcSuffix strin
 	} else {
 		bucketName = strings.Split(srcSuffix, "/")[0]
 	}
-	// mirror all bucket
+	// mirror all buckets
 	if bucketName == "" {
 		return false
 	}
