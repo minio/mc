@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -81,8 +83,9 @@ var (
 			Usage: "preserve file(s)/object(s) attributes and bucket(s) policy/locking configuration(s) on target bucket(s)",
 		},
 		cli.BoolFlag{
-			Name:  "md5",
-			Usage: "force all upload(s) to calculate md5sum checksum",
+			Name:   "md5",
+			Usage:  "force all upload(s) to calculate md5sum checksum",
+			Hidden: true,
 		},
 		cli.BoolFlag{
 			Name:   "multi-master",
@@ -145,6 +148,7 @@ var (
 			Name:  "skip-errors",
 			Usage: "skip any errors when mirroring",
 		},
+		checksumFlag,
 	}
 )
 
@@ -284,17 +288,31 @@ type mirrorJob struct {
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
-	Status     string `json:"status"`
-	Source     string `json:"source"`
-	Target     string `json:"target"`
-	Size       int64  `json:"size"`
-	TotalCount int64  `json:"totalCount"`
-	TotalSize  int64  `json:"totalSize"`
+	Status     string                 `json:"status"`
+	Source     string                 `json:"source"`
+	Target     string                 `json:"target"`
+	Size       int64                  `json:"size"`
+	TotalCount int64                  `json:"totalCount"`
+	TotalSize  int64                  `json:"totalSize"`
+	EventTime  string                 `json:"eventTime"`
+	EventType  notification.EventType `json:"eventType"`
 }
 
 // String colorized mirror message
 func (m mirrorMessage) String() string {
-	return console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
+	var msg string
+	if m.EventTime != "" {
+		msg = console.Colorize("Time", fmt.Sprintf("[%s] ", m.EventTime))
+	}
+	if m.EventType == notification.ObjectRemovedDelete {
+		return msg + "Removed " + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	}
+	if m.EventTime == "" {
+		return console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
+	}
+	msg += console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(m.Size))))
+	msg += console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
+	return msg
 }
 
 // JSON jsonified mirror message
@@ -352,7 +370,7 @@ func (mj *mirrorJob) doDeleteBucket(ctx context.Context, sURLs URLs) URLs {
 }
 
 // doRemove - removes files on target.
-func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
+func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs, event EventInfo) URLs {
 	if mj.opts.isFake {
 		return sURLs.WithError(nil)
 	}
@@ -382,13 +400,21 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs) URLs {
 			}
 			return sURLs.WithError(result.Err)
 		}
+		targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
+		mj.status.PrintMsg(mirrorMessage{
+			Target:     targetPath,
+			TotalCount: sURLs.TotalCount,
+			TotalSize:  sURLs.TotalSize,
+			EventTime:  event.Time,
+			EventType:  event.Type,
+		})
 	}
 
 	return sURLs.WithError(nil)
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
-func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSSE encrypt.ServerSide, sURLs URLs) URLs {
+func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSSE encrypt.ServerSide, sURLs URLs, event EventInfo) URLs {
 	shouldQueue := false
 	if !mj.opts.isOverwrite && !mj.opts.activeActive {
 		targetClient, err := newClient(targetPath)
@@ -412,7 +438,7 @@ func (mj *mirrorJob) doMirrorWatch(ctx context.Context, targetPath string, tgtSS
 		mj.status.AddCounts(1)
 		sURLs.TotalSize = mj.status.Get()
 		sURLs.TotalCount = mj.status.GetCounts()
-		return mj.doMirror(ctx, sURLs)
+		return mj.doMirror(ctx, sURLs, event)
 	}
 	return sURLs.WithError(probe.NewError(ObjectAlreadyExists{}))
 }
@@ -435,7 +461,7 @@ func convertSizeToTag(size int64) string {
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
-func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
+func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs, event EventInfo) URLs {
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
@@ -488,9 +514,12 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs) URLs {
 			Size:       length,
 			TotalCount: sURLs.TotalCount,
 			TotalSize:  sURLs.TotalSize,
+			EventTime:  event.Time,
+			EventType:  event.Type,
 		})
 	}
 	sURLs.MD5 = mj.opts.md5
+	sURLs.checksum = mj.opts.checksum
 	sURLs.DisableMultipart = mj.opts.disableMultipart
 
 	var ret URLs
@@ -596,10 +625,6 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 
 		if sURLs.SourceContent != nil {
 			mirrorTotalUploadedBytes.Add(float64(sURLs.SourceContent.Size))
-		} else if sURLs.TargetContent != nil {
-			// Construct user facing message and path.
-			targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
-			mj.status.PrintMsg(rmMessage{Key: targetPath})
 		}
 	}
 
@@ -680,6 +705,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				TargetAlias:      targetAlias,
 				TargetContent:    &ClientContent{URL: *targetURL},
 				MD5:              mj.opts.md5,
+				checksum:         mj.opts.checksum,
 				DisableMultipart: mj.opts.disableMultipart,
 				encKeyDB:         mj.opts.encKeyDB,
 			}
@@ -694,7 +720,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				continue
 			}
 			mj.parallel.queueTask(func() URLs {
-				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL)
+				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL, event)
 			}, mirrorURL.SourceContent.Size)
 		} else if event.Type == notification.ObjectRemovedDelete {
 			if targetAlias != "" && strings.Contains(event.UserAgent, uaMirrorAppName+":"+targetAlias) {
@@ -707,6 +733,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				TargetAlias:      targetAlias,
 				TargetContent:    &ClientContent{URL: *targetURL},
 				MD5:              mj.opts.md5,
+				checksum:         mj.opts.checksum,
 				DisableMultipart: mj.opts.disableMultipart,
 				encKeyDB:         mj.opts.encKeyDB,
 			}
@@ -714,7 +741,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mirrorURL.TotalSize = mj.status.Get()
 			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
 				mj.parallel.queueTask(func() URLs {
-					return mj.doRemove(ctx, mirrorURL)
+					return mj.doRemove(ctx, mirrorURL, event)
 				}, 0)
 			}
 		} else if event.Type == notification.BucketCreatedAll {
@@ -814,11 +841,11 @@ func (mj *mirrorJob) startMirror(ctx context.Context) {
 
 			if sURLs.SourceContent != nil {
 				mj.parallel.queueTask(func() URLs {
-					return mj.doMirror(ctx, sURLs)
+					return mj.doMirror(ctx, sURLs, EventInfo{})
 				}, sURLs.SourceContent.Size)
 			} else if sURLs.TargetContent != nil && mj.opts.isRemove {
 				mj.parallel.queueTask(func() URLs {
-					return mj.doRemove(ctx, sURLs)
+					return mj.doRemove(ctx, sURLs, EventInfo{})
 				}, 0)
 			}
 		case <-ctx.Done():
@@ -962,6 +989,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
 	isRemove := cli.Bool("remove")
+	md5, checksum := parseChecksum(cli)
 
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
@@ -975,7 +1003,8 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isMetadata:            isMetadata,
 		isSummary:             cli.Bool("summary"),
 		isRetriable:           cli.Bool("retry"),
-		md5:                   cli.Bool("md5"),
+		md5:                   md5,
+		checksum:              checksum,
 		disableMultipart:      cli.Bool("disable-multipart"),
 		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
@@ -1072,6 +1101,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 						}
 						if err == nil {
 							mj.opts.md5 = true
+							mj.opts.checksum = minio.ChecksumNone
 						}
 					}
 					errorIf(copyBucketPolicies(ctx, newSrcClt, newDstClt, isOverwrite),

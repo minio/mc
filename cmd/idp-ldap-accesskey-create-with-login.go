@@ -90,6 +90,9 @@ func mainIDPLdapAccesskeyCreateWithLogin(ctx *cli.Context) error {
 func loginLDAPAccesskey(ctx *cli.Context) (*madmin.AdminClient, madmin.AddServiceAccountReq) {
 	urlStr := ctx.Args().First()
 
+	u, e := url.Parse(urlStr)
+	fatalIf(probe.NewError(e), "unable to parse server URL")
+
 	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
 	reader := bufio.NewReader(os.Stdin)
 
@@ -107,8 +110,8 @@ func loginLDAPAccesskey(ctx *cli.Context) (*madmin.AdminClient, madmin.AddServic
 	stsCreds, e := credentials.NewLDAPIdentity(urlStr, username, password)
 	fatalIf(probe.NewError(e), "unable to initialize LDAP identity")
 
-	u, e := url.Parse(urlStr)
-	fatalIf(probe.NewError(e), "unable to parse server URL")
+	tempCreds, e := stsCreds.Get()
+	fatalIf(probe.NewError(e), "unable to create a temporary account from LDAP identity")
 
 	client, e := madmin.NewWithOptions(u.Host, &madmin.Options{
 		Creds:  stsCreds,
@@ -116,5 +119,5 @@ func loginLDAPAccesskey(ctx *cli.Context) (*madmin.AdminClient, madmin.AddServic
 	})
 	fatalIf(probe.NewError(e), "unable to initialize admin connection")
 
-	return client, accessKeyCreateOpts(ctx, username)
+	return client, accessKeyCreateOpts(ctx, tempCreds.AccessKeyID)
 }

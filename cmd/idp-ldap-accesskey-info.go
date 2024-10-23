@@ -120,6 +120,11 @@ func (m ldapAccesskeyMessage) JSON() string {
 }
 
 func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
+	return commonAccesskeyInfo(ctx)
+}
+
+// currently no difference between ldap and builtin accesskey info
+func commonAccesskeyInfo(ctx *cli.Context) error {
 	if len(ctx.Args()) < 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
@@ -151,9 +156,8 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 					Policy:        json.RawMessage(tempRes.Policy),
 					Name:          tempRes.Name,
 					Description:   tempRes.Description,
-					Expiration:    tempRes.Expiration,
+					Expiration:    nilExpiry(tempRes.Expiration),
 				}
-
 				printMsg(m)
 			}
 		} else {
@@ -167,12 +171,18 @@ func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
 				Policy:        json.RawMessage(res.Policy),
 				Name:          res.Name,
 				Description:   res.Description,
-				Expiration:    res.Expiration,
+				Expiration:    nilExpiry(res.Expiration),
 			}
-
 			printMsg(m)
 		}
 	}
 
 	return nil
+}
+
+func nilExpiry(expiry *time.Time) *time.Time {
+	if expiry != nil && expiry.Equal(timeSentinel) {
+		return nil
+	}
+	return expiry
 }

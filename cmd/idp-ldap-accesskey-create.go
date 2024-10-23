@@ -98,6 +98,10 @@ EXAMPLES:
 }
 
 func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
+	return commonAccesskeyCreate(ctx, true)
+}
+
+func commonAccesskeyCreate(ctx *cli.Context, ldap bool) error {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
@@ -114,7 +118,13 @@ func mainIDPLdapAccesskeyCreate(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	res, e := client.AddServiceAccountLDAP(globalContext, opts)
+	var res madmin.Credentials
+	var e error
+	if ldap {
+		res, e = client.AddServiceAccountLDAP(globalContext, opts)
+	} else {
+		res, e = client.AddServiceAccount(globalContext, opts)
+	}
 	fatalIf(probe.NewError(e), "Unable to add service account.")
 
 	m := ldapAccesskeyMessage{
