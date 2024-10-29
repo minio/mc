@@ -114,6 +114,12 @@ var globalProfilers []profiler
 func enableProfilers(outputFolder string, profilers []string) error {
 	now := time.Now().Format("2006-01-02T15-04-05")
 
+	if _, e := os.Stat(outputFolder); e != nil {
+		if e := os.MkdirAll(outputFolder, 0o700); e != nil {
+			return e
+		}
+	}
+
 	for _, profilerName := range profilers {
 		outputFile := path.Join(outputFolder, profilerName+"."+now)
 		f, e := os.Create(outputFile)
