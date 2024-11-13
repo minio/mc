@@ -136,8 +136,8 @@ type Client interface {
 	GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
-	GetAccess(ctx context.Context) (access, policyJSON string, error *probe.Error)
-	GetAccessRules(ctx context.Context) (policyRules map[string]string, error *probe.Error)
+	GetAccess(ctx context.Context) (access, policyJSON string, err *probe.Error)
+	GetAccessRules(ctx context.Context) (policyRules map[string]string, err *probe.Error)
 	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
 	// I/O operations

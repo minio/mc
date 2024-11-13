@@ -147,11 +147,11 @@ func (m *speedTestUI) View() string {
 	dres := m.result.DriveResult
 	cres := m.result.ClientResult
 
-	trailerIfGreaterThan := func(in string, max int) string {
-		if len(in) < max {
+	trailerIfGreaterThan := func(in string, maxIdx int) string {
+		if len(in) < maxIdx {
 			return in
 		}
-		return in[:max] + "..."
+		return in[:maxIdx] + "..."
 	}
 
 	// Print the spinner
