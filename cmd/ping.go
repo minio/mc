@@ -283,22 +283,22 @@ func pad(s, p string, count int, left bool) string {
 func pingStats(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
 	var errorString string
 	var sum, avg, dns uint64
-	min := uint64(math.MaxUint64)
-	var max uint64
+	minPing := uint64(math.MaxUint64)
+	var maxPing uint64
 	var counter, errorCount int
 
 	if result.Error != nil {
 		errorString = result.Error.Error()
 		if stat, ok := serverMap[result.Endpoint.Host]; ok {
-			min = stat.min
-			max = stat.max
+			minPing = stat.min
+			maxPing = stat.max
 			sum = stat.sum
 			counter = stat.counter
 			avg = stat.avg
 			errorCount = stat.errorCount + 1
 
 		} else {
-			min = 0
+			minPing = 0
 			errorCount = 1
 		}
 		if cliCtx.IsSet("error-count") && errorCount >= cliCtx.Int("error-count") {
@@ -315,21 +315,21 @@ func pingStats(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[str
 			} else {
 				minVal = stat.min
 			}
-			min = uint64(math.Min(float64(minVal), float64(uint64(result.ResponseTime))))
-			max = uint64(math.Max(float64(stat.max), float64(uint64(result.ResponseTime))))
+			minPing = uint64(math.Min(float64(minVal), float64(uint64(result.ResponseTime))))
+			maxPing = uint64(math.Max(float64(stat.max), float64(uint64(result.ResponseTime))))
 			sum = stat.sum + uint64(result.ResponseTime.Nanoseconds())
 			counter = stat.counter + 1
 
 		} else {
-			min = uint64(math.Min(float64(min), float64(uint64(result.ResponseTime))))
-			max = uint64(math.Max(float64(max), float64(uint64(result.ResponseTime))))
+			minPing = uint64(math.Min(float64(minPing), float64(uint64(result.ResponseTime))))
+			maxPing = uint64(math.Max(float64(maxPing), float64(uint64(result.ResponseTime))))
 			sum = uint64(result.ResponseTime)
 			counter = 1
 		}
 		avg = sum / uint64(counter)
 		dns = uint64(result.DNSResolveTime.Nanoseconds())
 	}
-	return serverStats{min, max, sum, avg, dns, errorCount, errorString, counter}
+	return serverStats{minPing, maxPing, sum, avg, dns, errorCount, errorString, counter}
 }
 
 // mainPing is entry point for ping command.

@@ -73,13 +73,6 @@ func UTCNow() time.Time {
 	return time.Now().UTC()
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // randString generates random names and prepends them with a known prefix.
 func randString(n int, src rand.Source, prefix string) string {
 	if n == 0 {
