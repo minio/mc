@@ -127,7 +127,9 @@ func (ui *uiData) updateStats(i madmin.HealResultItem) error {
 	var afterCol col
 	h := newHRI(&i)
 	switch h.Type {
-	case madmin.HealItemMetadata, madmin.HealItemBucket:
+	case madmin.HealItemBucket:
+		_, afterCol, err = h.getBucketHCCChange()
+	case madmin.HealItemMetadata, madmin.HealItemBucketMetadata:
 		_, afterCol, err = h.getReplicatedFileHCCChange()
 	default:
 		_, afterCol, err = h.getObjectHCCChange()
@@ -206,7 +208,9 @@ func (ui *uiData) printItemsQuietly(s *madmin.HealTaskStatus) (err error) {
 	for _, item := range s.Items {
 		h := newHRI(&item)
 		switch h.Type {
-		case madmin.HealItemMetadata, madmin.HealItemBucket:
+		case madmin.HealItemBucket:
+			b, a, err = h.getBucketHCCChange()
+		case madmin.HealItemMetadata, madmin.HealItemBucketMetadata:
 			b, a, err = h.getReplicatedFileHCCChange()
 		default:
 			b, a, err = h.getObjectHCCChange()
@@ -267,7 +271,9 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 		var b, a col
 		var err error
 		switch h.Type {
-		case madmin.HealItemMetadata, madmin.HealItemBucket:
+		case madmin.HealItemBucket:
+			b, a, err = h.getBucketHCCChange()
+		case madmin.HealItemMetadata, madmin.HealItemBucketMetadata:
 			b, a, err = h.getReplicatedFileHCCChange()
 		default:
 			if h.Type == madmin.HealItemObject {
