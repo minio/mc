@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/minio/madmin-go/v3"
@@ -51,6 +52,46 @@ func (h hri) getObjectHCCChange() (b, a col, err error) {
 	if err != nil {
 		err = fmt.Errorf("%w: surplusShardsBeforeHeal: %d, parityShards: %d",
 			err, surplusShardsAfterHeal, parityShards)
+	}
+	return
+}
+
+// getBucketHCCChange - fetches health color code for bucket healing
+// this does not return a Grey color since it does not have any meaning
+// for a bucket healing. Return green if the bucket is found in a drive,
+// yellow for missing, and red for everything else, grey for weird situations
+func (h hri) getBucketHCCChange() (b, a col, err error) {
+	if h.HealResultItem == nil {
+		return colGrey, colGrey, errors.New("empty result")
+	}
+
+	getColCode := func(drives []madmin.HealDriveInfo) (c col) {
+		var missing, unavailable int
+		for i := range drives {
+			switch drives[i].State {
+			case madmin.DriveStateOk:
+			case madmin.DriveStateMissing:
+				missing++
+			default:
+				unavailable++
+			}
+		}
+		if unavailable > 0 {
+			return colRed
+		}
+		if missing > 0 {
+			return colYellow
+		}
+		return colGreen
+	}
+
+	a, b = colGrey, colGrey
+
+	if len(h.HealResultItem.Before.Drives) > 0 {
+		b = getColCode(h.HealResultItem.Before.Drives)
+	}
+	if len(h.HealResultItem.After.Drives) > 0 {
+		a = getColCode(h.HealResultItem.After.Drives)
 	}
 	return
 }
