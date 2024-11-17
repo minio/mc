@@ -1659,18 +1659,21 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if opts.isZip {
 			o.Set("x-minio-extract", "true")
 		}
+
 		o.Set("x-amz-checksum-mode", "ENABLED")
 		ctnt, err := c.getObjectStat(ctx, bucket, path, o)
 		if err == nil {
 			return ctnt, nil
 		}
+
 		// Ignore object missing error but return for other errors
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
 
 		// when versionID is specified we do not have to perform List() operation
-		if opts.versionID != "" && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
+		// when headOnly is specified we do not have to perform List() operation
+		if (opts.versionID != "" || opts.headOnly) && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, probe.NewError(ObjectMissing{opts.timeRef})
 		}
 

@@ -212,6 +212,7 @@ func url2Stat(ctx context.Context, opts url2StatOptions) (client Client, content
 		versionID:          opts.versionID,
 		isZip:              opts.isZip,
 		ignoreBucketExists: opts.ignoreBucketExistsCheck,
+		headOnly:           opts.headOnly,
 	})
 	if err != nil {
 		return nil, nil, err.Trace(opts.urlStr)

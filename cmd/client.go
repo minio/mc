@@ -88,6 +88,7 @@ type StatOptions struct {
 	includeVersions    bool
 	isZip              bool
 	ignoreBucketExists bool
+	headOnly           bool
 }
 
 // BucketStatOptions - bucket stat.
