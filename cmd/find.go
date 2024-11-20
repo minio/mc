@@ -274,7 +274,7 @@ func doFind(ctxCtx context.Context, ctx *findContext) error {
 
 	lstOptions := ListOptions{
 		WithOlderVersions: ctx.withVersions,
-		WithDeleteMarkers: ctx.withDeleteMarkers,
+		WithDeleteMarkers: ctx.withVersions,
 		Recursive:         true,
 		ShowDir:           DirFirst,
 		WithMetadata:      len(ctx.matchMeta) > 0 || len(ctx.matchTags) > 0,

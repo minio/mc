@@ -45,10 +45,6 @@ var (
 			Name:  "versions",
 			Usage: "include all objects versions",
 		},
-		cli.BoolFlag{
-			Name:  "with-delete-marker",
-			Usage: "include delete markers when used with the `versions` flag",
-		},
 		cli.StringFlag{
 			Name:  "name",
 			Usage: "find object names matching wildcard pattern",
@@ -211,22 +207,21 @@ func checkFindSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[stri
 // ease of repurposing.
 type findContext struct {
 	*cli.Context
-	execCmd           string
-	ignorePattern     string
-	namePattern       string
-	pathPattern       string
-	regexPattern      *regexp.Regexp
-	maxDepth          uint
-	printFmt          string
-	olderThan         string
-	newerThan         string
-	largerSize        uint64
-	smallerSize       uint64
-	watch             bool
-	withVersions      bool
-	withDeleteMarkers bool
-	matchMeta         map[string]*regexp.Regexp
-	matchTags         map[string]*regexp.Regexp
+	execCmd       string
+	ignorePattern string
+	namePattern   string
+	pathPattern   string
+	regexPattern  *regexp.Regexp
+	maxDepth      uint
+	printFmt      string
+	olderThan     string
+	newerThan     string
+	largerSize    uint64
+	smallerSize   uint64
+	watch         bool
+	withVersions  bool
+	matchMeta     map[string]*regexp.Regexp
+	matchTags     map[string]*regexp.Regexp
 
 	// Internal values
 	targetAlias   string
@@ -286,10 +281,6 @@ func mainFind(cliCtx *cli.Context) error {
 
 	// Get --versions flag
 	withVersions := cliCtx.Bool("versions")
-	withDeleteMarkers := false
-	if withVersions {
-		withDeleteMarkers = cliCtx.Bool("with-delete-marker")
-	}
 
 	targetAlias, _, hostCfg, err := expandAlias(args[0])
 	fatalIf(err.Trace(args[0]), "Unable to expand alias.")
@@ -304,26 +295,25 @@ func mainFind(cliCtx *cli.Context) error {
 	}
 
 	return doFind(ctx, &findContext{
-		Context:           cliCtx,
-		maxDepth:          cliCtx.Uint("maxdepth"),
-		execCmd:           cliCtx.String("exec"),
-		printFmt:          cliCtx.String("print"),
-		namePattern:       cliCtx.String("name"),
-		pathPattern:       cliCtx.String("path"),
-		regexPattern:      regMatch,
-		ignorePattern:     cliCtx.String("ignore"),
-		withVersions:      withVersions,
-		withDeleteMarkers: withDeleteMarkers,
-		olderThan:         olderThan,
-		newerThan:         newerThan,
-		largerSize:        largerSize,
-		smallerSize:       smallerSize,
-		watch:             cliCtx.Bool("watch"),
-		targetAlias:       targetAlias,
-		targetURL:         args[0],
-		targetFullURL:     targetFullURL,
-		clnt:              clnt,
-		matchMeta:         getRegexMap(cliCtx, "metadata"),
-		matchTags:         getRegexMap(cliCtx, "tags"),
+		Context:       cliCtx,
+		maxDepth:      cliCtx.Uint("maxdepth"),
+		execCmd:       cliCtx.String("exec"),
+		printFmt:      cliCtx.String("print"),
+		namePattern:   cliCtx.String("name"),
+		pathPattern:   cliCtx.String("path"),
+		regexPattern:  regMatch,
+		ignorePattern: cliCtx.String("ignore"),
+		withVersions:  withVersions,
+		olderThan:     olderThan,
+		newerThan:     newerThan,
+		largerSize:    largerSize,
+		smallerSize:   smallerSize,
+		watch:         cliCtx.Bool("watch"),
+		targetAlias:   targetAlias,
+		targetURL:     args[0],
+		targetFullURL: targetFullURL,
+		clnt:          clnt,
+		matchMeta:     getRegexMap(cliCtx, "metadata"),
+		matchTags:     getRegexMap(cliCtx, "tags"),
 	})
 }
