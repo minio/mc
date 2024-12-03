@@ -129,7 +129,7 @@ func mainAdminPolicyCreate(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	if strings.Contains(args.Get(1), ",") {
-		fatalIf(probe.NewError(errors.New("policy name may not incude comma")), "Only a single policy may be specified here. Policy name may not incude commas.")
+		fatalIf(probe.NewError(errors.New("policy name may not include comma")), "Only a single policy may be specified here.")
 	}
 
 	policy, e := os.ReadFile(args.Get(2))
