@@ -18,8 +18,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -125,6 +127,10 @@ func mainAdminPolicyCreate(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+
+	if strings.Contains(args.Get(1), ",") {
+		fatalIf(probe.NewError(errors.New("policy name may not incude comma")), "Only a single policy may be specified here. Policy name may not incude commas.")
+	}
 
 	policy, e := os.ReadFile(args.Get(2))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get policy")
