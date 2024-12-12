@@ -18,12 +18,15 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -33,6 +36,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/klauspost/compress/zstd"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
@@ -92,7 +96,7 @@ var adminTraceFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:   "stats-n",
 		Usage:  "maximum number of stat entries",
-		Value:  30,
+		Value:  20,
 		Hidden: true,
 	},
 	cli.BoolFlag{
@@ -110,6 +114,10 @@ var adminTraceFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "filter-size",
 		Usage: "filter size, use with filter (see UNITS)",
+	},
+	cli.StringFlag{
+		Name:  "in",
+		Usage: "read previously saved json from file and replay",
 	},
 }
 
@@ -239,7 +247,7 @@ const traceTimeFormat = "2006-01-02T15:04:05.000"
 var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
+	if len(ctx.Args()) != 1 && len(ctx.String("in")) == 0 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 	filterFlag := ctx.Bool("filter-request") || ctx.Bool("filter-response")
@@ -489,7 +497,6 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 	verbose := ctx.Bool("verbose")
 	stats := ctx.Bool("stats")
-	aliasedURL := ctx.Args().Get(0)
 
 	console.SetColor("Stat", color.New(color.FgYellow))
 
@@ -510,23 +517,78 @@ func mainAdminTrace(ctx *cli.Context) error {
 	for _, c := range colors {
 		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
 	}
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-		return nil
-	}
+
+	var traceCh <-chan madmin.ServiceTraceInfo
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
 
-	opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
-	fatalIf(probe.NewError(e), "Unable to start tracing")
+	if inFile := ctx.String("in"); inFile != "" {
+		stats = true
+		ch := make(chan madmin.ServiceTraceInfo, 1000)
+		traceCh = ch
+		go func() {
+			f, e := os.Open(inFile)
+			fatalIf(probe.NewError(e), "Unable to open input")
+			defer f.Close()
+			in := io.Reader(f)
+			if strings.HasSuffix(inFile, ".zst") {
+				zr, e := zstd.NewReader(in)
+				fatalIf(probe.NewError(e), "Unable to open input")
+				defer zr.Close()
+				in = zr
+			}
+			sc := bufio.NewReader(in)
+			for ctxt.Err() == nil {
+				b, e := sc.ReadBytes('\n')
+				if e == io.EOF {
+					break
+				}
+				var t shortTraceMsg
+				e = json.Unmarshal(b, &t)
+				if e != nil || t.Type == "Bootstrap" {
+					// Ignore bootstrap, since their times skews averages.
+					continue
+				}
+				ch <- madmin.ServiceTraceInfo{
+					Trace: madmin.TraceInfo{
+						TraceType:  t.trcType, // TODO: Grab from string, once we can.
+						NodeName:   t.Host,
+						FuncName:   t.FuncName,
+						Time:       t.Time,
+						Path:       t.Path,
+						Duration:   t.Duration,
+						Bytes:      t.Size,
+						Message:    t.StatusMsg,
+						Error:      t.Error,
+						Custom:     t.Extra,
+						HTTP:       nil,
+						HealResult: nil,
+					},
+					Err: nil,
+				}
+			}
+			close(ch)
+			select {}
+		}()
+	} else {
+		// Create a new MinIO Admin Client
+		aliasedURL := ctx.Args().Get(0)
+
+		client, err := newAdminClient(aliasedURL)
+		if err != nil {
+			fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
+			return nil
+		}
+
+		opts, e := tracingOpts(ctx, ctx.StringSlice("call"))
+		fatalIf(probe.NewError(e), "Unable to start tracing")
+
+		// Start listening on all trace activity.
+		traceCh = client.ServiceTrace(ctxt, opts)
+	}
 
 	mopts := matchingOpts(ctx)
-
-	// Start listening on all trace activity.
-	traceCh := client.ServiceTrace(ctxt, opts)
 	if stats {
 		filteredTraces := make(chan madmin.ServiceTraceInfo, 1)
 		ui := tea.NewProgram(initTraceStatsUI(ctx.Bool("all"), ctx.Int("stats-n"), filteredTraces))
@@ -542,12 +604,14 @@ func mainAdminTrace(ctx *cli.Context) error {
 					filteredTraces <- t
 				}
 			}
+			ui.Send(tea.Quit())
 		}()
 		if _, e := ui.Run(); e != nil {
 			cancel()
 			if te != nil {
 				e = te
 			}
+			aliasedURL := ctx.Args().Get(0)
 			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch http trace statistics")
 		}
 		return nil
@@ -915,9 +979,10 @@ type statItem struct {
 }
 
 type statTrace struct {
-	Calls   map[string]statItem `json:"calls"`
-	Started time.Time
-	mu      sync.Mutex
+	Calls  map[string]statItem `json:"calls"`
+	Oldest time.Time
+	Latest time.Time
+	mu     sync.Mutex
 }
 
 func (s *statTrace) JSON() string {
@@ -942,6 +1007,16 @@ func (s *statTrace) add(t madmin.ServiceTraceInfo) {
 	id := t.Trace.FuncName
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if t.Trace.TraceType != madmin.TraceBootstrap {
+		// We can't use bootstrap to find start/end
+		ended := t.Trace.Time.Add(t.Trace.Duration)
+		if s.Oldest.IsZero() {
+			s.Oldest = ended
+		}
+		if ended.After(s.Latest) {
+			s.Latest = ended
+		}
+	}
 	got := s.Calls[id]
 	if got.Name == "" {
 		got.Name = id

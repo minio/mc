@@ -31,6 +31,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/klauspost/compress/zstd"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
@@ -110,7 +111,15 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 		}()
 		f, e := os.Open(inFile)
 		fatalIf(probe.NewError(e), "Unable to open input")
-		sc := bufio.NewReader(f)
+		defer f.Close()
+		in := io.Reader(f)
+		if strings.HasSuffix(inFile, ".zst") {
+			zr, e := zstd.NewReader(in)
+			fatalIf(probe.NewError(e), "Unable to open input")
+			defer zr.Close()
+			in = zr
+		}
+		sc := bufio.NewReader(in)
 		var lastTime time.Time
 		for {
 			b, e := sc.ReadBytes('\n')
