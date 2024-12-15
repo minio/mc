@@ -104,8 +104,8 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 	// Replay from file.
 	if inFile := ctx.String("in"); inFile != "" {
 		go func() {
+			defer cancel()
 			if _, e := ui.Run(); e != nil {
-				cancel()
 				fatalIf(probe.NewError(e), "Unable to fetch scanner metrics")
 			}
 		}()
@@ -121,7 +121,7 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 		}
 		sc := bufio.NewReader(in)
 		var lastTime time.Time
-		for {
+		for ctxt.Err() == nil {
 			b, e := sc.ReadBytes('\n')
 			if e == io.EOF {
 				break
@@ -193,13 +193,19 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 }
 
 type topRPCUI struct {
-	spinner  spinner.Model
-	offset   int
-	quitting bool
-	curr     madmin.RealtimeMetrics
+	spinner      spinner.Model
+	offset       int
+	quitting     bool
+	pageSz       int
+	showTo       bool
+	filterReconn bool
+	sortQueue    bool
+	curr         madmin.RealtimeMetrics
+	frozen       *madmin.RealtimeMetrics
 }
 
 func (m *topRPCUI) Init() tea.Cmd {
+	m.showTo = true
 	return m.spinner.Tick
 }
 
@@ -207,13 +213,37 @@ func (m *topRPCUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q", "esc":
+		case "ctrl+c", "esc":
 			m.quitting = true
 			return m, tea.Quit
 		case "up":
 			m.offset--
 		case "down":
 			m.offset++
+		case "pgdown":
+			m.offset += m.pageSz - 1
+		case "pgup":
+			m.offset -= m.pageSz - 1
+		case "t":
+			m.showTo = true
+		case "f":
+			m.showTo = false
+		case "r":
+			m.filterReconn = !m.filterReconn
+		case "q":
+			m.sortQueue = !m.sortQueue
+			if !m.sortQueue {
+				m.filterReconn = false
+			}
+		case tea.KeySpace.String():
+			if m.frozen == nil {
+				freeze := m.curr
+				m.frozen = &freeze
+			} else {
+				m.frozen = nil
+			}
+		case "tab":
+			m.showTo = !m.showTo
 		}
 		return m, nil
 	case madmin.RealtimeMetrics:
@@ -251,6 +281,11 @@ func (m *topRPCUI) View() string {
 	table.SetHeader([]string{"SERVER", "CONCTD", "PING", "PONG", "OUT.Q", "RECONNS", "STR.IN", "STR.OUT", "MSG.IN", "MSG.OUT"})
 
 	rpc := m.curr.Aggregated.RPC
+	byhost := m.curr.ByHost
+	if m.frozen != nil {
+		rpc = m.frozen.Aggregated.RPC
+		byhost = m.frozen.ByHost
+	}
 	if rpc == nil || len(rpc.ByDestination) == 0 {
 		table.Render()
 		s.WriteString("\n(no rpc connections)\n")
@@ -265,7 +300,6 @@ func (m *topRPCUI) View() string {
 		hosts = append(hosts, k)
 		intoHost[k] = v
 	}
-	byhost := m.curr.ByHost
 	if len(byhost) > 0 {
 		for k, v := range byhost {
 			if v.RPC != nil {
@@ -273,40 +307,88 @@ func (m *topRPCUI) View() string {
 			}
 		}
 	}
-	sort.Strings(hosts)
-	allhosts := hosts
-	maxHosts := max(3, (globalTermHeight-4)/2) // 2 lines of output per host, or at least 3 hosts.
-
-	truncate := len(hosts) > maxHosts && !m.quitting
-	if truncate {
-		if m.offset < 0 {
-			m.offset = 0
-		}
-		if m.offset >= len(hosts)-maxHosts {
-			m.offset = len(hosts) - maxHosts
-		}
-		hosts = hosts[m.offset:]
-		if len(hosts) > maxHosts {
-			hosts = hosts[:maxHosts]
-		}
-	}
-	dataRender := make([][]string, 0, len(hosts)*2)
-	for _, host := range hosts {
-		if v, ok := intoHost[host]; ok {
-			dataRender = append(dataRender, []string{
-				fmt.Sprintf(" To  %s", host),
-				fmt.Sprintf("%d", v.Connected),
-				fmt.Sprintf("%0.1fms", v.LastPingMS),
-				fmt.Sprintf("%ds ago", v.CollectedAt.Sub(v.LastPongTime)/time.Second),
-				fmt.Sprintf("%d", v.OutQueue),
-				fmt.Sprintf("%d", v.ReconnectCount),
-				fmt.Sprintf("->%d", v.IncomingStreams),
-				fmt.Sprintf("%d->", v.OutgoingStreams),
-				fmt.Sprintf("%d", v.IncomingMessages),
-				fmt.Sprintf("%d", v.OutgoingMessages),
+	sortBy := ""
+	switch {
+	case m.filterReconn:
+		sortBy = " sorted by RECONNS"
+		if m.showTo {
+			sort.Slice(hosts, func(i, j int) bool {
+				if intoHost[hosts[i]].ReconnectCount != intoHost[hosts[j]].ReconnectCount {
+					return intoHost[hosts[i]].ReconnectCount > intoHost[hosts[j]].ReconnectCount
+				}
+				return hosts[i] < hosts[j]
+			})
+		} else {
+			sort.Slice(hosts, func(i, j int) bool {
+				if fromHost[hosts[i]].ReconnectCount != fromHost[hosts[j]].ReconnectCount {
+					return fromHost[hosts[i]].ReconnectCount > fromHost[hosts[j]].ReconnectCount
+				}
+				return hosts[i] < hosts[j]
 			})
 		}
+	case m.sortQueue:
+		sortBy = " sorted by Q"
+		if m.showTo {
+			sort.Slice(hosts, func(i, j int) bool {
+				if intoHost[hosts[i]].OutQueue != intoHost[hosts[j]].OutQueue {
+					return intoHost[hosts[i]].OutQueue > intoHost[hosts[j]].OutQueue
+				}
+				return hosts[i] < hosts[j]
+			})
+		} else {
+			sort.Slice(hosts, func(i, j int) bool {
+				if fromHost[hosts[i]].OutQueue != fromHost[hosts[j]].OutQueue {
+					return fromHost[hosts[i]].OutQueue > fromHost[hosts[j]].OutQueue
+				}
+				return hosts[i] < hosts[j]
+			})
+		}
+	default:
+		sort.Strings(hosts)
+	}
+	allhosts := hosts
+	maxHosts := max(3, globalTermHeight-4) // at least 3 hosts.
+	m.pageSz = maxHosts
+	truncate := len(hosts) > maxHosts && !m.quitting
+	hostsShown := 0
+	if m.offset >= len(hosts)-maxHosts {
+		m.offset = len(hosts) - maxHosts
+	}
+	if m.offset < 0 {
+		m.offset = 0
+	}
+	hosts = hosts[m.offset:]
+	dataRender := make([][]string, 0, maxHosts)
+	for _, host := range hosts {
+		if hostsShown == maxHosts {
+			truncate = true
+			break
+		}
+		if m.showTo {
+			if v, ok := intoHost[host]; ok {
+				if m.filterReconn && v.ReconnectCount == 0 {
+					continue
+				}
+				dataRender = append(dataRender, []string{
+					fmt.Sprintf("To %s", host),
+					fmt.Sprintf("%d", v.Connected),
+					fmt.Sprintf("%0.1fms", v.LastPingMS),
+					fmt.Sprintf("%ds ago", v.CollectedAt.Sub(v.LastPongTime)/time.Second),
+					fmt.Sprintf("%d", v.OutQueue),
+					fmt.Sprintf("%d", v.ReconnectCount),
+					fmt.Sprintf("->%d", v.IncomingStreams),
+					fmt.Sprintf("%d->", v.OutgoingStreams),
+					fmt.Sprintf("%d", v.IncomingMessages),
+					fmt.Sprintf("%d", v.OutgoingMessages),
+				})
+				hostsShown++
+			}
+			continue
+		}
 		if v, ok := fromHost[host]; ok {
+			if m.filterReconn && v.ReconnectCount == 0 {
+				continue
+			}
 			dataRender = append(dataRender, []string{
 				fmt.Sprintf("From %s", host),
 				fmt.Sprintf("%d", v.Connected),
@@ -319,13 +401,28 @@ func (m *topRPCUI) View() string {
 				fmt.Sprintf("%d", v.IncomingMessages),
 				fmt.Sprintf("%d", v.OutgoingMessages),
 			})
+			hostsShown++
 		}
 	}
-
+	dir := "TO"
+	if !m.showTo {
+		dir = "FROM"
+	}
 	table.AppendBulk(dataRender)
 	table.Render()
+	pre := "\n"
+	if m.frozen != nil {
+		if time.Now().UnixMilli()&512 < 256 {
+			pre = "\n[PAUSED] "
+		} else {
+			pre = "\n(PAUSED) "
+		}
+	}
+	s.WriteString(pre)
 	if truncate {
-		s.WriteString(fmt.Sprintf("\nSHOWING Host %d to %d of %d. Use ↑ and ↓ to see different hosts", 1+m.offset, m.offset+len(hosts), len(allhosts)))
+		s.WriteString(fmt.Sprintf("SHOWING %s Host %d to %d of %d%s. ↑ and ↓ available. <tab>=TO/FROM r=RECON q=Q.", dir, 1+m.offset, m.offset+hostsShown, len(allhosts), sortBy))
+	} else {
+		s.WriteString(fmt.Sprintf("SHOWING traffic %s hosts%s. <tab>=TO/FROM r=RECON q=Q.", dir, sortBy))
 	}
 	return s.String()
 }
