@@ -43,6 +43,7 @@ type traceStatsUI struct {
 	meter      spinner.Model
 	quitting   bool
 	maxEntries int
+	offset     int
 	allFlag    bool
 }
 
@@ -60,6 +61,24 @@ func (m *traceStatsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
+		case "r":
+			// Reset min/max
+			m.current.mu.Lock()
+			defer m.current.mu.Unlock()
+			for k, si := range m.current.Calls {
+				si.MaxDur, si.MinDur = 0, 0
+				si.MaxTTFB = 0
+				m.current.Calls[k] = si
+			}
+			return m, nil
+		case "down":
+			m.offset++
+		case "up":
+			m.offset--
+		case "home":
+			m.offset = 0
+		case "end":
+			m.offset = len(m.current.Calls)
 		default:
 			return m, nil
 		}
@@ -74,8 +93,9 @@ func (m *traceStatsUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *traceStatsUI) View() string {
 	var s strings.Builder
 
+	dur := m.current.Latest.Sub(m.current.Oldest)
 	s.WriteString(fmt.Sprintf("%s %s\n",
-		console.Colorize("metrics-top-title", "Duration: "+time.Since(m.current.Started).Round(time.Second).String()), m.meter.View()))
+		console.Colorize("metrics-top-title", "Duration: "+dur.Round(time.Second).String()), m.meter.View()))
 
 	// Set table header - akin to k8s style
 	// https://github.com/olekukonko/tablewriter#example-10---set-nowhitespace-and-tablepadding-option
@@ -99,7 +119,6 @@ func (m *traceStatsUI) View() string {
 		totalRX  = 0
 		totalTX  = 0
 	)
-	dur := time.Since(m.current.Started)
 	for _, v := range m.current.Calls {
 		totalCnt += v.Count
 		totalRX += v.CallStats.Rx
@@ -117,8 +136,22 @@ func (m *traceStatsUI) View() string {
 		}
 		return entries[i].Count > entries[j].Count
 	})
+
+	frontTrunc := false
+	endTrunc := false
+	m.offset = min(max(0, m.offset), len(entries))
+	offset := m.offset
 	if m.maxEntries > 0 && len(entries) > m.maxEntries {
-		entries = entries[:m.maxEntries]
+		entLeft := len(entries) - offset
+		if entLeft > m.maxEntries {
+			// Truncate both ends
+			entries = entries[offset : m.maxEntries+offset]
+			frontTrunc = offset > 0
+			endTrunc = true
+		} else {
+			entries = entries[len(entries)-m.maxEntries:]
+			frontTrunc = true
+		}
 	}
 	hasTTFB := false
 	for _, e := range entries {
@@ -141,8 +174,13 @@ func (m *traceStatsUI) View() string {
 	s.WriteString(console.Colorize("metrics-top-title", fmt.Sprintf("RPM    :  %0.1f\n", float64(totalCnt)/dur.Minutes())))
 	s.WriteString("-------------\n")
 
+	preCall := ""
+	if frontTrunc {
+		preCall = console.Colorize("metrics-error", "↑ ")
+	}
+
 	t := []string{
-		console.Colorize("metrics-top-title", "Call"),
+		preCall + console.Colorize("metrics-top-title", "Call"),
 		console.Colorize("metrics-top-title", "Count"),
 		console.Colorize("metrics-top-title", "RPM"),
 		console.Colorize("metrics-top-title", "Avg Time"),
@@ -162,7 +200,8 @@ func (m *traceStatsUI) View() string {
 	)
 
 	table.Append(t)
-	for _, v := range entries {
+
+	for i, v := range entries {
 		if v.Count <= 0 {
 			continue
 		}
@@ -221,8 +260,13 @@ func (m *traceStatsUI) View() string {
 			rate = console.Colorize("metrics-size", rate)
 		}
 
+		preCall = ""
+		if endTrunc && i == len(entries)-1 {
+			preCall = console.Colorize("metrics-error", "↓ ")
+		}
+
 		t := []string{
-			console.Colorize("metrics-title", metricsTitle(v.Name)),
+			preCall + console.Colorize("metrics-title", metricsTitle(v.Name)),
 			console.Colorize("metrics-number", fmt.Sprintf("%d ", v.Count)) +
 				console.Colorize("metrics-number-secondary", fmt.Sprintf("(%0.1f%%)", float64(v.Count)/float64(totalCnt)*100)),
 			console.Colorize("metrics-number", fmt.Sprintf("%0.1f", float64(v.Count)/dur.Minutes())),
@@ -242,6 +286,7 @@ func (m *traceStatsUI) View() string {
 		t = append(t, sz, rate, errs)
 		table.Append(t)
 	}
+
 	table.Render()
 	if globalTermWidth <= 10 {
 		return s.String()
@@ -293,7 +338,7 @@ func initTraceStatsUI(allFlag bool, maxEntries int, traces <-chan madmin.Service
 	console.SetColor("metrics-number", color.New(color.FgWhite))
 	console.SetColor("metrics-number-secondary", color.New(color.FgBlue))
 	console.SetColor("metrics-zero", color.New(color.FgWhite))
-	stats := &statTrace{Calls: make(map[string]statItem, 20), Started: time.Now()}
+	stats := &statTrace{Calls: make(map[string]statItem, 20)}
 	go func() {
 		for t := range traces {
 			stats.add(t)
