@@ -21,7 +21,7 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.8
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v3 v3.0.78
+	github.com/minio/madmin-go/v3 v3.0.79
 	github.com/minio/minio-go/v7 v7.0.82
 	github.com/minio/pkg/v3 v3.0.23
 	github.com/minio/selfupdate v0.6.0
@@ -118,3 +118,5 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/minio/madmin-go/v3 v3.0.79 => github.com/klauspost/madmin-go/v3 v3.0.0-20241218165029-d0467cf8d00a
