@@ -74,7 +74,7 @@ func checkAdminServiceUnfreezeSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceUnfreeze(ctx *cli.Context) error {
-	// Validate serivce unfreeze syntax.
+	// Validate service unfreeze syntax.
 	checkAdminServiceUnfreezeSyntax(ctx)
 
 	// Set color.
@@ -89,7 +89,7 @@ func mainAdminServiceUnfreeze(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Unfreeze the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceUnfreeze(globalContext)), "Unable to unfreeze the server.")
+	fatalIf(probe.NewError(client.ServiceUnfreezeV2(globalContext)), "Unable to unfreeze the server.")
 
 	// Success..
 	printMsg(serviceUnfreezeCommand{Status: "success", ServerURL: aliasedURL})
