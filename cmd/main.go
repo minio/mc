@@ -397,7 +397,7 @@ func findClosestCommands(commandsTree *trie.Trie, command string) []string {
 // Check for updates and print a notification message
 func checkUpdate(ctx *cli.Context) {
 	// Do not print update messages, if quiet flag is set.
-	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
+	if !ctx.Bool("quiet") || !ctx.GlobalBool("quiet") {
 		// Its OK to ignore any errors during doUpdate() here.
 		if updateMsg, _, currentReleaseTime, latestReleaseTime, _, err := getUpdateInfo("", 2*time.Second); err == nil {
 			printMsg(updateMessage{
