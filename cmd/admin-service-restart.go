@@ -269,6 +269,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 		})
 		if e != nil {
 			// Attempt an older API server might be old
+			//nolint:staticcheck
 			e = client.ServiceRestart(ctxt)
 		}
 		fatalIf(probe.NewError(e), "Unable to restart the server.")
