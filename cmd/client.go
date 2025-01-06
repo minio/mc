@@ -75,6 +75,7 @@ type PutOptions struct {
 	multipartThreads      uint
 	concurrentStream      bool
 	ifNotExists           bool
+	checksum              minio.ChecksumType
 }
 
 // StatOptions holds options of the HEAD operation
@@ -87,6 +88,7 @@ type StatOptions struct {
 	includeVersions    bool
 	isZip              bool
 	ignoreBucketExists bool
+	headOnly           bool
 }
 
 // BucketStatOptions - bucket stat.
@@ -135,8 +137,8 @@ type Client interface {
 	GetObjectLockConfig(ctx context.Context) (status string, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
-	GetAccess(ctx context.Context) (access, policyJSON string, error *probe.Error)
-	GetAccessRules(ctx context.Context) (policyRules map[string]string, error *probe.Error)
+	GetAccess(ctx context.Context) (access, policyJSON string, err *probe.Error)
+	GetAccessRules(ctx context.Context) (policyRules map[string]string, err *probe.Error)
 	SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error
 
 	// I/O operations
@@ -219,6 +221,7 @@ type ClientContent struct {
 	Metadata     map[string]string
 	Tags         map[string]string
 	UserMetadata map[string]string
+	Checksum     map[string]string
 	ETag         string
 	Expires      time.Time
 

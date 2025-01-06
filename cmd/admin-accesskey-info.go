@@ -17,29 +17,34 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+)
 
-var supportTopSubcommands = []cli.Command{
-	supportTopAPICmd,
-	supportTopDriveCmd,
-	supportTopLocksCmd,
-	supportTopNetCmd,
-	supportTopRPCCmd,
+var adminAccesskeyInfoCmd = cli.Command{
+	Name:         "info",
+	Usage:        "info about given access key pairs",
+	Action:       mainAdminAccesskeyInfo,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
+	OnUsageError: onUsageError,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET ACCESSKEY [ACCESSKEY...]
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Get info for the access key "testkey"
+	 {{.Prompt}} {{.HelpName}} local/ testkey
+  2. Get info for the access keys "testkey" and "testkey2"
+	 {{.Prompt}} {{.HelpName}} local/ testkey testkey2
+	`,
 }
 
-var supportTopCmd = cli.Command{
-	Name:            "top",
-	Usage:           "provide top like statistics for MinIO",
-	Action:          mainSupportTop,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	Subcommands:     supportTopSubcommands,
-	HideHelpCommand: true,
-}
-
-// mainSupportTop is the handle for "mc support top" command.
-func mainSupportTop(ctx *cli.Context) error {
-	commandNotFound(ctx, supportTopSubcommands)
-	return nil
-	// Sub-commands like "locks" have their own main.
+func mainAdminAccesskeyInfo(ctx *cli.Context) error {
+	return commonAccesskeyInfo(ctx)
 }

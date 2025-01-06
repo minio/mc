@@ -83,8 +83,9 @@ var (
 			Usage: "preserve file(s)/object(s) attributes and bucket(s) policy/locking configuration(s) on target bucket(s)",
 		},
 		cli.BoolFlag{
-			Name:  "md5",
-			Usage: "force all upload(s) to calculate md5sum checksum",
+			Name:   "md5",
+			Usage:  "force all upload(s) to calculate md5sum checksum",
+			Hidden: true,
 		},
 		cli.BoolFlag{
 			Name:   "multi-master",
@@ -143,6 +144,7 @@ var (
 			Name:  "skip-errors",
 			Usage: "skip any errors when mirroring",
 		},
+		checksumFlag,
 	}
 )
 
@@ -510,6 +512,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, sURLs URLs, event EventInfo) 
 		})
 	}
 	sURLs.MD5 = mj.opts.md5
+	sURLs.checksum = mj.opts.checksum
 	sURLs.DisableMultipart = mj.opts.disableMultipart
 
 	var ret URLs
@@ -695,6 +698,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				TargetAlias:      targetAlias,
 				TargetContent:    &ClientContent{URL: *targetURL},
 				MD5:              mj.opts.md5,
+				checksum:         mj.opts.checksum,
 				DisableMultipart: mj.opts.disableMultipart,
 				encKeyDB:         mj.opts.encKeyDB,
 			}
@@ -722,6 +726,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				TargetAlias:      targetAlias,
 				TargetContent:    &ClientContent{URL: *targetURL},
 				MD5:              mj.opts.md5,
+				checksum:         mj.opts.checksum,
 				DisableMultipart: mj.opts.disableMultipart,
 				encKeyDB:         mj.opts.encKeyDB,
 			}
@@ -977,6 +982,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
 	isRemove := cli.Bool("remove")
+	md5, checksum := parseChecksum(cli)
 
 	// preserve is also expected to be overwritten if necessary
 	isMetadata := cli.Bool("a") || isWatch || len(userMetadata) > 0
@@ -990,7 +996,8 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isMetadata:            isMetadata,
 		isSummary:             cli.Bool("summary"),
 		isRetriable:           cli.Bool("retry"),
-		md5:                   cli.Bool("md5"),
+		md5:                   md5,
+		checksum:              checksum,
 		disableMultipart:      cli.Bool("disable-multipart"),
 		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
@@ -1086,6 +1093,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 						}
 						if err == nil {
 							mj.opts.md5 = true
+							mj.opts.checksum = minio.ChecksumNone
 						}
 					}
 					errorIf(copyBucketPolicies(ctx, newSrcClt, newDstClt, isOverwrite),

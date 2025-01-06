@@ -23,6 +23,10 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
+const (
+	errCodeChangeAlreadyApplied = "XMinioAdminPolicyChangeAlreadyApplied"
+)
+
 var adminAttachPolicyFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "user, u",
@@ -97,7 +101,10 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	} else {
 		res, e = client.DetachPolicy(globalContext, req)
 	}
-	fatalIf(probe.NewError(e), "Unable to make user/group policy association")
+
+	if e != nil && madmin.ToErrorResponse(e).Code != errCodeChangeAlreadyApplied {
+		fatalIf(probe.NewError(e), "Unable to make user/group policy association")
+	}
 
 	var emptyResp madmin.PolicyAssociationResp
 	if res.UpdatedAt == emptyResp.UpdatedAt {

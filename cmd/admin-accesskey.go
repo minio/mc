@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,27 +19,27 @@ package cmd
 
 import "github.com/minio/cli"
 
-var supportTopSubcommands = []cli.Command{
-	supportTopAPICmd,
-	supportTopDriveCmd,
-	supportTopLocksCmd,
-	supportTopNetCmd,
-	supportTopRPCCmd,
+var adminAccesskeySubcommands = []cli.Command{
+	adminAccesskeyListCmd,
+	adminAccesskeyRemoveCmd,
+	adminAccesskeyInfoCmd,
+	adminAccesskeyCreateCmd,
+	adminAccesskeyEditCmd,
+	adminAccesskeyEnableCmd,
+	adminAccesskeyDisableCmd,
 }
 
-var supportTopCmd = cli.Command{
-	Name:            "top",
-	Usage:           "provide top like statistics for MinIO",
-	Action:          mainSupportTop,
+var adminAccesskeyCmd = cli.Command{
+	Name:            "accesskey",
+	Usage:           "manage access keys defined in the MinIO server",
+	Action:          mainAdminAccesskey,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     supportTopSubcommands,
+	Subcommands:     adminAccesskeySubcommands,
 	HideHelpCommand: true,
 }
 
-// mainSupportTop is the handle for "mc support top" command.
-func mainSupportTop(ctx *cli.Context) error {
-	commandNotFound(ctx, supportTopSubcommands)
+func mainAdminAccesskey(ctx *cli.Context) error {
+	commandNotFound(ctx, adminAccesskeySubcommands)
 	return nil
-	// Sub-commands like "locks" have their own main.
 }

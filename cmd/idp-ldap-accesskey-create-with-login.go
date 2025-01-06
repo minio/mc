@@ -20,6 +20,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -110,7 +111,9 @@ func loginLDAPAccesskey(ctx *cli.Context) (*madmin.AdminClient, madmin.AddServic
 	stsCreds, e := credentials.NewLDAPIdentity(urlStr, username, password)
 	fatalIf(probe.NewError(e), "unable to initialize LDAP identity")
 
-	tempCreds, e := stsCreds.Get()
+	tempCreds, e := stsCreds.GetWithContext(&credentials.CredContext{
+		Client: http.DefaultClient,
+	})
 	fatalIf(probe.NewError(e), "unable to create a temporary account from LDAP identity")
 
 	client, e := madmin.NewWithOptions(u.Host, &madmin.Options{

@@ -89,26 +89,20 @@ func mainSupportTopNet(ctx *cli.Context) error {
 
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
-	info, e := client.ServerInfo(ctxt)
-	fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to initialize admin client.")
-	hosts := make([]string, 0, len(info.Servers))
-	for _, s := range info.Servers {
-		hosts = append(hosts, s.Endpoint)
-	}
+
 	// MetricsOptions are options provided to Metrics call.
 	opts := madmin.MetricsOptions{
 		Type:     madmin.MetricNet,
 		Interval: time.Duration(ctx.Int("interval")) * time.Second,
 		N:        ctx.Int("n"),
 		ByHost:   true,
-		Hosts:    hosts,
 	}
 	if globalJSON {
 		e := client.Metrics(ctxt, opts, func(metrics madmin.RealtimeMetrics) {
 			printMsg(metricsMessage{RealtimeMetrics: metrics})
 		})
 		if e != nil && !errors.Is(e, context.Canceled) {
-			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch net metrics")
 		}
 		return nil
 	}

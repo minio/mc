@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -29,19 +30,20 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
+	"github.com/minio/madmin-go/v3/estream"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
 )
 
 const (
-	defaultPublicKey      = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
-	inspectOutputFilename = "inspect-data.enc"
+	defaultPublicKey = "MIIBCgKCAQEAs/128UFS9A8YSJY1XqYKt06dLVQQCGDee69T+0Tip/1jGAB4z0/3QMpH0MiS8Wjs4BRWV51qvkfAHzwwdU7y6jxU05ctb/H/WzRj3FYdhhHKdzear9TLJftlTs+xwj2XaADjbLXCV1jGLS889A7f7z5DgABlVZMQd9BjVAR8ED3xRJ2/ZCNuQVJ+A8r7TYPGMY3wWvhhPgPk3Lx4WDZxDiDNlFs4GQSaESSsiVTb9vyGe/94CsCTM6Cw9QG6ifHKCa/rFszPYdKCabAfHcS3eTr0GM+TThSsxO7KfuscbmLJkfQev1srfL2Ii2RbnysqIJVWKEwdW05ID8ryPkuTuwIDAQAB"
 )
 
 var supportInspectFlags = append(subnetCommonFlags,
@@ -186,13 +188,62 @@ func mainSupportInspect(ctx *cli.Context) error {
 	// Download the inspect data in a temporary file first
 	tmpFile, e := os.CreateTemp("", "mc-inspect-")
 	fatalIf(probe.NewError(e), "Unable to download file data.")
-	_, e = io.Copy(tmpFile, r)
+	copied := false
+
+	// Validate stream, report errors on stream.
+	if len(key) == 0 {
+		pr, pw := io.Pipe()
+		copied = true
+		var aErr error
+		var wg sync.WaitGroup
+		wg.Add(1)
+		// Validate stream...
+		go func() {
+			defer wg.Done()
+			er, err := estream.NewReader(pr)
+			if err != nil {
+				// Ignore if header is non-parsable...
+				io.Copy(io.Discard, pr)
+				return
+			}
+			// We don't care about decrypting at this point.
+			er.SkipEncrypted(true)
+			for {
+				var st *estream.Stream
+				st, aErr = er.NextStream()
+				if errors.Is(aErr, io.EOF) {
+					aErr = nil
+					pr.CloseWithError(nil)
+					return
+				}
+				if aErr != nil {
+					pr.CloseWithError(aErr)
+					return
+				}
+				aErr = st.Skip()
+				if aErr != nil {
+					fmt.Println("Skip:", aErr)
+					pr.CloseWithError(aErr)
+					return
+				}
+			}
+		}()
+		_, e = io.Copy(io.MultiWriter(tmpFile, pw), r)
+		pw.CloseWithError(e)
+		wg.Wait()
+		if e == nil && aErr != nil {
+			e = aErr
+		}
+	}
+	if !copied {
+		_, e = io.Copy(tmpFile, r)
+	}
 	fatalIf(probe.NewError(e), "Unable to download file data.")
 	r.Close()
 	tmpFile.Close()
-
+	wantFileName := "inspect-" + conservativeFileName(strings.Join(splits, "_")) + ".enc"
 	if globalAirgapped {
-		saveInspectDataFile(key, tmpFile)
+		saveInspectDataFile(wantFileName, key, tmpFile)
 		return nil
 	}
 
@@ -203,14 +254,14 @@ func mainSupportInspect(ctx *cli.Context) error {
 	_, e = (&SubnetFileUploader{
 		alias:             alias,
 		FilePath:          tmpFileName,
-		filename:          inspectOutputFilename,
+		filename:          wantFileName,
 		ReqURL:            reqURL,
 		Headers:           headers,
 		DeleteAfterUpload: true,
 	}).UploadFileToSubnet()
 	if e != nil {
 		console.Errorln("Unable to upload inspect data to SUBNET portal: " + e.Error())
-		saveInspectDataFile(key, tmpFile)
+		saveInspectDataFile(wantFileName, key, tmpFile)
 		return nil
 	}
 
@@ -218,34 +269,33 @@ func mainSupportInspect(ctx *cli.Context) error {
 	return nil
 }
 
-func saveInspectDataFile(key []byte, tmpFile *os.File) {
+func saveInspectDataFile(dstFileName string, key []byte, tmpFile *os.File) {
 	var keyHex string
 
-	downloadPath := inspectOutputFilename
 	// Choose a name and move the inspect data to its final destination
 	if key != nil {
 		// Create an id that is also crc.
 		var id [4]byte
 		binary.LittleEndian.PutUint32(id[:], crc32.ChecksumIEEE(key[:]))
 		// We use 4 bytes of the 32 bytes to identify they file.
-		downloadPath = fmt.Sprintf("inspect-data.%s.enc", hex.EncodeToString(id[:]))
+		dstFileName = fmt.Sprintf("inspect-data.%s.enc", hex.EncodeToString(id[:]))
 		keyHex = hex.EncodeToString(id[:]) + hex.EncodeToString(key[:])
 	}
 
-	fi, e := os.Stat(downloadPath)
+	fi, e := os.Stat(dstFileName)
 	if e == nil && !fi.IsDir() {
-		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
-		fatalIf(probe.NewError(e), "Unable to create a backup of "+downloadPath)
+		e = moveFile(dstFileName, dstFileName+"."+time.Now().Format(dateTimeFormatFilename))
+		fatalIf(probe.NewError(e), "Unable to create a backup of "+dstFileName)
 	} else {
 		if !os.IsNotExist(e) {
 			fatal(probe.NewError(e), "Unable to download file data")
 		}
 	}
 
-	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to rename downloaded data, file exists at %s", tmpFile.Name())
+	fatalIf(probe.NewError(moveFile(tmpFile.Name(), dstFileName)), "Unable to rename downloaded data, file exists at %s", tmpFile.Name())
 
 	printMsg(inspectMessage{
-		File: downloadPath,
+		File: dstFileName,
 		Key:  keyHex,
 	})
 }

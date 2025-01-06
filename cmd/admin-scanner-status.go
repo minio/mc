@@ -33,8 +33,9 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/klauspost/compress/zstd"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
@@ -64,9 +65,8 @@ var adminScannerInfoFlags = []cli.Flag{
 		Value: -1,
 	},
 	cli.StringFlag{
-		Name:   "in",
-		Hidden: true,
-		Usage:  "read previously saved json from file and replay",
+		Name:  "in",
+		Usage: "read previously saved json from file and replay",
 	},
 	cli.StringFlag{
 		Name:  "bucket",
@@ -198,19 +198,6 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 
 	checkAdminScannerInfoSyntax(ctx)
 
-	aliasedURL := ctx.Args().Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
-
-	if bucket := ctx.String("bucket"); bucket != "" {
-		bucketStats, err := client.BucketScanInfo(globalContext, bucket)
-		fatalIf(probe.NewError(err).Trace(aliasedURL), "Unable to get bucket stats.")
-		printMsg(bucketScanMsg{Stats: bucketStats})
-		return nil
-	}
-
 	ui := tea.NewProgram(initScannerMetricsUI(ctx.Int("max-paths")))
 	ctxt, cancel := context.WithCancel(globalContext)
 	defer cancel()
@@ -220,12 +207,20 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 		go func() {
 			if _, e := ui.Run(); e != nil {
 				cancel()
-				fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to fetch scanner metrics")
+				fatalIf(probe.NewError(e), "Unable to fetch scanner metrics")
 			}
 		}()
 		f, e := os.Open(inFile)
-		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to open input")
-		sc := bufio.NewReader(f)
+		fatalIf(probe.NewError(e), "Unable to open input")
+		defer f.Close()
+		in := io.Reader(f)
+		if strings.HasSuffix(inFile, ".zst") {
+			zr, e := zstd.NewReader(in)
+			fatalIf(probe.NewError(e), "Unable to open input")
+			defer zr.Close()
+			in = zr
+		}
+		sc := bufio.NewReader(in)
 		var lastTime time.Time
 		for {
 			b, e := sc.ReadBytes('\n')
@@ -248,6 +243,18 @@ func mainAdminScannerInfo(ctx *cli.Context) error {
 			lastTime = metrics.Aggregated.Scanner.CollectedAt
 		}
 		os.Exit(0)
+	}
+
+	// Create a new MinIO Admin Client
+	aliasedURL := ctx.Args().Get(0)
+	client, err := newAdminClient(aliasedURL)
+	fatalIf(err.Trace(aliasedURL), "Unable to initialize admin client.")
+
+	if bucket := ctx.String("bucket"); bucket != "" {
+		bucketStats, err := client.BucketScanInfo(globalContext, bucket)
+		fatalIf(probe.NewError(err).Trace(aliasedURL), "Unable to get bucket stats.")
+		printMsg(bucketScanMsg{Stats: bucketStats})
+		return nil
 	}
 
 	opts := madmin.MetricsOptions{

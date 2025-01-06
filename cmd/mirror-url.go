@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/minio/cli"
+	"github.com/minio/minio-go/v7"
 	"github.com/minio/pkg/v3/wildcard"
 )
 
@@ -39,6 +40,7 @@ func checkMirrorSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB map[st
 	if len(cliCtx.Args()) != 2 {
 		showCommandHelpAndExit(cliCtx, 1) // last argument is exit code.
 	}
+	parseChecksum(cliCtx)
 
 	// extract URLs.
 	URLs := cliCtx.Args()
@@ -274,6 +276,7 @@ type mirrorOptions struct {
 	olderThan, newerThan                                  string
 	storageClass                                          string
 	userMetadata                                          map[string]string
+	checksum                                              minio.ChecksumType
 }
 
 // Prepares urls that need to be copied or removed based on requested options.

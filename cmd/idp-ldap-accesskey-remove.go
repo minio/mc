@@ -46,6 +46,11 @@ EXAMPLES:
 }
 
 func mainIDPLdapAccesskeyRemove(ctx *cli.Context) error {
+	return commonAccesskeyRemove(ctx)
+}
+
+// No difference between ldap and builtin accesskey remove for now
+func commonAccesskeyRemove(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}

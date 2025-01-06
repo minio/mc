@@ -119,7 +119,9 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 		string(madmin.ProfilerTrace),
 		string(madmin.ProfilerThreads),
 		string(madmin.ProfilerGoroutines),
-		string(madmin.ProfilerCPUIO))
+		string(madmin.ProfilerCPUIO),
+		string(madmin.ProfilerRuntime),
+	)
 	// Check if the provided profiler type is known and supported
 	profilers := strings.Split(strings.ToLower(ctx.String("type")), ",")
 	for _, profiler := range profilers {
@@ -134,8 +136,8 @@ func checkAdminProfileSyntax(ctx *cli.Context) {
 		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
-	if ctx.Int("duration") < 10 {
-		fatal(errDummy().Trace(), "for any useful profiling one must run it for atleast 10 seconds")
+	if ctx.Int("duration") < 1 {
+		fatal(errDummy().Trace(), "for any useful profiling one must run it for at least 1 second")
 	}
 }
 
