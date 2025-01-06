@@ -35,6 +35,7 @@ import (
 
 	"github.com/inconshreveable/mousetrap"
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/pkg/v3/console"
@@ -397,7 +398,7 @@ func findClosestCommands(commandsTree *trie.Trie, command string) []string {
 // Check for updates and print a notification message
 func checkUpdate(ctx *cli.Context) {
 	// Do not print update messages, if quiet flag is set.
-	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
+	if !ctx.Bool("quiet") && !ctx.GlobalBool("quiet") {
 		// Its OK to ignore any errors during doUpdate() here.
 		if updateMsg, _, currentReleaseTime, latestReleaseTime, _, err := getUpdateInfo("", 2*time.Second); err == nil {
 			printMsg(updateMessage{
@@ -479,7 +480,10 @@ func registerApp(name string) *cli.App {
 	app := cli.NewApp()
 	app.Name = name
 	app.Action = func(ctx *cli.Context) error {
-		if strings.HasPrefix(ReleaseTag, "RELEASE.") {
+		mcEnable := env.Get("MC_UPDATE", madmin.EnableOn)
+		minioEnable := env.Get("MINIO_UPDATE", madmin.EnableOn)
+
+		if strings.HasPrefix(ReleaseTag, "RELEASE.") && (mcEnable == madmin.EnableOn || minioEnable == madmin.EnableOn) {
 			// Check for new updates from dl.min.io.
 			checkUpdate(ctx)
 		}

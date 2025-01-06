@@ -196,7 +196,8 @@ func (n notifyExpiringTLS) RoundTrip(req *http.Request) (res *http.Response, err
 
 	cert := res.TLS.PeerCertificates[0] // leaf certificate
 	validityDur := cert.NotAfter.Sub(cert.NotBefore)
-	if time.Since(cert.NotBefore) > time.Duration(0.9*float64(validityDur)) {
+	// Warn if less than 10% of time left and it is less than 28 days.
+	if time.Until(cert.NotAfter) < time.Duration(min(0.1*float64(validityDur), 28*24*float64(time.Hour))) {
 		globalExpiringCerts.Store(req.Host, cert.NotAfter)
 	}
 
@@ -1658,18 +1659,21 @@ func (c *S3Client) Stat(ctx context.Context, opts StatOptions) (*ClientContent, 
 		if opts.isZip {
 			o.Set("x-minio-extract", "true")
 		}
+
 		o.Set("x-amz-checksum-mode", "ENABLED")
 		ctnt, err := c.getObjectStat(ctx, bucket, path, o)
 		if err == nil {
 			return ctnt, nil
 		}
+
 		// Ignore object missing error but return for other errors
 		if !errors.As(err.ToGoError(), &ObjectMissing{}) && !errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, err
 		}
 
 		// when versionID is specified we do not have to perform List() operation
-		if opts.versionID != "" && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
+		// when headOnly is specified we do not have to perform List() operation
+		if (opts.versionID != "" || opts.headOnly) && errors.As(err.ToGoError(), &ObjectMissing{}) || errors.As(err.ToGoError(), &ObjectIsDeleteMarker{}) {
 			return nil, probe.NewError(ObjectMissing{opts.timeRef})
 		}
 
