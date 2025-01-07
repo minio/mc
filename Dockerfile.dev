@@ -9,6 +9,12 @@ COPY LICENSE /licenses/LICENSE
 RUN  \
      microdnf update --nodocs --assumeyes && \
      microdnf install ca-certificates --nodocs --assumeyes && \
+     microdnf install automake gcc libtool git --nodocs --assumeyes && \
+     cd /tmp && git clone --recursive https://github.com/jqlang/jq.git && cd jq && \
+     git checkout $(git describe --abbrev=0 --tags) && \
+     autoreconf -i && \
+     ./configure && \
+     make && \
      microdnf clean all
 
 ENTRYPOINT ["mc"]

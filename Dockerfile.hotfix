@@ -1,6 +1,12 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest as build
 
 RUN microdnf update --nodocs --assumeyes  && microdnf install ca-certificates --nodocs --assumeyes 
+RUN microdnf install automake gcc libtool git --nodocs --assumeyes && \
+    cd /tmp && git clone --recursive https://github.com/jqlang/jq.git && cd jq && \
+    git checkout $(git describe --abbrev=0 --tags) && \
+    autoreconf -i && \
+    ./configure && \
+    make
 
 FROM registry.access.redhat.com/ubi9/ubi-micro:latest
 
@@ -13,12 +19,13 @@ LABEL maintainer="MinIO Inc <dev@min.io>"
 # - /etc/pki/tls/certs/ca-bundle.crt (RHEL 6)
 # - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem (RHEL 7)
 COPY --from=build /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/pki/ca-trust/extracted/pem/
+COPY --from=build /tmp/jq/jq /usr/bin/
 
 COPY CREDITS /licenses/CREDITS
 COPY LICENSE /licenses/LICENSE
 
 ADD https://dl.min.io/client/mc/hotfixes/linux-${TARGETARCH}/archive/mc.${RELEASE} /usr/bin/mc
 
-RUN chmod +x /usr/bin/mc
+RUN chmod +x /usr/bin/mc /usr/bin/jq
 
 ENTRYPOINT ["mc"]
