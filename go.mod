@@ -32,9 +32,9 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/shirou/gopsutil/v3 v3.23.12
 	github.com/tidwall/gjson v1.17.0
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.21.0
-	golang.org/x/text v0.14.0
+	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/net v0.33.0
+	golang.org/x/text v0.21.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -43,7 +43,7 @@ require (
 	github.com/charmbracelet/bubbles v0.17.1
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/gdamore/tcell/v2 v2.7.0
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/juju/ratelimit v1.0.2
 	github.com/minio/madmin-go/v3 v3.0.50-0.20240307075442-63b4fc3ac1fd
 	github.com/minio/pkg/v2 v2.0.7
@@ -52,7 +52,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rivo/tview v0.0.0-20231206124440-5f078138442e
 	github.com/vbauerster/mpb/v8 v8.7.1
-	golang.org/x/term v0.18.0
+	golang.org/x/term v0.27.0
 )
 
 require (
@@ -123,8 +123,8 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.11 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.18.0
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0
 	google.golang.org/genproto v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/grpc v1.60.1 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
