@@ -153,7 +153,7 @@ func mainMakeBucket(cliCtx *cli.Context) error {
 				errorIf(err.Trace(targetURL), "Unable to make bucket `%s`.", targetURL)
 			}
 			cErr = exitStatus(globalErrorExitStatus)
-			continue
+			break
 		}
 
 		if cliCtx.Bool("with-versioning") {
