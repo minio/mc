@@ -32,6 +32,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
 
@@ -301,8 +303,12 @@ func (f *fsClient) put(_ context.Context, reader io.Reader, size int64, progress
 
 	objectPath := f.PathURL.Path
 
-	// Write to a temporary file "object.part.minio" before commit.
-	objectPartPath := objectPath + partSuffix
+	if err := checkPathLength(objectPath); err != nil {
+		return 0, err
+	}
+
+	// Write to a temporary file "objectpath/uuid" before commit.
+	objectPartPath := filepath.Join(filepath.Dir(objectPath), uuid.NewString())
 
 	// We cannot resume this operation, then we
 	// should remove any partial download if any.
@@ -393,6 +399,46 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, progre
 	return f.put(ctx, reader, size, progress, opts)
 }
 
+// checkPathLength - returns error if given path name length more than 255
+func checkPathLength(pathName string) *probe.Error {
+	// Apple OS X path length is limited to 1016
+	if runtime.GOOS == "darwin" && len(pathName) > 1016 {
+		return probe.NewError(errors.New("file name too long"))
+	}
+
+	// Disallow more than 1024 characters on windows, there
+	// are no known name_max limits on Windows.
+	if runtime.GOOS == "windows" && len(pathName) > 1024 {
+		return probe.NewError(errors.New("file name too long"))
+	}
+
+	// On Unix we reject paths if they are just '.', '..' or '/'
+	if pathName == "." || pathName == ".." || pathName == "/" {
+		return probe.NewError(errors.New("file access denied"))
+	}
+
+	// Check each path segment length is > 255 on all Unix
+	// platforms, look for this value as NAME_MAX in
+	// /usr/include/linux/limits.h
+	var count int64
+	for _, p := range pathName {
+		switch p {
+		case '/':
+			count = 0 // Reset
+		case '\\':
+			if runtime.GOOS == "windows" {
+				count = 0
+			}
+		default:
+			count++
+			if count > 255 {
+				return probe.NewError(errors.New("file name too long"))
+			}
+		}
+	} // Success.
+	return nil
+}
+
 func (f *fsClient) putN(_ context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
@@ -415,8 +461,12 @@ func (f *fsClient) putN(_ context.Context, reader io.Reader, size int64, progres
 
 	objectPath := f.PathURL.Path
 
-	// Write to a temporary file "object.part.minio" before commit.
-	objectPartPath := objectPath + partSuffix
+	if err := checkPathLength(objectPath); err != nil {
+		return 0, err
+	}
+
+	// Write to a temporary file ""objectpath/uuid"" before commit.
+	objectPartPath := filepath.Join(filepath.Dir(objectPath), uuid.NewString())
 
 	// We cannot resume this operation, then we
 	// should remove any partial download if any.
