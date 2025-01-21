@@ -406,9 +406,10 @@ func checkPathLength(pathName string) *probe.Error {
 		return probe.NewError(errors.New("file name too long"))
 	}
 
-	// Disallow more than 1024 characters on windows, there
+	// Disallow more than 32,767 characters on windows, there
 	// are no known name_max limits on Windows.
-	if runtime.GOOS == "windows" && len(pathName) > 1024 {
+	// Refer: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+	if runtime.GOOS == "windows" && len(pathName) > 32767 {
 		return probe.NewError(errors.New("file name too long"))
 	}
 
@@ -428,12 +429,14 @@ func checkPathLength(pathName string) *probe.Error {
 		case '\\':
 			if runtime.GOOS == "windows" {
 				count = 0
+			} else {
+				count++
 			}
 		default:
 			count++
-			if count > 255 {
-				return probe.NewError(errors.New("file name too long"))
-			}
+		}
+		if count > 255 {
+			return probe.NewError(errors.New("file name too long"))
 		}
 	} // Success.
 	return nil
