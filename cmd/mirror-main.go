@@ -558,6 +558,13 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 
 	var cancelInProgress bool
 
+	defer func() {
+		// make sure we always cancel the context
+		if !cancelInProgress {
+			cancel()
+		}
+	}()
+
 	for sURLs := range mj.statusCh {
 		if cancelInProgress {
 			// Do not need to print any error after
