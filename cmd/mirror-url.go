@@ -277,6 +277,7 @@ type mirrorOptions struct {
 	storageClass                                          string
 	userMetadata                                          map[string]string
 	checksum                                              minio.ChecksumType
+	localListingOnly                                      bool
 }
 
 // Prepares urls that need to be copied or removed based on requested options.

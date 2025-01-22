@@ -243,12 +243,12 @@ func differenceInternal(sourceURL string,
 		tgtEOF = !tgtOk
 
 		// No objects from source AND target: Finish
-		if opts.isRemove {
-			if srcEOF && tgtEOF {
+		if opts.localListingOnly {
+			if srcEOF {
 				break
 			}
 		} else {
-			if srcEOF {
+			if srcEOF && tgtEOF {
 				break
 			}
 		}

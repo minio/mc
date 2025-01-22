@@ -1018,6 +1018,13 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		activeActive:          isWatch,
 	}
 
+	// If we are not using active/active and we are not removing
+	// files from the remote, then we can exit the listing once
+	// local files have been checked for diff.
+	if !mopts.activeActive && !mopts.isRemove {
+		mopts.localListingOnly = true
+	}
+
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL, mopts)
 
