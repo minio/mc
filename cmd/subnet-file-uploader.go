@@ -87,7 +87,7 @@ func (i *SubnetFileUploader) updateParams() {
 		i.filename += ".zst"
 		i.Params.Add("auto-compression", "zstd")
 	}
-	if i.AutoEncrypt || len(i.PubKey) >= 0 {
+	if i.AutoEncrypt || len(i.PubKey) > 0 {
 		i.Params.Add("encrypted", "true")
 		i.filename += ".enc"
 	}
