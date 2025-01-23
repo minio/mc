@@ -1022,7 +1022,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 	// files from the remote, then we can exit the listing once
 	// local files have been checked for diff.
 	if !mopts.activeActive && !mopts.isRemove {
-		mopts.localListingOnly = true
+		mopts.sourceListingOnly = true
 	}
 
 	// Create a new mirror job and execute it
