@@ -272,6 +272,8 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		}
 	}
 
+	expiryRulesCount := 0
+
 	if ctx.IsSet("size-lt") {
 		szStr := ctx.String("size-lt")
 		szLt, err := humanize.ParseBytes(szStr)
@@ -321,9 +323,11 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		tags = strPtr(ctx.String("tags"))
 	}
 	if ctx.IsSet("expiry-date") {
+		expiryRulesCount++
 		expiryDate = strPtr(ctx.String("expiry-date"))
 	}
 	if ctx.IsSet("expiry-days") {
+		expiryRulesCount++
 		expiryDays = strPtr(ctx.String("expiry-days"))
 	}
 	if f := "expire-days"; ctx.IsSet(f) {
@@ -339,6 +343,7 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 		expiredObjectDeleteMarker = boolPtr(ctx.Bool("expired-object-delete-marker"))
 	}
 	if f := "expire-delete-marker"; ctx.IsSet(f) {
+		expiryRulesCount++
 		expiredObjectDeleteMarker = boolPtr(ctx.Bool(f))
 	}
 	if ctx.IsSet("noncurrentversion-expiration-days") {
@@ -372,6 +377,10 @@ func GetLifecycleOptions(ctx *cli.Context) (LifecycleOptions, *probe.Error) {
 	}
 	if ctx.IsSet("expire-all-object-versions") {
 		expiredObjectAllversions = boolPtr(ctx.Bool("expire-all-object-versions"))
+	}
+
+	if expiryRulesCount > 1 {
+		return LifecycleOptions{}, probe.NewError(errors.New("only one of expiry-date, expiry-days and expire-delete-marker can be used in a single rule. Try adding multiple rules to achieve the desired effect"))
 	}
 
 	return LifecycleOptions{
