@@ -175,7 +175,16 @@ func isOlder(ti time.Time, olderRef string) bool {
 	}
 	objectAge := time.Since(ti)
 	olderThan, e := ParseDuration(olderRef)
-	fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`.")
+	if e != nil {
+		for _, format := range rewindSupportedFormat {
+			if t, e2 := time.Parse(format, olderRef); e2 == nil {
+				olderThan = Duration(time.Since(t))
+				e = nil
+				break
+			}
+		}
+	}
+	fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`. Supply relative '7d6h2m' or absolute '"+printDate+"'.")
 	return objectAge < time.Duration(olderThan)
 }
 
@@ -187,7 +196,16 @@ func isNewer(ti time.Time, newerRef string) bool {
 
 	objectAge := time.Since(ti)
 	newerThan, e := ParseDuration(newerRef)
-	fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`.")
+	if e != nil {
+		for _, format := range rewindSupportedFormat {
+			if t, e2 := time.Parse(format, newerRef); e2 == nil {
+				newerThan = Duration(time.Since(t))
+				e = nil
+				break
+			}
+		}
+	}
+	fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`. Supply relative '7d6h2m' or absolute '"+printDate+"'.")
 	return objectAge >= time.Duration(newerThan)
 }
 
