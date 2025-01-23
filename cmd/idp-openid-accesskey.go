@@ -19,30 +19,21 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	idpOpenidSubcommands = []cli.Command{
-		idpOpenidAddCmd,
-		idpOpenidUpdateCmd,
-		idpOpenidRemoveCmd,
-		idpOpenidListCmd,
-		idpOpenidInfoCmd,
-		idpOpenidEnableCmd,
-		idpOpenidDisableCmd,
-		idpOpenIDAccesskeyCmd,
-		// TODO: idpOpenidPolicyCmd,
-	}
-	idpOpenidCmd = cli.Command{
-		Name:            "openid",
-		Usage:           "manage OpenID IDP server configuration",
-		Action:          mainIDPOpenID,
-		Before:          setGlobalsFromContext,
-		Flags:           globalFlags,
-		Subcommands:     idpOpenidSubcommands,
-		HideHelpCommand: true,
-	}
-)
+var idpOpenIDAccesskeySubcommands = []cli.Command{
+	idpOpenIDAccesskeyListCmd,
+}
 
-func mainIDPOpenID(ctx *cli.Context) error {
-	commandNotFound(ctx, idpOpenidSubcommands)
+var idpOpenIDAccesskeyCmd = cli.Command{
+	Name:            "accesskey",
+	Usage:           "manage OpenID access key pairs",
+	Action:          mainIDPOpenIDAccesskey,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	Subcommands:     idpOpenIDAccesskeySubcommands,
+	HideHelpCommand: true,
+}
+
+func mainIDPOpenIDAccesskey(ctx *cli.Context) error {
+	commandNotFound(ctx, idpOpenIDAccesskeySubcommands)
 	return nil
 }
