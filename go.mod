@@ -21,7 +21,7 @@ require (
 	github.com/minio/cli v1.24.2
 	github.com/minio/colorjson v1.0.8
 	github.com/minio/filepath v1.0.0
-	github.com/minio/madmin-go/v3 v3.0.88
+	github.com/minio/madmin-go/v3 v3.0.89
 	github.com/minio/minio-go/v7 v7.0.83
 	github.com/minio/pkg/v3 v3.0.28
 	github.com/minio/selfupdate v0.6.0
