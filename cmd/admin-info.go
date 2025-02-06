@@ -41,6 +41,10 @@ var adminInfoFlags = []cli.Flag{
 		Name:  "offline",
 		Usage: "show only offline nodes/drives",
 	},
+	cli.BoolFlag{
+		Name:  "online",
+		Usage: "show online nodes/drives",
+	},
 }
 
 var adminInfoCmd = cli.Command{
@@ -136,6 +140,7 @@ type clusterStruct struct {
 	Info   madmin.InfoMessage `json:"info,omitempty"`
 
 	onlyOffline bool
+	onlyOnline  bool
 }
 
 // String provides colorized info messages
@@ -175,6 +180,9 @@ func (u clusterStruct) String() (msg string) {
 	for _, srv := range u.Info.Servers {
 		// Check if MinIO server is not online ("Mode" field),
 		if srv.State != string(madmin.ItemOnline) {
+			if u.onlyOnline {
+				continue
+			}
 			totalOfflineNodes++
 			// "PrintB" is color blue in console library package
 			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
@@ -389,6 +397,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 
 	clusterInfo := clusterStruct{
 		onlyOffline: ctx.Bool("offline"),
+		onlyOnline:  ctx.Bool("online"),
 	}
 
 	// Fetch info of all servers (cluster or single server)
