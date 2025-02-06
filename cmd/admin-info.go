@@ -180,14 +180,7 @@ func (u clusterStruct) String() (msg string) {
 	for _, srv := range u.Info.Servers {
 		// Check if MinIO server is not online ("Mode" field),
 		if srv.State != string(madmin.ItemOnline) {
-			if u.onlyOnline {
-				continue
-			}
 			totalOfflineNodes++
-			// "PrintB" is color blue in console library package
-			msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
-			msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", srv.State))
-
 			if backendType == madmin.Erasure {
 				// Info about drives on a server, only available for non-FS types
 				var OffDrives int
@@ -205,7 +198,12 @@ func (u clusterStruct) String() (msg string) {
 				totalDrivesPerServer := OnDrives + OffDrives
 
 				dispNoOfDrives = strconv.Itoa(OnDrives) + "/" + strconv.Itoa(totalDrivesPerServer)
-				msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDrives, console.Colorize("InfoFail", "OK "))
+				if !u.onlyOnline {
+					// "PrintB" is color blue in console library package
+					msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", srv.Endpoint))
+					msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", srv.State))
+					msg += fmt.Sprintf("   Drives: %s %s\n", dispNoOfDrives, console.Colorize("InfoFail", "OK "))
+				}
 			}
 
 			msg += "\n"
