@@ -97,8 +97,8 @@ var globalFlags = []cli.Flag{
 		Value:  10 * time.Minute,
 	},
 	cli.StringSliceFlag{
-		Name:  "header",
-		Usage: "add custom HTTP header to the request. 'key:value' format.",
+		Name:   "header",
+		Usage:  "add custom HTTP header to the request. 'key:value' format.",
 		Hidden: true,
 	},
 }
