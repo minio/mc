@@ -331,6 +331,17 @@ func (config *Config) isTLS() bool {
 	return isHostTLS(config)
 }
 
+type headerRoundTripper struct {
+	http.RoundTripper
+}
+
+func (r headerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	for k, v := range globalCustomHeader {
+		req.Header[k] = v
+	}
+	return r.RoundTripper.RoundTrip(req)
+}
+
 func (config *Config) initTransport(withS3v2 bool) {
 	var transport http.RoundTripper
 
@@ -372,7 +383,11 @@ func (config *Config) initTransport(withS3v2 bool) {
 			// 	return nil, probe.NewError(e)
 			// }
 		}
-		transport = tr
+		if len(globalCustomHeader) > 0 {
+			transport = headerRoundTripper{tr}
+		} else {
+			transport = tr
+		}
 	}
 
 	transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
