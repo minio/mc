@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"net/http"
 	"net/netip"
 	"net/url"
 	"os"
@@ -90,6 +91,8 @@ var (
 	globalLimitDownload uint64
 
 	globalContext, globalCancel = context.WithCancel(context.Background())
+
+	globalCustomHeader http.Header
 )
 
 var (
@@ -200,5 +203,17 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 			globalResolvers[host] = addr
 		}
 	}
+
+	if ctx.IsSet("header") {
+		globalCustomHeader = make(http.Header)
+		for _, h := range ctx.StringSlice("header") {
+			i := strings.IndexByte(h, ':')
+			if i < 0 {
+				return fmt.Errorf("invalid header entry %s", h)
+			}
+			globalCustomHeader.Add(h[:i], h[i+1:])
+		}
+	}
+
 	return nil
 }
