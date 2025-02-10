@@ -98,7 +98,8 @@ var globalFlags = []cli.Flag{
 	},
 	cli.StringSliceFlag{
 		Name:  "header",
-		Usage: "add custom HTTP header to the request",
+		Usage: "add custom HTTP header to the request. 'key:value' format.",
+		Hidden: true,
 	},
 }
 
