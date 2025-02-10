@@ -208,7 +208,7 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 		globalCustomHeader = make(http.Header)
 		for _, h := range ctx.StringSlice("header") {
 			i := strings.IndexByte(h, ':')
-			if i < 0 {
+			if i <= 0 {
 				return fmt.Errorf("invalid header entry %s", h)
 			}
 			globalCustomHeader.Add(h[:i], h[i+1:])
