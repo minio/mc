@@ -383,7 +383,7 @@ func (config *Config) initTransport(withS3v2 bool) {
 			// 	return nil, probe.NewError(e)
 			// }
 		}
-		if globalCustomHeader != nil {
+		if len(globalCustomHeader) > 0 {
 			transport = headerRoundTripper{tr}
 		} else {
 			transport = tr
