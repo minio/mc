@@ -844,11 +844,11 @@ func (mj *mirrorJob) startMirror(ctx context.Context) {
 
 			if sURLs.SourceContent != nil {
 				mj.parallel.queueTask(func() URLs {
-					return mj.doMirror(ctx, sURLs, EventInfo{Time: time.Now().UTC().Format(mirrorTimeFormat)})
+					return mj.doMirror(ctx, sURLs, EventInfo{Time: time.Now().Local().Format(mirrorTimeFormat)})
 				}, sURLs.SourceContent.Size)
 			} else if sURLs.TargetContent != nil && mj.opts.isRemove {
 				mj.parallel.queueTask(func() URLs {
-					return mj.doRemove(ctx, sURLs, EventInfo{Time: time.Now().UTC().Format(mirrorTimeFormat)})
+					return mj.doRemove(ctx, sURLs, EventInfo{Time: time.Now().Local().Format(mirrorTimeFormat)})
 				}, 0)
 			}
 		case <-ctx.Done():
