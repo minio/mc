@@ -138,8 +138,8 @@ EXAMPLES:
   16. Move a folder using specific server managed encryption keys from Amazon S3 to MinIO cloud storage.
       {{.Prompt}} {{.HelpName}} --r --enc-s3 "s3/documents" --enc-s3 "myminio/documents" s3/documents/ myminio/documents/
 
-  17. Add MD5 checksum to move a text file to MinIO cloud storage.
-      {{.Prompt}} {{.HelpName}} --checksum MD5 myobject.txt play/mybucket
+  17. Add SHA256 checksum to move a text file to MinIO cloud storage.
+      {{.Prompt}} {{.HelpName}} --checksum SHA256 myobject.txt play/mybucket
 `,
 }
 
