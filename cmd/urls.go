@@ -50,7 +50,7 @@ func (m URLs) Equal(n URLs) bool {
 		return false
 	} else if m.SourceContent == nil && n.SourceContent != nil {
 		return false
-	} else if m.SourceContent.URL != n.SourceContent.URL {
+	} else if m.SourceContent != nil && n.SourceContent != nil && m.SourceContent.URL != n.SourceContent.URL {
 		return false
 	}
 
@@ -58,7 +58,7 @@ func (m URLs) Equal(n URLs) bool {
 		return false
 	} else if m.TargetContent == nil && n.TargetContent != nil {
 		return false
-	} else if m.TargetContent.URL != n.TargetContent.URL {
+	} else if m.TargetContent != nil && n.TargetContent != nil && m.TargetContent.URL != n.TargetContent.URL {
 		return false
 	}
 

@@ -18,10 +18,13 @@
 package cmd
 
 import (
-	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/minio/pkg/v3/console"
 
 	"github.com/cheggaaa/pb"
 	json "github.com/minio/colorjson"
@@ -56,14 +59,14 @@ func newAccounter(total int64) *accounter {
 }
 
 // write calculate the final speed.
-func (a *accounter) write(current int64) float64 {
+func (a *accounter) write(current int64) (float64, time.Duration) {
 	fromStart := time.Since(a.startTime)
 	currentFromStart := current - a.startValue
 	if currentFromStart > 0 {
 		speed := float64(currentFromStart) / (float64(fromStart) / float64(time.Second))
-		return speed
+		return speed, fromStart
 	}
-	return 0.0
+	return 0.0, 0
 }
 
 // writer update new accounting data for a specified refreshRate.
@@ -81,10 +84,11 @@ func (a *accounter) writer() {
 
 // accountStat cantainer for current stats captured.
 type accountStat struct {
-	Status      string  `json:"status"`
-	Total       int64   `json:"total"`
-	Transferred int64   `json:"transferred"`
-	Speed       float64 `json:"speed"`
+	Status      string        `json:"status"`
+	Total       int64         `json:"total"`
+	Transferred int64         `json:"transferred"`
+	Duration    time.Duration `json:"duration"`
+	Speed       float64       `json:"speed"`
 }
 
 func (c accountStat) JSON() string {
@@ -96,15 +100,42 @@ func (c accountStat) JSON() string {
 }
 
 func (c accountStat) String() string {
+	dspOrder := []col{colGreen} // Header
+	dspOrder = append(dspOrder, colGrey)
+	var printColors []*color.Color
+	for _, c := range dspOrder {
+		printColors = append(printColors, getPrintCol(c))
+	}
+
+	tbl := console.NewTable(printColors, []bool{false, false, false, false}, 0)
+
+	var builder strings.Builder
+	cellText := make([][]string, 0, 2)
+	cellText = append(cellText, []string{
+		"Total",
+		"Transferred",
+		"Duration",
+		"Speed",
+	})
+
 	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
 	if speedBox == "" {
 		speedBox = "0 MB"
 	} else {
 		speedBox = speedBox + "/s"
 	}
-	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.Format(c.Total).To(pb.U_BYTES),
-		pb.Format(c.Transferred).To(pb.U_BYTES), speedBox)
-	return message
+
+	cellText = append(cellText, []string{
+		pb.Format(c.Total).To(pb.U_BYTES).String(),
+		pb.Format(c.Transferred).To(pb.U_BYTES).String(),
+		pb.Format(int64(c.Duration)).To(pb.U_DURATION).String(),
+		speedBox,
+	})
+
+	e := tbl.PopulateTable(&builder, cellText)
+	fatalIf(probe.NewError(e), "unable to populate the table")
+
+	return builder.String()
 }
 
 // Stat provides current stats captured.
@@ -114,7 +145,7 @@ func (a *accounter) Stat() accountStat {
 		close(a.isFinished)
 		acntStat.Total = a.total
 		acntStat.Transferred = atomic.LoadInt64(&a.current)
-		acntStat.Speed = a.write(atomic.LoadInt64(&a.current))
+		acntStat.Speed, acntStat.Duration = a.write(atomic.LoadInt64(&a.current))
 	})
 	return acntStat
 }
