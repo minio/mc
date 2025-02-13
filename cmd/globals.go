@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"net/http"
 	"net/netip"
 	"net/url"
 	"os"
@@ -36,6 +37,7 @@ import (
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/pkg/v3/console"
 	"github.com/muesli/termenv"
+	"golang.org/x/net/http/httpguts"
 )
 
 const (
@@ -90,6 +92,8 @@ var (
 	globalLimitDownload uint64
 
 	globalContext, globalCancel = context.WithCancel(context.Background())
+
+	globalCustomHeader http.Header
 )
 
 var (
@@ -200,5 +204,21 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 			globalResolvers[host] = addr
 		}
 	}
+
+	customHeaders := ctx.StringSlice("custom-header")
+	if len(customHeaders) > 0 {
+		globalCustomHeader = make(http.Header)
+		for _, header := range customHeaders {
+			i := strings.IndexByte(header, ':')
+			if i <= 0 {
+				return fmt.Errorf("invalid custom header entry %s", header)
+			}
+			if !httpguts.ValidHeaderFieldName(header[:i]) || !httpguts.ValidHeaderFieldValue(header[i+1:]) {
+				return fmt.Errorf("invalid custom header entry %s", header)
+			}
+			globalCustomHeader.Add(header[:i], header[i+1:])
+		}
+	}
+
 	return nil
 }

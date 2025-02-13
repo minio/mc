@@ -96,6 +96,10 @@ var globalFlags = []cli.Flag{
 		Hidden: true,
 		Value:  10 * time.Minute,
 	},
+	cli.StringSliceFlag{
+		Name:  "custom-header,H",
+		Usage: "add custom HTTP header to the request. 'key:value' format.",
+	},
 }
 
 // bundled encryption flags
