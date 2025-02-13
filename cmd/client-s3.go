@@ -898,6 +898,9 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 			return nil, nil, probe.NewError(err)
 		}
 	}
+	if opts.Preserve {
+		o.Set("X-Amz-Tagging-Directive", "ACCESS")
+	}
 	// Disallow automatic decompression for some objects with content-encoding set.
 	o.Set("Accept-Encoding", "identity")
 
