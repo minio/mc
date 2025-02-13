@@ -26,7 +26,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 
-	minio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7"
 	checkv1 "gopkg.in/check.v1"
 )
 
@@ -181,13 +181,12 @@ func (h stsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Server", "MinIO")
 			w.Write(response)
 			return
-		} else {
-			response := []byte("<ErrorResponse xmlns=\"https://sts.amazonaws.com/doc/2011-06-15/\"><Error><Type></Type><Code>AccessDenied</Code><Message>Access denied: Invalid Token</Message></Error><RequestId></RequestId></ErrorResponse>")
-			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
-			w.Header().Set("Content-Type", "application/xml")
-			w.Write(response)
-			return
 		}
+		response := []byte("<ErrorResponse xmlns=\"https://sts.amazonaws.com/doc/2011-06-15/\"><Error><Type></Type><Code>AccessDenied</Code><Message>Access denied: Invalid Token</Message></Error><RequestId></RequestId></ErrorResponse>")
+		w.Header().Set("Content-Length", strconv.Itoa(len(response)))
+		w.Header().Set("Content-Type", "application/xml")
+		w.Write(response)
+		return
 	}
 }
 
