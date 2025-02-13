@@ -124,7 +124,7 @@ var encS3Flag = cli.StringSliceFlag{
 
 var checksumFlag = cli.StringFlag{
 	Name:  "checksum",
-	Usage: "Add checksum to uploaded object. Values: MD5, CRC32, CRC32C, SHA1 or SHA256. Requires server trailing headers (AWS, MinIO)",
+	Usage: "Add checksum to uploaded object. Values: MD5 (not stored), CRC32, CRC32C, SHA1 or SHA256. Requires server trailing headers (AWS, MinIO)",
 	Value: "",
 }
 
