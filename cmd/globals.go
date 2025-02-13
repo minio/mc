@@ -213,10 +213,12 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 			if i <= 0 {
 				return fmt.Errorf("invalid custom header entry %s", header)
 			}
-			if !httpguts.ValidHeaderFieldName(header[:i]) || !httpguts.ValidHeaderFieldValue(header[i+1:]) {
+			h := strings.TrimSpace(header[:i])
+			hv := strings.TrimSpace(header[i+1:])
+			if !httpguts.ValidHeaderFieldName(h) || !httpguts.ValidHeaderFieldValue(hv) {
 				return fmt.Errorf("invalid custom header entry %s", header)
 			}
-			globalCustomHeader.Add(header[:i], header[i+1:])
+			globalCustomHeader.Add(h, hv)
 		}
 	}
 
