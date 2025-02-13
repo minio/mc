@@ -2,6 +2,8 @@ module github.com/minio/mc
 
 go 1.23
 
+toolchain go1.23.6
+
 require (
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.2.4
