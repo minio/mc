@@ -467,7 +467,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			if err != nil {
 				return uploadOpts.urls.WithError(probe.NewError(err))
 			}
-			metadata["X-Amz-Tagging"] = taggs
+			metadata["X-Amz-Tagging"] = tags
 			delete(metadata, "X-Amz-Tagging-Count")
 		}
 
