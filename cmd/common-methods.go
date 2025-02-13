@@ -463,7 +463,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		if content.Tags != nil {
-			taggs, err := url.PathUnescape(s3utils.TagEncode(content.Tags))
+			tags, err := url.PathUnescape(s3utils.TagEncode(content.Tags))
 			if err != nil {
 				return uploadOpts.urls.WithError(probe.NewError(err))
 			}
