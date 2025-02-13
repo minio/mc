@@ -207,6 +207,7 @@ func mainClusterIAMImport(ctx *cli.Context) error {
 
 	f, e = os.Open(args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get IAM info")
+	defer f.Close()
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
