@@ -128,7 +128,7 @@ var encS3Flag = cli.StringSliceFlag{
 
 var checksumFlag = cli.StringFlag{
 	Name:  "checksum",
-	Usage: "Add checksum to uploaded object. Values: MD5 (not stored), CRC32, CRC32C, SHA1 or SHA256. Requires server trailing headers (AWS, MinIO)",
+	Usage: "Add checksum to uploaded object. Values: CRC64NVME, CRC32, CRC32C, SHA1 or SHA256. Requires server trailing headers (AWS, MinIO)",
 	Value: "",
 }
 
@@ -140,14 +140,20 @@ func parseChecksum(ctx *cli.Context) (useMD5 bool, ct minio.ChecksumType) {
 			ct = minio.ChecksumCRC32
 		case "CRC32C":
 			ct = minio.ChecksumCRC32C
+		case "CRC32-FO":
+			ct = minio.ChecksumFullObjectCRC32
+		case "CRC32C-FO":
+			ct = minio.ChecksumFullObjectCRC32C
 		case "SHA1":
 			ct = minio.ChecksumSHA1
 		case "SHA256":
 			ct = minio.ChecksumSHA256
+		case "CRC64N", "CRC64NVME":
+			ct = minio.ChecksumCRC64NVME
 		case "MD5":
 			useMD5 = true
 		default:
-			err := fmt.Errorf("unknown checksum type: %s. Should be one of MD5, CRC32, CRC32C, SHA1 or SHA256", cs)
+			err := fmt.Errorf("unknown checksum type: %s. Should be one of CRC64NVME, MD5, CRC32, CRC32C, SHA1 or SHA256", cs)
 			fatalIf(probe.NewError(err), "")
 		}
 		if ct.IsSet() {
