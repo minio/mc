@@ -784,7 +784,7 @@ func MirrorTempDirectory(t *testing.T) {
 type tagListResult struct {
 	Tagset    map[string]string `json:"tagset"`
 	Status    string            `json:"status"`
-	Url       string            `json:"url"`
+	URL       string            `json:"url"`
 	VersionID string            `json:"versionID"`
 }
 
@@ -817,7 +817,7 @@ func MirrorMinio2MinioWithTagsCopy(t *testing.T) {
 		fileFound := false
 
 		for _, o := range targetTagsList {
-			if strings.Contains(o.Url, f.fileNameWithPrefix) {
+			if strings.Contains(o.URL, f.fileNameWithPrefix) {
 				fileFound = true
 				if !reflect.DeepEqual(f.tags, o.Tagset) {
 					fatalMsgOnly(fmt.Sprintf("expecting tags (%s) but got tags (%s)", f.tags, o.Tagset), t)
