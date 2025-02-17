@@ -2295,6 +2295,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	setChecksum("CRC32C", entry.ChecksumCRC32C)
 	setChecksum("SHA1", entry.ChecksumSHA1)
 	setChecksum("SHA256", entry.ChecksumSHA256)
+	setChecksum("CRC64NVME", entry.ChecksumCRC64NVME)
 	return content
 }
 
