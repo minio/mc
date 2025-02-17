@@ -1,6 +1,8 @@
 module github.com/minio/mc
 
-go 1.23
+go 1.23.0
+
+replace github.com/minio/madmin-go/v3 => /home/taran/work/madmin-go
 
 require (
 	github.com/charmbracelet/bubbles v0.20.0

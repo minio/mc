@@ -93,9 +93,9 @@ EXAMPLES:
 }
 
 type openIDAccesskeyList struct {
-	Status     string                                 `json:"status"`
-	ConfigName string                                 `json:"configName"`
-	Users      map[string]madmin.OpenIDUserAccessKeys `json:"users"`
+	Status     string                        `json:"status"`
+	ConfigName string                        `json:"configName"`
+	Users      []madmin.OpenIDUserAccessKeys `json:"users"`
 }
 
 func (m openIDAccesskeyList) String() string {
@@ -104,23 +104,23 @@ func (m openIDAccesskeyList) String() string {
 
 	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Config Name:"), m.ConfigName))
 	userStr := "User ID"
-	for userID, info := range m.Users {
-		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(userStr+":"), userID))
-		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Sub:"), info.Sub))
-		if info.ReadableName != "" {
-			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Readable Name:"), info.ReadableName))
+	for _, user := range m.Users {
+		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(userStr+":"), user.UserID))
+		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Sub:"), user.Sub))
+		if user.ReadableName != "" {
+			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Readable Name:"), user.ReadableName))
 		}
-		if len(info.STSKeys) > 0 || len(info.ServiceAccounts) > 0 {
+		if len(user.STSKeys) > 0 || len(user.ServiceAccounts) > 0 {
 			o.WriteString(iFmt(4, "%s\n", labelStyle.Render("Access Keys:")))
 		}
-		for _, k := range info.STSKeys {
+		for _, k := range user.STSKeys {
 			expiration := "never"
 			if nilExpiry(k.Expiration) != nil {
 				expiration = humanize.Time(*k.Expiration)
 			}
 			o.WriteString(iFmt(6, "%s, expires: %s, sts: true\n", k.AccessKey, expiration))
 		}
-		for _, k := range info.ServiceAccounts {
+		for _, k := range user.ServiceAccounts {
 			expiration := "never"
 			if nilExpiry(k.Expiration) != nil {
 				expiration = humanize.Time(*k.Expiration)
@@ -146,21 +146,21 @@ func mainIDPOpenIDAccesskeyList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	accessKeysMap, e := client.ListAccessKeysOpenIDBulk(globalContext, users, opts)
+	accessKeys, e := client.ListAccessKeysOpenIDBulk(globalContext, users, opts)
 	if e != nil {
 		if e.Error() == "Access Denied." && tentativeAll {
 			// retry with self
 			opts.All = false
-			accessKeysMap, e = client.ListAccessKeysOpenIDBulk(globalContext, users, opts)
+			accessKeys, e = client.ListAccessKeysOpenIDBulk(globalContext, users, opts)
 		}
 		fatalIf(probe.NewError(e), "Unable to list access keys.")
 	}
 
-	for cfgName, users := range accessKeysMap {
+	for _, cfg := range accessKeys {
 		m := openIDAccesskeyList{
 			Status:     "success",
-			ConfigName: cfgName,
-			Users:      users,
+			ConfigName: cfg.ConfigName,
+			Users:      cfg.Users,
 		}
 		printMsg(m)
 	}
