@@ -372,7 +372,16 @@ func (config *Config) initTransport(withS3v2 bool) {
 			// 	return nil, probe.NewError(e)
 			// }
 		}
-		transport = tr
+
+		if len(globalCustomHeader) > 0 {
+			transport = &headerTransport{
+				RoundTripper: tr,
+				customHeader: globalCustomHeader.Clone(),
+			}
+		} else {
+			transport = tr
+		}
+
 	}
 
 	transport = limiter.New(config.UploadLimit, config.DownloadLimit, transport)
@@ -398,4 +407,16 @@ type SelectObjectOpts struct {
 	InputSerOpts    map[string]map[string]string
 	OutputSerOpts   map[string]map[string]string
 	CompressionType minio.SelectCompressionType
+}
+
+type headerTransport struct {
+	http.RoundTripper
+	customHeader http.Header
+}
+
+func (h *headerTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	for k, v := range h.customHeader {
+		request.Header[k] = v
+	}
+	return h.RoundTripper.RoundTrip(request)
 }
