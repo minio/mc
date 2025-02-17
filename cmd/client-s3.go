@@ -898,6 +898,9 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 			return nil, nil, probe.NewError(err)
 		}
 	}
+	if opts.Preserve {
+		o.Set("X-Amz-Tagging-Directive", "ACCESS")
+	}
 	// Disallow automatic decompression for some objects with content-encoding set.
 	o.Set("Accept-Encoding", "identity")
 
@@ -2292,6 +2295,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	setChecksum("CRC32C", entry.ChecksumCRC32C)
 	setChecksum("SHA1", entry.ChecksumSHA1)
 	setChecksum("SHA256", entry.ChecksumSHA256)
+	setChecksum("CRC64NVME", entry.ChecksumCRC64NVME)
 	return content
 }
 
