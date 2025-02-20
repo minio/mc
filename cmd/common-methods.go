@@ -462,12 +462,12 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		if content.Tags != nil {
-			if tags, err := tags.NewTags(content.Tags, true); err != nil {
+			tags, err := tags.NewTags(content.Tags, true)
+			if err != nil {
 				return uploadOpts.urls.WithError(probe.NewError(err))
-			} else {
-				metadata["X-Amz-Tagging"] = tags.String()
-				delete(metadata, "X-Amz-Tagging-Count")
 			}
+			metadata["X-Amz-Tagging"] = tags.String()
+			delete(metadata, "X-Amz-Tagging-Count")
 		}
 
 		var e error
