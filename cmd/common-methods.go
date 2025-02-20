@@ -22,7 +22,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -36,7 +35,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/pkg/v3/env"
 )
 
@@ -463,12 +462,12 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		if content.Tags != nil {
-			tags, err := url.PathUnescape(s3utils.TagEncode(content.Tags))
-			if err != nil {
+			if tags, err := tags.NewTags(content.Tags, true); err != nil {
 				return uploadOpts.urls.WithError(probe.NewError(err))
+			} else {
+				metadata["X-Amz-Tagging"] = tags.String()
+				delete(metadata, "X-Amz-Tagging-Count")
 			}
-			metadata["X-Amz-Tagging"] = tags
-			delete(metadata, "X-Amz-Tagging-Count")
 		}
 
 		var e error
