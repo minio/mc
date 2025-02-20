@@ -28,6 +28,7 @@ import (
 	json "github.com/minio/colorjson"
 	madmin "github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/v3/console"
 )
 
 var adminTierListCmd = cli.Command{
@@ -108,6 +109,11 @@ func mainAdminTierList(ctx *cli.Context) error {
 
 	tiers, e := client.ListTiers(globalContext)
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list configured remote tier targets")
+
+	if len(tiers) == 0 {
+		console.Info("No remote tier targets found for alias '" + aliasedURL + "'. Use `mc ilm tier add` to configure one.\n")
+		return nil
+	}
 
 	if globalJSON {
 		printMsg(&tierListMessage{
