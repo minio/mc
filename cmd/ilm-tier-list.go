@@ -111,7 +111,7 @@ func mainAdminTierList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to list configured remote tier targets")
 
 	if len(tiers) == 0 {
-		console.Info("No remote tier targets found for alias '" + aliasedURL + "'. Use `mc ilm tier add` to configure one.\n")
+		console.Infoln("No remote tier targets found for alias '" + aliasedURL + "'. Use `mc ilm tier add` to configure one.")
 		return nil
 	}
 
