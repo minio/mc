@@ -31,6 +31,7 @@ import (
 
 var adminUserSTSAcctSubcommands = []cli.Command{
 	adminUserSTSAcctInfoCmd,
+	adminUserSTSAcctRevokeCmd,
 }
 
 var adminUserSTSAcctCmd = cli.Command{
