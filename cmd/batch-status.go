@@ -281,7 +281,22 @@ func (m *batchJobMetricsUI) View() string {
 			accElapsedTime := m.metric.LastUpdate.Sub(m.metric.StartTime)
 			addLine("Elapsed: ", accElapsedTime.String())
 		}
-
+	case string(madmin.BatchJobCatalog):
+		addLine("JobType: ", m.metric.JobType)
+		addLine("ObjectsScannedCount: ", m.metric.Catalog.ObjectsScannedCount)
+		addLine("ObjectsMatchedCount: ", m.metric.Catalog.ObjectsMatchedCount)
+		lastScanned := fmt.Sprintf("%s/%s", m.metric.Catalog.LastBucketScanned, m.metric.Catalog.LastObjectScanned)
+		addLine("LastScanned: ", lastScanned)
+		lastMatched := fmt.Sprintf("%s/%s", m.metric.Catalog.LastBucketMatched, m.metric.Catalog.LastObjectMatched)
+		addLine("LastMatched: ", lastMatched)
+		accElapsedTime := m.metric.LastUpdate.Sub(m.metric.StartTime)
+		addLine("RecordsWrittenCount: ", m.metric.Catalog.RecordsWrittenCount)
+		addLine("OutputObjectsCount: ", m.metric.Catalog.OutputObjectsCount)
+		addLine("Elapsed: ", accElapsedTime.Round(time.Second).String())
+		addLine("Scan Speed: ", fmt.Sprintf("%f objects/s", float64(m.metric.Catalog.ObjectsScannedCount)/accElapsedTime.Seconds()))
+		if m.metric.Catalog.ErrorMsg != "" {
+			addLine("Error: ", m.metric.Catalog.ErrorMsg)
+		}
 	}
 
 	table.AppendBulk(data)
