@@ -297,8 +297,13 @@ func (m mirrorMessage) String() string {
 	if m.EventTime != "" {
 		msg = console.Colorize("Time", fmt.Sprintf("[%s] ", m.EventTime))
 	}
-	if m.EventType == notification.ObjectRemovedDelete {
+	switch m.EventType {
+	case notification.ObjectRemovedDelete:
 		return msg + "Removed " + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	case notification.ObjectRemovedDeleteMarkerCreated:
+		return msg + "Removed (Delete Marker)" + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	case notification.ILMDelMarkerExpirationDelete:
+		return msg + "Removed (ILM)" + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
 	}
 	if m.EventTime == "" {
 		return console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
@@ -732,7 +737,9 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL, event)
 			}, mirrorURL.SourceContent.Size)
-		} else if event.Type == notification.ObjectRemovedDelete {
+		} else if event.Type == notification.ObjectRemovedDelete ||
+			event.Type == notification.ObjectRemovedDeleteMarkerCreated ||
+			event.Type == notification.ILMDelMarkerExpirationDelete {
 			if targetAlias != "" && strings.Contains(event.UserAgent, uaMirrorAppName+":"+targetAlias) {
 				// Ignore delete cascading delete events if cyclical.
 				continue
