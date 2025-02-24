@@ -367,7 +367,17 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs, event EventInfo) 
 	if mj.opts.isFake {
 		return sURLs.WithError(nil)
 	}
-
+	if sURLs.SourceContent != nil {
+		// Construct proper path with alias.
+		sourceWithAlias := filepath.Join(sURLs.SourceAlias, sURLs.SourceContent.URL.Path)
+		sourceCient, pErr := newClient(sourceWithAlias)
+		if pErr != nil {
+			return sURLs.WithError(pErr)
+		}
+		if _, err := sourceCient.Stat(ctx, StatOptions{headOnly: true}); err == nil {
+			return sURLs.WithError(nil)
+		}
+	}
 	// Construct proper path with alias.
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 	clnt, pErr := newClient(targetWithAlias)
