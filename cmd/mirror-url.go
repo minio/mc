@@ -272,7 +272,7 @@ type mirrorOptions struct {
 	skipErrors                                            bool
 	excludeOptions, excludeStorageClasses, excludeBuckets []string
 	encKeyDB                                              map[string][]prefixSSEPair
-	md5, disableMultipart                                 bool
+	md5, disableMultipart, enableVersion                  bool
 	olderThan, newerThan                                  string
 	storageClass                                          string
 	userMetadata                                          map[string]string

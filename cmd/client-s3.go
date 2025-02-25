@@ -739,6 +739,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
+					VersionID:    record.S3.Object.VersionID,
 				}
 			} else if strings.HasPrefix(record.EventName, "s3:ObjectCreated:PutRetention") {
 				eventsInfo[i] = EventInfo{
@@ -750,6 +751,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
+					VersionID:    record.S3.Object.VersionID,
 				}
 			} else if strings.HasPrefix(record.EventName, "s3:ObjectCreated:PutLegalHold") {
 				eventsInfo[i] = EventInfo{
@@ -761,6 +763,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
+					VersionID:    record.S3.Object.VersionID,
 				}
 			} else {
 				eventsInfo[i] = EventInfo{
@@ -772,6 +775,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 					Host:         record.Source.Host,
 					Port:         record.Source.Port,
 					UserAgent:    record.Source.UserAgent,
+					VersionID:    record.S3.Object.VersionID,
 				}
 			}
 		} else {
@@ -784,6 +788,7 @@ func (c *S3Client) notificationToEventsInfo(ninfo notification.Info) []EventInfo
 				Host:         record.Source.Host,
 				Port:         record.Source.Port,
 				UserAgent:    record.Source.UserAgent,
+				VersionID:    record.S3.Object.VersionID,
 			}
 		}
 	}
@@ -1087,6 +1092,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	}
 
 	opts := minio.PutObjectOptions{
+		Internal:              minio.AdvancedPutOptions{SourceVersionID: putOpts.versionId},
 		UserMetadata:          metadata,
 		UserTags:              tagsMap,
 		Progress:              progress,
