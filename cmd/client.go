@@ -76,7 +76,7 @@ type PutOptions struct {
 	concurrentStream      bool
 	ifNotExists           bool
 	checksum              minio.ChecksumType
-	versionId             string
+	versionID             string
 }
 
 // StatOptions holds options of the HEAD operation

@@ -1092,7 +1092,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	}
 
 	opts := minio.PutObjectOptions{
-		Internal:              minio.AdvancedPutOptions{SourceVersionID: putOpts.versionId},
+		Internal:              minio.AdvancedPutOptions{SourceVersionID: putOpts.versionID},
 		UserMetadata:          metadata,
 		UserTags:              tagsMap,
 		Progress:              progress,
