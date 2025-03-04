@@ -247,8 +247,10 @@ func undoURL(ctx context.Context, aliasedURL string, last int, recursive, dryRun
 			remove = false
 			continue
 		}
-		perObjectVersions = append(perObjectVersions, content)
-		atLeastOneUndoApplied = true
+		if (action == actionDelete && content.IsDeleteMarker) || (action == actionPut && !content.IsDeleteMarker) || action == "" {
+			perObjectVersions = append(perObjectVersions, content)
+			atLeastOneUndoApplied = true
+		}
 	}
 
 	// Undo the remaining versions found if any
