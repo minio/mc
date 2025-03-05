@@ -114,14 +114,7 @@ func validateExpiration(rule lifecycle.Rule) error {
 }
 
 func validateTransition(rule lifecycle.Rule) error {
-	var i int
-	if !rule.Transition.IsDaysNull() {
-		i++
-	}
-	if !rule.Transition.IsDateNull() {
-		i++
-	}
-	if i > 1 {
+	if !rule.Transition.IsDaysNull() && !rule.Transition.IsDateNull() {
 		return errors.New("only one parameter under Transition can be specified")
 	}
 	return nil
