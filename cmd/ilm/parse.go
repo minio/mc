@@ -113,6 +113,20 @@ func validateExpiration(rule lifecycle.Rule) error {
 	return nil
 }
 
+func validateTransition(rule lifecycle.Rule) error {
+	var i int
+	if !rule.Transition.IsDaysNull() {
+		i++
+	}
+	if !rule.Transition.IsDateNull() {
+		i++
+	}
+	if i > 1 {
+		return errors.New("only one parameter under Transition can be specified")
+	}
+	return nil
+}
+
 func validateNoncurrentExpiration(rule lifecycle.Rule) error {
 	days := rule.NoncurrentVersionExpiration.NoncurrentDays
 	if days < 0 {
@@ -162,6 +176,9 @@ func validateILMRule(rule lifecycle.Rule) *probe.Error {
 	if e := validateExpiration(rule); e != nil {
 		return probe.NewError(e)
 	}
+	if e := validateTransition(rule); e != nil {
+		return probe.NewError(e)
+	}
 	if e := validateTranExpCurdate(rule); e != nil {
 		return probe.NewError(e)
 	}
@@ -206,7 +223,8 @@ func parseTransition(storageClass, transitionDateStr, transitionDaysStr *string)
 			return lifecycle.Transition{}, err
 		}
 		transition.Date = transitionDate
-	} else if transitionDaysStr != nil {
+	}
+	if transitionDaysStr != nil {
 		transitionDays, err := parseTransitionDays(*transitionDaysStr)
 		if err != nil {
 			return lifecycle.Transition{}, err
