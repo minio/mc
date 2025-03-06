@@ -421,7 +421,7 @@ var appCmds = []cli.Command{
 	batchCmd,
 	cpCmd,
 	catCmd,
-	configCmd,
+	// configCmd,
 	corsCmd,
 	diffCmd,
 	duCmd,
