@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2025 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -19,27 +19,17 @@ package cmd
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminUserSTSAcctRevokeFlags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "all",
-		Usage: "revoke all STS accounts for the specified user",
-	},
-	cli.StringFlag{
-		Name:  "token-type",
-		Usage: "specify the token type to revoke",
-	},
-}
-
-var adminUserSTSAcctRevokeCmd = cli.Command{
-	Name:         "revoke",
+var idpLdapAccesskeySTSRevokeCmd = cli.Command{
+	Name:         "sts-revoke",
 	Usage:        "revokes all STS accounts or specified types for the specified user",
-	Action:       mainAdminUserSTSAcctRevoke,
+	Action:       mainIdpLdapAccesskeySTSRevoke,
 	OnUsageError: onUsageError,
 	Before:       setGlobalsFromContext,
-	Flags:        append(adminUserSTSAcctRevokeFlags, globalFlags...),
+	Flags:        append(adminAccesskeySTSRevokeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -52,44 +42,38 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Display information for the temporary account 'J123C4ZXEQN8RK6ND35I'
-     {{.Prompt}} {{.HelpName}} myminio/ J123C4ZXEQN8RK6ND35I
+  1. Revoke all 
+	 {{.Prompt}} {{.HelpName}} myminio user1 --all
+  2. TODO
+	 {{.Prompt}} {{.HelpName}} myminio user1 --token-type app-1
 `,
 }
 
-// checkAdminUserSTSAcctInfoSyntax - validate all the passed arguments
-func checkAdminUserSTSAcctRevokeSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		showCommandHelpAndExit(ctx, 1)
-	}
-
-	// All flag is here to ensure that the user wants to revoke all tokens.
-	// It is not actually sent, since an empty token type is sent to revoke all tokens.
-	if !ctx.Bool("all") && ctx.String("token-type") == "" {
-		fatalIf(errDummy().Trace(), "Exactly one of --all or --token-type must be specified.")
-	}
-}
-
-// mainAdminUserSTSAcctInfo is the handle for "mc admin user sts info" command.
-func mainAdminUserSTSAcctRevoke(ctx *cli.Context) error {
-	checkAdminUserSTSAcctInfoSyntax(ctx)
+// mainIdpLdapUserSTSAcctInfo is the handle for "mc admin accesskey sts-revoke" command.
+func mainIdpLdapAccesskeySTSRevoke(ctx *cli.Context) error {
+	checkAdminAccesskeySTSRevokeSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
-	user := args.Get(1)
-	tokenType := ctx.String("token-type")
+	user := args.Get(1) // will be empty if --self flag is set
+	tokenRevokeType := ctx.String("token-type")
+	fullRevoke := ctx.Bool("all")
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	e := client.RevokeTokens(globalContext, user, tokenType)
+	e := client.RevokeTokens(globalContext, madmin.RevokeTokensReq{
+		User:            user,
+		TokenRevokeType: tokenRevokeType,
+		FullRevoke:      fullRevoke,
+	})
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to revoke tokens for %s", user)
 
-	printMsg(userMessage{
-		op:        ctx.Command.Name,
-		AccessKey: args.Get(1),
+	printMsg(stsRevokeMessage{
+		User:            user,
+		TokenRevokeType: tokenRevokeType,
 	})
 
 	return nil
