@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/minio/cli"
@@ -52,9 +53,12 @@ EXAMPLES:
 
 func supportedJobTypes() string {
 	var builder strings.Builder
-	for _, jobType := range madmin.SupportedJobTypes {
+	for _, jobType := range madmin.ClientSupportedJobTypes {
 		builder.WriteString("  - ")
 		builder.WriteString(string(jobType))
+		if jobType == madmin.BatchJobCatalog {
+			builder.WriteString(" (AIStor only)")
+		}
 		builder.WriteString("\n")
 	}
 	return builder.String()
@@ -80,15 +84,18 @@ func mainBatchGenerate(ctx *cli.Context) error {
 	adminClient, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	var found bool
-	for _, job := range madmin.SupportedJobTypes {
-		if jobType == string(job) {
-			found = true
-			break
-		}
-	}
-	if !found {
+	serverSupportedBatchJobTypes, e := adminClient.ListBatchJobTypes(globalContext)
+	fatalIf(probe.NewError(e), "Unable to list batch job types")
+
+	isClientSupported := slices.Contains(madmin.ClientSupportedJobTypes, madmin.BatchJobType(jobType))
+	isServerSupported := slices.Contains(serverSupportedBatchJobTypes, jobType)
+
+	if !isClientSupported {
 		fatalIf(errInvalidArgument().Trace(jobType), "Unable to generate a job template for the specified job type")
+	}
+
+	if isClientSupported && !isServerSupported {
+		fatalIf(errInvalidArgument().Trace(jobType), "Unable to generate a job template: the server does not support this job type")
 	}
 
 	out, e := adminClient.GenerateBatchJob(globalContext, madmin.GenerateBatchJobOpts{
