@@ -344,7 +344,7 @@ func fetchServerDiagInfo(ctx *cli.Context, client *madmin.AdminClient) (interfac
 	diskHw := spinner("Disk Info", madmin.HealthDataTypeSysDriveHw)
 	osInfo := spinner("OS Info", madmin.HealthDataTypeSysOsInfo)
 	mem := spinner("Mem Info", madmin.HealthDataTypeSysMem)
-	process := spinner("Process Info", madmin.HealthDataTypeSysLoad)
+	process := spinner("Process Info", madmin.HealthDataTypeSysProcess)
 	config := spinner("Server Config", madmin.HealthDataTypeMinioConfig)
 	syserr := spinner("System Errors", madmin.HealthDataTypeSysErrors)
 	syssrv := spinner("System Services", madmin.HealthDataTypeSysServices)
