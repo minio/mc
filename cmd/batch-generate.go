@@ -19,9 +19,9 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/minio/cli"
+	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -40,24 +40,20 @@ USAGE:
   {{.HelpName}} TARGET JOBTYPE
 
 JOBTYPE:
-` + supportedJobTypes() + `
+  - replicate
+  - keyrotate
+  - expire
+Use the special value "list" to request server to list supported job types.
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Generate a new batch 'replication' job definition:
      {{.Prompt}} {{.HelpName}} myminio replicate > replication.yaml
+  2. List all supported job types:
+     {{.Prompt}} {{.HelpName}} myminio list
 `,
-}
-
-func supportedJobTypes() string {
-	var builder strings.Builder
-	for _, jobType := range madmin.SupportedJobTypes {
-		builder.WriteString("  - ")
-		builder.WriteString(string(jobType))
-		builder.WriteString("\n")
-	}
-	return builder.String()
 }
 
 // checkBatchGenerateSyntax - validate all the passed arguments
@@ -80,6 +76,45 @@ func mainBatchGenerate(ctx *cli.Context) error {
 	adminClient, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	if jobType == "list" {
+		supportedJobTypes, apiUnavailable, e := adminClient.GetSupportedBatchJobTypes(globalContext)
+		if e != nil {
+			fatalIf(probe.NewError(e), "Unable to list supported job types")
+		}
+		if apiUnavailable {
+			// Fallback to default supported jobs.
+			supportedJobTypes = madmin.SupportedJobTypes
+		}
+
+		if globalJSON {
+			j, err := json.Marshal(supportedJobTypes)
+			if err != nil {
+				fatalIf(probe.NewError(err), "Unable to marshal supported job types")
+			}
+			fmt.Println(string(j))
+		} else {
+			for _, jobType := range supportedJobTypes {
+				fmt.Println(jobType)
+			}
+		}
+		return nil
+	}
+
+	// Try GenerateV2 API.
+	template, apiUnavailable, e := adminClient.GenerateBatchJobV2(globalContext, madmin.GenerateBatchJobOpts{
+		Type: madmin.BatchJobType(jobType),
+	})
+	if e != nil {
+		fatalIf(probe.NewError(e), "Unable to generate template for %s", args.Get(1))
+	}
+
+	// Check if server supports GenerateV2 API.
+	if !apiUnavailable {
+		fmt.Println(template)
+		return nil
+	}
+
+	// As API is not supported we fallback to returning the static job template.
 	var found bool
 	for _, job := range madmin.SupportedJobTypes {
 		if jobType == string(job) {
