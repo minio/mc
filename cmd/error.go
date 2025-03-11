@@ -45,6 +45,14 @@ type errorMessage struct {
 	SysInfo   map[string]string  `json:"sysinfo,omitempty"`
 }
 
+// errorOrFatal wrapper function to call errorIf or fatalIf based on the boolean value
+func errorOrFatal(useFatal bool, err *probe.Error, msg string, data ...interface{}) {
+	if useFatal {
+		fatalIf(err, msg, data...)
+	}
+	errorIf(err, msg, data...)
+}
+
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
 func fatalIf(err *probe.Error, msg string, data ...interface{}) {
 	if err == nil {
