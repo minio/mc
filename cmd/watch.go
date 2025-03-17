@@ -37,6 +37,7 @@ type EventInfo struct {
 	Port         string
 	UserAgent    string
 	Type         notification.EventType
+	VersionID    string
 }
 
 // WatchOptions contains watch configuration options
