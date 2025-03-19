@@ -1086,6 +1086,8 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		}
 	}
 
+	disableSha256 := putOpts.checksum.IsSet() // pre-emptively disable sha256 payload, if checksum is set.
+
 	opts := minio.PutObjectOptions{
 		UserMetadata:          metadata,
 		UserTags:              tagsMap,
@@ -1100,6 +1102,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 		SendContentMd5:        putOpts.md5,
 		Checksum:              putOpts.checksum,
 		DisableMultipart:      putOpts.disableMultipart,
+		DisableContentSha256:  disableSha256,
 		PartSize:              putOpts.multipartSize,
 		NumThreads:            putOpts.multipartThreads,
 		ConcurrentStreamParts: putOpts.concurrentStream, // if enabled honors NumThreads for piped() uploads
