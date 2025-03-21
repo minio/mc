@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/pkg/v3/console"
 )
 
 var idpLdapAccesskeyInfoCmd = cli.Command{
@@ -139,42 +141,22 @@ func commonAccesskeyInfo(ctx *cli.Context) error {
 
 	for _, accessKey := range accessKeys {
 		// Assume service account by default
-		res, e := client.InfoServiceAccount(globalContext, accessKey)
-		if e != nil {
-			// If not a service account must be sts
-			tempRes, e := client.TemporaryAccountInfo(globalContext, accessKey)
-			if e != nil {
-				errorIf(probe.NewError(e), "Unable to retrieve access key %s info.", accessKey)
-			} else {
-				m := ldapAccesskeyMessage{
-					op:            "info",
-					AccessKey:     accessKey,
-					Status:        "success",
-					ParentUser:    tempRes.ParentUser,
-					AccountStatus: tempRes.AccountStatus,
-					ImpliedPolicy: tempRes.ImpliedPolicy,
-					Policy:        json.RawMessage(tempRes.Policy),
-					Name:          tempRes.Name,
-					Description:   tempRes.Description,
-					Expiration:    nilExpiry(tempRes.Expiration),
-				}
-				printMsg(m)
-			}
-		} else {
-			m := ldapAccesskeyMessage{
-				op:            "info",
-				AccessKey:     accessKey,
-				Status:        "success",
-				ParentUser:    res.ParentUser,
-				AccountStatus: res.AccountStatus,
-				ImpliedPolicy: res.ImpliedPolicy,
-				Policy:        json.RawMessage(res.Policy),
-				Name:          res.Name,
-				Description:   res.Description,
-				Expiration:    nilExpiry(res.Expiration),
-			}
-			printMsg(m)
-		}
+		res, e := client.InfoAccessKey(globalContext, accessKey)
+		fatalIf(probe.NewError(e), "Unable to get info for access key.")
+		console.Println(fmt.Sprint(res))
+		// m := ldapAccesskeyMessage{
+		// 	op:            "info",
+		// 	AccessKey:     accessKey,
+		// 	Status:        "success",
+		// 	ParentUser:    res.ParentUser,
+		// 	AccountStatus: res.AccountStatus,
+		// 	ImpliedPolicy: res.ImpliedPolicy,
+		// 	Policy:        json.RawMessage(res.Policy),
+		// 	Name:          res.Name,
+		// 	Description:   res.Description,
+		// 	Expiration:    nilExpiry(res.Expiration),
+		// }
+		// printMsg(m)
 	}
 
 	return nil

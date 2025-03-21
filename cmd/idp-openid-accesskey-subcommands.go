@@ -105,8 +105,8 @@ func (m openIDAccesskeyList) String() string {
 	o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Config Name:"), m.ConfigName))
 	userStr := "User ID"
 	for _, user := range m.Users {
-		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(userStr+":"), user.UserID))
-		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Sub:"), user.Sub))
+		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(userStr+":"), user.MinioAccessKey))
+		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("ID:"), user.ID))
 		if user.ReadableName != "" {
 			o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Readable Name:"), user.ReadableName))
 		}
