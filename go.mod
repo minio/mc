@@ -11,7 +11,7 @@ require (
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.18.0
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
 	github.com/inconshreveable/mousetrap v1.1.0
