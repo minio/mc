@@ -23,8 +23,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
-	"github.com/minio/mc/pkg/probe"
 )
 
 var idpOpenIDAccesskeyInfoCmd = cli.Command{
@@ -68,18 +66,11 @@ func (l openIDAccessKeyInfo) String() string {
 	o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Config:"), l.ConfigName))
 	if l.DisplayNameClaim != "" {
 		dispNameLabel := fmt.Sprintf("Display Name (%s):", l.DisplayNameClaim)
-		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(dispNameLabel), l.DisplayNameClaim))
+		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(dispNameLabel), l.DisplayName))
 	}
 	uidLabel := fmt.Sprintf("User ID (%s):", l.UserIDClaim)
 	o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(uidLabel), l.UserID))
 	return o.String()
-}
-
-func (l openIDAccessKeyInfo) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(l, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
 }
 
 func mainIDPOpenIDAccesskeyInfo(ctx *cli.Context) error {

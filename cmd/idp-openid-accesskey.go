@@ -21,6 +21,7 @@ import "github.com/minio/cli"
 
 var idpOpenIDAccesskeySubcommands = []cli.Command{
 	idpOpenIDAccesskeyListCmd,
+	idpOpenIDAccesskeyInfoCmd,
 }
 
 var idpOpenIDAccesskeyCmd = cli.Command{

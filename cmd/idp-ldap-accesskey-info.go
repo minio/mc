@@ -22,8 +22,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/minio/cli"
-	json "github.com/minio/colorjson"
-	"github.com/minio/mc/pkg/probe"
 )
 
 var idpLdapAccesskeyInfoCmd = cli.Command{
@@ -60,13 +58,6 @@ func (l ldapAccessKeyInfo) String() string {
 	o.WriteString(labelStyle.Render("Username: "))
 	o.WriteString(l.Username)
 	return o.String()
-}
-
-func (l ldapAccessKeyInfo) JSON() string {
-	jsonMessageBytes, e := json.MarshalIndent(l, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
 }
 
 func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {

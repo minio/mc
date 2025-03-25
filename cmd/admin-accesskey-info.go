@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/pkg/v3/console"
 )
 
 var adminAccesskeyInfoCmd = cli.Command{
@@ -56,18 +54,19 @@ EXAMPLES:
 }
 
 type accesskeyMessage struct {
-	op                   string
-	Status               string          `json:"status"`
-	AccessKey            string          `json:"accessKey"`
-	SecretKey            string          `json:"secretKey,omitempty"`
-	ParentUser           string          `json:"parentUser,omitempty"`
-	AccountStatus        string          `json:"accountStatus,omitempty"`
-	ImpliedPolicy        bool            `json:"impliedPolicy,omitempty"`
-	Policy               json.RawMessage `json:"policy,omitempty"`
-	Name                 string          `json:"name,omitempty"`
-	Description          string          `json:"description,omitempty"`
-	Expiration           *time.Time      `json:"expiration,omitempty"`
-	ProviderSpecificInfo message         `json:"providerSpecificInfo,omitempty"`
+	op            string
+	Status        string          `json:"status"`
+	AccessKey     string          `json:"accessKey"`
+	SecretKey     string          `json:"secretKey,omitempty"`
+	ParentUser    string          `json:"parentUser,omitempty"`
+	AccountStatus string          `json:"accountStatus,omitempty"`
+	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
+	Policy        json.RawMessage `json:"policy,omitempty"`
+	Name          string          `json:"name,omitempty"`
+	Description   string          `json:"description,omitempty"`
+	Expiration    *time.Time      `json:"expiration,omitempty"`
+	Provider      string          `json:"provider,omitempty"`
+	ProviderInfo  providerInfo    `json:"providerInfo,omitempty"`
 }
 
 func (m accesskeyMessage) String() string {
@@ -94,8 +93,10 @@ func (m accesskeyMessage) String() string {
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Expiration:"), expirationStr))
-		if m.ProviderSpecificInfo != nil {
-			o.WriteString(m.ProviderSpecificInfo.String())
+		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Provider:"), m.Provider))
+		if m.ProviderInfo != nil {
+			o.WriteString(iFmt(0, "%s\n", labelStyle.Render("Provider Specific Info:")))
+			o.WriteString(m.ProviderInfo.String())
 		}
 	case "create":
 		expirationStr := "NONE"
@@ -120,10 +121,15 @@ func (m accesskeyMessage) String() string {
 }
 
 func (m accesskeyMessage) JSON() string {
+	m.Status = "success"
 	jsonMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)
+}
+
+type providerInfo interface {
+	String() string
 }
 
 func mainAdminAccesskeyInfo(ctx *cli.Context) error {
@@ -147,7 +153,6 @@ func commonAccesskeyInfo(ctx *cli.Context) error {
 		// Assume service account by default
 		res, e := client.InfoAccessKey(globalContext, accessKey)
 		fatalIf(probe.NewError(e), "Unable to get info for access key.")
-		console.Println(fmt.Sprint(res))
 		m := accesskeyMessage{
 			op:            "info",
 			AccessKey:     accessKey,
@@ -158,23 +163,25 @@ func commonAccesskeyInfo(ctx *cli.Context) error {
 			Name:          res.Name,
 			Description:   res.Description,
 			Expiration:    nilExpiry(res.Expiration),
+			Provider:      res.UserProvider,
 		}
-		var providerSpecificMessage message
-		switch psi := res.ProviderSpecificInfo.(type) {
-		case madmin.LDAPSpecificAccessKeyInfo:
-			providerSpecificMessage = ldapAccessKeyInfo{
-				Username: psi.Username,
+
+		switch res.UserProvider {
+		case madmin.LDAPProvider:
+			info := res.LDAPSpecificInfo
+			m.ProviderInfo = ldapAccessKeyInfo{
+				Username: info.Username,
 			}
-		case madmin.OpenIDSpecificAccessKeyInfo:
-			providerSpecificMessage = openIDAccessKeyInfo{
-				ConfigName:       psi.ConfigName,
-				UserID:           psi.UserID,
-				UserIDClaim:      psi.UserIDClaim,
-				DisplayName:      psi.DisplayName,
-				DisplayNameClaim: psi.DisplayNameClaim,
+		case madmin.OpenIDProvider:
+			info := res.OpenIDSpecificInfo
+			m.ProviderInfo = openIDAccessKeyInfo{
+				ConfigName:       info.ConfigName,
+				UserID:           info.UserID,
+				UserIDClaim:      info.UserIDClaim,
+				DisplayName:      info.DisplayName,
+				DisplayNameClaim: info.DisplayNameClaim,
 			}
 		}
-		m.ProviderSpecificInfo = providerSpecificMessage
 		printMsg(m)
 	}
 
