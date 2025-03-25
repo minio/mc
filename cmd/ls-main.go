@@ -120,6 +120,7 @@ var rewindSupportedFormat = []string{
 	"2006.01.02T15:04",
 	"2006.01.02T15:04:05",
 	time.RFC3339,
+	printDate,
 }
 
 // Parse rewind flag while considering the system local time zone

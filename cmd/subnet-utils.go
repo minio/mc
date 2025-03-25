@@ -65,10 +65,6 @@ func subnetIssueURL(issueNum int) string {
 	return fmt.Sprintf("%s/issues/%d", SubnetBaseURL(), issueNum)
 }
 
-func subnetLogWebhookURL() string {
-	return SubnetBaseURL() + "/api/logs"
-}
-
 // SubnetUploadURL - returns the upload URL for the given upload type
 func SubnetUploadURL(uploadType string) string {
 	return fmt.Sprintf("%s/api/%s/upload", SubnetBaseURL(), uploadType)

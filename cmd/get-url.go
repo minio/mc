@@ -92,7 +92,7 @@ func guessGetURLType(ctx context.Context, o prepareCopyURLsOpts) (*copyURLsConte
 			return cc, probe.NewError(fmt.Errorf("Please set a full path for s3 resource."))
 		}
 		cc.sourceContent = s3clnt.objectInfo2ClientContent(bucket, minio.ObjectInfo{
-			Key: path,
+			Key: path, VersionID: o.versionID,
 		})
 
 		client, err = newClient(o.targetURL)

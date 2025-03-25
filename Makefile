@@ -2,8 +2,8 @@ PWD := $(shell pwd)
 GOPATH := $(shell go env GOPATH)
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
 
-GOARCH := $(shell go env GOARCH)
-GOOS := $(shell go env GOOS)
+TARGET_GOARCH ?= $(shell go env GOARCH)
+TARGET_GOOS ?= $(shell go env GOOS)
 
 VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/mc:$(VERSION)"
@@ -64,7 +64,7 @@ verify:
 # Builds mc locally.
 build: checks
 	@echo "Building mc binary to './mc'"
-	@GO111MODULE=on CGO_ENABLED=0 go build -trimpath -tags kqueue --ldflags "$(LDFLAGS)" -o $(PWD)/mc
+	@GO111MODULE=on GOOS=$(TARGET_GOOS) GOARCH=$(TARGET_GOARCH) CGO_ENABLED=0 go build -trimpath -tags kqueue --ldflags "$(LDFLAGS)" -o $(PWD)/mc
 
 hotfix-vars:
 	$(eval LDFLAGS := $(shell MC_RELEASE="RELEASE" MC_HOTFIX="hotfix.$(shell git rev-parse --short HEAD)" go run buildscripts/gen-ldflags.go $(shell git describe --tags --abbrev=0 | \
@@ -78,9 +78,9 @@ hotfix: hotfix-vars install ## builds mc binary with hotfix tags
 	@sha256sum < ./mc.$(VERSION) | sed 's, -,mc.$(VERSION),g' > mc.$(VERSION).sha256sum
 
 hotfix-push: hotfix
-	@scp -q -r mc.$(VERSION)* minio@dl-0.min.io:~/releases/client/mc/hotfixes/linux-amd64/archive/
-	@scp -q -r mc.$(VERSION)* minio@dl-1.min.io:~/releases/client/mc/hotfixes/linux-amd64/archive/
-	@echo "Published new hotfix binaries at https://dl.min.io/client/mc/hotfixes/linux-amd64/archive/mc.$(VERSION)"
+	@scp -q -r mc.$(VERSION)* minio@dl-0.min.io:~/releases/client/mc/hotfixes/$(TARGET_GOOS)-$(TARGET_GOARCH)/archive/
+	@scp -q -r mc.$(VERSION)* minio@dl-1.min.io:~/releases/client/mc/hotfixes/$(TARGET_GOOS)-$(TARGET_GOARCH)/archive/
+	@echo "Published new hotfix binaries at https://dl.min.io/client/mc/hotfixes/$(TARGET_GOOS)-$(TARGET_GOARCH)/archive/mc.$(VERSION)"
 
 docker-hotfix-push: docker-hotfix
 	@docker push -q $(TAG) && echo "Published new container $(TAG)"

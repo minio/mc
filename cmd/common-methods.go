@@ -35,6 +35,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/pkg/v3/env"
 )
 
@@ -458,6 +459,15 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		// Get userMetadata from target content as well
 		for k, v := range uploadOpts.urls.TargetContent.UserMetadata {
 			metadata[http.CanonicalHeaderKey(k)] = v
+		}
+
+		if content.Tags != nil {
+			tags, err := tags.NewTags(content.Tags, true)
+			if err != nil {
+				return uploadOpts.urls.WithError(probe.NewError(err))
+			}
+			metadata["X-Amz-Tagging"] = tags.String()
+			delete(metadata, "X-Amz-Tagging-Count")
 		}
 
 		var e error

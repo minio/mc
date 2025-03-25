@@ -297,8 +297,13 @@ func (m mirrorMessage) String() string {
 	if m.EventTime != "" {
 		msg = console.Colorize("Time", fmt.Sprintf("[%s] ", m.EventTime))
 	}
-	if m.EventType == notification.ObjectRemovedDelete {
+	switch m.EventType {
+	case notification.ObjectRemovedDelete:
 		return msg + "Removed " + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	case notification.ObjectRemovedDeleteMarkerCreated:
+		return msg + "Removed (Delete Marker)" + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	case notification.ILMDelMarkerExpirationDelete:
+		return msg + "Removed (ILM)" + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
 	}
 	if m.EventTime == "" {
 		return console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
@@ -558,6 +563,13 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 
 	var cancelInProgress bool
 
+	defer func() {
+		// make sure we always cancel the context
+		if !cancelInProgress {
+			cancel()
+		}
+	}()
+
 	for sURLs := range mj.statusCh {
 		if cancelInProgress {
 			// Do not need to print any error after
@@ -715,7 +727,9 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL, event)
 			}, mirrorURL.SourceContent.Size)
-		} else if event.Type == notification.ObjectRemovedDelete {
+		} else if event.Type == notification.ObjectRemovedDelete ||
+			event.Type == notification.ObjectRemovedDeleteMarkerCreated ||
+			event.Type == notification.ILMDelMarkerExpirationDelete {
 			if targetAlias != "" && strings.Contains(event.UserAgent, uaMirrorAppName+":"+targetAlias) {
 				// Ignore delete cascading delete events if cyclical.
 				continue
@@ -1011,6 +1025,13 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		activeActive:          isWatch,
 	}
 
+	// If we are not using active/active and we are not removing
+	// files from the remote, then we can exit the listing once
+	// local files have been checked for diff.
+	if !mopts.activeActive && !mopts.isRemove {
+		mopts.sourceListingOnly = true
+	}
+
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL, mopts)
 
@@ -1022,7 +1043,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 	if mirrorSrcBuckets || createDstBuckets {
 		// Synchronize buckets using dirDifference function
-		for d := range bucketDifference(ctx, srcClt, dstClt) {
+		for d := range bucketDifference(ctx, srcClt, dstClt, mj.opts) {
 			if d.Error != nil {
 				if mj.opts.activeActive {
 					errorIf(d.Error, "Failed to start mirroring.. retrying")
