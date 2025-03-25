@@ -127,7 +127,7 @@ func commonAccesskeyCreate(ctx *cli.Context, ldap bool) error {
 	}
 	fatalIf(probe.NewError(e), "Unable to add service account.")
 
-	m := ldapAccesskeyMessage{
+	m := accesskeyMessage{
 		op:          "create",
 		Status:      "success",
 		AccessKey:   res.AccessKey,

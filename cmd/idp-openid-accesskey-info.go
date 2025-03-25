@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -26,10 +27,10 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var idpLdapAccesskeyInfoCmd = cli.Command{
+var idpOpenIDAccesskeyInfoCmd = cli.Command{
 	Name:         "info",
 	Usage:        "info about given access key pairs for LDAP",
-	Action:       mainIDPLdapAccesskeyInfo,
+	Action:       mainIDPOpenIDAccesskeyInfo,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
 	OnUsageError: onUsageError,
@@ -50,25 +51,37 @@ EXAMPLES:
 	`,
 }
 
-type ldapAccessKeyInfo struct {
-	Username string `json:"username,omitempty"`
+type openIDAccessKeyInfo struct {
+	ConfigName       string `json:"configName"`
+	UserID           string `json:"userID"`
+	UserIDClaim      string `json:"userIDClaim"`
+	DisplayName      string `json:"displayName,omitempty"`
+	DisplayNameClaim string `json:"displayNameClaim,omitempty"`
 }
 
-func (l ldapAccessKeyInfo) String() string {
+func (l openIDAccessKeyInfo) String() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")) // green
 	o := strings.Builder{}
-	o.WriteString(labelStyle.Render("Username: "))
-	o.WriteString(l.Username)
+	if l.ConfigName == "_" {
+		l.ConfigName = "_ (default)"
+	}
+	o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render("Config:"), l.ConfigName))
+	if l.DisplayNameClaim != "" {
+		dispNameLabel := fmt.Sprintf("Display Name (%s):", l.DisplayNameClaim)
+		o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(dispNameLabel), l.DisplayNameClaim))
+	}
+	uidLabel := fmt.Sprintf("User ID (%s):", l.UserIDClaim)
+	o.WriteString(iFmt(2, "%s %s\n", labelStyle.Render(uidLabel), l.UserID))
 	return o.String()
 }
 
-func (l ldapAccessKeyInfo) JSON() string {
+func (l openIDAccessKeyInfo) JSON() string {
 	jsonMessageBytes, e := json.MarshalIndent(l, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)
 }
 
-func mainIDPLdapAccesskeyInfo(ctx *cli.Context) error {
+func mainIDPOpenIDAccesskeyInfo(ctx *cli.Context) error {
 	return commonAccesskeyInfo(ctx)
 }

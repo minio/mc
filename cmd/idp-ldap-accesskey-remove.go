@@ -66,7 +66,7 @@ func commonAccesskeyRemove(ctx *cli.Context) error {
 	e := client.DeleteServiceAccount(globalContext, accessKey)
 	fatalIf(probe.NewError(e), "Unable to remove service account.")
 
-	m := ldapAccesskeyMessage{
+	m := accesskeyMessage{
 		op:        "remove",
 		Status:    "success",
 		AccessKey: accessKey,
