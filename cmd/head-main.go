@@ -142,9 +142,13 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 	}
 
 	for nlines > 0 {
-		line, _, e := br.ReadLine()
-		if e != nil {
-			return probe.NewError(e)
+		line, _, err := br.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return probe.NewError(err)
+			}
 		}
 		if _, e := stdout.Write(line); e != nil {
 			switch e := e.(type) {
