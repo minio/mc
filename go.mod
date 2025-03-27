@@ -4,7 +4,7 @@ go 1.23
 
 toolchain go1.23.6
 
-replace github.com/minio/madmin-go/v3 => github.com/taran-p/madmin-go/v3 v3.0.55-0.20250307220608-8bc8dacb30af
+replace github.com/minio/madmin-go/v3 => github.com/minio/madmin-go/v3 v3.0.100-0.20250319234114-3c39f28946cb
 
 require (
 	github.com/charmbracelet/bubbles v0.20.0
