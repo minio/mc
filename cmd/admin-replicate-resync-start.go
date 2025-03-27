@@ -19,8 +19,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/minio/madmin-go/v3"
 	"strings"
+
+	"github.com/minio/madmin-go/v3"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
