@@ -22,6 +22,7 @@ import (
 	"compress/bzip2"
 	"compress/gzip"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -143,12 +144,11 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 
 	for nlines > 0 {
 		line, _, err := br.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				return probe.NewError(err)
-			}
+		if err != nil && !errors.Is(err, io.EOF) {
+			return probe.NewError(err)
+		}
+		if errors.Is(err, io.EOF) {
+			break
 		}
 		if _, e := stdout.Write(line); e != nil {
 			switch e := e.(type) {
