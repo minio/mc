@@ -652,10 +652,11 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 		}
 		eventPath := event.Path
-		if runtime.GOOS == "darwin" {
+		switch runtime.GOOS {
+		case "darwin":
 			// Strip the prefixes in the event path. Happens in darwin OS only
 			eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
-		} else if runtime.GOOS == "windows" {
+		case "windows":
 			// Shared folder as source URL and if event path is an absolute path.
 			eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
 		}

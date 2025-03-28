@@ -1,32 +1,42 @@
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - typecheck
-    - goimports
-    - misspell
-    - staticcheck
-    - govet
-    - revive
-    - ineffassign
     - gomodguard
-    - gofmt
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
     - unused
+  settings:
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    rules:
+      - path: (.+)\.go$
+        text: instead of using struct literal
+      - path: (.+)\.go$
+        text: should have a package comment
+      - path: (.+)\.go$
+        text: error strings should not be capitalized or end with punctuation or a newline
+      - path: (.+)\.go$
+        text: error strings should not end with punctuation or newlines
+      - path: (.+)\.go$
+        text: error strings should not be capitalized
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
     - gofumpt
-
-linters-settings:
-  golint:
-    min-confidence: 0
-
-  misspell:
-    locale: US
-
-    # Choose whether or not to use the extra rules that are disabled
-    # by default
-    extra-rules: false
-
-issues:
-  exclude-use-default: false
-  exclude:
-    - instead of using struct literal
-    - should have a package comment
-    - error strings should not be capitalized or end with punctuation or a newline
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

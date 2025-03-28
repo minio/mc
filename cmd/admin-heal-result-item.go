@@ -87,11 +87,11 @@ func (h hri) getBucketHCCChange() (b, a col, err error) {
 
 	a, b = colGrey, colGrey
 
-	if len(h.HealResultItem.Before.Drives) > 0 {
-		b = getColCode(h.HealResultItem.Before.Drives)
+	if len(h.Before.Drives) > 0 {
+		b = getColCode(h.Before.Drives)
 	}
-	if len(h.HealResultItem.After.Drives) > 0 {
-		a = getColCode(h.HealResultItem.After.Drives)
+	if len(h.After.Drives) > 0 {
+		a = getColCode(h.After.Drives)
 	}
 	return
 }
