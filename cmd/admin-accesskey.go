@@ -27,6 +27,7 @@ var adminAccesskeySubcommands = []cli.Command{
 	adminAccesskeyEditCmd,
 	adminAccesskeyEnableCmd,
 	adminAccesskeyDisableCmd,
+	adminAccesskeySTSRevokeCmd,
 }
 
 var adminAccesskeyCmd = cli.Command{
