@@ -126,7 +126,7 @@ func (qs *QuietStatus) Start() {
 
 // Finish displays the accounting summary
 func (qs *QuietStatus) Finish() {
-	printMsg(qs.accounter.Stat())
+	printMsg(qs.Stat())
 }
 
 // Update is ignored for quietstatus
@@ -203,7 +203,7 @@ func (ps *ProgressStatus) SetTotal(v int64) Status {
 
 // Add bytes to current number of bytes
 func (ps *ProgressStatus) Add(v int64) Status {
-	ps.progressBar.Add64(v)
+	ps.Add64(v)
 	return ps
 }
 

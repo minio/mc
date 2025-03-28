@@ -83,13 +83,13 @@ func (i srRemoveStatus) String() string {
 	if i.RemoveAll {
 		return console.Colorize("UserMessage", "All site(s) were removed successfully")
 	}
-	if i.ReplicateRemoveStatus.Status == madmin.ReplicateRemoveStatusSuccess {
+	if i.Status == madmin.ReplicateRemoveStatusSuccess {
 		return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed successfully", i.sites))
 	}
 	if len(i.sites) == 1 {
-		return console.Colorize("UserMessage", fmt.Sprintf("Following site %s was removed partially, some operations failed:\nERROR: '%s'", i.sites, i.ReplicateRemoveStatus.ErrDetail))
+		return console.Colorize("UserMessage", fmt.Sprintf("Following site %s was removed partially, some operations failed:\nERROR: '%s'", i.sites, i.ErrDetail))
 	}
-	return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed partially, some operations failed: \nERROR: '%s'", i.sites, i.ReplicateRemoveStatus.ErrDetail))
+	return console.Colorize("UserMessage", fmt.Sprintf("Following site(s) %s were removed partially, some operations failed: \nERROR: '%s'", i.sites, i.ErrDetail))
 }
 
 func checkAdminReplicateRemoveSyntax(ctx *cli.Context) {

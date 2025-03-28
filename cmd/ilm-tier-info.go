@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
 	"github.com/minio/madmin-go/v3"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
 )
 
@@ -180,13 +181,33 @@ func mainAdminTierInfo(ctx *cli.Context) error {
 		NumbersStyle = lipgloss.NewStyle().Align(lipgloss.Right)
 	)
 	tableData := tierInfos(tInfos)
-	filteredData := table.NewFilter(tableData).
+	var filteredData table.Data
+	filteredData = table.NewFilter(tableData).
 		Filter(func(row int) bool {
 			if tier == "" {
 				return true
 			}
 			return tableData.At(row, 0) == tier
 		})
+
+	if filteredData.Rows() == 0 {
+		// check if that tier name is valid
+		// if valid will show that with empty data
+		tiers, e := client.ListTiers(globalContext)
+		fatalIf(probe.NewError(e).Trace(args...), "Unable to list configured remote tier targets")
+		for _, t := range tiers {
+			if t.Name == tier {
+				filteredData = tierInfos([]madmin.TierInfo{
+					{
+						Name: tier,
+						Type: t.Type.String(),
+					},
+				})
+				break
+			}
+		}
+	}
+
 	tbl := table.New().
 		Border(lipgloss.NormalBorder()).
 		Headers(tableData.Headers()...).

@@ -185,7 +185,7 @@ func mainIDPLDAPRemove(ctx *cli.Context) error {
 		showCommandHelpAndExit(ctx, 1)
 	}
 
-	var cfgName string = madmin.Default
+	cfgName := madmin.Default
 	return idpRemove(ctx, false, cfgName)
 }
 
@@ -247,7 +247,7 @@ func mainIDPLDAPInfo(ctx *cli.Context) error {
 		showCommandHelpAndExit(ctx, 1)
 	}
 
-	var cfgName string = madmin.Default
+	cfgName := madmin.Default
 	return idpInfo(ctx, false, cfgName)
 }
 

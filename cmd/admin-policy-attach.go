@@ -107,7 +107,7 @@ func userAttachOrDetachPolicy(ctx *cli.Context, attach bool) error {
 	}
 
 	var emptyResp madmin.PolicyAssociationResp
-	if res.UpdatedAt == emptyResp.UpdatedAt {
+	if res.UpdatedAt.Equal(emptyResp.UpdatedAt) {
 		// Older minio does not send a result, so we populate res manually to
 		// simulate a result. TODO(aditya): remove this after newer minio is
 		// released in a few months (Older API Deprecated in Jun 2023)
