@@ -398,7 +398,6 @@ func (ui *uiData) UpdateDisplay(s *madmin.HealTaskStatus) {
 	default:
 		ui.updateUI(s)
 	}
-	return
 }
 
 func (ui *uiData) healResumeMsg(aliasedURL string) string {

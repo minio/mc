@@ -50,9 +50,9 @@ type findMessage struct {
 // String calls tells the console what to print and how to print it.
 func (f findMessage) String() string {
 	var msg string
-	msg += f.contentMessage.Key
+	msg += f.Key
 	if f.VersionID != "" {
-		msg += " (" + f.contentMessage.VersionID + ")"
+		msg += " (" + f.VersionID + ")"
 	}
 	return console.Colorize("Find", msg)
 }
@@ -118,7 +118,7 @@ func getExitStatus(err error) int {
 		return 0
 	}
 	if pe, ok := err.(*exec.ExitError); ok {
-		if es, ok := pe.ProcessState.Sys().(syscall.WaitStatus); ok {
+		if es, ok := pe.Sys().(syscall.WaitStatus); ok {
 			return es.ExitStatus()
 		}
 	}

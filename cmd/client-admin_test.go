@@ -35,8 +35,8 @@ func (h adminPolicyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	switch {
-	case r.Method == "PUT":
+	switch r.Method {
+	case "PUT":
 		length, e := strconv.Atoi(r.Header.Get("Content-Length"))
 		if e != nil {
 			w.WriteHeader(http.StatusBadRequest)

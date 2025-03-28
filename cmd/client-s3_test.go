@@ -35,8 +35,8 @@ type bucketHandler struct {
 }
 
 func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch {
-	case r.Method == "GET":
+	switch r.Method {
+	case "GET":
 		// Handler for incoming getBucketLocation request.
 		if _, ok := r.URL.Query()["location"]; ok {
 			response := []byte("<LocationConstraint xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"></LocationConstraint>")
@@ -44,28 +44,28 @@ func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write(response)
 			return
 		}
-		switch {
-		case r.URL.Path == "/":
+		switch r.URL.Path {
+		case "/":
 			// Handler for incoming ListBuckets request.
 			response := []byte("<ListAllMyBucketsResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Buckets><Bucket><Name>bucket</Name><CreationDate>2015-05-20T23:05:09.230Z</CreationDate></Bucket></Buckets><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner></ListAllMyBucketsResult>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 			w.Write(response)
-		case r.URL.Path == "/bucket/":
+		case "/bucket/":
 			// Handler for incoming ListObjects request.
 			response := []byte("<ListBucketResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Contents><ETag>259d04a13802ae09c7e41be50ccc6baa</ETag><Key>object</Key><LastModified>2015-05-21T18:24:21.097Z</LastModified><Size>22061</Size><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Delimiter></Delimiter><EncodingType></EncodingType><IsTruncated>false</IsTruncated><Marker></Marker><MaxKeys>1000</MaxKeys><Name>testbucket</Name><NextMarker></NextMarker><Prefix></Prefix></ListBucketResult>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 			w.Write(response)
 		}
-	case r.Method == "PUT":
-		switch {
-		case r.URL.Path == h.resource:
+	case "PUT":
+		switch r.URL.Path {
+		case h.resource:
 			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 		}
-	case r.Method == "HEAD":
-		switch {
-		case r.URL.Path == h.resource:
+	case "HEAD":
+		switch r.URL.Path {
+		case h.resource:
 			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusForbidden)
@@ -85,8 +85,8 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch {
-	case r.Method == http.MethodPut:
+	switch r.Method {
+	case http.MethodPut:
 		// Handler for PUT object request.
 		length, e := strconv.Atoi(r.Header.Get("Content-Length"))
 		if e != nil {
@@ -100,7 +100,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
-	case r.Method == http.MethodHead:
+	case http.MethodHead:
 		// Handler for Stat object request.
 		if r.URL.Path != h.resource {
 			w.WriteHeader(http.StatusNotFound)
@@ -110,7 +110,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Last-Modified", UTCNow().Format(http.TimeFormat))
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
-	case r.Method == http.MethodPost:
+	case http.MethodPost:
 		// Handler for multipart upload request.
 		if _, ok := r.URL.Query()["uploads"]; ok {
 			if r.URL.Path == h.resource {
@@ -132,7 +132,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-	case r.Method == http.MethodGet:
+	case http.MethodGet:
 		// Handler for get bucket location request.
 		if _, ok := r.URL.Query()["location"]; ok {
 			response := []byte("<LocationConstraint xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"></LocationConstraint>")
@@ -171,8 +171,8 @@ func (h stsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	switch {
-	case r.Method == http.MethodPost:
+	switch r.Method {
+	case http.MethodPost:
 		token := r.Form.Get("WebIdentityToken")
 		if token == string(h.jwt) {
 			response := []byte("<AssumeRoleWithWebIdentityResponse xmlns=\"https://sts.amazonaws.com/doc/2011-06-15/\"><AssumeRoleWithWebIdentityResult><AssumedRoleUser><Arn></Arn><AssumeRoleId></AssumeRoleId></AssumedRoleUser><Credentials><AccessKeyId>7NL5BR739GUQ0ZOD4JNB</AccessKeyId><SecretAccessKey>A2mxZSxPnHNhSduedUHczsXZpVSSssOLpDruUmTV</SecretAccessKey><Expiration>0001-01-01T00:00:00Z</Expiration><SessionToken>eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NLZXkiOiI3Tkw1QlI3MzlHVVEwWk9ENEpOQiIsImV4cCI6MTY5OTYwMzMwNiwicGFyZW50IjoibWluaW8iLCJzZXNzaW9uUG9saWN5IjoiZXlKV1pYSnphVzl1SWpvaU1qQXhNaTB4TUMweE55SXNJbE4wWVhSbGJXVnVkQ0k2VzNzaVJXWm1aV04wSWpvaVFXeHNiM2NpTENKQlkzUnBiMjRpT2xzaVlXUnRhVzQ2S2lKZGZTeDdJa1ZtWm1WamRDSTZJa0ZzYkc5M0lpd2lRV04wYVc5dUlqcGJJbXR0Y3pvcUlsMTlMSHNpUldabVpXTjBJam9pUVd4c2IzY2lMQ0pCWTNScGIyNGlPbHNpY3pNNktpSmRMQ0pTWlhOdmRYSmpaU0k2V3lKaGNtNDZZWGR6T25Nek9qbzZLaUpkZlYxOSJ9.uuE_x7PO8QoPfUk9KzUELoAqxihIknZAvJLl5aYJjwpSjJYFTPLp6EvuyJX2hc18s9HzeiJ-vU0dPzsy50dXmg</SessionToken></Credentials></AssumeRoleWithWebIdentityResult><ResponseMetadata></ResponseMetadata></AssumeRoleWithWebIdentityResponse>")

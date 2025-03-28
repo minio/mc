@@ -279,7 +279,7 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
 func doCopyFake(cpURLs URLs, pg Progress) URLs {
 	if progressReader, ok := pg.(*progressBar); ok {
-		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
+		progressReader.Add64(cpURLs.SourceContent.Size)
 	}
 
 	return cpURLs
@@ -493,13 +493,13 @@ loop:
 
 				errSeen = true
 				if progressReader, pgok := pg.(*progressBar); pgok {
-					if progressReader.ProgressBar.Get() > 0 {
+					if progressReader.Get() > 0 {
 						writeContSize := (int)(cpURLs.SourceContent.Size)
-						totalPGSize := (int)(progressReader.ProgressBar.Total)
-						written := (int)(progressReader.ProgressBar.Get())
+						totalPGSize := (int)(progressReader.Total)
+						written := (int)(progressReader.Get())
 						if totalPGSize > writeContSize && written > writeContSize {
-							progressReader.ProgressBar.Set((written - writeContSize))
-							progressReader.ProgressBar.Update()
+							progressReader.Set((written - writeContSize))
+							progressReader.Update()
 						}
 					}
 				}
@@ -514,7 +514,7 @@ loop:
 			if !globalQuiet && !globalJSON {
 				console.Eraseline()
 			}
-		} else if progressReader.ProgressBar.Get() > 0 {
+		} else if progressReader.Get() > 0 {
 			progressReader.Finish()
 		}
 	} else {

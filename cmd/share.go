@@ -86,9 +86,9 @@ func (s shareMessage) JSON() string {
 	// JSON encoding escapes ampersand into its unicode character
 	// which is not usable directly for share and fails with cloud
 	// storage. convert them back so that they are usable.
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003c"), []byte("<"), -1)
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003e"), []byte(">"), -1)
+	shareMessageBytes = bytes.ReplaceAll(shareMessageBytes, []byte("\\u0026"), []byte("&"))
+	shareMessageBytes = bytes.ReplaceAll(shareMessageBytes, []byte("\\u003c"), []byte("<"))
+	shareMessageBytes = bytes.ReplaceAll(shareMessageBytes, []byte("\\u003e"), []byte(">"))
 
 	return string(shareMessageBytes)
 }

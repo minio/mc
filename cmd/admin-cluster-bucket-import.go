@@ -142,7 +142,7 @@ func statusTick(s madmin.MetaStatus) string {
 }
 
 func (i importMetaMsg) String() string {
-	m := i.BucketMetaImportErrs.Buckets
+	m := i.Buckets
 	totBuckets := len(m)
 	totErrs := 0
 	for _, st := range m {
@@ -186,7 +186,7 @@ func (i importMetaMsg) JSON() string {
 	// Disable escaping special chars to display XML tags correctly
 	enc.SetEscapeHTML(false)
 
-	fatalIf(probe.NewError(enc.Encode(i.BucketMetaImportErrs.Buckets)), "Unable to marshal into JSON.")
+	fatalIf(probe.NewError(enc.Encode(i.Buckets)), "Unable to marshal into JSON.")
 	return buf.String()
 }
 

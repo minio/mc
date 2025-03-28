@@ -224,7 +224,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context) {
 			"You cannot specify --version-id with any of --versions, --rewind and --recursive flags.")
 	}
 
-	if isNoncurrentVersion && !(isVersions && isRecursive) {
+	if isNoncurrentVersion && (!isVersions || !isRecursive) {
 		fatalIf(errDummy().Trace(),
 			"You cannot specify --non-current without --versions --recursive, please use --non-current --versions --recursive.")
 	}
@@ -278,7 +278,7 @@ func checkRmSyntax(ctx context.Context, cliCtx *cli.Context) {
 			"Removal requires --force flag. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}
 
-	if isNamespaceRemoval && !(isDangerous && isForce) {
+	if isNamespaceRemoval && (!isDangerous || !isForce) {
 		fatalIf(errDummy().Trace(),
 			"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 	}
