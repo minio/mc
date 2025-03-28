@@ -115,7 +115,7 @@ func validateClusterRegistered(alias string, cmdTalksToSubnet bool) string {
 	// command talks to subnet: dev+airgapped mode (both `--dev` and `--airgap` passed)
 	requireRegistration := !GlobalDevMode
 	if cmdTalksToSubnet {
-		requireRegistration = !(GlobalDevMode && globalAirgapped)
+		requireRegistration = !GlobalDevMode || !globalAirgapped
 	}
 
 	apiKey, e := getSubnetAPIKey(alias)

@@ -137,10 +137,7 @@ func newAnonymousClient(aliasedURL string) (*madmin.AnonymousClient, *probe.Erro
 	}
 
 	// By default enable HTTPs.
-	useTLS := true
-	if targetURL.Scheme == "http" {
-		useTLS = false
-	}
+	useTLS := targetURL.Scheme != "http"
 
 	// Construct an anonymous client
 	anonClient, e := madmin.NewAnonymousClient(targetURL.Host, useTLS)
