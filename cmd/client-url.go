@@ -267,3 +267,43 @@ func guessURLContentType(urlStr string) string {
 	contentType := mimedb.TypeByExtension(filepath.Ext(url.Path))
 	return contentType
 }
+
+// urlParts - split URL into parts.
+func urlParts(urlStr string) []string {
+	// Convert '/' on windows to filepath.Separator.
+	urlStr = filepath.FromSlash(urlStr)
+
+	if runtime.GOOS == "windows" {
+		// Remove '/' prefix before alias if any to support '\\home' alias
+		// style under Windows
+		urlStr = strings.TrimPrefix(urlStr, string(filepath.Separator))
+	}
+
+	// Remove everything after alias (i.e. after '/').
+	return strings.Split(urlStr, string(filepath.Separator))
+}
+
+// isURLPrefix - check if source and destination be subdirectories of each other
+// "s3/test", "s3/test/test"            // true
+// "s3/test/", "s3/test/test"           // true
+// "s3/test/test", "s3/test/"           // true
+// "s3/test/test", "s3/test/test.123"   // false
+// "s3/test/", "s3/test/test/test/test" // true
+// "s3/test/*", "s3/test/test/"         // true
+func isURLPrefix(src string, dest string) bool {
+	srcURLParts := urlParts(src)
+	dstURLParts := urlParts(dest)
+	minIndex := min(len(srcURLParts), len(dstURLParts))
+	isPrefix := true
+	for i := 0; i < minIndex; i++ {
+		// if one of the URLs ends with '/' and other does not
+		if (i == minIndex-1) && (dstURLParts[i] == "" || srcURLParts[i] == "" || dstURLParts[i] == "*" || srcURLParts[i] == "*") {
+			continue
+		}
+		if srcURLParts[i] != dstURLParts[i] {
+			isPrefix = false
+			break
+		}
+	}
+	return isPrefix
+}
