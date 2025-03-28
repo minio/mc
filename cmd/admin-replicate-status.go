@@ -167,8 +167,8 @@ func (i srStatus) String() string {
 	if i.opts.Buckets {
 		messages = append(messages,
 			console.Colorize("SummaryHdr", "Bucket replication status:"))
-		switch {
-		case i.MaxBuckets == 0:
+		switch i.MaxBuckets {
+		case 0:
 			messages = append(messages, console.Colorize("Summary", "No Buckets present\n"))
 		default:
 			msg := console.Colorize(i.getTheme(len(info.BucketStats) == 0), fmt.Sprintf("%d/%d Buckets in sync", info.MaxBuckets-len(info.BucketStats), info.MaxBuckets)) + "\n"
@@ -204,8 +204,8 @@ func (i srStatus) String() string {
 	if i.opts.Policies {
 		messages = append(messages,
 			console.Colorize("SummaryHdr", "Policy replication status:"))
-		switch {
-		case i.MaxPolicies == 0:
+		switch i.MaxPolicies {
+		case 0:
 			messages = append(messages, console.Colorize("Summary", "No Policies present\n"))
 		default:
 			msg := console.Colorize(i.getTheme(len(i.PolicyStats) == 0), fmt.Sprintf("%d/%d Policies in sync", info.MaxPolicies-len(info.PolicyStats), info.MaxPolicies)) + "\n"
@@ -243,8 +243,8 @@ func (i srStatus) String() string {
 	if i.opts.Users {
 		messages = append(messages,
 			console.Colorize("SummaryHdr", "User replication status:"))
-		switch {
-		case i.MaxUsers == 0:
+		switch i.MaxUsers {
+		case 0:
 			messages = append(messages, console.Colorize("Summary", "No Users present\n"))
 		default:
 			msg := console.Colorize(i.getTheme(len(i.UserStats) == 0), fmt.Sprintf("%d/%d Users in sync", info.MaxUsers-len(i.UserStats), info.MaxUsers)) + "\n"
@@ -284,8 +284,8 @@ func (i srStatus) String() string {
 	if i.opts.Groups {
 		messages = append(messages,
 			console.Colorize("SummaryHdr", "Group replication status:"))
-		switch {
-		case i.MaxGroups == 0:
+		switch i.MaxGroups {
+		case 0:
 			messages = append(messages, console.Colorize("Summary", "No Groups present\n"))
 		default:
 			msg := console.Colorize(i.getTheme(len(i.GroupStats) == 0), fmt.Sprintf("%d/%d Groups in sync", i.MaxGroups-len(i.GroupStats), i.MaxGroups)) + "\n"
@@ -478,7 +478,7 @@ func (i srStatus) getBucketStatusSummary(siteNames []string, nameIDMap map[strin
 	var messages []string
 	coloredDot := console.Colorize("Status", dot)
 	var found bool
-	for _, st := range i.SRStatusInfo.BucketStats[i.opts.EntityValue] {
+	for _, st := range i.BucketStats[i.opts.EntityValue] {
 		if st.HasBucket {
 			found = true
 			break
@@ -518,7 +518,7 @@ func (i srStatus) getBucketStatusSummary(siteNames []string, nameIDMap map[strin
 	rows := make([]string, len(rowLegend))
 	for j, sname := range siteNames {
 		dID := nameIDMap[sname]
-		ss := i.SRStatusInfo.BucketStats[i.opts.EntityValue][dID]
+		ss := i.BucketStats[i.opts.EntityValue][dID]
 		var theme, msgStr string
 		for r := range rowLegend {
 			switch r {
@@ -582,7 +582,7 @@ func (i srStatus) getPolicyStatusSummary(siteNames []string, nameIDMap map[strin
 	var messages []string
 	coloredDot := console.Colorize("Status", dot)
 	var found bool
-	for _, st := range i.SRStatusInfo.PolicyStats[i.opts.EntityValue] {
+	for _, st := range i.PolicyStats[i.opts.EntityValue] {
 		if st.HasPolicy {
 			found = true
 			break
@@ -603,7 +603,7 @@ func (i srStatus) getPolicyStatusSummary(siteNames []string, nameIDMap map[strin
 	rows := make([]string, len(rowLegend))
 	for j, sname := range siteNames {
 		dID := nameIDMap[sname]
-		ss := i.SRStatusInfo.PolicyStats[i.opts.EntityValue][dID]
+		ss := i.PolicyStats[i.opts.EntityValue][dID]
 		var theme, msgStr string
 		for r := range rowLegend {
 			switch r {
@@ -634,7 +634,7 @@ func (i srStatus) getUserStatusSummary(siteNames []string, nameIDMap map[string]
 	var messages []string
 	coloredDot := console.Colorize("Status", dot)
 	var found bool
-	for _, st := range i.SRStatusInfo.UserStats[i.opts.EntityValue] {
+	for _, st := range i.UserStats[i.opts.EntityValue] {
 		if st.HasUser {
 			found = true
 			break
@@ -662,7 +662,7 @@ func (i srStatus) getUserStatusSummary(siteNames []string, nameIDMap map[string]
 	rows := make([]string, len(rowLegend))
 	for j, sname := range siteNames {
 		dID := nameIDMap[sname]
-		ss := i.SRStatusInfo.UserStats[i.opts.EntityValue][dID]
+		ss := i.UserStats[i.opts.EntityValue][dID]
 		var theme, msgStr string
 		for r := range rowLegend {
 			switch r {
@@ -702,7 +702,7 @@ func (i srStatus) getGroupStatusSummary(siteNames []string, nameIDMap map[string
 	rowLegend := []string{"Info", "Policy mapping"}
 	detailFields := make([][]Field, len(rowLegend))
 	var found bool
-	for _, st := range i.SRStatusInfo.GroupStats[i.opts.EntityValue] {
+	for _, st := range i.GroupStats[i.opts.EntityValue] {
 		if st.HasGroup {
 			found = true
 			break
@@ -728,7 +728,7 @@ func (i srStatus) getGroupStatusSummary(siteNames []string, nameIDMap map[string
 	// b := i.opts.EntityValue
 	for j, sname := range siteNames {
 		dID := nameIDMap[sname]
-		ss := i.SRStatusInfo.GroupStats[i.opts.EntityValue][dID]
+		ss := i.GroupStats[i.opts.EntityValue][dID]
 		// sm := i.SRStatusInfo.StatsSummary
 		var theme, msgStr string
 		for r := range rowLegend {
@@ -767,7 +767,7 @@ func (i srStatus) getILMExpiryStatusSummary(siteNames []string, nameIDMap map[st
 	var messages []string
 	coloredDot := console.Colorize("Status", dot)
 	var found bool
-	for _, st := range i.SRStatusInfo.ILMExpiryStats[i.opts.EntityValue] {
+	for _, st := range i.ILMExpiryStats[i.opts.EntityValue] {
 		if st.HasILMExpiryRules {
 			found = true
 			break
@@ -788,7 +788,7 @@ func (i srStatus) getILMExpiryStatusSummary(siteNames []string, nameIDMap map[st
 	rows := make([]string, len(rowLegend))
 	for j, sname := range siteNames {
 		dID := nameIDMap[sname]
-		ss := i.SRStatusInfo.ILMExpiryStats[i.opts.EntityValue][dID]
+		ss := i.ILMExpiryStats[i.opts.EntityValue][dID]
 		var theme, msgStr string
 		for r := range rowLegend {
 			switch r {
@@ -817,17 +817,7 @@ func (i srStatus) getILMExpiryStatusSummary(siteNames []string, nameIDMap map[st
 
 // Calculate srstatus options for command line flags
 func srStatusOpts(ctx *cli.Context) (opts madmin.SRStatusOptions) {
-	if !(ctx.IsSet("buckets") ||
-		ctx.IsSet("users") ||
-		ctx.IsSet("groups") ||
-		ctx.IsSet("policies") ||
-		ctx.IsSet("ilm-expiry-rules") ||
-		ctx.IsSet("bucket") ||
-		ctx.IsSet("user") ||
-		ctx.IsSet("group") ||
-		ctx.IsSet("policy") ||
-		ctx.IsSet("ilm-expiry-rule") ||
-		ctx.IsSet("all")) || ctx.IsSet("all") {
+	if (!ctx.IsSet("buckets") && !ctx.IsSet("users") && !ctx.IsSet("groups") && !ctx.IsSet("policies") && !ctx.IsSet("ilm-expiry-rules") && !ctx.IsSet("bucket") && !ctx.IsSet("user") && !ctx.IsSet("group") && !ctx.IsSet("policy") && !ctx.IsSet("ilm-expiry-rule") && !ctx.IsSet("all")) || ctx.IsSet("all") {
 		opts.Buckets = true
 		opts.Users = true
 		opts.Groups = true
