@@ -357,7 +357,7 @@ func (m replicateXferMessage) String() string {
 	var rows []string
 	maxLen := 0
 
-	for _, rqs := range m.ReplQueueStats.Nodes {
+	for _, rqs := range m.Nodes {
 		if len(rqs.NodeName) > maxLen {
 			maxLen = len(rqs.NodeName)
 		}
