@@ -51,7 +51,7 @@ EXAMPLES:
   3. Revoke STS accounts of a token type 'app-1' for user 'user1'
 	 {{.Prompt}} {{.HelpName}} myminio user1 --token-type app-1
 
-  4. Revoke all STS acounts for the authenticated user (must be LDAP service account)
+  4. Revoke all STS accounts for the authenticated user (must be LDAP service account)
 	 {{.Prompt}} {{.HelpName}} myminio --self
 
   5. Revoke STS accounts of a token type 'app-1' for the authenticated user (must be LDAP service account)
