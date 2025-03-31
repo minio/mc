@@ -99,7 +99,7 @@ func (m stsRevokeMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// checkAdminUserSTSAcctInfoSyntax - validate all the passed arguments
+// checkSTSRevokeSyntax - validate all the passed arguments
 func checkSTSRevokeSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) > 2 || len(ctx.Args()) == 0 {
 		showCommandHelpAndExit(ctx, 1)
@@ -118,7 +118,7 @@ func checkSTSRevokeSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainAdminUserSTSAcctInfo is the handle for "mc admin accesskey sts-revoke" command.
+// mainAdminAccesskeySTSRevoke is the handle for "mc admin accesskey sts-revoke" command.
 func mainAdminAccesskeySTSRevoke(ctx *cli.Context) error {
 	checkSTSRevokeSyntax(ctx)
 
