@@ -42,16 +42,26 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Revoke all 
-	 {{.Prompt}} {{.HelpName}} myminio user1 --all
-  2. TODO
+  1. Revoke all STS acounts for LDAP user 'bobfisher'
+	 {{.Prompt}} {{.HelpName}} myminio uid=bobfisher,ou=people,ou=hwengg,dc=min,dc=io --all
+
+  2. Revoke all STS acounts for LDAP user 'bobfisher' (alt)
+	 {{.Prompt}} {{.HelpName}} myminio bobfisher --all
+
+  3. Revoke STS accounts of a token type 'app-1' for user 'user1'
 	 {{.Prompt}} {{.HelpName}} myminio user1 --token-type app-1
+
+  4. Revoke all STS acounts for the authenticated user (must be LDAP service account)
+	 {{.Prompt}} {{.HelpName}} myminio --self
+
+  5. Revoke STS accounts of a token type 'app-1' for the authenticated user (must be LDAP service account)
+	 {{.Prompt}} {{.HelpName}} myminio --self --token-type app-1
 `,
 }
 
 // mainIdpLdapUserSTSAcctInfo is the handle for "mc admin accesskey sts-revoke" command.
 func mainIdpLdapAccesskeySTSRevoke(ctx *cli.Context) error {
-	checkAdminAccesskeySTSRevokeSyntax(ctx)
+	checkSTSRevokeSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

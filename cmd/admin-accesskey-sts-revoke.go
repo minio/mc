@@ -58,10 +58,17 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Revoke all 
+  1. Revoke all STS acounts for user "user1"
 	 {{.Prompt}} {{.HelpName}} myminio user1 --all
-  2. TODO
+
+  2. Revoke STS accounts of a token type "app-1" for user "user1"
 	 {{.Prompt}} {{.HelpName}} myminio user1 --token-type app-1
+
+  3. Revoke all STS acounts for the authenticated user
+	 {{.Prompt}} {{.HelpName}} myminio --self
+
+  4. Revoke STS accounts of a token type "app-1" for the authenticated user
+	 {{.Prompt}} {{.HelpName}} myminio --self --token-type app-1
 `,
 }
 
@@ -93,7 +100,7 @@ func (m stsRevokeMessage) JSON() string {
 }
 
 // checkAdminUserSTSAcctInfoSyntax - validate all the passed arguments
-func checkAdminAccesskeySTSRevokeSyntax(ctx *cli.Context) {
+func checkSTSRevokeSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) > 2 || len(ctx.Args()) == 0 {
 		showCommandHelpAndExit(ctx, 1)
 	}
@@ -113,7 +120,7 @@ func checkAdminAccesskeySTSRevokeSyntax(ctx *cli.Context) {
 
 // mainAdminUserSTSAcctInfo is the handle for "mc admin accesskey sts-revoke" command.
 func mainAdminAccesskeySTSRevoke(ctx *cli.Context) error {
-	checkAdminAccesskeySTSRevokeSyntax(ctx)
+	checkSTSRevokeSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
