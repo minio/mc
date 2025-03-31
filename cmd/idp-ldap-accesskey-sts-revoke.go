@@ -42,10 +42,10 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Revoke all STS acounts for LDAP user 'bobfisher'
+  1. Revoke all STS accounts for LDAP user 'bobfisher'
 	 {{.Prompt}} {{.HelpName}} myminio uid=bobfisher,ou=people,ou=hwengg,dc=min,dc=io --all
 
-  2. Revoke all STS acounts for LDAP user 'bobfisher' (alt)
+  2. Revoke all STS accounts for LDAP user 'bobfisher' (alt)
 	 {{.Prompt}} {{.HelpName}} myminio bobfisher --all
 
   3. Revoke STS accounts of a token type 'app-1' for user 'user1'
