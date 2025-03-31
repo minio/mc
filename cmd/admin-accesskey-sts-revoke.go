@@ -58,13 +58,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Revoke all STS acounts for user "user1"
+  1. Revoke all STS accounts for user "user1"
 	 {{.Prompt}} {{.HelpName}} myminio user1 --all
 
   2. Revoke STS accounts of a token type "app-1" for user "user1"
 	 {{.Prompt}} {{.HelpName}} myminio user1 --token-type app-1
 
-  3. Revoke all STS acounts for the authenticated user
+  3. Revoke all STS accounts for the authenticated user
 	 {{.Prompt}} {{.HelpName}} myminio --self
 
   4. Revoke STS accounts of a token type "app-1" for the authenticated user
