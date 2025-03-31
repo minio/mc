@@ -113,7 +113,7 @@ func (m replicateMRFMessage) String() string {
 		Field{getNodeTheme(m.ReplicationMRF.NodeName), len(m.ReplicationMRF.NodeName) + 3},
 		Field{"Count", 7},
 		Field{"Object", -1},
-	).buildRow(m.ReplicationMRF.NodeName, fmt.Sprintf("Retry=%d", m.ReplicationMRF.RetryCount), fmt.Sprintf("%s (%s)", m.ReplicationMRF.Object, m.ReplicationMRF.VersionID)))
+	).buildRow(m.NodeName, fmt.Sprintf("Retry=%d", m.RetryCount), fmt.Sprintf("%s (%s)", m.Object, m.VersionID)))
 }
 
 type replicateBacklogMessage struct {
