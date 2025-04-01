@@ -18,8 +18,9 @@
 package cmd
 
 import (
-	checkv1 "gopkg.in/check.v1"
 	"testing"
+
+	checkv1 "gopkg.in/check.v1"
 )
 
 // TestURL - tests url parsing and fields.
