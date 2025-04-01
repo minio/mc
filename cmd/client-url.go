@@ -284,12 +284,6 @@ func urlParts(urlStr string) []string {
 }
 
 // isURLPrefix - check if source and destination be subdirectories of each other
-// "s3/test", "s3/test/test"            // true
-// "s3/test/", "s3/test/test"           // true
-// "s3/test/test", "s3/test/"           // true
-// "s3/test/test", "s3/test/test.123"   // false
-// "s3/test/", "s3/test/test/test/test" // true
-// "s3/test/*", "s3/test/test/"         // true
 func isURLPrefix(src string, dest string) bool {
 	srcURLParts := urlParts(src)
 	dstURLParts := urlParts(dest)
