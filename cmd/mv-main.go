@@ -211,7 +211,7 @@ func mainMove(cliCtx *cli.Context) error {
 		srcURL := args.Get(0)
 		dstURL := args.Get(1)
 		if isURLPrefix(srcURL, dstURL) {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("The source %v and destination %v might be subdirectories of each other", srcURL, dstURL))
+			fatalIf(errDummy().Trace(), fmt.Sprintf("The source %v and destination %v cannot be subdirectories of each other", srcURL, dstURL))
 			return nil
 		}
 	}
