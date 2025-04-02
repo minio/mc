@@ -17,7 +17,11 @@
 
 package cmd
 
-import checkv1 "gopkg.in/check.v1"
+import (
+	"testing"
+
+	checkv1 "gopkg.in/check.v1"
+)
 
 // TestURL - tests url parsing and fields.
 func (s *TestSuite) TestURL(c *checkv1.C) {
@@ -51,4 +55,34 @@ func (s *TestSuite) TestURLJoinPath(c *checkv1.C) {
 	url2 = "mybucket/bin/"
 	url = urlJoinPath(url1, url2)
 	c.Assert(url, checkv1.Equals, "http://s3.mycompany.io/dev/mybucket/bin/")
+}
+
+func Test_isURLPrefix(t *testing.T) {
+	type args struct {
+		src  string
+		dest string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"test1", args{"s3/test", "s3/test/test"}, true},
+		{"test2", args{"s3/test/", "s3/test/test"}, true},
+		{"test3", args{"s3/test/test", "s3/test/"}, true},
+		{"test4", args{"s3/test/test", "s3/test/test.123"}, false},
+		{"test5", args{"s3/test/", "s3/test/test/test/test"}, true},
+		{"test6", args{"s3/test/*", "s3/test/test/"}, true},
+		{"test7", args{"s3/test/*", "s3/test1/test/"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isURLPrefix(tt.args.src, tt.args.dest); got != tt.want {
+				t.Errorf("isURLPrefix() = %v, want %v", got, tt.want)
+			}
+			if got := isURLPrefix(tt.args.dest, tt.args.src); got != tt.want {
+				t.Errorf("isURLPrefix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

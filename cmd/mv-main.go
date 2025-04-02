@@ -210,8 +210,9 @@ func mainMove(cliCtx *cli.Context) error {
 		args := cliCtx.Args()
 		srcURL := args.Get(0)
 		dstURL := args.Get(1)
-		if srcURL == dstURL {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("Source and destination urls cannot be the same: %v.", srcURL))
+		if isURLPrefix(srcURL, dstURL) {
+			fatalIf(errDummy().Trace(), fmt.Sprintf("The source %v and destination %v cannot be subdirectories of each other", srcURL, dstURL))
+			return nil
 		}
 	}
 
