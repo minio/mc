@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/minio/madmin-go/v3"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
-	"github.com/minio/madmin-go/v3"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/pkg/v3/console"
 )
@@ -74,12 +75,10 @@ func (m resyncMessage) String() string {
 }
 
 func mainAdminReplicateResyncStart(ctx *cli.Context) error {
-	{
-		// Check argument count
-		argsNr := len(ctx.Args())
-		if argsNr != 2 {
-			cli.ShowCommandHelpAndExit(ctx, "start", 1) // last argument is exit code
-		}
+	// Check argument count
+	argsNr := len(ctx.Args())
+	if argsNr != 2 {
+		showCommandHelpAndExit(ctx, 1) // last argument is exit code
 	}
 
 	console.SetColor("ResyncMessage", color.New(color.FgGreen))
