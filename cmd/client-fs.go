@@ -565,7 +565,7 @@ func (f *fsClient) ShareDownload(_ context.Context, _ string, _ time.Duration) (
 }
 
 // ShareUpload - share upload not implemented for filesystem.
-func (f *fsClient) ShareUpload(_ context.Context, _ bool, _ time.Duration, _ string) (string, map[string]string, *probe.Error) {
+func (f *fsClient) ShareUpload(_ context.Context, _ bool, _ time.Duration, _ string, _ int64, _ int64) (string, map[string]string, *probe.Error) {
 	return "", nil, probe.NewError(APINotImplemented{
 		API:     "ShareUpload",
 		APIType: "filesystem",

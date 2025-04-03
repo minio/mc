@@ -159,7 +159,7 @@ type Client interface {
 
 	// I/O operations with expiration
 	ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error)
-	ShareUpload(context.Context, bool, time.Duration, string) (string, map[string]string, *probe.Error)
+	ShareUpload(context.Context, bool, time.Duration, string, int64, int64) (string, map[string]string, *probe.Error)
 
 	// Watch events
 	Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error)
