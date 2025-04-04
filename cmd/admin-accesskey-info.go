@@ -58,6 +58,7 @@ type accesskeyMessage struct {
 	Status        string          `json:"status"`
 	AccessKey     string          `json:"accessKey"`
 	SecretKey     string          `json:"secretKey,omitempty"`
+	STS           bool            `json:"sts,omitempty"`
 	ParentUser    string          `json:"parentUser,omitempty"`
 	AccountStatus string          `json:"accountStatus,omitempty"`
 	ImpliedPolicy bool            `json:"impliedPolicy,omitempty"`
@@ -86,6 +87,10 @@ func (m accesskeyMessage) String() string {
 		if m.AccountStatus == "off" {
 			statusStr = "disabled"
 		}
+		stsStr := "false"
+		if m.STS {
+			stsStr = "true"
+		}
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Access Key:"), m.AccessKey))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Parent User:"), m.ParentUser))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Status:"), statusStr))
@@ -93,6 +98,7 @@ func (m accesskeyMessage) String() string {
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Name:"), m.Name))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Description:"), m.Description))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Expiration:"), expirationStr))
+		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("STS:"), stsStr))
 		o.WriteString(iFmt(0, "%s %s\n", labelStyle.Render("Provider:"), m.Provider))
 		if m.ProviderInfo != nil {
 			o.WriteString(iFmt(0, "%s\n", labelStyle.Render("Provider Specific Info:")))
