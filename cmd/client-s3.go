@@ -2468,7 +2468,9 @@ func (c *S3Client) ShareUpload(ctx context.Context, isRecursive bool, expires ti
 		}
 	}
 	if minLen != 0 || maxLen != 0 {
-		p.SetContentLengthRange(minLen, maxLen)
+		if e := p.SetContentLengthRange(minLen, maxLen); e != nil {
+			return "", nil, probe.NewError(e)
+		}
 	}
 	u, m, e := c.api.PresignedPostPolicy(ctx, p)
 	if e != nil {
