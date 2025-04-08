@@ -130,6 +130,7 @@ func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool
 	svcaccOnly := ctx.Bool("svcacc-only")
 	selfFlag := ctx.Bool("self")
 	opts.All = ctx.Bool("all")
+	opts.AllConfigs = ctx.Bool("all-configs")
 
 	args := ctx.Args()
 	aliasedURL = args.Get(0)

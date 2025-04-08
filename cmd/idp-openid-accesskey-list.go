@@ -49,6 +49,10 @@ var idpOpenIDAccesskeyListFlags = []cli.Flag{
 		Name:  "all",
 		Usage: "list all access keys for all OpenID users",
 	},
+	cli.BoolFlag{
+		Name:  "all-configs",
+		Usage: "list access keys for all OpenID configurations",
+	},
 }
 
 var idpOpenIDAccesskeyListCmd = cli.Command{
@@ -63,7 +67,7 @@ var idpOpenIDAccesskeyListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET [DN...]
+  {{.HelpName}} [FLAGS] TARGET[:CFGNAME] [DN...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
