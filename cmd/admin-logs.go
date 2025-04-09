@@ -107,15 +107,6 @@ func (l logMessage) String() string {
 	if l.NodeName != "" {
 		hostStr = fmt.Sprintf("%s ", colorizedNodeName(l.NodeName))
 	}
-	log := l.LogInfo
-	if log.ConsoleMsg != "" {
-		if strings.HasPrefix(log.ConsoleMsg, "\n") {
-			fmt.Fprintf(b, "%s\n", hostStr)
-			log.ConsoleMsg = strings.TrimPrefix(log.ConsoleMsg, "\n")
-		}
-		fmt.Fprintf(b, "%s %s", hostStr, log.ConsoleMsg)
-		return b.String()
-	}
 	if l.API != nil {
 		apiString := "API: " + l.API.Name + "("
 		if l.API.Args != nil && l.API.Args.Bucket != "" {
@@ -141,6 +132,9 @@ func (l logMessage) String() string {
 	}
 	if l.UserAgent != "" {
 		fmt.Fprintf(b, "\n%s UserAgent: %s", hostStr, l.UserAgent)
+	}
+	if l.Message != "" {
+		fmt.Fprintf(b, "\n%s Message: %s", hostStr, l.Message)
 	}
 	if l.Trace != nil {
 		if l.Trace.Message != "" {
