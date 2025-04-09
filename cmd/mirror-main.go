@@ -561,6 +561,10 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 	mj.status.Start()
 	defer mj.status.Finish()
 
+	// if the operation is not retriable and is a watch operation, then
+	// we should exit on the first error.
+	useFatal := !mj.opts.isRetriable && mj.opts.isWatch
+
 	var cancelInProgress bool
 
 	defer func() {
@@ -595,22 +599,22 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 						ignoreErr = true
 					}
 					if !ignoreErr {
-						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+						errorOrFatal(useFatal, sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
 							"Failed to copy `%s`.", sURLs.SourceContent.URL)
 					}
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
-				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
+				errorOrFatal(useFatal, sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 					"Failed to remove `%s`.", sURLs.TargetContent.URL.String())
 			default:
 				if strings.Contains(sURLs.Error.ToGoError().Error(), "Overwrite not allowed") {
 					ignoreErr = true
 				}
 				if sURLs.ErrorCond == differInUnknown {
-					errorIf(sURLs.Error.Trace(), "Failed to perform mirroring")
+					errorOrFatal(useFatal, sURLs.Error.Trace(), "Failed to perform mirroring")
 				} else {
-					errorIf(sURLs.Error.Trace(),
+					errorOrFatal(useFatal, sURLs.Error.Trace(),
 						"Failed to perform mirroring, with error condition (%s)", sURLs.ErrorCond)
 				}
 			}
