@@ -1091,11 +1091,6 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 					}
 				}
 
-				mj.status.PrintMsg(mirrorMessage{
-					Source: newSrcURL,
-					Target: newTgtURL,
-				})
-
 				if mj.opts.isFake {
 					continue
 				}
@@ -1104,6 +1099,11 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 				if matchExcludeBucketOptions(mopts.excludeBuckets, sourceSuffix) {
 					continue
 				}
+
+				mj.status.PrintMsg(mirrorMessage{
+					Source: newSrcURL,
+					Target: newTgtURL,
+				})
 
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx, cli.String("region"), false, withLock); err != nil {
