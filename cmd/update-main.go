@@ -437,7 +437,7 @@ func doUpdate(customReleaseURL, sha256Hex string, latestReleaseTime time.Time, r
 	}
 
 	u, e := url.Parse(getDownloadURL(customReleaseURL, releaseTag))
-	if err != nil {
+	if e != nil {
 		return updateStatusMsg, probe.NewError(e)
 	}
 
