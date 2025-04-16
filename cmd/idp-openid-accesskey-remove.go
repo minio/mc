@@ -17,28 +17,33 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+)
 
-var idpOpenIDAccesskeySubcommands = []cli.Command{
-	idpOpenIDAccesskeyListCmd,
-	idpOpenIDAccesskeyRemoveCmd,
-	idpOpenIDAccesskeyInfoCmd,
-	idpOpenIDAccesskeyEditCmd,
-	idpOpenIDAccesskeyEnableCmd,
-	idpOpenIDAccesskeyDisableCmd,
+var idpOpenIDAccesskeyRemoveCmd = cli.Command{
+	Name:         "remove",
+	ShortName:    "rm",
+	Usage:        "delete access key pairs for LDAP",
+	Action:       mainIDPOpenIDAccesskeyRemove,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
+	OnUsageError: onUsageError,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET ACCESSKEY
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Remove the access key "testkey" from local server
+	 {{.Prompt}} {{.HelpName}} local/ testkey
+	`,
 }
 
-var idpOpenIDAccesskeyCmd = cli.Command{
-	Name:            "accesskey",
-	Usage:           "manage OpenID access key pairs",
-	Action:          mainIDPOpenIDAccesskey,
-	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
-	Subcommands:     idpOpenIDAccesskeySubcommands,
-	HideHelpCommand: true,
-}
-
-func mainIDPOpenIDAccesskey(ctx *cli.Context) error {
-	commandNotFound(ctx, idpOpenIDAccesskeySubcommands)
-	return nil
+func mainIDPOpenIDAccesskeyRemove(ctx *cli.Context) error {
+	return commonAccesskeyRemove(ctx)
 }
