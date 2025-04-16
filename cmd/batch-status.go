@@ -258,6 +258,8 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("Objects: ", m.metric.Replicate.Objects)
 		addLine("Versions: ", m.metric.Replicate.Objects)
 		addLine("FailedObjects: ", m.metric.Replicate.ObjectsFailed)
+		addLine("DeleteMarker: ", m.metric.Replicate.DeleteMarkers)
+		addLine("FailedDeleteMarker: ", m.metric.Replicate.DeleteMarkersFailed)
 		if accElapsedTime > 0 {
 			bytesTransferredPerSec := float64(m.metric.Replicate.BytesTransferred) / accElapsedTime.Seconds()
 			objectsPerSec := float64(int64(time.Second)*m.metric.Replicate.Objects) / float64(accElapsedTime)
@@ -271,6 +273,8 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("JobType: ", m.metric.JobType)
 		addLine("Objects: ", m.metric.Expired.Objects)
 		addLine("FailedObjects: ", m.metric.Expired.ObjectsFailed)
+		addLine("DeleteMarker: ", m.metric.Expired.DeleteMarkers)
+		addLine("FailedDeleteMarker: ", m.metric.Expired.DeleteMarkersFailed)
 		addLine("CurrObjName: ", m.metric.Expired.Object)
 
 		if !m.metric.LastUpdate.IsZero() {
