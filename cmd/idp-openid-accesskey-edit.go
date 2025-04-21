@@ -50,7 +50,7 @@ var idpOpenIDAccesskeyEditFlags = []cli.Flag{
 
 var idpOpenIDAccesskeyEditCmd = cli.Command{
 	Name:         "edit",
-	Usage:        "edit existing access keys for LDAP",
+	Usage:        "edit existing access keys for OpenID",
 	Action:       mainIDPOpenIDAccesskeyEdit,
 	Before:       setGlobalsFromContext,
 	Flags:        append(idpOpenIDAccesskeyEditFlags, globalFlags...),

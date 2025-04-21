@@ -67,7 +67,7 @@ var idpOpenIDAccesskeyListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET[:CFGNAME] [DN...]
+  {{.HelpName}} [FLAGS] TARGET[:CFGNAME] [USER/ID...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -82,14 +82,11 @@ EXAMPLES:
   3. Get list of all users and associated temporary access keys in play server (if admin)
 	 {{.Prompt}} {{.HelpName}} play/ --temp-only
 
-  4. Get list of access keys associated with user 'bobfisher'
-  	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io
+  4. Get list of access keys associated with internal name 'openidinternalname'
+  	 {{.Prompt}} {{.HelpName}} play/ openidinternalname
 
-  5. Get list of access keys associated with user 'bobfisher' (alt)
-	 {{.Prompt}} {{.HelpName}} play/ bobfisher
-
-  6. Get list of access keys associated with users 'bobfisher' and 'cody3'
-  	 {{.Prompt}} {{.HelpName}} play/ uid=bobfisher,dc=min,dc=io uid=cody3,dc=min,dc=io
+  5. Get list of access keys associated with ID claim 'openidsub' (default claim is sub)
+	 {{.Prompt}} {{.HelpName}} play/ openidsub
 
   7. Get authenticated user and associated access keys in local server (if not admin)
 	 {{.Prompt}} {{.HelpName}} local/

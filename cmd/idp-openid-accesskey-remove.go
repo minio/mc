@@ -24,7 +24,7 @@ import (
 var idpOpenIDAccesskeyRemoveCmd = cli.Command{
 	Name:         "remove",
 	ShortName:    "rm",
-	Usage:        "delete access key pairs for LDAP",
+	Usage:        "delete access key pairs for OpenID",
 	Action:       mainIDPOpenIDAccesskeyRemove,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,

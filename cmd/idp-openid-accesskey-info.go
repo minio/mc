@@ -27,7 +27,7 @@ import (
 
 var idpOpenIDAccesskeyInfoCmd = cli.Command{
 	Name:         "info",
-	Usage:        "info about given access key pairs for LDAP",
+	Usage:        "info about given access key pairs for OpenID",
 	Action:       mainIDPOpenIDAccesskeyInfo,
 	Before:       setGlobalsFromContext,
 	Flags:        globalFlags,
