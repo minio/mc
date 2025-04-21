@@ -68,8 +68,7 @@ EXAMPLES:
   1. Change the secret key for the access key "testkey"
      {{.Prompt}} {{.HelpName}} myminio/ testkey --secret-key 'xxxxxxx'
   2. Change the expiry duration for the access key "testkey"
-     {{.Prompt}} {{.HelpName}} myminio/ testkey ---expiry-duration 24h
-`,
+     {{.Prompt}} {{.HelpName}} myminio/ testkey --expiry-duration 24h
 }
 
 func mainIDPOpenIDAccesskeyEdit(ctx *cli.Context) error {
