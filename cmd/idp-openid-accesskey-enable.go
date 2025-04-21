@@ -21,7 +21,7 @@ import (
 	"github.com/minio/cli"
 )
 
-var idpOpenIDAccesskeyEnableCmd = cli.Command{
+var idpOpenidAccesskeyEnableCmd = cli.Command{
 	Name:         "enable",
 	Usage:        "enable an access key",
 	Action:       mainIDPOpenIDAccesskeyEnable,

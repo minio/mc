@@ -48,7 +48,7 @@ var idpOpenIDAccesskeyEditFlags = []cli.Flag{
 	},
 }
 
-var idpOpenIDAccesskeyEditCmd = cli.Command{
+var idpOpenidAccesskeyEditCmd = cli.Command{
 	Name:         "edit",
 	Usage:        "edit existing access keys for OpenID",
 	Action:       mainIDPOpenIDAccesskeyEdit,
@@ -69,6 +69,7 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/ testkey --secret-key 'xxxxxxx'
   2. Change the expiry duration for the access key "testkey"
      {{.Prompt}} {{.HelpName}} myminio/ testkey --expiry-duration 24h
+`,
 }
 
 func mainIDPOpenIDAccesskeyEdit(ctx *cli.Context) error {

@@ -21,7 +21,7 @@ import (
 	"github.com/minio/cli"
 )
 
-var idpOpenIDAccesskeyRemoveCmd = cli.Command{
+var idpOpenidAccesskeyRemoveCmd = cli.Command{
 	Name:         "remove",
 	ShortName:    "rm",
 	Usage:        "delete access key pairs for OpenID",

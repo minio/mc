@@ -21,7 +21,7 @@ import (
 	"github.com/minio/cli"
 )
 
-var idpOpenIDAccesskeyDisableCmd = cli.Command{
+var idpOpenidAccesskeyDisableCmd = cli.Command{
 	Name:         "disable",
 	Usage:        "disable an access key",
 	Action:       mainIDPOpenIDAccesskeyDisable,

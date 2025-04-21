@@ -19,13 +19,13 @@ package cmd
 
 import "github.com/minio/cli"
 
-var idpOpenIDAccesskeySubcommands = []cli.Command{
-	idpOpenIDAccesskeyListCmd,
-	idpOpenIDAccesskeyRemoveCmd,
-	idpOpenIDAccesskeyInfoCmd,
-	idpOpenIDAccesskeyEditCmd,
-	idpOpenIDAccesskeyEnableCmd,
-	idpOpenIDAccesskeyDisableCmd,
+var idpOpenidAccesskeySubcommands = []cli.Command{
+	idpOpenidAccesskeyListCmd,
+	idpOpenidAccesskeyRemoveCmd,
+	idpOpenidAccesskeyInfoCmd,
+	idpOpenidAccesskeyEditCmd,
+	idpOpenidAccesskeyEnableCmd,
+	idpOpenidAccesskeyDisableCmd,
 }
 
 var idpOpenIDAccesskeyCmd = cli.Command{
@@ -34,11 +34,11 @@ var idpOpenIDAccesskeyCmd = cli.Command{
 	Action:          mainIDPOpenIDAccesskey,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
-	Subcommands:     idpOpenIDAccesskeySubcommands,
+	Subcommands:     idpOpenidAccesskeySubcommands,
 	HideHelpCommand: true,
 }
 
 func mainIDPOpenIDAccesskey(ctx *cli.Context) error {
-	commandNotFound(ctx, idpOpenIDAccesskeySubcommands)
+	commandNotFound(ctx, idpOpenidAccesskeySubcommands)
 	return nil
 }

@@ -55,7 +55,7 @@ var idpOpenIDAccesskeyListFlags = []cli.Flag{
 	},
 }
 
-var idpOpenIDAccesskeyListCmd = cli.Command{
+var idpOpenidAccesskeyListCmd = cli.Command{
 	Name:         "list",
 	ShortName:    "ls",
 	Usage:        "list access key pairs for OpenID",
