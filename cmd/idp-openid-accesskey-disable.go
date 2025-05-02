@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 MinIO, Inc.
+// Copyright (c) 2015-2024 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -17,32 +17,32 @@
 
 package cmd
 
-import "github.com/minio/cli"
-
-var (
-	idpOpenidSubcommands = []cli.Command{
-		idpOpenidAddCmd,
-		idpOpenidUpdateCmd,
-		idpOpenidRemoveCmd,
-		idpOpenidListCmd,
-		idpOpenidInfoCmd,
-		idpOpenidEnableCmd,
-		idpOpenidDisableCmd,
-		idpOpenIDAccesskeyCmd,
-		// TODO: idpOpenidPolicyCmd,
-	}
-	idpOpenidCmd = cli.Command{
-		Name:            "openid",
-		Usage:           "manage OpenID IDP server configuration",
-		Action:          mainIDPOpenID,
-		Before:          setGlobalsFromContext,
-		Flags:           globalFlags,
-		Subcommands:     idpOpenidSubcommands,
-		HideHelpCommand: true,
-	}
+import (
+	"github.com/minio/cli"
 )
 
-func mainIDPOpenID(ctx *cli.Context) error {
-	commandNotFound(ctx, idpOpenidSubcommands)
-	return nil
+var idpOpenidAccesskeyDisableCmd = cli.Command{
+	Name:         "disable",
+	Usage:        "disable an access key",
+	Action:       mainIDPOpenIDAccesskeyDisable,
+	Before:       setGlobalsFromContext,
+	Flags:        globalFlags,
+	OnUsageError: onUsageError,
+	CustomHelpTemplate: `NAME:
+	  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] [TARGET]
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Disable LDAP access key
+	 {{.Prompt}} {{.HelpName}} myminio myaccesskey
+`,
+}
+
+func mainIDPOpenIDAccesskeyDisable(ctx *cli.Context) error {
+	return enableDisableAccesskey(ctx, false)
 }
