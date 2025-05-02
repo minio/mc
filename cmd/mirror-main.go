@@ -717,6 +717,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			if mj.opts.activeActive &&
 				event.Type != notification.ObjectCreatedCopy &&
+				event.Type != notification.ObjectCreatedPut &&
 				event.Type != notification.ObjectCreatedCompleteMultipartUpload &&
 				(getSourceModTimeKey(mirrorURL.SourceContent.Metadata) != "" ||
 					getSourceModTimeKey(mirrorURL.SourceContent.UserMetadata) != "") {
