@@ -366,7 +366,8 @@ func migrateConfigV6ToV7() {
 				continue
 			}
 		}
-		if host == "https://s3.amazonaws.com" {
+		switch host {
+		case "https://s3.amazonaws.com":
 			// Only one entry can exist for "s3" domain.
 			cfgV7.Hosts["s3"] = hostConfigV7{
 				URL:       host,
@@ -374,7 +375,7 @@ func migrateConfigV6ToV7() {
 				SecretKey: hostCfgV6.SecretAccessKey,
 				API:       hostCfgV6.API,
 			}
-		} else if host == "https://storage.googleapis.com" {
+		case "https://storage.googleapis.com":
 			// Only one entry can exist for "gcs" domain.
 			cfgV7.Hosts["gcs"] = hostConfigV7{
 				URL:       host,
@@ -382,7 +383,7 @@ func migrateConfigV6ToV7() {
 				SecretKey: hostCfgV6.SecretAccessKey,
 				API:       hostCfgV6.API,
 			}
-		} else {
+		default:
 			// Assign a generic "cloud1", cloud2..." key
 			// for all other entries that has valid keys set.
 			alias := fmt.Sprintf("cloud%d", aliasIndex)

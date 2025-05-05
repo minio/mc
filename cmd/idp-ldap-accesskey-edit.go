@@ -101,7 +101,7 @@ func commonAccesskeyEdit(ctx *cli.Context) error {
 	e := client.UpdateServiceAccount(globalContext, accessKey, opts)
 	fatalIf(probe.NewError(e), "Unable to edit service account.")
 
-	m := ldapAccesskeyMessage{
+	m := accesskeyMessage{
 		op:        "edit",
 		Status:    "success",
 		AccessKey: accessKey,

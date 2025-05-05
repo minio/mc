@@ -125,6 +125,11 @@ func mainClusterIAMExport(ctx *cli.Context) error {
 
 	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to rename downloaded data, file exists at %s", tmpFile.Name())
 
+	// Explicitly set permissions to 0o600 and override umask
+	// to ensure that the file is not world-readable.
+	e = os.Chmod(downloadPath, 0o600)
+	fatalIf(probe.NewError(e), "Unable to set file permissions for "+downloadPath)
+
 	if !globalJSON {
 		console.Infof("IAM info successfully downloaded as %s\n", downloadPath)
 		return nil

@@ -48,11 +48,12 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	var key, value strings.Builder
 
 	writeRune := func(ch rune, pt pToken) {
-		if pt == KEY {
+		switch pt {
+		case KEY:
 			key.WriteRune(ch)
-		} else if pt == VALUE {
+		case VALUE:
 			value.WriteRune(ch)
-		} else {
+		default:
 			panic("Invalid parser token type")
 		}
 	}
@@ -73,26 +74,28 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 		}
 
 		if ch == '"' {
-			if ps == DQSTRING {
+			switch ps {
+			case DQSTRING:
 				ps = NORMAL
-			} else if ps == QSTRING {
+			case QSTRING:
 				writeRune(ch, pt)
-			} else if ps == NORMAL {
+			case NORMAL:
 				ps = DQSTRING
-			} else {
+			default:
 				break
 			}
 			continue
 		}
 
 		if ch == '\'' {
-			if ps == QSTRING {
+			switch ps {
+			case QSTRING:
 				ps = NORMAL
-			} else if ps == DQSTRING {
+			case DQSTRING:
 				writeRune(ch, pt)
-			} else if ps == NORMAL {
+			case NORMAL:
 				ps = QSTRING
-			} else {
+			default:
 				break
 			}
 			continue

@@ -656,10 +656,11 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 		}
 		eventPath := event.Path
-		if runtime.GOOS == "darwin" {
+		switch runtime.GOOS {
+		case "darwin":
 			// Strip the prefixes in the event path. Happens in darwin OS only
 			eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
-		} else if runtime.GOOS == "windows" {
+		case "windows":
 			// Shared folder as source URL and if event path is an absolute path.
 			eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
 		}
@@ -1089,11 +1090,6 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 					}
 				}
 
-				mj.status.PrintMsg(mirrorMessage{
-					Source: newSrcURL,
-					Target: newTgtURL,
-				})
-
 				if mj.opts.isFake {
 					continue
 				}
@@ -1102,6 +1098,11 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 				if matchExcludeBucketOptions(mopts.excludeBuckets, sourceSuffix) {
 					continue
 				}
+
+				mj.status.PrintMsg(mirrorMessage{
+					Source: newSrcURL,
+					Target: newTgtURL,
+				})
 
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx, cli.String("region"), false, withLock); err != nil {
