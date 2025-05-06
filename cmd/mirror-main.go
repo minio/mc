@@ -561,9 +561,9 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 	mj.status.Start()
 	defer mj.status.Finish()
 
-	// if the operation is not retriable and is a watch operation, then
+	// if the operation is not retriable and fail-on-error is true, then
 	// we should exit on the first error.
-	useFatal := !mj.opts.isRetriable && mj.opts.isWatch
+	useFatal := mj.opts.failOnError && !mj.opts.isRetriable
 
 	var cancelInProgress bool
 
@@ -1015,6 +1015,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isMetadata:            isMetadata,
 		isSummary:             cli.Bool("summary"),
 		isRetriable:           cli.Bool("retry"),
+		failOnError:           cli.Bool("fail-on-error"),
 		md5:                   md5,
 		checksum:              checksum,
 		disableMultipart:      cli.Bool("disable-multipart"),
