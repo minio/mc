@@ -137,6 +137,10 @@ var (
 			Usage: "if specified, will enable retrying on a per object basis if errors occur",
 		},
 		cli.BoolFlag{
+			Name:  "fail-on-error",
+			Usage: "if specified, the application will exit if errors occur",
+		},
+		cli.BoolFlag{
 			Name:  "summary",
 			Usage: "print a summary of the mirror session",
 		},
