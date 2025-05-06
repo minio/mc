@@ -37,12 +37,12 @@ var (
 		cli.IntFlag{
 			Name:  "duration",
 			Usage: "profile for the specified duration in seconds",
-			Value: 10,
+			Value: 15,
 		},
 		cli.StringFlag{
 			Name:  "type",
-			Usage: "profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads' and 'goroutines'",
-			Value: "cpu,mem,block,mutex,goroutines",
+			Usage: "profiler type, possible values are 'cpu', 'cpuio', 'mem', 'block', 'mutex', 'trace', 'threads', 'goroutines' and 'runtime'",
+			Value: "cpu,mem,goroutines,runtime",
 		},
 	}, subnetCommonFlags...)
 )
