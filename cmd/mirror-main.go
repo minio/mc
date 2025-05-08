@@ -751,7 +751,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
-			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
+			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive || mj.opts.isWatch) {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL, event)
 				}, 0)
@@ -999,7 +999,8 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isOverwrite = cli.Bool("overwrite")
 	}
 
-	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
+	isWatch := cli.Bool("watch") || cli.Bool("multi-master")
+	isActiveActive := cli.Bool("active-active")
 	isRemove := cli.Bool("remove")
 	md5, checksum := parseChecksum(cli)
 
@@ -1027,7 +1028,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		storageClass:          cli.String("storage-class"),
 		userMetadata:          userMetadata,
 		encKeyDB:              encKeyDB,
-		activeActive:          isWatch,
+		activeActive:          isActiveActive,
 		bfs:                   cli.Bool("bfs"),
 	}
 
