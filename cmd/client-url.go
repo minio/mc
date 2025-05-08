@@ -190,10 +190,14 @@ func (u ClientURL) String() string {
 }
 
 // urlJoinPath Join a path to existing URL.
-func urlJoinPath(url1, url2 string) string {
-	u1 := newClientURL(url1)
-	u2 := newClientURL(url2)
-	return joinURLs(u1, u2).String()
+func urlJoinPath(base, element string) string {
+	if strings.HasSuffix(base, "/") && strings.HasPrefix(element, "/") {
+		return base + element[1:]
+	}
+	if !strings.HasSuffix(base, "/") && !strings.HasPrefix(element, "/") {
+		return base + "/" + element
+	}
+	return base + element
 }
 
 // url2Stat returns stat info for URL - supports bucket, object and a prefixe with or without a trailing slash
