@@ -66,6 +66,7 @@ EXAMPLES:
 type batchListMessage struct {
 	Status string                  `json:"status"`
 	Jobs   []madmin.BatchJobResult `json:"jobs"`
+	Admin  *madmin.AdminClient     `json:"-"` // Add AdminClient to fetch job status
 }
 
 // String colorized batchList message
@@ -90,15 +91,35 @@ func (c batchListMessage) String() string {
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
 
-	table.SetHeader([]string{"ID", "TYPE", "USER", "STARTED"})
-	data := make([][]string, 0, 4)
+	// Add a new "STATUS" column to the table header
+	table.SetHeader([]string{"ID", "TYPE", "USER", "STARTED", "STATUS"})
+	data := make([][]string, 0, 5)
 
+	// Fetch the status for the batch job using BatchJobStatus API
 	for _, job := range c.Jobs {
+		jobStatus := "unknown"
+		jobMetric, err := c.Admin.BatchJobStatus(context.Background(), job.ID)
+
+		// Output error if the API call fails, but continue processing remaining jobs
+		if err != nil {
+			println("Failed to fetch job status for Job ID:", job.ID, "Error:", err.Error())
+		} else {
+			if jobMetric.LastMetric.Complete && !jobMetric.LastMetric.Failed {
+				jobStatus = "completed"
+			} else if !jobMetric.LastMetric.Complete && !jobMetric.LastMetric.Failed {
+				jobStatus = "in-progress"
+			} else if jobMetric.LastMetric.Failed {
+				jobStatus = "failed"
+			}
+		}
+
+		// Add jobStatus details to the data table
 		data = append(data, []string{
 			job.ID,
 			string(job.Type),
 			job.User,
 			humanize.Time(job.Started),
+			jobStatus,
 		})
 	}
 
@@ -111,7 +132,43 @@ func (c batchListMessage) String() string {
 // JSON jsonified batchList message
 func (c batchListMessage) JSON() string {
 	c.Status = "success"
-	batchListMessageBytes, e := json.MarshalIndent(c, "", " ")
+
+	// Create a temporary slice to hold jobs with derived statuses
+	jobsWithStatus := make([]map[string]interface{}, len(c.Jobs))
+
+	// Fetch the status for the batch job using BatchJobStatus API
+	for i, job := range c.Jobs {
+		jobStatus := "unknown"
+		jobMetric, err := c.Admin.BatchJobStatus(context.Background(), job.ID)
+
+		// Output error if the API call fails, but continue processing remaining jobs
+		if err != nil {
+			println("Failed to fetch job status for Job ID:", job.ID, "Error:", err.Error())
+		} else {
+			if jobMetric.LastMetric.Complete && !jobMetric.LastMetric.Failed {
+				jobStatus = "completed"
+			} else if !jobMetric.LastMetric.Complete && !jobMetric.LastMetric.Failed {
+				jobStatus = "in-progress"
+			} else if jobMetric.LastMetric.Failed {
+				jobStatus = "failed"
+			}
+		}
+
+		// Add the job details along with the derived status
+		jobsWithStatus[i] = map[string]interface{}{
+			"id":      job.ID,
+			"type":    job.Type,
+			"user":    job.User,
+			"started": job.Started,
+			"status":  jobStatus,
+		}
+	}
+
+	// Marshal the updated jobs into JSON
+	batchListMessageBytes, e := json.MarshalIndent(map[string]interface{}{
+		"status": c.Status,
+		"jobs":   jobsWithStatus,
+	}, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(batchListMessageBytes)
@@ -147,6 +204,7 @@ func mainBatchList(ctx *cli.Context) error {
 	printMsg(batchListMessage{
 		Status: "success",
 		Jobs:   res.Jobs,
+		Admin:  adminClient, // Pass the adminClient for status lookups
 	})
 	return nil
 }
