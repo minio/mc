@@ -1056,7 +1056,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 			if d.Diff == differInSecond {
 				diffBucket := strings.TrimPrefix(d.SecondURL, dstClt.GetURL().String())
-				if !isFake && isRemove {
+				if !isFake && isRemove && createDstBuckets {
 					aliasedDstBucket := path.Join(dstURL, diffBucket)
 					err := deleteBucket(ctx, aliasedDstBucket, false)
 					mj.status.fatalIf(err, "Failed to start mirroring.")
@@ -1073,6 +1073,15 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 			newDstClt, _ := newClient(newTgtURL)
 
 			if d.Diff == differInFirst {
+				// This loop is responsible solely for bringing target on par with source at the bucket level.
+				// createDstBuckets == false implies that the target itself represents a bucket.
+				// So we don't want to perform MakeBucket (and in turn delete and recreate already existing buckets and objects) if it already exists.
+				// Any differences at the object level between source and target's bucket will be synced as part of objectDifference() that gets
+				// called later.
+				if !createDstBuckets {
+					continue
+				}
+
 				var (
 					withLock bool
 					mode     minio.RetentionMode
