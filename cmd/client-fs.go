@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
 
