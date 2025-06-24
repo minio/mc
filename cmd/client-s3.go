@@ -1839,6 +1839,10 @@ func (c *S3Client) listVersionsRoutine(ctx context.Context, b, o string, opts Li
 		buckets = append(buckets, b)
 	}
 
+	if opts.Prefix != "" {
+		o = opts.Prefix
+	}
+
 	for _, b := range buckets {
 		var skipKey string
 		for objectVersion := range c.api.ListObjects(ctx, b, minio.ListObjectsOptions{
@@ -2104,6 +2108,10 @@ func (c *S3Client) listIncompleteInRoutine(ctx context.Context, contentCh chan *
 func (c *S3Client) listIncompleteRecursiveInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
+	if opts.Prefix != "" {
+		o = opts.Prefix
+	}
+
 	switch {
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets(ctx)
@@ -2243,6 +2251,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	}
 	url.Path = c.buildAbsPath(bucket, entry.Key)
 	content.URL = url
+	content.ObjectKey = entry.Key
 	content.BucketName = bucket
 	content.Size = entry.Size
 	content.ETag = entry.ETag
@@ -2321,6 +2330,10 @@ func (c *S3Client) bucketStat(ctx context.Context, opts BucketStatOptions) (*Cli
 func (c *S3Client) listInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
+	if opts.Prefix != "" {
+		o = opts.Prefix
+	}
+
 	if opts.ListZip && (b == "" || o == "") {
 		contentCh <- &ClientContent{
 			Err: probe.NewError(errors.New("listing zip files must provide bucket and object")),
@@ -2385,6 +2398,10 @@ func sortBucketsNameWithSlash(bucketsInfo []minio.BucketInfo) {
 func (c *S3Client) listRecursiveInRoutine(ctx context.Context, contentCh chan *ClientContent, opts ListOptions) {
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
+	if opts.Prefix != "" {
+		o = opts.Prefix
+	}
+
 	switch {
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets(ctx)

@@ -144,6 +144,10 @@ var (
 			Name:  "skip-errors",
 			Usage: "skip any errors when mirroring",
 		},
+		cli.BoolFlag{
+			Name:  "bfs",
+			Usage: "using BFS for layer-by-layer traversal of files, suitable for large number of files",
+		},
 		checksumFlag,
 	}
 )
@@ -212,7 +216,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --older-than 30d s3/test ~/test
 
   13. Mirror server encrypted objects from Amazon S3 cloud storage to a bucket on Amazon S3 cloud storage
-      {{.Prompt}} {{.HelpName}} --enc-c "minio/archive=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" --enc-c "s3/archive=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5BBB" s3/archive/ minio/archive/ 
+      {{.Prompt}} {{.HelpName}} --enc-c "minio/archive=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" --enc-c "s3/archive=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5BBB" s3/archive/ minio/archive/
 
   14. Update 'Cache-Control' header on all existing objects recursively.
       {{.Prompt}} {{.HelpName}} --attr "Cache-Control=max-age=90000,min-fresh=9000" myminio/video-files myminio/video-files
@@ -1025,6 +1029,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		userMetadata:          userMetadata,
 		encKeyDB:              encKeyDB,
 		activeActive:          isActiveActive,
+		bfs:                   cli.Bool("bfs"),
 	}
 
 	// If we are not using active/active and we are not removing
