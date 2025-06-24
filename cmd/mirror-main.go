@@ -144,6 +144,10 @@ var (
 			Name:  "skip-errors",
 			Usage: "skip any errors when mirroring",
 		},
+		cli.IntFlag{
+			Name:  "max-workers",
+			Usage: "maximum threads of mirror",
+		},
 		checksumFlag,
 	}
 )
@@ -907,7 +911,7 @@ func newMirrorJob(srcURL, dstURL string, opts mirrorOptions) *mirrorJob {
 		watcher:   NewWatcher(UTCNow()),
 	}
 
-	mj.parallel = newParallelManager(mj.statusCh)
+	mj.parallel = newParallelManager(mj.statusCh, opts.maxWorkers)
 
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
@@ -1025,6 +1029,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		userMetadata:          userMetadata,
 		encKeyDB:              encKeyDB,
 		activeActive:          isActiveActive,
+		maxWorkers:            cli.Int("max-workers"),
 	}
 
 	// If we are not using active/active and we are not removing
