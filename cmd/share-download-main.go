@@ -90,8 +90,8 @@ func checkShareDownloadSyntax(ctx context.Context, cliCtx *cli.Context, encKeyDB
 	if expiry.Seconds() < 1 {
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be lesser than 1 second.")
 	}
-	if expiry.Seconds() > 604800 {
-		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
+	if expiry.Seconds() > 24*3600*365 {
+		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 365 days.")
 	}
 
 	isRecursive := cliCtx.Bool("recursive")
