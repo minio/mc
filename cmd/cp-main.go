@@ -99,7 +99,7 @@ var (
 		},
 		cli.IntFlag{
 			Name:  "max-workers",
-			Usage: "maximum threads of cp",
+			Usage: "maximum number of concurrent copies (default: autodetect)",
 		},
 		checksumFlag,
 	}

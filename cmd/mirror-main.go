@@ -146,7 +146,7 @@ var (
 		},
 		cli.IntFlag{
 			Name:  "max-workers",
-			Usage: "maximum threads of mirror",
+			Usage: "maximum number of concurrent copies (default: autodetect)",
 		},
 		checksumFlag,
 	}
