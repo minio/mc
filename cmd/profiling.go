@@ -45,7 +45,7 @@ func (p *cpuProfiler) Start() error {
 
 func (p *cpuProfiler) Stop() error {
 	pprof.StopCPUProfile()
-	return p.File.Close()
+	return p.Close()
 }
 
 type memProfiler struct {
@@ -65,7 +65,7 @@ func (p *memProfiler) Stop() error {
 	if e := pprof.Lookup("heap").WriteTo(p.File, 0); e != nil {
 		return e
 	}
-	return p.File.Close()
+	return p.Close()
 }
 
 type blockProfiler struct {
@@ -86,7 +86,7 @@ func (p *blockProfiler) Stop() error {
 		return e
 	}
 	runtime.SetBlockProfileRate(0)
-	return p.File.Close()
+	return p.Close()
 }
 
 type goroutineProfiler struct {
@@ -105,7 +105,7 @@ func (p *goroutineProfiler) Stop() error {
 	if e := pprof.Lookup("goroutine").WriteTo(p.File, 1); e != nil {
 		return e
 	}
-	return p.File.Close()
+	return p.Close()
 }
 
 var globalProfilers []profiler

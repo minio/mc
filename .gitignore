@@ -15,3 +15,4 @@ mc.RELEASE*
 mc.gz
 .DS_Store
 .vscode/
+.bin/

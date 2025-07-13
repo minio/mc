@@ -64,7 +64,7 @@ func getExpirationDays(rule lifecycle.Rule) int {
 	if rule.Expiration.Days > 0 {
 		return int(rule.Expiration.Days)
 	}
-	if !rule.Expiration.Date.Time.IsZero() {
+	if !rule.Expiration.Date.IsZero() {
 		return int(time.Until(rule.Expiration.Date.Time).Hours() / 24)
 	}
 
@@ -75,7 +75,7 @@ func getExpirationDays(rule lifecycle.Rule) int {
 // time.Now().UTC() for the given rule.
 func getTransitionDays(rule lifecycle.Rule) int {
 	if !rule.Transition.Date.IsZero() {
-		return int(time.Now().UTC().Sub(rule.Transition.Date.Time).Hours() / 24)
+		return int(time.Until(rule.Transition.Date.Time).Hours() / 24)
 	}
 
 	return int(rule.Transition.Days)

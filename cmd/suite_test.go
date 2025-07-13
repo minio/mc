@@ -578,19 +578,19 @@ func ShareURLUploadErrorTests(t *testing.T) {
 	shareMsg, err := parseShareMessageFromJSONOutput(out)
 	fatalIfErrorWMsg(err, out, t)
 
-	finalURL := strings.Replace(shareMsg.ShareURL, "<FILE>", file.diskFile.Name(), -1)
+	finalURL := strings.ReplaceAll(shareMsg.ShareURL, "<FILE>", file.diskFile.Name())
 	splitCommand := strings.Split(finalURL, " ")
 
 	if skipInsecure {
 		splitCommand = append(splitCommand, "--insecure")
 	}
 
-	bucketOnly := strings.Replace(shareURLErrorBucket, defaultAlias+"/", "", -1)
+	bucketOnly := strings.ReplaceAll(shareURLErrorBucket, defaultAlias+"/", "")
 
 	// Modify base url bucket path
 	newCmd := make([]string, len(splitCommand))
 	copy(newCmd, splitCommand)
-	newCmd[1] = strings.Replace(newCmd[1], bucketOnly, "fake-bucket-name", -1)
+	newCmd[1] = strings.ReplaceAll(newCmd[1], bucketOnly, "fake-bucket-name")
 	out, _ = RunCommand(newCmd[0], newCmd[1:]...)
 	curlFatalIfNoErrorTag(out, t)
 
@@ -626,7 +626,7 @@ func ShareURLUploadTest(t *testing.T) {
 	shareMsg, err := parseShareMessageFromJSONOutput(out)
 	fatalIfErrorWMsg(err, out, t)
 
-	finalURL := strings.Replace(shareMsg.ShareURL, "<FILE>", file.diskFile.Name(), -1)
+	finalURL := strings.ReplaceAll(shareMsg.ShareURL, "<FILE>", file.diskFile.Name())
 	splitCommand := strings.Split(finalURL, " ")
 
 	if skipInsecure {
@@ -3013,7 +3013,7 @@ func BuildCLI() error {
 	os.Remove(mcCmd)
 	out, err := exec.Command("go", "build", "-o", mcCmd, buildPath).CombinedOutput()
 	if err != nil {
-		log.Println("BUILD OUT:", out)
+		log.Println("BUILD OUT:", string(out))
 		log.Println(err)
 		panic(err)
 	}

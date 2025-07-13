@@ -76,11 +76,18 @@ type ParallelManager struct {
 
 	// The maximum memory to use
 	maxMem uint64
+
+	// The maximum workers will be created
+	maxWorkers int
 }
 
 // addWorker creates a new worker to process tasks
 func (p *ParallelManager) addWorker() {
-	if atomic.LoadUint32(&p.workersNum) >= maxParallelWorkers {
+	maxWorkers := maxParallelWorkers
+	if p.maxWorkers > 0 {
+		maxWorkers = p.maxWorkers
+	}
+	if int(atomic.LoadUint32(&p.workersNum)) >= maxWorkers {
 		// Number of maximum workers is reached, no need to
 		// to create a new one.
 		return
@@ -266,7 +273,7 @@ func availableMemory() (available uint64) {
 }
 
 // newParallelManager starts new workers waiting for executing tasks
-func newParallelManager(resultCh chan URLs) *ParallelManager {
+func newParallelManager(resultCh chan URLs, maxWorkers int) *ParallelManager {
 	p := &ParallelManager{
 		wg:            &sync.WaitGroup{},
 		workersNum:    0,
@@ -274,6 +281,7 @@ func newParallelManager(resultCh chan URLs) *ParallelManager {
 		queueCh:       make(chan task),
 		resultCh:      resultCh,
 		maxMem:        availableMemory(),
+		maxWorkers:    maxWorkers,
 	}
 
 	// Start with runtime.NumCPU().

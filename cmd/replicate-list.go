@@ -111,6 +111,7 @@ func (l replicateListMessage) String() string {
 
 	sb.WriteString(fmt.Sprintf("  Rule ID: %s\n", console.Colorize("Val", r.ID)))
 	sb.WriteString(fmt.Sprintf("  Priority: %s\n", console.Colorize("Val", r.Priority)))
+	sb.WriteString(fmt.Sprintf("  ARN: %s\n", console.Colorize("Val", r.Destination.Bucket)))
 	if r.Filter.And.Prefix != "" {
 		sb.WriteString(fmt.Sprintf("  Prefix: %s\n", console.Colorize("Val", r.Filter.And.Prefix)))
 	}

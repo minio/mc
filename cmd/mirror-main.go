@@ -144,6 +144,10 @@ var (
 			Name:  "skip-errors",
 			Usage: "skip any errors when mirroring",
 		},
+		cli.IntFlag{
+			Name:  "max-workers",
+			Usage: "maximum number of concurrent copies (default: autodetect)",
+		},
 		checksumFlag,
 	}
 )
@@ -297,8 +301,13 @@ func (m mirrorMessage) String() string {
 	if m.EventTime != "" {
 		msg = console.Colorize("Time", fmt.Sprintf("[%s] ", m.EventTime))
 	}
-	if m.EventType == notification.ObjectRemovedDelete {
+	switch m.EventType {
+	case notification.ObjectRemovedDelete:
 		return msg + "Removed " + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	case notification.ObjectRemovedDeleteMarkerCreated:
+		return msg + "Removed (Delete Marker)" + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
+	case notification.ILMDelMarkerExpirationDelete:
+		return msg + "Removed (ILM)" + console.Colorize("Removed", fmt.Sprintf("`%s`", m.Target))
 	}
 	if m.EventTime == "" {
 		return console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
@@ -647,10 +656,11 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 		}
 		eventPath := event.Path
-		if runtime.GOOS == "darwin" {
+		switch runtime.GOOS {
+		case "darwin":
 			// Strip the prefixes in the event path. Happens in darwin OS only
 			eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
-		} else if runtime.GOOS == "windows" {
+		case "windows":
 			// Shared folder as source URL and if event path is an absolute path.
 			eventPath = getEventPathURLWin(mj.sourceURL, eventPath)
 		}
@@ -722,7 +732,9 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			mj.parallel.queueTask(func() URLs {
 				return mj.doMirrorWatch(ctx, targetPath, tgtSSE, mirrorURL, event)
 			}, mirrorURL.SourceContent.Size)
-		} else if event.Type == notification.ObjectRemovedDelete {
+		} else if event.Type == notification.ObjectRemovedDelete ||
+			event.Type == notification.ObjectRemovedDeleteMarkerCreated ||
+			event.Type == notification.ILMDelMarkerExpirationDelete {
 			if targetAlias != "" && strings.Contains(event.UserAgent, uaMirrorAppName+":"+targetAlias) {
 				// Ignore delete cascading delete events if cyclical.
 				continue
@@ -739,7 +751,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 			}
 			mirrorURL.TotalCount = mj.status.GetCounts()
 			mirrorURL.TotalSize = mj.status.Get()
-			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive) {
+			if mirrorURL.TargetContent != nil && (mj.opts.isRemove || mj.opts.activeActive || mj.opts.isWatch) {
 				mj.parallel.queueTask(func() URLs {
 					return mj.doRemove(ctx, mirrorURL, event)
 				}, 0)
@@ -899,7 +911,7 @@ func newMirrorJob(srcURL, dstURL string, opts mirrorOptions) *mirrorJob {
 		watcher:   NewWatcher(UTCNow()),
 	}
 
-	mj.parallel = newParallelManager(mj.statusCh)
+	mj.parallel = newParallelManager(mj.statusCh, opts.maxWorkers)
 
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
@@ -987,7 +999,8 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isOverwrite = cli.Bool("overwrite")
 	}
 
-	isWatch := cli.Bool("watch") || cli.Bool("multi-master") || cli.Bool("active-active")
+	isWatch := cli.Bool("watch") || cli.Bool("multi-master")
+	isActiveActive := cli.Bool("active-active")
 	isRemove := cli.Bool("remove")
 	md5, checksum := parseChecksum(cli)
 
@@ -1015,7 +1028,8 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		storageClass:          cli.String("storage-class"),
 		userMetadata:          userMetadata,
 		encKeyDB:              encKeyDB,
-		activeActive:          isWatch,
+		activeActive:          isActiveActive,
+		maxWorkers:            cli.Int("max-workers"),
 	}
 
 	// If we are not using active/active and we are not removing
@@ -1047,7 +1061,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 
 			if d.Diff == differInSecond {
 				diffBucket := strings.TrimPrefix(d.SecondURL, dstClt.GetURL().String())
-				if !isFake && isRemove {
+				if !isFake && isRemove && createDstBuckets {
 					aliasedDstBucket := path.Join(dstURL, diffBucket)
 					err := deleteBucket(ctx, aliasedDstBucket, false)
 					mj.status.fatalIf(err, "Failed to start mirroring.")
@@ -1064,6 +1078,15 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 			newDstClt, _ := newClient(newTgtURL)
 
 			if d.Diff == differInFirst {
+				// This loop is responsible solely for bringing target on par with source at the bucket level.
+				// createDstBuckets == false implies that the target itself represents a bucket.
+				// So we don't want to perform MakeBucket (and in turn delete and recreate already existing buckets and objects) if it already exists.
+				// Any differences at the object level between source and target's bucket will be synced as part of objectDifference() that gets
+				// called later.
+				if !createDstBuckets {
+					continue
+				}
+
 				var (
 					withLock bool
 					mode     minio.RetentionMode
@@ -1078,11 +1101,6 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 					}
 				}
 
-				mj.status.PrintMsg(mirrorMessage{
-					Source: newSrcURL,
-					Target: newTgtURL,
-				})
-
 				if mj.opts.isFake {
 					continue
 				}
@@ -1091,6 +1109,11 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 				if matchExcludeBucketOptions(mopts.excludeBuckets, sourceSuffix) {
 					continue
 				}
+
+				mj.status.PrintMsg(mirrorMessage{
+					Source: newSrcURL,
+					Target: newTgtURL,
+				})
 
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx, cli.String("region"), false, withLock); err != nil {

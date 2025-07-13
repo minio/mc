@@ -65,8 +65,7 @@ func TestSTSS3Operation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var reader io.Reader
-	reader = bytes.NewReader(object.data)
+	var reader io.Reader = bytes.NewReader(object.data)
 	n, err := s3c.Put(context.Background(), reader, int64(len(object.data)), nil, PutOptions{
 		metadata: map[string]string{
 			"Content-Type": "application/octet-stream",
