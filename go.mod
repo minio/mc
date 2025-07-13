@@ -2,7 +2,7 @@ module github.com/minio/mc
 
 go 1.23.0
 
-toolchain go1.23.6
+toolchain go1.23.10
 
 require (
 	github.com/charmbracelet/bubbles v0.20.0

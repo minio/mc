@@ -73,7 +73,7 @@ func enableDisableAccesskey(ctx *cli.Context, enable bool) error {
 	})
 	fatalIf(probe.NewError(e), "Unable to add service account.")
 
-	m := ldapAccesskeyMessage{
+	m := accesskeyMessage{
 		op:        op,
 		Status:    "success",
 		AccessKey: accessKey,

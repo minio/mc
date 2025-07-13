@@ -411,12 +411,10 @@ func (opts matchOpts) matches(traceInfo madmin.ServiceTraceInfo) bool {
 		}
 	}
 
-	if opts.requestSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.requestSize) {
-		return false
-	}
-
-	if opts.responseSize > 0 && traceInfo.Trace.HTTP.CallStats.OutputBytes < int(opts.responseSize) {
-		return false
+	if traceInfo.Trace.HTTP != nil {
+		if (opts.requestSize > 0 && traceInfo.Trace.HTTP.CallStats.InputBytes < int(opts.requestSize)) || (opts.responseSize > 0 && traceInfo.Trace.HTTP.CallStats.OutputBytes < int(opts.responseSize)) {
+			return false
+		}
 	}
 
 	return true
