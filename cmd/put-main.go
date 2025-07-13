@@ -51,6 +51,10 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
+		cli.StringFlag{
+			Name:  "storage-class, sc",
+			Usage: "set storage class for new object on target",
+		},
 	}
 )
 
@@ -90,7 +94,10 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} --enc-c "play/mybucket/object=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDA" path-to/object play/mybucket/object 
 
   5. Put an object to MinIO storage using sse-kms encryption
-     {{.Prompt}} {{.HelpName}} --enc-kms path-to/object play/mybucket/object 
+     {{.Prompt}} {{.HelpName}} --enc-kms path-to/object play/mybucket/object
+
+  6. Put an object to MinIO storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
+      {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 `,
 }
 
@@ -133,6 +140,10 @@ func mainPut(cliCtx *cli.Context) (e error) {
 	if len(args) < 2 {
 		fatalIf(errInvalidArgument().Trace(args...), "Invalid number of arguments.")
 	}
+
+	// Check and handle storage class if passed in command line args
+	storageClass := cliCtx.String("sc")
+
 	// get source and target
 	sourceURLs := args[:len(args)-1]
 	targetURL := args[len(args)-1]
@@ -161,6 +172,9 @@ func mainPut(cliCtx *cli.Context) (e error) {
 			if putURLs.Error != nil {
 				putURLsCh <- putURLs
 				break
+			}
+			if storageClass != "" {
+				putURLs.TargetContent.StorageClass = storageClass
 			}
 			putURLs.checksum = checksum
 			putURLs.MD5 = md5
