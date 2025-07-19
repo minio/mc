@@ -74,7 +74,7 @@ func mainIDPLdapAccesskeyCreateWithLogin(ctx *cli.Context) error {
 	res, e := client.AddServiceAccountLDAP(globalContext, opts)
 	fatalIf(probe.NewError(e), "unable to add service account")
 
-	m := ldapAccesskeyMessage{
+	m := accesskeyMessage{
 		op:          "create",
 		Status:      "success",
 		AccessKey:   res.AccessKey,

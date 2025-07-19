@@ -148,7 +148,7 @@ func checkAliasSetSyntax(ctx *cli.Context, accessKey, secretKey string, deprecat
 		}
 	} else {
 		if !isValidPath(path) {
-			fatalIf(errInvalidArgument().Trace(bucketLookup),
+			fatalIf(errInvalidArgument().Trace(path),
 				"Unrecognized path value. Valid options are `[auto, on, off]`.")
 		}
 	}
