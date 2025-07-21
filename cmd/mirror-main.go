@@ -102,7 +102,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "with-versioning",
-			Usage: "upload or remove with versioning enabled on a bucket",
+			Usage: "enable mirroring of version history, including deletions, for versioned buckets",
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
@@ -1081,7 +1081,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 	mirrorBucketsToBuckets := mirrorSrcBuckets && createDstBuckets
 
 	if cli.Bool("with-versioning") && (!checkIfBucketIsVersioned(ctx, srcURL) || !checkIfBucketIsVersioned(ctx, dstURL)) {
-		fatalIf(errInvalidArgument().Trace(cli.Command.Name), "You cannot specify --with-versioning in versioning not enabled buckets")
+		fatalIf(errInvalidArgument().Trace(cli.Command.Name), "You cannot specify --with-versioning for buckets where versioning is not enabled.")
 	}
 
 	if mirrorSrcBuckets || createDstBuckets {
