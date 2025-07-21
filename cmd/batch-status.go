@@ -258,6 +258,8 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("Objects: ", m.metric.Replicate.Objects)
 		addLine("Versions: ", m.metric.Replicate.Objects)
 		addLine("FailedObjects: ", m.metric.Replicate.ObjectsFailed)
+		addLine("DeleteMarker: ", m.metric.Replicate.DeleteMarkers)
+		addLine("FailedDeleteMarker: ", m.metric.Replicate.DeleteMarkersFailed)
 		if accElapsedTime > 0 {
 			bytesTransferredPerSec := float64(m.metric.Replicate.BytesTransferred) / accElapsedTime.Seconds()
 			objectsPerSec := float64(int64(time.Second)*m.metric.Replicate.Objects) / float64(accElapsedTime)
@@ -271,13 +273,30 @@ func (m *batchJobMetricsUI) View() string {
 		addLine("JobType: ", m.metric.JobType)
 		addLine("Objects: ", m.metric.Expired.Objects)
 		addLine("FailedObjects: ", m.metric.Expired.ObjectsFailed)
+		addLine("DeleteMarker: ", m.metric.Expired.DeleteMarkers)
+		addLine("FailedDeleteMarker: ", m.metric.Expired.DeleteMarkersFailed)
 		addLine("CurrObjName: ", m.metric.Expired.Object)
 
 		if !m.metric.LastUpdate.IsZero() {
 			accElapsedTime := m.metric.LastUpdate.Sub(m.metric.StartTime)
 			addLine("Elapsed: ", accElapsedTime.String())
 		}
-
+	case string(madmin.BatchJobCatalog):
+		addLine("JobType: ", m.metric.JobType)
+		addLine("ObjectsScannedCount: ", m.metric.Catalog.ObjectsScannedCount)
+		addLine("ObjectsMatchedCount: ", m.metric.Catalog.ObjectsMatchedCount)
+		lastScanned := fmt.Sprintf("%s/%s", m.metric.Catalog.LastBucketScanned, m.metric.Catalog.LastObjectScanned)
+		addLine("LastScanned: ", lastScanned)
+		lastMatched := fmt.Sprintf("%s/%s", m.metric.Catalog.LastBucketMatched, m.metric.Catalog.LastObjectMatched)
+		addLine("LastMatched: ", lastMatched)
+		accElapsedTime := m.metric.LastUpdate.Sub(m.metric.StartTime)
+		addLine("RecordsWrittenCount: ", m.metric.Catalog.RecordsWrittenCount)
+		addLine("OutputObjectsCount: ", m.metric.Catalog.OutputObjectsCount)
+		addLine("Elapsed: ", accElapsedTime.Round(time.Second).String())
+		addLine("Scan Speed: ", fmt.Sprintf("%f objects/s", float64(m.metric.Catalog.ObjectsScannedCount)/accElapsedTime.Seconds()))
+		if m.metric.Catalog.ErrorMsg != "" {
+			addLine("Error: ", m.metric.Catalog.ErrorMsg)
+		}
 	}
 
 	table.AppendBulk(data)

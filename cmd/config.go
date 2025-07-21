@@ -248,9 +248,12 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, string, *probe.Err
 		return nil, "", "", "", probe.NewError(e)
 	}
 	// Look for if URL has invalid values and return error.
-	if !((u.Scheme == "http" || u.Scheme == "https") &&
-		(u.Path == "/" || u.Path == "") && u.Opaque == "" &&
-		!u.ForceQuery && u.RawQuery == "" && u.Fragment == "") {
+	if (u.Scheme != "http" && u.Scheme != "https") ||
+		(u.Path != "/" && u.Path != "") ||
+		u.Opaque != "" ||
+		u.ForceQuery ||
+		u.RawQuery != "" ||
+		u.Fragment != "" {
 		return nil, "", "", "", errInvalidArgument().Trace(u.String())
 	}
 	if accessKey == "" && secretKey == "" {

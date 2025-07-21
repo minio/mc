@@ -148,11 +148,10 @@ func mainRetentionSet(cliCtx *cli.Context) error {
 
 	target, versionID, recursive, rewind, withVersions, mode, validity, unit, bypass, bucketMode := parseSetRetentionArgs(cliCtx)
 
-	fatalIfBucketLockNotSupported(ctx, target)
-
 	if bucketMode {
 		return setBucketLock(target, mode, validity, unit)
 	}
+	fatalIfBucketLockNotSupported(ctx, target)
 
 	if withVersions && rewind.IsZero() {
 		rewind = time.Now().UTC()

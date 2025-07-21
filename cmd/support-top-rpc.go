@@ -192,16 +192,22 @@ func mainSupportTopRPC(ctx *cli.Context) error {
 	return nil
 }
 
+const (
+	rpcSortHostname = iota
+	rpcSortReconnections
+	rpcSortQueue
+	rpcSortPing
+)
+
 type topRPCUI struct {
-	spinner      spinner.Model
-	offset       int
-	quitting     bool
-	pageSz       int
-	showTo       bool
-	filterReconn bool
-	sortQueue    bool
-	curr         madmin.RealtimeMetrics
-	frozen       *madmin.RealtimeMetrics
+	spinner  spinner.Model
+	offset   int
+	quitting bool
+	pageSz   int
+	showTo   bool
+	sortBy   uint8
+	curr     madmin.RealtimeMetrics
+	frozen   *madmin.RealtimeMetrics
 }
 
 func (m *topRPCUI) Init() tea.Cmd {
@@ -229,12 +235,11 @@ func (m *topRPCUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "f":
 			m.showTo = false
 		case "r":
-			m.filterReconn = !m.filterReconn
+			m.sortBy = rpcSortReconnections
 		case "q":
-			m.sortQueue = !m.sortQueue
-			if !m.sortQueue {
-				m.filterReconn = false
-			}
+			m.sortBy = rpcSortQueue
+		case "p":
+			m.sortBy = rpcSortPing
 		case tea.KeySpace.String():
 			if m.frozen == nil {
 				freeze := m.curr
@@ -308,8 +313,8 @@ func (m *topRPCUI) View() string {
 		}
 	}
 	sortBy := ""
-	switch {
-	case m.filterReconn:
+	switch m.sortBy {
+	case rpcSortReconnections:
 		sortBy = " sorted by RECONNS"
 		if m.showTo {
 			sort.Slice(hosts, func(i, j int) bool {
@@ -326,8 +331,8 @@ func (m *topRPCUI) View() string {
 				return hosts[i] < hosts[j]
 			})
 		}
-	case m.sortQueue:
-		sortBy = " sorted by Q"
+	case rpcSortQueue:
+		sortBy = " sorted by Queue"
 		if m.showTo {
 			sort.Slice(hosts, func(i, j int) bool {
 				if intoHost[hosts[i]].OutQueue != intoHost[hosts[j]].OutQueue {
@@ -343,7 +348,25 @@ func (m *topRPCUI) View() string {
 				return hosts[i] < hosts[j]
 			})
 		}
+	case rpcSortPing:
+		sortBy = " sorted by Ping"
+		if m.showTo {
+			sort.Slice(hosts, func(i, j int) bool {
+				if intoHost[hosts[i]].LastPingMS != intoHost[hosts[j]].LastPingMS {
+					return intoHost[hosts[i]].LastPingMS > intoHost[hosts[j]].LastPingMS
+				}
+				return hosts[i] < hosts[j]
+			})
+		} else {
+			sort.Slice(hosts, func(i, j int) bool {
+				if fromHost[hosts[i]].LastPingMS != fromHost[hosts[j]].LastPingMS {
+					return fromHost[hosts[i]].LastPingMS > fromHost[hosts[j]].LastPingMS
+				}
+				return hosts[i] < hosts[j]
+			})
+		}
 	default:
+		sortBy = " sorted by Host"
 		sort.Strings(hosts)
 	}
 	allhosts := hosts
@@ -366,7 +389,7 @@ func (m *topRPCUI) View() string {
 		}
 		if m.showTo {
 			if v, ok := intoHost[host]; ok {
-				if m.filterReconn && v.ReconnectCount == 0 {
+				if m.sortBy == rpcSortReconnections && v.ReconnectCount == 0 {
 					continue
 				}
 				dataRender = append(dataRender, []string{
@@ -386,7 +409,7 @@ func (m *topRPCUI) View() string {
 			continue
 		}
 		if v, ok := fromHost[host]; ok {
-			if m.filterReconn && v.ReconnectCount == 0 {
+			if m.sortBy == rpcSortReconnections && v.ReconnectCount == 0 {
 				continue
 			}
 			dataRender = append(dataRender, []string{
@@ -420,9 +443,9 @@ func (m *topRPCUI) View() string {
 	}
 	s.WriteString(pre)
 	if truncate {
-		s.WriteString(fmt.Sprintf("SHOWING %s Host %d to %d of %d%s. ↑ and ↓ available. <tab>=TO/FROM r=RECON q=Q.", dir, 1+m.offset, m.offset+hostsShown, len(allhosts), sortBy))
+		s.WriteString(fmt.Sprintf("SHOWING %s Host %d to %d of %d%s. ↑ and ↓ available. <tab>=TO/FROM r=RECON q=Q p=PING.", dir, 1+m.offset, m.offset+hostsShown, len(allhosts), sortBy))
 	} else {
-		s.WriteString(fmt.Sprintf("SHOWING traffic %s hosts%s. <tab>=TO/FROM r=RECON q=Q.", dir, sortBy))
+		s.WriteString(fmt.Sprintf("SHOWING traffic %s hosts%s. <tab>=TO/FROM r=RECON q=Q p=PING.", dir, sortBy))
 	}
 	return s.String()
 }

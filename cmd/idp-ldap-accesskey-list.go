@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/madmin-go/v3"
@@ -129,10 +130,16 @@ func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool
 	svcaccOnly := ctx.Bool("svcacc-only")
 	selfFlag := ctx.Bool("self")
 	opts.All = ctx.Bool("all")
+	opts.AllConfigs = ctx.Bool("all-configs")
 
 	args := ctx.Args()
 	aliasedURL = args.Get(0)
 	users = args.Tail()
+
+	aliasedURL, cfgName, _ := strings.Cut(aliasedURL, ":")
+	if cfgName != "" {
+		opts.ConfigName = cfgName
+	}
 
 	var e error
 	if (usersOnly && svcaccOnly) || (usersOnly && stsOnly) || (svcaccOnly && stsOnly) {
@@ -140,7 +147,7 @@ func commonAccesskeyList(ctx *cli.Context) (aliasedURL string, tentativeAll bool
 	} else if selfFlag && opts.All {
 		e = errors.New("only one of --self or --all can be specified")
 	} else if (selfFlag || opts.All) && len(users) > 0 {
-		e = errors.New("user DNs cannot be specified with --self or --all")
+		e = errors.New("users cannot be specified with --self or --all")
 	}
 	fatalIf(probe.NewError(e), "Invalid flags.")
 
