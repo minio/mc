@@ -875,8 +875,10 @@ func (mj *mirrorJob) mirror(ctx context.Context) bool {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(ctx)
 
+	doneCh := make(chan struct{})
+
 	// Starts watcher loop for watching for new events.
-	if mj.opts.isWatch {
+	if mj.opts.isWatch || mj.opts.activeActive {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -897,9 +899,12 @@ func (mj *mirrorJob) mirror(ctx context.Context) bool {
 		wg.Wait()
 		mj.parallel.stopAndWait()
 		close(mj.statusCh)
+		close(doneCh)
 	}()
 
-	return mj.monitorMirrorStatus(cancel)
+	ret := mj.monitorMirrorStatus(cancel)
+	<-doneCh
+	return ret
 }
 
 func newMirrorJob(srcURL, dstURL string, opts mirrorOptions) *mirrorJob {
@@ -1142,7 +1147,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		}
 	}
 
-	if mj.opts.isWatch {
+	if mj.opts.isWatch || mj.opts.activeActive {
 		// monitor mode will watch the source folders for changes,
 		// and queue them for copying.
 		if err := mj.watchURL(ctx, srcClt); err != nil {
