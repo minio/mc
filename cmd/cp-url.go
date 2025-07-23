@@ -336,7 +336,7 @@ func prepareCopyURLs(ctx context.Context, o prepareCopyURLsOpts) chan URLs {
 		defer close(copyURLsCh)
 		copyURLsContent, err := guessCopyURLType(ctx, o)
 		if err != nil {
-			copyURLsCh <- URLs{Error: errUnableToGuess().Trace(o.sourceURLs...)}
+			copyURLsCh <- URLs{Error: errUnableToGuess(err.Cause.Error()).Trace(o.sourceURLs...)}
 			return
 		}
 
