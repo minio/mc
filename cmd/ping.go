@@ -221,14 +221,14 @@ func (ps PingSummary) String() string {
 	return builder.String()
 }
 
-// ServerStats
+// ServerStats ping result of each endpoint
 type ServerStats struct {
 	Endpoint   *url.URL `json:"endpoint"`
 	Min        uint64   `json:"min"`
 	Max        uint64   `json:"max"`
 	Sum        uint64   `json:"sum"`
 	Avg        uint64   `json:"avg"`
-	Dns        uint64   `json:"dns"`        // last DNS resolving time
+	DNS        uint64   `json:"dns"`        // last DNS resolving time
 	ErrorCount int      `json:"errorCount"` // used to keep a track of consecutive errors
 	Err        string   `json:"err"`
 	Counter    int      `json:"counter"` // used to find the average, acts as denominator
@@ -298,7 +298,7 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 		allOK = allOK && result.Online
 		endPointStat := EndPointStats{
 			Endpoint: result.Endpoint,
-			DNS:      time.Duration(stat.Dns).String(),
+			DNS:      time.Duration(stat.DNS).String(),
 			Status:   status,
 			Error:    stat.Err,
 			Time:     trimToTwoDecimal(result.ResponseTime),
@@ -413,7 +413,8 @@ func pingStats(cliCtx *cli.Context, result madmin.AliveResult, ps PingSummary) S
 }
 
 func watchSignals(ps PingSummary) {
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
+	defer close(c)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
 	go func() {
 		s := <-c
