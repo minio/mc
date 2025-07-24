@@ -22,8 +22,11 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 	"text/template"
 	"time"
@@ -117,14 +120,15 @@ func (pr PingResult) JSON() string {
 var colorMap = template.FuncMap{
 	"colorWhite": color.New(color.FgWhite).SprintfFunc(),
 	"colorRed":   color.New(color.FgRed).SprintfFunc(),
+	"colorGreen": color.New(color.FgGreen).SprintfFunc(),
 }
 
 // PingDist is the template for ping result in distributed mode
-const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{" "}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{" "}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}
+const PingDist = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "ok " .Status}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{"\t"}}{{colorWhite "status="}}{{colorGreen .Status}}{{" "}}{{colorWhite "time="}}{{colorWhite .Time}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{"\t"}}{{colorRed "status="}}{{colorRed .Status}}{{" "}}{{colorRed "time="}}{{colorRed .Time}}{{end}}
 {{end}}`
 
 // Ping is the template for ping result
-const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "0  " .CountErr}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{"\t"}}{{ colorWhite "min="}}{{colorWhite .Min}}{{"\t"}}{{colorWhite "max="}}{{colorWhite .Max}}{{"\t"}}{{colorWhite "average="}}{{colorWhite .Average}}{{"\t"}}{{colorWhite "errors="}}{{colorWhite .CountErr}}{{" "}}{{colorWhite "roundtrip="}}{{colorWhite .Roundtrip}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{if ne "" .Endpoint.Port}}{{colorRed ":"}}{{colorRed .Endpoint.Port}}{{end}}{{"\t"}}{{ colorRed "min="}}{{colorRed .Min}}{{"\t"}}{{colorRed "max="}}{{colorRed .Max}}{{"\t"}}{{colorRed "average="}}{{colorRed .Average}}{{"\t"}}{{colorRed "errors="}}{{colorRed .CountErr}}{{" "}}{{colorRed "roundtrip="}}{{colorRed .Roundtrip}}{{end}}{{end}}`
+const Ping = `{{$x := .Counter}}{{range .EndPointsStats}}{{if eq "ok " .Status}}{{colorWhite $x}}{{colorWhite ": "}}{{colorWhite .Endpoint.Scheme}}{{colorWhite "://"}}{{colorWhite .Endpoint.Host}}{{"\t"}}{{colorWhite "status="}}{{colorGreen .Status}}{{" "}}{{colorWhite "time="}}{{colorWhite .Time}}{{else}}{{colorRed $x}}{{colorRed ": "}}{{colorRed .Endpoint.Scheme}}{{colorRed "://"}}{{colorRed .Endpoint.Host}}{{"\t"}}{{colorRed "status="}}{{colorRed .Status}}{{" "}}{{colorRed "time="}}{{colorRed .Time}}{{end}}{{end}}`
 
 // PingTemplateDist - captures ping template
 var PingTemplateDist = template.Must(template.New("ping-list").Funcs(colorMap).Parse(PingDist))
@@ -149,14 +153,11 @@ func (pr PingResult) String() string {
 
 // EndPointStats - container to hold server ping stats
 type EndPointStats struct {
-	Endpoint  *url.URL `json:"endpoint"`
-	Min       string   `json:"min"`
-	Max       string   `json:"max"`
-	Average   string   `json:"average"`
-	DNS       string   `json:"dns"`
-	CountErr  string   `json:"error-count,omitempty"`
-	Error     string   `json:"error,omitempty"`
-	Roundtrip string   `json:"roundtrip"`
+	Endpoint *url.URL `json:"endpoint"`
+	DNS      string   `json:"dns"`
+	Status   string   `json:"status,omitempty"`
+	Error    string   `json:"error,omitempty"`
+	Time     string   `json:"time"`
 }
 
 // PingResult contains ping output
@@ -166,15 +167,71 @@ type PingResult struct {
 	EndPointsStats []EndPointStats `json:"servers"`
 }
 
-type serverStats struct {
-	min        uint64
-	max        uint64
-	sum        uint64
-	avg        uint64
-	dns        uint64 // last DNS resolving time
-	errorCount int    // used to keep a track of consecutive errors
-	err        string
-	counter    int // used to find the average, acts as denominator
+// PingSummary Summarize the results of the ping execution.
+type PingSummary struct {
+	Status string `json:"status"`
+	// map to contain server stats for all the servers
+	ServerMap map[string]ServerStats `json:"serverMap"`
+}
+
+// JSON jsonified ping summary message.
+func (ps PingSummary) JSON() string {
+	pingJSONBytes, e := json.MarshalIndent(ps, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(pingJSONBytes)
+}
+
+// String colorized ping summary message.
+func (ps PingSummary) String() string {
+	dspOrder := []col{colGreen} // Header
+	for i := 0; i < len(ps.ServerMap); i++ {
+		dspOrder = append(dspOrder, colGrey)
+	}
+	var printColors []*color.Color
+	for _, c := range dspOrder {
+		printColors = append(printColors, getPrintCol(c))
+	}
+	tbl := console.NewTable(printColors, []bool{false, false, false, false, false, false}, 0)
+
+	var builder strings.Builder
+	cellText := make([][]string, len(ps.ServerMap)+1)
+	cellText[0] = []string{
+		"Endpoint",
+		"Min",
+		"Avg",
+		"Max",
+		"Error",
+		"Count",
+	}
+	index := 0
+	for endpoint, ping := range ps.ServerMap {
+		index++
+		cellText[index] = []string{
+			ping.Endpoint.Scheme + "://" + endpoint,
+			trimToTwoDecimal(time.Duration(ping.Min)),
+			trimToTwoDecimal(time.Duration(ping.Avg)),
+			trimToTwoDecimal(time.Duration(ping.Max)),
+			strconv.Itoa(ping.ErrorCount),
+			strconv.Itoa(ping.Counter),
+		}
+	}
+	e := tbl.PopulateTable(&builder, cellText)
+	fatalIf(probe.NewError(e), "unable to populate the table")
+	return builder.String()
+}
+
+// ServerStats
+type ServerStats struct {
+	Endpoint   *url.URL `json:"endpoint"`
+	Min        uint64   `json:"min"`
+	Max        uint64   `json:"max"`
+	Sum        uint64   `json:"sum"`
+	Avg        uint64   `json:"avg"`
+	Dns        uint64   `json:"dns"`        // last DNS resolving time
+	ErrorCount int      `json:"errorCount"` // used to keep a track of consecutive errors
+	Err        string   `json:"err"`
+	Counter    int      `json:"counter"` // used to find the average, acts as denominator
 }
 
 func fetchAdminInfo(admClnt *madmin.AdminClient) (madmin.InfoMessage, error) {
@@ -223,7 +280,7 @@ func filterAdminInfo(admClnt *madmin.AdminClient, nodeName string) (madmin.InfoM
 	return madmin.InfoMessage{}, e
 }
 
-func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.AnonymousClient, admInfo madmin.InfoMessage, endPointMap map[string]serverStats, index int) {
+func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.AnonymousClient, admInfo madmin.InfoMessage, pingSummary PingSummary, index int) {
 	var endPointStats []EndPointStats
 	var servers []madmin.ServerProperties
 	if cliCtx.Bool("distributed") || cliCtx.IsSet("node") {
@@ -232,21 +289,22 @@ func ping(ctx context.Context, cliCtx *cli.Context, anonClient *madmin.Anonymous
 	allOK := true
 
 	for result := range anonClient.Alive(ctx, madmin.AliveOpts{}, servers...) {
-		stat := pingStats(cliCtx, result, endPointMap)
+		stat := pingStats(cliCtx, result, pingSummary)
+		status := "ok "
+		if !result.Online {
+			status = "failed "
+		}
 
 		allOK = allOK && result.Online
 		endPointStat := EndPointStats{
-			Endpoint:  result.Endpoint,
-			Min:       trimToTwoDecimal(time.Duration(stat.min)),
-			Max:       trimToTwoDecimal(time.Duration(stat.max)),
-			Average:   trimToTwoDecimal(time.Duration(stat.avg)),
-			DNS:       time.Duration(stat.dns).String(),
-			CountErr:  pad(strconv.Itoa(stat.errorCount), " ", 3-len(strconv.Itoa(stat.errorCount)), false),
-			Error:     stat.err,
-			Roundtrip: trimToTwoDecimal(result.ResponseTime),
+			Endpoint: result.Endpoint,
+			DNS:      time.Duration(stat.Dns).String(),
+			Status:   status,
+			Error:    stat.Err,
+			Time:     trimToTwoDecimal(result.ResponseTime),
 		}
 		endPointStats = append(endPointStats, endPointStat)
-		endPointMap[result.Endpoint.Host] = stat
+		pingSummary.ServerMap[result.Endpoint.Host] = stat
 
 	}
 	stop = stop || cliCtx.Bool("exit") && allOK
@@ -302,7 +360,7 @@ func pad(s, p string, count int, left bool) string {
 	return string(ret)
 }
 
-func pingStats(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[string]serverStats) serverStats {
+func pingStats(cliCtx *cli.Context, result madmin.AliveResult, ps PingSummary) ServerStats {
 	var errorString string
 	var sum, avg, dns uint64
 	minPing := uint64(math.MaxUint64)
@@ -311,13 +369,13 @@ func pingStats(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[str
 
 	if result.Error != nil {
 		errorString = result.Error.Error()
-		if stat, ok := serverMap[result.Endpoint.Host]; ok {
-			minPing = stat.min
-			maxPing = stat.max
-			sum = stat.sum
-			counter = stat.counter
-			avg = stat.avg
-			errorCount = stat.errorCount + 1
+		if stat, ok := ps.ServerMap[result.Endpoint.Host]; ok {
+			minPing = stat.Min
+			maxPing = stat.Max
+			sum = stat.Sum
+			counter = stat.Counter
+			avg = stat.Avg
+			errorCount = stat.ErrorCount + 1
 
 		} else {
 			minPing = 0
@@ -330,17 +388,17 @@ func pingStats(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[str
 	} else {
 		// reset consecutive error count
 		errorCount = 0
-		if stat, ok := serverMap[result.Endpoint.Host]; ok {
+		if stat, ok := ps.ServerMap[result.Endpoint.Host]; ok {
 			var minVal uint64
-			if stat.min == 0 {
+			if stat.Min == 0 {
 				minVal = uint64(result.ResponseTime)
 			} else {
-				minVal = stat.min
+				minVal = stat.Min
 			}
 			minPing = uint64(math.Min(float64(minVal), float64(uint64(result.ResponseTime))))
-			maxPing = uint64(math.Max(float64(stat.max), float64(uint64(result.ResponseTime))))
-			sum = stat.sum + uint64(result.ResponseTime.Nanoseconds())
-			counter = stat.counter + 1
+			maxPing = uint64(math.Max(float64(stat.Max), float64(uint64(result.ResponseTime))))
+			sum = stat.Sum + uint64(result.ResponseTime.Nanoseconds())
+			counter = stat.Counter + 1
 
 		} else {
 			minPing = uint64(math.Min(float64(minPing), float64(uint64(result.ResponseTime))))
@@ -351,7 +409,38 @@ func pingStats(cliCtx *cli.Context, result madmin.AliveResult, serverMap map[str
 		avg = sum / uint64(counter)
 		dns = uint64(result.DNSResolveTime.Nanoseconds())
 	}
-	return serverStats{minPing, maxPing, sum, avg, dns, errorCount, errorString, counter}
+	return ServerStats{result.Endpoint, minPing, maxPing, sum, avg, dns, errorCount, errorString, counter}
+}
+
+func watchSignals(ps PingSummary) {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
+	go func() {
+		s := <-c
+		// Ensure that the table structure is not disrupted when manually canceling.
+		fmt.Println("")
+		printMsg(ps)
+
+		// Stop profiling if enabled, this needs to be before canceling the
+		// global context to check for any unusual cpu/mem/goroutines usage
+		stopProfiling()
+
+		// Cancel the global context
+		globalCancel()
+
+		var exitCode int
+		switch s.String() {
+		case "interrupt":
+			exitCode = globalCancelExitStatus
+		case "killed":
+			exitCode = globalKillExitStatus
+		case "terminated":
+			exitCode = globalTerminatExitStatus
+		default:
+			exitCode = globalErrorExitStatus
+		}
+		os.Exit(exitCode)
+	}()
 }
 
 // mainPing is entry point for ping command.
@@ -383,9 +472,14 @@ func mainPing(cliCtx *cli.Context) error {
 		admInfo, e = filterAdminInfo(admClient, cliCtx.String("node"))
 		fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to get server info")
 	}
+	pingSummary := PingSummary{
+		ServerMap: make(map[string]ServerStats),
+		Status:    "success",
+	}
 
-	// map to contain server stats for all the servers
-	serverMap := make(map[string]serverStats)
+	// stop global signals trap.
+	GlobalTrapSignals = false
+	watchSignals(pingSummary)
 
 	index := 1
 	if cliCtx.IsSet("count") {
@@ -396,9 +490,10 @@ func mainPing(cliCtx *cli.Context) error {
 		for index <= count {
 			// return if consecutive error count more then specified value
 			if stop {
+				printMsg(pingSummary)
 				return nil
 			}
-			ping(ctx, cliCtx, anonClient, admInfo, serverMap, index)
+			ping(ctx, cliCtx, anonClient, admInfo, pingSummary, index)
 			index++
 		}
 	} else {
@@ -409,12 +504,14 @@ func mainPing(cliCtx *cli.Context) error {
 			default:
 				// return if consecutive error count more then specified value
 				if stop {
+					printMsg(pingSummary)
 					return nil
 				}
-				ping(ctx, cliCtx, anonClient, admInfo, serverMap, index)
+				ping(ctx, cliCtx, anonClient, admInfo, pingSummary, index)
 				index++
 			}
 		}
 	}
+	printMsg(pingSummary)
 	return nil
 }
