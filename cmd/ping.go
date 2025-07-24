@@ -414,7 +414,7 @@ func pingStats(cliCtx *cli.Context, result madmin.AliveResult, ps PingSummary) S
 
 func watchSignals(ps PingSummary) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		s := <-c
 		// Ensure that the table structure is not disrupted when manually canceling.
