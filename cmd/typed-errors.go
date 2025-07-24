@@ -41,8 +41,11 @@ var errInvalidArgument = func() *probe.Error {
 
 type unableToGuessErr error
 
-var errUnableToGuess = func() *probe.Error {
+var errUnableToGuess = func(customMsg string) *probe.Error {
 	msg := "Unable to guess the type of copy operation."
+	if strings.TrimSpace(customMsg) != "" {
+		msg = customMsg
+	}
 	return probe.NewError(unableToGuessErr(errors.New(msg)))
 }
 
