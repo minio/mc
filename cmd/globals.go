@@ -82,7 +82,7 @@ var (
 	// GlobalDevMode is set to true if the program is running in development mode
 	GlobalDevMode = false
 
-	// GlobalTrapSignals is set to true if need to traps the registered signals and cancel the global context.
+	// GlobalTrapSignals is set to true if need to trap the registered signals and cancel the global context.
 	GlobalTrapSignals = true
 
 	// GlobalSubnetProxyURL is the proxy to be used for communication with subnet

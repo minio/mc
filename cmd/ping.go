@@ -167,7 +167,7 @@ type PingResult struct {
 	EndPointsStats []EndPointStats `json:"servers"`
 }
 
-// PingSummary Summarize the results of the ping execution.
+// PingSummary Summarizes the results of the ping execution.
 type PingSummary struct {
 	Status string `json:"status"`
 	// map to contain server stats for all the servers
