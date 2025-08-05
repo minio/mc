@@ -98,6 +98,10 @@ var replicateAddFlags = []cli.Flag{
 		Name:  "disable-proxy",
 		Usage: "disable proxying in active-active replication. If unset, default behavior is to proxy",
 	},
+	cli.BoolFlag{
+		Name:  "disable-ssl,ds",
+		Usage: "disable SSL certificate verification",
+	},
 }
 
 var replicateAddCmd = cli.Command{
@@ -125,18 +129,22 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
          --priority 1 
 
-  3. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all objects with tags
+  3. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all operations in an active-active replication setup, with SSL disabled.
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
+         --priority 1 --disable-ssl
+
+  4. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all objects with tags
      "key1=value1, key2=value2" to targetbucket synchronously with bandwidth set to 2 gigabits per second. 
      {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket  \
          --tags "key1=value1&key2=value2" --bandwidth "2G" --sync \
          --priority 1
 
-  4. Disable a replication configuration rule on bucket "mybucket" for alias "myminio".
+  5. Disable a replication configuration rule on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket  \
          --tags "key1=value1&key2=value2" \
          --priority 1 --disable
 
-  5. Add replication configuration rule with existing object replication, delete marker replication and versioned deletes
+  6. Add replication configuration rule with existing object replication, delete marker replication and versioned deletes
      enabled on bucket "mybucket" for alias "myminio".
      {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket  \
          --replicate "existing-objects,delete,delete-marker" \
@@ -257,6 +265,7 @@ func fetchRemoteTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 		ReplicationSync:     cli.Bool("sync"),
 		DisableProxy:        disableproxy,
 		HealthCheckDuration: time.Duration(cli.Uint("healthcheck-seconds")) * time.Second,
+		DisableSSL:          cli.Bool("disable-ssl"),
 	}
 	return bktTarget
 }
