@@ -99,8 +99,8 @@ var replicateAddFlags = []cli.Flag{
 		Usage: "disable proxying in active-active replication. If unset, default behavior is to proxy",
 	},
 	cli.BoolFlag{
-		Name:  "disable-ssl,ds",
-		Usage: "disable SSL certificate verification",
+		Name:  "insecure-tls,it",
+		Usage: "disable TLS certificate verification during replicate",
 	},
 }
 
@@ -129,9 +129,9 @@ EXAMPLES:
      {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
          --priority 1 
 
-  3. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all operations in an active-active replication setup, with SSL disabled.
+  3. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all operations in an active-active replication setup, with TLS disabled.
      {{.Prompt}} {{.HelpName}} myminio/mybucket --remote-bucket https://foobar:foo12345@minio.siteb.example.com/targetbucket \
-         --priority 1 --disable-ssl
+         --priority 1 --insecure-tls
 
   4. Add replication configuration rule on bucket "mybucket" for alias "myminio" to replicate all objects with tags
      "key1=value1, key2=value2" to targetbucket synchronously with bandwidth set to 2 gigabits per second. 
@@ -265,7 +265,7 @@ func fetchRemoteTarget(cli *cli.Context) (bktTarget *madmin.BucketTarget) {
 		ReplicationSync:     cli.Bool("sync"),
 		DisableProxy:        disableproxy,
 		HealthCheckDuration: time.Duration(cli.Uint("healthcheck-seconds")) * time.Second,
-		DisableSSL:          cli.Bool("disable-ssl"),
+		InsecureTLS:         cli.Bool("insecure-tls"),
 	}
 	return bktTarget
 }
