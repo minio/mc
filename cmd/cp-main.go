@@ -24,6 +24,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -100,6 +101,10 @@ var (
 		cli.IntFlag{
 			Name:  "max-workers",
 			Usage: "maximum number of concurrent copies (default: autodetect)",
+		},
+		cli.BoolFlag{
+			Name:  "retry",
+			Usage: "if specified, will enable retrying on a per object basis if errors occur",
 		},
 		checksumFlag,
 	}
@@ -261,21 +266,49 @@ func doCopy(ctx context.Context, copyOpts doCopyOpts) URLs {
 			TotalSize:  copyOpts.cpURLs.TotalSize,
 		})
 	}
-
-	urls := uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{
-		urls:                copyOpts.cpURLs,
-		progress:            copyOpts.pg,
-		encKeyDB:            copyOpts.encryptionKeys,
-		preserve:            copyOpts.preserve,
-		isZip:               copyOpts.isZip,
-		multipartSize:       copyOpts.multipartSize,
-		multipartThreads:    copyOpts.multipartThreads,
-		updateProgressTotal: copyOpts.updateProgressTotal,
-		ifNotExists:         copyOpts.ifNotExists,
-	})
-	if copyOpts.isMvCmd && urls.Error == nil {
-		rmManager.add(ctx, sourceAlias, sourceURL.String())
+	var urls URLs
+	if !copyOpts.isRetriable {
+		urls = uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{
+			urls:                copyOpts.cpURLs,
+			progress:            copyOpts.pg,
+			encKeyDB:            copyOpts.encryptionKeys,
+			preserve:            copyOpts.preserve,
+			isZip:               copyOpts.isZip,
+			multipartSize:       copyOpts.multipartSize,
+			multipartThreads:    copyOpts.multipartThreads,
+			updateProgressTotal: copyOpts.updateProgressTotal,
+			ifNotExists:         copyOpts.ifNotExists,
+		})
+		if copyOpts.isMvCmd && urls.Error == nil {
+			rmManager.add(ctx, sourceAlias, sourceURL.String())
+		}
+		return urls
 	}
+	newRetryManager(ctx, time.Second, 3).retry(func(rm *retryManager) *probe.Error {
+		if rm.retries > 0 {
+			printMsg(retryMessage{
+				SourceURL: copyOpts.cpURLs.SourceContent.URL.String(),
+				TargetURL: copyOpts.cpURLs.TargetContent.URL.String(),
+				Retries:   rm.retries,
+			})
+		}
+		urls = uploadSourceToTargetURL(ctx, uploadSourceToTargetURLOpts{
+			urls:                copyOpts.cpURLs,
+			progress:            copyOpts.pg,
+			encKeyDB:            copyOpts.encryptionKeys,
+			preserve:            copyOpts.preserve,
+			isZip:               copyOpts.isZip,
+			multipartSize:       copyOpts.multipartSize,
+			multipartThreads:    copyOpts.multipartThreads,
+			updateProgressTotal: copyOpts.updateProgressTotal,
+			ifNotExists:         copyOpts.ifNotExists,
+		})
+		if copyOpts.isMvCmd && urls.Error == nil {
+			rmManager.add(ctx, sourceAlias, sourceURL.String())
+			return nil
+		}
+		return urls.Error
+	})
 
 	return urls
 }
@@ -450,6 +483,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 							isMvCmd:        isMvCmd,
 							preserve:       preserve,
 							isZip:          isZip,
+							isRetriable:    cli.Bool("retry"),
 						})
 					}, cpURLs.SourceContent.Size)
 				}
@@ -563,12 +597,12 @@ func mainCopy(cliCtx *cli.Context) error {
 }
 
 type doCopyOpts struct {
-	cpURLs                   URLs
-	pg                       ProgressReader
-	encryptionKeys           map[string][]prefixSSEPair
-	isMvCmd, preserve, isZip bool
-	updateProgressTotal      bool
-	multipartSize            string
-	multipartThreads         string
-	ifNotExists              bool
+	cpURLs                                URLs
+	pg                                    ProgressReader
+	encryptionKeys                        map[string][]prefixSSEPair
+	isMvCmd, preserve, isZip, isRetriable bool
+	updateProgressTotal                   bool
+	multipartSize                         string
+	multipartThreads                      string
+	ifNotExists                           bool
 }
