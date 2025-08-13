@@ -75,6 +75,11 @@ var replicateUpdateFlags = []cli.Flag{
 		Value: "enable",
 	},
 	cli.StringFlag{
+		Name:  "tls",
+		Usage: "enable tls in active-active replication, valid values are ['enable', 'disable']",
+		Value: "enable",
+	},
+	cli.StringFlag{
 		Name:  "bandwidth",
 		Usage: "Set bandwidth limit in bytes per second (K,B,G,T for metric and Ki,Bi,Gi,Ti for IEC units)",
 	},
@@ -139,6 +144,10 @@ EXAMPLES:
   10. Disable proxying and enable synchronous replication for remote target of bucket mybucket with rule ID kxYD.492
      {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.492" --remote-bucket https://foobar:newpassword@minio.siteb.example.com/targetbucket \
          --sync "enable" --proxy "disable"
+
+  10. Disable tls replication for remote target of bucket mybucket with rule ID kxYD.492
+     {{.Prompt}} {{.HelpName}} myminio/mybucket --id "kxYD.492" --remote-bucket https://foobar:newpassword@minio.siteb.example.com/targetbucket \
+         --tls "disable"
 `,
 }
 
@@ -149,7 +158,7 @@ func checkReplicateUpdateSyntax(ctx *cli.Context) {
 	}
 }
 
-// modifyRemoteTarget - modifies the dest credentials or updates sync , disable-proxy settings
+// modifyRemoteTarget - modifies the dest credentials or updates sync , disable-proxy settings, enable TLS settings
 func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget, arnStr string) (*madmin.BucketTarget, []madmin.TargetUpdateType) {
 	args := cli.Args()
 	foundIdx := -1
@@ -190,6 +199,17 @@ func modifyRemoteTarget(cli *cli.Context, targets []madmin.BucketTarget, arnStr 
 
 		default:
 			fatalIf(errInvalidArgument().Trace(args...), "--proxy can be either [enable|disable]")
+		}
+	}
+	if cli.IsSet("tls") {
+		tlsState := strings.ToLower(cli.String("tls"))
+		switch tlsState {
+		case "enable", "disable":
+			bktTarget.InsecureTLS = tlsState == "disable"
+			ops = append(ops, madmin.InsecureTLSUpdateType)
+
+		default:
+			fatalIf(errInvalidArgument().Trace(args...), "--tls can be either [enable|disable]")
 		}
 	}
 
