@@ -38,6 +38,12 @@ func trapSignals(sig ...os.Signal) {
 	// Once signal has been received stop signal Notify handler.
 	signal.Stop(sigCh)
 
+	// If GlobalTrapSignals is set to false, the global context will not be canceled,
+	// allowing the method to cancel the context.
+	if !GlobalTrapSignals {
+		return
+	}
+
 	// Stop profiling if enabled, this needs to be before canceling the
 	// global context to check for any unusual cpu/mem/goroutines usage
 	stopProfiling()
