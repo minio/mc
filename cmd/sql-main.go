@@ -92,7 +92,7 @@ FLAGS:
   {{end}}{{end}}
 
 SERIALIZATION OPTIONS:
-  For query serialization options, refer to https://min.io/docs/minio/linux/reference/minio-mc/mc-sql.html#command-mc.sql
+  For query serialization options, refer to https://docs.min.io/community/minio-object-store/reference/minio-mc/mc-sql.html
 
 EXAMPLES:
   1. Run a query on a set of objects recursively on AWS S3.
