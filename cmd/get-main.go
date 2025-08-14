@@ -32,6 +32,10 @@ var (
 			Name:  "version-id, vid",
 			Usage: "get a specific version of an object",
 		},
+		cli.BoolFlag{
+			Name:  "retry",
+			Usage: "if specified, will enable retrying on a per object basis if errors occur",
+		},
 	}
 )
 
@@ -132,6 +136,7 @@ func mainGet(cliCtx *cli.Context) (e error) {
 				pg:                  pg,
 				encryptionKeys:      encryptionKeys,
 				updateProgressTotal: true,
+				isRetriable:         cliCtx.Bool("retry"),
 			})
 			if urls.Error != nil {
 				e = urls.Error.ToGoError()

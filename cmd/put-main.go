@@ -55,6 +55,10 @@ var (
 			Name:  "storage-class, sc",
 			Usage: "set storage class for new object on target",
 		},
+		cli.BoolFlag{
+			Name:  "retry",
+			Usage: "if specified, will enable retrying on a per object basis if errors occur",
+		},
 	}
 )
 
@@ -208,6 +212,7 @@ func mainPut(cliCtx *cli.Context) (e error) {
 				multipartSize:    size,
 				multipartThreads: strconv.Itoa(threads),
 				ifNotExists:      cliCtx.Bool("if-not-exists"),
+				isRetriable:      cliCtx.Bool("retry"),
 			})
 			if urls.Error != nil {
 				showLastProgressBar(pg, urls.Error.ToGoError())
