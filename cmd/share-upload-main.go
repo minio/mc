@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,14 @@ var shareUploadFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "recursive, r",
 		Usage: "recursively upload any object matching the prefix",
+	},
+	cli.Int64Flag{
+		Name:  "min-len",
+		Usage: "minimum size in byte",
+	},
+	cli.Int64Flag{
+		Name:  "max-len",
+		Usage: "maximum size in byte",
 	},
 	shareFlagExpire,
 	shareFlagContentType,
@@ -66,6 +75,9 @@ EXAMPLES:
 
   4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
      {{.Prompt}} {{.HelpName}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
+
+  5. Generate a curl command to allow upload access for a single object with min/max lengths (in bytes).
+     {{.Prompt}} {{.HelpName}} --min-len=1024 --max-len=8192 s3/backup/2006-Mar-1/info.txt
 `,
 }
 
@@ -150,16 +162,16 @@ func saveSharedURL(objectURL, shareURL string, expiry time.Duration, contentType
 }
 
 // doShareUploadURL uploads files to the target.
-func doShareUploadURL(ctx context.Context, objectURL string, isRecursive bool, expiry time.Duration, contentType string) *probe.Error {
+func doShareUploadURL(ctx context.Context, objectURL string, isRecursive bool, expiry time.Duration, contentType string, minLen int64, maxLen int64) *probe.Error {
 	clnt, err := newClient(objectURL)
 	if err != nil {
 		return err.Trace(objectURL)
 	}
 
 	// Generate pre-signed access info.
-	shareURL, uploadInfo, err := clnt.ShareUpload(ctx, isRecursive, expiry, contentType)
+	shareURL, uploadInfo, err := clnt.ShareUpload(ctx, isRecursive, expiry, contentType, minLen, maxLen)
 	if err != nil {
-		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
+		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType, "minLen="+strconv.FormatInt(minLen, 10), "maxLen="+strconv.FormatInt(maxLen, 10))
 	}
 
 	// Get the new expanded url.
@@ -201,6 +213,8 @@ func mainShareUpload(cliCtx *cli.Context) error {
 	expireArg := cliCtx.String("expire")
 	expiry := shareDefaultExpiry
 	contentType := cliCtx.String("content-type")
+	minLen := cliCtx.Int64("min-len")
+	maxLen := cliCtx.Int64("max-len")
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
@@ -208,7 +222,7 @@ func mainShareUpload(cliCtx *cli.Context) error {
 	}
 
 	for _, targetURL := range cliCtx.Args() {
-		err := doShareUploadURL(ctx, targetURL, isRecursive, expiry, contentType)
+		err := doShareUploadURL(ctx, targetURL, isRecursive, expiry, contentType, minLen, maxLen)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
