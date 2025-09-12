@@ -136,6 +136,7 @@ func mainGet(cliCtx *cli.Context) (e error) {
 			if urls.Error != nil {
 				e = urls.Error.ToGoError()
 				showLastProgressBar(pg, e)
+				fatalIf(urls.Error.Trace(), "Unable to download.")
 				return
 			}
 		}
@@ -151,10 +152,10 @@ func printGetURLsError(cpURLs *URLs) {
 
 	if strings.Contains(cpURLs.Error.ToGoError().Error(),
 		" is a folder.") {
-		errorIf(cpURLs.Error.Trace(),
+		fatalIf(cpURLs.Error.Trace(),
 			"Folder cannot be copied. Please use `...` suffix.")
 	} else {
-		errorIf(cpURLs.Error.Trace(),
+		fatalIf(cpURLs.Error.Trace(),
 			"Unable to download.")
 	}
 }

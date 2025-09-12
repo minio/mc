@@ -226,10 +226,10 @@ func printPutURLsError(putURLs *URLs) {
 	}
 	if strings.Contains(putURLs.Error.ToGoError().Error(),
 		" is a folder.") {
-		errorIf(putURLs.Error.Trace(),
+		fatalIf(putURLs.Error.Trace(),
 			"Folder cannot be copied. Please use `...` suffix.")
 	} else {
-		errorIf(putURLs.Error.Trace(),
+		fatalIf(putURLs.Error.Trace(),
 			"Unable to upload.")
 	}
 }
