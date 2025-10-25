@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"testing"
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
@@ -30,7 +31,6 @@ import (
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/minio/minio-go/v7/pkg/replication"
-	checkv1 "gopkg.in/check.v1"
 )
 
 // mockClient implements Client interface for testing parallel reader
@@ -242,7 +242,7 @@ func (m *mockClient) DeleteBucketCors(ctx context.Context) *probe.Error {
 }
 
 // Test parallel reader with small data
-func (s *TestSuite) TestParallelReaderSmall(c *checkv1.C) {
+func TestParallelReaderSmall(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test data
@@ -255,17 +255,23 @@ func (s *TestSuite) TestParallelReaderSmall(c *checkv1.C) {
 	// Create parallel reader with 2 threads and 10-byte parts
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 10, 2, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	// Read all data
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(bytes.Equal(result, testData), checkv1.Equals, true)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Data mismatch: expected %d bytes, got %d bytes", len(testData), len(result))
+	}
 }
 
 // Test parallel reader with larger data and more threads
-func (s *TestSuite) TestParallelReaderLarge(c *checkv1.C) {
+func TestParallelReaderLarge(t *testing.T) {
 	ctx := context.Background()
 
 	// Create larger test data (1MB)
@@ -284,18 +290,26 @@ func (s *TestSuite) TestParallelReaderLarge(c *checkv1.C) {
 	partSize := int64(128 * 1024)
 	pr := NewParallelReader(ctx, client, int64(len(testData)), partSize, 8, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	// Read all data
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(len(result), checkv1.Equals, len(testData))
-	c.Assert(bytes.Equal(result, testData), checkv1.Equals, true)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if len(result) != len(testData) {
+		t.Errorf("Data length mismatch: expected %d bytes, got %d bytes", len(testData), len(result))
+	}
+	if !bytes.Equal(result, testData) {
+		t.Error("Data content mismatch")
+	}
 }
 
 // Test parallel reader with single thread (should behave like normal reader)
-func (s *TestSuite) TestParallelReaderSingleThread(c *checkv1.C) {
+func TestParallelReaderSingleThread(t *testing.T) {
 	ctx := context.Background()
 
 	testData := []byte("Single threaded test data")
@@ -307,17 +321,23 @@ func (s *TestSuite) TestParallelReaderSingleThread(c *checkv1.C) {
 	// Create parallel reader with 1 thread
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 5, 1, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	// Read all data
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(bytes.Equal(result, testData), checkv1.Equals, true)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Data mismatch: expected %d bytes, got %d bytes", len(testData), len(result))
+	}
 }
 
 // Test parallel reader with exact part boundaries
-func (s *TestSuite) TestParallelReaderExactParts(c *checkv1.C) {
+func TestParallelReaderExactParts(t *testing.T) {
 	ctx := context.Background()
 
 	// Create data that divides evenly into parts
@@ -330,17 +350,23 @@ func (s *TestSuite) TestParallelReaderExactParts(c *checkv1.C) {
 	// Create parallel reader with 4-byte parts (exactly 4 parts)
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 4, 4, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	// Read all data
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(bytes.Equal(result, testData), checkv1.Equals, true)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Data mismatch: expected %d bytes, got %d bytes", len(testData), len(result))
+	}
 }
 
 // Test parallel reader with uneven part boundaries
-func (s *TestSuite) TestParallelReaderUnevenParts(c *checkv1.C) {
+func TestParallelReaderUnevenParts(t *testing.T) {
 	ctx := context.Background()
 
 	// Create data that doesn't divide evenly
@@ -353,17 +379,23 @@ func (s *TestSuite) TestParallelReaderUnevenParts(c *checkv1.C) {
 	// Create parallel reader with 5-byte parts (3 full parts + 1 partial)
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 5, 4, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	// Read all data
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(bytes.Equal(result, testData), checkv1.Equals, true)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Data mismatch: expected %d bytes, got %d bytes", len(testData), len(result))
+	}
 }
 
 // Test parallel reader with small buffer reads
-func (s *TestSuite) TestParallelReaderSmallReads(c *checkv1.C) {
+func TestParallelReaderSmallReads(t *testing.T) {
 	ctx := context.Background()
 
 	testData := []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -374,7 +406,9 @@ func (s *TestSuite) TestParallelReaderSmallReads(c *checkv1.C) {
 
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 5, 2, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	// Read data in small 3-byte chunks
@@ -388,14 +422,18 @@ func (s *TestSuite) TestParallelReaderSmallReads(c *checkv1.C) {
 		if readErr == io.EOF {
 			break
 		}
-		c.Assert(readErr, checkv1.IsNil)
+		if readErr != nil {
+			t.Fatalf("Failed to read data: %v", readErr)
+		}
 	}
 
-	c.Assert(bytes.Equal(result.Bytes(), testData), checkv1.Equals, true)
+	if !bytes.Equal(result.Bytes(), testData) {
+		t.Errorf("Data mismatch: expected %d bytes, got %d bytes", len(testData), result.Len())
+	}
 }
 
 // Test parallel reader closes properly
-func (s *TestSuite) TestParallelReaderClose(c *checkv1.C) {
+func TestParallelReaderClose(t *testing.T) {
 	ctx := context.Background()
 
 	testData := []byte("Test data for close")
@@ -406,19 +444,25 @@ func (s *TestSuite) TestParallelReaderClose(c *checkv1.C) {
 
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 5, 2, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 
 	// Close immediately without reading
 	closeErr := pr.Close()
-	c.Assert(closeErr, checkv1.IsNil)
+	if closeErr != nil {
+		t.Errorf("Failed to close parallel reader: %v", closeErr)
+	}
 
 	// Verify we can close multiple times
 	closeErr = pr.Close()
-	c.Assert(closeErr, checkv1.IsNil)
+	if closeErr != nil {
+		t.Errorf("Failed to close parallel reader second time: %v", closeErr)
+	}
 }
 
 // Test parallel reader with large part size (larger than total size)
-func (s *TestSuite) TestParallelReaderLargePartSize(c *checkv1.C) {
+func TestParallelReaderLargePartSize(t *testing.T) {
 	ctx := context.Background()
 
 	testData := []byte("Small data")
@@ -430,16 +474,22 @@ func (s *TestSuite) TestParallelReaderLargePartSize(c *checkv1.C) {
 	// Part size larger than data size (should result in 1 part)
 	pr := NewParallelReader(ctx, client, int64(len(testData)), 1000, 4, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(bytes.Equal(result, testData), checkv1.Equals, true)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if !bytes.Equal(result, testData) {
+		t.Errorf("Data mismatch: expected %d bytes, got %d bytes", len(testData), len(result))
+	}
 }
 
 // Test parallel reader with empty data
-func (s *TestSuite) TestParallelReaderEmpty(c *checkv1.C) {
+func TestParallelReaderEmpty(t *testing.T) {
 	ctx := context.Background()
 
 	testData := []byte{}
@@ -450,10 +500,16 @@ func (s *TestSuite) TestParallelReaderEmpty(c *checkv1.C) {
 
 	pr := NewParallelReader(ctx, client, 0, 10, 2, GetOptions{})
 	err := pr.Start()
-	c.Assert(err, checkv1.IsNil)
+	if err != nil {
+		t.Fatalf("Failed to start parallel reader: %v", err)
+	}
 	defer pr.Close()
 
 	result, readErr := io.ReadAll(pr)
-	c.Assert(readErr, checkv1.IsNil)
-	c.Assert(len(result), checkv1.Equals, 0)
+	if readErr != nil {
+		t.Fatalf("Failed to read data: %v", readErr)
+	}
+	if len(result) != 0 {
+		t.Errorf("Expected empty result, got %d bytes", len(result))
+	}
 }
