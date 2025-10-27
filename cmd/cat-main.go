@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 MinIO, Inc.
+// Copyright (c) 2015-2025 MinIO, Inc.
 //
 // This file is part of MinIO Object Storage stack
 //
@@ -66,9 +66,8 @@ var catFlags = []cli.Flag{
 		Value: 1,
 	},
 	cli.StringFlag{
-		Name:  "part-size",
-		Usage: "part size for parallel downloads (e.g. 128MiB, 512MiB)",
-		Value: "128MiB",
+		Name:  "buffer-size",
+		Usage: "total buffer size for parallel downloads, split among workers (e.g. 1GiB, 512MiB)",
 	},
 }
 
@@ -113,11 +112,11 @@ EXAMPLES:
   7. Display the content of a particular object version
      {{.Prompt}} {{.HelpName}} --vid "3ddac055-89a7-40fa-8cd3-530a5581b6b8" play/my-bucket/my-object
 
-  8. Download a large object with parallel downloads (8 threads, 256MiB parts)
-     {{.Prompt}} {{.HelpName}} --parallel 8 --part-size 256MiB play/my-bucket/large-file.bin > large-file.bin
+  8. Download a large object with parallel downloads (8 threads, 1GiB total buffer)
+     {{.Prompt}} {{.HelpName}} --parallel 8 --buffer-size 1GiB play/my-bucket/large-file.bin > large-file.bin
 
   9. Stream large object to mc pipe with parallel downloads for fast bucket-to-bucket copy
-     {{.Prompt}} {{.HelpName}} --parallel 16 --part-size 512MiB source/bucket/15tb-file | mc pipe --part-size 512MiB target/bucket/15tb-file
+     {{.Prompt}} {{.HelpName}} --parallel 16 --buffer-size 2GiB source/bucket/15tb-file | mc pipe --part-size 128MiB target/bucket/15tb-file
 `,
 }
 
@@ -178,16 +177,16 @@ func (s prettyStdout) Write(input []byte) (int, error) {
 }
 
 type catOpts struct {
-	args        []string
-	versionID   string
-	timeRef     time.Time
-	startO      int64
-	tailO       int64
-	partN       int
-	isZip       bool
-	stdinMode   bool
-	parallel    int
-	partSizeStr string
+	args          []string
+	versionID     string
+	timeRef       time.Time
+	startO        int64
+	tailO         int64
+	partN         int
+	isZip         bool
+	stdinMode     bool
+	parallel      int
+	bufferSizeStr string
 }
 
 // parseCatSyntax performs command-line input validation for cat command.
@@ -223,7 +222,7 @@ func parseCatSyntax(ctx *cli.Context) catOpts {
 	o.tailO = ctx.Int64("tail")
 	o.partN = ctx.Int("part-number")
 	o.parallel = ctx.Int("parallel")
-	o.partSizeStr = ctx.String("part-size")
+	o.bufferSizeStr = ctx.String("buffer-size")
 
 	if o.tailO != 0 && o.startO != 0 {
 		fatalIf(errInvalidArgument().Trace(), "You cannot specify both --tail and --offset")
@@ -302,29 +301,38 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 			return err.Trace(sourceURL)
 		}
 
-		// Use parallel reader for multiple threads
+		// Use parallel reader for large objects (>16MiB) with multiple threads
+		// Default buffer size is 25% of object size, configurable via --buffer-size
 		if o.parallel > 1 && size > 16<<20 && client.GetURL().Type == objectStorage {
-			// Parse part size
-			partSize, parseErr := humanize.ParseBytes(o.partSizeStr)
-			if parseErr != nil {
-				return probe.NewError(parseErr).Trace(sourceURL)
+			bufferSize := size / 4
+			if o.bufferSizeStr != "" {
+				parsed, parseErr := humanize.ParseBytes(o.bufferSizeStr)
+				if parseErr != nil {
+					return probe.NewError(parseErr).Trace(sourceURL)
+				}
+				bufferSize = int64(parsed)
 			}
 
+			// Minimum 5MiB per part
+			partSize := max(bufferSize/int64(o.parallel), 5*1024*1024)
+
 			gopts := GetOptions{VersionID: versionID, Zip: o.isZip}
-			pr := NewParallelReader(ctx, client, size, int64(partSize), o.parallel, gopts)
+			pr := NewParallelReader(ctx, client, size, partSize, o.parallel, gopts)
 			if startErr := pr.Start(); startErr != nil {
 				return probe.NewError(startErr).Trace(sourceURL)
 			}
 			reader = pr
-		} else {
-			// Use standard single-threaded reader
-			gopts := GetOptions{VersionID: versionID, Zip: o.isZip, RangeStart: o.startO, PartNumber: o.partN}
-			if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB, getSourceOpts{
-				GetOptions: gopts,
-				preserve:   false,
-			}); err != nil {
-				return err.Trace(sourceURL)
-			}
+			defer reader.Close()
+			return catOut(reader, size).Trace(sourceURL)
+		}
+
+		// Use standard single-threaded reader
+		gopts := GetOptions{VersionID: versionID, Zip: o.isZip, RangeStart: o.startO, PartNumber: o.partN}
+		if reader, err = getSourceStreamFromURL(ctx, sourceURL, encKeyDB, getSourceOpts{
+			GetOptions: gopts,
+			preserve:   false,
+		}); err != nil {
+			return err.Trace(sourceURL)
 		}
 		defer reader.Close()
 	}
