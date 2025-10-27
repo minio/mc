@@ -303,7 +303,7 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 		}
 
 		// Use parallel reader for multiple threads
-		if o.parallel > 1 && size > 0 && client.GetURL().Type == objectStorage {
+		if o.parallel > 1 && size > 16<<20 && client.GetURL().Type == objectStorage {
 			// Parse part size
 			partSize, parseErr := humanize.ParseBytes(o.partSizeStr)
 			if parseErr != nil {
