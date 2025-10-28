@@ -155,6 +155,7 @@ func (pr *parallelReader) downloadWorker() {
 			// Create a copy of opts with range set
 			opts := pr.opts
 			opts.RangeStart = start
+			opts.RangeEnd = end // Set end for precise range request
 
 			// Download the part
 			reader, _, err := pr.client.Get(pr.ctx, opts)

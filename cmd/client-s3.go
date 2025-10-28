@@ -892,8 +892,8 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	if opts.Zip {
 		o.Set("x-minio-extract", "true")
 	}
-	if opts.RangeStart != 0 {
-		err := o.SetRange(opts.RangeStart, 0)
+	if opts.RangeStart != 0 || opts.RangeEnd != 0 {
+		err := o.SetRange(opts.RangeStart, opts.RangeEnd)
 		if err != nil {
 			return nil, nil, probe.NewError(err)
 		}
