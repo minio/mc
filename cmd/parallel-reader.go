@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 )
@@ -42,7 +41,6 @@ type parallelReader struct {
 	opts        GetOptions
 
 	// State management
-	currentPart   int64
 	totalParts    int64
 	readOffset    int64
 	currentData   []byte
@@ -51,9 +49,16 @@ type parallelReader struct {
 
 	// Coordination
 	downloadWg  sync.WaitGroup
+	collectorWg sync.WaitGroup
 	requestCh   chan int64
-	responseChs chan chan *partData
+	resultCh    chan *partData
+	partBuffer  map[int64]*partData
+	nextPart    int64
+	bufferMu    sync.Mutex
+	resultReady *sync.Cond
 	started     bool
+	closeMu     sync.Mutex
+	closed      bool
 
 	// Buffer
 	bufferPool sync.Pool
@@ -83,8 +88,10 @@ func NewParallelReader(ctx context.Context, client Client, size int64, partSize 
 		opts:        opts,
 		totalParts:  totalParts,
 		requestCh:   make(chan int64, parallelism*workerQueueDepth),
-		responseChs: make(chan chan *partData, parallelism*workerQueueDepth),
+		resultCh:    make(chan *partData, parallelism*workerQueueDepth),
+		partBuffer:  make(map[int64]*partData),
 	}
+	pr.resultReady = sync.NewCond(&pr.bufferMu)
 
 	// Initialize buffer pool to reuse allocations
 	pr.bufferPool.New = func() any {
@@ -102,16 +109,14 @@ func (pr *parallelReader) Start() error {
 	}
 	pr.started = true
 
-	// Start worker goroutines for downloading
 	for i := 0; i < pr.parallelism; i++ {
 		pr.downloadWg.Add(1)
 		go pr.downloadWorker()
 	}
 
-	// Start result collector
+	// Start result collector and request scheduler
+	pr.collectorWg.Add(1)
 	go pr.collectResults()
-
-	// Start request scheduler
 	go pr.scheduleRequests()
 
 	return nil
@@ -138,80 +143,82 @@ func (pr *parallelReader) downloadWorker() {
 		select {
 		case <-pr.ctx.Done():
 			return
-		case responseCh, ok := <-pr.responseChs:
+		case partNum, ok := <-pr.requestCh:
 			if !ok {
 				return
 			}
-			pr.downloadPart(responseCh)
-		}
-	}
-}
 
-// downloadPart downloads a single part and sends it back on the response channel
-func (pr *parallelReader) downloadPart(responseCh chan *partData) {
-	// Get part number from request channel
-	select {
-	case <-pr.ctx.Done():
-		return
-	case partNum, ok := <-pr.requestCh:
-		if !ok {
-			return
-		}
+			start := partNum * pr.partSize
+			end := min(pr.size, start+pr.partSize) - 1
+			length := end - start + 1
 
-		start := partNum * pr.partSize
-		end := min(pr.size, start+pr.partSize) - 1
-		length := end - start + 1
+			// Create a copy of opts with range set
+			opts := pr.opts
+			opts.RangeStart = start
 
-		// Create a copy of opts with range set
-		opts := pr.opts
-		opts.RangeStart = start
-
-		// Download the part
-		reader, _, err := pr.client.Get(pr.ctx, opts)
-		if err != nil {
-			responseCh <- &partData{
-				partNum: partNum,
-				err:     err.ToGoError(),
+			// Download the part
+			reader, _, err := pr.client.Get(pr.ctx, opts)
+			if err != nil {
+				select {
+				case pr.resultCh <- &partData{partNum: partNum, err: err.ToGoError()}:
+				case <-pr.ctx.Done():
+				}
+				continue
 			}
-			return
-		}
-		defer reader.Close()
 
-		// Get a buffer from the pool
-		bufPtr := pr.bufferPool.Get().(*[]byte)
-		buf := *bufPtr
-		data := buf[:length] // Slice to the actual length needed
+			// Get a buffer from the pool
+			bufPtr := pr.bufferPool.Get().(*[]byte)
+			buf := *bufPtr
+			data := buf[:length]
 
-		n, readErr := io.ReadFull(reader, data)
-		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
-			pr.bufferPool.Put(bufPtr) // Return buffer to pool on error
-			responseCh <- &partData{
-				partNum: partNum,
-				err:     readErr,
+			n, readErr := io.ReadFull(reader, data)
+			reader.Close()
+
+			if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
+				pr.bufferPool.Put(bufPtr) // Return buffer to pool on error
+				select {
+				case pr.resultCh <- &partData{partNum: partNum, err: readErr}:
+				case <-pr.ctx.Done():
+				}
+				continue
 			}
-			return
-		}
 
-		responseCh <- &partData{
-			partNum: partNum,
-			data:    data[:n],
-			bufPtr:  bufPtr,
-			err:     nil,
+			select {
+			case pr.resultCh <- &partData{partNum: partNum, data: data[:n], bufPtr: bufPtr}:
+			case <-pr.ctx.Done():
+				pr.bufferPool.Put(bufPtr)
+				return
+			}
 		}
 	}
 }
 
 // collectResults collects downloaded parts and buffers them
 func (pr *parallelReader) collectResults() {
-	pr.downloadWg.Wait()
-	close(pr.responseChs)
+	defer pr.collectorWg.Done()
+	defer func() {
+		// Wake up any waiting Read() calls when collector exits
+		// This prevents deadlock if context is cancelled while Read() is waiting
+		pr.bufferMu.Lock()
+		pr.resultReady.Broadcast()
+		pr.bufferMu.Unlock()
+	}()
+
+	for part := range pr.resultCh {
+		pr.bufferMu.Lock()
+		pr.partBuffer[part.partNum] = part
+		pr.resultReady.Broadcast() // Wake up Read() if waiting for this part
+		pr.bufferMu.Unlock()
+	}
 }
 
 // Read implements io.Reader interface
 func (pr *parallelReader) Read(p []byte) (n int, err error) {
 	// Check if context is cancelled
-	if err := context.Cause(pr.ctx); err != nil {
-		return 0, err
+	select {
+	case <-pr.ctx.Done():
+		return 0, context.Cause(pr.ctx)
+	default:
 	}
 
 	// If we have data in current buffer, return it
@@ -232,70 +239,99 @@ func (pr *parallelReader) Read(p []byte) (n int, err error) {
 		return n, nil
 	}
 
-	// Check if we've read everything
-	if pr.currentPart >= pr.totalParts {
+	// Wait for the next sequential part - check EOF under lock
+	pr.bufferMu.Lock()
+
+	// Check if we've read everything (now protected by lock)
+	if pr.nextPart >= pr.totalParts {
+		pr.bufferMu.Unlock()
 		if pr.readOffset >= pr.size {
 			return 0, io.EOF
 		}
-		return 0, fmt.Errorf("unexpected end of download stream")
+		return 0, io.ErrUnexpectedEOF
 	}
 
-	// Request next part
-	responseCh := make(chan *partData, 1)
-	select {
-	case <-pr.ctx.Done():
-		return 0, context.Cause(pr.ctx)
-	case pr.responseChs <- responseCh:
-	}
+	for {
+		// Check if we have the part we need
+		part, ok := pr.partBuffer[pr.nextPart]
+		if ok {
+			// Remove from buffer
+			delete(pr.partBuffer, pr.nextPart)
+			pr.nextPart++
+			pr.bufferMu.Unlock()
 
-	// Wait for the part
-	select {
-	case <-pr.ctx.Done():
-		return 0, context.Cause(pr.ctx)
-	case part := <-responseCh:
-		if part.err != nil {
-			// Return buffer to pool on error
-			if part.bufPtr != nil {
-				pr.bufferPool.Put(part.bufPtr)
+			// Handle error
+			if part.err != nil {
+				if part.bufPtr != nil {
+					pr.bufferPool.Put(part.bufPtr)
+				}
+				pr.cancelCause(part.err)
+				return 0, part.err
 			}
-			// Cancel context with the error cause
-			pr.cancelCause(part.err)
-			return 0, part.err
-		}
 
-		pr.currentPart++
-		pr.currentData = part.data
-		pr.currentBufPtr = part.bufPtr
-		pr.currentIndex = 0
-
-		// Copy data to output
-		n = copy(p, pr.currentData)
-		pr.currentIndex += n
-		pr.readOffset += int64(n)
-
-		// If we've consumed all current data, return buffer to pool
-		if pr.currentIndex >= len(pr.currentData) {
-			if pr.currentBufPtr != nil {
-				pr.bufferPool.Put(pr.currentBufPtr)
-				pr.currentBufPtr = nil
-			}
-			pr.currentData = nil
+			// Set as current data
+			pr.currentData = part.data
+			pr.currentBufPtr = part.bufPtr
 			pr.currentIndex = 0
+
+			// Copy to output
+			n = copy(p, pr.currentData)
+			pr.currentIndex += n
+			pr.readOffset += int64(n)
+
+			if pr.currentIndex >= len(pr.currentData) {
+				if pr.currentBufPtr != nil {
+					pr.bufferPool.Put(pr.currentBufPtr)
+					pr.currentBufPtr = nil
+				}
+				pr.currentData = nil
+				pr.currentIndex = 0
+			}
+			return n, nil
 		}
-		return n, nil
+
+		// Check for cancellation
+		select {
+		case <-pr.ctx.Done():
+			pr.bufferMu.Unlock()
+			return 0, context.Cause(pr.ctx)
+		default:
+		}
+
+		// Wait for signal that a new part arrived
+		pr.resultReady.Wait()
 	}
 }
 
 // Close implements io.Closer
 func (pr *parallelReader) Close() error {
-	if !pr.started {
+	pr.closeMu.Lock()
+	if !pr.started || pr.closed {
+		pr.closeMu.Unlock()
 		return nil
 	}
+	pr.closed = true
+	pr.closeMu.Unlock()
 
 	// Cancel the context if not already cancelled
 	pr.cancelCause(nil)
 
+	// Wait for workers to finish
 	pr.downloadWg.Wait()
+
+	// Close result channel and wait for collector to finish
+	close(pr.resultCh)
+	pr.collectorWg.Wait()
+
+	// Clean up any buffered parts safely after collector is finished
+	pr.bufferMu.Lock()
+	for _, part := range pr.partBuffer {
+		if part.bufPtr != nil {
+			pr.bufferPool.Put(part.bufPtr)
+		}
+	}
+	pr.partBuffer = nil
+	pr.bufferMu.Unlock()
 
 	// Return current data buffer if any
 	if pr.currentBufPtr != nil {

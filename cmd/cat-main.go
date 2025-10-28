@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -245,6 +246,11 @@ func parseCatSyntax(ctx *cli.Context) catOpts {
 	if o.parallel < 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid --parallel value, must be >= 1")
 	}
+	if o.bufferSizeStr != "" {
+		if _, err := humanize.ParseBytes(o.bufferSizeStr); err != nil {
+			fatalIf(probe.NewError(err).Trace(), "Invalid --buffer-size value")
+		}
+	}
 
 	return o
 }
@@ -302,9 +308,12 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 		}
 
 		// Use parallel reader for large objects (>16MiB) with multiple threads
-		// Default buffer size is 25% of object size, configurable via --buffer-size
+		// Default buffer size is smallest of object size, 25% of
+		// available memory or 1GB, configurable via --buffer-size
 		if o.parallel > 1 && size > 16<<20 && client.GetURL().Type == objectStorage {
-			bufferSize := size / 4
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			bufferSize := min(size, min(int64(memStats.Sys/4), 1<<30))
 			if o.bufferSizeStr != "" {
 				parsed, parseErr := humanize.ParseBytes(o.bufferSizeStr)
 				if parseErr != nil {
@@ -316,14 +325,19 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 			// Minimum 5MiB per part
 			partSize := max(bufferSize/int64(o.parallel), 5*1024*1024)
 
-			gopts := GetOptions{VersionID: versionID, Zip: o.isZip}
-			pr := NewParallelReader(ctx, client, size, partSize, o.parallel, gopts)
-			if startErr := pr.Start(); startErr != nil {
-				return probe.NewError(startErr).Trace(sourceURL)
+			// Skip parallel download if effective part size would exceed object size
+			if partSize >= size {
+				// Fall through to single-threaded reader
+			} else {
+				gopts := GetOptions{VersionID: versionID, Zip: o.isZip}
+				pr := NewParallelReader(ctx, client, size, partSize, o.parallel, gopts)
+				if startErr := pr.Start(); startErr != nil {
+					return probe.NewError(startErr).Trace(sourceURL)
+				}
+				reader = pr
+				defer reader.Close()
+				return catOut(reader, size).Trace(sourceURL)
 			}
-			reader = pr
-			defer reader.Close()
-			return catOut(reader, size).Trace(sourceURL)
 		}
 
 		// Use standard single-threaded reader
