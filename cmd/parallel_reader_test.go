@@ -44,7 +44,7 @@ type mockClient struct {
 	failAt        int64
 }
 
-func (m *mockClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *ClientContent, *probe.Error) {
+func (m *mockClient) Get(_ context.Context, opts GetOptions) (io.ReadCloser, *ClientContent, *probe.Error) {
 	reqNum := m.getRangeCount.Add(1)
 
 	if m.failAt > 0 && reqNum == m.failAt {
@@ -63,122 +63,166 @@ func (m *mockClient) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *
 	return reader, content, nil
 }
 
-func (m *mockClient) Stat(ctx context.Context, opts StatOptions) (*ClientContent, *probe.Error) {
+func (m *mockClient) Stat(_ context.Context, _ StatOptions) (*ClientContent, *probe.Error) {
 	return &ClientContent{Size: m.size}, nil
 }
-func (m *mockClient) List(ctx context.Context, opts ListOptions) <-chan *ClientContent { return nil }
-func (m *mockClient) Put(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+
+func (m *mockClient) List(_ context.Context, _ ListOptions) <-chan *ClientContent { return nil }
+
+func (m *mockClient) Put(_ context.Context, _ io.Reader, _ int64, _ io.Reader, _ PutOptions) (int64, *probe.Error) {
 	return 0, nil
 }
-func (m *mockClient) Copy(ctx context.Context, source string, opts CopyOptions, progress io.Reader) *probe.Error {
+
+func (m *mockClient) Copy(_ context.Context, _ string, _ CopyOptions, _ io.Reader) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetURL() ClientURL                { return ClientURL{} }
-func (m *mockClient) AddUserAgent(app, version string) {}
-func (m *mockClient) Remove(ctx context.Context, isIncomplete, isRemoveBucket, isBypass, isForceDel bool, contentCh <-chan *ClientContent) <-chan RemoveResult {
+
+func (m *mockClient) GetURL() ClientURL        { return ClientURL{} }
+func (m *mockClient) AddUserAgent(_, _ string) {}
+
+func (m *mockClient) Remove(_ context.Context, _, _, _, _ bool, _ <-chan *ClientContent) <-chan RemoveResult {
 	return nil
 }
-func (m *mockClient) Select(ctx context.Context, expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
+
+func (m *mockClient) Select(_ context.Context, _ string, _ encrypt.ServerSide, _ SelectObjectOpts) (io.ReadCloser, *probe.Error) {
 	return nil, nil
 }
-func (m *mockClient) MakeBucket(ctx context.Context, region string, ignoreExisting, withLock bool) *probe.Error {
+
+func (m *mockClient) MakeBucket(_ context.Context, _ string, _, _ bool) *probe.Error {
 	return nil
 }
-func (m *mockClient) RemoveBucket(ctx context.Context, forceRemove bool) *probe.Error { return nil }
-func (m *mockClient) ListBuckets(ctx context.Context) ([]*ClientContent, *probe.Error) {
+
+func (m *mockClient) RemoveBucket(_ context.Context, _ bool) *probe.Error { return nil }
+
+func (m *mockClient) ListBuckets(_ context.Context) ([]*ClientContent, *probe.Error) {
 	return nil, nil
 }
-func (m *mockClient) SetObjectLockConfig(ctx context.Context, mode minio.RetentionMode, validity uint64, unit minio.ValidityUnit) *probe.Error {
+
+func (m *mockClient) SetObjectLockConfig(_ context.Context, _ minio.RetentionMode, _ uint64, _ minio.ValidityUnit) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetObjectLockConfig(ctx context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
+
+func (m *mockClient) GetObjectLockConfig(_ context.Context) (string, minio.RetentionMode, uint64, minio.ValidityUnit, *probe.Error) {
 	return "", "", 0, "", nil
 }
-func (m *mockClient) GetAccess(ctx context.Context) (string, string, *probe.Error) {
+
+func (m *mockClient) GetAccess(_ context.Context) (string, string, *probe.Error) {
 	return "", "", nil
 }
-func (m *mockClient) GetAccessRules(ctx context.Context) (map[string]string, *probe.Error) {
+
+func (m *mockClient) GetAccessRules(_ context.Context) (map[string]string, *probe.Error) {
 	return nil, nil
 }
-func (m *mockClient) SetAccess(ctx context.Context, access string, isJSON bool) *probe.Error {
+
+func (m *mockClient) SetAccess(_ context.Context, _ string, _ bool) *probe.Error {
 	return nil
 }
-func (m *mockClient) PutObjectRetention(ctx context.Context, versionID string, mode minio.RetentionMode, retainUntilDate time.Time, bypassGovernance bool) *probe.Error {
+
+func (m *mockClient) PutObjectRetention(_ context.Context, _ string, _ minio.RetentionMode, _ time.Time, _ bool) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetObjectRetention(ctx context.Context, versionID string) (minio.RetentionMode, time.Time, *probe.Error) {
+
+func (m *mockClient) GetObjectRetention(_ context.Context, _ string) (minio.RetentionMode, time.Time, *probe.Error) {
 	return "", time.Time{}, nil
 }
-func (m *mockClient) PutObjectLegalHold(ctx context.Context, versionID string, hold minio.LegalHoldStatus) *probe.Error {
+
+func (m *mockClient) PutObjectLegalHold(_ context.Context, _ string, _ minio.LegalHoldStatus) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetObjectLegalHold(ctx context.Context, versionID string) (minio.LegalHoldStatus, *probe.Error) {
+
+func (m *mockClient) GetObjectLegalHold(_ context.Context, _ string) (minio.LegalHoldStatus, *probe.Error) {
 	return "", nil
 }
-func (m *mockClient) ShareDownload(ctx context.Context, versionID string, expires time.Duration) (string, *probe.Error) {
+
+func (m *mockClient) ShareDownload(_ context.Context, _ string, _ time.Duration) (string, *probe.Error) {
 	return "", nil
 }
-func (m *mockClient) ShareUpload(ctx context.Context, isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
+
+func (m *mockClient) ShareUpload(_ context.Context, _ bool, _ time.Duration, _ string) (string, map[string]string, *probe.Error) {
 	return "", nil, nil
 }
-func (m *mockClient) Watch(ctx context.Context, options WatchOptions) (*WatchObject, *probe.Error) {
+
+func (m *mockClient) Watch(_ context.Context, _ WatchOptions) (*WatchObject, *probe.Error) {
 	return nil, nil
 }
-func (m *mockClient) GetTags(ctx context.Context, versionID string) (map[string]string, *probe.Error) {
+
+func (m *mockClient) GetTags(_ context.Context, _ string) (map[string]string, *probe.Error) {
 	return nil, nil
 }
-func (m *mockClient) SetTags(ctx context.Context, versionID, tags string) *probe.Error { return nil }
-func (m *mockClient) DeleteTags(ctx context.Context, versionID string) *probe.Error    { return nil }
-func (m *mockClient) GetLifecycle(ctx context.Context) (*lifecycle.Configuration, time.Time, *probe.Error) {
+
+func (m *mockClient) SetTags(_ context.Context, _, _ string) *probe.Error { return nil }
+
+func (m *mockClient) DeleteTags(_ context.Context, _ string) *probe.Error { return nil }
+
+func (m *mockClient) GetLifecycle(_ context.Context) (*lifecycle.Configuration, time.Time, *probe.Error) {
 	return nil, time.Time{}, nil
 }
-func (m *mockClient) SetLifecycle(ctx context.Context, config *lifecycle.Configuration) *probe.Error {
+
+func (m *mockClient) SetLifecycle(_ context.Context, _ *lifecycle.Configuration) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetVersion(ctx context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
+
+func (m *mockClient) GetVersion(_ context.Context) (minio.BucketVersioningConfiguration, *probe.Error) {
 	return minio.BucketVersioningConfiguration{}, nil
 }
-func (m *mockClient) SetVersion(ctx context.Context, status string, prefixes []string, excludeFolders bool) *probe.Error {
+
+func (m *mockClient) SetVersion(_ context.Context, _ string, _ []string, _ bool) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetReplication(ctx context.Context) (replication.Config, *probe.Error) {
+
+func (m *mockClient) GetReplication(_ context.Context) (replication.Config, *probe.Error) {
 	return replication.Config{}, nil
 }
-func (m *mockClient) SetReplication(ctx context.Context, cfg *replication.Config, opts replication.Options) *probe.Error {
+
+func (m *mockClient) SetReplication(_ context.Context, _ *replication.Config, _ replication.Options) *probe.Error {
 	return nil
 }
-func (m *mockClient) RemoveReplication(ctx context.Context) *probe.Error { return nil }
-func (m *mockClient) GetReplicationMetrics(ctx context.Context) (replication.MetricsV2, *probe.Error) {
+
+func (m *mockClient) RemoveReplication(_ context.Context) *probe.Error { return nil }
+
+func (m *mockClient) GetReplicationMetrics(_ context.Context) (replication.MetricsV2, *probe.Error) {
 	return replication.MetricsV2{}, nil
 }
-func (m *mockClient) ResetReplication(ctx context.Context, before time.Duration, arn string) (replication.ResyncTargetsInfo, *probe.Error) {
+
+func (m *mockClient) ResetReplication(_ context.Context, _ time.Duration, _ string) (replication.ResyncTargetsInfo, *probe.Error) {
 	return replication.ResyncTargetsInfo{}, nil
 }
-func (m *mockClient) ReplicationResyncStatus(ctx context.Context, arn string) (replication.ResyncTargetsInfo, *probe.Error) {
+
+func (m *mockClient) ReplicationResyncStatus(_ context.Context, _ string) (replication.ResyncTargetsInfo, *probe.Error) {
 	return replication.ResyncTargetsInfo{}, nil
 }
-func (m *mockClient) GetEncryption(ctx context.Context) (string, string, *probe.Error) {
+
+func (m *mockClient) GetEncryption(_ context.Context) (string, string, *probe.Error) {
 	return "", "", nil
 }
-func (m *mockClient) SetEncryption(ctx context.Context, algorithm, kmsKeyID string) *probe.Error {
+
+func (m *mockClient) SetEncryption(_ context.Context, _, _ string) *probe.Error {
 	return nil
 }
-func (m *mockClient) DeleteEncryption(ctx context.Context) *probe.Error { return nil }
-func (m *mockClient) GetBucketInfo(ctx context.Context) (BucketInfo, *probe.Error) {
+
+func (m *mockClient) DeleteEncryption(_ context.Context) *probe.Error { return nil }
+
+func (m *mockClient) GetBucketInfo(_ context.Context) (BucketInfo, *probe.Error) {
 	return BucketInfo{}, nil
 }
-func (m *mockClient) Restore(ctx context.Context, versionID string, days int) *probe.Error {
+
+func (m *mockClient) Restore(_ context.Context, _ string, _ int) *probe.Error {
 	return nil
 }
-func (m *mockClient) GetPart(ctx context.Context, part int) (io.ReadCloser, *probe.Error) {
+
+func (m *mockClient) GetPart(_ context.Context, _ int) (io.ReadCloser, *probe.Error) {
 	return nil, nil
 }
-func (m *mockClient) PutPart(ctx context.Context, reader io.Reader, size int64, progress io.Reader, opts PutOptions) (int64, *probe.Error) {
+
+func (m *mockClient) PutPart(_ context.Context, _ io.Reader, _ int64, _ io.Reader, _ PutOptions) (int64, *probe.Error) {
 	return 0, nil
 }
-func (m *mockClient) GetBucketCors(ctx context.Context) (*cors.Config, *probe.Error) { return nil, nil }
-func (m *mockClient) SetBucketCors(ctx context.Context, corsXML []byte) *probe.Error { return nil }
-func (m *mockClient) DeleteBucketCors(ctx context.Context) *probe.Error              { return nil }
+
+func (m *mockClient) GetBucketCors(_ context.Context) (*cors.Config, *probe.Error) { return nil, nil }
+
+func (m *mockClient) SetBucketCors(_ context.Context, _ []byte) *probe.Error { return nil }
+
+func (m *mockClient) DeleteBucketCors(_ context.Context) *probe.Error { return nil }
 
 func TestParallelReader_Basic(t *testing.T) {
 	testData := []byte("Hello, World!")
@@ -835,7 +879,7 @@ func TestParallelReader_CancelDuringWait(t *testing.T) {
 	select {
 	case err := <-readDone:
 		if err == nil {
-			t.Error("Expected error from cancelled context")
+			t.Error("Expected error from canceled context")
 		}
 		// Any error is acceptable - cancellation was detected
 		t.Logf("Got expected error: %v", err)

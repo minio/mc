@@ -326,9 +326,7 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 			partSize := max(bufferSize/int64(o.parallel), 5*1024*1024)
 
 			// Skip parallel download if effective part size would exceed object size
-			if partSize >= size {
-				// Fall through to single-threaded reader
-			} else {
+			if partSize < size {
 				gopts := GetOptions{VersionID: versionID, Zip: o.isZip}
 				pr := NewParallelReader(ctx, client, size, partSize, o.parallel, gopts)
 				if startErr := pr.Start(); startErr != nil {

@@ -30,8 +30,8 @@ const (
 	workerQueueDepth = 2
 )
 
-// parallelReader reads an object in parallel using range requests
-type parallelReader struct {
+// ParallelReader reads an object in parallel using range requests
+type ParallelReader struct {
 	ctx         context.Context
 	cancelCause context.CancelCauseFunc
 	client      Client
@@ -72,13 +72,13 @@ type partData struct {
 }
 
 // NewParallelReader creates a new parallel reader for downloading objects
-func NewParallelReader(ctx context.Context, client Client, size int64, partSize int64, parallelism int, opts GetOptions) *parallelReader {
+func NewParallelReader(ctx context.Context, client Client, size int64, partSize int64, parallelism int, opts GetOptions) *ParallelReader {
 	totalParts := (size + partSize - 1) / partSize
 
 	// Create a cancellable context for internal cancellation
 	derivedCtx, cancelCause := context.WithCancelCause(ctx)
 
-	pr := &parallelReader{
+	pr := &ParallelReader{
 		ctx:         derivedCtx,
 		cancelCause: cancelCause,
 		client:      client,
@@ -103,7 +103,7 @@ func NewParallelReader(ctx context.Context, client Client, size int64, partSize 
 }
 
 // Start begins parallel downloading
-func (pr *parallelReader) Start() error {
+func (pr *ParallelReader) Start() error {
 	if pr.started {
 		return nil
 	}
@@ -123,7 +123,7 @@ func (pr *parallelReader) Start() error {
 }
 
 // scheduleRequests sends part numbers to download workers
-func (pr *parallelReader) scheduleRequests() {
+func (pr *ParallelReader) scheduleRequests() {
 	defer close(pr.requestCh)
 
 	for partNum := range pr.totalParts {
@@ -136,7 +136,7 @@ func (pr *parallelReader) scheduleRequests() {
 }
 
 // downloadWorker downloads parts from the source
-func (pr *parallelReader) downloadWorker() {
+func (pr *ParallelReader) downloadWorker() {
 	defer pr.downloadWg.Done()
 
 	for {
@@ -195,11 +195,11 @@ func (pr *parallelReader) downloadWorker() {
 }
 
 // collectResults collects downloaded parts and buffers them
-func (pr *parallelReader) collectResults() {
+func (pr *ParallelReader) collectResults() {
 	defer pr.collectorWg.Done()
 	defer func() {
 		// Wake up any waiting Read() calls when collector exits
-		// This prevents deadlock if context is cancelled while Read() is waiting
+		// This prevents deadlock if context is canceled while Read() is waiting
 		pr.bufferMu.Lock()
 		pr.resultReady.Broadcast()
 		pr.bufferMu.Unlock()
@@ -214,8 +214,8 @@ func (pr *parallelReader) collectResults() {
 }
 
 // Read implements io.Reader interface
-func (pr *parallelReader) Read(p []byte) (n int, err error) {
-	// Check if context is cancelled
+func (pr *ParallelReader) Read(p []byte) (n int, err error) {
+	// Check if context is canceled
 	select {
 	case <-pr.ctx.Done():
 		return 0, context.Cause(pr.ctx)
@@ -305,7 +305,7 @@ func (pr *parallelReader) Read(p []byte) (n int, err error) {
 }
 
 // Close implements io.Closer
-func (pr *parallelReader) Close() error {
+func (pr *ParallelReader) Close() error {
 	pr.closeMu.Lock()
 	if !pr.started || pr.closed {
 		pr.closeMu.Unlock()
@@ -314,7 +314,7 @@ func (pr *parallelReader) Close() error {
 	pr.closed = true
 	pr.closeMu.Unlock()
 
-	// Cancel the context if not already cancelled
+	// Cancel the context if not already canceled
 	pr.cancelCause(nil)
 
 	// Wait for workers to finish
