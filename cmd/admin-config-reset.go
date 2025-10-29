@@ -78,6 +78,7 @@ func (u configResetMessage) String() (msg string) {
 		msg += console.Colorize("ResetConfigSuccess",
 			fmt.Sprintf("\nPlease restart your server with `%s`.", suggestion))
 	}
+
 	return
 }
 

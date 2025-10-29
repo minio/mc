@@ -190,5 +190,6 @@ func (a *accounter) Read(p []byte) (n int, err error) {
 
 	n = len(p)
 	a.Add(int64(n))
+
 	return
 }
