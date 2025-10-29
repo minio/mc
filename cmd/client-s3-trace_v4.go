@@ -38,6 +38,7 @@ func newTraceV4() httptracer.HTTPTracer {
 // Request - Trace HTTP Request
 func (t traceV4) Request(req *http.Request) (err error) {
 	origAuth := req.Header.Get("Authorization")
+	sseKey := req.Header.Get("X-Amz-Server-Side-Encryption-Customer-Key")
 
 	printTrace := func() error {
 		reqTrace, rerr := httputil.DumpRequestOut(req, false) // Only display header
@@ -45,6 +46,11 @@ func (t traceV4) Request(req *http.Request) (err error) {
 			console.Debug(string(reqTrace))
 		}
 		return rerr
+	}
+
+	if strings.TrimSpace(sseKey) != "" {
+		// Stripe out SSE-C key from: X-Amz-Server-Side-Encryption-Customer-Key=<key>
+		req.Header.Set("X-Amz-Server-Side-Encryption-Customer-Key", "**REDACTED**")
 	}
 
 	if strings.TrimSpace(origAuth) != "" {

@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -60,6 +61,7 @@ func (p byPrefixLength) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 // get SSE Key if object prefix matches with given resource.
 func getSSE(resource string, encKeys []prefixSSEPair) encrypt.ServerSide {
+	resource = filepath.ToSlash(resource)
 	for _, k := range encKeys {
 		if strings.HasPrefix(resource, k.Prefix) {
 			return k.SSE

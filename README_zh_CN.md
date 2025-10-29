@@ -165,9 +165,9 @@ cat      cp       events   mb       pipe     rm       share    version
 ```
 
 ## 了解更多
-- [MinIO Client完全指南](https://min.io/docs/minio/linux/reference/minio-mc.html?ref=gh)
-- [MinIO快速入门](https://min.io/docs/minio/linux/index.html#quickstart-for-linux?ref=gh)
-- [MinIO官方文档](https://min.io/docs/minio/linux/index.html?ref=gh)
+- [MinIO Client完全指南](https://docs.min.io/community/minio-object-store/reference/minio-mc.html?ref=gh)
+- [MinIO快速入门](https://docs.min.io/community/minio-object-store/operations/deployments/baremetal-deploy-minio-on-redhat-linux.html?ref=gh)
+- [MinIO官方文档](https://docs.min.io/community/minio-object-store/index.html?ref=gh)
 
 ## 贡献
 请遵守MinIO[贡献者指南](https://github.com/minio/mc/blob/master/docs/zh_CN/CONTRIBUTING.md)

@@ -98,6 +98,10 @@ var (
 			Name:  "zip",
 			Usage: "Extract from remote zip file (MinIO server source only)",
 		},
+		cli.IntFlag{
+			Name:  "max-workers",
+			Usage: "maximum number of concurrent copies (default: autodetect)",
+		},
 		checksumFlag,
 	}
 )
@@ -367,7 +371,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 	quitCh := make(chan struct{})
 	statusCh := make(chan URLs)
-	parallel := newParallelManager(statusCh)
+	parallel := newParallelManager(statusCh, cli.Int("max-workers"))
 
 	go func() {
 		gracefulStop := func() {
