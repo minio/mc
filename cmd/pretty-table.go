@@ -50,10 +50,7 @@ func (t PrettyTable) buildRow(contents ...string) (line string) {
 
 	// totalColumns is the minimum of the number of fields config
 	// and the number of contents elements.
-	totalColumns := len(contents)
-	if len(t.cols) < totalColumns {
-		totalColumns = len(t.cols)
-	}
+	totalColumns := min(len(t.cols), len(contents))
 
 	// Format fields and construct message
 	for i := 0; i < totalColumns; i++ {

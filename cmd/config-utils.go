@@ -17,7 +17,10 @@
 
 package cmd
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 var validAPIs = []string{"S3v4", "S3v2"}
 
@@ -73,21 +76,11 @@ func isValidAPI(api string) (ok bool) {
 // isValidLookup - validates if bucket lookup is of valid type
 func isValidLookup(lookup string) (ok bool) {
 	l := strings.ToLower(strings.TrimSpace(lookup))
-	for _, v := range []string{"dns", "path", "auto"} {
-		if l == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains([]string{"dns", "path", "auto"}, l)
 }
 
 // isValidPath - validates the alias path config
 func isValidPath(path string) (ok bool) {
 	l := strings.ToLower(strings.TrimSpace(path))
-	for _, v := range []string{"on", "off", "auto"} {
-		if l == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains([]string{"on", "off", "auto"}, l)
 }

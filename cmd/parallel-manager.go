@@ -154,7 +154,7 @@ func (p *ParallelManager) monitorProgress() {
 					maxBandwidth = bandwidth
 				}
 
-				for i := 0; i < defaultWorkerFactor; i++ {
+				for range defaultWorkerFactor {
 					p.addWorker()
 				}
 			}

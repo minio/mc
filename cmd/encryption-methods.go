@@ -168,7 +168,7 @@ func validateAndParseKey(ctx *cli.Context, key string, keyType sseKeyType) (SSEP
 }
 
 func validateOverLappingSSEKeys(keyMap []prefixSSEPair) (err *probe.Error) {
-	for i := 0; i < len(keyMap); i++ {
+	for i := range keyMap {
 		for j := i + 1; j < len(keyMap); j++ {
 			if strings.HasPrefix(keyMap[i].Prefix, keyMap[j].Prefix) ||
 				strings.HasPrefix(keyMap[j].Prefix, keyMap[i].Prefix) {

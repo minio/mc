@@ -244,7 +244,7 @@ func generateCredentials() (accessKey, secretKey string, err *probe.Error) {
 	if e != nil {
 		return "", "", probe.NewError(e)
 	}
-	for i := 0; i < accessKeyMaxLen; i++ {
+	for i := range accessKeyMaxLen {
 		keyBytes[i] = alphaNumericTable[keyBytes[i]%alphaNumericTableLen]
 	}
 	accessKey = string(keyBytes)

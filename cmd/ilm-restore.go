@@ -224,7 +224,7 @@ func checkRestoreStatus(ctx context.Context, targetAlias, targetURL, targetVersi
 var dotCycle = 0
 
 // Clear and print text in the same line
-func printStatus(msg string, args ...interface{}) {
+func printStatus(msg string, args ...any) {
 	if globalJSON {
 		return
 	}

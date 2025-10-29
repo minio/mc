@@ -42,7 +42,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, e error) {
+func marshalPublicKey(pub any) (publicKeyBytes []byte, e error) {
 	// pkcs1PublicKey reflects the ASN.1 structure of a PKCS #1 public key.
 	type pkcs1PublicKey struct {
 		N *big.Int

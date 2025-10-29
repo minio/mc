@@ -95,7 +95,7 @@ type SwInfoV1 struct {
 // MinioHealthInfoV1 - Health info of the MinIO cluster
 type MinioHealthInfoV1 struct {
 	Info     madmin.InfoMessage      `json:"info,omitempty"`
-	Config   interface{}             `json:"config,omitempty"`
+	Config   any                     `json:"config,omitempty"`
 	ProcInfo []madmin.ServerProcInfo `json:"procinfos,omitempty"`
 	Error    string                  `json:"error,omitempty"`
 }

@@ -316,20 +316,20 @@ func initializeTestSuite(t *testing.T) {
 		os.Exit(1)
 	}
 
-	for i := 0; i < len(oneMBSlice); i++ {
+	for i := range len(oneMBSlice) {
 		oneMBSlice[i] = byte(rand.Intn(250))
 	}
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tmpNameMap["aaa"+strconv.Itoa(i)] = false
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tmpNameMap["bbb"+strconv.Itoa(i)] = false
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tmpNameMap["ccc"+strconv.Itoa(i)] = false
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tmpNameMap["ddd"+strconv.Itoa(i)] = false
 	}
 

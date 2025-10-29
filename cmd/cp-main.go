@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"path/filepath"
 	"strings"
 
@@ -422,9 +423,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 				isZip := cli.Bool("zip")
 				if cli.String("attr") != "" {
 					userMetaMap, _ := getMetaDataEntry(cli.String("attr"))
-					for metadataKey, metaDataVal := range userMetaMap {
-						cpURLs.TargetContent.UserMetadata[metadataKey] = metaDataVal
-					}
+					maps.Copy(cpURLs.TargetContent.UserMetadata, userMetaMap)
 				}
 
 				cpURLs.MD5 = md5

@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
@@ -70,9 +71,7 @@ func migrateConfigV1ToV101() {
 	cfgV101 := newConfigV101()
 
 	// Copy aliases.
-	for k, v := range mcCfgV1.Data().(*configV1).Aliases {
-		cfgV101.Aliases[k] = v
-	}
+	maps.Copy(cfgV101.Aliases, mcCfgV1.Data().(*configV1).Aliases)
 
 	// Copy hosts.
 	for k, hostCfgV1 := range mcCfgV1.Data().(*configV1).Hosts {
@@ -128,9 +127,7 @@ func migrateConfigV101ToV2() {
 	cfgV2 := newConfigV2()
 
 	// Copy aliases.
-	for k, v := range mcCfgV101.Data().(*configV101).Aliases {
-		cfgV2.Aliases[k] = v
-	}
+	maps.Copy(cfgV2.Aliases, mcCfgV101.Data().(*configV101).Aliases)
 
 	// Copy hosts.
 	for k, hostCfgV101 := range mcCfgV101.Data().(*configV101).Hosts {
@@ -166,9 +163,7 @@ func migrateConfigV2ToV3() {
 	cfgV3 := newConfigV3()
 
 	// Copy aliases.
-	for k, v := range mcCfgV2.Data().(*configV2).Aliases {
-		cfgV3.Aliases[k] = v
-	}
+	maps.Copy(cfgV3.Aliases, mcCfgV2.Data().(*configV2).Aliases)
 
 	// Copy hosts.
 	for k, hostCfgV2 := range mcCfgV2.Data().(*configV2).Hosts {
@@ -203,9 +198,7 @@ func migrateConfigV3ToV4() {
 	fatalIf(probe.NewError(e), "Unable to load mc config V3.")
 
 	cfgV4 := newConfigV4()
-	for k, v := range mcCfgV3.Data().(*configV3).Aliases {
-		cfgV4.Aliases[k] = v
-	}
+	maps.Copy(cfgV4.Aliases, mcCfgV3.Data().(*configV3).Aliases)
 	// New hostConfig has API signature. All older entries were V4
 	// only. So it is safe to assume V4 as default for all older
 	// entries.
@@ -244,9 +237,7 @@ func migrateConfigV4ToV5() {
 	fatalIf(probe.NewError(e), "Unable to load mc config V4.")
 
 	cfgV5 := newConfigV5()
-	for k, v := range mcCfgV4.Data().(*configV4).Aliases {
-		cfgV5.Aliases[k] = v
-	}
+	maps.Copy(cfgV5.Aliases, mcCfgV4.Data().(*configV4).Aliases)
 	for host, hostCfgV4 := range mcCfgV4.Data().(*configV4).Hosts {
 		cfgV5.Hosts[host] = hostConfigV5{
 			AccessKeyID:     hostCfgV4.AccessKeyID,
@@ -286,9 +277,7 @@ func migrateConfigV5ToV6() {
 	// Add new Google Cloud Storage alias.
 	cfgV6.Aliases["gcs"] = "https://storage.googleapis.com"
 
-	for k, v := range mcCfgV5.Data().(*configV5).Aliases {
-		cfgV6.Aliases[k] = v
-	}
+	maps.Copy(cfgV6.Aliases, mcCfgV5.Data().(*configV5).Aliases)
 
 	// Add defaults.
 	cfgV6.Hosts["*s3*amazonaws.com"] = hostConfigV6{

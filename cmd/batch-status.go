@@ -232,7 +232,7 @@ func (m *batchJobMetricsUI) View() string {
 	table.SetNoWhiteSpace(true)
 
 	var data [][]string
-	addLine := func(prefix string, value interface{}) {
+	addLine := func(prefix string, value any) {
 		data = append(data, []string{
 			prefix,
 			whiteStyle.Render(fmt.Sprint(value)),

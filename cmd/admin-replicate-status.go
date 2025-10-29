@@ -426,10 +426,7 @@ func (i srStatus) String() string {
 				currDowntime = UTCNow().Sub(m.LastOnline)
 			}
 			// normalize because total downtime is calculated at server side at heartbeat interval, may be slightly behind
-			totalDowntime := m.TotalDowntime
-			if currDowntime > totalDowntime {
-				totalDowntime = currDowntime
-			}
+			totalDowntime := max(currDowntime, m.TotalDowntime)
 			var linkStatus string
 			if m.Online {
 				linkStatus = healthDot + fmt.Sprintf(" online (total downtime: %s)", timeDurationToHumanizedDuration(totalDowntime).String())

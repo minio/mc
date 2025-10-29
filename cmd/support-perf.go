@@ -552,7 +552,7 @@ func runPerfTests(ctx *cli.Context, aliasedURL, perfType string) []PerfTestResul
 	return results
 }
 
-func writeJSONObjToZip(zipWriter *zip.Writer, obj interface{}, filename string) error {
+func writeJSONObjToZip(zipWriter *zip.Writer, obj any, filename string) error {
 	writer, e := zipWriter.Create(filename)
 	if e != nil {
 		return e

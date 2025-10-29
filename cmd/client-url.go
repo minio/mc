@@ -289,7 +289,7 @@ func isURLPrefix(src string, dest string) bool {
 	dstURLParts := urlParts(dest)
 	minIndex := min(len(srcURLParts), len(dstURLParts))
 	isPrefix := true
-	for i := 0; i < minIndex; i++ {
+	for i := range minIndex {
 		// if one of the URLs ends with '/' and other does not
 		if (i == minIndex-1) && (dstURLParts[i] == "" || srcURLParts[i] == "" || dstURLParts[i] == "*" || srcURLParts[i] == "*") {
 			continue

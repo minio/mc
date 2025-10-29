@@ -57,10 +57,7 @@ func newPrettyRecord(indent int, rows ...Row) PrettyRecord {
 func (t PrettyRecord) buildRecord(contents ...string) (line string) {
 	// totalRows is the minimum of the number of fields config
 	// and the number of contents elements.
-	totalRows := len(contents)
-	if len(t.rows) < totalRows {
-		totalRows = len(t.rows)
-	}
+	totalRows := min(len(t.rows), len(contents))
 	var format, separator string
 	// Format fields and construct message
 	for i := 0; i < totalRows; i++ {

@@ -8,8 +8,7 @@ TARGET_GOOS ?= $(shell go env GOOS)
 VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/mc:$(VERSION)"
 
-GOLANGCI_DIR = .bin/golangci/$(GOLANGCI_VERSION)
-GOLANGCI = $(GOLANGCI_DIR)/golangci-lint
+GOLANGCI = $(GOPATH)/bin/golangci-lint
 
 all: build
 
@@ -19,8 +18,7 @@ checks:
 
 getdeps:
 	@mkdir -p ${GOPATH}/bin
-	@echo "Installing golangci-lint" && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOLANGCI_DIR)
-	@echo "Installing stringer" && go install -v golang.org/x/tools/cmd/stringer@latest
+	@echo "Installing tools" && go install tool
 
 crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)

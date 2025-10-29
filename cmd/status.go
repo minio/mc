@@ -27,7 +27,7 @@ import (
 
 // Status implements a interface that can be used in quit mode or with progressbar.
 type Status interface {
-	Println(data ...interface{})
+	Println(data ...any)
 	AddCounts(int64)
 	SetCounts(int64)
 	GetCounts() int64
@@ -112,7 +112,7 @@ func (qs *QuietStatus) Add(v int64) Status {
 }
 
 // Println prints line, ignored for quietstatus
-func (qs *QuietStatus) Println(_ ...interface{}) {
+func (qs *QuietStatus) Println(_ ...any) {
 }
 
 // PrintMsg prints message
@@ -208,7 +208,7 @@ func (ps *ProgressStatus) Add(v int64) Status {
 }
 
 // Println prints line, ignored for quietstatus
-func (ps *ProgressStatus) Println(data ...interface{}) {
+func (ps *ProgressStatus) Println(data ...any) {
 	console.Eraseline()
 	console.Println(data...)
 }
