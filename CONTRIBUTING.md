@@ -27,7 +27,7 @@ $ ./mc --help
 
 * When you're ready to create a pull request, be sure to:
     - Have test cases for the new code. If you have questions about how to do it, please ask in your pull request.
-    - Run `go fmt`
+    - Run the lints which will be run in the CI: `golangci-lint run -j8` (install locally from https://github.com/golangci/golangci-lint)
     - Squash your commits into a single commit. `git rebase -i`. It's okay to force update your pull request.
     - Make sure `make install` completes.
 
