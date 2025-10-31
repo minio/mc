@@ -79,7 +79,7 @@ func (u configResetMessage) String() (msg string) {
 			fmt.Sprintf("\nPlease restart your server with `%s`.", suggestion))
 	}
 
-	return
+	return msg
 }
 
 // JSON jsonified service status message.
