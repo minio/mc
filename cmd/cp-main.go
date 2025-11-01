@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -71,6 +72,14 @@ var (
 		cli.BoolFlag{
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
+		},
+		cli.StringFlag{
+			Name:  "part-size",
+			Usage: "part size for multipart uploads (e.g. 16MiB, 64MiB, 128MiB). Max 5GiB. Max file size = part-size × 10000",
+		},
+		cli.IntFlag{
+			Name:  "parallel",
+			Usage: "number of parts to upload in parallel for multipart uploads",
 		},
 		cli.BoolFlag{
 			Name:   "md5",
@@ -193,6 +202,12 @@ EXAMPLES:
 
   19. Set tags to the uploaded objects
       {{.Prompt}} {{.HelpName}} -r --tags "category=prod&type=backup" ./data/ play/another-bucket/
+
+  20. Copy a large file with custom part size and parallel uploads
+      {{.Prompt}} {{.HelpName}} --part-size 128MiB --parallel 8 largefile.bin play/mybucket/
+
+  21. Copy a very large file (12TB+) with CRC32C checksum and optimized multipart settings
+      {{.Prompt}} {{.HelpName}} --checksum CRC32C --part-size 5GiB --parallel 8 verylargefile.bin play/mybucket/
 
 `,
 }
@@ -441,17 +456,35 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						return doCopyFake(cpURLs, pg)
 					}, 0)
 				} else {
+					// Determine if this will be a server-side copy (no data transfer through client)
+					// Server-side copy is used when source and target are on the same server AND file < 5TiB
+					// Note: S3 ComposeObject API has a 5TiB limit, so files >= 5TiB must use stream copy
+					const maxServerSideCopySize = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
+					isServerSideCopy := cpURLs.SourceAlias == cpURLs.TargetAlias &&
+						!isZip &&
+						!checksum.IsSet() &&
+						cpURLs.SourceContent.Size < maxServerSideCopySize
+
+					// For server-side copy, pass size=0 to parallel manager since no data flows through client
+					// For stream copy (including large files > 5TiB), pass actual size for progress tracking
+					queueSize := cpURLs.SourceContent.Size
+					if isServerSideCopy {
+						queueSize = 0 // No client bandwidth used for server-side copy
+					}
+
 					// Print the copy resume summary once in start
 					parallel.queueTask(func() URLs {
 						return doCopy(ctx, doCopyOpts{
-							cpURLs:         cpURLs,
-							pg:             pg,
-							encryptionKeys: encryptionKeys,
-							isMvCmd:        isMvCmd,
-							preserve:       preserve,
-							isZip:          isZip,
+							cpURLs:           cpURLs,
+							pg:               pg,
+							encryptionKeys:   encryptionKeys,
+							isMvCmd:          isMvCmd,
+							preserve:         preserve,
+							isZip:            isZip,
+							multipartSize:    cli.String("part-size"),
+							multipartThreads: strconv.Itoa(cli.Int("parallel")),
 						})
-					}, cpURLs.SourceContent.Size)
+					}, queueSize)
 				}
 			}
 		}

@@ -20,6 +20,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -36,6 +37,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/minio/pkg/v3/console"
 	"github.com/minio/pkg/v3/env"
 )
 
@@ -353,8 +355,30 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
-	// Optimize for server side copy if the host is same.
-	if sourceAlias == targetAlias && !uploadOpts.isZip && !uploadOpts.urls.checksum.IsSet() {
+	// Debug: Print alias information
+	if !globalQuiet && !globalJSON {
+		console.Infof("DEBUG: Copy operation analysis:\n")
+		console.Infof("  Source alias: '%s'\n", sourceAlias)
+		console.Infof("  Target alias: '%s'\n", targetAlias)
+		console.Infof("  Aliases match: %v\n", sourceAlias == targetAlias)
+		console.Infof("  Is zip: %v\n", uploadOpts.isZip)
+		console.Infof("  Has checksum: %v\n", uploadOpts.urls.checksum.IsSet())
+		console.Infof("  File size: %d bytes (%.2f GB)\n", length, float64(length)/(1024*1024*1024))
+	}
+
+	// Server-side copy has a 5TiB limit due to S3 ComposeObject API limitation
+	// For files > 5TiB, we must use stream copy (download + upload) even for same-alias
+	const maxServerSideCopySize = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
+	canUseServerSideCopy := sourceAlias == targetAlias &&
+		!uploadOpts.isZip &&
+		!uploadOpts.urls.checksum.IsSet() &&
+		length < maxServerSideCopySize
+
+	// Optimize for server side copy if the host is same and file size allows it
+	if canUseServerSideCopy {
+		if !globalQuiet && !globalJSON {
+			console.Infof("DEBUG: Using server-side copy (fast, no client bandwidth)\n")
+		}
 		// preserve new metadata and save existing ones.
 		if uploadOpts.preserve {
 			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
@@ -394,6 +418,13 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, sourceVersion, mode, until,
 			legalHold, length, uploadOpts.progress, opts)
 	} else {
+		if !globalQuiet && !globalJSON {
+			console.Infof("DEBUG: Using stream copy (downloads + uploads through client)\n")
+			if length > 5*1024*1024*1024*1024 { // > 5TB
+				console.Errorln(fmt.Sprintf("WARNING: File size %.2f TB exceeds 5TB. Stream copy may fail!", float64(length)/(1024*1024*1024*1024)))
+				console.Errorln("Recommendation: Use --checksum flag or ensure same-alias for server-side copy")
+			}
+		}
 		if uploadOpts.urls.SourceContent.RetentionEnabled {
 			// preserve new metadata and save existing ones.
 			if uploadOpts.preserve {
