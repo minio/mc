@@ -20,7 +20,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -292,7 +291,7 @@ func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSS
 }
 
 // uploadSourceToTargetURL - uploads to targetURL from source.
-// optionally optimizes copy for object sizes <= 5GiB by using
+// optionally optimizes copy for object sizes <= 5TiB by using
 // server side copy operation.
 func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTargetURLOpts) URLs {
 	sourceAlias := uploadOpts.urls.SourceAlias
@@ -355,19 +354,8 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
-	// Debug: Print alias information
-	if !globalQuiet && !globalJSON {
-		console.Infof("DEBUG: Copy operation analysis:\n")
-		console.Infof("  Source alias: '%s'\n", sourceAlias)
-		console.Infof("  Target alias: '%s'\n", targetAlias)
-		console.Infof("  Aliases match: %v\n", sourceAlias == targetAlias)
-		console.Infof("  Is zip: %v\n", uploadOpts.isZip)
-		console.Infof("  Has checksum: %v\n", uploadOpts.urls.checksum.IsSet())
-		console.Infof("  File size: %d bytes (%.2f GB)\n", length, float64(length)/(1024*1024*1024))
-	}
-
-	// Server-side copy has a 5TiB limit due to S3 ComposeObject API limitation
-	// For files > 5TiB, we must use stream copy (download + upload) even for same-alias
+	// Server-side copy using ComposeObject API has a 5TiB limit
+	// For files >= 5TiB, we must use stream copy (download + upload) even for same-alias
 	const maxServerSideCopySize = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
 	canUseServerSideCopy := sourceAlias == targetAlias &&
 		!uploadOpts.isZip &&
@@ -376,9 +364,6 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 
 	// Optimize for server side copy if the host is same and file size allows it
 	if canUseServerSideCopy {
-		if !globalQuiet && !globalJSON {
-			console.Infof("DEBUG: Using server-side copy (fast, no client bandwidth)\n")
-		}
 		// preserve new metadata and save existing ones.
 		if uploadOpts.preserve {
 			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
@@ -401,10 +386,6 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		if uploadOpts.urls.SourceContent.RetentionEnabled {
-			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
-			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
-		}
 
 		opts := CopyOptions{
 			srcSSE:           srcSSE,
@@ -417,14 +398,12 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, sourceVersion, mode, until,
 			legalHold, length, uploadOpts.progress, opts)
-	} else {
-		if !globalQuiet && !globalJSON {
-			console.Infof("DEBUG: Using stream copy (downloads + uploads through client)\n")
-			if length > 5*1024*1024*1024*1024 { // > 5TB
-				console.Errorln(fmt.Sprintf("WARNING: File size %.2f TB exceeds 5TB. Stream copy may fail!", float64(length)/(1024*1024*1024*1024)))
-				console.Errorln("Recommendation: Use --checksum flag or ensure same-alias for server-side copy")
-			}
+
+		// Can apply retention after copy if enabled
+		if err == nil && uploadOpts.urls.SourceContent.RetentionEnabled {
+			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
 		}
+	} else {
 		if uploadOpts.urls.SourceContent.RetentionEnabled {
 			// preserve new metadata and save existing ones.
 			if uploadOpts.preserve {
@@ -525,6 +504,9 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		if e != nil {
 			return uploadOpts.urls.WithError(probe.NewError(e))
 		}
+
+		// Debug logs for multipart configuration
+		console.Debugln("DEBUG: multipart configuration - part-size:", humanize.IBytes(multipartSize), "parallel:", multipartThreads, "file size:", humanize.IBytes(uint64(length)))
 
 		putOpts := PutOptions{
 			metadata:         filterMetadata(metadata),

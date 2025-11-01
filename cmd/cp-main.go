@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/colorjson"
@@ -457,19 +458,31 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 					}, 0)
 				} else {
 					// Determine if this will be a server-side copy (no data transfer through client)
-					// Server-side copy is used when source and target are on the same server AND file < 5TiB
-					// Note: S3 ComposeObject API has a 5TiB limit, so files >= 5TiB must use stream copy
+					// ComposeObject API supports server-side copy up to 5TiB
+					// Files >= 5TiB must use stream copy (download + upload)
 					const maxServerSideCopySize = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
 					isServerSideCopy := cpURLs.SourceAlias == cpURLs.TargetAlias &&
 						!isZip &&
 						!checksum.IsSet() &&
 						cpURLs.SourceContent.Size < maxServerSideCopySize
 
-					// For server-side copy, pass size=0 to parallel manager since no data flows through client
-					// For stream copy (including large files > 5TiB), pass actual size for progress tracking
+					// For server-side copy (< 5TiB), pass size=0 to parallel manager
+					// For stream copy, pass actual size for progress tracking
 					queueSize := cpURLs.SourceContent.Size
 					if isServerSideCopy {
 						queueSize = 0 // No client bandwidth used for server-side copy
+					}
+
+					// Debug log for multipart configuration
+					if globalDebug {
+						partSizeStr := cli.String("part-size")
+						parallelCount := cli.Int("parallel")
+						copyType := "stream copy"
+						if isServerSideCopy {
+							copyType = "server-side copy"
+						}
+						console.Debugln(fmt.Sprintf("DEBUG: Starting %s - file: %s, size: %s, part-size: %s, parallel: %d",
+							copyType, cpURLs.SourceContent.URL.Path, humanize.IBytes(uint64(cpURLs.SourceContent.Size)), partSizeStr, parallelCount))
 					}
 
 					// Print the copy resume summary once in start
