@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -322,6 +321,37 @@ func printCopyURLsError(cpURLs *URLs) {
 	}
 }
 
+// doCopySession manages the copy session and determines copy strategy.
+//
+//  1. SERVER-SIDE COPY - no data transfer through client and is preferred
+//     Used when all below conditions are met:
+//     - Source and target are on the same alias (same MinIO/S3 server)
+//     - File size is < 5 TiB (ComposeObject API limit)
+//     - Not extracting from zip (--zip not used)
+//     - No checksum verification requested (--checksum not used)
+//
+//     Multipart behavior: Uses ComposeObject API with X-Amz-Copy-Source-Range headers.
+//     Part size and parallel settings ARE applied via --part-size and --parallel flags.
+//
+//  2. STREAM COPY (download + upload through client)
+//     Used when ANY of these conditions are met:
+//     - Source and target are on different aliases (cross-server copy)
+//     - File size is >= 5 TiB
+//     - Extracting from zip (--zip flag used)
+//     - Checksum verification requested (--checksum flag used)
+//
+//     Multipart behavior: Uses standard multipart upload API.
+//     Part size and parallel settings ARE applied via --part-size and --parallel flags.
+//
+//  3. PUT without multipart
+//     Used when:
+//     - File size is < 64 MiB (default threshold)
+//     - OR --disable-multipart flag is used
+//
+// Notes:
+//   - The 5 TiB limit is a limitation of the S3 ComposeObject API
+//   - Default part size: based on Minio SDK of 128 MiB for multipart uploads
+//   - Default parallel: 4 threads if parallel is not set
 func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, encryptionKeys map[string][]prefixSSEPair, isMvCmd bool) error {
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
@@ -475,14 +505,25 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 
 					// Debug log for multipart configuration
 					if globalDebug {
-						partSizeStr := cli.String("part-size")
-						parallelCount := cli.Int("parallel")
-						copyType := "stream copy"
-						if isServerSideCopy {
-							copyType = "server-side copy"
+						copyType := "server-side copy"
+						if !isServerSideCopy {
+							copyType = "stream copy"
+							if checksum.IsSet() {
+								console.Debugln(fmt.Sprintf("DEBUG: Checksum %v requested - forcing stream copy for verification", checksum))
+							}
 						}
+
+						partSizeStr := cli.String("part-size")
+						if partSizeStr == "" {
+							partSizeStr = "default"
+						}
+
 						console.Debugln(fmt.Sprintf("DEBUG: Starting %s - file: %s, size: %s, part-size: %s, parallel: %d",
-							copyType, cpURLs.SourceContent.URL.Path, humanize.IBytes(uint64(cpURLs.SourceContent.Size)), partSizeStr, parallelCount))
+							copyType,
+							cpURLs.SourceContent.URL.Path,
+							humanize.IBytes(uint64(cpURLs.SourceContent.Size)),
+							partSizeStr,
+							cli.Int("parallel")))
 					}
 
 					// Print the copy resume summary once in start
@@ -495,7 +536,7 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 							preserve:         preserve,
 							isZip:            isZip,
 							multipartSize:    cli.String("part-size"),
-							multipartThreads: strconv.Itoa(cli.Int("parallel")),
+							multipartThreads: cli.Int("parallel"),
 						})
 					}, queueSize)
 				}
@@ -615,6 +656,6 @@ type doCopyOpts struct {
 	isMvCmd, preserve, isZip bool
 	updateProgressTotal      bool
 	multipartSize            string
-	multipartThreads         string
+	multipartThreads         int
 	ifNotExists              bool
 }

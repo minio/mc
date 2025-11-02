@@ -206,7 +206,7 @@ func mainPut(cliCtx *cli.Context) (e error) {
 				pg:               pg,
 				encryptionKeys:   encryptionKeys,
 				multipartSize:    size,
-				multipartThreads: strconv.Itoa(threads),
+				multipartThreads: threads,
 				ifNotExists:      cliCtx.Bool("if-not-exists"),
 			})
 			if urls.Error != nil {

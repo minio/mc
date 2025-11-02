@@ -892,16 +892,9 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 	if opts.Zip {
 		o.Set("x-minio-extract", "true")
 	}
-	if opts.RangeStart != 0 || opts.RangeEnd != 0 {
-		var err error
-		// SetRange expects offset and length, not start and end
-		// But when length is 0, it reads to EOF
-		// For explicit range: bytes=start-end (inclusive)
-		if opts.RangeEnd != 0 {
-			err = o.SetRange(opts.RangeStart, opts.RangeEnd)
-		} else {
-			err = o.SetRange(opts.RangeStart, 0)
-		}
+	if opts.RangeStart != 0 {
+		// SetRange with length 0 reads from RangeStart to EOF
+		err := o.SetRange(opts.RangeStart, 0)
 		if err != nil {
 			return nil, nil, probe.NewError(err)
 		}

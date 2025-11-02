@@ -60,7 +60,6 @@ type GetOptions struct {
 	VersionID  string
 	Zip        bool
 	RangeStart int64
-	RangeEnd   int64
 	PartNumber int
 	Preserve   bool
 }

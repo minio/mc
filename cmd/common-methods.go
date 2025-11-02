@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -457,9 +458,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		metadata := make(map[string]string, len(content.Metadata))
-		for k, v := range content.Metadata {
-			metadata[k] = v
-		}
+		maps.Copy(metadata, content.Metadata)
 
 		// Get metadata from target content as well
 		for k, v := range uploadOpts.urls.TargetContent.Metadata {
@@ -496,13 +495,13 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			}
 		}
 
-		if uploadOpts.multipartThreads == "" {
+		if uploadOpts.multipartThreads == 0 {
 			multipartThreads, e = strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
+			if e != nil {
+				return uploadOpts.urls.WithError(probe.NewError(e))
+			}
 		} else {
-			multipartThreads, e = strconv.Atoi(uploadOpts.multipartThreads)
-		}
-		if e != nil {
-			return uploadOpts.urls.WithError(probe.NewError(e))
+			multipartThreads = uploadOpts.multipartThreads
 		}
 
 		// Debug logs for multipart configuration
@@ -599,7 +598,7 @@ type uploadSourceToTargetURLOpts struct {
 	encKeyDB            map[string][]prefixSSEPair
 	preserve, isZip     bool
 	multipartSize       string
-	multipartThreads    string
+	multipartThreads    int
 	updateProgressTotal bool
 	ifNotExists         bool
 }
