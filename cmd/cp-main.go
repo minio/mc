@@ -351,7 +351,7 @@ func printCopyURLsError(cpURLs *URLs) {
 // Notes:
 //   - The 5 TiB limit is a limitation of the S3 ComposeObject API
 //   - Default part size: based on Minio SDK of 128 MiB for multipart uploads
-//   - Default parallel: 4 threads if parallel is not set
+//   - Default parallel: 4 threads if parallel is not set and no env var MC_UPLOAD_MULTIPART_THREADS
 func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.Context, encryptionKeys map[string][]prefixSSEPair, isMvCmd bool) error {
 	var isCopied func(string) bool
 	var totalObjects, totalBytes int64
@@ -487,9 +487,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						return doCopyFake(cpURLs, pg)
 					}, 0)
 				} else {
-					// Determine if this will be a server-side copy (no data transfer through client)
-					// ComposeObject API supports server-side copy up to 5TiB
-					// Files >= 5TiB must use stream copy (download + upload)
 					const maxServerSideCopySize = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
 					isServerSideCopy := cpURLs.SourceAlias == cpURLs.TargetAlias &&
 						!isZip &&
@@ -503,7 +500,6 @@ func doCopySession(ctx context.Context, cancelCopy context.CancelFunc, cli *cli.
 						queueSize = 0 // No client bandwidth used for server-side copy
 					}
 
-					// Debug log for multipart configuration
 					if globalDebug {
 						copyType := "server-side copy"
 						if !isServerSideCopy {

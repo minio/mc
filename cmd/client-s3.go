@@ -893,7 +893,6 @@ func (c *S3Client) Get(ctx context.Context, opts GetOptions) (io.ReadCloser, *Cl
 		o.Set("x-minio-extract", "true")
 	}
 	if opts.RangeStart != 0 {
-		// SetRange with length 0 reads from RangeStart to EOF
 		err := o.SetRange(opts.RangeStart, 0)
 		if err != nil {
 			return nil, nil, probe.NewError(err)

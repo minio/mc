@@ -504,8 +504,9 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			multipartThreads = uploadOpts.multipartThreads
 		}
 
-		// Debug logs for multipart configuration
-		console.Debugln("DEBUG: multipart configuration - part-size:", humanize.IBytes(multipartSize), "parallel:", multipartThreads, "file size:", humanize.IBytes(uint64(length)))
+		if globalDebug {
+			console.Debugln("DEBUG: multipart configuration - part-size:", humanize.IBytes(multipartSize), "parallel:", multipartThreads, "file size:", humanize.IBytes(uint64(length)))
+		}
 
 		putOpts := PutOptions{
 			metadata:         filterMetadata(metadata),
