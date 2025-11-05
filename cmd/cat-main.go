@@ -251,11 +251,9 @@ func catURL(ctx context.Context, sourceURL string, encKeyDB map[string][]prefixS
 				versionID = content.VersionID
 			}
 			if o.tailO > 0 && content.Size > 0 {
-				o.startO = content.Size - o.tailO
-				if o.startO < 0 {
+				o.startO = max(content.Size-o.tailO,
 					// Return all.
-					o.startO = 0
-				}
+					0)
 			}
 			if client.GetURL().Type == objectStorage {
 				size = content.Size - o.startO

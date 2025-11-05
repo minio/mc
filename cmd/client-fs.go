@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -634,9 +635,7 @@ func (f *fsClient) Get(_ context.Context, opts GetOptions) (io.ReadCloser, *Clie
 		if pErr != nil {
 			return nil, content, nil
 		}
-		for k, v := range metaData {
-			content.Metadata[k] = v
-		}
+		maps.Copy(content.Metadata, metaData)
 		content.Metadata[metadataKey] = fileAttr
 	}
 
@@ -1361,9 +1360,7 @@ func (f *fsClient) Stat(_ context.Context, opts StatOptions) (content *ClientCon
 		if pErr != nil {
 			return content, nil
 		}
-		for k, v := range metaData {
-			content.Metadata[k] = v
-		}
+		maps.Copy(content.Metadata, metaData)
 		content.Metadata[metadataKey] = fileAttr
 	}
 

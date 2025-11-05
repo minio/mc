@@ -173,7 +173,7 @@ func (m *serviceRestartUI) View() string {
 
 func initServiceRestartUI(rowCount int, currentCh chan serviceRestartMessage) *serviceRestartUI {
 	var printColors []*color.Color
-	for i := 0; i < rowCount; i++ {
+	for range rowCount {
 		printColors = append(printColors, getPrintCol(colGreen))
 	}
 

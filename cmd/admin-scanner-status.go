@@ -397,7 +397,7 @@ func (m *scannerMetricsUI) View() string {
 		writtenRows++
 	}
 	_ = addRow
-	addRowF := func(format string, vals ...interface{}) {
+	addRowF := func(format string, vals ...any) {
 		s := fmt.Sprintf(format, vals...)
 		table.Append([]string{s})
 		writtenRows++
@@ -442,7 +442,7 @@ func (m *scannerMetricsUI) View() string {
 		if sc.CurrentCycle > 0 {
 			addRowF(title("Current cycle:")+"         %s; Started: %v", ui(sc.CurrentCycle), console.Colorize("metrics-date", sc.CurrentStarted))
 		} else {
-			addRowF(title("Current cycle:") + "         (between cycles)")
+			addRowF("%s", title("Current cycle:")+"         (between cycles)")
 		}
 	}
 

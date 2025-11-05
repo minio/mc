@@ -256,7 +256,7 @@ func subnetGetReq(reqURL string, headers map[string]string) (string, error) {
 }
 
 // SubnetPostReq - makes a POST request to SUBNET
-func SubnetPostReq(reqURL string, payload interface{}, headers map[string]string) (string, error) {
+func SubnetPostReq(reqURL string, payload any, headers map[string]string) (string, error) {
 	body, e := json.Marshal(payload)
 	if e != nil {
 		return "", e

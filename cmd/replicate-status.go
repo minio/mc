@@ -160,7 +160,7 @@ func (s replicateStatusMessage) String() string {
 	maxui := uiFn("Peak")
 	avgui := uiFn("Avg")
 
-	addRowF := func(format string, vals ...interface{}) {
+	addRowF := func(format string, vals ...any) {
 		s := fmt.Sprintf(format, vals...)
 		table.Append([]string{s})
 	}
@@ -205,12 +205,9 @@ func (s replicateStatusMessage) String() string {
 			currDowntime = UTCNow().Sub(tgt.LastOnline)
 		}
 		// normalize because total downtime is calculated at server side at heartbeat interval, may be slightly behind
-		totalDowntime := tgt.TotalDowntime
-		if currDowntime > totalDowntime {
-			totalDowntime = currDowntime
-		}
+		totalDowntime := max(currDowntime, tgt.TotalDowntime)
 		nodeStr := nodeui(nodeName)
-		addRowF(nodeui(nodeStr))
+		addRowF("%s", nodeui(nodeStr))
 		stat, ok := rs.Stats[arn]
 		if ok {
 			addRowF(titleui("Replicated:                   ")+humanize.Comma(int64(stat.ReplicatedCount))+keyui(" objects")+" (%s", valueui(humanize.IBytes(stat.ReplicatedSize))+")")
@@ -227,10 +224,10 @@ func (s replicateStatusMessage) String() string {
 			linkStatus = healthDot + fmt.Sprintf(" offline %s (total downtime: %s)", valueui(timeDurationToHumanizedDuration(currDowntime).String()), valueui(timeDurationToHumanizedDuration(totalDowntime).String()))
 		}
 		if singleTgt { // for single target - combine summary section into the target section
-			addRowF(titleui("Queued:                       ") + coloredDot + " " + humanize.Comma(int64(qtots.Curr.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Curr.Bytes))) +
-				" (" + avgui("avg") + ": " + humanize.Comma(int64(qtots.Avg.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Avg.Bytes))) +
-				" ; " + maxui("max:") + " " + humanize.Comma(int64(qtots.Max.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Max.Bytes))) + ")")
-			addRowF(titleui("Workers:                      ") + valueui(humanize.Comma(int64(qs.Workers.Curr))) + avgui(" (avg: ") + humanize.Comma(int64(qs.Workers.Avg)) + maxui("; max: ") + humanize.Comma(int64(qs.Workers.Max)) + ")")
+			addRowF("%s", titleui("Queued:                       ")+coloredDot+" "+humanize.Comma(int64(qtots.Curr.Count))+keyui(" objects, ")+valueui(humanize.IBytes(uint64(qtots.Curr.Bytes)))+
+				" ("+avgui("avg")+": "+humanize.Comma(int64(qtots.Avg.Count))+keyui(" objects, ")+valueui(humanize.IBytes(uint64(qtots.Avg.Bytes)))+
+				" ; "+maxui("max:")+" "+humanize.Comma(int64(qtots.Max.Count))+keyui(" objects, ")+valueui(humanize.IBytes(uint64(qtots.Max.Bytes)))+")")
+			addRowF("%s", titleui("Workers:                      ")+valueui(humanize.Comma(int64(qs.Workers.Curr)))+avgui(" (avg: ")+humanize.Comma(int64(qs.Workers.Avg))+maxui("; max: ")+humanize.Comma(int64(qs.Workers.Max))+")")
 		}
 		tgtXfer := qs.TgtXferStats[arn][replication.Total]
 		addRowF(titleui("Transfer Rate:                ")+"%s/s ("+keyui("avg: ")+"%s/s"+keyui("; max: ")+"%s/s", valueui(humanize.Bytes(uint64(tgtXfer.CurrRate))), valueui(humanize.Bytes(uint64(tgtXfer.AvgRate))), valueui(humanize.Bytes(uint64(tgtXfer.PeakRate))))
@@ -257,12 +254,12 @@ func (s replicateStatusMessage) String() string {
 	}
 	if !singleTgt {
 		xfer := qs.XferStats[replication.Total]
-		addRowF(hdrui("\nSummary:"))
+		addRowF("%s", hdrui("\nSummary:"))
 		addRowF(titleui("Replicated:                   ")+humanize.Comma(int64(replCount))+keyui(" objects")+" (%s", valueui(humanize.IBytes(replSz))+")")
-		addRowF(titleui("Queued:                       ") + coloredDot + " " + humanize.Comma(int64(qtots.Curr.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Curr.Bytes))) +
-			" (" + avgui("avg") + ": " + humanize.Comma(int64(qtots.Avg.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Avg.Bytes))) +
-			" ; " + maxui("max:") + " " + humanize.Comma(int64(qtots.Max.Count)) + keyui(" objects, ") + valueui(humanize.IBytes(uint64(qtots.Max.Bytes))) + ")")
-		addRowF(titleui("Workers:                      ") + valueui(humanize.Comma(int64(qs.Workers.Curr))) + avgui(" (avg: ") + humanize.Comma(int64(qs.Workers.Avg)) + maxui("; max: ") + humanize.Comma(int64(qs.Workers.Max)) + ")")
+		addRowF("%s", titleui("Queued:                       ")+coloredDot+" "+humanize.Comma(int64(qtots.Curr.Count))+keyui(" objects, ")+valueui(humanize.IBytes(uint64(qtots.Curr.Bytes)))+
+			" ("+avgui("avg")+": "+humanize.Comma(int64(qtots.Avg.Count))+keyui(" objects, ")+valueui(humanize.IBytes(uint64(qtots.Avg.Bytes)))+
+			" ; "+maxui("max:")+" "+humanize.Comma(int64(qtots.Max.Count))+keyui(" objects, ")+valueui(humanize.IBytes(uint64(qtots.Max.Bytes)))+")")
+		addRowF("%s", titleui("Workers:                      ")+valueui(humanize.Comma(int64(qs.Workers.Curr)))+avgui(" (avg: ")+humanize.Comma(int64(qs.Workers.Avg))+maxui("; max: ")+humanize.Comma(int64(qs.Workers.Max))+")")
 		addRowF(titleui("Received:                     ")+"%s"+keyui(" objects")+" (%s)", humanize.Comma(int64(replicaCount)), valueui(humanize.IBytes(uint64(replicaSz))))
 		addRowF(titleui("Transfer Rate:                ")+"%s/s"+avgui(" (avg: ")+"%s/s"+maxui("; max: ")+"%s/s)", valueui(humanize.Bytes(uint64(xfer.CurrRate))), valueui(humanize.Bytes(uint64(xfer.AvgRate))), valueui(humanize.Bytes(uint64(xfer.PeakRate))))
 		addRowF(titleui("Errors:                       ")+"%s in last 1 minute; %s in last 1hr; %s since uptime", valueui(humanize.Comma(int64(failed.LastMinute.Count))), valueui(humanize.Comma(int64(failed.LastHour.Count))), valueui(humanize.Comma(int64(failed.Totals.Count))))

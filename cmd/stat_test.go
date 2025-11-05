@@ -37,7 +37,6 @@ func TestParseStat(t *testing.T) {
 		{ClientContent{URL: *newClientURL("https://play.min.io/yrdy"), Size: 10000, Time: localTime, Type: 0o644, ETag: "blahblah", Metadata: map[string]string{"cusom-key": "custom-value"}}, "play"},
 	}
 	for _, testCase := range testCases {
-		testCase := testCase
 		t.Run("", func(t *testing.T) {
 			statMsg := parseStat(&testCase.content)
 			if !reflect.DeepEqual(testCase.content.Metadata, statMsg.Metadata) {

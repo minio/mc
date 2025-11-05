@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -198,11 +199,8 @@ func deltaSourceTarget(ctx context.Context, sourceURL, targetURL string, opts mi
 
 		if diffMsg.firstContent != nil {
 			var found bool
-			for _, esc := range opts.excludeStorageClasses {
-				if esc == diffMsg.firstContent.StorageClass {
-					found = true
-					break
-				}
+			if slices.Contains(opts.excludeStorageClasses, diffMsg.firstContent.StorageClass) {
+				found = true
 			}
 			if found {
 				continue

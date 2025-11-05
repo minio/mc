@@ -215,7 +215,7 @@ func (r *replicateBacklogMessage) replStatus() string {
 
 type replicateBacklogUI struct {
 	spinner  spinner.Model
-	sub      interface{}
+	sub      any
 	diffCh   chan madmin.DiffInfo
 	mrfCh    chan madmin.ReplicationMRF
 	arn      string
@@ -255,7 +255,7 @@ func newKeyMap() keyMap {
 	}
 }
 
-func initReplicateBacklogUI(arn, op string, diffCh interface{}) *replicateBacklogUI {
+func initReplicateBacklogUI(arn, op string, diffCh any) *replicateBacklogUI {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -298,7 +298,7 @@ func (m *replicateBacklogUI) Init() tea.Cmd {
 const rowLimit = 10000
 
 // A command that waits for the activity on a channel.
-func waitForActivity(sub interface{}, op string) tea.Cmd {
+func waitForActivity(sub any, op string) tea.Cmd {
 	return func() tea.Msg {
 		switch op {
 		case "diff":

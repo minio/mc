@@ -135,7 +135,6 @@ func TestParseDurationTime(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase
 		t.Run("", func(t *testing.T) {
 			myVal, err := ParseDuration(testCase.timeValue)
 			if err != nil && err.Error() != testCase.err {

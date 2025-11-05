@@ -512,7 +512,7 @@ func registerApp(name string) *cli.App {
 	app.EnableBashCompletion = true
 	app.OnUsageError = onUsageError
 	app.After = func(*cli.Context) error {
-		globalExpiringCerts.Range(func(k, v interface{}) bool {
+		globalExpiringCerts.Range(func(k, v any) bool {
 			host := k.(string)
 			expires := v.(time.Time)
 			fmt.Fprintf(os.Stderr, "\n")

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -936,9 +937,7 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 	}
 
 	metadata := make(map[string]string, len(opts.metadata))
-	for k, v := range opts.metadata {
-		metadata[k] = v
-	}
+	maps.Copy(metadata, opts.metadata)
 
 	delete(metadata, "X-Amz-Storage-Class")
 	if opts.storageClass != "" {
@@ -1024,9 +1023,7 @@ func (c *S3Client) Put(ctx context.Context, reader io.Reader, size int64, progre
 	}
 
 	metadata := make(map[string]string, len(putOpts.metadata))
-	for k, v := range putOpts.metadata {
-		metadata[k] = v
-	}
+	maps.Copy(metadata, putOpts.metadata)
 
 	// Do not copy storage class, it needs to be specified in putOpts
 	delete(metadata, "X-Amz-Storage-Class")
@@ -2260,9 +2257,7 @@ func (c *S3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.Tags = entry.UserTags
 
 	content.ReplicationStatus = entry.ReplicationStatus
-	for k, v := range entry.UserMetadata {
-		content.UserMetadata[k] = v
-	}
+	maps.Copy(content.UserMetadata, entry.UserMetadata)
 	for k := range entry.Metadata {
 		content.Metadata[k] = entry.Metadata.Get(k)
 	}

@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"maps"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -415,8 +416,6 @@ type headerTransport struct {
 }
 
 func (h *headerTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	for k, v := range h.customHeader {
-		request.Header[k] = v
-	}
+	maps.Copy(request.Header, h.customHeader)
 	return h.RoundTripper.RoundTrip(request)
 }

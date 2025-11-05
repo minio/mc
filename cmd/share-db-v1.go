@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"maps"
 	"os"
 	"sync"
 	"time"
@@ -106,9 +107,7 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 	}
 
 	// Copy map over.
-	for k, v := range qs.Data().(*shareDBV1).Shares {
-		s.Shares[k] = v
-	}
+	maps.Copy(s.Shares, qs.Data().(*shareDBV1).Shares)
 
 	// Filter out expired entries and save changes back to disk.
 	s.deleteAllExpired()

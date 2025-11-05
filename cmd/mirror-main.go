@@ -25,6 +25,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -682,11 +683,8 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 		sc, ok := event.UserMetadata["x-amz-storage-class"]
 		if ok {
 			var found bool
-			for _, esc := range mj.opts.excludeStorageClasses {
-				if esc == sc {
-					found = true
-					break
-				}
+			if slices.Contains(mj.opts.excludeStorageClasses, sc) {
+				found = true
 			}
 			if found {
 				continue

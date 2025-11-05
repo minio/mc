@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -94,9 +95,7 @@ func fixConfigV3() {
 
 	cfgV3 := newConfigV3()
 	isMutated := false
-	for k, v := range brokenMcCfgV3.Data().(*brokenConfigV3).Aliases {
-		cfgV3.Aliases[k] = v
-	}
+	maps.Copy(cfgV3.Aliases, brokenMcCfgV3.Data().(*brokenConfigV3).Aliases)
 
 	for host, brokenHostCfgV3 := range brokenMcCfgV3.Data().(*brokenConfigV3).Hosts {
 
@@ -144,9 +143,7 @@ func fixConfigV6ForHosts() {
 	isMutated := false
 
 	// Copy aliases.
-	for k, v := range brokenMcCfgV6.Data().(*configV6).Aliases {
-		newCfgV6.Aliases[k] = v
-	}
+	maps.Copy(newCfgV6.Aliases, brokenMcCfgV6.Data().(*configV6).Aliases)
 
 	url := &ClientURL{}
 	// Copy hosts.

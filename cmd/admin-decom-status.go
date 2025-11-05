@@ -125,7 +125,7 @@ func mainAdminDecommissionStatus(ctx *cli.Context) error {
 	}
 
 	dspOrder := []col{colGreen} // Header
-	for i := 0; i < len(poolStatuses); i++ {
+	for range poolStatuses {
 		dspOrder = append(dspOrder, colGrey)
 	}
 	var printColors []*color.Color

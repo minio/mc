@@ -21,10 +21,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -135,15 +137,12 @@ func isReadAt(reader io.Reader) (ok bool) {
 		// which happen to also be io.ReaderAt compatible
 		// we need to add special conditions for them to
 		// be ignored by this function.
-		for _, f := range []string{
+		if slices.Contains([]string{
 			"/dev/stdin",
 			"/dev/stdout",
 			"/dev/stderr",
-		} {
-			if f == v.Name() {
-				ok = false
-				break
-			}
+		}, v.Name()) {
+			ok = false
 		}
 	}
 	return
@@ -361,9 +360,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			if err != nil {
 				return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 			}
-			for k, v := range currentMetadata {
-				metadata[k] = v
-			}
+			maps.Copy(metadata, currentMetadata)
 		}
 
 		// Get metadata from target content as well
@@ -401,9 +398,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 				if err != nil {
 					return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
 				}
-				for k, v := range currentMetadata {
-					metadata[k] = v
-				}
+				maps.Copy(metadata, currentMetadata)
 			}
 
 			// Get metadata from target content as well
@@ -447,9 +442,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		metadata := make(map[string]string, len(content.Metadata))
-		for k, v := range content.Metadata {
-			metadata[k] = v
-		}
+		maps.Copy(metadata, content.Metadata)
 
 		// Get metadata from target content as well
 		for k, v := range uploadOpts.urls.TargetContent.Metadata {
