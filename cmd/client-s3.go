@@ -2440,7 +2440,7 @@ func (c *S3Client) ShareDownload(ctx context.Context, versionID string, expires 
 }
 
 // ShareUpload - get data for presigned post http form upload.
-func (c *S3Client) ShareUpload(ctx context.Context, isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
+func (c *S3Client) ShareUpload(ctx context.Context, isRecursive bool, expires time.Duration, contentType string, minLen int64, maxLen int64) (string, map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
 	if e := p.SetExpires(UTCNow().Add(expires)); e != nil {
@@ -2459,6 +2459,11 @@ func (c *S3Client) ShareUpload(ctx context.Context, isRecursive bool, expires ti
 		}
 	} else {
 		if e := p.SetKey(object); e != nil {
+			return "", nil, probe.NewError(e)
+		}
+	}
+	if minLen != 0 || maxLen != 0 {
+		if e := p.SetContentLengthRange(minLen, maxLen); e != nil {
 			return "", nil, probe.NewError(e)
 		}
 	}
