@@ -38,6 +38,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/minio/pkg/v3/console"
 	"github.com/minio/pkg/v3/env"
 )
 
@@ -289,7 +290,7 @@ func getAllMetadata(ctx context.Context, sourceAlias, sourceURLStr string, srcSS
 }
 
 // uploadSourceToTargetURL - uploads to targetURL from source.
-// optionally optimizes copy for object sizes <= 5GiB by using
+// optionally optimizes copy for object sizes <= 5TiB by using
 // server side copy operation.
 func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTargetURLOpts) URLs {
 	sourceAlias := uploadOpts.urls.SourceAlias
@@ -352,8 +353,16 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		metadata[http.CanonicalHeaderKey(k)] = v
 	}
 
-	// Optimize for server side copy if the host is same.
-	if sourceAlias == targetAlias && !uploadOpts.isZip && !uploadOpts.urls.checksum.IsSet() {
+	// Server-side copy using ComposeObject API has a 5TiB limit
+	// For files >= 5TiB, we must use stream copy (download + upload) even for same-alias
+	const maxServerSideCopySize = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
+	canUseServerSideCopy := sourceAlias == targetAlias &&
+		!uploadOpts.isZip &&
+		!uploadOpts.urls.checksum.IsSet() &&
+		length < maxServerSideCopySize
+
+	// Optimize for server side copy if the host is same and file size allows it
+	if canUseServerSideCopy {
 		// preserve new metadata and save existing ones.
 		if uploadOpts.preserve {
 			currentMetadata, err := getAllMetadata(ctx, sourceAlias, sourceURL.String(), srcSSE, uploadOpts.urls)
@@ -374,10 +383,6 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		if uploadOpts.urls.SourceContent.RetentionEnabled {
-			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
-			return uploadOpts.urls.WithError(err.Trace(sourceURL.String()))
-		}
 
 		opts := CopyOptions{
 			srcSSE:           srcSSE,
@@ -390,6 +395,11 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 
 		err = copySourceToTargetURL(ctx, targetAlias, targetURL.String(), sourcePath, sourceVersion, mode, until,
 			legalHold, length, uploadOpts.progress, opts)
+
+		// Can apply retention after copy if enabled
+		if err == nil && uploadOpts.urls.SourceContent.RetentionEnabled {
+			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
+		}
 	} else {
 		if uploadOpts.urls.SourceContent.RetentionEnabled {
 			// preserve new metadata and save existing ones.
@@ -479,13 +489,17 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			}
 		}
 
-		if uploadOpts.multipartThreads == "" {
+		if uploadOpts.multipartThreads == 0 {
 			multipartThreads, e = strconv.Atoi(env.Get("MC_UPLOAD_MULTIPART_THREADS", "4"))
+			if e != nil {
+				return uploadOpts.urls.WithError(probe.NewError(e))
+			}
 		} else {
-			multipartThreads, e = strconv.Atoi(uploadOpts.multipartThreads)
+			multipartThreads = uploadOpts.multipartThreads
 		}
-		if e != nil {
-			return uploadOpts.urls.WithError(probe.NewError(e))
+
+		if globalDebug {
+			console.Debugln("DEBUG: multipart configuration - part-size:", humanize.IBytes(multipartSize), "parallel:", multipartThreads, "file size:", humanize.IBytes(uint64(length)))
 		}
 
 		putOpts := PutOptions{
@@ -579,7 +593,7 @@ type uploadSourceToTargetURLOpts struct {
 	encKeyDB            map[string][]prefixSSEPair
 	preserve, isZip     bool
 	multipartSize       string
-	multipartThreads    string
+	multipartThreads    int
 	updateProgressTotal bool
 	ifNotExists         bool
 }

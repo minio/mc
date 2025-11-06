@@ -984,7 +984,11 @@ func (c *S3Client) Copy(ctx context.Context, source string, opts CopyOptions, pr
 	destOpts.ReplaceMetadata = len(metadata) > 0
 
 	var e error
-	if opts.disableMultipart || opts.size < 64*1024*1024 {
+	// Use CopyObject for files < 5GiB (its maximum size limit)
+	// Use ComposeObject for files >= 5GiB (supports multipart copy up to 5TiB)
+	const maxCopyObjectSize = 5 * 1024 * 1024 * 1024 // 5GiB
+
+	if opts.disableMultipart || opts.size < maxCopyObjectSize {
 		_, e = c.api.CopyObject(ctx, destOpts, srcOpts)
 	} else {
 		_, e = c.api.ComposeObject(ctx, destOpts, srcOpts)
