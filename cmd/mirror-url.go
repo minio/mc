@@ -266,6 +266,7 @@ type mirrorOptions struct {
 	isFake, isOverwrite, activeActive                     bool
 	isWatch, isRemove, isMetadata                         bool
 	isRetriable                                           bool
+	failOnError                                           bool
 	isSummary                                             bool
 	skipErrors                                            bool
 	excludeOptions, excludeStorageClasses, excludeBuckets []string

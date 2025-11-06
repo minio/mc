@@ -138,6 +138,10 @@ var (
 			Usage: "if specified, will enable retrying on a per object basis if errors occur",
 		},
 		cli.BoolFlag{
+			Name:  "fail-on-error",
+			Usage: "if specified, the application will exit if errors occur",
+		},
+		cli.BoolFlag{
 			Name:  "summary",
 			Usage: "print a summary of the mirror session",
 		},
@@ -566,6 +570,10 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 	mj.status.Start()
 	defer mj.status.Finish()
 
+	// if the operation is not retriable and fail-on-error is true, then
+	// we should exit on the first error.
+	useFatal := mj.opts.failOnError && !mj.opts.isRetriable
+
 	var cancelInProgress bool
 
 	defer func() {
@@ -600,22 +608,22 @@ func (mj *mirrorJob) monitorMirrorStatus(cancel context.CancelFunc) (errDuringMi
 						ignoreErr = true
 					}
 					if !ignoreErr {
-						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+						errorOrFatal(useFatal, sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
 							"Failed to copy `%s`.", sURLs.SourceContent.URL)
 					}
 				}
 			case sURLs.TargetContent != nil:
 				// When sURLs.SourceContent is nil, we know that we have an error related to removing
-				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
+				errorOrFatal(useFatal, sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 					"Failed to remove `%s`.", sURLs.TargetContent.URL.String())
 			default:
 				if strings.Contains(sURLs.Error.ToGoError().Error(), "Overwrite not allowed") {
 					ignoreErr = true
 				}
 				if sURLs.ErrorCond == differInUnknown {
-					errorIf(sURLs.Error.Trace(), "Failed to perform mirroring")
+					errorOrFatal(useFatal, sURLs.Error.Trace(), "Failed to perform mirroring")
 				} else {
-					errorIf(sURLs.Error.Trace(),
+					errorOrFatal(useFatal, sURLs.Error.Trace(),
 						"Failed to perform mirroring, with error condition (%s)", sURLs.ErrorCond)
 				}
 			}
@@ -1019,6 +1027,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		isMetadata:            isMetadata,
 		isSummary:             cli.Bool("summary"),
 		isRetriable:           cli.Bool("retry"),
+		failOnError:           cli.Bool("fail-on-error"),
 		md5:                   md5,
 		checksum:              checksum,
 		disableMultipart:      cli.Bool("disable-multipart"),
