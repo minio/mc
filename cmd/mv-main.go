@@ -63,6 +63,10 @@ var (
 			Name:  "tags",
 			Usage: "apply one or more tags to the uploaded objects",
 		},
+		cli.BoolFlag{
+			Name:  "retry",
+			Usage: "if specified, will enable retrying on a per object basis if errors occur",
+		},
 		checksumFlag,
 	}
 )
