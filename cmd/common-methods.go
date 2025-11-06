@@ -499,6 +499,7 @@ func uploadSourceToTargetURL(ctx context.Context, uploadOpts uploadSourceToTarge
 			multipartThreads: uint(multipartThreads),
 			ifNotExists:      uploadOpts.ifNotExists,
 			checksum:         uploadOpts.urls.checksum,
+			versionID:        uploadOpts.urls.TargetContent.VersionID,
 		}
 
 		if isReadAt(reader) || length == 0 {

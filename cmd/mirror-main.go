@@ -101,6 +101,10 @@ var (
 			Name:  "disable-multipart",
 			Usage: "disable multipart upload feature",
 		},
+		cli.BoolFlag{
+			Name:  "with-versioning",
+			Usage: "enable mirroring of version history, including deletions, for versioned buckets",
+		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
 			Usage: "exclude object(s) that match specified object name pattern",
@@ -228,6 +232,9 @@ EXAMPLES:
   16. Cross mirror between sites in a active-active deployment.
       Site-A: {{.Prompt}} {{.HelpName}} --active-active siteA siteB
       Site-B: {{.Prompt}} {{.HelpName}} --active-active siteB siteA
+
+  17. Mirror a bucket from MinIO cloud storage to other minIO cloud storage with versioning enabled.
+      {{.Prompt}} {{.HelpName}} --with-versioning myminio/bucket1 otherminio/bucket2
 `,
 }
 
@@ -377,7 +384,18 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs, event EventInfo) 
 	if mj.opts.isFake {
 		return sURLs.WithError(nil)
 	}
-
+	// remote S3 to local file system
+	if sURLs.SourceContent != nil && sURLs.TargetAlias == "" {
+		// Construct proper path with alias.
+		sourceWithAlias := filepath.Join(sURLs.SourceAlias, sURLs.SourceContent.URL.Path)
+		sourceCient, pErr := newClient(sourceWithAlias)
+		if pErr != nil {
+			return sURLs.WithError(pErr)
+		}
+		if _, err := sourceCient.Stat(ctx, StatOptions{headOnly: true}); err == nil {
+			return sURLs.WithError(nil)
+		}
+	}
 	// Construct proper path with alias.
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 	clnt, pErr := newClient(targetWithAlias)
@@ -390,7 +408,7 @@ func (mj *mirrorJob) doRemove(ctx context.Context, sURLs URLs, event EventInfo) 
 		clnt.AddUserAgent(uaMirrorAppName, ReleaseTag)
 	}
 	contentCh := make(chan *ClientContent, 1)
-	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
+	contentCh <- &ClientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path), VersionID: sURLs.TargetContent.VersionID}
 	close(contentCh)
 	isRemoveBucket := false
 	resultCh := clnt.Remove(ctx, false, isRemoveBucket, false, false, contentCh)
@@ -700,6 +718,10 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 
 		if strings.HasPrefix(string(event.Type), "s3:ObjectCreated:") {
 			sourceModTime, _ := time.Parse(time.RFC3339Nano, event.Time)
+			targetContent := &ClientContent{URL: *targetURL}
+			if mj.opts.enableVersion {
+				targetContent = &ClientContent{URL: *targetURL, VersionID: event.VersionID}
+			}
 			mirrorURL := URLs{
 				SourceAlias: sourceAlias,
 				SourceContent: &ClientContent{
@@ -711,7 +733,7 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 					Metadata:         event.UserMetadata,
 				},
 				TargetAlias:      targetAlias,
-				TargetContent:    &ClientContent{URL: *targetURL},
+				TargetContent:    targetContent,
 				MD5:              mj.opts.md5,
 				checksum:         mj.opts.checksum,
 				DisableMultipart: mj.opts.disableMultipart,
@@ -737,11 +759,15 @@ func (mj *mirrorJob) watchMirrorEvents(ctx context.Context, events []EventInfo) 
 				// Ignore delete cascading delete events if cyclical.
 				continue
 			}
+			targetContent := &ClientContent{URL: *targetURL}
+			if mj.opts.enableVersion {
+				targetContent = &ClientContent{URL: *targetURL, VersionID: event.VersionID}
+			}
 			mirrorURL := URLs{
 				SourceAlias:      sourceAlias,
-				SourceContent:    nil,
+				SourceContent:    &ClientContent{URL: *sourceURL},
 				TargetAlias:      targetAlias,
-				TargetContent:    &ClientContent{URL: *targetURL},
+				TargetContent:    targetContent,
 				MD5:              mj.opts.md5,
 				checksum:         mj.opts.checksum,
 				DisableMultipart: mj.opts.disableMultipart,
@@ -1022,6 +1048,7 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 		md5:                   md5,
 		checksum:              checksum,
 		disableMultipart:      cli.Bool("disable-multipart"),
+		enableVersion:         cli.Bool("with-versioning"),
 		skipErrors:            cli.Bool("skip-errors"),
 		excludeOptions:        cli.StringSlice("exclude"),
 		excludeBuckets:        cli.StringSlice("exclude-bucket"),
@@ -1050,6 +1077,10 @@ func runMirror(ctx context.Context, srcURL, dstURL string, cli *cli.Context, enc
 	createDstBuckets := dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == string(dstClt.GetURL().Separator)
 	mirrorSrcBuckets := srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == string(srcClt.GetURL().Separator)
 	mirrorBucketsToBuckets := mirrorSrcBuckets && createDstBuckets
+
+	if cli.Bool("with-versioning") && (!checkIfBucketIsVersioned(ctx, srcURL) || !checkIfBucketIsVersioned(ctx, dstURL)) {
+		fatalIf(errInvalidArgument().Trace(cli.Command.Name), "You cannot specify --with-versioning for buckets where versioning is not enabled.")
+	}
 
 	if mirrorSrcBuckets || createDstBuckets {
 		// Synchronize buckets using dirDifference function
