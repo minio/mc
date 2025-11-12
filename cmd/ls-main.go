@@ -60,6 +60,10 @@ var (
 			Name:  "zip",
 			Usage: "list files inside zip archive (MinIO servers only)",
 		},
+		cli.StringFlag{
+			Name:  "sort",
+			Usage: "sort by field. Only possible value for now: size",
+		},
 	}
 )
 
@@ -177,6 +181,11 @@ func checkListSyntax(cliCtx *cli.Context) ([]string, doListOptions) {
 
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 
+	sortBy := cliCtx.String("sort")
+	if sortBy != "" && sortBy != "size" {
+		fatalIf(errInvalidArgument().Trace(args...), "Unsupported sort option '"+sortBy+"'. Only 'size' is supported.")
+	}
+
 	if listZip && (withVersions || !timeRef.IsZero()) {
 		fatalIf(errInvalidArgument().Trace(args...), "Zip file listing can only be performed on the latest version")
 	}
@@ -189,6 +198,7 @@ func checkListSyntax(cliCtx *cli.Context) ([]string, doListOptions) {
 		withVersions: withVersions,
 		listZip:      listZip,
 		filter:       storageClasss,
+		sortBy:       sortBy,
 	}
 	return args, opts
 }

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -198,12 +199,10 @@ func (s summaryMessage) JSON() string {
 }
 
 // Pretty print the list of versions belonging to one object
-func printObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) {
+func getObjectVersions(clntURL ClientURL, ctntVersions []*ClientContent, printAllVersions bool) []contentMessage {
 	sortObjectVersions(ctntVersions)
 	msgs := generateContentMessages(clntURL, ctntVersions, printAllVersions)
-	for _, msg := range msgs {
-		printMsg(msg)
-	}
+	return msgs
 }
 
 type doListOptions struct {
@@ -214,6 +213,7 @@ type doListOptions struct {
 	withVersions bool
 	listZip      bool
 	filter       string
+	sortBy       string
 }
 
 // doList - list all entities inside a folder.
@@ -226,6 +226,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects      int64
 	)
 
+	objects := []contentMessage{}
 	for content := range clnt.List(ctx, ListOptions{
 		Recursive:         o.isRecursive,
 		Incomplete:        o.isIncomplete,
@@ -245,9 +246,10 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 			continue
 		}
 
+		// Check if we have moved to a new object (or if this is another version of the last iteration's object)
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+			objects = append(objects, getObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)...)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -257,7 +259,19 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+	objects = append(objects, getObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)...)
+
+	// Sort by size if requested
+	if o.sortBy == "size" {
+		slices.SortFunc(objects, func(a, b contentMessage) int {
+			return int(a.Size - b.Size)
+		})
+	}
+
+	// Print all objects
+	for _, obj := range objects {
+		printMsg(obj)
+	}
 
 	if o.isSummary {
 		printMsg(summaryMessage{
