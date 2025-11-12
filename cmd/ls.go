@@ -216,8 +216,8 @@ type doListOptions struct {
 	sortBy       string
 }
 
-// doList - list all entities inside a folder.
-func doList(ctx context.Context, clnt Client, o doListOptions) error {
+// Will loop over entities listed and call fn() for every object with all their versions
+func loopOverObjects(ctx context.Context, clnt Client, fn func(content *[]contentMessage) error, o doListOptions) (int64, int64, error) {
 	var (
 		lastPath          string
 		perObjectVersions []*ClientContent
@@ -226,7 +226,6 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects      int64
 	)
 
-	objects := []contentMessage{}
 	for content := range clnt.List(ctx, ListOptions{
 		Recursive:         o.isRecursive,
 		Incomplete:        o.isIncomplete,
@@ -249,7 +248,8 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		// Check if we have moved to a new object (or if this is another version of the last iteration's object)
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			objects = append(objects, getObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)...)
+			objects := getObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+			fn(&objects)
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -259,23 +259,55 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects++
 	}
 
-	objects = append(objects, getObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)...)
+	objects := getObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+	fn(&objects)
+	return totalObjects, totalSize, cErr
+}
 
-	// Sort by size if requested
-	if o.sortBy == "size" {
-		slices.SortFunc(objects, func(a, b contentMessage) int {
-			if a.Size < b.Size {
-				return -1
-			} else if a.Size > b.Size {
-				return 1
+// doList - list all entities inside a folder.
+func doList(ctx context.Context, clnt Client, o doListOptions) error {
+	var cErr error
+	isAccumulating := o.sortBy == "size" // should objects be accumulated instead of printed directly
+	var accumulatedObjects []contentMessage
+
+	var processFn func(objects *[]contentMessage) error
+	if isAccumulating {
+		processFn = func(newObjects *[]contentMessage) error {
+			// Accumulate all objects for sorting later
+			accumulatedObjects = append(accumulatedObjects, *newObjects...)
+			return nil
+		}
+	} else {
+		processFn = func(objects *[]contentMessage) error {
+			// Print objects as they come
+			for _, obj := range *objects {
+				printMsg(obj)
 			}
-			return 0
-		})
+			return nil
+		}
 	}
 
-	// Print all objects
-	for _, obj := range objects {
-		printMsg(obj)
+	totalObjects, totalSize, cErr := loopOverObjects(ctx, clnt, processFn, o)
+
+	// if isAccumulating is true, objects have been accumulated instead of printed
+	if isAccumulating {
+		// Sort if requested
+		switch o.sortBy {
+		case "size":
+			slices.SortFunc(accumulatedObjects, func(a, b contentMessage) int {
+				if a.Size < b.Size {
+					return -1
+				} else if a.Size > b.Size {
+					return 1
+				}
+				return 0
+			})
+		}
+
+		// Print all objects
+		for _, obj := range accumulatedObjects {
+			printMsg(obj)
+		}
 	}
 
 	if o.isSummary {
