@@ -182,7 +182,10 @@ func checkListSyntax(cliCtx *cli.Context) ([]string, doListOptions) {
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
 
 	sortBy := cliCtx.String("sort")
-	if sortBy != "" && sortBy != "size" {
+	switch sortBy {
+	case "":
+	case "size":
+	default:
 		fatalIf(errInvalidArgument().Trace(args...), "Unsupported sort option '"+sortBy+"'. Only 'size' is supported.")
 	}
 
