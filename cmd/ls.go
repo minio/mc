@@ -264,7 +264,12 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 	// Sort by size if requested
 	if o.sortBy == "size" {
 		slices.SortFunc(objects, func(a, b contentMessage) int {
-			return int(a.Size - b.Size)
+			if a.Size < b.Size {
+				return -1
+			} else if a.Size > b.Size {
+				return 1
+			}
+			return 0
 		})
 	}
 
