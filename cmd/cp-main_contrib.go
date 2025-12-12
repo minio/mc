@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -30,6 +31,24 @@ import (
 // validate the passed metadataString and populate the map
 func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	metaDataMap := make(map[string]string)
+	metadataString = strings.TrimSpace(metadataString)
+
+	if strings.HasPrefix(metadataString, "{") {
+		raw := make(map[string]json.RawMessage)
+		if err := json.Unmarshal([]byte(metadataString), &raw); err != nil {
+			return nil, probe.NewError(ErrInvalidMetadata)
+		}
+		for k, v := range raw {
+			var strVal string
+			if err := json.Unmarshal(v, &strVal); err == nil {
+				metaDataMap[http.CanonicalHeaderKey(k)] = strVal
+				continue
+			}
+			metaDataMap[http.CanonicalHeaderKey(k)] = strings.TrimSpace(string(v))
+		}
+		return metaDataMap, nil
+	}
+
 	r := strings.NewReader(metadataString)
 
 	type pToken int
@@ -74,6 +93,14 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 		}
 
 		if ch == '"' {
+			if ps == NORMAL && pt == VALUE && value.Len() > 0 {
+				writeRune(ch, pt)
+				continue
+			}
+			if ps == NORMAL && pt == KEY && key.Len() > 0 {
+				writeRune(ch, pt)
+				continue
+			}
 			switch ps {
 			case DQSTRING:
 				ps = NORMAL
@@ -136,3 +163,4 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	fatalErr := fmt.Sprintf("Invalid parser state at index: %d", p)
 	panic(fatalErr)
 }
+
