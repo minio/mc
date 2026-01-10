@@ -211,9 +211,29 @@ type doListOptions struct {
 	isRecursive  bool
 	isIncomplete bool
 	isSummary    bool
+	countOnly    bool
 	withVersions bool
 	listZip      bool
 	filter       string
+}
+
+// storageClassAllowed checks if a content entry should be included based on storage class filter.
+// Returns true if:
+//   - filter is empty (no filtering)
+//   - filter is "*" (wildcard, show all)
+//   - content.StorageClass is empty (always include)
+//   - content.StorageClass matches filter
+func storageClassAllowed(content *ClientContent, filter string) bool {
+	// No filter or wildcard filter means allow all
+	if filter == "" || filter == "*" {
+		return true
+	}
+	// If content has no storage class, allow it
+	if content.StorageClass == "" {
+		return true
+	}
+	// Otherwise, allow only if storage class matches filter
+	return content.StorageClass == filter
 }
 
 // doList - list all entities inside a folder.
@@ -241,13 +261,15 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 			continue
 		}
 
-		if content.StorageClass != "" && o.filter != "" && o.filter != "*" && content.StorageClass != o.filter {
+		if !storageClassAllowed(content, o.filter) {
 			continue
 		}
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+			if !o.countOnly {
+				printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+			}
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -257,9 +279,13 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+	if !o.countOnly {
+		printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+	}
 
-	if o.isSummary {
+	if o.countOnly {
+		console.Println(totalObjects)
+	} else if o.isSummary {
 		printMsg(summaryMessage{
 			TotalObjects: totalObjects,
 			TotalSize:    totalSize,

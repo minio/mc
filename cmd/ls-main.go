@@ -52,6 +52,10 @@ var (
 			Name:  "summarize",
 			Usage: "display summary information (number of objects, total size)",
 		},
+		cli.BoolFlag{
+			Name:  "count-only",
+			Usage: "print only the total count of objects",
+		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
 			Usage: "filter to specified storage class",
@@ -109,9 +113,12 @@ EXAMPLES:
 
   9. List all objects on mybucket, summarize the number of objects and total size.
      {{.Prompt}} {{.HelpName}} --summarize s3/mybucket/
-  
+
   10. List all objects on mybucket, for the GLACIER storage class
-     {{.Prompt}} {{.HelpName}} --storage-class 'GLACIER' s3/mybucket 
+     {{.Prompt}} {{.HelpName}} --storage-class 'GLACIER' s3/mybucket
+
+  11. Count objects in mybucket without listing them.
+     {{.Prompt}} {{.HelpName}} --count-only s3/mybucket/ 
 `,
 }
 
@@ -173,6 +180,7 @@ func checkListSyntax(cliCtx *cli.Context) ([]string, doListOptions) {
 	isIncomplete := cliCtx.Bool("incomplete")
 	withVersions := cliCtx.Bool("versions")
 	isSummary := cliCtx.Bool("summarize")
+	countOnly := cliCtx.Bool("count-only")
 	listZip := cliCtx.Bool("zip")
 
 	timeRef := parseRewindFlag(cliCtx.String("rewind"))
@@ -186,6 +194,7 @@ func checkListSyntax(cliCtx *cli.Context) ([]string, doListOptions) {
 		isRecursive:  isRecursive,
 		isIncomplete: isIncomplete,
 		isSummary:    isSummary,
+		countOnly:    countOnly,
 		withVersions: withVersions,
 		listZip:      listZip,
 		filter:       storageClasss,
