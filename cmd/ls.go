@@ -217,6 +217,25 @@ type doListOptions struct {
 	filter       string
 }
 
+// storageClassAllowed checks if a content entry should be included based on storage class filter.
+// Returns true if:
+//   - filter is empty (no filtering)
+//   - filter is "*" (wildcard, show all)
+//   - content.StorageClass is empty (always include)
+//   - content.StorageClass matches filter
+func storageClassAllowed(content *ClientContent, filter string) bool {
+	// No filter or wildcard filter means allow all
+	if filter == "" || filter == "*" {
+		return true
+	}
+	// If content has no storage class, allow it
+	if content.StorageClass == "" {
+		return true
+	}
+	// Otherwise, allow only if storage class matches filter
+	return content.StorageClass == filter
+}
+
 // doList - list all entities inside a folder.
 func doList(ctx context.Context, clnt Client, o doListOptions) error {
 	var (
@@ -242,7 +261,7 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 			continue
 		}
 
-		if content.StorageClass != "" && o.filter != "" && o.filter != "*" && content.StorageClass != o.filter {
+		if !storageClassAllowed(content, o.filter) {
 			continue
 		}
 
