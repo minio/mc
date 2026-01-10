@@ -211,6 +211,7 @@ type doListOptions struct {
 	isRecursive  bool
 	isIncomplete bool
 	isSummary    bool
+	countOnly    bool
 	withVersions bool
 	listZip      bool
 	filter       string
@@ -247,7 +248,9 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 
 		if lastPath != content.URL.Path {
 			// Print any object in the current list before reinitializing it
-			printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+			if !o.countOnly {
+				printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+			}
 			lastPath = content.URL.Path
 			perObjectVersions = []*ClientContent{}
 		}
@@ -257,9 +260,13 @@ func doList(ctx context.Context, clnt Client, o doListOptions) error {
 		totalObjects++
 	}
 
-	printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+	if !o.countOnly {
+		printObjectVersions(clnt.GetURL(), perObjectVersions, o.withVersions)
+	}
 
-	if o.isSummary {
+	if o.countOnly {
+		console.Println(totalObjects)
+	} else if o.isSummary {
 		printMsg(summaryMessage{
 			TotalObjects: totalObjects,
 			TotalSize:    totalSize,
