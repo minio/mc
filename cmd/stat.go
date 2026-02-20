@@ -324,9 +324,10 @@ func statURL(ctx context.Context, targetURL, versionID string, timeRef time.Time
 		}
 		found++
 
-		if content.StorageClass == s3StorageClassGlacier {
-			continue
-		}
+		////(pc) not sure why this is here, it at least cause a zero output on GLACIER objects.
+		//if content.StorageClass == s3StorageClassGlacier {
+		//	continue
+		//}
 
 		url := getStandardizedURL(targetAlias + getKey(content))
 		standardizedURL := getStandardizedURL(targetURL)
